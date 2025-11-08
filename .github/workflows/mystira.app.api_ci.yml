@@ -2,7 +2,7 @@ name: Mystira.App API CI/CD
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, dev ]
     paths:
       - 'src/Mystira.App.Api/**'
       - 'src/Mystira.App.Domain/**'
@@ -12,6 +12,7 @@ on:
     paths:
       - 'src/Mystira.App.Api/**'
       - 'src/Mystira.App.Domain/**'
+  workflow_dispatch:
 
 env:
   DOTNET_VERSION: '9.0.x'
