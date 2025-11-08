@@ -1,0 +1,275 @@
+@model Mystira.App.Api.Models.AppStatusConfiguration
+@{
+    ViewData["Title"] = "App Status Configuration";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">App Status Configuration</h3>
+                    <a href="/admin" class="btn btn-secondary">Back to Dashboard</a>
+                </div>
+                <div class="card-body">
+                    @if (TempData["SuccessMessage"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            @TempData["SuccessMessage"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+                    
+                    @if (TempData["ErrorMessage"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            @TempData["ErrorMessage"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+                    
+                    <form method="post" action="/admin/status">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <!-- Version Management -->
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5>Version Management</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label for="minSupportedVersion">Minimum Supported Version</label>
+                                                    <input type="text" class="form-control" id="minSupportedVersion" name="minSupportedVersion" 
+                                                           value="@Model.MinSupportedVersion" required pattern="^\d+\.\d+\.\d+$">
+                                                    <small class="form-text text-muted">
+                                                        Clients below this version will be forced to update
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label for="latestVersion">Latest Version</label>
+                                                    <input type="text" class="form-control" id="latestVersion" name="latestVersion" 
+                                                           value="@Model.LatestVersion" required pattern="^\d+\.\d+\.\d+$">
+                                                    <small class="form-text text-muted">
+                                                        Current latest version available
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label for="bundleVersion">Bundle Version</label>
+                                                    <input type="text" class="form-control" id="bundleVersion" name="bundleVersion" 
+                                                           value="@Model.BundleVersion" required>
+                                                    <small class="form-text text-muted">
+                                                        Content bundle version identifier
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label for="contentVersion">Content Version</label>
+                                                    <input type="text" class="form-control" id="contentVersion" name="contentVersion" 
+                                                           value="@Model.ContentVersion" readonly>
+                                                    <small class="form-text text-muted">
+                                                        Auto-generated timestamp for content changes
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- App Control -->
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5>App Control</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" value="true" id="forceContentRefresh" 
+                                                   name="forceContentRefresh" @(Model.ForceContentRefresh ? "checked" : "")>
+                                            <label class="form-check-label" for="forceContentRefresh">
+                                                Force Content Refresh
+                                            </label>
+                                            <small class="form-text text-muted">
+                                                Forces all clients to refresh their content on next startup
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" value="true" id="maintenanceMode" 
+                                                   name="maintenanceMode" @(Model.MaintenanceMode ? "checked" : "")>
+                                            <label class="form-check-label" for="maintenanceMode">
+                                                Maintenance Mode
+                                            </label>
+                                            <small class="form-text text-muted">
+                                                Prevents clients from accessing the app
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="form-group mb-3">
+                                            <label for="maintenanceMessage">Maintenance Message</label>
+                                            <textarea class="form-control" id="maintenanceMessage" name="maintenanceMessage" 
+                                                      rows="3" placeholder="Message to show during maintenance">@Model.MaintenanceMessage</textarea>
+                                        </div>
+                                        
+                                        <div class="form-group mb-3">
+                                            <label for="updateMessage">Update Message</label>
+                                            <textarea class="form-control" id="updateMessage" name="updateMessage" 
+                                                      rows="3" placeholder="Message to show when update is required">@Model.UpdateMessage</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Feature Flags -->
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5>Feature Flags</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-check mb-3">
+                                                    <input class="form-check-input" type="checkbox" value="true" id="enableNewScenarios" 
+                                                           name="featureFlags.enableNewScenarios" @(Model.FeatureFlags.EnableNewScenarios ? "checked" : "")>
+                                                    <label class="form-check-label" for="enableNewScenarios">
+                                                        Enable New Scenarios
+                                                    </label>
+                                                </div>
+                                                
+                                                <div class="form-check mb-3">
+                                                    <input class="form-check-input" type="checkbox" value="true" id="enableMediaPreview" 
+                                                           name="featureFlags.enableMediaPreview" @(Model.FeatureFlags.EnableMediaPreview ? "checked" : "")>
+                                                    <label class="form-check-label" for="enableMediaPreview">
+                                                        Enable Media Preview
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-check mb-3">
+                                                    <input class="form-check-input" type="checkbox" value="true" id="enableBulkUpload" 
+                                                           name="featureFlags.enableBulkUpload" @(Model.FeatureFlags.EnableBulkUpload ? "checked" : "")>
+                                                    <label class="form-check-label" for="enableBulkUpload">
+                                                        Enable Bulk Upload
+                                                    </label>
+                                                </div>
+                                                
+                                                <div class="form-check mb-3">
+                                                    <input class="form-check-input" type="checkbox" value="true" id="enableBundleUpload" 
+                                                           name="featureFlags.enableBundleUpload" @(Model.FeatureFlags.EnableBundleUpload ? "checked" : "")>
+                                                    <label class="form-check-label" for="enableBundleUpload">
+                                                        Enable Bundle Upload
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Sidebar -->
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5>Current Status</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <strong>Last Updated:</strong><br>
+                                            <small>@Model.LastUpdated.ToString("yyyy-MM-dd HH:mm:ss") UTC</small>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <strong>Maintenance Mode:</strong><br>
+                                            <span class="badge @(Model.MaintenanceMode ? "bg-danger" : "bg-success")">
+                                                @(Model.MaintenanceMode ? "Active" : "Inactive")
+                                            </span>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <strong>Force Refresh:</strong><br>
+                                            <span class="badge @(Model.ForceContentRefresh ? "bg-warning" : "bg-secondary")">
+                                                @(Model.ForceContentRefresh ? "Enabled" : "Disabled")
+                                            </span>
+                                        </div>
+                                        
+                                        <hr>
+                                        
+                                        <div class="d-grid gap-2">
+                                            <button type="submit" class="btn btn-primary">Save Configuration</button>
+                                            <button type="button" class="btn btn-warning" onclick="updateBundleVersion()">Update Bundle Version</button>
+                                            <button type="button" class="btn btn-info" onclick="checkClientStatus()">Check Client Status</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="card mt-3">
+                                    <div class="card-header">
+                                        <h5>Quick Actions</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="d-grid gap-2">
+                                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="enableMaintenance()">
+                                                Enable Maintenance
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-success" onclick="disableMaintenance()">
+                                                Disable Maintenance
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-info" onclick="forceRefresh()">
+                                                Force Content Refresh
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateBundleVersion() {
+    const timestamp = new Date().toISOString();
+    document.getElementById('bundleVersion').value = timestamp;
+    document.getElementById('contentVersion').value = timestamp;
+}
+
+function checkClientStatus() {
+    fetch('/api/client/status?client_version=1.0.0&content_version=')
+        .then(response => response.json())
+        .then(data => {
+            alert('Client Status Check:\n' + 
+                  'Force Refresh: ' + data.forceRefresh + '\n' +
+                  'Update Required: ' + data.updateRequired + '\n' +
+                  'Message: ' + data.message);
+        })
+        .catch(error => {
+            alert('Error checking client status: ' + error.message);
+        });
+}
+
+function enableMaintenance() {
+    document.getElementById('maintenanceMode').checked = true;
+    if (!document.getElementById('maintenanceMessage').value) {
+        document.getElementById('maintenanceMessage').value = 'The app is currently under maintenance. Please try again later.';
+    }
+}
+
+function disableMaintenance() {
+    document.getElementById('maintenanceMode').checked = false;
+}
+
+function forceRefresh() {
+    document.getElementById('forceContentRefresh').checked = true;
+    updateBundleVersion();
+}
+</script>

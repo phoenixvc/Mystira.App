@@ -1,0 +1,42 @@
+namespace Mystira.App.Domain.Models;
+
+public class Account
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string Auth0UserId { get; set; } = string.Empty; // Auth0 user identifier
+    public string Email { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public List<string> UserProfileIds { get; set; } = new(); // Can have multiple user profiles
+    public SubscriptionDetails Subscription { get; set; } = new();
+    public AccountSettings Settings { get; set; } = new();
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime LastLoginAt { get; set; } = DateTime.UtcNow;
+}
+
+public class SubscriptionDetails
+{
+    public SubscriptionType Type { get; set; } = SubscriptionType.Free;
+    public string ProductId { get; set; } = string.Empty; // App store product identifier
+    public DateTime? ValidUntil { get; set; } // null for lifetime or free accounts
+    public bool IsActive { get; set; } = true;
+    public string? PurchaseToken { get; set; } // For app store verification
+    public DateTime? LastVerified { get; set; } // Last time subscription was verified with app store
+    public List<string> PurchasedScenarios { get; set; } = new(); // Individual scenario purchases
+}
+
+public class AccountSettings
+{
+    public bool CacheCredentials { get; set; } = true;
+    public bool RequireAuthOnStartup { get; set; } = false;
+    public string PreferredLanguage { get; set; } = "en";
+    public bool NotificationsEnabled { get; set; } = true;
+}
+
+public enum SubscriptionType
+{
+    Free,           // Limited access
+    Monthly,        // Monthly subscription
+    Annual,         // Annual subscription
+    Lifetime,       // One-time purchase with lifetime updates
+    Individual      // Individual scenario purchases
+}

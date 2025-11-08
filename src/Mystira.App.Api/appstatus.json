@@ -1,0 +1,17 @@
+{
+  "MinSupportedVersion": "1.0.0",
+  "LatestVersion": "1.0.0",
+  "ContentVersion": "2025-05-30T12:00:00Z",
+  "BundleVersion": "1.0.0",
+  "ForceContentRefresh": false,
+  "MaintenanceMode": false,
+  "MaintenanceMessage": "",
+  "UpdateMessage": "Please update to the latest version for the best experience.",
+  "FeatureFlags": {
+    "EnableNewScenarios": true,
+    "EnableMediaPreview": true,
+    "EnableBulkUpload": true,
+    "EnableBundleUpload": true
+  },
+  "LastUpdated": "2025-01-01T00:00:00Z"
+}

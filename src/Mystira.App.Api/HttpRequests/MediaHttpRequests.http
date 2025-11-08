@@ -1,0 +1,24 @@
+﻿### authenticate
+POST /api/auth/login HTTP/1.1
+Host: mystira-app-dev-api.azurewebsites.net
+Accept: application/json
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "adminPass123!"
+}
+
+### media info
+GET /api/media/video-the-empty-bush-114c1fd9/info HTTP/1.1
+# Host: localhost:5260
+Host: mystira-app-dev-api.azurewebsites.net
+Accept: application/json
+Content-Type: application/json
+
+### media statistics
+GET /api/media/statistics HTTP/1.1
+# Host: localhost:5260
+Host: mystira-app-dev-api.azurewebsites.net
+Accept: application/json
+Content-Type: application/json

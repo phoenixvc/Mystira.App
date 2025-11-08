@@ -1,0 +1,6 @@
+@Mystira.App.Api_HostAddress = http://localhost:5260
+
+GET {{Mystira.App.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
