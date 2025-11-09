@@ -6,46 +6,6 @@
 <PageTitle>@GetPageTitle()</PageTitle>
 
 <style>
-    .game-content {
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-    
-    .game-content .container-fluid {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-    
-    .scene-content {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        padding: 1rem;
-    }
-    
-    .story-content {
-        flex: 1;
-        overflow-y: auto;
-        min-height: 0; /* Important for flexbox scrolling */
-    }
-    
-    .media-container {
-        flex-shrink: 0;
-    }
-    
-    .media-container img,
-    .media-container video {
-        max-height: 35vh;
-        width: 100%;
-        object-fit: contain;
-        border-radius: 0.5rem;
-    }
-    
     .choice-button {
         display: block;
         width: 100%;
@@ -86,12 +46,13 @@
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
     
-    .choice-scene-content,
-    .roll-scene-content,
-    .final-scene-content,
-    .story-scene-content {
-        margin-top: auto;
-        padding-top: 1rem;
+    .scene-navigation {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        padding: 1rem 0;
+        border-top: 1px solid #e5e7eb;
+        margin-top: 2rem;
     }
 </style>
 
@@ -126,7 +87,6 @@ else
                 <div class="col-12">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h2 class="text-primary-custom mb-1">@gameSession.CurrentScene.Title</h2>
                             <small class="text-muted">@gameSession.ScenarioName</small>
                         </div>
                         <div>
@@ -140,16 +100,22 @@ else
             </div>
 
             <!-- Scene Content -->
-            <div class="row flex-grow-1 overflow-hidden">
-                <div class="col-lg-8 h-100">
-                    <div class="scene-content h-100">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="scene-content">
                         
+                        <!-- Scene Story -->
+                        <div class="story-content mb-4">
+                            <h2 class="text-primary-custom mb-3">@gameSession.CurrentScene.Title</h2>
+                            <p class="lead">@gameSession.CurrentScene.Content</p>
+                        </div>
+
                         <!-- Media Display -->
                         @if (!string.IsNullOrEmpty(gameSession.CurrentScene.ImageUrl) || 
                              !string.IsNullOrEmpty(gameSession.CurrentScene.VideoUrl) ||
                              !string.IsNullOrEmpty(gameSession.CurrentScene.AudioUrl))
                         {
-                            <div class="media-container mb-3 flex-shrink-0">
+                            <div class="media-container mb-4">
                                 @if (!string.IsNullOrEmpty(gameSession.CurrentScene.ImageUrl))
                                 {
                                     <img src="@gameSession.CurrentScene.ImageUrl" 
@@ -166,8 +132,8 @@ else
                                 
                                 @if (!string.IsNullOrEmpty(gameSession.CurrentScene.AudioUrl))
                                 {
-                                    <div class="p-3 bg-dark rounded text-center">
-                                        <i class="fas fa-music fa-2x text-white mb-2"></i>
+                                    <div class="p-4 bg-dark rounded text-center">
+                                        <i class="fas fa-music fa-2x text-white mb-3"></i>
                                         <audio controls class="w-100">
                                             <source src="@gameSession.CurrentScene.AudioUrl" type="audio/mpeg">
                                             Your browser does not support the audio element.
@@ -176,17 +142,19 @@ else
                                 }
                             </div>
                         }
+                        
+                    </div>
+                </div>
+            </div>
 
-                        <!-- Scene Story -->
-                        <div class="story-content mb-3 flex-grow-1 overflow-y-auto">
-                            <p class="lead mb-0">@gameSession.CurrentScene.Content</p>
-                        </div>
-
-                        <!-- Scene Type Specific Content -->
+            <!-- Scene Type Specific Content - Navigation -->
+            <div class="scene-navigation">
+                <div class="row">
+                    <div class="col-lg-8">
                         @if (gameSession.CurrentScene.SceneType == SceneType.Choice && gameSession.CurrentScene.Choices.Any())
                         {
                             <!-- Choice Scene -->
-                            <div class="choice-scene-content text-center flex-shrink-0">
+                            <div class="text-center">
                                 <h5 class="mb-3 text-muted">What do you choose?</h5>
                                 <div class="d-flex flex-column align-items-center gap-2">
                                     @foreach (var choice in gameSession.CurrentScene.Choices.OrderBy(c => c.Order))
@@ -207,7 +175,7 @@ else
                         else if (gameSession.CurrentScene.SceneType == SceneType.Roll)
                         {
                             <!-- Roll Scene -->
-                            <div class="roll-scene-content text-center flex-shrink-0">
+                            <div class="text-center">
                                 @if (!rollResult.HasValue)
                                 {
                                     <h5 class="mb-3 text-muted">Time to test your luck!</h5>
@@ -253,7 +221,7 @@ else
                         else if (gameSession.CurrentScene.SceneType == SceneType.Final)
                         {
                             <!-- Final Scene -->
-                            <div class="final-scene-content text-center flex-shrink-0">
+                            <div class="text-center">
                                 <div class="alert alert-success">
                                     <h4 class="alert-heading">
                                         <i class="fas fa-trophy me-2"></i>
@@ -273,7 +241,7 @@ else
                         else
                         {
                             <!-- Story Scene - just continue -->
-                            <div class="story-scene-content text-center flex-shrink-0">
+                            <div class="text-center">
                                 <button class="btn btn-primary-custom btn-lg" 
                                         @onclick="ContinueStory"
                                         disabled="@isProcessing">
@@ -285,7 +253,6 @@ else
                                 </button>
                             </div>
                         }
-                        
                     </div>
                 </div>
             </div>
