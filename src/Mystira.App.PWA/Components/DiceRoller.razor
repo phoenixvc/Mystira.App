@@ -1,0 +1,197 @@
+﻿@using System.Security.Cryptography
+@inject IJSRuntime JS
+
+<div class="dice-shell">
+    
+    <div class="row">
+        <div class="col-12 text-center mb-4">
+            <div class="controls">
+                <button type="button" class="roll-btn" @onclick="Roll" disabled="@IsRolling" aria-label="Roll the dice">
+                    @(IsRolling ? "Rolling..." : "Roll")
+                </button>
+            </div>
+        </div>
+    </div>
+    
+
+    <div class="dice-area" role="group" aria-label="Dice results">
+        @for (var i = 0; i < DiceCount; i++)
+        {
+            var value = i < Results.Count ? Results[i] : 1;
+            <div class="die @(IsRolling ? "rolling" : "")" style="@GetDieTransform(i)">
+                <div class="die-3d">
+                    @if (Faces == 6)
+                    {
+                        <!-- Pretty pips for d6 -->
+                        <svg viewBox="0 0 100 100" class="die-svg">
+                            <defs>
+                                <filter id="shadow"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.3"/></filter>
+                                <radialGradient id="grad" cx="30%" cy="30%">
+                                    <stop offset="0%" stop-color="var(--die-grad1, #fff)"/>
+                                    <stop offset="100%" stop-color="var(--die-grad2, #d4d4d8)"/>
+                                </radialGradient>
+                            </defs>
+                            <rect x="5" y="5" width="90" height="90" rx="18" fill="url(#grad)" filter="url(#shadow)"/>
+                            @foreach (var (px, py, show) in PipLayout(value))
+                            {
+                                if (show)
+                                {
+                                    <circle cx="@px" cy="@py" r="7.5" class="pip"/>
+                                }
+                            }
+                        </svg>
+                    }
+                    else
+                    {
+                        <!-- Generic faces: big number -->
+                        <svg viewBox="0 0 100 100" class="die-svg">
+                            <defs>
+                                <filter id="shadow2"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.3"/></filter>
+                                <linearGradient id="tagGrad" x1="0" x2="1" y1="0" y2="1">
+                                    <stop offset="0%" stop-color="var(--die-grad1, #fff)"/>
+                                    <stop offset="100%" stop-color="var(--die-grad2, #d4d4d8)"/>
+                                </linearGradient>
+                            </defs>
+                            <rect x="5" y="5" width="90" height="90" rx="18" fill="url(#tagGrad)" filter="url(#shadow2)"/>
+                            <text x="50" y="58" text-anchor="middle" class="big-num">@value</text>
+                        </svg>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <audio @ref="audioRef" preload="auto">
+        <!-- Replace with your own file if you like -->
+        <source src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAA..." type="audio/mp3"/>
+    </audio>
+</div>
+
+@code {
+    // Public parameters
+    [Parameter] public EventCallback<int> OnRollResult { get; set; }
+    
+    [Parameter] public int DiceCount { get; set; } = 2;
+    [Parameter] public int Faces { get; set; } = 6;
+    [Parameter] public bool DarkMode { get; set; } = false;
+    [Parameter] public bool SoundOn { get; set; } = true;
+    [Parameter] public bool HapticsOn { get; set; } = true;
+    [Parameter] public int RollDurationMs { get; set; } = 900;
+    [Parameter] public int WaitAfterRollDuration { get; set; } = 0;
+    
+    private static readonly int[] AllowedFaces = new[] { 4, 6, 8, 10, 12, 20, 100 };
+
+    private bool IsRolling { get; set; }
+    private List<int> Results { get; set; } = new();
+    private ElementReference audioRef;
+
+    private record RollHistory(int DiceCount, int Faces, IReadOnlyList<int> Results, DateTime Timestamp);
+    private readonly List<RollHistory> HistoryEntries = new();
+
+    private CancellationTokenSource? _rollerCts;
+
+    protected override void OnParametersSet()
+    {
+        if (!AllowedFaces.Contains(Faces)) Faces = 6;
+        DiceCount = Math.Clamp(DiceCount, 1, 10);
+    }
+
+    private async Task Roll()
+    {
+        if (IsRolling) return;
+        IsRolling = true;
+        StateHasChanged();
+
+        _rollerCts?.Cancel();
+        _rollerCts = new CancellationTokenSource();
+        var token = _rollerCts.Token;
+
+        try
+        {
+            await PlayClickAsync();
+            await HapticAsync(2);
+
+            if (Results.Count != DiceCount)
+                Results = Enumerable.Repeat(1, DiceCount).ToList();
+
+            // Animate “spinning” faces
+            await AnimateRollAsync(RollDurationMs, token);
+
+            HistoryEntries.Insert(0, new RollHistory(DiceCount, Faces, Results.ToArray(), DateTime.UtcNow));
+
+            await PlayClickAsync();
+            await HapticAsync(8);
+            await Task.Delay(WaitAfterRollDuration, token);
+        }
+        finally
+        {
+            IsRolling = false;
+            StateHasChanged();
+            await OnRollResult.InvokeAsync(Results.Sum());
+        }
+    }
+
+    private async Task AnimateRollAsync(int durationMs, CancellationToken token)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var step = 60; // ms between face changes
+
+        while (sw.ElapsedMilliseconds < durationMs && !token.IsCancellationRequested)
+        {
+            for (int i = 0; i < DiceCount; i++)
+                Results[i] = SecureDie(Faces);
+
+            StateHasChanged();
+            try { await Task.Delay(step, token); } catch { break; }
+        }
+    }
+
+    private static int SecureDie(int faces)
+        => RandomNumberGenerator.GetInt32(1, faces + 1);
+
+    private string GetDieTransform(int index)
+    {
+        var angle = (index % 2 == 0 ? 6 : -6) + (index % 3 == 0 ? 2 : -2);
+        var drift = (index % 4) * 2 - 3;
+        return $"--tilt:{angle}deg; --drift:{drift}px;";
+    }
+
+    private IEnumerable<(int x, int y, bool show)> PipLayout(int value)
+    {
+        var spots = new (int x, int y)[] {
+            (25,25),(50,25),(75,25),
+            (25,50),(50,50),(75,50),
+            (25,75),(50,75),(75,75)
+        };
+
+        var masks = new Dictionary<int, int[]> {
+            {1, new[]{4}},
+            {2, new[]{0,8}},
+            {3, new[]{0,4,8}},
+            {4, new[]{0,2,6,8}},
+            {5, new[]{0,2,4,6,8}},
+            {6, new[]{0,2,3,5,6,8}}
+        };
+
+        var showIdx = masks.TryGetValue(value, out var arr) ? arr : new[]{4};
+        for (int i=0;i<spots.Length;i++)
+            yield return (spots[i].x, spots[i].y, showIdx.Contains(i));
+    }
+
+    private async Task PlayClickAsync()
+    {
+        if (!SoundOn || string.IsNullOrEmpty(audioRef.Id)) return;
+        try { await JS.InvokeVoidAsync("diceAudio.play", audioRef); } catch { }
+    }
+
+    private async Task HapticAsync(int ms)
+    {
+        if (!HapticsOn) return;
+        try { await JS.InvokeVoidAsync("diceHaptics.vibrate", ms); } catch { }
+    }
+
+    private async Task ToggleTheme()
+    {
+        try { await JS.InvokeVoidAsync("diceTheme.set", DarkMode); } catch { }
+    }
+}

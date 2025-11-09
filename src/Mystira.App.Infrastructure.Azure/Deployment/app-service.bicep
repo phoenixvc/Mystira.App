@@ -1,5 +1,5 @@
 @description('Name of the App Service')
-param appServiceName string = 'dev-euw-app-mystira'
+param appServiceName string = 'dev-wus-app-mystira'
 
 @description('Location for all resources')
 param location string = resourceGroup().location

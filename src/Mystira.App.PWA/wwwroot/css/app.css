@@ -1,0 +1,232 @@
+/* Mystira PWA Custom Styles */
+
+:root {
+    --primary-color: #8B5CF6;
+    --secondary-color: #1F2937;
+    --success-color: #10B981;
+    --danger-color: #EF4444;
+    --warning-color: #F59E0B;
+    --info-color: #3B82F6;
+    --light-color: #F9FAFB;
+    --dark-color: #111827;
+
+    /* dice colors */
+    --bg: #f8fafc;
+    --fg: #111827;
+    --muted: #6b7280;
+    --card: rgba(255,255,255,0.85);
+    --border: rgba(17,24,39,0.08);
+    --glow: rgba(52,211,153,0.35);
+    --accent: #22c55e;
+
+    /* dice appearance */
+    --die-grad1: #ffffff;
+    --die-grad2: #d4d4d8;
+    --pip: #111827;
+}
+
+html, body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.bg-primary-custom {
+    background-color: var(--primary-color) !important;
+}
+
+.text-primary-custom {
+    color: var(--primary-color) !important;
+}
+
+.btn-primary-custom {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary-custom:hover {
+    background-color: #7C3AED;
+    border-color: #7C3AED;
+}
+
+.scenario-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border: 1px solid #E5E7EB;
+    border-radius: 0.75rem;
+}
+
+.scenario-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(139, 92, 246, 0.15);
+}
+
+.loading-spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 3px solid var(--primary-color);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.offline-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--danger-color);
+    color: white;
+    text-align: center;
+    padding: 0.5rem;
+    z-index: 9999;
+    font-size: 0.875rem;
+}
+
+.install-prompt {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 1000;
+}
+
+.btn-install {
+    background-color: var(--primary-color);
+    border: none;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 2rem;
+    font-weight: 500;
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.25);
+    transition: all 0.2s ease;
+}
+
+.btn-install:hover {
+    background-color: #7C3AED;
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
+    transform: translateY(-1px);
+}
+
+.game-content {
+    min-height: 100vh;
+    padding: 2rem 0;
+}
+
+.scene-content {
+    background: white;
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.choice-button {
+    background: linear-gradient(135deg, var(--primary-color), #7C3AED);
+    border: none;
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: 0.75rem;
+    font-weight: 500;
+    margin: 0.5rem;
+    transition: all 0.3s ease;
+    min-width: 200px;
+}
+
+.choice-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.25);
+    background: linear-gradient(135deg, #7C3AED, #6D28D9);
+}
+
+.media-container {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin: 1rem 0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.media-container img,
+.media-container video {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.media-container audio {
+    width: 100%;
+    background: var(--secondary-color);
+    border-radius: 0.5rem;
+}
+
+.roll-dice {
+    font-size: 4rem;
+    color: var(--primary-color);
+    animation: rollAnimation 1s ease-in-out;
+}
+
+@keyframes rollAnimation {
+    0% { transform: rotate(0deg) scale(1); }
+    25% { transform: rotate(90deg) scale(1.2); }
+    50% { transform: rotate(180deg) scale(1.1); }
+    75% { transform: rotate(270deg) scale(1.2); }
+    100% { transform: rotate(360deg) scale(1); }
+}
+
+.navbar-brand {
+    font-weight: 700;
+    color: var(--primary-color) !important;
+    font-size: 1.5rem;
+}
+
+.nav-link {
+    color: var(--secondary-color) !important;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.nav-link:hover {
+    color: var(--primary-color) !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .scene-content {
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .choice-button {
+        min-width: 100%;
+        margin: 0.25rem 0;
+    }
+    
+    .game-content {
+        padding: 1rem 0;
+    }
+}
+
+/* Error UI Styles */
+#blazor-error-ui {
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}

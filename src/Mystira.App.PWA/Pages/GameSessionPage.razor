@@ -1,0 +1,363 @@
+@page "/game"
+@using Mystira.App.PWA.Components
+@using Mystira.App.PWA.Services
+
+<PageTitle>@GetPageTitle()</PageTitle>
+
+@if (gameSession == null || gameSession.CurrentScene == null)
+{
+    <div class="container-fluid py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <div class="card border-0 shadow">
+                    <div class="card-body p-5">
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                        <h3>No Active Adventure</h3>
+                        <p class="text-muted mb-4">
+                            You don't have an active adventure. Please select an adventure from the home page.
+                        </p>
+                        <a href="/" class="btn btn-primary-custom btn-lg">
+                            <i class="fas fa-home me-2"></i>
+                            Go to Home
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="game-content">
+        <div class="container-fluid">
+            <!-- Scene Header -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="text-primary-custom mb-1">@gameSession.CurrentScene.Title</h2>
+                            <small class="text-muted">@gameSession.ScenarioName</small>
+                        </div>
+                        <div>
+                            <a href="/" class="btn btn-outline-secondary">
+                                <i class="fas fa-home me-1"></i>
+                                Exit
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene Content -->
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="scene-content">
+                        
+                        <!-- Media Display -->
+                        @if (!string.IsNullOrEmpty(gameSession.CurrentScene.ImageUrl) || 
+                             !string.IsNullOrEmpty(gameSession.CurrentScene.VideoUrl) ||
+                             !string.IsNullOrEmpty(gameSession.CurrentScene.AudioUrl))
+                        {
+                            <div class="media-container mb-4">
+                                @if (!string.IsNullOrEmpty(gameSession.CurrentScene.ImageUrl))
+                                {
+                                    <img src="@gameSession.CurrentScene.ImageUrl" 
+                                         alt="Scene media" 
+                                         class="img-fluid rounded" />
+                                }
+                                else if (!string.IsNullOrEmpty(gameSession.CurrentScene.VideoUrl))
+                                {
+                                    <video controls class="w-100 rounded">
+                                        <source src="@gameSession.CurrentScene.VideoUrl" type="video/mp4">
+                                        Your browser does not support the video tag.
+                                    </video>
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(gameSession.CurrentScene.AudioUrl))
+                                {
+                                    <div class="p-4 bg-dark rounded text-center">
+                                        <i class="fas fa-music fa-2x text-white mb-3"></i>
+                                        <audio controls class="w-100">
+                                            <source src="@gameSession.CurrentScene.AudioUrl" type="audio/mpeg">
+                                            Your browser does not support the audio element.
+                                        </audio>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <!-- Scene Story -->
+                        <div class="mb-4">
+                            <p class="lead">@gameSession.CurrentScene.Content</p>
+                        </div>
+
+                        <!-- Scene Type Specific Content -->
+                        @if (gameSession.CurrentScene.SceneType == SceneType.Choice && gameSession.CurrentScene.Choices.Any())
+                        {
+                            <!-- Choice Scene -->
+                            <div class="text-center">
+                                <h5 class="mb-4 text-muted">What do you choose?</h5>
+                                <div class="d-flex flex-column align-items-center">
+                                    @foreach (var choice in gameSession.CurrentScene.Choices.OrderBy(c => c.Order))
+                                    {
+                                        <button class="choice-button" 
+                                                @onclick="() => HandleChoice(choice)"
+                                                disabled="@isProcessing">
+                                            @if (isProcessing)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                            }
+                                            @choice.Text
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        else if (gameSession.CurrentScene.SceneType == SceneType.Roll)
+                        {
+                            <!-- Roll Scene -->
+                            <div class="text-center">
+                                @if (!rollResult.HasValue)
+                                {
+                                    <h5 class="mb-4 text-muted">Time to test your luck!</h5>
+                                    <p class="mb-4">You need to roll @gameSession.CurrentScene.RollTarget or higher.</p>
+                                    <div class="dice-roller-container">
+                                        <DiceRoller DiceCount="1" Faces="20" SoundOn="true" HapticsOn="true" DarkMode="false" 
+                                                    RollDurationMs="1500" WaitAfterRollDuration="500" OnRollResult="HandleRollResult"/>
+                                    </div>
+
+                                    <style>
+                                        .dice-roller-container {
+                                            max-width: 200px; /* Adjust this value to control the width */
+                                            margin: 0 auto; /* This centers the container horizontally */
+                                            padding: 15px;
+                                            background-color: var(--bs-body-bg, white);
+                                            border-radius: 8px;
+                                            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                                        }
+                                    </style>
+                                }
+                                else
+                                {
+                                    <div class="mb-4">
+                                        <h3 class="text-primary-custom mb-2">
+                                            <i class="fas fa-dice me-2"></i>
+                                            You rolled: @rollResult
+                                        </h3>
+                                        <div class="alert @(rollResult >= gameSession.CurrentScene.RollTarget ? "alert-success" : "alert-warning")">
+                                            @if (rollResult >= gameSession.CurrentScene.RollTarget)
+                                            {
+                                                <h5 class="mb-2">Success!</h5>
+                                                <p class="mb-0">@gameSession.CurrentScene.SuccessBranch</p>
+                                            }
+                                            else
+                                            {
+                                                <h5 class="mb-2">Fail!</h5>
+                                                <p class="mb-0">@gameSession.CurrentScene.FailureBranch</p>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <button class="btn btn-primary-custom btn-lg"
+                                            @onclick="ContinueFromRoll"
+                                            disabled="@isProcessing">
+                                        @if (isProcessing)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                        }
+                                        Continue Adventure
+                                    </button>
+                                }
+                            </div>
+                        }
+                        else if (gameSession.CurrentScene.SceneType == SceneType.Final)
+                        {
+                            <!-- Final Scene -->
+                            <div class="text-center">
+                                <div class="alert alert-success">
+                                    <h4 class="alert-heading">
+                                        <i class="fas fa-trophy me-2"></i>
+                                        Adventure Complete!
+                                    </h4>
+                                    <p class="mb-0">Congratulations on completing this adventure!</p>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <a href="/" class="btn btn-primary-custom btn-lg me-2">
+                                        <i class="fas fa-home me-2"></i>
+                                        New Adventure
+                                    </a>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <!-- Story Scene - just continue -->
+                            <div class="text-center">
+                                <button class="btn btn-primary-custom btn-lg" 
+                                        @onclick="ContinueStory"
+                                        disabled="@isProcessing">
+                                    @if (isProcessing)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                    }
+                                    Continue
+                                </button>
+                            </div>
+                        }
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Inject] private IGameSessionService GameSessionService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ILogger<GameSessionPage> Logger { get; set; } = default!;
+
+    private GameSession? gameSession;
+    private bool isProcessing = false;
+    private bool isRolling = false;
+    private int? rollResult = null;
+
+    protected override void OnInitialized()
+    {
+        // Get current game session
+        gameSession = GameSessionService.CurrentGameSession;
+        
+        // Subscribe to changes
+        GameSessionService.GameSessionChanged += OnGameSessionChanged;
+        
+        // If no game session, redirect to home
+        if (gameSession == null)
+        {
+            Logger.LogWarning("No active game session found, redirecting to home");
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private void OnGameSessionChanged(object? sender, GameSession? session)
+    {
+        gameSession = session;
+        rollResult = null; // Reset roll result when scene changes
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string GetPageTitle()
+    {
+        if (gameSession?.CurrentScene != null)
+        {
+            return $"{gameSession.CurrentScene.Title} - {gameSession.ScenarioName}";
+        }
+        return "Game Session - Mystira";
+    }
+
+    private async Task HandleChoice(Choice choice)
+    {
+        if (isProcessing || string.IsNullOrEmpty(choice.NextSceneTitle))
+            return;
+
+        try
+        {
+            isProcessing = true;
+            StateHasChanged();
+            
+            Logger.LogInformation("Player chose: {ChoiceText} -> {NextScene}", choice.Text, choice.NextSceneTitle);
+            
+            var success = await GameSessionService.NavigateToSceneAsync(choice.NextSceneTitle);
+            if (!success)
+            {
+                Logger.LogError("Failed to navigate to scene: {NextScene}", choice.NextSceneTitle);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error handling choice: {ChoiceText}", choice.Text);
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ContinueFromRoll()
+    {
+        if (isProcessing || gameSession?.CurrentScene == null || !rollResult.HasValue)
+            return;
+
+        try
+        {
+            isProcessing = true;
+            StateHasChanged();
+            
+            // Determine if the roll was successful
+            bool isSuccess = rollResult.Value >= (gameSession.CurrentScene.RollTarget ?? 0);
+            
+            Logger.LogInformation("Processing roll result: {RollResult}, Target: {Target}, Success: {IsSuccess}", 
+                rollResult.Value, gameSession.CurrentScene.RollTarget, isSuccess);
+            
+            // Navigate based on success/failure
+            var success = await GameSessionService.NavigateFromRollAsync(isSuccess);
+            
+            if (!success)
+            {
+                Logger.LogError("Failed to navigate from roll scene");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error continuing from roll");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ContinueStory()
+    {
+        if (isProcessing)
+            return;
+
+        try
+        {
+            isProcessing = true;
+            StateHasChanged();
+            
+            // For story scenes, advance to the next scene
+            var success = await GameSessionService.GoToNextSceneAsync();
+            if (!success)
+            {
+                Logger.LogError("Failed to advance to next scene");
+            }
+            
+            Logger.LogInformation("Story scene advanced");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error continuing story");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        GameSessionService.GameSessionChanged -= OnGameSessionChanged;
+    }
+
+    private Task HandleRollResult(int arg)
+    {
+        rollResult = arg;
+
+        return Task.CompletedTask;
+    }
+}

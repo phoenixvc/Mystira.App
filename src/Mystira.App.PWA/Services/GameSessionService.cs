@@ -1,0 +1,269 @@
+using Mystira.PWA.Models;
+
+namespace Mystira.App.PWA.Services;
+
+public class GameSessionService : IGameSessionService
+{
+    private readonly ILogger<GameSessionService> _logger;
+    private readonly IApiClient _apiClient;
+    
+    public event EventHandler<GameSession?>? GameSessionChanged;
+    
+    private GameSession? _currentGameSession;
+    public GameSession? CurrentGameSession 
+    { 
+        get => _currentGameSession;
+        private set
+        {
+            _currentGameSession = value;
+            GameSessionChanged?.Invoke(this, value);
+        }
+    }
+
+    public GameSessionService(ILogger<GameSessionService> logger, IApiClient apiClient)
+    {
+        _logger = logger;
+        _apiClient = apiClient;
+    }
+
+    public async Task<bool> StartGameSessionAsync(Scenario scenario)
+    {
+        try
+        {
+            _logger.LogInformation("Starting game session for scenario: {ScenarioName}", scenario.Title);
+            
+            // Find the starting scene - look for a scene that's not referenced by any other scene
+            var allReferencedSceneIds = scenario.Scenes
+                .Where(s => !string.IsNullOrEmpty(s.NextSceneId))
+                .Select(s => s.NextSceneId)
+                .Concat(scenario.Scenes
+                    .SelectMany(s => s.Branches)
+                    .Where(b => !string.IsNullOrEmpty(b.NextSceneId))
+                    .Select(b => b.NextSceneId))
+                .Where(id => !string.IsNullOrEmpty(id))
+                .ToHashSet();
+            
+            var startingScene = scenario.Scenes.FirstOrDefault(s => !allReferencedSceneIds.Contains(s.Id));
+            
+            if (startingScene == null)
+            {
+                // Fallback to first scene if we can't determine the starting scene
+                startingScene = scenario.Scenes.FirstOrDefault();
+            }
+            
+            if (startingScene == null)
+            {
+                _logger.LogError("No starting scene found for scenario: {ScenarioName}", scenario.Title);
+                return false;
+            }
+            
+            startingScene.AudioUrl = !string.IsNullOrEmpty(startingScene.Media?.Audio) ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Audio) : null;
+            startingScene.ImageUrl = !string.IsNullOrEmpty(startingScene.Media?.Image) ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Image) : null;
+            startingScene.VideoUrl = !string.IsNullOrEmpty(startingScene.Media?.Video) ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Video) : null;
+
+            
+            CurrentGameSession = new GameSession
+            {
+                Scenario = scenario,
+                ScenarioId = scenario.Id,
+                ScenarioName = scenario.Title,
+                CurrentScene = startingScene,
+                StartedAt = DateTime.UtcNow,
+                CompletedScenes = new List<Scene>(),
+                IsCompleted = false
+            };
+
+            _logger.LogInformation("Game session started successfully");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error starting game session for scenario: {ScenarioName}", scenario.Title);
+            return false;
+        }
+    }
+
+    public async Task<bool> NavigateToSceneAsync(string sceneId)
+    {
+        try
+        {
+            if (CurrentGameSession == null)
+            {
+                _logger.LogWarning("Cannot navigate to scene - no active game session");
+                return false;
+            }
+
+            _logger.LogInformation("Navigating to scene: {SceneId}", sceneId);
+
+            // Add current scene to completed scenes if it exists
+            if (CurrentGameSession.CurrentScene != null && CurrentGameSession.CompletedScenes.All(s => s.Id != CurrentGameSession.CurrentScene.Id))
+            {
+                CurrentGameSession.CompletedScenes.Add(CurrentGameSession.CurrentScene);
+            }
+
+            // Try to get the scene from API
+            var scene = CurrentGameSession.Scenario.Scenes.Find(x => x.Id == sceneId);
+            
+            if (scene == null)
+            {
+                _logger.LogError("Scene not found: {SceneId}", sceneId);
+                return false;
+            }
+
+            // Resolve Media URLs
+            scene.AudioUrl = !string.IsNullOrEmpty(scene.Media?.Audio) ? await _apiClient.GetMediaUrlFromId(scene.Media.Audio) : null;
+            scene.ImageUrl = !string.IsNullOrEmpty(scene.Media?.Image) ? await _apiClient.GetMediaUrlFromId(scene.Media.Image) : null;
+            scene.VideoUrl = !string.IsNullOrEmpty(scene.Media?.Video) ? await _apiClient.GetMediaUrlFromId(scene.Media.Video) : null;
+            
+            CurrentGameSession.CurrentScene = scene;
+            
+            // Check if this is a final scene
+            if (scene.SceneType == SceneType.Final)
+            {
+                CurrentGameSession.IsCompleted = true;
+                _logger.LogInformation("Game session completed");
+            }
+
+            // Trigger the event to notify subscribers
+            GameSessionChanged?.Invoke(this, CurrentGameSession);
+
+            _logger.LogInformation("Successfully navigated to scene: {SceneId}", sceneId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error navigating to scene: {SceneId}", sceneId);
+            return false;
+        }
+    }
+
+    public Task<bool> CompleteGameSessionAsync()
+    {
+        try
+        {
+            if (CurrentGameSession == null)
+            {
+                _logger.LogWarning("Cannot complete game session - no active session");
+                return Task.FromResult(false);
+            }
+
+            _logger.LogInformation("Completing game session for scenario: {ScenarioName}", CurrentGameSession.ScenarioName);
+
+            CurrentGameSession.IsCompleted = true;
+            
+            // Trigger the event to notify subscribers
+            GameSessionChanged?.Invoke(this, CurrentGameSession);
+
+            _logger.LogInformation("Game session completed successfully");
+            return Task.FromResult(true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error completing game session");
+            return Task.FromResult(false);
+        }
+    }
+
+    public async Task<bool> NavigateFromRollAsync(bool isSuccess)
+    {
+        try
+        {
+            if (CurrentGameSession?.CurrentScene == null)
+            {
+                _logger.LogWarning("Cannot navigate from roll - no active game session or current scene");
+                return false;
+            }
+
+            var currentScene = CurrentGameSession.CurrentScene;
+            
+            if (currentScene.SceneType != SceneType.Roll)
+            {
+                _logger.LogWarning("Current scene is not a roll scene");
+                return false;
+            }
+
+            // For roll scenes, use the branches collection to determine next scene
+            // First branch = success path, second branch = failure path
+            var branches = currentScene.Branches;
+            
+            if (branches == null || !branches.Any())
+            {
+                _logger.LogWarning("Roll scene has no branches defined");
+                
+                // Fallback to NextSceneId if available
+                if (!string.IsNullOrEmpty(currentScene.NextSceneId))
+                {
+                    return await NavigateToSceneAsync(currentScene.NextSceneId);
+                }
+                
+                _logger.LogInformation("No navigation path available for roll scene. Completing game session.");
+                return await CompleteGameSessionAsync();
+            }
+            
+            // Select the appropriate branch based on success/failure
+            var selectedBranch = isSuccess 
+                ? branches.FirstOrDefault()                // First branch for success
+                : branches.Skip(1).FirstOrDefault();       // Second branch for failure
+                
+            if (selectedBranch == null)
+            {
+                _logger.LogWarning("Could not find appropriate branch for roll outcome (Success: {IsSuccess})", isSuccess);
+                return await CompleteGameSessionAsync();
+            }
+            
+            var nextSceneId = selectedBranch.NextSceneId;
+            
+            if (string.IsNullOrEmpty(nextSceneId))
+            {
+                _logger.LogInformation("Selected branch has no next scene specified (Success: {IsSuccess}). Completing game session.", isSuccess);
+                return await CompleteGameSessionAsync();
+            }
+
+            _logger.LogInformation("Navigating from roll scene. Success: {IsSuccess}, Branch choice: '{BranchChoice}', Next scene: {NextSceneId}", 
+                isSuccess, selectedBranch.Choice, nextSceneId);
+            
+            return await NavigateToSceneAsync(nextSceneId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error navigating from roll (Success: {IsSuccess})", isSuccess);
+            return false;
+        }
+    }
+
+    public async Task<bool> GoToNextSceneAsync()
+    {
+        try
+        {
+            if (CurrentGameSession?.CurrentScene == null)
+            {
+                _logger.LogWarning("Cannot go to next scene - no active game session or current scene");
+                return false;
+            }
+
+            var currentScene = CurrentGameSession.CurrentScene;
+            var nextSceneId = currentScene.NextSceneId;
+            
+            if (string.IsNullOrEmpty(nextSceneId))
+            {
+                _logger.LogInformation("No next scene available, completing game session");
+                return await CompleteGameSessionAsync();
+            }
+
+            _logger.LogInformation("Advancing to next scene: {NextSceneId}", nextSceneId);
+            
+            return await NavigateToSceneAsync(nextSceneId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error advancing to next scene");
+            return false;
+        }
+    }
+
+    public void ClearGameSession()
+    {
+        _logger.LogInformation("Clearing game session");
+        CurrentGameSession = null;
+    }
+}

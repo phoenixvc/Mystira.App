@@ -1,0 +1,263 @@
+﻿/* Component styles (consume global CSS vars; provide fallbacks) */
+
+.dice-shell {
+  display: grid;
+  gap: 1rem;
+  background: var(--card, rgba(255,255,255,0.9));
+  color: var(--fg, #111827);
+  border-radius: 1.25rem;
+  border: 1px solid var(--border, rgba(17,24,39,0.08));
+  padding: 1rem;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px -15px var(--glow, rgba(52,211,153,0.35));
+  transition: background .3s ease, color .3s ease, border-color .3s ease;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto auto;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.controls .group {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.92rem;
+}
+
+.controls label { color: var(--muted, #6b7280); }
+
+.controls input[type="range"] { width: 100%; }
+
+.controls select,
+.controls input[type="range"],
+.controls input[type="checkbox"] {
+  accent-color: var(--accent, #22c55e);
+}
+
+.controls .toggles {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  color: var(--fg, #111827);
+}
+
+.roll-btn {
+  padding: 0.7rem 1rem;
+  border-radius: 0.9rem;
+  border: 1px solid var(--border, rgba(17,24,39,0.08));
+  background: linear-gradient(180deg, var(--accent, #22c55e), color-mix(in srgb, var(--accent, #22c55e) 82%, black));
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .1s ease, filter .2s ease, opacity .2s ease, box-shadow .2s ease;
+  box-shadow: 0 6px 16px -10px var(--glow, rgba(52,211,153,0.35));
+}
+.roll-btn:hover { filter: brightness(1.02); box-shadow: 0 10px 24px -12px var(--glow, rgba(52,211,153,0.35)); }
+.roll-btn:disabled { opacity: .65; cursor: not-allowed; }
+.roll-btn:active { transform: translateY(1px) scale(0.985); }
+
+/* Dice grid */
+.dice-area {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  gap: 0.85rem;
+  align-items: center;
+}
+
+/* Parent supplies perspective & horizontal drift only */
+.die {
+  aspect-ratio: 1 / 1;
+  perspective: 800px;
+  transform: translateX(var(--drift, 0px));
+  transition: transform .2s ease;
+  will-change: transform;
+}
+
+/* Inner 3D layer rotates in 3D */
+.die-3d {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transform: rotateZ(var(--tilt, 0deg)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform .3s ease;
+  filter: drop-shadow(0 10px 16px rgba(0,0,0,.25));
+}
+
+/* Subtle thickness illusion */
+.die-3d::before {
+  content: "";
+  position: absolute;
+  inset: 6%;
+  border-radius: 16px;
+  background: linear-gradient(to bottom, rgba(255,255,255,.20), rgba(0,0,0,.15));
+  transform: translateZ(-6px);
+  pointer-events: none;
+}
+
+/* SVG face */
+.die-svg {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: block;
+  backface-visibility: hidden;
+}
+
+.pip { fill: var(--pip, #111827); }
+
+.big-num {
+  font: 800 44px/1.1 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+  fill: white;
+  paint-order: stroke;
+  stroke: rgba(0,0,0,0.25);
+  stroke-width: 1.5;
+}
+.small-num {
+  font: 600 12px/1 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+  fill: rgba(255,255,255,0.9);
+}
+
+/* Rolling: combine 3D tumble + wobble */
+.die.rolling .die-3d {
+  animation:
+          tumble3d .9s cubic-bezier(.2,.6,.2,1),
+          wobble   .55s cubic-bezier(.36,.07,.19,.97);
+}
+
+@keyframes tumble3d {
+  0%   { transform: rotateZ(var(--tilt,0)) rotateX(0turn)   rotateY(0turn); }
+  50%  { transform: rotateZ(calc(var(--tilt,0) + 8deg)) rotateX(.5turn) rotateY(.5turn); }
+  100% { transform: rotateZ(var(--tilt,0)) rotateX(1turn)  rotateY(1turn); }
+}
+
+@keyframes wobble {
+  10%  { transform: rotateZ(calc(var(--tilt, 0) - 8deg)); }
+  30%  { transform: rotateZ(calc(var(--tilt, 0) + 6deg)); }
+  50%  { transform: rotateZ(calc(var(--tilt, 0) - 4deg)); }
+  70%  { transform: rotateZ(calc(var(--tilt, 0) + 2deg)); }
+  100% { transform: rotateZ(var(--tilt, 0)); }
+}
+
+/* Summary & History */
+.summary {
+  display: flex;
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+.sum-pill {
+  display: inline-flex;
+  gap: .5rem;
+  align-items: baseline;
+  border: 1px solid var(--border, rgba(17,24,39,0.08));
+  padding: .5rem .75rem;
+  border-radius: .9rem;
+  background: rgba(255,255,255,0.06);
+  color: var(--fg, #111827);
+}
+.sum-pill span { color: var(--muted, #6b7280); }
+
+.history { margin-top: .5rem; }
+.history summary {
+  cursor: pointer;
+  color: var(--muted, #6b7280);
+}
+.history ul {
+  list-style: none;
+  padding-left: 0;
+  margin: .5rem 0 0;
+  display: grid;
+  gap: .35rem;
+  font-size: .92rem;
+}
+.history li {
+  display: flex;
+  gap: .5rem;
+  align-items: baseline;
+  border-bottom: 1px dashed var(--border, rgba(17,24,39,0.12));
+  padding-bottom: .35rem;
+}
+.history .time { color: var(--muted, #6b7280); }
+.history .break { color: var(--border, rgba(17,24,39,0.12)); }
+
+/* Responsive */
+@media (max-width: 720px) {
+  .controls {
+    grid-template-columns: 1fr 1fr;
+  }
+  .roll-btn {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+/* Compact variant when wrapped in <div class="dice-mini"> */
+:host-context(.dice-mini) .dice-shell {
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 0.9rem;
+}
+:host-context(.dice-mini) .controls {
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+}
+:host-context(.dice-mini) .dice-area {
+  gap: 0.4rem;
+  grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+}
+:host-context(.dice-mini) .big-num { font-size: 34px; }
+:host-context(.dice-mini) .small-num { font-size: 10px; }
+
+/* === 3D Cube for d6 === */
+.cube {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+
+/* Each face is a plane positioned around the center */
+.face {
+  position: absolute;
+  inset: 0;
+  display: block;
+  backface-visibility: hidden;
+}
+
+/* Assume the die face is roughly 100x100; translateZ by half depth */
+:root { --die-depth: 28px; } /* you can tune this in global CSS */
+
+.face.front  { transform: rotateY(  0deg) translateZ(var(--die-depth)); }
+.face.back   { transform: rotateY(180deg) translateZ(var(--die-depth)); }
+.face.right  { transform: rotateY( 90deg) translateZ(var(--die-depth)); }
+.face.left   { transform: rotateY(-90deg) translateZ(var(--die-depth)); }
+.face.top    { transform: rotateX( 90deg) translateZ(var(--die-depth)); }
+.face.bottom { transform: rotateX(-90deg) translateZ(var(--die-depth)); }
+
+/* Add a bit of global shading for the cube */
+.cube { filter: drop-shadow(0 10px 16px rgba(0,0,0,.25)); }
+
+/* Use the existing .die and .die-3d rules to provide perspective + rotation:
+   - .die gives perspective
+   - .die-3d rotates (we'll rotate the .die-3d which contains the .cube)
+*/
+
+/* If you want even stronger depth, optionally give edges a subtle outline */
+.face .die-svg rect {
+  stroke: rgba(0,0,0,.12);
+  stroke-width: 1;
+}
+
+/* Ensure rolling rotates the 3D wrapper so the cube tumbles */
+.die.rolling .die-3d {
+  animation: cubeTumble .9s cubic-bezier(.2,.6,.2,1);
+}
+
+/* Replace or keep your previous tumble3d; this one emphasizes 3D axes */
+@keyframes cubeTumble {
+  0%   { transform: rotateZ(var(--tilt,0)) rotateX(0turn)   rotateY(0turn); }
+  50%  { transform: rotateZ(calc(var(--tilt,0) + 8deg)) rotateX(.5turn) rotateY(.5turn); }
+  100% { transform: rotateZ(var(--tilt,0)) rotateX(1turn)  rotateY(1turn); }
+}

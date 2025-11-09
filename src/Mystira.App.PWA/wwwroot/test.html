@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blazor Test</title>
+    <meta charset="utf-8" />
+</head>
+<body>
+    <div id="app">
+        <div>Loading test...</div>
+    </div>
+    
+    <script>
+        console.log("Test HTML loaded");
+        
+        // Test basic Blazor WebAssembly loading
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log("DOM loaded");
+        });
+        
+        // Test if we can load the blazor script
+        var script = document.createElement('script');
+        script.onload = function() {
+            console.log("Blazor script loaded successfully");
+        };
+        script.onerror = function() {
+            console.log("Error loading Blazor script");
+        };
+        script.src = '_framework/blazor.webassembly.js';
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>

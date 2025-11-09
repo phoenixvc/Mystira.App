@@ -6,8 +6,8 @@ set -e
 # ⚠️ CONFIGURATION REQUIRED: Update these default values for your deployment
 # Default values - ⚠️ UPDATE: Change these defaults to match your environment
 ENVIRONMENT="dev" # ⚠️ UPDATE: Set to 'dev', 'staging', or 'prod'
-RESOURCE_GROUP="dev-euw-app-mystira" # ⚠️ UPDATE: Set your resource group name (e.g., 'myapp-rg-dev')
-LOCATION="westeu" # ⚠️ UPDATE: Set your preferred Azure region
+RESOURCE_GROUP="dev-wus-app-mystira" # ⚠️ UPDATE: Set your resource group name (e.g., 'myapp-rg-dev')
+LOCATION="westus" # ⚠️ UPDATE: Set your preferred Azure region
 SUBSCRIPTION_ID="991fddfd-dba0-4154-88fb-00abc2108e69" # ⚠️ UPDATE: Set your Azure subscription ID
 
 # Parse command line arguments
@@ -34,7 +34,7 @@ while [[ $# -gt 0 ]]; do
             echo "Options:"
             echo "  -e, --environment    Environment (dev, staging, prod) [default: dev]"
             echo "  -g, --resource-group Resource group name [required]"
-            echo "  -l, --location       Azure location [default: westeu]"
+            echo "  -l, --location       Azure location [default: westus]"
             echo "  -s, --subscription   Azure subscription ID [optional]"
             echo "  -h, --help          Show this help message"
             exit 0
