@@ -1,7 +1,6 @@
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Mystira.PWA.Models;
+namespace Mystira.App.PWA.Models;
 
 public class ScenariosResponse
 {

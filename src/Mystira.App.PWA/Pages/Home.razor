@@ -109,9 +109,9 @@
                                             {
                                                 <span class="badge bg-secondary me-1">@tag</span>
                                             }
-                                            @if (scenario.Tags.Count > 3)
+                                            @if (scenario.Tags.Length > 3)
                                             {
-                                                <span class="badge bg-secondary">+@(scenario.Tags.Count - 3)</span>
+                                                <span class="badge bg-secondary">+@(scenario.Tags.Length - 3)</span>
                                             }
                                         </div>
                                     }
