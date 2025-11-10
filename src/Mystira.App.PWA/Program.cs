@@ -15,10 +15,6 @@ builder.Services.AddOidcAuthentication(options =>
     builder.Configuration.Bind("Auth0", options.ProviderOptions);
     options.ProviderOptions.ResponseType = "code";
     options.ProviderOptions.AdditionalProviderParameters.Add("prompt", "login");
-    
-    // Configure token refresh
-    options.UserOptions.RoleClaim = "http://schemas.microsoft.com/ws/2008/06/identityclaims/role";
-    options.UserOptions.NameClaim = "name";
 });
 
 // Configure HttpClient
@@ -27,12 +23,12 @@ builder.Services.AddScoped(sp => new HttpClient
     BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) 
 });
 
-// Configure API HttpClient with auth token provider
+// Configure API HttpClient with token provider
 builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration.GetValue<string>("ApiBaseUrl") ?? "https://mystira-app-dev-api.azurewebsites.net/");
     client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
-}).AddHttpMessageHandler<BaseAddressAuthorizationMessageHandler>();
+});
 
 // Configure JSON serialization with enum string conversion
 builder.Services.Configure<JsonSerializerOptions>(options =>
@@ -56,7 +52,6 @@ builder.Services.Configure<JsonSerializerOptions>(options =>
 // Register services
 builder.Services.AddScoped<SimpleAuthService>();
 builder.Services.AddScoped<IAuthService>(provider => provider.GetRequiredService<SimpleAuthService>());
-builder.Services.AddScoped<TokenRefreshService>();
 builder.Services.AddScoped<IGameSessionService, GameSessionService>();
 builder.Services.AddScoped<IIndexedDbService, IndexedDbService>();
 
