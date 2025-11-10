@@ -4,8 +4,8 @@ using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
 using Mystira.App.Api.Validation;
 using NJsonSchema;
+using System.Linq;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace Mystira.App.Api.Services;
@@ -278,6 +278,107 @@ public class ScenarioApiService : IScenarioApiService
         return false;
     }
 
+    private void ValidateAgainstSchema(CreateScenarioRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var tags = request.Tags ?? new List<string>();
+        var coreAxes = request.CoreAxes ?? new List<string>();
+        var archetypes = request.Archetypes ?? new List<string>();
+        var characters = request.Characters ?? new List<ScenarioCharacter>();
+        var scenes = request.Scenes ?? new List<Scene>();
+
+        var payload = new
+        {
+            Title = request.Title,
+            Description = request.Description,
+            Tags = tags,
+            Difficulty = request.Difficulty.ToString(),
+            SessionLength = request.SessionLength.ToString(),
+            AgeGroup = request.AgeGroup,
+            MinimumAge = request.MinimumAge,
+            CoreAxes = coreAxes,
+            Archetypes = archetypes,
+            Characters = characters.Select(character => new
+            {
+                Id = character.Id,
+                Name = character.Name,
+                Image = character.Image,
+                Audio = character.Audio,
+                Metadata = character.Metadata == null ? null : new
+                {
+                    Role = character.Metadata.Role ?? new List<string>(),
+                    Archetype = character.Metadata.Archetype ?? new List<string>(),
+                    Species = character.Metadata.Species,
+                    Age = character.Metadata.Age,
+                    Traits = character.Metadata.Traits ?? new List<string>(),
+                    Backstory = character.Metadata.Backstory
+                }
+            }).ToList(),
+            Scenes = scenes.Select(scene =>
+            {
+                var media = scene.Media;
+                var hasMedia = media != null && (!string.IsNullOrWhiteSpace(media.Image) ||
+                                                 !string.IsNullOrWhiteSpace(media.Audio) ||
+                                                 !string.IsNullOrWhiteSpace(media.Video));
+
+                var branches = scene.Branches ?? new List<Branch>();
+                var echoReveals = scene.EchoReveals ?? new List<EchoReveal>();
+
+                return new
+                {
+                    Id = scene.Id,
+                    Title = scene.Title,
+                    Type = scene.Type.ToString().ToLowerInvariant(),
+                    Description = scene.Description,
+                    NextScene = string.IsNullOrWhiteSpace(scene.NextSceneId) ? null : scene.NextSceneId,
+                    Difficulty = scene.Difficulty,
+                    Media = hasMedia ? new
+                    {
+                        Image = media?.Image,
+                        Audio = media?.Audio,
+                        Video = media?.Video
+                    } : null,
+                    Branches = branches.Select(branch => new
+                    {
+                        Choice = branch.Choice,
+                        NextScene = string.IsNullOrWhiteSpace(branch.NextSceneId) ? null : branch.NextSceneId,
+                        EchoLog = branch.EchoLog == null ? null : new
+                        {
+                            EchoType = branch.EchoLog.EchoType,
+                            Description = branch.EchoLog.Description,
+                            Strength = branch.EchoLog.Strength
+                        },
+                        CompassChange = branch.CompassChange == null ? null : new
+                        {
+                            Axis = branch.CompassChange.Axis,
+                            Delta = branch.CompassChange.Delta,
+                            DevelopmentalLink = branch.CompassChange.DevelopmentalLink
+                        }
+                    }).ToList(),
+                    EchoReveals = echoReveals.Select(reveal => new
+                    {
+                        EchoType = reveal.EchoType,
+                        MinStrength = reveal.MinStrength,
+                        TriggerSceneId = reveal.TriggerSceneId,
+                        MaxAgeScenes = reveal.MaxAgeScenes,
+                        RevealMechanic = reveal.RevealMechanic,
+                        Required = reveal.Required
+                    }).ToList()
+                };
+            }).ToList()
+        };
+
+        var serialized = JsonSerializer.Serialize(payload, SchemaSerializerOptions);
+        var errors = ScenarioJsonSchema.Validate(serialized);
+
+        if (errors.Count > 0)
+        {
+            var details = string.Join("; ", errors.Select(e => e.ToString()));
+            throw new ScenarioValidationException($"Scenario document does not match the required schema: {details}");
+        }
+    }
+
     public async Task<List<Scenario>> GetFeaturedScenariosAsync()
     {
         // Return a curated list of featured scenarios
@@ -341,7 +442,7 @@ public class ScenarioApiService : IScenarioApiService
 
                     if (!scenario.CoreAxes.Contains(change.Axis))
                     {
-                        Console.WriteLine(change.Axis);
+                        // TODO: re-enable strict validation when master axis list is finalized.
                         //throw new ScenarioValidationException($"Invalid compass axis '{change.Axis}' not defined in scenario (Scene ID: {scene.Id}, Choice: {branch.Choice})");
                     }
                 }

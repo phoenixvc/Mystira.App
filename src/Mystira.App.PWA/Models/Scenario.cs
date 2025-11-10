@@ -22,7 +22,9 @@ public class Scenario
     public string Difficulty { get; set; } = string.Empty;
     public string SessionLength { get; set; } = string.Empty;
     public string[] Archetypes { get; set; } = Array.Empty<string>();
-    public string MinimumAge { get; set; } = string.Empty;
+    public int MinimumAge { get; set; }
+    public string AgeGroup { get; set; } = string.Empty;
+    public string[] CoreAxes { get; set; } = Array.Empty<string>();
     public string Summary { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     

@@ -1,3 +1,4 @@
+using System.Linq;
 using YamlDotNet.Serialization;
 
 namespace Mystira.App.Domain.Models;
@@ -26,11 +27,17 @@ public class YamlScenario
     [YamlMember(Alias = "archetypes")]
     public List<string> Archetypes { get; set; } = new();
 
+    [YamlMember(Alias = "age_group")]
+    public string AgeGroup { get; set; } = string.Empty;
+
     [YamlMember(Alias = "minimum_age")]
     public int MinimumAge { get; set; } = 1;
 
+    [YamlMember(Alias = "core_axes")]
+    public List<string> CoreAxes { get; set; } = new();
+
     [YamlMember(Alias = "compass_axes")]
-    public List<string> CompassAxes { get; set; } = new();
+    public List<string> LegacyCompassAxes { get; set; } = new();
 
     [YamlMember(Alias = "summary")]
     public string Summary { get; set; } = string.Empty;
@@ -47,6 +54,8 @@ public class YamlScenario
     // Convert to domain model
     public Scenario ToDomainModel()
     {
+        var axes = CoreAxes?.Any() == true ? CoreAxes : LegacyCompassAxes ?? new List<string>();
+
         return new Scenario
         {
             Id = Id,
@@ -56,8 +65,9 @@ public class YamlScenario
             Difficulty = Enum.Parse<DifficultyLevel>(Difficulty),
             SessionLength = Enum.Parse<SessionLength>(SessionLength),
             Archetypes = Archetypes,
+            AgeGroup = AgeGroup,
             MinimumAge = MinimumAge,
-            CoreAxes = CompassAxes,
+            CoreAxes = axes,
             CreatedAt = DateTime.TryParse(CreatedAt, out var createdAt) ? createdAt : DateTime.UtcNow,
             Scenes = Scenes.Select(s => s.ToDomainModel()).ToList()
         };
@@ -78,26 +88,43 @@ public class YamlScene
     [YamlMember(Alias = "description")]
     public string Description { get; set; } = string.Empty;
 
+    [YamlMember(Alias = "next_scene")]
+    public string? NextScene { get; set; }
+
+    [YamlMember(Alias = "next_scene_id")]
+    public string? LegacyNextSceneId { get; set; }
+
+    [YamlMember(Alias = "difficulty")]
+    public int? Difficulty { get; set; }
+
     [YamlMember(Alias = "media")]
     public YamlMediaReferences? Media { get; set; }
 
     [YamlMember(Alias = "branches")]
     public List<YamlBranch> Branches { get; set; } = new();
 
+    [YamlMember(Alias = "echo_reveals")]
+    public List<YamlEchoRevealReference> EchoReveals { get; set; } = new();
+
     [YamlMember(Alias = "echo_reveal_references")]
-    public List<YamlEchoRevealReference> EchoRevealReferences { get; set; } = new();
+    public List<YamlEchoRevealReference> LegacyEchoRevealReferences { get; set; } = new();
 
     public Scene ToDomainModel()
     {
+        var nextSceneId = !string.IsNullOrWhiteSpace(NextScene) ? NextScene : LegacyNextSceneId;
+        var echoReveals = (EchoReveals?.Any() == true ? EchoReveals : LegacyEchoRevealReferences) ?? new List<YamlEchoRevealReference>();
+
         return new Scene
         {
             Id = Id,
             Title = Title,
             Type = Enum.Parse<SceneType>(Type, true),
             Description = Description,
+            NextSceneId = string.IsNullOrWhiteSpace(nextSceneId) ? null : nextSceneId,
+            Difficulty = Difficulty,
             Media = Media?.ToDomainModel(),
             Branches = Branches.Select(b => b.ToDomainModel()).ToList(),
-            EchoReveals = EchoRevealReferences.Select<YamlEchoRevealReference, EchoReveal>(e => e.ToDomainModel()).ToList()
+            EchoReveals = echoReveals.Select<YamlEchoRevealReference, EchoReveal>(e => e.ToDomainModel()).ToList()
         };
     }
 }
@@ -129,8 +156,11 @@ public class YamlBranch
     [YamlMember(Alias = "choice")]
     public string Choice { get; set; } = string.Empty;
 
+    [YamlMember(Alias = "next_scene")]
+    public string? NextScene { get; set; }
+
     [YamlMember(Alias = "next_scene_id")]
-    public string NextSceneId { get; set; } = string.Empty;
+    public string? LegacyNextSceneId { get; set; }
 
     [YamlMember(Alias = "echo_log")]
     public YamlEchoLog? EchoLog { get; set; }
@@ -140,10 +170,12 @@ public class YamlBranch
 
     public Branch ToDomainModel()
     {
+        var nextSceneId = !string.IsNullOrWhiteSpace(NextScene) ? NextScene : LegacyNextSceneId;
+
         return new Branch
         {
             Choice = Choice,
-            NextSceneId = NextSceneId,
+            NextSceneId = string.IsNullOrWhiteSpace(nextSceneId) ? string.Empty : nextSceneId,
             EchoLog = EchoLog?.ToDomainModel(),
             CompassChange = CompassChange?.ToDomainModel()
         };
@@ -181,12 +213,16 @@ public class YamlCompassChange
     [YamlMember(Alias = "delta")]
     public float Delta { get; set; }
 
+    [YamlMember(Alias = "developmental_link")]
+    public string? DevelopmentalLink { get; set; }
+
     public CompassChange ToDomainModel()
     {
         return new CompassChange
         {
             Axis = Axis,
-            Delta = Delta
+            Delta = Delta,
+            DevelopmentalLink = DevelopmentalLink
         };
     }
 }

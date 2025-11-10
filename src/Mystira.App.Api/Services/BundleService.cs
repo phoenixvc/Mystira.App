@@ -292,14 +292,18 @@ public class BundleService : IBundleService
         {
             Title = scenario.Title,
             Description = scenario.Description,
-            MinimumAge = scenario.MinimumAge,
-            SessionLength = scenario.SessionLength,
-            Difficulty = scenario.Difficulty,
             Tags = scenario.Tags,
+            Difficulty = scenario.Difficulty,
+            SessionLength = scenario.SessionLength,
             Archetypes = scenario.Archetypes,
-            CompassAxes = scenario.CoreAxes,
+            AgeGroup = scenario.AgeGroup,
+            MinimumAge = scenario.MinimumAge,
+            CoreAxes = scenario.CoreAxes,
+            Characters = scenario.Characters,
             Scenes = scenario.Scenes
         };
+
+        createRequest.CompassAxes = scenario.CoreAxes;
 
         if (existingScenario != null)
         {
