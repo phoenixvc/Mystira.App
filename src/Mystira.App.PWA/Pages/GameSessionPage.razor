@@ -98,7 +98,7 @@ else
                                 <div class="d-flex flex-column align-items-center">
                                     @foreach (var choice in gameSession.CurrentScene.Choices.OrderBy(c => c.Order))
                                     {
-                                        <button class="choice-button mb-2" 
+                                        <button class="btn btn-primary-custom btn-lg mb-2" 
                                                 @onclick="() => HandleChoice(choice)"
                                                 disabled="@isProcessing">
                                             @if (isProcessing)
@@ -156,7 +156,7 @@ else
                                         </div>
                                     </div>
 
-                                    <button class="btn btn-primary-custom btn-lg"
+                                    <button class="btn btn-primary-custom btn-lg mb-2"
                                             @onclick="ContinueFromRoll"
                                             disabled="@isProcessing">
                                         @if (isProcessing)
@@ -192,7 +192,7 @@ else
                         {
                             <!-- Story Scene - just continue -->
                             <div class="text-center">
-                                <button class="btn btn-primary-custom btn-lg" 
+                                <button class="btn btn-primary-custom btn-lg mb-2" 
                                         @onclick="ContinueStory"
                                         disabled="@isProcessing">
                                     @if (isProcessing)
