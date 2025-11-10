@@ -61,6 +61,18 @@ html, body {
     box-shadow: 0 10px 25px rgba(139, 92, 246, 0.15);
 }
 
+.scenario-metadata {
+    border-top: 1px solid #E5E7EB;
+    padding-top: 0.75rem;
+}
+
+.scenario-metadata .badge {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+}
+
 .loading-spinner {
     width: 2rem;
     height: 2rem;
@@ -114,7 +126,6 @@ html, body {
 }
 
 .game-content {
-    min-height: 100vh;
     padding: 2rem 0;
 }
 
@@ -126,23 +137,7 @@ html, body {
     margin-bottom: 2rem;
 }
 
-.choice-button {
-    background: linear-gradient(135deg, var(--primary-color), #7C3AED);
-    border: none;
-    color: white;
-    padding: 1rem 2rem;
-    border-radius: 0.75rem;
-    font-weight: 500;
-    margin: 0.5rem;
-    transition: all 0.3s ease;
-    min-width: 200px;
-}
-
-.choice-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.25);
-    background: linear-gradient(135deg, #7C3AED, #6D28D9);
-}
+/* Choice button styles moved to GameSessionPage.razor for better specificity */
 
 .media-container {
     border-radius: 1rem;

@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components.WebAssembly.Http;
-using Mystira.PWA.Models;
+using Mystira.App.PWA.Models;
 
 namespace Mystira.App.PWA.Services;
 

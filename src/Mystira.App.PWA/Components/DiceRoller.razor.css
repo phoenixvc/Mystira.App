@@ -1,4 +1,4 @@
-﻿/* Component styles (consume global CSS vars; provide fallbacks) */
+/* Component styles (consume global CSS vars; provide fallbacks) */
 
 .dice-shell {
   display: grid;
@@ -13,50 +13,7 @@
   transition: background .3s ease, color .3s ease, border-color .3s ease;
 }
 
-.controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto auto;
-  gap: 0.75rem;
-  align-items: end;
-}
-
-.controls .group {
-  display: grid;
-  gap: 0.35rem;
-  font-size: 0.92rem;
-}
-
-.controls label { color: var(--muted, #6b7280); }
-
-.controls input[type="range"] { width: 100%; }
-
-.controls select,
-.controls input[type="range"],
-.controls input[type="checkbox"] {
-  accent-color: var(--accent, #22c55e);
-}
-
-.controls .toggles {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  color: var(--fg, #111827);
-}
-
-.roll-btn {
-  padding: 0.7rem 1rem;
-  border-radius: 0.9rem;
-  border: 1px solid var(--border, rgba(17,24,39,0.08));
-  background: linear-gradient(180deg, var(--accent, #22c55e), color-mix(in srgb, var(--accent, #22c55e) 82%, black));
-  color: white;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform .1s ease, filter .2s ease, opacity .2s ease, box-shadow .2s ease;
-  box-shadow: 0 6px 16px -10px var(--glow, rgba(52,211,153,0.35));
-}
-.roll-btn:hover { filter: brightness(1.02); box-shadow: 0 10px 24px -12px var(--glow, rgba(52,211,153,0.35)); }
-.roll-btn:disabled { opacity: .65; cursor: not-allowed; }
-.roll-btn:active { transform: translateY(1px) scale(0.985); }
+/* Controls section removed - dice is now clickable */
 
 /* Dice grid */
 .dice-area {
@@ -73,6 +30,18 @@
   transform: translateX(var(--drift, 0px));
   transition: transform .2s ease;
   will-change: transform;
+}
+
+.die.clickable {
+  cursor: pointer;
+}
+
+.die.clickable:hover {
+  transform: translateX(var(--drift, 0px)) scale(1.05);
+}
+
+.die.clickable:active {
+  transform: translateX(var(--drift, 0px)) scale(0.98);
 }
 
 /* Inner 3D layer rotates in 3D */
@@ -109,7 +78,7 @@
 .pip { fill: var(--pip, #111827); }
 
 .big-num {
-  font: 800 44px/1.1 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+  font: 800 52px/1.1 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
   fill: white;
   paint-order: stroke;
   stroke: rgba(0,0,0,0.25);
@@ -184,12 +153,9 @@
 
 /* Responsive */
 @media (max-width: 720px) {
-  .controls {
-    grid-template-columns: 1fr 1fr;
-  }
-  .roll-btn {
-    grid-column: 1 / -1;
-    justify-self: start;
+  .dice-area {
+    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+    gap: 0.6rem;
   }
 }
 
@@ -199,15 +165,11 @@
   padding: 0.5rem;
   border-radius: 0.9rem;
 }
-:host-context(.dice-mini) .controls {
-  grid-template-columns: 1fr auto;
-  gap: 0.5rem;
-}
 :host-context(.dice-mini) .dice-area {
   gap: 0.4rem;
   grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
 }
-:host-context(.dice-mini) .big-num { font-size: 34px; }
+:host-context(.dice-mini) .big-num { font-size: 40px; }
 :host-context(.dice-mini) .small-num { font-size: 10px; }
 
 /* === 3D Cube for d6 === */

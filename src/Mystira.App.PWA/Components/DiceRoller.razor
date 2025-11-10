@@ -1,24 +1,17 @@
-﻿@using System.Security.Cryptography
+@using System.Security.Cryptography
 @inject IJSRuntime JS
 
 <div class="dice-shell">
-    
-    <div class="row">
-        <div class="col-12 text-center mb-4">
-            <div class="controls">
-                <button type="button" class="roll-btn" @onclick="Roll" disabled="@IsRolling" aria-label="Roll the dice">
-                    @(IsRolling ? "Rolling..." : "Roll")
-                </button>
-            </div>
-        </div>
-    </div>
-    
 
     <div class="dice-area" role="group" aria-label="Dice results">
         @for (var i = 0; i < DiceCount; i++)
         {
             var value = i < Results.Count ? Results[i] : 1;
-            <div class="die @(IsRolling ? "rolling" : "")" style="@GetDieTransform(i)">
+            <div class="die @(IsRolling ? "rolling" : "") clickable" 
+                 style="@GetDieTransform(i)" 
+                 @onclick="Roll" 
+                 role="button" 
+                 aria-label="Roll the dice">
                 <div class="die-3d">
                     @if (Faces == 6)
                     {
