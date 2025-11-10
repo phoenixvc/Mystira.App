@@ -1,14 +1,13 @@
-using System.Text.Json;
 using Microsoft.JSInterop;
 using Mystira.App.PWA.Models;
+using System.Text.Json;
 
 namespace Mystira.App.PWA.Services;
 
-public class AuthService : IAuthService
+public class SimpleAuthService : IAuthService
 {
     private readonly IJSRuntime _jsRuntime;
-    private readonly ILogger<AuthService> _logger;
-    private readonly IApiClient _apiClient;
+    private readonly ILogger<SimpleAuthService> _logger;
     private const string AUTH_TOKEN_KEY = "mystira_auth_token";
     private const string ACCOUNT_KEY = "mystira_account";
     
@@ -17,11 +16,10 @@ public class AuthService : IAuthService
 
     public event EventHandler<bool>? AuthenticationStateChanged;
 
-    public AuthService(IJSRuntime jsRuntime, ILogger<AuthService> logger, IApiClient apiClient)
+    public SimpleAuthService(IJSRuntime jsRuntime, ILogger<SimpleAuthService> logger)
     {
         _jsRuntime = jsRuntime;
         _logger = logger;
-        _apiClient = apiClient;
     }
 
     public async Task<bool> IsAuthenticatedAsync()
@@ -58,39 +56,29 @@ public class AuthService : IAuthService
         }
     }
 
-    public async Task<bool> LoginAsync(string email, string password)
+    public async Task LoginAsync(bool rememberMe = false, string? connection = null)
     {
         try
         {
-            _logger.LogInformation("Attempting login for email: {Email}", email);
+            _logger.LogInformation("Initiating login with rememberMe: {RememberMe}, connection: {Connection}", rememberMe, connection);
             
-            // For demo purposes, create a simple demo authentication
-            // In a real implementation, this would call an authentication API
-            var demoAccount = new Account
+            // For demo purposes, redirect to Auth0 login page
+            var loginUrl = "/authentication/login";
+            if (!string.IsNullOrEmpty(connection))
             {
-                Auth0UserId = $"demo|{Guid.NewGuid():N}",
-                Email = email,
-                DisplayName = email.Split('@')[0]
-            };
+                LoginUrl += "?connection=" + connection;
+            }
+            if (rememberMe)
+            {
+                LoginUrl += "&prompt=consent&scope=openid profile email offline_access";
+            }
             
-            var demoToken = $"demo_token_{Guid.NewGuid():N}";
-            
-            // Store token and account in localStorage
-            await SetStoredTokenAsync(demoToken);
-            await SetStoredAccountAsync(demoAccount);
-            
-            _isAuthenticated = true;
-            _currentAccount = demoAccount;
-            
-            _logger.LogInformation("Login successful for: {Email}", email);
-            AuthenticationStateChanged?.Invoke(this, true);
-            
-            return true;
+            await _jsRuntime.InvokeVoidAsync("window.location.href", LoginUrl);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during login");
-            return false;
+            _logger.LogError(ex, "Error during login initiation");
+            throw;
         }
     }
 
@@ -107,12 +95,28 @@ public class AuthService : IAuthService
             _isAuthenticated = false;
             _currentAccount = null;
             
+            // Redirect to logout page
+            await _jsRuntime.InvokeVoidAsync("window.location.href", "/authentication/logout");
+            
             _logger.LogInformation("Logout successful");
             AuthenticationStateChanged?.Invoke(this, false);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during logout");
+        }
+    }
+
+    public async Task<string?> GetAccessTokenAsync()
+    {
+        try
+        {
+            return await GetStoredTokenAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting access token");
+            return null;
         }
     }
 
@@ -126,30 +130,6 @@ public class AuthService : IAuthService
         {
             _logger.LogError(ex, "Error getting stored token");
             return null;
-        }
-    }
-
-    private async Task SetStoredTokenAsync(string token)
-    {
-        try
-        {
-            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", AUTH_TOKEN_KEY, token);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error setting stored token");
-        }
-    }
-
-    private async Task ClearStoredTokenAsync()
-    {
-        try
-        {
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", AUTH_TOKEN_KEY);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error clearing stored token");
         }
     }
 
@@ -170,6 +150,18 @@ public class AuthService : IAuthService
         }
     }
 
+    private async Task SetStoredTokenAsync(string token)
+    {
+        try
+        {
+            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", AUTH_TOKEN_KEY, token);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting stored token");
+        }
+    }
+
     private async Task SetStoredAccountAsync(Account account)
     {
         try
@@ -180,6 +172,18 @@ public class AuthService : IAuthService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error setting stored account");
+        }
+    }
+
+    private async Task ClearStoredTokenAsync()
+    {
+        try
+        {
+            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", AUTH_TOKEN_KEY);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error clearing stored token");
         }
     }
 

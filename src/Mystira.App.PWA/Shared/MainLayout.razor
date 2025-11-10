@@ -39,6 +39,14 @@
                         </li>
                     }
                 </ul>
+                
+                <!-- Simple Sign In/Out Button -->
+                <div class="ms-3">
+                    <a href="/login" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt me-2"></i>
+                        Sign In
+                    </a>
+                </div>
             </div>
         </div>
     </nav>
@@ -47,14 +55,6 @@
     <main class="flex-grow-1">
         @Body
     </main>
-
-    <!-- PWA Install Prompt -->
-    <div id="install-prompt" class="install-prompt" style="display: none;">
-        <button id="install-button" class="btn btn-install" onclick="installPWA()">
-            <i class="fas fa-download me-2"></i>
-            Install App
-        </button>
-    </div>
 
     <!-- Footer -->
     <footer class="bg-light py-3 mt-4">
@@ -90,28 +90,3 @@
         GameSessionService.GameSessionChanged -= OnGameSessionChanged;
     }
 }
-
-<script>
-    // Connection status monitoring
-    function updateConnectionStatus() {
-        const statusElement = document.getElementById('connection-status');
-        const offlineIndicator = document.getElementById('offline-indicator');
-        
-        if (navigator.onLine) {
-            if (statusElement) statusElement.textContent = 'Online';
-            if (statusElement) statusElement.className = 'text-success';
-            if (offlineIndicator) offlineIndicator.style.display = 'none';
-        } else {
-            if (statusElement) statusElement.textContent = 'Offline';
-            if (statusElement) statusElement.className = 'text-warning';
-            if (offlineIndicator) offlineIndicator.style.display = 'block';
-        }
-    }
-
-    // Monitor connection status
-    window.addEventListener('online', updateConnectionStatus);
-    window.addEventListener('offline', updateConnectionStatus);
-    
-    // Initial status check
-    document.addEventListener('DOMContentLoaded', updateConnectionStatus);
-</script>

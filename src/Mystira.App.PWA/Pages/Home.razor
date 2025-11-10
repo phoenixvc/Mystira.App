@@ -3,6 +3,7 @@
 @using Mystira.App.PWA.Components
 @using Mystira.App.PWA.Services
 @using Mystira.App.PWA.Models
+@using Mystira.App.Domain.Models
 @implements IDisposable
 
 <PageTitle>Mystira</PageTitle>
@@ -17,13 +18,16 @@
             <p class="lead text-muted">
                 Dynamic Adventures for Young Heroes
             </p>
+            <p class="text-muted">
+                Welcome to your storytelling adventure platform!
+            </p>
         </div>
     </div>
     
     <style>
         .dice-roller-container {
-            max-width: 300px; /* Adjust this value to control the width */
-            margin: 0 auto; /* This centers the container horizontally */
+            max-width: 300px;
+            margin: 0 auto;
             padding: 15px;
             background-color: var(--bs-body-bg, white);
             border-radius: 8px;
@@ -40,128 +44,178 @@
             </div>
         </div>
     }
-    else if (!isAuthenticated)
+    else
     {
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card shadow-lg">
-                    <div class="card-body p-5 text-center">
-                        <i class="fas fa-user-shield fa-4x text-primary-custom mb-4"></i>
-                        <h3 class="card-title mb-3">Welcome to Mystira</h3>
-                        <p class="card-text text-muted mb-4">
-                            Sign in to access your adventures and create memorable experiences for young heroes.
-                        </p>
-                        <button class="btn btn-primary-custom btn-lg" @onclick="ShowSignIn">
-                            <i class="fas fa-sign-in-alt me-2"></i>
-                            Sign In
+        <div class="row">
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-plus-circle text-success me-2"></i>
+                            Create New Adventure
+                        </h5>
+                        <p class="card-text">Start a new storytelling adventure with your heroes.</p>
+                        <button class="btn btn-primary-custom" @onclick="CreateNewGameSession">
+                            <i class="fas fa-play me-2"></i>
+                            Start Adventure
                         </button>
                     </div>
                 </div>
             </div>
-        </div>
-    }
-    else if (scenarios.Any())
-    {
-        <div class="row">
-            @foreach (var scenario in scenarios)
+            
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-history text-info me-2"></i>
+                            Recent Adventures
+                        </h5>
+                        <p class="card-text">Continue or review your previous adventures.</p>
+                        <button class="btn btn-outline-primary-custom" @onclick="LoadRecentSessions">
+                            <i class="fas fa-clock me-2"></i>
+                            View History
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-dice text-warning me-2"></i>
+                            Quick Dice Roll
+                        </h5>
+                        <p class="card-text">Roll dice for spontaneous challenges.</p>
+                        <div class="dice-roller-container">
+                            <DiceRoller />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Current Session Display -->
+            @if (CurrentGameSession != null)
             {
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card scenario-card h-100">
-                        @if (!string.IsNullOrEmpty(scenario.ImageUrl))
-                        {
-                            <img src="@scenario.ImageUrl" class="card-img-top" alt="@scenario.Name" style="height: 200px; object-fit: cover;" />
-                        }
-                        
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title">@scenario.Name</h5>
-                            <p class="card-text flex-grow-1">@scenario.Description</p>
-                            
-                            <div class="mt-auto">
-                                <!-- Scenario Metadata -->
-                                <div class="scenario-metadata mb-3">
-                                    <div class="row g-2">
-                                        <div class="col-6">
-                                            <span class="badge bg-info text-dark me-1">
-                                                <i class="fas fa-users me-1"></i>@scenario.MinimumAge
-                                            </span>
-                                        </div>
-                                        <div class="col-6">
-                                            <span class="badge bg-warning me-1">
-                                                <i class="fas fa-signal me-1"></i>@scenario.Difficulty
-                                            </span>
-                                        </div>
-                                        <div class="col-6">
-                                            <span class="badge bg-success me-1">
-                                                <i class="fas fa-clock me-1"></i>@scenario.SessionLength
-                                            </span>
-                                        </div>
-                                        <div class="col-6">
-                                            <!-- Empty cell for balance -->
-                                        </div>
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card border-success">
+                            <div class="card-header bg-success text-white">
+                                <i class="fas fa-play-circle me-2"></i>
+                                Current Adventure: @CurrentGameSession.ScenarioName
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <p><strong>Started:</strong> @CurrentGameSession.StartTime.ToString("g")</p>
+                                        <p><strong>Players:</strong> @(CurrentGameSession.PlayerNames?.Count ?? 0)</p>
                                     </div>
-                                    
-                                    @if (scenario.Tags?.Any() == true)
-                                    {
-                                        <div class="mt-2">
-                                            @foreach (var tag in scenario.Tags.Take(3))
-                                            {
-                                                <span class="badge bg-secondary me-1">@tag</span>
-                                            }
-                                            @if (scenario.Tags.Length > 3)
-                                            {
-                                                <span class="badge bg-secondary">+@(scenario.Tags.Length - 3)</span>
-                                            }
-                                        </div>
-                                    }
+                                    <div class="col-md-4 text-end">
+                                        <a href="/gamesession/@CurrentGameSession.Id" class="btn btn-success btn-lg">
+                                            <i class="fas fa-arrow-right me-2"></i>
+                                            Continue Adventure
+                                        </a>
+                                    </div>
                                 </div>
-                                
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <small class="text-muted">
-                                        <i class="fas fa-calendar me-1"></i>
-                                        @scenario.UpdatedAt.ToString("MMM d")
-                                    </small>
-                                </div>
-                                
-                                <button class="btn btn-primary-custom btn-lg w-100" 
-                                        @onclick="() => StartAdventure(scenario)"
-                                        disabled="@isStartingAdventure">
-                                    @if (isStartingAdventure)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                        <span>Starting...</span>
-                                    }
-                                    else
-                                    {
-                                        <i class="fas fa-play me-2"></i>
-                                        <span>Start Adventure</span>
-                                    }
-                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             }
-        </div>
-    }
-    else
-    {
-        <div class="row justify-content-center">
-            <div class="col-md-6 text-center">
-                <div class="card border-0 shadow">
-                    <div class="card-body p-5">
-                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-                        <h3>No Adventures Available</h3>
-                        <p class="text-muted mb-4">
-                            We couldn't load any adventures right now. This might be due to a connection issue.
-                        </p>
-                        <button class="btn btn-primary-custom" @onclick="LoadScenarios">
-                            <i class="fas fa-refresh me-2"></i>
-                            Try Again
-                        </button>
+            
+            <!-- Scenarios List -->
+            @if (scenarios.Any())
+            {
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <h3 class="mb-3">
+                            <i class="fas fa-book me-2"></i>
+                            Available Scenarios
+                        </h3>
+                        <div class="row">
+                            @foreach (var scenario in scenarios.Take(6))
+                            {
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card scenario-card h-100">
+                                        @if (!string.IsNullOrEmpty(scenario.ImageUrl))
+                                        {
+                                            <img src="@scenario.ImageUrl" class="card-img-top" alt="@scenario.Name" style="height: 200px; object-fit: cover;" />
+                                        }
+                                        
+                                        <div class="card-body d-flex flex-column">
+                                            <h5 class="card-title">@scenario.Name</h5>
+                                            <p class="card-text flex-grow-1">@scenario.Description</p>
+                                            
+                                            <div class="mt-auto">
+                                                <!-- Scenario Metadata -->
+                                                <div class="scenario-metadata mb-3">
+                                                    <div class="row g-2">
+                                                        <div class="col-6">
+                                                            <span class="badge bg-info text-dark me-1">
+                                                                <i class="fas fa-users me-1"></i>@scenario.MinimumAge
+                                                            </span>
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <span class="badge bg-warning me-1">
+                                                                <i class="fas fa-signal me-1"></i>@scenario.Difficulty
+                                                            </span>
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <span class="badge bg-success me-1">
+                                                                <i class="fas fa-clock me-1"></i>@scenario.SessionLength
+                                                            </span>
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <!-- Empty cell for balance -->
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    @if (scenario.Tags?.Any() == true)
+                                                    {
+                                                        <div class="mt-2">
+                                                            @foreach (var tag in scenario.Tags.Take(3))
+                                                            {
+                                                                <span class="badge bg-secondary me-1">@tag</span>
+                                                            }
+                                                            @if (scenario.Tags.Length > 3)
+                                                            {
+                                                                <span class="badge bg-secondary">+@(scenario.Tags.Length - 3)</span>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </div>
+                                                
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-calendar me-1"></i>
+                                                        @scenario.UpdatedAt.ToString("MMM d")
+                                                    </small>
+                                                </div>
+                                                
+                                                <button class="btn btn-primary-custom btn-lg w-100" 
+                                                        @onclick="() => StartAdventure(scenario)"
+                                                        disabled="@isStartingAdventure">
+                                                    @if (isStartingAdventure)
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                                        <span>Starting...</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="fas fa-play me-2"></i>
+                                                        <span>Start Adventure</span>
+                                                    }
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
+            }
+        }
     }
 </div>
 
@@ -172,10 +226,10 @@
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ILogger<Home> Logger { get; set; } = default!;
 
-    private List<Scenario> scenarios = new();
+    private List<Mystira.App.Domain.Models.Scenario> scenarios = new();
+    private Mystira.App.Domain.Models.GameSession? CurrentGameSession => GameSessionService.CurrentGameSession;
     private bool isLoading = true;
     private bool isStartingAdventure = false;
-    private bool isAuthenticated = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -187,7 +241,7 @@
             AuthService.AuthenticationStateChanged += OnAuthenticationStateChanged;
             
             // Check current authentication status
-            isAuthenticated = await AuthService.IsAuthenticatedAsync();
+            var isAuthenticated = await AuthService.IsAuthenticatedAsync();
             
             Logger.LogInformation("Auth service initialized. IsAuthenticated: {IsAuthenticated}", isAuthenticated);
             
@@ -212,7 +266,6 @@
 
     private void OnAuthenticationStateChanged(object? sender, bool authenticated)
     {
-        isAuthenticated = authenticated;
         InvokeAsync(async () => 
         {
             if (authenticated)
@@ -225,14 +278,6 @@
             }
             StateHasChanged();
         });
-    }
-
-    public void Dispose()
-    {
-        if (AuthService != null)
-        {
-            AuthService.AuthenticationStateChanged -= OnAuthenticationStateChanged;
-        }
     }
 
     private async Task LoadScenarios()
@@ -300,27 +345,23 @@
         }
     }
 
-    private async Task ShowSignIn()
+    private async Task CreateNewGameSession()
     {
-        try
+        // Navigate to scenario selection or create new scenario page
+        Navigation.NavigateTo("/scenarios");
+    }
+
+    private async Task LoadRecentSessions()
+    {
+        // Navigate to sessions history page
+        Navigation.NavigateTo("/sessions");
+    }
+
+    public void Dispose()
+    {
+        if (AuthService != null)
         {
-            Logger.LogInformation("Performing demo sign in...");
-            
-            // For demo purposes, use a simple authentication
-            var success = await AuthService.LoginAsync("demo@mystira.com", "password");
-            
-            if (success)
-            {
-                Logger.LogInformation("Demo sign in successful");
-            }
-            else
-            {
-                Logger.LogError("Demo sign in failed");
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error during sign in");
+            AuthService.AuthenticationStateChanged -= OnAuthenticationStateChanged;
         }
     }
 }

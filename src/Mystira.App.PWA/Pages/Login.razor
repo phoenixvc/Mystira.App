@@ -1,0 +1,209 @@
+@page "/login"
+@using Mystira.App.PWA.Services
+@using Mystira.App.PWA.Models
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+
+<div class="container-fluid vh-100">
+    <div class="row h-100">
+        <div class="col-lg-6 mx-auto align-self-center">
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-dragon fa-4x text-primary mb-3"></i>
+                        <h1 class="h3 mb-3">Welcome to Mystira</h1>
+                        <p class="text-muted">Sign in to manage your storytelling adventures</p>
+                    </div>
+
+                    @if (showErrorMessage)
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            @errorMessage
+                        </div>
+                    }
+
+                    <!-- Email Input Form -->
+                    <div class="mb-4">
+                        <label for="email" class="form-label">Email address</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-envelope"></i>
+                            </span>
+                            <input type="email" 
+                                   class="form-control form-control-lg" 
+                                   id="email" 
+                                   placeholder="Enter your email"
+                                   @bind="email"
+                                   @onkeypress="HandleEmailKeyPress" />
+                        </div>
+                    </div>
+
+                    <!-- Stay Signed In Checkbox -->
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="rememberMe" @bind="rememberMe">
+                            <label class="form-check-label" for="rememberMe">
+                                Stay signed in (uses secure rotating refresh tokens). Turn off on shared devices.
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Continue Button -->
+                    <div class="d-grid mb-4">
+                        <button class="btn btn-primary btn-lg" @onclick="ContinueWithEmail" disabled="@(string.IsNullOrWhiteSpace(email))">
+                            <i class="fas fa-arrow-right me-2"></i>
+                            Continue
+                        </button>
+                    </div>
+
+                    <!-- More Options -->
+                    <div class="text-center mb-4">
+                        <button class="btn btn-link text-muted p-0" @onclick="ToggleMoreOptions">
+                            <i class="fas fa-chevron-@(showMoreOptions ? "up" : "down") me-1"></i>
+                            More options
+                        </button>
+                    </div>
+
+                    <!-- Social Login Options -->
+                    @if (showMoreOptions)
+                    {
+                        <div class="border-top pt-4">
+                            <p class="text-center text-muted mb-3">Or continue with:</p>
+                            
+                            <div class="d-grid gap-2">
+                                <!-- Google -->
+                                <button class="btn btn-outline-secondary d-flex align-items-center justify-content-center" @onclick="() => LoginWithSocial('google-oauth2')">
+                                    <i class="fab fa-google me-2"></i>
+                                    Continue with Google
+                                </button>
+
+                                <!-- Apple -->
+                                <button class="btn btn-outline-secondary d-flex align-items-center justify-content-center" @onclick="() => LoginWithSocial('apple')">
+                                    <i class="fab fa-apple me-2"></i>
+                                    Continue with Apple
+                                </button>
+
+                                <!-- Microsoft -->
+                                <button class="btn btn-outline-secondary d-flex align-items-center justify-content-center" @onclick="() => LoginWithSocial('windowslive')">
+                                    <i class="fab fa-microsoft me-2"></i>
+                                    Continue with Microsoft
+                                </button>
+
+                                <!-- Email Magic Link -->
+                                <button class="btn btn-outline-primary d-flex align-items-center justify-content-center" @onclick="LoginWithEmailMagicLink">
+                                    <i class="fas fa-magic me-2"></i>
+                                    Continue with Email (Magic Link)
+                                </button>
+
+                                <!-- Password (hidden by default) -->
+                                @if (showPasswordOption)
+                                {
+                                    <button class="btn btn-outline-warning d-flex align-items-center justify-content-center" @onclick="LoginWithPassword">
+                                        <i class="fas fa-key me-2"></i>
+                                        Use a Password
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Sign Up Link -->
+                    <div class="text-center mt-4">
+                        <p class="text-muted mb-0">
+                            New to Mystira? 
+                            <a href="#" class="text-decoration-none" @onclick="NavigateToSignUp">
+                                Create an account
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string email = string.Empty;
+    private bool rememberMe = false;
+    private bool showMoreOptions = false;
+    private bool showPasswordOption = false; // Hidden by default
+    private bool showErrorMessage = false;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if user is already authenticated
+        if (await AuthService.IsAuthenticatedAsync())
+        {
+            NavigationManager.NavigateTo("/");
+        }
+    }
+
+    private void HandleEmailKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Code == "Enter" && !string.IsNullOrWhiteSpace(email))
+        {
+            ContinueWithEmail();
+        }
+    }
+
+    private async Task ContinueWithEmail()
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            ShowError("Please enter your email address");
+            return;
+        }
+
+        // Default to passwordless email magic link
+        await LoginWithEmailMagicLink();
+    }
+
+    private async Task LoginWithEmailMagicLink()
+    {
+        try
+        {
+            await AuthService.LoginAsync(rememberMe, "email");
+        }
+        catch (Exception ex)
+        {
+            ShowError("Failed to initiate magic link login. Please try again.");
+        }
+    }
+
+    private async Task LoginWithSocial(string connection)
+    {
+        try
+        {
+            await AuthService.LoginAsync(rememberMe, connection);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to initiate {connection} login. Please try again.");
+        }
+    }
+
+    private async Task LoginWithPassword()
+    {
+        // For future implementation when password login is enabled
+        ShowError("Password login is not yet enabled. Please use magic link or social login.");
+    }
+
+    private void ToggleMoreOptions()
+    {
+        showMoreOptions = !showMoreOptions;
+    }
+
+    private void NavigateToSignUp()
+    {
+        // Navigate to Auth0 signup page
+        NavigationManager.NavigateTo("/authentication/login?screen_hint=signup");
+    }
+
+    private void ShowError(string message)
+    {
+        errorMessage = message;
+        showErrorMessage = true;
+    }
+}
