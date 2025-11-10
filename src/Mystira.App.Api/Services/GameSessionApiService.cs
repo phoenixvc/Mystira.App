@@ -46,7 +46,7 @@ public class GameSessionApiService : IGameSessionApiService
         };
 
         // Initialize compass tracking for scenario axes
-        foreach (var axis in scenario.CompassAxes)
+        foreach (var axis in scenario.CoreAxes)
         {
             session.CompassValues[axis] = new CompassTracking
             {

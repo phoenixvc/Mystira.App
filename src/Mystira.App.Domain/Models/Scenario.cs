@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace Mystira.App.Domain.Models;
 
 public class Scenario
@@ -44,7 +42,7 @@ public class Scene
     public string Title { get; set; } = string.Empty;
     public SceneType Type { get; set; }
     public string Description { get; set; } = string.Empty;
-    public string? NextScene { get; set; }
+    public string? NextSceneId { get; set; }
     public MediaReferences? Media { get; set; }
     public List<Branch> Branches { get; set; } = new();
     public List<EchoReveal> EchoReveals { get; set; } = new();
@@ -54,7 +52,7 @@ public class Scene
 public class Branch
 {
     public string Choice { get; set; } = string.Empty;
-    public string NextScene { get; set; } = string.Empty;
+    public string NextSceneId { get; set; } = string.Empty;
     public EchoLog? EchoLog { get; set; }
     public CompassChange? CompassChange { get; set; }
 }
@@ -71,8 +69,6 @@ public class EchoLog
     public string EchoType { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public double Strength { get; set; }
-
-    [JsonIgnore]
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 }
 

@@ -25,7 +25,6 @@ public static class ScenarioRequestCreator
             throw new DataException("Scenario does not contain archetypes.");
         if (!scenarioData.TryGetValue("minimum_age", out var minimumAge)) 
             throw new DataException("Scenario does not contain minimum_age.");
-        var summary = scenarioData.GetValueOrDefault("summary", "");
         var compassAxes = scenarioData.GetValueOrDefault("compass_axes", new List<object>());
         var scenes = (List<object>)scenarioData.GetValueOrDefault("scenes", new List<object>());
         if (scenes.Count == 0)
@@ -40,8 +39,7 @@ public static class ScenarioRequestCreator
             Difficulty = difficulty,
             SessionLength = sessionLength,
             Archetypes = ((List<object>)archetypes).Select(o => (string)o).ToList(),
-            MinimumAge = (string)minimumAge,
-            Summary = (string)summary,
+            MinimumAge = (int)minimumAge,
             CompassAxes = ((List<object>)compassAxes).Select(o => (string)o).ToList(),
             Scenes = scenes.Select(o => ParseSceneFromDictionary((Dictionary<object, object>)o)).ToList()
         };
@@ -151,26 +149,13 @@ public static class ScenarioRequestCreator
             {
                 if (echoObj is IDictionary<object, object> echoDict)
                 {
-                    scene.EchoRevealReferences.Add(ParseEchoRevealReference(echoDict));
+                    scene.EchoReveals.Add(ParseEchoRevealReference(echoDict));
                 }
             }
         }
         // No else needed as EchoRevealReferences defaults to an empty list
         
-        // Parse session achievements - defaults to empty list if not found
-        if (sceneDict.TryGetValue("sessionAchievements", out var achievementsObj) && 
-            achievementsObj is IList<object> achievementsList)
-        {
-            foreach (var achievementObj in achievementsList)
-            {
-                if (achievementObj is IDictionary<object, object> achievementDict)
-                {
-                    scene.SessionAchievements.Add(ParseSessionAchievement(achievementDict));
-                }
-            }
-        }
         // No else needed as SessionAchievements defaults to an empty list
-        
         return scene;
     }
 
@@ -403,9 +388,9 @@ public static class ScenarioRequestCreator
         return compassChange;
     }
 
-    private static EchoRevealReference ParseEchoRevealReference(IDictionary<object, object> revealDict)
+    private static EchoReveal ParseEchoRevealReference(IDictionary<object, object> revealDict)
     {
-        var reveal = new EchoRevealReference();
+        var reveal = new EchoReveal();
     
         // Parse EchoType (required)
         if (revealDict.TryGetValue("echoType", out var echoTypeObj) || 

@@ -339,7 +339,7 @@ public class ScenarioApiService : IScenarioApiService
                     if (string.IsNullOrWhiteSpace(change.Axis))
                         throw new ScenarioValidationException($"Compass axis cannot be empty (Scene ID: {scene.Id}, Choice: {branch.Choice})");
 
-                    if (!scenario.CompassAxes.Contains(change.Axis))
+                    if (!scenario.CoreAxes.Contains(change.Axis))
                     {
                         Console.WriteLine(change.Axis);
                         //throw new ScenarioValidationException($"Invalid compass axis '{change.Axis}' not defined in scenario (Scene ID: {scene.Id}, Choice: {branch.Choice})");

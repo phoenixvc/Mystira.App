@@ -100,6 +100,8 @@ public class CreateScenarioRequest
 
     [Required]
     public List<Scene> Scenes { get; set; } = new();
+
+    public List<string> CompassAxes { get; set; }
 }
 
 public class StartGameSessionRequest

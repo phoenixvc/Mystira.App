@@ -295,10 +295,9 @@ public class BundleService : IBundleService
             MinimumAge = scenario.MinimumAge,
             SessionLength = scenario.SessionLength,
             Difficulty = scenario.Difficulty,
-            Summary = scenario.Summary,
             Tags = scenario.Tags,
             Archetypes = scenario.Archetypes,
-            CompassAxes = scenario.CompassAxes,
+            CompassAxes = scenario.CoreAxes,
             Scenes = scenario.Scenes
         };
 

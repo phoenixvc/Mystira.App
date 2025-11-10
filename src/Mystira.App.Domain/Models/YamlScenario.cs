@@ -27,7 +27,7 @@ public class YamlScenario
     public List<string> Archetypes { get; set; } = new();
 
     [YamlMember(Alias = "minimum_age")]
-    public string MinimumAge { get; set; } = string.Empty;
+    public int MinimumAge { get; set; } = 1;
 
     [YamlMember(Alias = "compass_axes")]
     public List<string> CompassAxes { get; set; } = new();
@@ -56,9 +56,8 @@ public class YamlScenario
             Difficulty = Enum.Parse<DifficultyLevel>(Difficulty),
             SessionLength = Enum.Parse<SessionLength>(SessionLength),
             Archetypes = Archetypes,
-            MinimumAge = MinimumAge, // Now string-based
-            CompassAxes = CompassAxes,
-            Summary = Summary,
+            MinimumAge = MinimumAge,
+            CoreAxes = CompassAxes,
             CreatedAt = DateTime.TryParse(CreatedAt, out var createdAt) ? createdAt : DateTime.UtcNow,
             Scenes = Scenes.Select(s => s.ToDomainModel()).ToList()
         };
@@ -98,7 +97,7 @@ public class YamlScene
             Description = Description,
             Media = Media?.ToDomainModel(),
             Branches = Branches.Select(b => b.ToDomainModel()).ToList(),
-            EchoRevealReferences = EchoRevealReferences.Select(e => e.ToDomainModel()).ToList()
+            EchoReveals = EchoRevealReferences.Select<YamlEchoRevealReference, EchoReveal>(e => e.ToDomainModel()).ToList()
         };
     }
 }
@@ -212,9 +211,9 @@ public class YamlEchoRevealReference
     [YamlMember(Alias = "required")]
     public bool Required { get; set; } = false;
 
-    public EchoRevealReference ToDomainModel()
+    public EchoReveal ToDomainModel()
     {
-        return new EchoRevealReference
+        return new EchoReveal
         {
             EchoType = EchoType,
             MinStrength = MinStrength,
