@@ -1,7 +1,7 @@
 using AutoFixture;
 using AutoFixture.Xunit2;
-using DMfinity.Domain.Models;
 using FluentAssertions;
+using Mystira.App.Domain.Models;
 using Xunit;
 
 namespace DMfinity.Domain.Tests.Models;
@@ -24,9 +24,11 @@ public class ScenarioTests
         scenario.Difficulty.Should().Be(default(DifficultyLevel));
         scenario.SessionLength.Should().Be(default(SessionLength));
         scenario.Archetypes.Should().NotBeNull().And.BeEmpty();
-        scenario.Summary.Should().BeEmpty();
+        scenario.AgeGroup.Should().BeEmpty();
+        scenario.MinimumAge.Should().Be(0);
+        scenario.CoreAxes.Should().NotBeNull().And.BeEmpty();
+        scenario.Characters.Should().NotBeNull().And.BeEmpty();
         scenario.Scenes.Should().NotBeNull().And.BeEmpty();
-        scenario.CompassAxes.Should().NotBeNull().And.BeEmpty();
         scenario.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
 
@@ -38,7 +40,9 @@ public class ScenarioTests
         string description,
         List<string> tags,
         List<string> archetypes,
-        string summary)
+        string ageGroup,
+        int minimumAge,
+        List<string> coreAxes)
     {
         // Arrange
         var scenario = new Scenario();
@@ -51,7 +55,9 @@ public class ScenarioTests
         scenario.Difficulty = DifficultyLevel.Medium;
         scenario.SessionLength = SessionLength.Medium;
         scenario.Archetypes = archetypes;
-        scenario.Summary = summary;
+        scenario.AgeGroup = ageGroup;
+        scenario.MinimumAge = minimumAge;
+        scenario.CoreAxes = coreAxes;
 
         // Assert
         scenario.Id.Should().Be(id);
@@ -61,7 +67,9 @@ public class ScenarioTests
         scenario.Difficulty.Should().Be(DifficultyLevel.Medium);
         scenario.SessionLength.Should().Be(SessionLength.Medium);
         scenario.Archetypes.Should().BeEquivalentTo(archetypes);
-        scenario.Summary.Should().Be(summary);
+        scenario.AgeGroup.Should().Be(ageGroup);
+        scenario.MinimumAge.Should().Be(minimumAge);
+        scenario.CoreAxes.Should().BeEquivalentTo(coreAxes);
     }
 
     [Theory]
@@ -112,18 +120,18 @@ public class ScenarioTests
     }
 
     [Fact]
-    public void Scenario_CompassAxes_ShouldNotExceedFour()
+    public void Scenario_CoreAxes_ShouldNotExceedFour()
     {
         // Arrange
         var scenario = new Scenario();
-        var compassAxes = new List<string> { "honesty", "bravery", "kindness", "justice" };
+        var coreAxes = new List<string> { "honesty", "bravery", "kindness", "justice" };
 
         // Act
-        scenario.CompassAxes = compassAxes;
+        scenario.CoreAxes = coreAxes;
 
         // Assert
-        scenario.CompassAxes.Should().HaveCount(4);
-        scenario.CompassAxes.Should().BeEquivalentTo(compassAxes);
+        scenario.CoreAxes.Should().HaveCount(4);
+        scenario.CoreAxes.Should().BeEquivalentTo(coreAxes);
     }
 }
 
@@ -142,7 +150,8 @@ public class SceneTests
         scene.Description.Should().BeEmpty();
         scene.Media.Should().BeNull();
         scene.Branches.Should().NotBeNull().And.BeEmpty();
-        scene.EchoRevealReferences.Should().NotBeNull().And.BeEmpty();
+        scene.EchoReveals.Should().NotBeNull().And.BeEmpty();
+        scene.Difficulty.Should().BeNull();
     }
 
     [Theory]
@@ -150,7 +159,8 @@ public class SceneTests
     public void Scene_SetProperties_SetsValuesCorrectly(
         string id,
         string title,
-        string description)
+        string description,
+        string nextScene)
     {
         // Arrange
         var scene = new Scene();
@@ -160,12 +170,16 @@ public class SceneTests
         scene.Title = title;
         scene.Type = SceneType.Choice;
         scene.Description = description;
+        scene.NextScene = nextScene;
+        scene.Difficulty = 10;
 
         // Assert
         scene.Id.Should().Be(id);
         scene.Title.Should().Be(title);
         scene.Type.Should().Be(SceneType.Choice);
         scene.Description.Should().Be(description);
+        scene.NextScene.Should().Be(nextScene);
+        scene.Difficulty.Should().Be(10);
     }
 
     [Theory]
@@ -196,7 +210,7 @@ public class BranchTests
 
         // Assert
         branch.Choice.Should().BeEmpty();
-        branch.NextSceneId.Should().BeEmpty();
+        branch.NextScene.Should().BeEmpty();
         branch.EchoLog.Should().BeNull();
         branch.CompassChange.Should().BeNull();
     }
@@ -205,18 +219,18 @@ public class BranchTests
     [AutoData]
     public void Branch_SetProperties_SetsValuesCorrectly(
         string choice,
-        string nextSceneId)
+        string nextScene)
     {
         // Arrange
         var branch = new Branch();
 
         // Act
         branch.Choice = choice;
-        branch.NextSceneId = nextSceneId;
+        branch.NextScene = nextScene;
 
         // Assert
         branch.Choice.Should().Be(choice);
-        branch.NextSceneId.Should().Be(nextSceneId);
+        branch.NextScene.Should().Be(nextScene);
     }
 }
 
@@ -232,7 +246,6 @@ public class EchoLogTests
         echoLog.EchoType.Should().BeEmpty();
         echoLog.Description.Should().BeEmpty();
         echoLog.Strength.Should().Be(0);
-        echoLog.Timestamp.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
     }
 
     [Theory]
@@ -240,30 +253,27 @@ public class EchoLogTests
     public void EchoLog_SetProperties_SetsValuesCorrectly(
         string echoType,
         string description,
-        float strength)
+        double strength)
     {
         // Arrange
         var echoLog = new EchoLog();
-        var testTime = DateTime.UtcNow;
 
         // Act
         echoLog.EchoType = echoType;
         echoLog.Description = description;
         echoLog.Strength = strength;
-        echoLog.Timestamp = testTime;
 
         // Assert
         echoLog.EchoType.Should().Be(echoType);
         echoLog.Description.Should().Be(description);
         echoLog.Strength.Should().Be(strength);
-        echoLog.Timestamp.Should().Be(testTime);
     }
 
     [Theory]
-    [InlineData(0.1f)]
-    [InlineData(0.5f)]
-    [InlineData(1.0f)]
-    public void EchoLog_SetStrength_WithinValidRange_SetsCorrectly(float strength)
+    [InlineData(-1.0)]
+    [InlineData(0.0)]
+    [InlineData(1.0)]
+    public void EchoLog_SetStrength_WithinValidRange_SetsCorrectly(double strength)
     {
         // Arrange
         var echoLog = new EchoLog();
@@ -273,6 +283,6 @@ public class EchoLogTests
 
         // Assert
         echoLog.Strength.Should().Be(strength);
-        echoLog.Strength.Should().BeInRange(0.1f, 1.0f);
+        echoLog.Strength.Should().BeInRange(-1.0, 1.0);
     }
 }

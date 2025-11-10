@@ -40,7 +40,7 @@ public class SessionChoice
     public string SceneId { get; set; } = string.Empty;
     public string SceneTitle { get; set; } = string.Empty;
     public string ChoiceText { get; set; } = string.Empty;
-    public string NextSceneId { get; set; } = string.Empty;
+    public string NextScene { get; set; } = string.Empty;
     public DateTime ChosenAt { get; set; } = DateTime.UtcNow;
     public EchoLog? EchoGenerated { get; set; }
     public CompassChange? CompassChange { get; set; }
