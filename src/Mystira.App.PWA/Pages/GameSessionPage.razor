@@ -34,7 +34,9 @@ else
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
-                        <h2 class="text-primary-custom mb-1">@gameSession.CurrentScene.Title</h2>
+                        <h2 class="text-primary-custom mb-1">
+                            <MarkdownRenderer Content="@gameSession.CurrentScene.Title" />
+                        </h2>
                         <small class="text-muted">@gameSession.ScenarioName</small>
                     </div>
                     <div>
@@ -87,7 +89,9 @@ else
 
                         <!-- Scene Story -->
                         <div class="mb-4">
-                            <p class="lead">@gameSession.CurrentScene.Content</p>
+                            <div class="lead">
+                                <MarkdownRenderer Content="@gameSession.CurrentScene.Content" />
+                            </div>
                         </div>
 
                         <!-- Scene Type Specific Content -->
@@ -99,14 +103,14 @@ else
                                 <div class="d-flex flex-column align-items-center">
                                     @foreach (var choice in gameSession.CurrentScene.Choices.OrderBy(c => c.Order))
                                     {
-                                        <button class="btn btn-primary-custom btn-lg mb-2" 
+                                        <button class="btn btn-primary-custom btn-lg mb-2 choice-button" 
                                                 @onclick="() => HandleChoice(choice)"
                                                 disabled="@isProcessing">
                                             @if (isProcessing)
                                             {
                                                 <span class="spinner-border spinner-border-sm me-2"></span>
                                             }
-                                            @choice.Text
+                                            <MarkdownRenderer Content="@choice.Text" />
                                         </button>
                                     }
                                 </div>
@@ -165,12 +169,16 @@ else
                                             @if (gameSession.Scenario.AgeGroup == "1-2" || gameSession.Scenario.AgeGroup == "3-5" || rollResult >= gameSession.CurrentScene.RollTarget)
                                             {
                                                 <h5 class="mb-2">@successMsg</h5>
-                                                <p class="mb-0">@gameSession.CurrentScene.SuccessBranch</p>
+                                                <div class="mb-0">
+                                                    <MarkdownRenderer Content="@gameSession.CurrentScene.SuccessBranch" />
+                                                </div>
                                             }
                                             else
                                             {
                                                 <h5 class="mb-2">Fail!</h5>
-                                                <p class="mb-0">@gameSession.CurrentScene.FailureBranch</p>
+                                                <div class="mb-0">
+                                                    <MarkdownRenderer Content="@gameSession.CurrentScene.FailureBranch" />
+                                                </div>
                                             }
                                         </div>
 
@@ -374,7 +382,7 @@ else
         return Task.CompletedTask;
     }
 
-    private async Task FinishAdventure()
+    private void FinishAdventure()
     {
         try
         {

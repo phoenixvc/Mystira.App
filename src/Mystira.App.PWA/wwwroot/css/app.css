@@ -137,7 +137,28 @@ html, body {
     margin-bottom: 2rem;
 }
 
-/* Choice button styles moved to GameSessionPage.razor for better specificity */
+/* Choice button styles */
+.choice-button {
+    min-width: 250px;
+    text-align: left;
+    white-space: normal;
+    word-wrap: break-word;
+    hyphens: auto;
+}
+
+.choice-button .markdown-content {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.choice-button .markdown-content p {
+    margin: 0;
+}
+
+.choice-button .markdown-content strong,
+.choice-button .markdown-content b {
+    color: white;
+}
 
 .media-container {
     border-radius: 1rem;
@@ -224,4 +245,129 @@ html, body {
     position: absolute;
     right: 0.75rem;
     top: 0.5rem;
+}
+
+/* Markdown Content Styles */
+.markdown-content {
+    line-height: 1.6;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: var(--secondary-color);
+}
+
+.markdown-content h1 { font-size: 2rem; }
+.markdown-content h2 { font-size: 1.75rem; }
+.markdown-content h3 { font-size: 1.5rem; }
+.markdown-content h4 { font-size: 1.25rem; }
+.markdown-content h5 { font-size: 1.125rem; }
+.markdown-content h6 { font-size: 1rem; }
+
+.markdown-content p {
+    margin-bottom: 1rem;
+}
+
+.markdown-content strong,
+.markdown-content b {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.markdown-content em,
+.markdown-content i {
+    font-style: italic;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+}
+
+.markdown-content li {
+    margin-bottom: 0.5rem;
+}
+
+.markdown-content blockquote {
+    border-left: 4px solid var(--primary-color);
+    padding-left: 1rem;
+    margin: 1rem 0;
+    font-style: italic;
+    color: var(--muted);
+}
+
+.markdown-content code {
+    background-color: #f3f4f6;
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+}
+
+.markdown-content pre {
+    background-color: #f3f4f6;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin-bottom: 1rem;
+}
+
+.markdown-content pre code {
+    background-color: transparent;
+    padding: 0;
+}
+
+.markdown-content a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.markdown-content a:hover {
+    text-decoration: underline;
+}
+
+.markdown-content hr {
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    margin: 2rem 0;
+}
+
+/* Markdown content in headings */
+h1 .markdown-content,
+h2 .markdown-content,
+h3 .markdown-content,
+h4 .markdown-content,
+h5 .markdown-content,
+h6 .markdown-content {
+    margin: 0;
+    display: inline;
+}
+
+h1 .markdown-content strong,
+h2 .markdown-content strong,
+h3 .markdown-content strong,
+h4 .markdown-content strong,
+h5 .markdown-content strong,
+h6 .markdown-content strong {
+    color: inherit;
+}
+
+/* Lead text markdown styling */
+.lead .markdown-content {
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+.lead .markdown-content p {
+    font-size: inherit;
+    font-weight: inherit;
+    margin-bottom: 0;
 }
