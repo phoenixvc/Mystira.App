@@ -77,13 +77,13 @@
                             </div>
 
                             <div class="mb-4">
-                                <label for="code" class="form-label">
+                                <label for="inputCode" class="form-label">
                                     <i class="fas fa-key me-2"></i>Verification Code
                                 </label>
                                 <input type="text" 
                                        class="form-control form-control-lg text-center" 
-                                       id="code" 
-                                       @bind="code" 
+                                       id="inputCode" 
+                                       @bind="inputCode" 
                                        placeholder="Enter 6-digit code"
                                        maxlength="6" 
                                        pattern="[0-9]{6}" 
@@ -110,9 +110,9 @@
                             }
 
                             <div class="d-grid gap-2">
-                                <button type="submit" 
-                                        class="btn btn-primary-custom btn-lg" 
-                                        disabled="@isSubmitting || code.Length < 6">
+                                <button type="submit"
+                                        class="btn btn-primary-custom btn-lg"
+                                        disabled="@isSubmitting">
                                     @if (isSubmitting)
                                     {
                                         <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -125,8 +125,8 @@
                                     }
                                 </button>
 
-                                <button type="button" 
-                                        class="btn btn-outline-secondary" 
+                                <button type="button"
+                                        class="btn btn-outline-secondary"
                                         @onclick="GoBack"
                                         disabled="@isSubmitting">
                                     <i class="fas fa-arrow-left me-2"></i>
@@ -161,7 +161,7 @@
 
     private SignInStep currentStep = SignInStep.Email;
     private string email = string.Empty;
-    private string code = string.Empty;
+    private string inputCode = string.Empty;
     private bool isSubmitting = false;
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
@@ -212,7 +212,7 @@
 
             Logger.LogInformation("Verifying sign-in code for email: {Email}", email);
 
-            var (success, message, account) = await AuthService.VerifyPasswordlessSigninAsync(email, code);
+            var (success, message, account) = await AuthService.VerifyPasswordlessSigninAsync(email, inputCode);
 
             if (success && account != null)
             {
@@ -242,14 +242,14 @@
         var value = e.Value?.ToString() ?? string.Empty;
         // Only allow numbers and limit to 6 digits
         var filtered = new string(value.Where(char.IsDigit).ToArray());
-        code = filtered.Length > 6 ? filtered.Substring(0, 6) : filtered;
+        inputCode = filtered.Length > 6 ? filtered.Substring(0, 6) : filtered;
         StateHasChanged();
     }
 
     private void GoBack()
     {
         currentStep = SignInStep.Email;
-        code = string.Empty;
+        inputCode = string.Empty;
         errorMessage = string.Empty;
         successMessage = string.Empty;
     }
