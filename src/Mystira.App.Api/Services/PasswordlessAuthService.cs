@@ -32,14 +32,14 @@ public class PasswordlessAuthService : IPasswordlessAuthService
                 return (false, "An account with this email already exists", null);
             }
 
-            var existingPending = await _context.PendingSignups
-                .FirstOrDefaultAsync(p => p.Email == email && !p.IsUsed && p.ExpiresAt > DateTime.UtcNow);
-            
-            if (existingPending != null)
-            {
-                _logger.LogInformation("Signup already pending for email: {Email}, reusing existing code", email);
-                return (true, "Check your email for the verification code", existingPending.Code);
-            }
+            // var existingPending = await _context.PendingSignups
+            //     .FirstOrDefaultAsync(p => p.Email == email && !p.IsUsed && p.ExpiresAt > DateTime.UtcNow);
+            //
+            // if (existingPending != null)
+            // {
+            //     _logger.LogInformation("Signup already pending for email: {Email}, reusing existing code", email);
+            //     return (true, "Check your email for the verification code", existingPending.Code);
+            // }
 
             var code = GenerateCode();
             var pendingSignup = new PendingSignup
@@ -161,14 +161,14 @@ public class PasswordlessAuthService : IPasswordlessAuthService
                 return (false, "No account found with this email. Please sign up first.", null);
             }
 
-            var existingPending = await _context.PendingSignups
-                .FirstOrDefaultAsync(p => p.Email == email && !p.IsUsed && p.ExpiresAt > DateTime.UtcNow && p.IsSignin);
-            
-            if (existingPending != null)
-            {
-                _logger.LogInformation("Signin already pending for email: {Email}, reusing existing code", email);
-                return (true, "Check your email for the sign-in code", existingPending.Code);
-            }
+            // var existingPending = await _context.PendingSignups
+            //     .FirstOrDefaultAsync(p => p.Email == email && !p.IsUsed && p.ExpiresAt > DateTime.UtcNow && p.IsSignin);
+            //
+            // if (existingPending != null)
+            // {
+            //     _logger.LogInformation("Signin already pending for email: {Email}, reusing existing code", email);
+            //     return (true, "Check your email for the sign-in code", existingPending.Code);
+            // }
 
             var code = GenerateCode();
             var pendingSignin = new PendingSignup
