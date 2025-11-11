@@ -50,10 +50,9 @@ public class Scene
     {
         "roll" => SceneType.Roll,
         "choice" => SceneType.Choice,
-        "narrative" => SceneType.Story,
-        "final" => SceneType.Final,
+        "narrative" => SceneType.Narrative,
         "special" => SceneType.Special,
-        _ => SceneType.Story
+        _ => throw new ArgumentOutOfRangeException(nameof(Type), Type, "Expected on of roll, choice, narrative, or special")
     };
     
     public string? ImageUrl { get; set; }
@@ -113,13 +112,10 @@ public class GameSession
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum SceneType
 {
-    Story = 0,
+    Narrative = 0,
     Choice = 1,
     Roll = 2,
-    Video = 3,
-    Audio = 4,
-    Final = 5,
-    Special
+    Special = 3
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

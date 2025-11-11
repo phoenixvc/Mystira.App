@@ -118,7 +118,7 @@ public class GameSessionService : IGameSessionService
             CurrentGameSession.CurrentScene = scene;
             
             // Check if this is a final scene
-            if (scene.SceneType == SceneType.Final)
+            if (scene is { SceneType: SceneType.Special, NextSceneId: null })
             {
                 CurrentGameSession.IsCompleted = true;
                 _logger.LogInformation("Game session completed");

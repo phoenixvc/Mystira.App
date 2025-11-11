@@ -188,10 +188,8 @@ else
                                 }
                             </div>
                         }
-                        else if (gameSession.CurrentScene.SceneType == SceneType.Final || 
-                                 (gameSession.CurrentScene.SceneType == SceneType.Special && 
-                                  gameSession.CurrentScene.NextSceneId == null)
-                                 )
+                        else if (gameSession.CurrentScene.SceneType == SceneType.Special && 
+                                 gameSession.CurrentScene.NextSceneId == null)
                         {
                             <!-- Final Scene -->
                             <div class="text-center">

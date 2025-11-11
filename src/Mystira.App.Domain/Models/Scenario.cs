@@ -114,10 +114,10 @@ public enum SessionLength
 
 public enum SceneType
 {
-    Narrative,
-    Choice,
-    Roll,
-    Special
+    Narrative = 0,
+    Choice = 1,
+    Roll = 2,
+    Special = 3
 }
 
 public static class MasterLists
