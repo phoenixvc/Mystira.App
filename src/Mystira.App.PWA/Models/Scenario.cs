@@ -100,6 +100,7 @@ public class Choice
 
 public class GameSession
 {
+    public string Id { get; set; } = string.Empty;
     public string ScenarioId { get; set; } = string.Empty;
     public string ScenarioName { get; set; } = string.Empty;
     public Scene? CurrentScene { get; set; }
