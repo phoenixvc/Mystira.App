@@ -8,4 +8,6 @@ public interface IApiClient
     Task<Scenario?> GetScenarioAsync(string id);
     Task<Scene?> GetSceneAsync(string scenarioId, string sceneId);
     Task<string?> GetMediaUrlFromId(string mediaAudio);
+    Task<PasswordlessSignupResponse?> RequestPasswordlessSignupAsync(string email, string displayName);
+    Task<PasswordlessVerifyResponse?> VerifyPasswordlessSignupAsync(string email, string code);
 }

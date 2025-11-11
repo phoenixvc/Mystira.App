@@ -8,5 +8,7 @@ public interface IAuthService
     Task<Account?> GetCurrentAccountAsync();
     Task<bool> LoginAsync(string email, string password);
     Task LogoutAsync();
+    Task<(bool Success, string Message)> RequestPasswordlessSignupAsync(string email, string displayName);
+    Task<(bool Success, string Message, Account? Account)> VerifyPasswordlessSignupAsync(string email, string code);
     event EventHandler<bool>? AuthenticationStateChanged;
 }

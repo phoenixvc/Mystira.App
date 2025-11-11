@@ -599,3 +599,40 @@ public class ValidateScenarioReferencesRequest
     public string ScenarioId { get; set; } = string.Empty;
     public bool IncludeMetadataValidation { get; set; } = true;
 }
+
+// Passwordless Signup Models
+public class PasswordlessSignupRequest
+{
+    [Required]
+    [EmailAddress]
+    public string Email { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(100, MinimumLength = 2)]
+    public string DisplayName { get; set; } = string.Empty;
+}
+
+public class PasswordlessSignupResponse
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public string? Email { get; set; }
+}
+
+public class PasswordlessVerifyRequest
+{
+    [Required]
+    [EmailAddress]
+    public string Email { get; set; } = string.Empty;
+
+    [Required]
+    public string Code { get; set; } = string.Empty;
+}
+
+public class PasswordlessVerifyResponse
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public Account? Account { get; set; }
+    public string? Token { get; set; }
+}

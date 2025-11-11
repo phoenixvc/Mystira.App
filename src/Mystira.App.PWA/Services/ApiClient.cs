@@ -150,5 +150,63 @@ public class ApiClient : IApiClient
             return null;
         }
     }
+
+    public async Task<PasswordlessSignupResponse?> RequestPasswordlessSignupAsync(string email, string displayName)
+    {
+        try
+        {
+            _logger.LogInformation("Requesting passwordless signup for email: {Email}", email);
+            
+            var request = new { email, displayName };
+            var response = await _httpClient.PostAsJsonAsync("api/auth/passwordless/signup", request, _jsonOptions);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<PasswordlessSignupResponse>(_jsonOptions);
+                _logger.LogInformation("Passwordless signup request successful for: {Email}", email);
+                return result;
+            }
+            else
+            {
+                _logger.LogWarning("Passwordless signup request failed with status: {StatusCode} for email: {Email}", 
+                    response.StatusCode, email);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error requesting passwordless signup for email: {Email}", email);
+            return null;
+        }
+    }
+
+    public async Task<PasswordlessVerifyResponse?> VerifyPasswordlessSignupAsync(string email, string code)
+    {
+        try
+        {
+            _logger.LogInformation("Verifying passwordless signup for email: {Email}", email);
+            
+            var request = new { email, code };
+            var response = await _httpClient.PostAsJsonAsync("api/auth/passwordless/verify", request, _jsonOptions);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<PasswordlessVerifyResponse>(_jsonOptions);
+                _logger.LogInformation("Passwordless signup verification successful for: {Email}", email);
+                return result;
+            }
+            else
+            {
+                _logger.LogWarning("Passwordless signup verification failed with status: {StatusCode} for email: {Email}", 
+                    response.StatusCode, email);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error verifying passwordless signup for email: {Email}", email);
+            return null;
+        }
+    }
     
 }
