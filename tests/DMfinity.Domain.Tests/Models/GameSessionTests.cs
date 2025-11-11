@@ -19,7 +19,7 @@ public class GameSessionTests
         // Assert
         gameSession.Id.Should().NotBeEmpty();
         gameSession.ScenarioId.Should().BeEmpty();
-        gameSession.DmName.Should().BeEmpty();
+        gameSession.AccountId.Should().BeEmpty();
         gameSession.PlayerNames.Should().NotBeNull().And.BeEmpty();
         gameSession.Status.Should().Be(SessionStatus.NotStarted);
         gameSession.CurrentSceneId.Should().BeEmpty();
@@ -35,7 +35,7 @@ public class GameSessionTests
     [AutoData]
     public void GameSession_SetProperties_SetsValuesCorrectly(
         string scenarioId, 
-        string dmName, 
+        string accountId, 
         List<string> playerNames, 
         string currentSceneId)
     {
@@ -44,14 +44,14 @@ public class GameSessionTests
 
         // Act
         gameSession.ScenarioId = scenarioId;
-        gameSession.DmName = dmName;
+        gameSession.AccountId = accountId;
         gameSession.PlayerNames = playerNames;
         gameSession.CurrentSceneId = currentSceneId;
         gameSession.Status = SessionStatus.InProgress;
 
         // Assert
         gameSession.ScenarioId.Should().Be(scenarioId);
-        gameSession.DmName.Should().Be(dmName);
+        gameSession.AccountId.Should().Be(accountId);
         gameSession.PlayerNames.Should().BeEquivalentTo(playerNames);
         gameSession.CurrentSceneId.Should().Be(currentSceneId);
         gameSession.Status.Should().Be(SessionStatus.InProgress);

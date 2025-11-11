@@ -32,10 +32,9 @@ public class GameSessionService : IGameSessionService
         {
             _logger.LogInformation("Starting game session for scenario: {ScenarioName}", scenario.Title);
             
-            // Start session via API
+            // Start session via API (account ID will be extracted from auth token on server)
             var apiGameSession = await _apiClient.StartGameSessionAsync(
                 scenario.Id, 
-                "Player", // Default DM name for now
                 new List<string> { "Player" }, // Default player name for now
                 scenario.AgeGroup ?? "6-9" // Default age group
             );

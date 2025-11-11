@@ -51,7 +51,7 @@ public class GameSessionsController : ControllerBase
     /// Start a new game session
     /// </summary>
     [HttpPost]
-    //[Authorize] // Requires DM authentication
+    [Authorize] // Requires authentication
     public async Task<ActionResult<GameSession>> StartSession([FromBody] StartGameSessionRequest request)
     {
         try
@@ -69,7 +69,20 @@ public class GameSessionsController : ControllerBase
                 });
             }
 
-            var session = await _sessionService.StartSessionAsync(request);
+            var accountId = User.FindFirst("sub")?.Value 
+                ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                ?? User.FindFirst("account_id")?.Value;
+
+            if (string.IsNullOrEmpty(accountId))
+            {
+                return Unauthorized(new ErrorResponse 
+                { 
+                    Message = "Account ID not found in authentication claims",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            var session = await _sessionService.StartSessionAsync(request, accountId);
             return CreatedAtAction(nameof(GetSession), new { id = session.Id }, session);
         }
         catch (ArgumentException ex)
@@ -125,23 +138,41 @@ public class GameSessionsController : ControllerBase
     }
 
     /// <summary>
-    /// Get all sessions for a specific DM
+    /// Get all sessions for a specific account
     /// </summary>
-    [HttpGet("dm/{dmName}")]
-    [Authorize] // Requires DM authentication
-    public async Task<ActionResult<List<GameSessionResponse>>> GetSessionsByDm(string dmName)
+    [HttpGet("account/{accountId}")]
+    [Authorize] // Requires authentication
+    public async Task<ActionResult<List<GameSessionResponse>>> GetSessionsByAccount(string accountId)
     {
         try
         {
-            var sessions = await _sessionService.GetSessionsByDmAsync(dmName);
+            var requestingAccountId = User.FindFirst("sub")?.Value 
+                ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                ?? User.FindFirst("account_id")?.Value;
+
+            if (string.IsNullOrEmpty(requestingAccountId))
+            {
+                return Unauthorized(new ErrorResponse 
+                { 
+                    Message = "Account ID not found in authentication claims",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            if (requestingAccountId != accountId && !User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
+
+            var sessions = await _sessionService.GetSessionsByAccountAsync(accountId);
             return Ok(sessions);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting sessions for DM {DmName}", dmName);
+            _logger.LogError(ex, "Error getting sessions for account {AccountId}", accountId);
             return StatusCode(500, new ErrorResponse 
             { 
-                Message = "Internal server error while fetching DM sessions",
+                Message = "Internal server error while fetching account sessions",
                 TraceId = HttpContext.TraceIdentifier
             });
         }

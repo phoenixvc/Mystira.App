@@ -267,16 +267,15 @@ public class ApiClient : IApiClient
         }
     }
 
-    public async Task<GameSession?> StartGameSessionAsync(string scenarioId, string dmName, List<string> playerNames, string targetAgeGroup)
+    public async Task<GameSession?> StartGameSessionAsync(string scenarioId, List<string> playerNames, string targetAgeGroup)
     {
         try
         {
-            _logger.LogInformation("Starting game session for scenario: {ScenarioId}, DM: {DmName}", scenarioId, dmName);
+            _logger.LogInformation("Starting game session for scenario: {ScenarioId}", scenarioId);
             
             var request = new 
             { 
                 scenarioId, 
-                dmName, 
                 playerNames, 
                 targetAgeGroup 
             };
