@@ -19,6 +19,49 @@
         </div>
     </div>
     
+    <!-- Age Group Filters -->
+    @if (isAuthenticated && !isLoading)
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-title mb-3">
+                            <i class="fas fa-filter me-2"></i>Filter by Age Group
+                        </h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach (var ageGroup in availableAgeGroups)
+                            {
+                                var isSelected = selectedAgeGroups.Contains(ageGroup);
+                                <button class="btn @(isSelected ? "btn-primary-custom" : "btn-outline-secondary")"
+                                        @onclick="() => ToggleAgeGroupFilter(ageGroup)">
+                                    <i class="fas fa-users me-1"></i>
+                                    Ages @ageGroup
+                                    @if (isSelected)
+                                    {
+                                        <i class="fas fa-check ms-1"></i>
+                                    }
+                                </button>
+                            }
+                            @if (selectedAgeGroups.Any())
+                            {
+                                <button class="btn btn-outline-danger" @onclick="ClearAllFilters">
+                                    <i class="fas fa-times me-1"></i>Clear All
+                                </button>
+                            }
+                        </div>
+                        @if (selectedAgeGroups.Any())
+                        {
+                            <div class="mt-2 text-muted small">
+                                Showing @filteredScenarios.Count of @scenarios.Count adventures
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    
     <style>
         .dice-roller-container {
             max-width: 300px; /* Adjust this value to control the width */
@@ -59,10 +102,10 @@
             </div>
         </div>
     }
-    else if (scenarios.Any())
+    else if (filteredScenarios.Any())
     {
         <div class="row">
-            @foreach (var scenario in scenarios)
+            @foreach (var scenario in filteredScenarios)
             {
                 <div class="col-md-6 col-lg-4 mb-4">
                     <div class="card scenario-card h-100">
@@ -168,9 +211,14 @@
     [Inject] private ILogger<Home> Logger { get; set; } = default!;
 
     private List<Scenario> scenarios = new();
+    private List<Scenario> filteredScenarios = new();
     private bool isLoading = true;
     private bool isStartingAdventure = false;
     private bool isAuthenticated = false;
+    
+    // Age group filter state
+    private readonly HashSet<string> selectedAgeGroups = new();
+    private readonly string[] availableAgeGroups = { "1-2", "3-5", "6-9", "10-12", "13-18" };
 
     protected override async Task OnInitializedAsync()
     {
@@ -217,6 +265,8 @@
             else 
             {
                 scenarios.Clear();
+                filteredScenarios.Clear();
+                selectedAgeGroups.Clear();
             }
             StateHasChanged();
         });
@@ -240,6 +290,9 @@
             Logger.LogInformation("Loading scenarios...");
             scenarios = await ApiClient.GetScenariosAsync();
             Logger.LogInformation("Loaded {Count} scenarios", scenarios.Count);
+            
+            // Apply filters after loading scenarios
+            ApplyFilters();
         }
         catch (Exception ex)
         {
@@ -317,5 +370,44 @@
         {
             Logger.LogError(ex, "Error during sign in");
         }
+    }
+
+    private void ToggleAgeGroupFilter(string ageGroup)
+    {
+        if (selectedAgeGroups.Contains(ageGroup))
+        {
+            selectedAgeGroups.Remove(ageGroup);
+        }
+        else
+        {
+            selectedAgeGroups.Add(ageGroup);
+        }
+        
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private void ClearAllFilters()
+    {
+        selectedAgeGroups.Clear();
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private void ApplyFilters()
+    {
+        if (!selectedAgeGroups.Any())
+        {
+            filteredScenarios = scenarios.ToList();
+        }
+        else
+        {
+            filteredScenarios = scenarios
+                .Where(s => selectedAgeGroups.Contains(s.AgeGroup))
+                .ToList();
+        }
+        
+        Logger.LogInformation("Applied age group filters. Selected: [{SelectedFilters}], Showing {Count} of {Total} scenarios", 
+            string.Join(", ", selectedAgeGroups), filteredScenarios.Count, scenarios.Count);
     }
 }
