@@ -145,6 +145,7 @@ builder.Services.AddScoped<ICharacterMediaMetadataService, CharacterMediaMetadat
 builder.Services.AddScoped<IBundleService, BundleService>();
 builder.Services.AddScoped<ICharacterMapFileService, CharacterMapFileService>();
 builder.Services.AddScoped<IPasswordlessAuthService, PasswordlessAuthService>();
+builder.Services.AddScoped<IEmailService, AzureEmailService>();
 
 // Configure Health Checks
 builder.Services.AddHealthChecks()

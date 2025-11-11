@@ -8,13 +8,15 @@ public class PasswordlessAuthService : IPasswordlessAuthService
 {
     private readonly MystiraAppDbContext _context;
     private readonly ILogger<PasswordlessAuthService> _logger;
+    private readonly IEmailService _emailService;
     private const int CodeExpiryMinutes = 15;
     private const int CodeLength = 6;
 
-    public PasswordlessAuthService(MystiraAppDbContext context, ILogger<PasswordlessAuthService> logger)
+    public PasswordlessAuthService(MystiraAppDbContext context, ILogger<PasswordlessAuthService> logger, IEmailService emailService)
     {
         _context = context;
         _logger = logger;
+        _emailService = emailService;
     }
 
     public async Task<(bool Success, string Message, string? Code)> RequestSignupAsync(string email, string displayName)
@@ -55,9 +57,13 @@ public class PasswordlessAuthService : IPasswordlessAuthService
 
             _logger.LogInformation("Signup requested for email: {Email} with display name: {DisplayName}", email, displayName);
             
-            // In a real implementation, send email with the code
-            // For now, we log it for development
-            _logger.LogInformation("Magic code for {Email}: {Code}", email, code);
+            var (emailSuccess, emailError) = await _emailService.SendSignupCodeAsync(email, displayName, code);
+            
+            if (!emailSuccess)
+            {
+                _logger.LogWarning("Failed to send verification email to {Email}: {Error}", email, emailError);
+                return (false, "Failed to send verification email. Please try again later.", null);
+            }
 
             return (true, "Check your email for the verification code", code);
         }
