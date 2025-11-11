@@ -278,7 +278,6 @@ html, body {
 .markdown-content strong,
 .markdown-content b {
     font-weight: 600;
-    color: var(--primary-color);
 }
 
 .markdown-content em,
