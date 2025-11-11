@@ -143,9 +143,27 @@ else
                                             You rolled: @rollResult
                                         </h3>
                                         <div class="alert @(rollResult >= gameSession.CurrentScene.RollTarget ? "alert-success" : "alert-warning")">
-                                            @if (rollResult >= gameSession.CurrentScene.RollTarget)
+                                            @{
+                                                string successMsg;
+                                                if (gameSession.Scenario.AgeGroup == "1-2")
+                                                {
+                                                    string[] youngExclamations = new[] { "Yipee!", "Hooray!", "Wow!" };
+                                                    successMsg = youngExclamations[new Random().Next(youngExclamations.Length)];
+                                                }
+                                                else if (gameSession.Scenario.AgeGroup == "3-5")
+                                                {
+                                                    string[] olderExclamations = new[] { "Yipee!", "Hooray!", "Wow!", "Neat!", "Tada!", "Whoa!", "Good Job!", "Amazing!" };
+                                                    successMsg = olderExclamations[new Random().Next(olderExclamations.Length)];
+                                                }
+                                                else
+                                                {
+                                                    successMsg = "Success!";
+                                                }
+                                            }
+    
+                                            @if (gameSession.Scenario.AgeGroup == "1-2" || gameSession.Scenario.AgeGroup == "3-5" || rollResult >= gameSession.CurrentScene.RollTarget)
                                             {
-                                                <h5 class="mb-2">Success!</h5>
+                                                <h5 class="mb-2">@successMsg</h5>
                                                 <p class="mb-0">@gameSession.CurrentScene.SuccessBranch</p>
                                             }
                                             else
@@ -154,6 +172,7 @@ else
                                                 <p class="mb-0">@gameSession.CurrentScene.FailureBranch</p>
                                             }
                                         </div>
+
                                     </div>
 
                                     <button class="btn btn-primary-custom btn-lg mb-2"

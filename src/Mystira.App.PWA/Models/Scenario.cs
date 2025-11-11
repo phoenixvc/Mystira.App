@@ -42,7 +42,7 @@ public class Scene
     public string? NextSceneId { get; set; }
     public SceneMedia? Media { get; set; }
     public List<SceneBranch> Branches { get; set; } = new();
-    public int Difficulty { get; set; }
+    public int? Difficulty { get; set; }
     
     // Backward compatibility properties
     public string Content => Description;
@@ -52,6 +52,7 @@ public class Scene
         "choice" => SceneType.Choice,
         "narrative" => SceneType.Story,
         "final" => SceneType.Final,
+        "special" => SceneType.Special,
         _ => SceneType.Story
     };
     
@@ -117,7 +118,8 @@ public enum SceneType
     Roll = 2,
     Video = 3,
     Audio = 4,
-    Final = 5
+    Final = 5,
+    Special
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
