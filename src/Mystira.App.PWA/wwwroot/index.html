@@ -73,11 +73,28 @@
     <!-- Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function () {
+            window.addEventListener('load', () => {
                 navigator.serviceWorker.register('service-worker.js')
-                    .then(function (registration) {
+                    .then(async (registration) => {
                         console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                    }, function (err) {
+
+                        if (navigator.serviceWorker.controller) {
+                            navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHES' });
+                        }
+
+                        if ('caches' in window) {
+                            try {
+                                const cacheKeys = await caches.keys();
+                                if (cacheKeys.length > 0) {
+                                    await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+                                    console.log('Cleared caches from window context:', cacheKeys);
+                                }
+                            } catch (cacheError) {
+                                console.warn('Failed to clear caches from window context:', cacheError);
+                            }
+                        }
+                    })
+                    .catch((err) => {
                         console.log('ServiceWorker registration failed: ', err);
                     });
             });

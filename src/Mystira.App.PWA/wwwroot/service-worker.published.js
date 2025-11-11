@@ -1,58 +1,47 @@
-﻿// Blazor PWA default published service worker
+// Service worker for Mystira PWA (published build)
+// Caching has been fully disabled to prevent stale assets across deployments.
 
-self.importScripts('./service-worker-assets.js');
+const LOG_PREFIX = '[Mystira ServiceWorker]';
 
-const CACHE_NAME = 'offline-cache-v1';
-const ASSETS = self.assetsManifest
-    ? self.assetsManifest.assets.map(a => new URL(a.url, self.location).toString())
-    : [];
+async function clearAllCaches() {
+    if (!self.caches) {
+        return;
+    }
 
-self.addEventListener('install', event => {
+    try {
+        const cacheKeys = await caches.keys();
+        if (cacheKeys.length === 0) {
+            return;
+        }
+
+        await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+        console.log(`${LOG_PREFIX} Cleared caches:`, cacheKeys);
+    } catch (error) {
+        console.error(`${LOG_PREFIX} Failed to clear caches`, error);
+    }
+}
+
+self.addEventListener('install', (event) => {
+    console.log(`${LOG_PREFIX} Install - skipping waiting and clearing caches`);
+
     event.waitUntil((async () => {
-        const cache = await caches.open(CACHE_NAME);
-        await cache.addAll(['./', ...ASSETS]);
+        await clearAllCaches();
         await self.skipWaiting();
     })());
 });
 
-self.addEventListener('activate', event => {
+self.addEventListener('activate', (event) => {
+    console.log(`${LOG_PREFIX} Activate - ensuring caches are cleared`);
+
     event.waitUntil((async () => {
-        // delete old caches
-        const keys = await caches.keys();
-        await Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)));
+        await clearAllCaches();
         await self.clients.claim();
     })());
 });
 
-self.addEventListener('fetch', event => {
-    const { request } = event;
-
-    // Never cache auth or SW-related endpoints
-    const noCache = ['/authentication/', '/callback', '/signin-', '/signout-'];
-    if (noCache.some(p => request.url.includes(p))) return;
-
-    event.respondWith((async () => {
-        // Network-first for navigation/HTML, cache-first for static assets
-        if (request.mode === 'navigate' || (request.headers.get('Accept') || '').includes('text/html')) {
-            try {
-                const networkResponse = await fetch(request);
-                const cache = await caches.open(CACHE_NAME);
-                cache.put(request, networkResponse.clone());
-                return networkResponse;
-            } catch {
-                const cache = await caches.open(CACHE_NAME);
-                return (await cache.match(request)) || (await cache.match('./'));
-            }
-        } else {
-            const cache = await caches.open(CACHE_NAME);
-            const cached = await cache.match(request);
-            if (cached) return cached;
-            const networkResponse = await fetch(request);
-            // Only cache OK, same-origin static resources
-            if (networkResponse.ok && new URL(request.url).origin === location.origin) {
-                cache.put(request, networkResponse.clone());
-            }
-            return networkResponse;
-        }
-    })());
+self.addEventListener('message', (event) => {
+    if (event?.data?.type === 'CLEAR_CACHES') {
+        console.log(`${LOG_PREFIX} Received CLEAR_CACHES message`);
+        event.waitUntil(clearAllCaches());
+    }
 });
