@@ -46,7 +46,7 @@ public class GameSessionApiService : IGameSessionApiService
         };
 
         // Initialize compass tracking for scenario axes
-        foreach (var axis in scenario.CompassAxes)
+        foreach (var axis in scenario.CoreAxes)
         {
             session.CompassValues[axis] = new CompassTracking
             {
@@ -123,7 +123,7 @@ public class GameSessionApiService : IGameSessionApiService
             SceneId = request.SceneId,
             SceneTitle = currentScene.Title,
             ChoiceText = request.ChoiceText,
-            NextSceneId = request.NextSceneId,
+            NextScene = request.NextSceneId,
             ChosenAt = DateTime.UtcNow,
             EchoGenerated = branch.EchoLog,
             CompassChange = branch.CompassChange
@@ -181,7 +181,7 @@ public class GameSessionApiService : IGameSessionApiService
 
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Choice made in session {SessionId}: {ChoiceText} -> {NextSceneId}", 
+        _logger.LogInformation("Choice made in session {SessionId}: {ChoiceText} -> {NextScene}", 
             session.Id, request.ChoiceText, request.NextSceneId);
 
         return session;
@@ -393,27 +393,43 @@ public class GameSessionApiService : IGameSessionApiService
         }
     }
 
-    private bool IsAgeGroupCompatible(string minimumAge, string targetAge)
+    private bool IsAgeGroupCompatible(int scenarioMinimumAge, string targetAgeGroup)
     {
-        // Define age group hierarchy (from youngest to oldest)
-        var ageOrder = new List<string> 
-        { 
-            AgeGroup.Toddlers.Name, 
-            AgeGroup.Preschoolers.Name, 
-            AgeGroup.School.Name, 
-            AgeGroup.Preteens.Name, 
-            AgeGroup.Teens.Name 
-        };
-
-        var minIndex = ageOrder.IndexOf(minimumAge);
-        var targetIndex = ageOrder.IndexOf(targetAge);
-
-        // If either age group is not found, assume compatible for backward compatibility
-        if (minIndex == -1 || targetIndex == -1)
+        if (scenarioMinimumAge <= 0)
+        {
             return true;
+        }
 
-        // Target age group must be at or above the minimum age group
-        return targetIndex >= minIndex;
+        if (string.IsNullOrWhiteSpace(targetAgeGroup))
+        {
+            return true;
+        }
+
+        var target = AgeGroup.GetByName(targetAgeGroup);
+        if (target != null)
+        {
+            return target.MinimumAge >= scenarioMinimumAge;
+        }
+
+        if (TryParseAgeRangeMinimum(targetAgeGroup, out var parsedMinimum))
+        {
+            return parsedMinimum >= scenarioMinimumAge;
+        }
+
+        return true;
+    }
+
+    private static bool TryParseAgeRangeMinimum(string value, out int minimumAge)
+    {
+        minimumAge = 0;
+        var parts = value.Split('-', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length > 0 && int.TryParse(parts[0], out var min))
+        {
+            minimumAge = min;
+            return true;
+        }
+
+        return false;
     }
 
     public async Task<int> GetActiveSessionsCountAsync()

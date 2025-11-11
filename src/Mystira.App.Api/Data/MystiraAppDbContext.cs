@@ -194,7 +194,7 @@ public class MystiraAppDbContext : DbContext
                       c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                       c => c.ToList()));
 
-            entity.Property(e => e.CompassAxes)
+            entity.Property(e => e.CoreAxes)
                   .HasConversion(
                       v => string.Join(',', v),
                       v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
@@ -204,6 +204,39 @@ public class MystiraAppDbContext : DbContext
                       c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                       c => c.ToList()));
 
+            entity.OwnsMany(e => e.Characters, character =>
+            {
+                character.OwnsOne(c => c.Metadata, metadata =>
+                {
+                    metadata.Property(m => m.Role)
+                            .HasConversion(
+                                v => string.Join(',', v),
+                                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
+                            .Metadata.SetValueComparer(new ValueComparer<List<string>>(
+                                (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+                                c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                                c => c.ToList()));
+
+                    metadata.Property(m => m.Archetype)
+                            .HasConversion(
+                                v => string.Join(',', v),
+                                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
+                            .Metadata.SetValueComparer(new ValueComparer<List<string>>(
+                                (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+                                c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                                c => c.ToList()));
+
+                    metadata.Property(m => m.Traits)
+                            .HasConversion(
+                                v => string.Join(',', v),
+                                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
+                            .Metadata.SetValueComparer(new ValueComparer<List<string>>(
+                                (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+                                c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                                c => c.ToList()));
+                });
+            });
+
             entity.OwnsMany(e => e.Scenes, scene =>
             {
                 scene.OwnsOne(s => s.Media);
@@ -212,7 +245,7 @@ public class MystiraAppDbContext : DbContext
                     branch.OwnsOne(b => b.EchoLog);
                     branch.OwnsOne(b => b.CompassChange);
                 });
-                scene.OwnsMany(s => s.EchoRevealReferences);
+                scene.OwnsMany(s => s.EchoReveals);
             });
         });
 

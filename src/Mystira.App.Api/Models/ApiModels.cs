@@ -72,6 +72,7 @@ public class CreateScenarioRequest
     [StringLength(1000, MinimumLength = 10)]
     public string Description { get; set; } = string.Empty;
 
+    [Required]
     public List<string> Tags { get; set; } = new();
 
     [Required]
@@ -85,18 +86,22 @@ public class CreateScenarioRequest
     public List<string> Archetypes { get; set; } = new();
 
     [Required]
-    public string MinimumAge { get; set; } = string.Empty;
+    public string AgeGroup { get; set; } = string.Empty;
 
     [Required]
-    [StringLength(500, MinimumLength = 10)]
-    public string Summary { get; set; } = string.Empty;
+    public int MinimumAge { get; set; }
 
     [Required]
     [MaxLength(4)]
-    public List<string> CompassAxes { get; set; } = new();
+    public List<string> CoreAxes { get; set; } = new();
+
+    [Required]
+    public List<ScenarioCharacter> Characters { get; set; } = new();
 
     [Required]
     public List<Scene> Scenes { get; set; } = new();
+
+    public List<string> CompassAxes { get; set; } = new();
 }
 
 public class StartGameSessionRequest
@@ -134,9 +139,11 @@ public class ScenarioQueryRequest
 {
     public DifficultyLevel? Difficulty { get; set; }
     public SessionLength? SessionLength { get; set; }
-    public string? MinimumAge { get; set; }
+    public int? MinimumAge { get; set; }
+    public string? AgeGroup { get; set; }
     public List<string>? Tags { get; set; }
     public List<string>? Archetypes { get; set; }
+    public List<string>? CoreAxes { get; set; }
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 10;
 }
@@ -160,8 +167,9 @@ public class ScenarioSummary
     public DifficultyLevel Difficulty { get; set; }
     public SessionLength SessionLength { get; set; }
     public List<string> Archetypes { get; set; } = new();
-    public string MinimumAge { get; set; } = string.Empty;
-    public string Summary { get; set; } = string.Empty;
+    public int MinimumAge { get; set; }
+    public string AgeGroup { get; set; } = string.Empty;
+    public List<string> CoreAxes { get; set; } = new();
     public DateTime CreatedAt { get; set; }
 }
 

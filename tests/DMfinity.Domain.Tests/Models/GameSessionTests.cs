@@ -133,7 +133,7 @@ public class SessionChoiceTests
         choice.SceneId.Should().BeEmpty();
         choice.SceneTitle.Should().BeEmpty();
         choice.ChoiceText.Should().BeEmpty();
-        choice.NextSceneId.Should().BeEmpty();
+        choice.NextScene.Should().BeEmpty();
         choice.ChosenAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
         choice.EchoGenerated.Should().BeNull();
         choice.CompassChange.Should().BeNull();
@@ -145,7 +145,7 @@ public class SessionChoiceTests
         string sceneId,
         string sceneTitle,
         string choiceText,
-        string nextSceneId)
+        string nextScene)
     {
         // Arrange
         var choice = new SessionChoice();
@@ -155,14 +155,14 @@ public class SessionChoiceTests
         choice.SceneId = sceneId;
         choice.SceneTitle = sceneTitle;
         choice.ChoiceText = choiceText;
-        choice.NextSceneId = nextSceneId;
+        choice.NextScene = nextScene;
         choice.ChosenAt = testTime;
 
         // Assert
         choice.SceneId.Should().Be(sceneId);
         choice.SceneTitle.Should().Be(sceneTitle);
         choice.ChoiceText.Should().Be(choiceText);
-        choice.NextSceneId.Should().Be(nextSceneId);
+        choice.NextScene.Should().Be(nextScene);
         choice.ChosenAt.Should().Be(testTime);
     }
 }

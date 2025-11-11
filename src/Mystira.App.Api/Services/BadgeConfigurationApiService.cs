@@ -114,9 +114,9 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
         }
 
         // Validate that the axis is from the master list
-        if (!MasterLists.CompassAxes.Contains(request.Axis))
+        if (!MasterLists.CoreAxes.Contains(request.Axis))
         {
-            throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", MasterLists.CompassAxes)}");
+            throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", MasterLists.CoreAxes)}");
         }
 
         var badgeConfig = new BadgeConfiguration
@@ -158,9 +158,9 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
 
         if (!string.IsNullOrWhiteSpace(request.Axis))
         {
-            if (!MasterLists.CompassAxes.Contains(request.Axis))
+            if (!MasterLists.CoreAxes.Contains(request.Axis))
             {
-                throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", MasterLists.CompassAxes)}");
+                throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", MasterLists.CoreAxes)}");
             }
             badgeConfig.Axis = request.Axis;
         }
@@ -238,9 +238,9 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
         foreach (var yamlEntry in badgeConfigYaml.Badges)
         {
             // Validate axis
-            if (!MasterLists.CompassAxes.Contains(yamlEntry.Axis))
+            if (!MasterLists.CoreAxes.Contains(yamlEntry.Axis))
             {
-                throw new ArgumentException($"Invalid compass axis in YAML: {yamlEntry.Axis}. Must be one of: {string.Join(", ", MasterLists.CompassAxes)}");
+                throw new ArgumentException($"Invalid compass axis in YAML: {yamlEntry.Axis}. Must be one of: {string.Join(", ", MasterLists.CoreAxes)}");
             }
 
             var badgeConfig = new BadgeConfiguration

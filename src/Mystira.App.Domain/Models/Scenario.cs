@@ -9,11 +9,31 @@ public class Scenario
     public DifficultyLevel Difficulty { get; set; }
     public SessionLength SessionLength { get; set; }
     public List<string> Archetypes { get; set; } = new();
-    public string MinimumAge { get; set; } = string.Empty; // Now uses string values from AgeGroup class
-    public string Summary { get; set; } = string.Empty;
+    public string AgeGroup { get; set; } = string.Empty;
+    public int MinimumAge { get; set; }
+    public List<string> CoreAxes { get; set; } = new();
+    public List<ScenarioCharacter> Characters { get; set; } = new();
     public List<Scene> Scenes { get; set; } = new();
-    public List<string> CompassAxes { get; set; } = new(); // Max 4 from master list
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public class ScenarioCharacter
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Image { get; set; }
+    public string? Audio { get; set; }
+    public ScenarioCharacterMetadata Metadata { get; set; } = new();
+}
+
+public class ScenarioCharacterMetadata
+{
+    public List<string> Role { get; set; } = new();
+    public List<string> Archetype { get; set; } = new();
+    public string Species { get; set; } = string.Empty;
+    public int Age { get; set; }
+    public List<string> Traits { get; set; } = new();
+    public string Backstory { get; set; } = string.Empty;
 }
 
 public class Scene
@@ -21,14 +41,12 @@ public class Scene
     public string Id { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public SceneType Type { get; set; }
-    public string? NextSceneId { get; set; }
     public string Description { get; set; } = string.Empty;
+    public string? NextSceneId { get; set; }
     public MediaReferences? Media { get; set; }
     public List<Branch> Branches { get; set; } = new();
-    public List<EchoRevealReference> EchoRevealReferences { get; set; } = new();
-    
-    public List<SessionAchievement> SessionAchievements { get; set; } = new();
-    public int Difficulty { get; set; } = 0;
+    public List<EchoReveal> EchoReveals { get; set; } = new();
+    public int? Difficulty { get; set; }
 }
 
 public class Branch
@@ -48,31 +66,32 @@ public class MediaReferences
 
 public class EchoLog
 {
-    public string EchoType { get; set; } = string.Empty; // From master echo types list
+    public string EchoType { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public double Strength { get; set; } // Between 0.1 and 1.0
+    public double Strength { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 }
 
 public class CompassChange
 {
-    public string Axis { get; set; } = string.Empty; // From master compass axes list
-    public double Delta { get; set; } // Between -1.0 and 1.0
+    public string Axis { get; set; } = string.Empty;
+    public double Delta { get; set; }
+    public string? DevelopmentalLink { get; set; }
 }
 
-public class EchoRevealReference
+public class EchoReveal
 {
     public string EchoType { get; set; } = string.Empty;
-    public float MinStrength { get; set; }
+    public double MinStrength { get; set; }
     public string TriggerSceneId { get; set; } = string.Empty;
-    public string RevealMechanic { get; set; } = "none"; // mirror, dream, spirit, none
-    public int MaxAgeScenes { get; set; } = 10;
-    public bool Required { get; set; } = false;
+    public int? MaxAgeScenes { get; set; }
+    public string? RevealMechanic { get; set; }
+    public bool? Required { get; set; }
 }
 
 public class CompassTracking
 {
-    public string Axis { get; set; } = string.Empty; // From master compass axes list
+    public string Axis { get; set; } = string.Empty;
     public double CurrentValue { get; set; } = 0.0;
     public double StartingValue { get; set; } = 0.0;
     public List<CompassChange> History { get; set; } = new();
@@ -88,20 +107,19 @@ public enum DifficultyLevel
 
 public enum SessionLength
 {
-    Short,   // ~30 minutes
-    Medium,  // ~60 minutes
-    Long     // ~90+ minutes
+    Short,
+    Medium,
+    Long
 }
 
 public enum SceneType
 {
-    Narrative,  // Story telling, no player choice
-    Choice,     // Player decision point (only type that can have echo_log)
-    Roll,       // Dice roll required
-    Special     // Special mechanics or events
+    Narrative,
+    Choice,
+    Roll,
+    Special
 }
 
-// Master lists from PRD specification
 public static class MasterLists
 {
     public static readonly List<string> Archetypes = new()
@@ -109,7 +127,7 @@ public static class MasterLists
         "heroic", "guardian", "trickster", "wise/mental", "inner", "moral", "elemental"
     };
 
-    public static readonly List<string> CompassAxes = new()
+    public static readonly List<string> CoreAxes = new()
     {
         "honesty", "bravery", "generosity", "loyalty", "humility", "empathy", "resilience",
         "responsibility", "justice", "trust", "kindness", "discipline", "patience", "curiosity",

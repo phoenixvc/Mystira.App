@@ -16,15 +16,16 @@ public class Scenario
     public string Id { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public string? ImageUrl { get; set; }
     public List<Scene> Scenes { get; set; } = new();
-    public string[] Tags { get; set; } = Array.Empty<string>();
+    public string[] Tags { get; set; } = [];
     public string Difficulty { get; set; } = string.Empty;
     public string SessionLength { get; set; } = string.Empty;
-    public string[] Archetypes { get; set; } = Array.Empty<string>();
-    public string MinimumAge { get; set; } = string.Empty;
+    public string[] Archetypes { get; set; } = [];
+    public int MinimumAge { get; set; } = 1;
+    public string AgeGroup { get; set; } = string.Empty;
     public string Summary { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+    public List<string> CoreAxes { get; set; } = new();
     
     // Backward compatibility properties
     public string Name => Title;

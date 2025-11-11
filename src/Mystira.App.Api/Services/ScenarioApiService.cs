@@ -2,6 +2,11 @@ using Microsoft.EntityFrameworkCore;
 using Mystira.App.Domain.Models;
 using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
+using Mystira.App.Api.Validation;
+using NJsonSchema;
+using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Mystira.App.Api.Services;
 
@@ -13,6 +18,15 @@ public class ScenarioApiService : IScenarioApiService
     private readonly ICharacterMapFileService _characterService;
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ICharacterMediaMetadataService _characterMetadataService;
+
+    private static readonly JsonSchema ScenarioJsonSchema = JsonSchema.FromJsonAsync(ScenarioSchemaDefinitions.StorySchema).GetAwaiter().GetResult();
+
+    private static readonly JsonSerializerOptions SchemaSerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new JsonStringEnumConverter() }
+    };
 
     public ScenarioApiService(
         MystiraAppDbContext context, 
@@ -34,43 +48,32 @@ public class ScenarioApiService : IScenarioApiService
     {
         var query = _context.Scenarios.AsQueryable();
 
-        // Apply filters
         if (request.Difficulty.HasValue)
+        {
             query = query.Where(s => s.Difficulty == request.Difficulty.Value);
+        }
 
         if (request.SessionLength.HasValue)
-            query = query.Where(s => s.SessionLength == request.SessionLength.Value);
-
-        if (!string.IsNullOrEmpty(request.MinimumAge))
         {
-            // Filter scenarios with compatible age groups (in-memory filtering)
-            var allScenarios = await query.ToListAsync();
-            var compatibleScenarios = allScenarios.Where(s => IsAgeGroupCompatible(s.MinimumAge, request.MinimumAge)).ToList();
-            var scenarioSummaries = compatibleScenarios
-                .Skip((request.Page - 1) * request.PageSize)
-                .Take(request.PageSize)
-                .Select(s => new ScenarioSummary
-                {
-                    Id = s.Id,
-                    Title = s.Title,
-                    Description = s.Description,
-                    Tags = s.Tags,
-                    Difficulty = s.Difficulty,
-                    SessionLength = s.SessionLength,
-                    Archetypes = s.Archetypes,
-                    MinimumAge = s.MinimumAge,
-                    Summary = s.Summary,
-                    CreatedAt = s.CreatedAt
-                })
-                .ToList();
-            
-            return new ScenarioListResponse
+            query = query.Where(s => s.SessionLength == request.SessionLength.Value);
+        }
+
+        if (request.MinimumAge.HasValue)
+        {
+            query = query.Where(s => s.MinimumAge <= request.MinimumAge.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.AgeGroup))
+        {
+            var targetMinimumAge = GetMinimumAgeForGroup(request.AgeGroup);
+            if (targetMinimumAge.HasValue)
             {
-                Scenarios = scenarioSummaries,
-                TotalCount = compatibleScenarios.Count,
-                Page = request.Page,
-                PageSize = request.PageSize
-            };
+                query = query.Where(s => s.MinimumAge <= targetMinimumAge.Value);
+            }
+            else
+            {
+                query = query.Where(s => s.AgeGroup == request.AgeGroup);
+            }
         }
 
         if (request.Tags?.Any() == true)
@@ -86,6 +89,14 @@ public class ScenarioApiService : IScenarioApiService
             foreach (var archetype in request.Archetypes)
             {
                 query = query.Where(s => s.Archetypes.Contains(archetype));
+            }
+        }
+
+        if (request.CoreAxes?.Any() == true)
+        {
+            foreach (var axis in request.CoreAxes)
+            {
+                query = query.Where(s => s.CoreAxes.Contains(axis));
             }
         }
 
@@ -105,7 +116,8 @@ public class ScenarioApiService : IScenarioApiService
                 SessionLength = s.SessionLength,
                 Archetypes = s.Archetypes,
                 MinimumAge = s.MinimumAge,
-                Summary = s.Summary,
+                AgeGroup = s.AgeGroup,
+                CoreAxes = s.CoreAxes,
                 CreatedAt = s.CreatedAt
             })
             .ToListAsync();
@@ -128,16 +140,7 @@ public class ScenarioApiService : IScenarioApiService
 
     public async Task<Scenario> CreateScenarioAsync(CreateScenarioRequest request)
     {
-        // Validate archetypes are from master list
-        // todo validate after updating valid archetypes & axes
-        // var invalidArchetypes = request.Archetypes.Except(MasterLists.Archetypes).ToList();
-        // if (invalidArchetypes.Any())
-        //     throw new ArgumentException($"Invalid archetypes: {string.Join(", ", invalidArchetypes)}");
-        //
-        // // Validate compass axes are from master list
-        // var invalidAxes = request.CompassAxes.Except(MasterLists.CompassAxes).ToList();
-        // if (invalidAxes.Any())
-        //     throw new ArgumentException($"Invalid compass axes: {string.Join(", ", invalidAxes)}");
+        ValidateAgainstSchema(request);
 
         var scenario = new Scenario
         {
@@ -148,14 +151,14 @@ public class ScenarioApiService : IScenarioApiService
             Difficulty = request.Difficulty,
             SessionLength = request.SessionLength,
             Archetypes = request.Archetypes,
+            AgeGroup = request.AgeGroup,
             MinimumAge = request.MinimumAge,
-            Summary = request.Summary,
+            CoreAxes = request.CoreAxes,
+            Characters = request.Characters,
             Scenes = request.Scenes,
-            CompassAxes = request.CompassAxes,
             CreatedAt = DateTime.UtcNow
         };
 
-        // Validate scenario structure
         await ValidateScenarioAsync(scenario);
 
         _context.Scenarios.Add(scenario);
@@ -167,6 +170,7 @@ public class ScenarioApiService : IScenarioApiService
         catch (Exception e)
         {
             _logger.LogError(e, "Error saving scenario: {ScenarioId}", scenario.Id);
+            throw;
         }
 
         _logger.LogInformation("Created new scenario: {ScenarioId} - {Title}", scenario.Id, scenario.Title);
@@ -179,19 +183,20 @@ public class ScenarioApiService : IScenarioApiService
         if (scenario == null)
             return null;
 
-        // Apply updates
+        ValidateAgainstSchema(request);
+
         scenario.Title = request.Title;
         scenario.Description = request.Description;
         scenario.Tags = request.Tags;
         scenario.Difficulty = request.Difficulty;
         scenario.SessionLength = request.SessionLength;
         scenario.Archetypes = request.Archetypes;
+        scenario.AgeGroup = request.AgeGroup;
         scenario.MinimumAge = request.MinimumAge;
-        scenario.Summary = request.Summary;
+        scenario.CoreAxes = request.CoreAxes;
+        scenario.Characters = request.Characters;
         scenario.Scenes = request.Scenes;
-        scenario.CompassAxes = request.CompassAxes;
 
-        // Validate updated scenario
         await ValidateScenarioAsync(scenario);
 
         await _context.SaveChangesAsync();
@@ -215,36 +220,163 @@ public class ScenarioApiService : IScenarioApiService
 
     public async Task<List<Scenario>> GetScenariosByAgeGroupAsync(string ageGroup)
     {
-        // Get all scenarios and filter in memory for age compatibility
         var scenarios = await _context.Scenarios.ToListAsync();
-        
+
+        if (string.IsNullOrWhiteSpace(ageGroup))
+        {
+            return scenarios
+                .OrderBy(s => s.Title)
+                .ToList();
+        }
+
+        var targetMinimumAge = GetMinimumAgeForGroup(ageGroup);
+        if (targetMinimumAge.HasValue)
+        {
+            return scenarios
+                .Where(s => s.MinimumAge <= targetMinimumAge.Value)
+                .OrderBy(s => s.Title)
+                .ToList();
+        }
+
         return scenarios
-            .Where(s => IsAgeGroupCompatible(s.MinimumAge, ageGroup))
+            .Where(s => string.Equals(s.AgeGroup, ageGroup, StringComparison.OrdinalIgnoreCase))
             .OrderBy(s => s.Title)
             .ToList();
     }
 
-    private bool IsAgeGroupCompatible(string minimumAge, string targetAge)
+    private static int? GetMinimumAgeForGroup(string ageGroup)
     {
-        // Define age group hierarchy (from youngest to oldest)
-        var ageOrder = new List<string> 
-        { 
-            AgeGroup.Toddlers.Name, 
-            AgeGroup.Preschoolers.Name, 
-            AgeGroup.School.Name, 
-            AgeGroup.Preteens.Name, 
-            AgeGroup.Teens.Name 
+        if (string.IsNullOrWhiteSpace(ageGroup))
+        {
+            return null;
+        }
+
+        var knownGroup = AgeGroup.GetByName(ageGroup);
+        if (knownGroup != null)
+        {
+            return knownGroup.MinimumAge;
+        }
+
+        if (TryParseAgeRangeMinimum(ageGroup, out var parsedMinimum))
+        {
+            return parsedMinimum;
+        }
+
+        return null;
+    }
+
+    private static bool TryParseAgeRangeMinimum(string value, out int minimumAge)
+    {
+        minimumAge = 0;
+        var parts = value.Split('-', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length > 0 && int.TryParse(parts[0], out var min))
+        {
+            minimumAge = min;
+            return true;
+        }
+
+        return false;
+    }
+
+    private void ValidateAgainstSchema(CreateScenarioRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var tags = request.Tags ?? new List<string>();
+        var coreAxes = request.CoreAxes ?? new List<string>();
+        var archetypes = request.Archetypes ?? new List<string>();
+        var characters = request.Characters ?? new List<ScenarioCharacter>();
+        var scenes = request.Scenes ?? new List<Scene>();
+
+        var payload = new
+        {
+            Title = request.Title,
+            Description = request.Description,
+            Tags = tags,
+            Difficulty = request.Difficulty.ToString(),
+            SessionLength = request.SessionLength.ToString(),
+            AgeGroup = request.AgeGroup,
+            MinimumAge = request.MinimumAge,
+            CoreAxes = coreAxes,
+            Archetypes = archetypes,
+            Characters = characters.Select(character => new
+            {
+                Id = character.Id,
+                Name = character.Name,
+                Image = character.Image,
+                Audio = character.Audio,
+                Metadata = character.Metadata == null ? null : new
+                {
+                    Role = character.Metadata.Role ?? new List<string>(),
+                    Archetype = character.Metadata.Archetype ?? new List<string>(),
+                    Species = character.Metadata.Species,
+                    Age = character.Metadata.Age,
+                    Traits = character.Metadata.Traits ?? new List<string>(),
+                    Backstory = character.Metadata.Backstory
+                }
+            }).ToList(),
+            Scenes = scenes.Select(scene =>
+            {
+                var media = scene.Media;
+                var hasMedia = media != null && (!string.IsNullOrWhiteSpace(media.Image) ||
+                                                 !string.IsNullOrWhiteSpace(media.Audio) ||
+                                                 !string.IsNullOrWhiteSpace(media.Video));
+
+                var branches = scene.Branches ?? new List<Branch>();
+                var echoReveals = scene.EchoReveals ?? new List<EchoReveal>();
+
+                return new
+                {
+                    Id = scene.Id,
+                    Title = scene.Title,
+                    Type = scene.Type.ToString().ToLowerInvariant(),
+                    Description = scene.Description,
+                    NextScene = string.IsNullOrWhiteSpace(scene.NextSceneId) ? null : scene.NextSceneId,
+                    Difficulty = scene.Difficulty,
+                    Media = hasMedia ? new
+                    {
+                        Image = media?.Image,
+                        Audio = media?.Audio,
+                        Video = media?.Video
+                    } : null,
+                    Branches = branches.Select(branch => new
+                    {
+                        Choice = branch.Choice,
+                        NextScene = string.IsNullOrWhiteSpace(branch.NextSceneId) ? null : branch.NextSceneId,
+                        EchoLog = branch.EchoLog == null ? null : new
+                        {
+                            EchoType = branch.EchoLog.EchoType,
+                            Description = branch.EchoLog.Description,
+                            Strength = branch.EchoLog.Strength
+                        },
+                        CompassChange = branch.CompassChange == null ? null : new
+                        {
+                            Axis = branch.CompassChange.Axis,
+                            Delta = branch.CompassChange.Delta,
+                            DevelopmentalLink = branch.CompassChange.DevelopmentalLink
+                        }
+                    }).ToList(),
+                    EchoReveals = echoReveals.Select(reveal => new
+                    {
+                        EchoType = reveal.EchoType,
+                        MinStrength = reveal.MinStrength,
+                        TriggerSceneId = reveal.TriggerSceneId,
+                        MaxAgeScenes = reveal.MaxAgeScenes,
+                        RevealMechanic = reveal.RevealMechanic,
+                        Required = reveal.Required
+                    }).ToList()
+                };
+            }).ToList()
         };
 
-        var minIndex = ageOrder.IndexOf(minimumAge);
-        var targetIndex = ageOrder.IndexOf(targetAge);
+        var serialized = JsonSerializer.Serialize(payload, SchemaSerializerOptions);
+        var errors = ScenarioJsonSchema.Validate(serialized);
 
-        // If either age group is not found, assume compatible for backward compatibility
-        if (minIndex == -1 || targetIndex == -1)
-            return true;
-
-        // Target age group must be at or above the minimum age group
-        return targetIndex >= minIndex;
+        if (errors.Count > 0)
+        {
+            var details = string.Join("; ", errors.Select(e => e.ToString()));
+            throw new ScenarioValidationException($"Scenario document does not match the required schema: {details}");
+        }
     }
 
     public async Task<List<Scenario>> GetFeaturedScenariosAsync()
@@ -308,9 +440,9 @@ public class ScenarioApiService : IScenarioApiService
                     if (string.IsNullOrWhiteSpace(change.Axis))
                         throw new ScenarioValidationException($"Compass axis cannot be empty (Scene ID: {scene.Id}, Choice: {branch.Choice})");
 
-                    if (!scenario.CompassAxes.Contains(change.Axis))
+                    if (!scenario.CoreAxes.Contains(change.Axis))
                     {
-                        Console.WriteLine(change.Axis);
+                        // TODO: re-enable strict validation when master axis list is finalized.
                         //throw new ScenarioValidationException($"Invalid compass axis '{change.Axis}' not defined in scenario (Scene ID: {scene.Id}, Choice: {branch.Choice})");
                     }
                 }
