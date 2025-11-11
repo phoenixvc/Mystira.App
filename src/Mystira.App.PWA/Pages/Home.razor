@@ -93,10 +93,10 @@
                         <p class="card-text text-muted mb-4">
                             Sign in to access your adventures and create memorable experiences for young heroes.
                         </p>
-                        <button class="btn btn-primary-custom btn-lg w-100 mb-3" @onclick="ShowSignIn">
+                        <a href="/signin" class="btn btn-primary-custom btn-lg w-100 mb-3">
                             <i class="fas fa-sign-in-alt me-2"></i>
                             Sign In
-                        </button>
+                        </a>
                         <a href="/signup" class="btn btn-outline-primary btn-lg w-100">
                             <i class="fas fa-user-plus me-2"></i>
                             Create Account
@@ -349,30 +349,6 @@
         {
             isStartingAdventure = false;
             StateHasChanged();
-        }
-    }
-
-    private async Task ShowSignIn()
-    {
-        try
-        {
-            Logger.LogInformation("Performing demo sign in...");
-            
-            // For demo purposes, use a simple authentication
-            var success = await AuthService.LoginAsync("demo@mystira.com", "password");
-            
-            if (success)
-            {
-                Logger.LogInformation("Demo sign in successful");
-            }
-            else
-            {
-                Logger.LogError("Demo sign in failed");
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error during sign in");
         }
     }
 

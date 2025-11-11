@@ -32,6 +32,20 @@ public class GameSessionService : IGameSessionService
         {
             _logger.LogInformation("Starting game session for scenario: {ScenarioName}", scenario.Title);
             
+            // Start session via API
+            var apiGameSession = await _apiClient.StartGameSessionAsync(
+                scenario.Id, 
+                "Player", // Default DM name for now
+                new List<string> { "Player" }, // Default player name for now
+                scenario.AgeGroup ?? "6-9" // Default age group
+            );
+
+            if (apiGameSession == null)
+            {
+                _logger.LogWarning("Failed to start game session via API for scenario: {ScenarioName}", scenario.Title);
+                return false;
+            }
+
             // Find the starting scene - look for a scene that's not referenced by any other scene
             var allReferencedSceneIds = scenario.Scenes
                 .Where(s => !string.IsNullOrEmpty(s.NextSceneId))
@@ -61,19 +75,20 @@ public class GameSessionService : IGameSessionService
             startingScene.ImageUrl = !string.IsNullOrEmpty(startingScene.Media?.Image) ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Image) : null;
             startingScene.VideoUrl = !string.IsNullOrEmpty(startingScene.Media?.Video) ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Video) : null;
 
-            
+            // Create local game session with API session data
             CurrentGameSession = new GameSession
             {
+                Id = apiGameSession.Id,
                 Scenario = scenario,
                 ScenarioId = scenario.Id,
                 ScenarioName = scenario.Title,
                 CurrentScene = startingScene,
-                StartedAt = DateTime.UtcNow,
+                StartedAt = apiGameSession.StartedAt,
                 CompletedScenes = new List<Scene>(),
                 IsCompleted = false
             };
 
-            _logger.LogInformation("Game session started successfully");
+            _logger.LogInformation("Game session started successfully with ID: {SessionId}", apiGameSession.Id);
             return true;
         }
         catch (Exception ex)

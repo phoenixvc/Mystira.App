@@ -1,0 +1,267 @@
+@page "/signin"
+@using Mystira.App.PWA.Models
+@using Mystira.App.PWA.Services
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject ILogger<SignIn> Logger
+
+<PageTitle>Sign In - Mystira</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-lg">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-dragon fa-4x text-primary-custom mb-3"></i>
+                        <h2 class="card-title">Welcome Back</h2>
+                        <p class="text-muted">Sign in to continue your adventure</p>
+                    </div>
+
+                    @if (currentStep == SignInStep.Email)
+                    {
+                        <form @onsubmit="RequestSigninCode">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">
+                                    <i class="fas fa-envelope me-2"></i>Email Address
+                                </label>
+                                <input type="email" 
+                                       class="form-control form-control-lg" 
+                                       id="email" 
+                                       @bind="email" 
+                                       placeholder="Enter your email"
+                                       required 
+                                       disabled="@isSubmitting" />
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(errorMessage))
+                            {
+                                <div class="alert alert-danger" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    @errorMessage
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(successMessage))
+                            {
+                                <div class="alert alert-success" role="alert">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    @successMessage
+                                </div>
+                            }
+
+                            <button type="submit" 
+                                    class="btn btn-primary-custom btn-lg w-100" 
+                                    disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    <span>Sending...</span>
+                                }
+                                else
+                                {
+                                    <i class="fas fa-paper-plane me-2"></i>
+                                    <span>Send Sign-In Code</span>
+                                }
+                            </button>
+                        </form>
+                    }
+                    else if (currentStep == SignInStep.Verification)
+                    {
+                        <form @onsubmit="VerifySigninCode">
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-envelope me-2"></i>Email Address
+                                </label>
+                                <div class="form-control bg-light">@email</div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="code" class="form-label">
+                                    <i class="fas fa-key me-2"></i>Verification Code
+                                </label>
+                                <input type="text" 
+                                       class="form-control form-control-lg text-center" 
+                                       id="code" 
+                                       @bind="code" 
+                                       placeholder="Enter 6-digit code"
+                                       maxlength="6" 
+                                       pattern="[0-9]{6}" 
+                                       required 
+                                       disabled="@isSubmitting" 
+                                       @oninput="OnCodeInput" />
+                                <div class="form-text">Check your email for the 6-digit verification code</div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(errorMessage))
+                            {
+                                <div class="alert alert-danger" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    @errorMessage
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(successMessage))
+                            {
+                                <div class="alert alert-success" role="alert">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    @successMessage
+                                </div>
+                            }
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" 
+                                        class="btn btn-primary-custom btn-lg" 
+                                        disabled="@isSubmitting || code.Length != 6">
+                                    @if (isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                        <span>Verifying...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-sign-in-alt me-2"></i>
+                                        <span>Sign In</span>
+                                    }
+                                </button>
+
+                                <button type="button" 
+                                        class="btn btn-outline-secondary" 
+                                        @onclick="GoBack"
+                                        disabled="@isSubmitting">
+                                    <i class="fas fa-arrow-left me-2"></i>
+                                    Back
+                                </button>
+                            </div>
+                        </form>
+                    }
+
+                    <hr class="my-4" />
+
+                    <div class="text-center">
+                        <p class="mb-0 text-muted">
+                            Don't have an account? 
+                            <a href="/signup" class="text-primary-custom text-decoration-none">
+                                Create Account
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private enum SignInStep
+    {
+        Email,
+        Verification
+    }
+
+    private SignInStep currentStep = SignInStep.Email;
+    private string email = string.Empty;
+    private string code = string.Empty;
+    private bool isSubmitting = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    private async Task RequestSigninCode()
+    {
+        try
+        {
+            isSubmitting = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+
+            Logger.LogInformation("Requesting sign-in code for email: {Email}", email);
+
+            var (success, message) = await AuthService.RequestPasswordlessSigninAsync(email);
+
+            if (success)
+            {
+                successMessage = message;
+                currentStep = SignInStep.Verification;
+                Logger.LogInformation("Sign-in code sent successfully for: {Email}", email);
+            }
+            else
+            {
+                errorMessage = message;
+                Logger.LogWarning("Failed to send sign-in code for: {Email}. Message: {Message}", email, message);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An error occurred while sending the sign-in code. Please try again.";
+            Logger.LogError(ex, "Error requesting sign-in code for: {Email}", email);
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task VerifySigninCode()
+    {
+        try
+        {
+            isSubmitting = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+
+            Logger.LogInformation("Verifying sign-in code for email: {Email}", email);
+
+            var (success, message, account) = await AuthService.VerifyPasswordlessSigninAsync(email, code);
+
+            if (success && account != null)
+            {
+                Logger.LogInformation("Sign-in successful for: {Email}", email);
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                errorMessage = message ?? "Invalid verification code. Please try again.";
+                Logger.LogWarning("Failed to verify sign-in code for: {Email}. Message: {Message}", email, message);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An error occurred while verifying the code. Please try again.";
+            Logger.LogError(ex, "Error verifying sign-in code for: {Email}", email);
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnCodeInput(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString() ?? string.Empty;
+        // Only allow numbers
+        code = new string(value.Where(char.IsDigit).ToArray());
+    }
+
+    private void GoBack()
+    {
+        currentStep = SignInStep.Email;
+        code = string.Empty;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+    }
+
+    protected override void OnInitialized()
+    {
+        // Check if user is already authenticated
+        _ = Task.Run(async () =>
+        {
+            var isAuthenticated = await AuthService.IsAuthenticatedAsync();
+            if (isAuthenticated)
+            {
+                Navigation.NavigateTo("/");
+            }
+        });
+    }
+}

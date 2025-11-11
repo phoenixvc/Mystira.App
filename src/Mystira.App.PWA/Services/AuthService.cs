@@ -191,6 +191,60 @@ public class AuthService : IAuthService
         _currentAccount = account;
     }
 
+    public async Task<(bool Success, string Message)> RequestPasswordlessSigninAsync(string email)
+    {
+        try
+        {
+            _logger.LogInformation("Requesting passwordless signin for: {Email}", email);
+            
+            var response = await _apiClient.RequestPasswordlessSigninAsync(email);
+            
+            if (response?.Success == true)
+            {
+                _logger.LogInformation("Passwordless signin requested successfully for: {Email}", email);
+                return (true, response.Message);
+            }
+            
+            _logger.LogWarning("Passwordless signin request failed for: {Email}", email);
+            return (false, response?.Message ?? "Failed to request signin code");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error requesting passwordless signin for: {Email}", email);
+            return (false, "An error occurred while processing your request");
+        }
+    }
+
+    public async Task<(bool Success, string Message, Account? Account)> VerifyPasswordlessSigninAsync(string email, string code)
+    {
+        try
+        {
+            _logger.LogInformation("Verifying passwordless signin for: {Email}", email);
+            
+            var response = await _apiClient.VerifyPasswordlessSigninAsync(email, code);
+            
+            if (response?.Success == true && response.Account != null)
+            {
+                SetStoredToken(response.Token ?? $"{DemoTokenPrefix}{Guid.NewGuid():N}");
+                SetStoredAccount(response.Account);
+                
+                _isAuthenticated = true;
+                _logger.LogInformation("Passwordless signin verified successfully for: {Email}", email);
+                AuthenticationStateChanged?.Invoke(this, true);
+                
+                return (true, "Sign-in successful", response.Account);
+            }
+            
+            _logger.LogWarning("Passwordless signin verification failed for: {Email}", email);
+            return (false, response?.Message ?? "Verification failed", null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error verifying passwordless signin for: {Email}", email);
+            return (false, "An error occurred during verification", null);
+        }
+    }
+
     private void ClearStoredAccount()
     {
         _currentAccount = null;

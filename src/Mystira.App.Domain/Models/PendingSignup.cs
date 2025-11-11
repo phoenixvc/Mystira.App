@@ -9,4 +9,5 @@ public class PendingSignup
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime ExpiresAt { get; set; }
     public bool IsUsed { get; set; } = false;
+    public bool IsSignin { get; set; } = false; // true for signin, false for signup
 }

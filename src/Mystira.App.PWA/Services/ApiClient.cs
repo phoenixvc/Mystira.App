@@ -208,5 +208,99 @@ public class ApiClient : IApiClient
             return null;
         }
     }
+
+    public async Task<PasswordlessSigninResponse?> RequestPasswordlessSigninAsync(string email)
+    {
+        try
+        {
+            _logger.LogInformation("Requesting passwordless signin for email: {Email}", email);
+            
+            var request = new { email };
+            var response = await _httpClient.PostAsJsonAsync("api/auth/passwordless/signin", request, _jsonOptions);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<PasswordlessSigninResponse>(_jsonOptions);
+                _logger.LogInformation("Passwordless signin request successful for: {Email}", email);
+                return result;
+            }
+            else
+            {
+                _logger.LogWarning("Passwordless signin request failed with status: {StatusCode} for email: {Email}", 
+                    response.StatusCode, email);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error requesting passwordless signin for email: {Email}", email);
+            return null;
+        }
+    }
+
+    public async Task<PasswordlessVerifyResponse?> VerifyPasswordlessSigninAsync(string email, string code)
+    {
+        try
+        {
+            _logger.LogInformation("Verifying passwordless signin for email: {Email}", email);
+            
+            var request = new { email, code };
+            var response = await _httpClient.PostAsJsonAsync("api/auth/passwordless/signin/verify", request, _jsonOptions);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<PasswordlessVerifyResponse>(_jsonOptions);
+                _logger.LogInformation("Passwordless signin verification successful for: {Email}", email);
+                return result;
+            }
+            else
+            {
+                _logger.LogWarning("Passwordless signin verification failed with status: {StatusCode} for email: {Email}", 
+                    response.StatusCode, email);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error verifying passwordless signin for email: {Email}", email);
+            return null;
+        }
+    }
+
+    public async Task<GameSession?> StartGameSessionAsync(string scenarioId, string dmName, List<string> playerNames, string targetAgeGroup)
+    {
+        try
+        {
+            _logger.LogInformation("Starting game session for scenario: {ScenarioId}, DM: {DmName}", scenarioId, dmName);
+            
+            var request = new 
+            { 
+                scenarioId, 
+                dmName, 
+                playerNames, 
+                targetAgeGroup 
+            };
+            
+            var response = await _httpClient.PostAsJsonAsync("api/gamesessions", request, _jsonOptions);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var gameSession = await response.Content.ReadFromJsonAsync<GameSession>(_jsonOptions);
+                _logger.LogInformation("Game session started successfully with ID: {SessionId}", gameSession?.Id);
+                return gameSession;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to start game session with status: {StatusCode} for scenario: {ScenarioId}", 
+                    response.StatusCode, scenarioId);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error starting game session for scenario: {ScenarioId}", scenarioId);
+            return null;
+        }
+    }
     
 }
