@@ -60,12 +60,13 @@ else
                                 @if (!string.IsNullOrEmpty(gameSession.CurrentScene.ImageUrl))
                                 {
                                     <img src="@gameSession.CurrentScene.ImageUrl" 
-                                         alt="Scene media" 
+                                         alt="Scene media"
+                                         @key="gameSession.CurrentScene.ImageUrl"
                                          class="img-fluid rounded" />
                                 }
                                 else if (!string.IsNullOrEmpty(gameSession.CurrentScene.VideoUrl))
                                 {
-                                    <video controls class="w-100 rounded">
+                                    <video controls class="w-100 rounded" @key="gameSession.CurrentScene.VideoUrl">
                                         <source src="@gameSession.CurrentScene.VideoUrl" type="video/mp4">
                                         Your browser does not support the video tag.
                                     </video>
@@ -75,7 +76,7 @@ else
                                 {
                                     <div class="p-4 bg-dark rounded text-center">
                                         <i class="fas fa-music fa-2x text-white mb-3"></i>
-                                        <audio controls class="w-100">
+                                        <audio controls class="w-100" @key="gameSession.CurrentScene.AudioUrl">
                                             <source src="@gameSession.CurrentScene.AudioUrl" type="audio/mpeg">
                                             Your browser does not support the audio element.
                                         </audio>
@@ -187,7 +188,10 @@ else
                                 }
                             </div>
                         }
-                        else if (gameSession.CurrentScene.SceneType == SceneType.Final)
+                        else if (gameSession.CurrentScene.SceneType == SceneType.Final || 
+                                 (gameSession.CurrentScene.SceneType == SceneType.Special && 
+                                  gameSession.CurrentScene.NextSceneId == null)
+                                 )
                         {
                             <!-- Final Scene -->
                             <div class="text-center">
