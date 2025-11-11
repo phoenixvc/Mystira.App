@@ -90,7 +90,7 @@
                                        required 
                                        disabled="@isSubmitting" 
                                        @oninput="OnCodeInput" />
-                                <div class="form-text">Check your email for the 6-digit verification code</div>
+                                <div class="form-text">Check your email for 6-digit verification code</div>
                             </div>
 
                             @if (!string.IsNullOrEmpty(errorMessage))
@@ -112,7 +112,7 @@
                             <div class="d-grid gap-2">
                                 <button type="submit" 
                                         class="btn btn-primary-custom btn-lg" 
-                                        disabled="@isSubmitting || code.Length != 6">
+                                        disabled="@isSubmitting || code.Length < 6">
                                     @if (isSubmitting)
                                     {
                                         <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -192,7 +192,7 @@
         }
         catch (Exception ex)
         {
-            errorMessage = "An error occurred while sending the sign-in code. Please try again.";
+            errorMessage = "An error occurred while sending sign-in code. Please try again.";
             Logger.LogError(ex, "Error requesting sign-in code for: {Email}", email);
         }
         finally
@@ -240,8 +240,10 @@
     private void OnCodeInput(ChangeEventArgs e)
     {
         var value = e.Value?.ToString() ?? string.Empty;
-        // Only allow numbers
-        code = new string(value.Where(char.IsDigit).ToArray());
+        // Only allow numbers and limit to 6 digits
+        var filtered = new string(value.Where(char.IsDigit).ToArray());
+        code = filtered.Length > 6 ? filtered.Substring(0, 6) : filtered;
+        StateHasChanged();
     }
 
     private void GoBack()
@@ -252,16 +254,19 @@
         successMessage = string.Empty;
     }
 
-    protected override void OnInitialized()
+    protected override void OnAfterRender(bool firstRender)
     {
-        // Check if user is already authenticated
-        _ = Task.Run(async () =>
+        if (firstRender)
         {
-            var isAuthenticated = await AuthService.IsAuthenticatedAsync();
-            if (isAuthenticated)
+            // Check if user is already authenticated
+            _ = Task.Run(async () =>
             {
-                Navigation.NavigateTo("/");
-            }
-        });
+                var isAuthenticated = await AuthService.IsAuthenticatedAsync();
+                if (isAuthenticated)
+                {
+                    Navigation.NavigateTo("/");
+                }
+            });
+        }
     }
 }
