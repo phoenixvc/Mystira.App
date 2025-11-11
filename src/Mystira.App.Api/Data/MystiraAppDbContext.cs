@@ -17,6 +17,7 @@ public class MystiraAppDbContext : DbContext
     public DbSet<UserProfile> UserProfiles { get; set; }
     public DbSet<UserBadge> UserBadges { get; set; }
     public DbSet<Account> Accounts { get; set; }
+    public DbSet<PendingSignup> PendingSignups { get; set; }
 
     // Scenario Management
     public DbSet<Scenario> Scenarios { get; set; }

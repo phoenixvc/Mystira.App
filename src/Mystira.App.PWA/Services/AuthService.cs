@@ -5,6 +5,7 @@ namespace Mystira.App.PWA.Services;
 public class AuthService : IAuthService
 {
     private readonly ILogger<AuthService> _logger;
+    private readonly IApiClient _apiClient;
     private const string DemoTokenPrefix = "demo_token_";
 
     private bool _isAuthenticated;
@@ -13,9 +14,10 @@ public class AuthService : IAuthService
 
     public event EventHandler<bool>? AuthenticationStateChanged;
 
-    public AuthService(ILogger<AuthService> logger)
+    public AuthService(ILogger<AuthService> logger, IApiClient apiClient)
     {
         _logger = logger;
+        _apiClient = apiClient;
     }
 
     public async Task<bool> IsAuthenticatedAsync()
@@ -108,6 +110,60 @@ public class AuthService : IAuthService
         }
 
         return Task.CompletedTask;
+    }
+
+    public async Task<(bool Success, string Message)> RequestPasswordlessSignupAsync(string email, string displayName)
+    {
+        try
+        {
+            _logger.LogInformation("Requesting passwordless signup for: {Email}", email);
+            
+            var response = await _apiClient.RequestPasswordlessSignupAsync(email, displayName);
+            
+            if (response?.Success == true)
+            {
+                _logger.LogInformation("Passwordless signup requested successfully for: {Email}", email);
+                return (true, response.Message);
+            }
+            
+            _logger.LogWarning("Passwordless signup request failed for: {Email}", email);
+            return (false, response?.Message ?? "Failed to request signup code");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error requesting passwordless signup for: {Email}", email);
+            return (false, "An error occurred while processing your request");
+        }
+    }
+
+    public async Task<(bool Success, string Message, Account? Account)> VerifyPasswordlessSignupAsync(string email, string code)
+    {
+        try
+        {
+            _logger.LogInformation("Verifying passwordless signup for: {Email}", email);
+            
+            var response = await _apiClient.VerifyPasswordlessSignupAsync(email, code);
+            
+            if (response?.Success == true && response.Account != null)
+            {
+                SetStoredToken(response.Token ?? $"{DemoTokenPrefix}{Guid.NewGuid():N}");
+                SetStoredAccount(response.Account);
+                
+                _isAuthenticated = true;
+                _logger.LogInformation("Passwordless signup verified successfully for: {Email}", email);
+                AuthenticationStateChanged?.Invoke(this, true);
+                
+                return (true, "Account created successfully", response.Account);
+            }
+            
+            _logger.LogWarning("Passwordless signup verification failed for: {Email}", email);
+            return (false, response?.Message ?? "Verification failed", null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error verifying passwordless signup for: {Email}", email);
+            return (false, "An error occurred during verification", null);
+        }
     }
 
     private Task<string?> GetStoredTokenAsync()
