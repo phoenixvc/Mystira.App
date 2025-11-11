@@ -2,12 +2,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Domain.Models;
-using Mystira.App.Api.Data;
-using Mystira.App.Api.Models;
-using Mystira.App.Api.Services;
-using CharacterMetadata = Mystira.App.Api.Models.CharacterMetadata;
+using Mystira.App.Admin.Api.Data;
+using Mystira.App.Admin.Api.Models;
+using Mystira.App.Admin.Api.Services;
+using CharacterMetadata = Mystira.App.Admin.Api.Models.CharacterMetadata;
 
-namespace Mystira.App.Api.Controllers;
+namespace Mystira.App.Admin.Api.Controllers;
 
 [ApiController]
 [Route("admin")]

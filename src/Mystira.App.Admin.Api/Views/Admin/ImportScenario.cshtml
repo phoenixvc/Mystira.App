@@ -1,0 +1,287 @@
+@{
+    ViewData["Title"] = "Import Scenario";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Import Scenario</h3>
+                    <a href="/admin" class="btn btn-secondary">Back to Dashboard</a>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Scenario Import:</strong> Upload a YAML file containing scenario definition with scenes, choices, and media references.
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Upload Scenario YAML</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="scenarioUploadForm" method="post" enctype="multipart/form-data" action="/api/scenarios/import">
+                                        <div class="form-group mb-3">
+                                            <label for="yamlFile">Scenario YAML File</label>
+                                            <input type="file" class="form-control" id="yamlFile" name="scenarioFile" accept=".yaml,.yml" required>                                            <small class="form-text text-muted">
+                                                Upload a YAML file containing scenario configuration
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" value="true" id="validateMedia" name="validateMedia" checked>
+                                            <label class="form-check-label" for="validateMedia">
+                                                Validate media references
+                                            </label>
+                                            <small class="form-text text-muted">
+                                                Checks that all media references in the scenario exist in the media database
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" value="true" id="overwriteExisting" name="overwriteExisting">
+                                            <label class="form-check-label" for="overwriteExisting">
+                                                Overwrite existing scenario
+                                            </label>
+                                            <small class="form-text text-muted">
+                                                Warning: This will replace an existing scenario with the same ID
+                                            </small>
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-primary">Upload Scenario</button>
+                                        <button type="button" class="btn btn-info" onclick="validateYamlFile()">Validate YAML</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sidebar -->
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Expected YAML Format</h5>
+                                </div>
+                                <div class="card-body">
+                                    <pre class="small"><code>id: forest-adventure
+title: The Enchanted Forest
+description: A magical adventure through an ancient forest
+target_age_group: Primary
+estimated_duration: 30
+compass_themes:
+  - bravery
+  - honesty
+scenes:
+  - id: forest-entrance
+    title: Forest Entrance
+    description: You stand before a mystical forest
+    background_audio: media/audio/forest-ambience.mp3
+    background_image: media/images/forest-entrance.jpg
+    choices:
+      - id: enter-forest
+        text: Enter the forest boldly
+        compass_impact:
+          bravery: 2
+        next_scene: deep-forest
+      - id: hesitate
+        text: Hesitate at the entrance
+        compass_impact:
+          bravery: -1
+        next_scene: forest-edge</code></pre>
+                                </div>
+                            </div>
+                            
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h5>Media References</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="small">
+                                        <p><strong>Audio:</strong> background_audio, sound_effects</p>
+                                        <p><strong>Images:</strong> background_image, character_images</p>
+                                        <p><strong>Video:</strong> cutscene_video, intro_video</p>
+                                        <p><strong>Format:</strong> All media references must follow the naming convention (media/type/filename.ext)</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h5>Tips</h5>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="small">
+                                        <li>Use descriptive scenario and scene IDs (lowercase, hyphens)</li>
+                                        <li>Ensure all media references exist in the media database</li>
+                                        <li>Compass themes should align with available compass axes</li>
+                                        <li>Test scenarios with target age group in mind</li>
+                                        <li>Include meaningful choice impacts on compass values</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress and Results -->
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Upload Progress</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="uploadProgress" style="display: none;">
+                                        <div class="progress mb-3">
+                                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                        <div id="progressText">Preparing upload...</div>
+                                    </div>
+                                    
+                                    <div id="uploadResults"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function validateYamlFile() {
+    const fileInput = document.getElementById('yamlFile');
+    if (!fileInput.files.length) {
+        alert('Please select a YAML file first');
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        try {
+            // Basic validation - check if it looks like scenario YAML
+            const content = e.target.result;
+            if (!content.includes('id:') || !content.includes('scenes:')) {
+                alert('Warning: This doesn\'t look like a valid scenario YAML file.\nExpected to find "id:" and "scenes:" fields.');
+                return;
+            }
+            
+            // Count scenes
+            const sceneMatches = content.match(/- id:/g);
+            const sceneCount = sceneMatches ? sceneMatches.length : 0;
+            
+            alert(`YAML file appears to be valid with ${sceneCount} scene(s). Click "Upload Scenario" to proceed.`);
+        } catch (error) {
+            alert('Error reading file: ' + error.message);
+        }
+    };
+    
+    reader.readAsText(file);
+}
+
+document.getElementById('scenarioUploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    showProgress('Uploading scenario...');
+    
+    fetch('/admin/scenarios/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.json().then(err => Promise.reject(err));
+        }
+    })
+    .then(data => {
+        hideProgress();
+        
+        if (data.success && data.scenarioId) {
+            showUploadResult('success', `${data.message} ID: ${data.scenarioId} (${data.scenarioTitle})`);
+            this.reset();
+        } else if (data.success) {
+            showUploadResult('success', data.message || 'Scenario uploaded successfully!');
+            this.reset();
+        } else {
+            showUploadResult('error', data.message || 'Unexpected response format');
+        }
+    })
+    .catch(error => {
+        hideProgress();
+        const errorMessage = error.message || error.Message || 'Scenario upload failed: Unknown error';
+        showUploadResult('error', 'Scenario upload failed: ' + errorMessage);
+        
+        if (error.validationErrors) {
+            showValidationResults(error.validationErrors);
+        }
+    });
+});
+
+function showProgress(message) {
+    document.getElementById('uploadProgress').style.display = 'block';
+    document.getElementById('progressBar').style.width = '25%';
+    document.getElementById('progressText').textContent = message;
+}
+
+function hideProgress() {
+    document.getElementById('uploadProgress').style.display = 'none';
+}
+
+function showUploadResult(type, message) {
+    const alertClass = type === 'success' ? 'alert-success' : 
+                     type === 'warning' ? 'alert-warning' : 'alert-danger';
+    
+    document.getElementById('uploadResults').innerHTML += 
+        `<div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+}
+
+function showValidationResults(errors) {
+    let resultHtml = '<div class="mt-3"><h6>Validation Errors:</h6><div class="list-group list-group-flush">';
+    
+    if (Array.isArray(errors)) {
+        errors.forEach(error => {
+            resultHtml += `
+                <div class="list-group-item">
+                    <span class="badge bg-danger me-2">Error</span>
+                    ${error}
+                </div>
+            `;
+        });
+    } else {
+        Object.keys(errors).forEach(field => {
+            errors[field].forEach(error => {
+                resultHtml += `
+                    <div class="list-group-item">
+                        <span class="badge bg-danger me-2">${field}</span>
+                        ${error}
+                    </div>
+                `;
+            });
+        });
+    }
+    
+    resultHtml += '</div></div>';
+    document.getElementById('uploadResults').innerHTML += resultHtml;
+}
+
+// Auto-validate when file is selected
+document.getElementById('yamlFile').addEventListener('change', function() {
+    if (this.files.length > 0) {
+        const fileName = this.files[0].name;
+        if (!fileName.toLowerCase().endsWith('.yaml') && !fileName.toLowerCase().endsWith('.yml')) {
+            alert('Please select a YAML file (.yaml or .yml)');
+            this.value = '';
+        }
+    }
+});
+</script>

@@ -1,0 +1,593 @@
+@{
+    ViewData["Title"] = "Import Media";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Import Media</h3>
+                    <a href="/admin/media" class="btn btn-secondary">Back to Media</a>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <!-- Media Metadata File Upload -->
+                            <div class="card mb-4 border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        Step 1: Media Metadata File (Required)
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-warning">
+                                        <strong>Important:</strong> Media metadata file must be uploaded/configured before uploading any media files. 
+                                        This ensures all media uploads have proper metadata entries.
+                                    </div>
+                                    
+                                    <div id="metadataStatus" class="mb-3">
+                                        <div class="d-flex align-items-center">
+                                            <span id="metadataStatusIcon" class="me-2">⏳</span>
+                                            <span id="metadataStatusText">Checking metadata status...</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <form id="metadataUploadForm" method="post" enctype="multipart/form-data">
+                                        <div class="form-group mb-3">
+                                            <label for="metadataFile">Media Metadata File (JSON or YAML)</label>
+                                            <input type="file" class="form-control" id="metadataFile" name="metadataFile" accept=".json,.yaml,.yml">
+                                            <small class="form-text text-muted">
+                                                Upload a JSON or YAML file containing media metadata entries. 
+                                                <a href="/admin/mediametadata" target="_blank">Manage existing metadata</a>
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" value="true" id="overwriteMetadata" name="overwriteMetadata">
+                                            <label class="form-check-label" for="overwriteMetadata">
+                                                Overwrite existing metadata entries
+                                            </label>
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-warning" id="uploadMetadataBtn">
+                                            <i class="fas fa-upload me-2"></i>Upload Metadata File
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary ms-2" onclick="checkMetadataStatus()">
+                                            <i class="fas fa-refresh me-2"></i>Refresh Status
+                                        </button>
+                                    </form>
+                                    
+                                    <hr class="my-3">
+                                    
+                                    <div class="d-flex justify-content-between">
+                                        <a href="/admin/initialize-sample-data" class="btn btn-info" target="_blank">
+                                            <i class="fas fa-magic me-2"></i>Initialize Sample Metadata
+                                        </a>
+                                        <a href="/admin/mediametadata" class="btn btn-secondary" target="_blank">
+                                            <i class="fas fa-cog me-2"></i>Manage Media Metadata
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Single File Upload -->
+                            <div class="card mb-4" id="singleUploadCard" style="display: none;">
+                                <div class="card-header">
+                                    <h5>
+                                        <i class="fas fa-file-upload me-2"></i>
+                                        Step 2: Single File Upload
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <strong>Note:</strong> The file will be matched against existing metadata entries by filename. 
+                                        You can also specify a Media ID if it exists in your metadata.
+                                    </div>
+                                    
+                                    <form id="singleUploadForm" method="post" enctype="multipart/form-data" action="/admin/media/upload">
+                                        <div class="form-group mb-3">
+                                            <label for="file">Select Media File</label>
+                                            <input type="file" class="form-control" id="file" name="file" accept="audio/*,video/*,image/*" required>
+                                            <small class="form-text text-muted">
+                                                Supported formats: MP3, WAV, MP4, AVI, JPG, PNG, GIF. 
+                                                Filename will be matched against metadata entries.
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="form-group mb-3">
+                                            <label for="mediaId">Media ID (Optional)</label>
+                                            <input type="text" class="form-control" id="mediaId" name="mediaId" placeholder="Leave blank to resolve from filename via metadata">
+                                            <small class="form-text text-muted">
+                                                If specified, this Media ID must exist in your metadata file. 
+                                                Otherwise, the system will match by filename.
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="form-group mb-3">
+                                            <label for="mediaType">Media Type (Optional)</label>
+                                            <select class="form-control" id="mediaType" name="mediaType">
+                                                <option value="">Auto-detect from metadata</option>
+                                                <option value="audio">Audio</option>
+                                                <option value="video">Video</option>
+                                                <option value="image">Image</option>
+                                            </select>
+                                            <small class="form-text text-muted">
+                                                Will use type from metadata entry if not specified
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="form-group mb-3">
+                                            <label for="description">Description (Optional)</label>
+                                            <textarea class="form-control" id="description" name="description" rows="3" placeholder="Optional additional description"></textarea>
+                                            <small class="form-text text-muted">
+                                                Metadata entry description will be used if this is left blank
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="form-group mb-3">
+                                            <label for="tags">Tags (Optional, comma-separated)</label>
+                                            <input type="text" class="form-control" id="tags" name="tags" placeholder="Optional additional tags">
+                                            <small class="form-text text-muted">
+                                                Will merge with tags from metadata entry
+                                            </small>
+                                        </div>
+                                        
+                                        <div id="metadataMatchInfo" class="alert alert-secondary" style="display: none;">
+                                            <strong>Metadata Match:</strong> <span id="matchedMetadata"></span>
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-primary" id="uploadSingleBtn" disabled>
+                                            <i class="fas fa-upload me-2"></i>Upload Media
+                                        </button>
+                                        <small class="form-text text-muted mt-2">
+                                            Upload button will be enabled once metadata is available
+                                        </small>
+                                    </form>
+                                </div>
+                            </div>
+                            
+                            <!-- Bulk Upload -->
+                            <div class="card" id="bulkUploadCard" style="display: none;">
+                                <div class="card-header">
+                                    <h5>
+                                        <i class="fas fa-files me-2"></i>
+                                        Step 2: Bulk Upload
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <strong>Note:</strong> All files will be matched against existing metadata entries by filename. 
+                                        Only files with matching metadata entries will be uploaded.
+                                    </div>
+                                    
+                                    <form id="bulkUploadForm" method="post" enctype="multipart/form-data" action="/admin/media/bulk-upload">
+                                        <div class="form-group mb-3">
+                                            <label for="files">Select Multiple Files</label>
+                                            <input type="file" class="form-control" id="files" name="files" multiple accept="audio/*,video/*,image/*" required>
+                                            <small class="form-text text-muted">
+                                                Hold Ctrl/Cmd to select multiple files. Each filename will be matched against metadata entries.
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="form-group mb-3" id="metadataFileSection">
+                                            <label for="bulkMetadataFile">Additional Metadata File (Optional)</label>
+                                            <input type="file" class="form-control" id="bulkMetadataFile" name="metadataFile" accept=".json,.yaml,.yml">
+                                            <small class="form-text text-muted">
+                                                Upload additional metadata alongside media files. Will be processed first.
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" value="true" id="autoDetectType" name="autoDetectType" checked>
+                                            <label class="form-check-label" for="autoDetectType">
+                                                Auto-detect media type from metadata/file extension
+                                            </label>
+                                        </div>
+                                        
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" value="true" id="overwriteExisting" name="overwriteExisting">
+                                            <label class="form-check-label" for="overwriteExisting">
+                                                Overwrite existing media with same ID
+                                            </label>
+                                        </div>
+                                        
+                                        <div id="fileValidationStatus" class="mb-3" style="display: none;">
+                                            <div class="alert alert-secondary">
+                                                <strong>File Validation:</strong> <span id="validationSummary"></span>
+                                                <div id="validationDetails" class="mt-2"></div>
+                                            </div>
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-success" id="uploadBulkBtn" disabled>
+                                            <i class="fas fa-upload me-2"></i>Upload All Files
+                                        </button>
+                                        <small class="form-text text-muted mt-2">
+                                            Upload button will be enabled once metadata is available
+                                        </small>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sidebar -->
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Media Metadata Requirements</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-warning">
+                                        <strong>New Requirement:</strong> All media uploads now require existing metadata entries.
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <strong>Metadata Entry Format:</strong><br>
+                                        <small class="text-muted">Each media file needs a metadata entry with:</small>
+                                        <ul class="small mt-2">
+                                            <li><code>id</code> - Unique media identifier</li>
+                                            <li><code>fileName</code> - Exact filename to match</li>
+                                            <li><code>type</code> - audio, video, or image</li>
+                                            <li><code>title</code> - Display name</li>
+                                            <li><code>description</code> - Brief description</li>
+                                            <li><code>tags</code> - Array of tag strings</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <strong>Example JSON Entry:</strong><br>
+                                        <pre class="small bg-light p-2 rounded mt-1"><code>{
+  "id": "forest-sounds",
+  "fileName": "forest_sounds.mp3",
+  "type": "audio",
+  "title": "Forest Sounds",
+  "description": "Peaceful ambience",
+  "tags": ["nature", "ambient"]
+}</code></pre>
+                                    </div>
+                                    
+                                    <hr>
+                                    
+                                    <div class="mb-3">
+                                        <strong>File Size Limits:</strong><br>
+                                        <small>Audio: 50MB max<br>
+                                        Video: 100MB max<br>
+                                        Images: 10MB max</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h5>Upload Progress</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="uploadProgress" style="display: none;">
+                                        <div class="progress mb-2">
+                                            <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                        <div id="progressText">Preparing upload...</div>
+                                    </div>
+                                    <div id="uploadResults"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global variables
+let metadataEntries = [];
+let metadataAvailable = false;
+
+// Initialize page on load
+document.addEventListener('DOMContentLoaded', function() {
+    checkMetadataStatus();
+    
+    // Set up event listeners
+    document.getElementById('metadataUploadForm').addEventListener('submit', uploadMetadata);
+    document.getElementById('singleUploadForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        uploadSingleFile();
+    });
+    document.getElementById('bulkUploadForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        uploadBulkFiles();
+    });
+    
+    // File change handlers
+    document.getElementById('file').addEventListener('change', handleSingleFileChange);
+    document.getElementById('files').addEventListener('change', handleBulkFilesChange);
+});
+
+// Check metadata status
+async function checkMetadataStatus() {
+    try {
+        const response = await fetch('/api/mediametadata');
+        if (response.ok) {
+            const metadataFile = await response.json();
+            metadataEntries = metadataFile.entries || [];
+            
+            if (metadataEntries.length > 0) {
+                updateMetadataStatus('success', `✅ Metadata available (${metadataEntries.length} entries)`, true);
+            } else {
+                updateMetadataStatus('warning', '⚠️ No metadata entries found', false);
+            }
+        } else {
+            updateMetadataStatus('error', '❌ No metadata file found', false);
+        }
+    } catch (error) {
+        updateMetadataStatus('error', '❌ Error checking metadata status', false);
+        console.error('Metadata check error:', error);
+    }
+}
+
+function updateMetadataStatus(type, message, available) {
+    metadataAvailable = available;
+    
+    const statusIcon = document.getElementById('metadataStatusIcon');
+    const statusText = document.getElementById('metadataStatusText');
+    const singleCard = document.getElementById('singleUploadCard');
+    const bulkCard = document.getElementById('bulkUploadCard');
+    const singleBtn = document.getElementById('uploadSingleBtn');
+    const bulkBtn = document.getElementById('uploadBulkBtn');
+    
+    statusIcon.textContent = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌';
+    statusText.textContent = message;
+    
+    // Show/hide upload sections based on metadata availability
+    if (available) {
+        singleCard.style.display = 'block';
+        bulkCard.style.display = 'block';
+        singleBtn.disabled = false;
+        bulkBtn.disabled = false;
+    } else {
+        singleCard.style.display = 'none';
+        bulkCard.style.display = 'none';
+        singleBtn.disabled = true;
+        bulkBtn.disabled = true;
+    }
+}
+
+// Upload metadata file
+async function uploadMetadata(e) {
+    e.preventDefault();
+    
+    const form = e.target;
+    const fileInput = document.getElementById('metadataFile');
+    const overwrite = document.getElementById('overwriteMetadata').checked;
+    
+    if (!fileInput.files || fileInput.files.length === 0) {
+        showResult('error', 'Please select a metadata file to upload');
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    showProgress('Uploading metadata file...');
+    
+    try {
+        // Read file content
+        const fileContent = await file.text();
+        
+        const response = await fetch(`/api/mediametadata/import?overwriteExisting=${overwrite}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(fileContent)
+        });
+        
+        if (response.ok) {
+            hideProgress();
+            showResult('success', 'Metadata file uploaded successfully!');
+            form.reset();
+            await checkMetadataStatus(); // Refresh status
+        } else {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to upload metadata');
+        }
+    } catch (error) {
+        hideProgress();
+        showResult('error', `Metadata upload failed: ${error.message}`);
+    }
+}
+
+// Handle single file selection
+function handleSingleFileChange(e) {
+    if (e.target.files.length === 0) return;
+    
+    const file = e.target.files[0];
+    const filename = file.name;
+    
+    // Find matching metadata entry
+    const metadataEntry = metadataEntries.find(entry => entry.fileName === filename);
+    
+    if (metadataEntry) {
+        // Show metadata match info
+        document.getElementById('metadataMatchInfo').style.display = 'block';
+        document.getElementById('matchedMetadata').innerHTML = `
+            <strong>${metadataEntry.title}</strong> (ID: ${metadataEntry.id}, Type: ${metadataEntry.type})
+        `;
+        
+        // Pre-fill form with metadata info
+        document.getElementById('mediaId').placeholder = `Will use: ${metadataEntry.id}`;
+        document.getElementById('mediaType').value = metadataEntry.type;
+    } else {
+        // No matching metadata
+        document.getElementById('metadataMatchInfo').style.display = 'block';
+        document.getElementById('matchedMetadata').innerHTML = `
+            <span class="text-danger">No metadata entry found for "${filename}"</span>
+        `;
+    }
+}
+
+// Handle bulk file selection
+function handleBulkFilesChange(e) {
+    if (e.target.files.length === 0) return;
+    
+    const files = Array.from(e.target.files);
+    const validFiles = [];
+    const invalidFiles = [];
+    
+    files.forEach(file => {
+        const metadataEntry = metadataEntries.find(entry => entry.fileName === file.name);
+        if (metadataEntry) {
+            validFiles.push({file: file, metadata: metadataEntry});
+        } else {
+            invalidFiles.push(file.name);
+        }
+    });
+    
+    // Show validation status
+    const statusDiv = document.getElementById('fileValidationStatus');
+    const summarySpan = document.getElementById('validationSummary');
+    const detailsDiv = document.getElementById('validationDetails');
+    
+    statusDiv.style.display = 'block';
+    summarySpan.innerHTML = `${validFiles.length} valid, ${invalidFiles.length} invalid of ${files.length} files`;
+    
+    let detailsHtml = '';
+    
+    if (validFiles.length > 0) {
+        detailsHtml += `<div class="mb-2"><strong class="text-success">Valid files:</strong><br>`;
+        validFiles.forEach(({file, metadata}) => {
+            detailsHtml += `<small class="text-success">✅ ${file.name} → ${metadata.id}</small><br>`;
+        });
+        detailsHtml += '</div>';
+    }
+    
+    if (invalidFiles.length > 0) {
+        detailsHtml += `<div class="mb-2"><strong class="text-danger">Missing metadata:</strong><br>`;
+        invalidFiles.forEach(filename => {
+            detailsHtml += `<small class="text-danger">❌ ${filename}</small><br>`;
+        });
+        detailsHtml += '</div>';
+    }
+    
+    detailsDiv.innerHTML = detailsHtml;
+}
+
+// Upload single file
+async function uploadSingleFile() {
+    const form = document.getElementById('singleUploadForm');
+    const formData = new FormData(form);
+    
+    showProgress('Uploading file...');
+    
+    try {
+        const response = await fetch('/api/media/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            hideProgress();
+            showResult('success', `File uploaded successfully! Media ID: ${data.mediaId}`);
+            form.reset();
+            document.getElementById('metadataMatchInfo').style.display = 'none';
+        } else {
+            const error = await response.json();
+            throw new Error(error.message || 'Upload failed');
+        }
+    } catch (error) {
+        hideProgress();
+        showResult('error', `Upload failed: ${error.message}`);
+    }
+}
+
+// Upload bulk files
+async function uploadBulkFiles() {
+    const form = document.getElementById('bulkUploadForm');
+    const formData = new FormData(form);
+    
+    showProgress('Uploading files...');
+    
+    try {
+        const response = await fetch('/api/media/bulk-upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            hideProgress();
+            showResult('success', `Successfully uploaded ${data.uploadedCount} files`);
+            if (data.errors && data.errors.length > 0) {
+                showResult('warning', `Some errors occurred: ${data.errors.join(', ')}`);
+            }
+            showBulkResults(data);
+            form.reset();
+            document.getElementById('fileValidationStatus').style.display = 'none';
+        } else {
+            const error = await response.json();
+            throw new Error(error.message || 'Bulk upload failed');
+        }
+    } catch (error) {
+        hideProgress();
+        showResult('error', `Bulk upload failed: ${error.message}`);
+    }
+}
+
+// Utility functions
+function showProgress(message = 'Processing...') {
+    document.getElementById('uploadProgress').style.display = 'block';
+    document.getElementById('progressBar').style.width = '50%';
+    document.getElementById('progressText').textContent = message;
+}
+
+function hideProgress() {
+    document.getElementById('uploadProgress').style.display = 'none';
+}
+
+function showResult(type, message) {
+    const alertClass = type === 'success' ? 'alert-success' : 
+                     type === 'warning' ? 'alert-warning' : 'alert-danger';
+    
+    document.getElementById('uploadResults').innerHTML += 
+        `<div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+}
+
+function showBulkResults(data) {
+    if (data.successfulUploads && data.successfulUploads.length > 0 || 
+        data.errors && data.errors.length > 0) {
+        
+        let resultHtml = '<div class="mt-3"><h6>Upload Details:</h6><div class="list-group list-group-flush">';
+        
+        if (data.successfulUploads) {
+            data.successfulUploads.forEach(mediaId => {
+                resultHtml += `
+                    <div class="list-group-item list-group-item-success">
+                        <span class="badge bg-success me-2">Success</span>
+                        ${mediaId}
+                    </div>
+                `;
+            });
+        }
+        
+        if (data.errors) {
+            data.errors.forEach(error => {
+                resultHtml += `
+                    <div class="list-group-item list-group-item-danger">
+                        <span class="badge bg-danger me-2">Error</span>
+                        ${error}
+                    </div>
+                `;
+            });
+        }
+        
+        resultHtml += '</div></div>';
+        document.getElementById('uploadResults').innerHTML += resultHtml;
+    }
+}
+</script>

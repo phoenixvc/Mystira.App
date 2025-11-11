@@ -1,0 +1,300 @@
+@{
+    ViewData["Title"] = "Import Bundle";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Import Content Bundle</h3>
+                    <a href="/admin" class="btn btn-secondary">Back to Dashboard</a>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Bundle Format:</strong> Upload a ZIP file containing scenarios and media files with the expected directory structure.
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Upload Bundle</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="bundleUploadForm" method="post" enctype="multipart/form-data" action="/admin/bundles/upload">
+                                        <div class="form-group mb-3">
+                                            <label for="bundleFile">Select Bundle File (ZIP)</label>
+                                            <input type="file" class="form-control" id="bundleFile" name="bundleFile" accept=".zip" required>
+                                            <small class="form-text text-muted">
+                                                Maximum file size: 500MB
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="form-group mb-3">
+                                            <label for="bundleName">Bundle Name</label>
+                                            <input type="text" class="form-control" id="bundleName" name="bundleName" placeholder="e.g., Fantasy Adventure Pack" required>
+                                        </div>
+                                        
+                                        <div class="form-group mb-3">
+                                            <label for="version">Version</label>
+                                            <input type="text" class="form-control" id="version" name="version" placeholder="e.g., 1.0.0" required>
+                                        </div>
+                                        
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" value="true" id="validateContent" name="validateContent" checked>
+                                            <label class="form-check-label" for="validateContent">
+                                                Validate content before import
+                                            </label>
+                                            <small class="form-text text-muted">
+                                                Checks scenarios against media references and validates structure
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" value="true" id="overwriteExisting" name="overwriteExisting">
+                                            <label class="form-check-label" for="overwriteExisting">
+                                                Overwrite existing content
+                                            </label>
+                                            <small class="form-text text-muted">
+                                                Warning: This will replace existing scenarios and media with the same IDs
+                                            </small>
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-primary">Upload and Import Bundle</button>
+                                        <button type="button" class="btn btn-info" onclick="validateOnly()">Validate Only (No Import)</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Sidebar -->
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Expected Directory Structure</h5>
+                                </div>
+                                <div class="card-body">
+                                    <pre class="small">
+bundle.zip
+├── scenarios/
+│   ├── scenario1.yaml
+│   ├── scenario2.yaml
+│   └── ...
+└── media/
+    ├── audio/
+    │   ├── ambient-forest.mp3
+    │   ├── dragon-roar.wav
+    │   └── ...
+    ├── images/
+    │   ├── castle-entrance.jpg
+    │   ├── character-portrait.png
+    │   └── ...
+    └── video/
+        ├── tavern-scene.mp4
+        └── ...
+                                    </pre>
+                                </div>
+                            </div>
+                            
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h5>Validation Rules</h5>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="small">
+                                        <li>All scenario files must be valid YAML</li>
+                                        <li>Media files must follow naming conventions</li>
+                                        <li>All media references in scenarios must exist in the bundle</li>
+                                        <li>Scenario IDs must be unique</li>
+                                        <li>Media IDs must be unique</li>
+                                        <li>File sizes must be within limits</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress and Results -->
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Import Progress</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="importProgress" style="display: none;">
+                                        <div class="progress mb-3">
+                                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                        <div id="progressText">Preparing import...</div>
+                                    </div>
+                                    
+                                    <div id="importResults"></div>
+                                    
+                                    <div id="validationResults" style="display: none;">
+                                        <h6>Validation Results</h6>
+                                        <div id="validationDetails"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('bundleUploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    importBundle();
+});
+
+function importBundle() {
+    const form = document.getElementById('bundleUploadForm');
+    const formData = new FormData(form);
+    
+    showProgress('Uploading bundle...');
+    
+    fetch('/admin/bundles/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideProgress();
+        
+        if (data.success) {
+            showImportResult('success', `Bundle imported successfully!`);
+            
+            if (data.summary) {
+                showImportSummary(data.summary);
+            }
+            
+            if (data.warnings && data.warnings.length > 0) {
+                showImportResult('warning', `Warnings: ${data.warnings.join(', ')}`);
+            }
+            
+            form.reset();
+        } else {
+            showImportResult('error', data.message || 'Bundle import failed');
+            
+            if (data.validationErrors) {
+                showValidationResults(data.validationErrors);
+            }
+        }
+    })
+    .catch(error => {
+        hideProgress();
+        showImportResult('error', 'Bundle import failed: ' + error.message);
+    });
+}
+
+function validateOnly() {
+    const form = document.getElementById('bundleUploadForm');
+    const formData = new FormData(form);
+    formData.append('validateOnly', 'true');
+    
+    showProgress('Validating bundle...');
+    
+    fetch('/admin/bundles/validate', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideProgress();
+        
+        if (data.valid) {
+            showImportResult('success', 'Bundle structure is valid!');
+            showValidationResults(data.details);
+        } else {
+            showImportResult('error', 'Bundle validation failed');
+            showValidationResults(data.errors);
+        }
+    })
+    .catch(error => {
+        hideProgress();
+        showImportResult('error', 'Validation failed: ' + error.message);
+    });
+}
+
+function showProgress(message) {
+    document.getElementById('importProgress').style.display = 'block';
+    document.getElementById('progressBar').style.width = '25%';
+    document.getElementById('progressText').textContent = message;
+}
+
+function hideProgress() {
+    document.getElementById('importProgress').style.display = 'none';
+}
+
+function showImportResult(type, message) {
+    const alertClass = type === 'success' ? 'alert-success' : 
+                     type === 'warning' ? 'alert-warning' : 'alert-danger';
+    
+    document.getElementById('importResults').innerHTML += 
+        `<div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+}
+
+function showImportSummary(summary) {
+    const summaryHtml = `
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6>Import Summary</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Scenarios:</strong> ${summary.scenariosImported || 0} imported
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Media Files:</strong> ${summary.mediaImported || 0} imported
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <strong>Total Size:</strong> ${summary.totalSize || 'Unknown'}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Import Time:</strong> ${summary.importTime || 'Unknown'}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('importResults').innerHTML += summaryHtml;
+}
+
+function showValidationResults(results) {
+    document.getElementById('validationResults').style.display = 'block';
+    
+    let resultHtml = '<div class="list-group list-group-flush">';
+    
+    if (Array.isArray(results)) {
+        results.forEach(result => {
+            const badgeClass = result.type === 'error' ? 'bg-danger' : 
+                              result.type === 'warning' ? 'bg-warning' : 'bg-success';
+            
+            resultHtml += `
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">${result.file || 'General'}</h6>
+                        <span class="badge ${badgeClass}">${result.type}</span>
+                    </div>
+                    <p class="mb-1">${result.message}</p>
+                </div>
+            `;
+        });
+    }
+    
+    resultHtml += '</div>';
+    document.getElementById('validationDetails').innerHTML = resultHtml;
+}
+</script>
