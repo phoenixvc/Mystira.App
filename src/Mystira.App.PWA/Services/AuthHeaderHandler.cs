@@ -4,12 +4,12 @@ namespace Mystira.App.PWA.Services;
 
 public class AuthHeaderHandler : DelegatingHandler
 {
-    private readonly IAuthService _authService;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<AuthHeaderHandler> _logger;
 
-    public AuthHeaderHandler(IAuthService authService, ILogger<AuthHeaderHandler> logger)
+    public AuthHeaderHandler(IServiceProvider serviceProvider, ILogger<AuthHeaderHandler> logger)
     {
-        _authService = authService;
+        _serviceProvider = serviceProvider;
         _logger = logger;
     }
 
@@ -17,16 +17,26 @@ public class AuthHeaderHandler : DelegatingHandler
     {
         try
         {
-            var token = await _authService.GetTokenAsync();
+            // Resolve IAuthService lazily to avoid circular dependency
+            var authService = _serviceProvider.GetService<IAuthService>();
             
-            if (!string.IsNullOrEmpty(token))
+            if (authService != null)
             {
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                _logger.LogDebug("Added Bearer token to request: {Uri}", request.RequestUri);
+                var token = await authService.GetTokenAsync();
+                
+                if (!string.IsNullOrEmpty(token))
+                {
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                    _logger.LogDebug("Added Bearer token to request: {Uri}", request.RequestUri);
+                }
+                else
+                {
+                    _logger.LogDebug("No token available for request: {Uri}", request.RequestUri);
+                }
             }
             else
             {
-                _logger.LogDebug("No token available for request: {Uri}", request.RequestUri);
+                _logger.LogWarning("AuthService not available for request: {Uri}", request.RequestUri);
             }
         }
         catch (Exception ex)
