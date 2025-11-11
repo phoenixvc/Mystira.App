@@ -51,7 +51,7 @@ public class GameSessionsController : ControllerBase
     /// Start a new game session
     /// </summary>
     [HttpPost]
-    [Authorize] // Requires DM authentication
+    //[Authorize] // Requires DM authentication
     public async Task<ActionResult<GameSession>> StartSession([FromBody] StartGameSessionRequest request)
     {
         try
