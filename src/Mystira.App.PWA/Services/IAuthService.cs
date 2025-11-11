@@ -6,6 +6,7 @@ public interface IAuthService
 {
     Task<bool> IsAuthenticatedAsync();
     Task<Account?> GetCurrentAccountAsync();
+    Task<string?> GetTokenAsync();
     Task<bool> LoginAsync(string email, string password);
     Task LogoutAsync();
     Task<(bool Success, string Message)> RequestPasswordlessSignupAsync(string email, string displayName);

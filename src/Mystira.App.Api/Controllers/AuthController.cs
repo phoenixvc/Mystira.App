@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Text;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.IdentityModel.Tokens;
 using Mystira.App.Api.Models;
 using Mystira.App.Api.Services;
 
@@ -122,7 +125,7 @@ namespace Mystira.App.Api.Controllers
                 Success = true, 
                 Message = "Account created successfully",
                 Account = account,
-                Token = GenerateDemoToken(account.Auth0UserId)
+                Token = GenerateJwtToken(account.Id, account.Email, account.DisplayName)
             });
         }
 
@@ -180,13 +183,37 @@ namespace Mystira.App.Api.Controllers
                 Success = true, 
                 Message = "Sign-in successful",
                 Account = account,
-                Token = GenerateDemoToken(account.Auth0UserId)
+                Token = GenerateJwtToken(account.Id, account.Email, account.DisplayName)
             });
         }
 
-        private string GenerateDemoToken(string userId)
+        private string GenerateJwtToken(string accountId, string email, string displayName)
         {
-            return $"demo_token_{userId}_{Guid.NewGuid():N}";
+            var jwtKey = _configuration["Jwt:Key"] ?? "Mystira-app-Development-Secret-Key-2024-Very-Long-For-Security";
+            var jwtIssuer = _configuration["Jwt:Issuer"] ?? "mystira-app-api";
+            var jwtAudience = _configuration["Jwt:Audience"] ?? "mystira-app";
+
+            var claims = new[]
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, accountId),
+                new Claim(JwtRegisteredClaimNames.Email, email),
+                new Claim(JwtRegisteredClaimNames.Name, displayName),
+                new Claim("account_id", accountId),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(
+                issuer: jwtIssuer,
+                audience: jwtAudience,
+                claims: claims,
+                expires: DateTime.UtcNow.AddDays(7),
+                signingCredentials: credentials
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
 

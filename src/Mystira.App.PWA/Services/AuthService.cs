@@ -55,6 +55,19 @@ public class AuthService : IAuthService
         }
     }
 
+    public async Task<string?> GetTokenAsync()
+    {
+        try
+        {
+            return await GetStoredTokenAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting token");
+            return null;
+        }
+    }
+
     public Task<bool> LoginAsync(string email, string password)
     {
         try
