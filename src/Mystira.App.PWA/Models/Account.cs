@@ -2,11 +2,11 @@ namespace Mystira.App.PWA.Models;
 
 public class Account
 {
-    public string Id { get; set; } = string.Empty;
-    public string Auth0UserId { get; set; } = string.Empty;
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string Auth0UserId { get; set; } = string.Empty; // Auth0 user identifier
     public string Email { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
-    public List<string> UserProfileIds { get; set; } = new();
+    public List<string> UserProfileIds { get; set; } = new(); // Can have multiple user profiles
     public SubscriptionDetails Subscription { get; set; } = new();
     public AccountSettings Settings { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
