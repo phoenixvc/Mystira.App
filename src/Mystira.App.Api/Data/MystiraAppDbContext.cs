@@ -259,7 +259,7 @@ public class MystiraAppDbContext : DbContext
             if (!isInMemoryDatabase)
             {
                 entity.ToContainer("GameSessions")
-                      .HasPartitionKey(e => e.DmName);
+                      .HasPartitionKey(e => e.AccountId);
             }
 
             entity.Property(e => e.PlayerNames)

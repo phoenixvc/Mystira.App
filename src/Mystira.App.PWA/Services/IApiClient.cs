@@ -12,5 +12,6 @@ public interface IApiClient
     Task<PasswordlessVerifyResponse?> VerifyPasswordlessSignupAsync(string email, string code);
     Task<PasswordlessSigninResponse?> RequestPasswordlessSigninAsync(string email);
     Task<PasswordlessVerifyResponse?> VerifyPasswordlessSigninAsync(string email, string code);
-    Task<GameSession?> StartGameSessionAsync(string scenarioId, string dmName, List<string> playerNames, string targetAgeGroup);
+    Task<GameSession?> StartGameSessionAsync(string scenarioId, string accountId, string profileId, List<string> playerNames, string targetAgeGroup);
+    Task<Account?> GetAccountByEmailAsync(string email);
 }

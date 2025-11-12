@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Components.WebAssembly.Http;
 using Mystira.App.PWA.Models;
 
@@ -18,7 +19,8 @@ public class ApiClient : IApiClient
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
         };
     }
 
@@ -267,16 +269,18 @@ public class ApiClient : IApiClient
         }
     }
 
-    public async Task<GameSession?> StartGameSessionAsync(string scenarioId, string dmName, List<string> playerNames, string targetAgeGroup)
+    public async Task<GameSession?> StartGameSessionAsync(string scenarioId, string accountId, string profileId, List<string> playerNames, string targetAgeGroup)
     {
         try
         {
-            _logger.LogInformation("Starting game session for scenario: {ScenarioId}, DM: {DmName}", scenarioId, dmName);
+            _logger.LogInformation("Starting game session for scenario: {ScenarioId}, Account: {AccountId}, Profile: {ProfileId}", 
+                scenarioId, accountId, profileId);
             
             var request = new 
             { 
                 scenarioId, 
-                dmName, 
+                accountId, 
+                profileId, 
                 playerNames, 
                 targetAgeGroup 
             };
@@ -299,6 +303,40 @@ public class ApiClient : IApiClient
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error starting game session for scenario: {ScenarioId}", scenarioId);
+            return null;
+        }
+    }
+
+    public async Task<Account?> GetAccountByEmailAsync(string email)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching account for email: {Email}", email);
+            
+            var encodedEmail = Uri.EscapeDataString(email);
+            var response = await _httpClient.GetAsync($"api/accounts/email/{encodedEmail}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var account = await response.Content.ReadFromJsonAsync<Account>(_jsonOptions);
+                _logger.LogInformation("Successfully fetched account for email: {Email}", email);
+                return account;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Account not found for email: {Email}", email);
+                return null;
+            }
+            else
+            {
+                _logger.LogWarning("API request failed with status: {StatusCode} for email: {Email}", 
+                    response.StatusCode, email);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching account for email: {Email}", email);
             return null;
         }
     }

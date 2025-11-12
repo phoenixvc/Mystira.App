@@ -1,11 +1,9 @@
-using System.Text;
 using Mystira.App.Api.Adapters;
 using Mystira.App.Api.Data;
 using Mystira.App.Api.Services;
 using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -31,31 +29,6 @@ builder.Services.AddSwaggerGen(c =>
         {
             Name = "Mystira Team",
             Email = "support@mystira.app"
-        }
-    });
-
-    // Add JWT authentication to Swagger
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token in the text input below.",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
         }
     });
 
@@ -89,11 +62,7 @@ else
 // Add Azure Infrastructure Services
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 
-// Configure JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "Mystira-app-Development-Secret-Key-2024-Very-Long-For-Security";
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "mystira-app-api";
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "mystira-app";
-
+// Configure Cookie Authentication (no JWT)
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultScheme = "Cookies";
@@ -111,19 +80,6 @@ builder.Services.AddAuthentication(options =>
         options.LoginPath = "/api/auth/login";
         options.LogoutPath = "/api/auth/logout";
         options.AccessDeniedPath = "/api/auth/forbidden";
-    })
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-        };
     });
 
 builder.Services.AddAuthorization();

@@ -6,6 +6,7 @@ public class GameSessionService : IGameSessionService
 {
     private readonly ILogger<GameSessionService> _logger;
     private readonly IApiClient _apiClient;
+    private readonly IAuthService _authService;
     
     public event EventHandler<GameSession?>? GameSessionChanged;
     
@@ -20,10 +21,11 @@ public class GameSessionService : IGameSessionService
         }
     }
 
-    public GameSessionService(ILogger<GameSessionService> logger, IApiClient apiClient)
+    public GameSessionService(ILogger<GameSessionService> logger, IApiClient apiClient, IAuthService authService)
     {
         _logger = logger;
         _apiClient = apiClient;
+        _authService = authService;
     }
 
     public async Task<bool> StartGameSessionAsync(Scenario scenario)
@@ -32,10 +34,24 @@ public class GameSessionService : IGameSessionService
         {
             _logger.LogInformation("Starting game session for scenario: {ScenarioName}", scenario.Title);
             
+            // Get account information from auth service
+            var account = await _authService.GetCurrentAccountAsync();
+            string accountId = account?.Id ?? "default-account";
+            string profileId = "default-profile";
+            
+            // If account has profiles, use the first one as default
+            if (account?.UserProfileIds != null && account.UserProfileIds.Any())
+            {
+                profileId = account.UserProfileIds.First();
+            }
+            
+            _logger.LogInformation("Starting session with AccountId: {AccountId}, ProfileId: {ProfileId}", accountId, profileId);
+            
             // Start session via API
             var apiGameSession = await _apiClient.StartGameSessionAsync(
-                scenario.Id, 
-                "Player", // Default DM name for now
+                scenario.Id,
+                accountId,
+                profileId,
                 new List<string> { "Player" }, // Default player name for now
                 scenario.AgeGroup ?? "6-9" // Default age group
             );
