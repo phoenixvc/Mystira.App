@@ -36,7 +36,8 @@ public class GameSessionApiService : IGameSessionApiService
         {
             Id = Guid.NewGuid().ToString(),
             ScenarioId = request.ScenarioId,
-            AccountId = accountId,
+            AccountId = request.AccountId,
+            ProfileId = request.ProfileId,
             PlayerNames = request.PlayerNames,
             Status = SessionStatus.InProgress,
             CurrentSceneId = scenario.Scenes.First().Id,
@@ -60,7 +61,8 @@ public class GameSessionApiService : IGameSessionApiService
         _context.GameSessions.Add(session);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Started new game session: {SessionId} for account: {AccountId}", session.Id, session.AccountId);
+        _logger.LogInformation("Started new game session: {SessionId} for Account: {AccountId}, Profile: {ProfileId}", 
+            session.Id, session.AccountId, session.ProfileId);
         return session;
     }
 
@@ -80,6 +82,34 @@ public class GameSessionApiService : IGameSessionApiService
                 Id = s.Id,
                 ScenarioId = s.ScenarioId,
                 AccountId = s.AccountId,
+                ProfileId = s.ProfileId,
+                PlayerNames = s.PlayerNames,
+                Status = s.Status,
+                CurrentSceneId = s.CurrentSceneId,
+                ChoiceCount = s.ChoiceHistory.Count,
+                EchoCount = s.EchoHistory.Count,
+                AchievementCount = s.Achievements.Count,
+                StartTime = s.StartTime,
+                EndTime = s.EndTime,
+                ElapsedTime = s.ElapsedTime,
+                IsPaused = s.IsPaused,
+                SceneCount = s.SceneCount,
+                TargetAgeGroup = s.TargetAgeGroupName
+            })
+            .ToListAsync();
+    }
+
+    public async Task<List<GameSessionResponse>> GetSessionsByProfileAsync(string profileId)
+    {
+        return await _context.GameSessions
+            .Where(s => s.ProfileId == profileId)
+            .OrderByDescending(s => s.StartTime)
+            .Select(s => new GameSessionResponse
+            {
+                Id = s.Id,
+                ScenarioId = s.ScenarioId,
+                AccountId = s.AccountId,
+                ProfileId = s.ProfileId,
                 PlayerNames = s.PlayerNames,
                 Status = s.Status,
                 CurrentSceneId = s.CurrentSceneId,
@@ -380,7 +410,7 @@ public class GameSessionApiService : IGameSessionApiService
             // This is a simplification - in practice, you might want to add a more direct relationship
             
             var sessions = await _context.GameSessions
-                .Where(s => s.PlayerNames.Contains(profileId))
+                .Where(s => s.ProfileId == profileId || s.PlayerNames.Contains(profileId))
                 .OrderByDescending(s => s.StartTime)
                 .ToListAsync();
 

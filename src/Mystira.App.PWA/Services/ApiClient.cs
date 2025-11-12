@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Components.WebAssembly.Http;
 using Mystira.App.PWA.Models;
 
@@ -18,7 +19,8 @@ public class ApiClient : IApiClient
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
         };
     }
 
@@ -267,15 +269,18 @@ public class ApiClient : IApiClient
         }
     }
 
-    public async Task<GameSession?> StartGameSessionAsync(string scenarioId, List<string> playerNames, string targetAgeGroup)
+    public async Task<GameSession?> StartGameSessionAsync(string scenarioId, string accountId, string profileId, List<string> playerNames, string targetAgeGroup)
     {
         try
         {
-            _logger.LogInformation("Starting game session for scenario: {ScenarioId}", scenarioId);
+            _logger.LogInformation("Starting game session for scenario: {ScenarioId}, Account: {AccountId}, Profile: {ProfileId}", 
+                scenarioId, accountId, profileId);
             
             var requestData = new 
             { 
                 scenarioId, 
+                accountId, 
+                profileId, 
                 playerNames, 
                 targetAgeGroup 
             };
@@ -302,5 +307,100 @@ public class ApiClient : IApiClient
             return null;
         }
     }
+
+    public async Task<Account?> GetAccountByEmailAsync(string email)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching account for email: {Email}", email);
+            
+            var encodedEmail = Uri.EscapeDataString(email);
+            var response = await _httpClient.GetAsync($"api/accounts/email/{encodedEmail}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var account = await response.Content.ReadFromJsonAsync<Account>(_jsonOptions);
+                _logger.LogInformation("Successfully fetched account for email: {Email}", email);
+                return account;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Account not found for email: {Email}", email);
+                return null;
+            }
+            else
+            {
+                _logger.LogWarning("API request failed with status: {StatusCode} for email: {Email}", 
+                    response.StatusCode, email);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching account for email: {Email}", email);
+            return null;
+        }
+    }
+
+    public async Task<GameSession?> EndGameSessionAsync(string sessionId)
+    {
+        try
+        {
+            _logger.LogInformation("Ending game session: {SessionId}", sessionId);
+            
+            var response = await _httpClient.PostAsync($"api/gamesessions/{sessionId}/end", null);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var gameSession = await response.Content.ReadFromJsonAsync<GameSession>(_jsonOptions);
+                _logger.LogInformation("Game session ended successfully: {SessionId}", sessionId);
+                return gameSession;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to end game session with status: {StatusCode} for session: {SessionId}", 
+                    response.StatusCode, sessionId);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error ending game session: {SessionId}", sessionId);
+            return null;
+        }
+    }
+
+    public async Task<List<GameSession>?> GetSessionsByAccountAsync(string accountId)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching sessions for account: {AccountId}", accountId);
+            
+            var response = await _httpClient.GetAsync($"api/gamesessions/account/{accountId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var sessions = await response.Content.ReadFromJsonAsync<List<GameSession>>(_jsonOptions);
+                _logger.LogInformation("Successfully fetched {Count} sessions for account: {AccountId}", 
+                    sessions?.Count ?? 0, accountId);
+                return sessions;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to fetch sessions with status: {StatusCode} for account: {AccountId}", 
+                    response.StatusCode, accountId);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching sessions for account: {AccountId}", accountId);
+            return null;
+        }
+    }
     
+    public string GetApiBaseAddress()
+    {
+        return _httpClient.BaseAddress!.ToString();
+    }
 }

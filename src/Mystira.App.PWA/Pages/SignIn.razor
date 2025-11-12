@@ -1,9 +1,11 @@
 @page "/signin"
 @using Mystira.App.PWA.Models
 @using Mystira.App.PWA.Services
+@using System.Timers
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject ILogger<SignIn> Logger
+@implements IDisposable
 
 <PageTitle>Sign In - Mystira</PageTitle>
 
@@ -126,6 +128,27 @@
                                 </button>
 
                                 <button type="button"
+                                        class="btn btn-outline-primary"
+                                        @onclick="ResendCode"
+                                        disabled="@(isSubmitting || resendCountdown > 0 || isResendingCode)">
+                                    @if (isResendingCode)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                        <span>Sending...</span>
+                                    }
+                                    else if (resendCountdown > 0)
+                                    {
+                                        <i class="fas fa-clock me-2"></i>
+                                        <span>Resend Code (@resendCountdown s)</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-redo me-2"></i>
+                                        <span>Resend Code</span>
+                                    }
+                                </button>
+
+                                <button type="button"
                                         class="btn btn-outline-secondary"
                                         @onclick="GoBack"
                                         disabled="@isSubmitting">
@@ -142,7 +165,7 @@
                         <p class="mb-0 text-muted">
                             Don't have an account? 
                             <a href="/signup" class="text-primary-custom text-decoration-none">
-                                Create Account
+                                Register
                             </a>
                         </p>
                     </div>
@@ -165,6 +188,9 @@
     private bool isSubmitting = false;
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
+    private int resendCountdown = 0;
+    private bool isResendingCode = false;
+    private System.Timers.Timer? countdownTimer;
 
     private async Task RequestSigninCode()
     {
@@ -182,6 +208,7 @@
             {
                 successMessage = message;
                 currentStep = SignInStep.Verification;
+                StartResendCountdown();
                 Logger.LogInformation("Sign-in code sent successfully for: {Email}", email);
             }
             else
@@ -202,6 +229,47 @@
         }
     }
 
+    private async Task ResendCode()
+    {
+        if (resendCountdown > 0 || isResendingCode)
+        {
+            return;
+        }
+
+        try
+        {
+            isResendingCode = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+
+            Logger.LogInformation("Resending sign-in code for email: {Email}", email);
+
+            var (success, message) = await AuthService.RequestPasswordlessSigninAsync(email);
+
+            if (success)
+            {
+                successMessage = message;
+                StartResendCountdown();
+                Logger.LogInformation("Sign-in code re-sent successfully for: {Email}", email);
+            }
+            else
+            {
+                errorMessage = message;
+                Logger.LogWarning("Failed to re-send sign-in code for: {Email}. Message: {Message}", email, message);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An error occurred while resending sign-in code. Please try again.";
+            Logger.LogError(ex, "Error resending sign-in code for: {Email}", email);
+        }
+        finally
+        {
+            isResendingCode = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task VerifySigninCode()
     {
         try
@@ -216,6 +284,7 @@
 
             if (success && account != null)
             {
+                StopResendCountdown();
                 Logger.LogInformation("Sign-in successful for: {Email}", email);
                 Navigation.NavigateTo("/");
             }
@@ -252,6 +321,40 @@
         inputCode = string.Empty;
         errorMessage = string.Empty;
         successMessage = string.Empty;
+        StopResendCountdown();
+    }
+
+    private void StartResendCountdown()
+    {
+        StopResendCountdown();
+        resendCountdown = 15;
+        
+        countdownTimer = new System.Timers.Timer(1000);
+        countdownTimer.Elapsed += OnCountdownTimerElapsed;
+        countdownTimer.AutoReset = true;
+        countdownTimer.Start();
+    }
+
+    private void StopResendCountdown()
+    {
+        if (countdownTimer != null)
+        {
+            countdownTimer.Stop();
+            countdownTimer.Elapsed -= OnCountdownTimerElapsed;
+            countdownTimer.Dispose();
+            countdownTimer = null;
+        }
+        resendCountdown = 0;
+    }
+
+    private void OnCountdownTimerElapsed(object? sender, ElapsedEventArgs e)
+    {
+        resendCountdown--;
+        if (resendCountdown <= 0)
+        {
+            StopResendCountdown();
+        }
+        InvokeAsync(StateHasChanged);
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -268,5 +371,10 @@
                 }
             });
         }
+    }
+
+    public void Dispose()
+    {
+        StopResendCountdown();
     }
 }

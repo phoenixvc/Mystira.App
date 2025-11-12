@@ -1,0 +1,349 @@
+@{
+    ViewData["Title"] = "Scenarios Management";
+    Layout = "_Layout";
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">📚 Scenarios Management</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="/admin/scenarios/create" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus"></i> Create New Scenario
+            </a>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshScenarios()">
+                <i class="fas fa-refresh"></i> Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="row mb-3">
+    <div class="col-md-4">
+        <input type="text" class="form-control" id="searchInput" placeholder="Search scenarios..." onkeyup="filterScenarios()">
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" id="difficultyFilter" onchange="filterScenarios()">
+            <option value="">All Difficulties</option>
+            <option value="Beginner">Beginner</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+            <option value="Expert">Expert</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" id="ageGroupFilter" onchange="filterScenarios()">
+            <option value="">All Age Groups</option>
+            <option value="Ages6To8">Ages 6-8</option>
+            <option value="Ages9To12">Ages 9-12</option>
+            <option value="Ages13To16">Ages 13-16</option>
+            <option value="Ages17Plus">Ages 17+</option>
+        </select>
+    </div>
+    <div class="col-md-4">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="setView('grid')" id="gridViewBtn">
+                <i class="fas fa-th"></i> Grid
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm active" onclick="setView('list')" id="listViewBtn">
+                <i class="fas fa-list"></i> List
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Scenarios Content -->
+<div id="scenariosContainer">
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Loading scenarios...</p>
+    </div>
+</div>
+
+<!-- Scenario Modal for Quick Actions -->
+<div class="modal fade" id="scenarioModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="scenarioModalTitle">Scenario Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="scenarioModalBody">
+                <!-- Content will be loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" id="deleteScenarioBtn">Delete Scenario</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+let allScenarios = [];
+let scenarioReferences = new Map(); // Map to store reference validation data
+let currentView = 'list';
+
+$(document).ready(function() {
+    loadScenarios();
+    loadScenarioReferences();
+});
+
+function loadScenarios() {
+    $.get('/api/scenarios?pageSize=100', function(data) {
+        allScenarios = data.scenarios || [];
+        displayScenarios(allScenarios);
+    }).fail(function() {
+        $('#scenariosContainer').html('<div class="alert alert-danger">Failed to load scenarios</div>');
+    });
+}
+
+function loadScenarioReferences() {
+    $.get('/api/admin/scenariosadmin/validate-all-references', function(data) {
+        // Convert array to Map for easy lookup
+        scenarioReferences.clear();
+        data.forEach(ref => {
+            scenarioReferences.set(ref.scenarioId, ref);
+        });
+        // Refresh the display if scenarios are already loaded
+        if (allScenarios.length > 0) {
+            displayScenarios(getFilteredScenarios());
+        }
+    }).fail(function(xhr) {
+        console.warn('Failed to load scenario references:', xhr.responseText);
+        // Continue without reference data
+    });
+}
+
+function displayScenarios(scenarios) {
+    const container = $('#scenariosContainer');
+    
+    if (scenarios.length === 0) {
+        container.html('<div class="text-center py-5"><p class="text-muted">No scenarios found</p></div>');
+        return;
+    }
+
+    if (currentView === 'grid') {
+        displayGridView(scenarios);
+    } else {
+        displayListView(scenarios);
+    }
+}
+
+function displayListView(scenarios) {
+    let html = `
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Difficulty</th>
+                        <th>Age Group</th>
+                        <th>Session Length</th>
+                        <th>References</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    scenarios.forEach(scenario => {
+        const referencesHtml = getReferencesStatusHtml(scenario);
+        html += `
+            <tr>
+                <td>
+                    <strong>${scenario.title}</strong><br>
+                    <small class="text-muted">${scenario.description.substring(0, 100)}...</small>
+                </td>
+                <td><span class="badge bg-primary">${scenario.difficulty}</span></td>
+                <td><span class="badge bg-info">${scenario.ageGroup}</span></td>
+                <td><span class="badge bg-secondary">${scenario.sessionLength}</span></td>
+                <td>${referencesHtml}</td>
+                <td><small>${new Date(scenario.createdAt).toLocaleDateString()}</small></td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="viewScenario('${scenario.id}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="deleteScenario('${scenario.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    html += '</tbody></table></div>';
+    $('#scenariosContainer').html(html);
+}
+
+function displayGridView(scenarios) {
+    let html = '<div class="row">';
+    
+    scenarios.forEach(scenario => {
+        html += `
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">${scenario.title}</h5>
+                        <p class="card-text">${scenario.description.substring(0, 100)}...</p>
+                        <div class="mb-2">
+                            <span class="badge bg-primary">${scenario.difficulty}</span>
+                            <span class="badge bg-info">${scenario.minimumAge}</span>
+                            <span class="badge bg-secondary">${scenario.sessionLength}</span>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="btn-group w-100">
+                            <button class="btn btn-outline-primary btn-sm" onclick="viewScenario('${scenario.id}')">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="deleteScenario('${scenario.id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    $('#scenariosContainer').html(html);
+}
+
+function setView(view) {
+    currentView = view;
+    $('#gridViewBtn, #listViewBtn').removeClass('active');
+    $(`#${view}ViewBtn`).addClass('active');
+    displayScenarios(getFilteredScenarios());
+}
+
+function filterScenarios() {
+    const filtered = getFilteredScenarios();
+    displayScenarios(filtered);
+}
+
+function getFilteredScenarios() {
+    const searchTerm = $('#searchInput').val().toLowerCase();
+    const difficultyFilter = $('#difficultyFilter').val();
+    const ageGroupFilter = $('#ageGroupFilter').val();
+
+    return allScenarios.filter(scenario => {
+        const matchesSearch = !searchTerm || 
+            scenario.title.toLowerCase().includes(searchTerm) || 
+            scenario.description.toLowerCase().includes(searchTerm);
+        const matchesDifficulty = !difficultyFilter || scenario.difficulty === difficultyFilter;
+        const matchesAgeGroup = !ageGroupFilter || scenario.minimumAge === ageGroupFilter;
+
+        return matchesSearch && matchesDifficulty && matchesAgeGroup;
+    });
+}
+
+function viewScenario(scenarioId) {
+    $.get(`/api/scenarios/${scenarioId}`, function(scenario) {
+        $('#scenarioModalTitle').text(scenario.title);
+        
+        // Get reference data
+        const refData = scenarioReferences.get(scenarioId);
+        let referencesHtml = '';
+        
+        if (refData) {
+            referencesHtml = `
+                <div class="col-md-12 mt-3">
+                    <h6>Media & Character References</h6>
+                    <p><strong>Total References:</strong> ${refData.totalReferences}</p>
+                    <p><strong>Missing References:</strong> ${refData.missingReferencesCount}</p>
+            `;
+            
+            if (refData.missingReferences && refData.missingReferences.length > 0) {
+                referencesHtml += `
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle"></i> Missing References</h6>
+                        <ul class="mb-0">
+                `;
+                refData.missingReferences.forEach(missing => {
+                    referencesHtml += `
+                        <li><strong>${missing.referenceId}</strong> (${missing.referenceType}) - ${missing.description}</li>
+                    `;
+                });
+                referencesHtml += '</ul></div>';
+            } else if (refData.totalReferences > 0) {
+                referencesHtml += '<div class="alert alert-success">All references are valid!</div>';
+            }
+            
+            referencesHtml += '</div>';
+        }
+        
+        $('#scenarioModalBody').html(`
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Details</h6>
+                    <p><strong>Description:</strong> ${scenario.description}</p>
+                    <p><strong>Difficulty:</strong> ${scenario.difficulty}</p>
+                    <p><strong>Age Group:</strong> ${scenario.minimumAge}</p>
+                    <p><strong>Session Length:</strong> ${scenario.sessionLength}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Additional Info</h6>
+                    <p><strong>Archetypes:</strong> ${scenario.archetypes.join(', ')}</p>
+                    <p><strong>Compass Axes:</strong> ${scenario.compassAxes?.join(', ') != null ? scenario.compassAxes?.join(', ') : null }</p>
+                    <p><strong>Scene Count:</strong> ${scenario.scenes.length}</p>
+                    <p><strong>Created:</strong> ${new Date(scenario.createdAt).toLocaleString()}</p>
+                </div>
+                ${referencesHtml}
+            </div>
+        `);
+        $('#deleteScenarioBtn').attr('onclick', `deleteScenario('${scenarioId}')`);
+        $('#scenarioModal').modal('show');
+    });
+}
+
+function deleteScenario(scenarioId) {
+    if (confirm('Are you sure you want to delete this scenario? This action cannot be undone.')) {
+        $.ajax({
+            url: `/api/scenarios/${scenarioId}`,
+            type: 'DELETE',
+            success: function() {
+                alert('Scenario deleted successfully');
+                loadScenarios();
+                $('#scenarioModal').modal('hide');
+            },
+            error: function() {
+                alert('Failed to delete scenario');
+            }
+        });
+    }
+}
+
+function getReferencesStatusHtml(scenario) {
+    const refData = scenarioReferences.get(scenario.id);
+    if (!refData) {
+        return '<span class="text-muted"><i class="fas fa-hourglass-half"></i> Loading...</span>';
+    }
+    
+    const totalRefs = refData.totalReferences;
+    const missingRefs = refData.missingReferencesCount;
+    
+    if (totalRefs === 0) {
+        return '<span class="text-muted">No refs</span>';
+    }
+    
+    if (missingRefs === 0) {
+        return `<span class="badge bg-success">${totalRefs} OK</span>`;
+    } else {
+        return `<span class="badge bg-danger">${missingRefs}/${totalRefs} missing</span>`;
+    }
+}
+
+function refreshScenarios() {
+    loadScenarios();
+    loadScenarioReferences();
+}
+</script>
+}

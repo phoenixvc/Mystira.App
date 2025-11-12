@@ -6,6 +6,7 @@ public class GameSessionService : IGameSessionService
 {
     private readonly ILogger<GameSessionService> _logger;
     private readonly IApiClient _apiClient;
+    private readonly IAuthService _authService;
     
     public event EventHandler<GameSession?>? GameSessionChanged;
     
@@ -20,10 +21,11 @@ public class GameSessionService : IGameSessionService
         }
     }
 
-    public GameSessionService(ILogger<GameSessionService> logger, IApiClient apiClient)
+    public GameSessionService(ILogger<GameSessionService> logger, IApiClient apiClient, IAuthService authService)
     {
         _logger = logger;
         _apiClient = apiClient;
+        _authService = authService;
     }
 
     public async Task<bool> StartGameSessionAsync(Scenario scenario)
@@ -32,9 +34,24 @@ public class GameSessionService : IGameSessionService
         {
             _logger.LogInformation("Starting game session for scenario: {ScenarioName}", scenario.Title);
             
-            // Start session via API (account ID will be extracted from auth token on server)
+            // Get account information from auth service
+            var account = await _authService.GetCurrentAccountAsync();
+            string accountId = account?.Id ?? "default-account";
+            string profileId = "default-profile";
+            
+            // If account has profiles, use the first one as default
+            if (account?.UserProfileIds != null && account.UserProfileIds.Any())
+            {
+                profileId = account.UserProfileIds.First();
+            }
+            
+            _logger.LogInformation("Starting session with AccountId: {AccountId}, ProfileId: {ProfileId}", accountId, profileId);
+            
+            // Start session via API
             var apiGameSession = await _apiClient.StartGameSessionAsync(
-                scenario.Id, 
+                scenario.Id,
+                accountId,
+                profileId,
                 new List<string> { "Player" }, // Default player name for now
                 scenario.AgeGroup ?? "6-9" // Default age group
             );
@@ -151,17 +168,25 @@ public class GameSessionService : IGameSessionService
         }
     }
 
-    public Task<bool> CompleteGameSessionAsync()
+    public async Task<bool> CompleteGameSessionAsync()
     {
         try
         {
             if (CurrentGameSession == null)
             {
                 _logger.LogWarning("Cannot complete game session - no active session");
-                return Task.FromResult(false);
+                return false;
             }
 
             _logger.LogInformation("Completing game session for scenario: {ScenarioName}", CurrentGameSession.ScenarioName);
+
+            // Call the API to end the session
+            var apiSession = await _apiClient.EndGameSessionAsync(CurrentGameSession.Id);
+            if (apiSession == null)
+            {
+                _logger.LogWarning("Failed to end game session via API");
+                // Still mark as completed locally for UI consistency
+            }
 
             CurrentGameSession.IsCompleted = true;
             
@@ -169,12 +194,12 @@ public class GameSessionService : IGameSessionService
             GameSessionChanged?.Invoke(this, CurrentGameSession);
 
             _logger.LogInformation("Game session completed successfully");
-            return Task.FromResult(true);
+            return true;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error completing game session");
-            return Task.FromResult(false);
+            return false;
         }
     }
 
