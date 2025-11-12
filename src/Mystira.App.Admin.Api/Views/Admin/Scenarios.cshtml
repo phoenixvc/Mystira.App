@@ -102,7 +102,7 @@ function loadScenarios() {
 }
 
 function loadScenarioReferences() {
-    $.get('/api/scenarios/validate-all-references', function(data) {
+    $.get('/api/admin/scenariosadmin/validate-all-references', function(data) {
         // Convert array to Map for easy lookup
         scenarioReferences.clear();
         data.forEach(ref => {

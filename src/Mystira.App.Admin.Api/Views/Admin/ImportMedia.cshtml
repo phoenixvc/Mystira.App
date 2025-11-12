@@ -310,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Check metadata status
 async function checkMetadataStatus() {
     try {
-        const response = await fetch('/api/mediametadata');
+        const response = await fetch('/api/admin/MediaMetadataAdmin');
         if (response.ok) {
             const metadataFile = await response.json();
             metadataEntries = metadataFile.entries || [];

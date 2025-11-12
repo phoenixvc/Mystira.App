@@ -360,7 +360,7 @@ async function loadMetadata() {
 
 async function loadCharacters() {
     try {
-        const response = await fetch('/api/CharacterMap');
+        const response = await fetch('/api/admin/CharacterMapsAdmin');
         const data = await response.json();
         allCharacters = data.characters || [];
         
@@ -511,7 +511,7 @@ async function saveNewEntry() {
     };
     
     try {
-        const response = await fetch(`/api/charactermediametadata/entries`, {
+        const response = await fetch(`/api/admin/CharacterMediaMetadataAdmin/entries`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -562,7 +562,7 @@ async function saveEntry() {
     };
     
     try {
-        const response = await fetch(`/api/charactermediametadata/entries/${entryId}`, {
+        const response = await fetch(`/api/admin/CharacterMediaMetadataAdmin/${entryId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -587,7 +587,7 @@ async function deleteEntry(entryId) {
     if (!confirm('Are you sure you want to delete this entry?')) return;
     
     try {
-        const response = await fetch(`/api/charactermediametadata/entries/${entryId}`, {
+        const response = await fetch(`/api/admin/CharacterMediaMetadataAdmin/${entryId}`, {
             method: 'DELETE'
         });
         
@@ -624,7 +624,7 @@ async function createMissingMetadata() {
     
     try {
         for (const entry of entries) {
-            const response = await fetch(`/api/charactermediametadata/entries`, {
+            const response = await fetch(`/api/admin/CharacterMediaMetadataAdmin/entries`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -671,7 +671,7 @@ async function bulkCreateMissingMetadata() {
     
     try {
         for (const entry of entries) {
-            const response = await fetch(`/api/charactermediametadata/entries`, {
+            const response = await fetch(`/api/admin/CharacterMediaMetadataAdmin/entries`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -756,7 +756,7 @@ async function importMetadata() {
             parsedData = JSON.parse(data);
         }
         
-        const response = await fetch(`/api/charactermediametadata/import?overwriteExisting=${overwriteExisting}`, {
+        const response = await fetch(`/api/admin/CharacterMediaMetadataAdmin/import?overwriteExisting=${overwriteExisting}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

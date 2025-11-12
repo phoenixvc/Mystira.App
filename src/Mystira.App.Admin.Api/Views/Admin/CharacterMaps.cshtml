@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function loadCharacters() {
     try {
-        const response = await fetch('/api/CharacterMap');
+        const response = await fetch('/api/admin/CharacterMapsAdmin');
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -233,7 +233,7 @@ function displayCharacters(characters) {
 async function loadCharacterImage(characterId, mediaId) {
     try {
         // Get media asset by ID to get the URL
-        const response = await fetch(`/api/media/${mediaId}/info`, {
+        const response = await fetch(`/api/admin/MediaAdmin/${mediaId}/info`, {
             headers: {
                 'Authorization': 'Bearer ' + localStorage.getItem('authToken') || ''
             }
@@ -389,7 +389,7 @@ async function saveCharacter() {
         
         if (currentEditingCharacterId) {
             // Update existing character
-            response = await fetch(`/api/Character/${currentEditingCharacterId}`, {
+            response = await fetch(`/api/admin/CharacterAdmin/${currentEditingCharacterId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -399,7 +399,7 @@ async function saveCharacter() {
             message = 'Character updated successfully';
         } else {
             // Add new character
-            response = await fetch('/api/Character', {
+            response = await fetch('/api/admin/CharacterAdmin', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -430,7 +430,7 @@ async function deleteCharacter(id) {
     }
     
     try {
-        const response = await fetch(`/api/Character/${id}`, {
+        const response = await fetch(`/api/admin/CharacterAdmin/${id}`, {
             method: 'DELETE'
         });
         
@@ -470,7 +470,7 @@ function addNewCharacter() {
 
 async function exportCharacterMap() {
     try {
-        const response = await fetch('/api/CharacterMap/export');
+        const response = await fetch('/api/admin/CharacterMapsAdmin/export');
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -506,7 +506,7 @@ function importCharacterMap() {
             const text = await file.text();
             const overwrite = confirm('Do you want to overwrite existing characters with the same IDs?');
             
-            const response = await fetch(`/api/CharacterMap/import?overwriteExisting=${overwrite}`, {
+            const response = await fetch(`/api/admin/CharacterMapsAdmin/import?overwriteExisting=${overwrite}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

@@ -1,15 +1,14 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Mystira.App.Domain.Models;
+using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
 [ApiController]
 [Route("api/admin/[controller]")]
 [Produces("application/json")]
-[Authorize]
 public class CharacterMapsAdminController : ControllerBase
 {
     private readonly ICharacterMapApiService _characterMapService;
@@ -22,9 +21,63 @@ public class CharacterMapsAdminController : ControllerBase
     }
 
     /// <summary>
+    /// Get all character maps
+    /// </summary>
+    [HttpGet]
+    public async Task<ActionResult<List<CharacterMap>>> GetAllCharacterMaps()
+    {
+        try
+        {
+            var characterMaps = await _characterMapService.GetAllCharacterMapsAsync();
+            return Ok(characterMaps);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting all character maps");
+            return StatusCode(500, new ErrorResponse 
+            { 
+                Message = "Internal server error while fetching character maps",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get character map by ID
+    /// </summary>
+    [HttpGet("{id}")]
+    public async Task<ActionResult<CharacterMap>> GetCharacterMap(string id)
+    {
+        try
+        {
+            var characterMap = await _characterMapService.GetCharacterMapAsync(id);
+            if (characterMap == null)
+            {
+                return NotFound(new ErrorResponse 
+                { 
+                    Message = $"Character map not found: {id}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            return Ok(characterMap);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting character map {Id}", id);
+            return StatusCode(500, new ErrorResponse 
+            { 
+                Message = "Internal server error while fetching character map",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
     /// Create a new character map
     /// </summary>
     [HttpPost]
+    [Authorize]
     public async Task<ActionResult<CharacterMap>> CreateCharacterMap([FromBody] CreateCharacterMapRequest request)
     {
         try
@@ -69,6 +122,7 @@ public class CharacterMapsAdminController : ControllerBase
     /// Update a character map
     /// </summary>
     [HttpPut("{id}")]
+    [Authorize]
     public async Task<ActionResult<CharacterMap>> UpdateCharacterMap(string id, [FromBody] UpdateCharacterMapRequest request)
     {
         try
@@ -122,6 +176,7 @@ public class CharacterMapsAdminController : ControllerBase
     /// Delete a character map
     /// </summary>
     [HttpDelete("{id}")]
+    [Authorize]
     public async Task<ActionResult> DeleteCharacterMap(string id)
     {
         try
@@ -153,6 +208,7 @@ public class CharacterMapsAdminController : ControllerBase
     /// Export character maps as YAML
     /// </summary>
     [HttpGet("export")]
+    [Authorize]
     public async Task<ActionResult> ExportCharacterMaps()
     {
         try
@@ -175,6 +231,7 @@ public class CharacterMapsAdminController : ControllerBase
     /// Import character maps from YAML
     /// </summary>
     [HttpPost("import")]
+    [Authorize]
     public async Task<ActionResult<List<CharacterMap>>> ImportCharacterMaps([FromForm] IFormFile file)
     {
         try
@@ -216,37 +273,6 @@ public class CharacterMapsAdminController : ControllerBase
             return StatusCode(500, new ErrorResponse 
             { 
                 Message = "Internal server error while importing character maps",
-                TraceId = HttpContext.TraceIdentifier
-            });
-        }
-    }
-
-    /// <summary>
-    /// Get character map by ID
-    /// </summary>
-    [HttpGet("{id}")]
-    public async Task<ActionResult<CharacterMap>> GetCharacterMap(string id)
-    {
-        try
-        {
-            var characterMap = await _characterMapService.GetCharacterMapAsync(id);
-            if (characterMap == null)
-            {
-                return NotFound(new ErrorResponse 
-                { 
-                    Message = $"Character map not found: {id}",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            return Ok(characterMap);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting character map {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
-                Message = "Internal server error while fetching character map",
                 TraceId = HttpContext.TraceIdentifier
             });
         }

@@ -68,7 +68,7 @@ $(document).ready(function() {
 
 async function loadMedia() {
     try {
-        const response = await fetch('/api/media', {
+        const response = await fetch('/api/admin/mediaadmin', {
             headers: {
                 'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || '')
             }
@@ -267,7 +267,7 @@ async function deleteMedia(mediaId) {
     }
     
     try {
-        const response = await fetch(`/api/media/${mediaId}`, {
+        const response = await fetch(`/api/admin/mediaadmin/${mediaId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || '')

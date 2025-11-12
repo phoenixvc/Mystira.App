@@ -344,7 +344,7 @@ async function loadAllData() {
 
 async function loadMetadata() {
     try {
-        const response = await fetch('/api/mediametadata');
+        const response = await fetch('/api/admin/mediametadataadmin');
         const data = await response.json();
         currentMetadata = data;
         
@@ -360,7 +360,7 @@ async function loadMetadata() {
 
 async function loadMediaAssets() {
     try {
-        const response = await fetch('/api/media?page=1&pageSize=1000'); // Load all media
+        const response = await fetch('/api/admin/mediaadmin?page=1&pageSize=1000'); // Load all media
         const data = await response.json();
         allMediaAssets = data.media || [];
         
@@ -519,7 +519,7 @@ async function saveNewEntry() {
     };
     
     try {
-        const response = await fetch(`/api/mediametadata/entries`, {
+        const response = await fetch(`/api/admin/mediametadata/entries`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -570,7 +570,7 @@ async function saveEntry() {
     };
     
     try {
-        const response = await fetch(`/api/mediametadata/entries/${entryId}`, {
+        const response = await fetch(`/api/admin/mediametadata/entries/${entryId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -595,7 +595,7 @@ async function deleteEntry(entryId) {
     if (!confirm('Are you sure you want to delete this entry?')) return;
     
     try {
-        const response = await fetch(`/api/mediametadata/entries/${entryId}`, {
+        const response = await fetch(`/api/admin/mediametadata/entries/${entryId}`, {
             method: 'DELETE'
         });
         
@@ -632,7 +632,7 @@ async function createMissingMetadata() {
     
     try {
         for (const entry of entries) {
-            const response = await fetch(`/api/mediametadata/entries`, {
+            const response = await fetch(`/api/admin/mediametadata/entries`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -679,7 +679,7 @@ async function bulkCreateMissingMetadata() {
     
     try {
         for (const entry of entries) {
-            const response = await fetch(`/api/mediametadata/entries`, {
+            const response = await fetch(`/api/admin/mediametadata/entries`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -764,7 +764,7 @@ async function importMetadata() {
             parsedData = JSON.parse(data);
         }
         
-        const response = await fetch(`/api/mediametadata/import?overwriteExisting=${overwriteExisting}`, {
+        const response = await fetch(`/api/admin/mediametadata/import?overwriteExisting=${overwriteExisting}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

@@ -317,7 +317,7 @@ function loadDashboardData() {
     });
 
     // Load character count from new character map file
-    $.get('/api/CharacterMap', function(data) {
+    $.get('/api/admin/CharacterMapAdmin', function(data) {
         $('#characterMapCount').text(data.characters ? data.characters.length : 0);
         $('#characterMapLastUpdated').text(new Date(data.updatedAt).toLocaleDateString());
     }).fail(function() {
@@ -335,7 +335,7 @@ function loadDashboardData() {
     });
 
     // Load media metadata counts
-    $.get('/api/mediametadata', function(data) {
+    $.get('/api/admin/mediametadata', function(data) {
         $('#mediaMetadataCount').text(data.entries.length);
         $('#mediaMetadataLastUpdated').text(new Date(data.updatedAt).toLocaleDateString());
     }).fail(function() {
@@ -344,7 +344,7 @@ function loadDashboardData() {
     });
 
     // Load character media metadata counts
-    $.get('/api/charactermediametadata', function(data) {
+    $.get('/api/admin/charactermediametadataadmin', function(data) {
         $('#characterMediaMetadataCount').text(data.entries.length);
         $('#characterMediaMetadataLastUpdated').text(new Date(data.updatedAt).toLocaleDateString());
     }).fail(function() {
@@ -353,7 +353,7 @@ function loadDashboardData() {
     });
 
     // Load actual media count
-    $.get('/api/media/count', function(mediaCount) {
+    $.get('/api/admin/mediaadmin/count', function(mediaCount) {
         $('#totalMedia, #mediaCount').text(mediaCount.count || 0);
         $('#mediaLastUpdated').text(new Date().toLocaleDateString());
     }).fail(function() {
@@ -445,7 +445,7 @@ function loadScenarioReferences() {
     $('#scenarioRefLoading').show();
     $('#missingReferencesSection').hide();
     
-    $.get('/api/scenarios/validate-all-references', function(data) {
+    $.get('/api/admin/scenariosadmin/validate-all-references', function(data) {
         const totalScenarios = data.length;
         const scenariosWithMissing = data.filter(s => s.hasMissingReferences);
         const validScenarios = totalScenarios - scenariosWithMissing.length;

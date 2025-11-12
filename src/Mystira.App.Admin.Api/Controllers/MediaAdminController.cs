@@ -23,6 +23,60 @@ public class MediaAdminController : ControllerBase
     }
 
     /// <summary>
+    /// Gets all media assets with optional filtering
+    /// </summary>
+    [HttpGet]
+    public async Task<ActionResult<MediaQueryResponse>> GetMedia([FromQuery] MediaQueryRequest request)
+    {
+        try
+        {
+            var result = await _mediaService.GetMediaAsync(request);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting media assets");
+            return StatusCode(500, new ErrorResponse 
+            { 
+                Message = "Internal server error while getting media",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
+    /// Serves the actual media file content by ID
+    /// </summary>
+    [HttpGet("{mediaId}")]
+    public async Task<IActionResult> GetMediaFile(string mediaId)
+    {
+        try
+        {
+            var result = await _mediaService.GetMediaFileAsync(mediaId);
+            if (result == null)
+            {
+                return NotFound(new ErrorResponse 
+                { 
+                    Message = $"Media file not found: {mediaId}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            var (stream, contentType, fileName) = result.Value;
+            return File(stream, contentType, fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error serving media file: {MediaId}", mediaId);
+            return StatusCode(500, new ErrorResponse 
+            { 
+                Message = "Internal server error while serving media file",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+    
+    /// <summary>
     /// Upload a single media file (Admin authentication required)
     /// Media ID must match an existing entry in the media metadata file
     /// </summary>
