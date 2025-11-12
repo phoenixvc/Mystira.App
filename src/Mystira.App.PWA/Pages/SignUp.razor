@@ -1,5 +1,6 @@
 @page "/signup"
 @using Mystira.App.PWA.Services
+@using System.Timers
 @implements IDisposable
 
 <PageTitle>Sign Up - Mystira</PageTitle>
@@ -112,6 +113,27 @@
                                 }
                             </button>
 
+                            <button type="button" 
+                                    class="btn btn-outline-primary btn-lg w-100 mt-2" 
+                                    @onclick="ResendCode"
+                                    disabled="@(isVerifying || resendCountdown > 0 || isResendingCode)">
+                                @if (isResendingCode)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    <span>Sending...</span>
+                                }
+                                else if (resendCountdown > 0)
+                                {
+                                    <i class="fas fa-clock me-2"></i>
+                                    <span>Resend Code (@resendCountdown s)</span>
+                                }
+                                else
+                                {
+                                    <i class="fas fa-redo me-2"></i>
+                                    <span>Resend Code</span>
+                                }
+                            </button>
+
                             <button type="button" class="btn btn-outline-secondary btn-lg w-100 mt-2" 
                                     @onclick="ResetForm" disabled="@isVerifying">
                                 <i class="fas fa-arrow-left me-2"></i>Back
@@ -119,8 +141,7 @@
                         </form>
 
                         <div class="text-center mt-3 text-muted small">
-                            Didn't receive the code? Check your spam folder or 
-                            <a href="javascript:void(0)" @onclick="ResetForm" class="text-primary-custom">try again</a>
+                            Need a new code? You can resend once the countdown finishes.
                         </div>
                     }
                     else if (signupStep == SignupStep.Success)
@@ -163,6 +184,9 @@
     
     private bool isSubmitting = false;
     private bool isVerifying = false;
+    private bool isResendingCode = false;
+    private int resendCountdown = 0;
+    private System.Timers.Timer? resendTimer;
     
     private string emailError = string.Empty;
     private string displayNameError = string.Empty;
@@ -250,6 +274,7 @@
             if (success)
             {
                 signupStep = SignupStep.CodeSent;
+                StartResendCountdown();
                 Logger.LogInformation("Signup code sent successfully for: {Email}", email);
             }
             else
@@ -298,6 +323,7 @@
             
             if (success && account != null)
             {
+                StopResendCountdown();
                 signupStep = SignupStep.Success;
                 Logger.LogInformation("Signup verified successfully for: {Email}", email);
             }
@@ -329,6 +355,7 @@
         displayNameError = string.Empty;
         codeError = string.Empty;
         generalError = string.Empty;
+        StopResendCountdown();
         StateHasChanged();
     }
 
@@ -337,7 +364,80 @@
         Navigation.NavigateTo("/");
     }
 
+    private async Task ResendCode()
+    {
+        if (resendCountdown > 0 || isResendingCode)
+        {
+            return;
+        }
+
+        try
+        {
+            isResendingCode = true;
+            generalError = string.Empty;
+
+            Logger.LogInformation("Resending signup code for email: {Email}", email);
+
+            var (success, message) = await AuthService.RequestPasswordlessSignupAsync(email, displayName);
+
+            if (success)
+            {
+                StartResendCountdown();
+                Logger.LogInformation("Signup code re-sent successfully for: {Email}", email);
+            }
+            else
+            {
+                generalError = message;
+                Logger.LogWarning("Failed to re-send signup code for: {Email}. Message: {Message}", email, message);
+            }
+        }
+        catch (Exception ex)
+        {
+            generalError = "An error occurred while resending the code. Please try again.";
+            Logger.LogError(ex, "Error resending signup code for: {Email}", email);
+        }
+        finally
+        {
+            isResendingCode = false;
+            StateHasChanged();
+        }
+    }
+
+    private void StartResendCountdown()
+    {
+        StopResendCountdown();
+        resendCountdown = 15;
+        
+        resendTimer = new System.Timers.Timer(1000);
+        resendTimer.Elapsed += OnResendTimerElapsed;
+        resendTimer.AutoReset = true;
+        resendTimer.Start();
+    }
+
+    private void StopResendCountdown()
+    {
+        if (resendTimer != null)
+        {
+            resendTimer.Stop();
+            resendTimer.Elapsed -= OnResendTimerElapsed;
+            resendTimer.Dispose();
+            resendTimer = null;
+        }
+        resendCountdown = 0;
+    }
+
+    private void OnResendTimerElapsed(object? sender, ElapsedEventArgs e)
+    {
+        resendCountdown--;
+        if (resendCountdown <= 0)
+        {
+            StopResendCountdown();
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
     public void Dispose()
     {
+        StopResendCountdown();
     }
 }
