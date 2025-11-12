@@ -5,6 +5,7 @@
 @inject IGameSessionService GameSessionService
 @inject IApiClient ApiClient
 @inject ILogger<CharacterAssignment> Logger
+@inject IJSRuntime JSRuntime
 @using System.Linq
 
 <PageTitle>Assign Players - Mystira</PageTitle>
@@ -65,7 +66,7 @@ else
                             <div class="text-center mb-3">
                                 @if (!string.IsNullOrEmpty(assignment.Image))
                                 {
-                                    <img src="@(ApiClient.GetApiBaseAddress() + assignment.Image)" class="character-avatar mb-2" alt="@assignment.CharacterName" />
+                                    <img src="@(ApiClient.GetMediaResourceEndpointUrl(assignment.Image))" class="character-avatar mb-2" alt="@assignment.CharacterName" />
                                 }
                                 else
                                 {
@@ -81,14 +82,14 @@ else
                             <div class="d-flex justify-content-center gap-2 mb-3">
                                 @if (!string.IsNullOrEmpty(assignment.Image))
                                 {
-                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => PreviewImage(ApiClient.GetApiBaseAddress() + assignment.Image)" title="View Image">
-                                        <i class="fas fa-image"></i>
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => PreviewImage(ApiClient.GetMediaResourceEndpointUrl(assignment.Image))" title="View Image">
+                                        <i class="🖼️"></i>
                                     </button>
                                 }
                                 @if (!string.IsNullOrEmpty(assignment.Audio))
                                 {
-                                    <button class="btn btn-sm btn-outline-success" @onclick="() => PlayAudio(ApiClient.GetApiBaseAddress() + assignment.Audio)" title="Play Audio">
-                                        <i class="fas @(isPlayingAudio == assignment.Audio ? "fa-pause" : "fa-play")"></i>
+                                    <button class="btn btn-sm btn-outline-success" @onclick="() => PlayAudio(ApiClient.GetMediaResourceEndpointUrl(assignment.Audio))" title="Play Audio">
+                                        <i class="@(isPlayingAudio == assignment.Audio ? "⏸️" : "▶️")"></i>
                                     </button>
                                 }
                             </div>
@@ -294,7 +295,6 @@ else
     private List<UserProfile> availableProfiles = new();
     private bool isLoading = true;
     private bool isStartingSession = false;
-    private string? isPlayingAudio;
 
     // Modal state
     private bool showPlayerAssignmentModal = false;
@@ -310,13 +310,22 @@ else
     private bool saveGuestAsProfile = false;
     private string? previewImage;
 
+    // Audio
+    private string? isPlayingAudio = null;
+    private IJSObjectReference? audioModule;
+    private ElementReference audioPlayer;
+    
     protected override async Task OnInitializedAsync()
     {
         try
         {
             Logger.LogInformation("Initializing character assignment for scenario: {ScenarioId}", ScenarioId);
-            
             await LoadCharacterAssignmentData();
+            
+            // Load the audio module when component initializes
+            audioModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./js/audioPlayer.js");
+
         }
         catch (Exception ex)
         {
@@ -435,21 +444,24 @@ else
                 .Select(ca => ca.PlayerAssignment!)
                 .ToList();
 
-            foreach (var guest in guestProfilesToCreate)
+            if (guestProfilesToCreate.Any())
             {
-                var guestProfileRequest = new CreateGuestProfileRequest
+                foreach (var guest in guestProfilesToCreate)
                 {
-                    Name = guest.GuestName!,
-                    AgeRange = guest.GuestAgeRange,
-                    AccountId = account.Id,
-                    IsGuest = false // Saving as real profile
-                };
+                    var guestProfileRequest = new CreateGuestProfileRequest
+                    {
+                        Name = guest.GuestName!,
+                        AgeRange = guest.GuestAgeRange,
+                        AccountId = account.Id,
+                        IsGuest = false // Saving as real profile
+                    };
 
-                var createdProfile = await CharacterAssignmentService.CreateGuestProfileAsync(guestProfileRequest);
-                if (createdProfile != null)
-                {
-                    guest.ProfileId = createdProfile.Id;
-                    guest.ProfileName = createdProfile.Name;
+                    var createdProfile = await CharacterAssignmentService.CreateGuestProfileAsync(guestProfileRequest);
+                    if (createdProfile != null)
+                    {
+                        guest.ProfileId = createdProfile.Id;
+                        guest.ProfileName = createdProfile.Name;
+                    }
                 }
             }
 
@@ -467,7 +479,7 @@ else
 
             if (success)
             {
-                Logger.LogInformation("Session started successfully, navigating to game");
+                Logger.LogInformation("Session started successfully, navigating to {NavigationManagerBaseUri}game", NavigationManager.BaseUri);
                 NavigationManager.NavigateTo("/game");
             }
             else
@@ -506,19 +518,43 @@ else
 
     private async Task PlayAudio(string audioUrl)
     {
-        // TODO: Implement audio playback
-        await Task.CompletedTask;
+        try
+        {
+            if (audioModule == null)
+            {
+                return;
+            }
         
-        if (isPlayingAudio == audioUrl)
-        {
-            isPlayingAudio = null; // Stop playing
+            if (isPlayingAudio == audioUrl)
+            {
+                // Stop the currently playing audio
+                await audioModule.InvokeVoidAsync("stopAudio");
+                isPlayingAudio = null;
+            }
+            else
+            {
+                // Stop any currently playing audio first
+                if (!string.IsNullOrEmpty(isPlayingAudio))
+                {
+                    await audioModule.InvokeVoidAsync("stopAudio");
+                }
+            
+                // Start playing the new audio
+                await audioModule.InvokeVoidAsync("playAudio", audioUrl);
+                isPlayingAudio = audioUrl;
+            }
         }
-        else
+        catch (Exception ex)
         {
-            isPlayingAudio = audioUrl; // Start playing
+            Console.Error.WriteLine($"Error playing audio: {ex.Message}");
+            // Optionally handle the error in the UI
         }
-        StateHasChanged();
+        finally
+        {
+            StateHasChanged();
+        }
     }
+
 
     private async Task CreateProfileFromGuest(PlayerAssignment guest)
     {

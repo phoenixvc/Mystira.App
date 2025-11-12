@@ -680,4 +680,9 @@ public class ApiClient : IApiClient
     {
         return _httpClient.BaseAddress!.ToString();
     }
+
+    public string GetMediaResourceEndpointUrl(string mediaId)
+    {
+        return $"{GetApiBaseAddress()}api/media/{mediaId}";
+    }
 }

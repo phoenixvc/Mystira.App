@@ -31,4 +31,6 @@ public interface IApiClient
     Task<bool> DeleteProfileAsync(string id);
     
     string GetApiBaseAddress();
+    
+    string GetMediaResourceEndpointUrl(string mediaId);
 }
