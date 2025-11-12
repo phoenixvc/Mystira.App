@@ -156,13 +156,16 @@ docker run -p 8080:80 mystira-app-api
 
 ## 📚 Documentation
 
-### Key Documentation Files
-- **[PASSWORDLESS_SIGNUP.md](PASSWORDLESS_SIGNUP.md)** - Passwordless authentication implementation
-- **[EMAIL_INTEGRATION_README.md](EMAIL_INTEGRATION_README.md)** - Azure Communication Services email setup
-- **[ACS_EMAIL_SETUP.md](ACS_EMAIL_SETUP.md)** - Step-by-step Azure email configuration
-- **[COMPLETE_IMPLEMENTATION_GUIDE.md](COMPLETE_IMPLEMENTATION_GUIDE.md)** - Full implementation overview
-- **[src/Mystira.App.Api/README.md](src/Mystira.App.Api/README.md)** - Backend API documentation
-- **[src/Mystira.App.Admin.Api/README.md](src/Mystira.App.Admin.Api/README.md)** - Admin API documentation
+### Quick Links
+- **[Documentation Hub](docs/README.md)** - Complete documentation index
+- **[Email Setup Guide](docs/setup/EMAIL_SETUP.md)** - Email integration with Azure Communication Services
+- **[Passwordless Authentication](docs/features/PASSWORDLESS_SIGNUP.md)** - Technical implementation details
+- **[Admin API Architecture](docs/features/ADMIN_API_SEPARATION.md)** - Admin/client API separation
+
+### API Documentation
+- **[Client API](src/Mystira.App.Api/README.md)** - Main client-facing API
+- **[Admin API](src/Mystira.App.Admin.Api/README.md)** - Administrative API
+- **[Cosmos Console](Mystira.App.CosmosConsole/README.md)** - Database reporting tool
 
 ### API Endpoints
 
