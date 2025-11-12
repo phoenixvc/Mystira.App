@@ -304,5 +304,39 @@ public class ApiClient : IApiClient
             return null;
         }
     }
+
+    public async Task<Account?> GetAccountByEmailAsync(string email)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching account for email: {Email}", email);
+            
+            var encodedEmail = Uri.EscapeDataString(email);
+            var response = await _httpClient.GetAsync($"api/accounts/email/{encodedEmail}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var account = await response.Content.ReadFromJsonAsync<Account>(_jsonOptions);
+                _logger.LogInformation("Successfully fetched account for email: {Email}", email);
+                return account;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Account not found for email: {Email}", email);
+                return null;
+            }
+            else
+            {
+                _logger.LogWarning("API request failed with status: {StatusCode} for email: {Email}", 
+                    response.StatusCode, email);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching account for email: {Email}", email);
+            return null;
+        }
+    }
     
 }

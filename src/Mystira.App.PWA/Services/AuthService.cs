@@ -147,13 +147,26 @@ public class AuthService : IAuthService
             if (response?.Success == true && response.Account != null)
             {
                 SetStoredToken(response.Token ?? $"{DemoTokenPrefix}{Guid.NewGuid():N}");
-                SetStoredAccount(response.Account);
                 
-                _isAuthenticated = true;
-                _logger.LogInformation("Passwordless signup verified successfully for: {Email}", email);
-                AuthenticationStateChanged?.Invoke(this, true);
-                
-                return (true, "Account created successfully", response.Account);
+                // Fetch full account details from API
+                var fullAccount = await _apiClient.GetAccountByEmailAsync(email);
+                if (fullAccount != null)
+                {
+                    SetStoredAccount(fullAccount);
+                    _isAuthenticated = true;
+                    _logger.LogInformation("Passwordless signup verified successfully for: {Email}", email);
+                    AuthenticationStateChanged?.Invoke(this, true);
+                    return (true, "Account created successfully", fullAccount);
+                }
+                else
+                {
+                    // Fallback to response account if API call fails
+                    SetStoredAccount(response.Account);
+                    _isAuthenticated = true;
+                    _logger.LogInformation("Passwordless signup verified successfully for: {Email}", email);
+                    AuthenticationStateChanged?.Invoke(this, true);
+                    return (true, "Account created successfully", response.Account);
+                }
             }
             
             _logger.LogWarning("Passwordless signup verification failed for: {Email}", email);
@@ -226,13 +239,26 @@ public class AuthService : IAuthService
             if (response?.Success == true && response.Account != null)
             {
                 SetStoredToken(response.Token ?? $"{DemoTokenPrefix}{Guid.NewGuid():N}");
-                SetStoredAccount(response.Account);
                 
-                _isAuthenticated = true;
-                _logger.LogInformation("Passwordless signin verified successfully for: {Email}", email);
-                AuthenticationStateChanged?.Invoke(this, true);
-                
-                return (true, "Sign-in successful", response.Account);
+                // Fetch full account details from API
+                var fullAccount = await _apiClient.GetAccountByEmailAsync(email);
+                if (fullAccount != null)
+                {
+                    SetStoredAccount(fullAccount);
+                    _isAuthenticated = true;
+                    _logger.LogInformation("Passwordless signin verified successfully for: {Email}", email);
+                    AuthenticationStateChanged?.Invoke(this, true);
+                    return (true, "Sign-in successful", fullAccount);
+                }
+                else
+                {
+                    // Fallback to response account if API call fails
+                    SetStoredAccount(response.Account);
+                    _isAuthenticated = true;
+                    _logger.LogInformation("Passwordless signin verified successfully for: {Email}", email);
+                    AuthenticationStateChanged?.Invoke(this, true);
+                    return (true, "Sign-in successful", response.Account);
+                }
             }
             
             _logger.LogWarning("Passwordless signin verification failed for: {Email}", email);
