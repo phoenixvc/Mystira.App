@@ -1,10 +1,11 @@
+using System.Data;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.CosmosConsole.Services;
 
 public interface ICosmosReportingService
 {
-    Task<List<GameSessionWithAccount>> GetGameSessionsWithAccountsAsync();
+    Task<DataTable> GetGameSessionReportingTable();
     Task<List<ScenarioStatistics>> GetScenarioStatisticsAsync();
 }
 

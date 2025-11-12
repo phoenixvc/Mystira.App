@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Domain.Models;
@@ -16,7 +17,7 @@ public class CosmosReportingService : ICosmosReportingService
         _logger = logger;
     }
 
-    public async Task<List<GameSessionWithAccount>> GetGameSessionsWithAccountsAsync()
+    public async Task<DataTable> GetGameSessionReportingTable()
     {
         try
         {
@@ -25,40 +26,77 @@ public class CosmosReportingService : ICosmosReportingService
             var sessions = await _context.GameSessions.ToListAsync();
             var scenarios = await _context.Scenarios.ToListAsync();
             var accounts = await _context.Accounts.ToListAsync();
+            
+            // Create a dictionary for quick lookup of accounts by Id
+            var accountsDict = accounts.ToDictionary(a => a.Id);
 
-            var result = sessions
-                .Select(session => new GameSessionWithAccount
-                {
-                    Session = session,
-                    Account = accounts.FirstOrDefault(a => a.Id == session.AccountId)
-                })
-                .Where(x => x.Account != null)
-                .Select(x => new GameSessionWithAccount
-                {
-                    Session = new GameSession
-                    {
-                        Id = x.Session.Id,
-                        ScenarioId = x.Session.ScenarioId,
-                        AccountId = x.Session.AccountId,
-                        ProfileId = x.Session.ProfileId,
-                        Status = x.Session.Status,
-                        StartTime = x.Session.StartTime,
-                        EndTime = x.Session.EndTime,
-                        ElapsedTime = x.Session.ElapsedTime,
-                        IsPaused = x.Session.IsPaused,
-                        PausedAt = x.Session.PausedAt,
-                        SceneCount = x.Session.SceneCount,
-                        TargetAgeGroupName = x.Session.TargetAgeGroupName,
-                        SelectedCharacterId = x.Session.SelectedCharacterId
-                        // Copy navigation property manually
-                    },
-                    Account = x.Account
-                })
-                .OrderByDescending(x => x.Session.StartTime)
-                .ToList();
+            // Create a dictionary for quick lookup of scenarios by Id
+            var scenariosDict = scenarios.ToDictionary(s => s.Id);
 
-            _logger.LogInformation("Loaded {Count} game sessions with account data", result.Count);
-            return result;
+            // Join sessions with accounts and scenarios
+            var sessionList = sessions.Select<GameSession, SessionTableRow>(session => 
+            {
+                // Look up the account and scenario for this session
+                accountsDict.TryGetValue(session.AccountId, out var account);
+                scenariosDict.TryGetValue(session.ScenarioId, out var scenario);
+
+                return new SessionTableRow
+                {
+                    SessionId = session.Id,
+                    StartedUtc = session.StartTime,
+                    CompletedUtc = session.EndTime,
+                    Status = session.EndTime.HasValue ? "Completed" : "In Progress",
+        
+                    // Account information
+                    AccountId = session.AccountId,
+                    AccountDisplayName = account?.DisplayName ?? "",
+                    AccountEmail = account?.Email ?? "",
+        
+                    // Scenario information
+                    ScenarioId = session.ScenarioId,
+                    ScenarioName = scenario?.Title ?? "Unknown Scenario",
+        
+                    // Other session information
+                    PlayerNames = string.Join(",", session.PlayerNames)
+                };
+            }).ToList();
+
+            // Convert the list to a DataTable
+            DataTable dataTable = new DataTable("GameSessions");
+
+            // Add columns to the DataTable
+            dataTable.Columns.Add("SessionId", typeof(string));
+            dataTable.Columns.Add("StartedUtc", typeof(DateTime));
+            dataTable.Columns.Add("CompletedUtc", typeof(DateTime));
+            dataTable.Columns.Add("Status", typeof(string));
+            dataTable.Columns.Add("Duration", typeof(string));
+            dataTable.Columns.Add("AccountId", typeof(string));
+            dataTable.Columns.Add("AccountDisplayName", typeof(string));
+            dataTable.Columns.Add("AccountEmail", typeof(string));
+            dataTable.Columns.Add("ScenarioId", typeof(string));
+            dataTable.Columns.Add("ScenarioName", typeof(string));
+            dataTable.Columns.Add("PlayerNames", typeof(string));
+
+            // Add rows to the DataTable
+            foreach (var item in sessionList)
+            {
+                DataRow row = dataTable.NewRow();
+    
+                row["SessionId"] = item.SessionId;
+                row["StartedUtc"] = item.StartedUtc;
+                row["CompletedUtc"] = item.CompletedUtc.HasValue ? item.CompletedUtc.Value : DBNull.Value;
+                row["Status"] = item.Status;
+                row["AccountId"] = item.AccountId;
+                row["AccountDisplayName"] = item.AccountDisplayName;
+                row["AccountEmail"] = item.AccountEmail;
+                row["ScenarioId"] = item.ScenarioId;
+                row["ScenarioName"] = item.ScenarioName;
+                row["PlayerNames"] = item.PlayerNames;
+    
+                dataTable.Rows.Add(row);
+            }
+
+            return dataTable;
         }
         catch (Exception ex)
         {
@@ -67,6 +105,21 @@ public class CosmosReportingService : ICosmosReportingService
         }
     }
 
+    private class SessionTableRow
+    {
+        public string SessionId { get; set; }
+        public DateTime StartedUtc { get; set; }
+        public DateTime? CompletedUtc { get; set; }
+        public string Status { get; set; }
+        public string AccountId { get; set; }
+        public string AccountDisplayName { get; set; }
+        public string AccountEmail { get; set; }
+        public string ScenarioId { get; set; }
+        public string ScenarioName { get; set; }
+        public string PlayerNames { get; set; }
+    }
+
+    
     public async Task<List<ScenarioStatistics>> GetScenarioStatisticsAsync()
     {
         try

@@ -7,6 +7,7 @@ using Mystira.App.CosmosConsole.Services;
 using Mystira.App.CosmosConsole.Data;
 using CsvHelper;
 using System.Globalization;
+using Mystira.App.CosmosConsole.Extensions;
 
 namespace Mystira.App.CosmosConsole;
 
@@ -46,7 +47,11 @@ class Program
         }
 
         services.AddDbContext<CosmosConsoleDbContext>(options =>
-            options.UseCosmos(connectionString, databaseName));
+            options.UseCosmos(
+                connectionString,
+                databaseName
+            ));
+
 
         // Add our services
         services.AddScoped<ICosmosReportingService, CosmosReportingService>();
@@ -114,66 +119,11 @@ class Program
             logger.LogInformation("Starting export of game sessions to CSV: {OutputFile}", outputFile);
 
             var reportingService = serviceProvider.GetRequiredService<ICosmosReportingService>();
-            var sessionsWithAccounts = await reportingService.GetGameSessionsWithAccountsAsync();
-
-            if (!sessionsWithAccounts.Any())
-            {
-                Console.WriteLine("No game sessions found to export.");
-                return;
-            }
-
-            // Ensure output directory exists
-            var directory = Path.GetDirectoryName(outputFile);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            // Write to CSV
-            using var writer = new StreamWriter(outputFile);
-            using var csv = new CsvHelper.CsvWriter(writer, new CultureInfo("en-US"));
-
-            // Write header
-            csv.WriteRecord(new
-            {
-                SessionId = "SessionId",
-                ScenarioId = "ScenarioId", 
-                ScenarioName = "ScenarioName",
-                AccountId = "AccountId",
-                AccountEmail = "AccountEmail",
-                AccountAlias = "AccountAlias",
-                ProfileId = "ProfileId",
-                StartedAt = "StartedAt",
-                IsCompleted = "IsCompleted",
-                CompletedAt = "CompletedAt"
-            });
-            csv.NextRecord();
-
-            // Write records
-            foreach (var session in sessionsWithAccounts)
-            {
-                csv.WriteRecord(new
-                {
-                    SessionId = session.Session.Id,
-                    ScenarioId = session.Session.ScenarioId,
-                    ScenarioName = GetScenarioName(session.Session.ScenarioId),
-                    AccountId = session.Account?.Id ?? "Unknown",
-                    AccountEmail = session.Account?.Email ?? "Unknown",
-                    AccountAlias = session.Account?.DisplayName ?? "Unknown",
-                    ProfileId = session.Session.ProfileId,
-                    StartedAt = session.Session.StartTime,
-                    IsCompleted = session.Session.Status == SessionStatus.Completed,
-                    CompletedAt = session.Session.EndTime
-                });
-                csv.NextRecord();
-            }
-
-            await csv.FlushAsync();
-            writer.Close();
-
-            Console.WriteLine($"Successfully exported {sessionsWithAccounts.Count} game sessions to: {outputFile}");
-            logger.LogInformation("Export completed. {Count} sessions exported to {OutputFile}", 
-                sessionsWithAccounts.Count, outputFile);
+            var sessionsWithAccounts = await reportingService.GetGameSessionReportingTable();
+            var csv = sessionsWithAccounts.ToCsv();
+            await File.WriteAllTextAsync(outputFile, csv);
+            logger.LogInformation("Export completed: {OutputFile}", outputFile);
+            Console.WriteLine($"Export completed: {outputFile}");
         }
         catch (Exception ex)
         {
