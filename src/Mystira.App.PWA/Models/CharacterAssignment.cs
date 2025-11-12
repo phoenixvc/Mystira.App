@@ -22,9 +22,17 @@ public class CharacterAssignment
         {
             var parts = new List<string>();
             if (!string.IsNullOrEmpty(Role)) parts.Add(Role);
-            if (!string.IsNullOrEmpty(Archetype)) parts.Add(Archetype);
+            if (!string.IsNullOrEmpty(Archetype)) parts.Add(ToTitleCase(Archetype));
             return parts.Count > 0 ? string.Join(" • ", parts) : "Character";
         }
+    }
+
+    private static string ToTitleCase(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return string.Empty;
+            
+        return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(input.ToLower());
     }
 }
 
@@ -41,7 +49,6 @@ public class PlayerAssignment
     // Guest properties
     public string? GuestName { get; set; }
     public string? GuestAgeRange { get; set; }
-    public string? GuestPronouns { get; set; }
     public string? GuestAvatar { get; set; }
     public bool SaveAsProfile { get; set; } = false;
 }
@@ -65,7 +72,6 @@ public class CreateGuestProfileRequest
 {
     public string Name { get; set; } = string.Empty;
     public string? AgeRange { get; set; }
-    public string? Pronouns { get; set; }
     public string? Avatar { get; set; }
     public string AccountId { get; set; } = string.Empty;
     public bool IsGuest { get; set; } = true;

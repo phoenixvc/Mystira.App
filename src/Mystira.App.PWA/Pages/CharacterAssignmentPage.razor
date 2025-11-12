@@ -3,6 +3,7 @@
 @inject ICharacterAssignmentService CharacterAssignmentService
 @inject IAuthService AuthService
 @inject IGameSessionService GameSessionService
+@inject IApiClient ApiClient
 @inject ILogger<CharacterAssignment> Logger
 @using System.Linq
 
@@ -129,9 +130,15 @@ else
                                                         <small class="text-muted">@assignment.PlayerAssignment.Type</small>
                                                     </div>
                                                     <button class="btn btn-sm btn-outline-danger" @onclick="() => RemovePlayerAssignment(cardIndex)" title="Remove">
-                                                        <i class="fas fa-times"></i>
+                                                       <i class="fas fa-times"></i>
                                                     </button>
-                                                </div>
+                                                    @if (assignment.PlayerAssignment?.Type == "Guest")
+                                                    {
+                                                       <button class="btn btn-sm btn-outline-primary ms-1" @onclick="() => CreateProfileFromGuest(assignment.PlayerAssignment)" title="Create Profile">
+                                                           <i class="fas fa-user-plus"></i>
+                                                       </button>
+                                                    }
+                                                    </div>
                                             </div>
                                         }
                                     </div>
@@ -242,16 +249,6 @@ else
                             </select>
                         </div>
                         
-                        <div class="mb-3">
-                            <label class="form-label">Pronouns</label>
-                            <select class="form-select" @bind="guestPronouns">
-                                <option value="">Select pronouns...</option>
-                                @foreach (var pronouns in PronounOptions.All)
-                                {
-                                    <option value="@pronouns">@pronouns</option>
-                                }
-                            </select>
-                        </div>
                         
                         <div class="form-check mb-3">
                             <input class="form-check-input" type="checkbox" @bind="saveGuestAsProfile" />
@@ -310,7 +307,6 @@ else
     private string selectedProfileId = string.Empty;
     private string guestName = string.Empty;
     private string guestAgeRange = string.Empty;
-    private string guestPronouns = string.Empty;
     private bool saveGuestAsProfile = false;
     private string? previewImage;
 
@@ -359,7 +355,6 @@ else
         selectedProfileId = string.Empty;
         guestName = string.Empty;
         guestAgeRange = string.Empty;
-        guestPronouns = string.Empty;
         saveGuestAsProfile = false;
         assignmentTab = "profiles";
     }
@@ -398,7 +393,6 @@ else
             playerAssignment.Type = "Guest";
             playerAssignment.GuestName = guestName;
             playerAssignment.GuestAgeRange = guestAgeRange;
-            playerAssignment.GuestPronouns = guestPronouns;
             playerAssignment.SaveAsProfile = saveGuestAsProfile;
         }
 
@@ -447,7 +441,6 @@ else
                 {
                     Name = guest.GuestName!,
                     AgeRange = guest.GuestAgeRange,
-                    Pronouns = guest.GuestPronouns,
                     AccountId = account.Id,
                     IsGuest = false // Saving as real profile
                 };
@@ -525,6 +518,66 @@ else
             isPlayingAudio = audioUrl; // Start playing
         }
         StateHasChanged();
+    }
+
+    private async Task CreateProfileFromGuest(PlayerAssignment guest)
+    {
+        try
+        {
+            var account = await AuthService.GetCurrentAccountAsync();
+            if (account == null)
+            {
+                Logger.LogError("No account found for creating profile");
+                return;
+            }
+
+            var profileRequest = new CreateUserProfileRequest
+            {
+                Name = guest.GuestName!,
+                AgeGroupName = GetAgeGroupNameFromRange(guest.GuestAgeRange),
+                AccountId = account.Id,
+                IsGuest = false // This is now a real profile
+            };
+
+            var createdProfile = await ApiClient.CreateProfileAsync(profileRequest);
+            if (createdProfile != null)
+            {
+                // Update the guest assignment to use the new profile
+                guest.ProfileId = createdProfile.Id;
+                guest.ProfileName = createdProfile.Name;
+                guest.Type = "Profile"; // Change from Guest to Profile
+                
+                // Refresh available profiles
+                await LoadCharacterAssignmentData();
+                
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error creating profile from guest: {GuestName}", guest.GuestName);
+        }
+    }
+
+    private string GetAgeGroupNameFromRange(string? ageRange)
+    {
+        return ageRange switch
+        {
+            "1-2" => "toddlers",
+            "3-5" => "preschoolers",
+            "6-9" => "school",
+            "10-12" => "preteens",
+            "13-18" => "teens",
+            _ => "school"
+        };
+    }
+
+    private string ToTitleCase(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return string.Empty;
+            
+        return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(input.ToLower());
     }
 
     private string GetPlayerDisplayName(PlayerAssignment assignment)
