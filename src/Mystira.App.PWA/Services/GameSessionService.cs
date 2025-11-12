@@ -34,7 +34,7 @@ public class GameSessionService : IGameSessionService
             
             // Start session via API
             var apiGameSession = await _apiClient.StartGameSessionAsync(
-                scenario.Id, 
+                scenario.Id,
                 "default-account", // Default account ID for now
                 "default-profile", // Default profile ID for now
                 new List<string> { "Player" }, // Default player name for now
