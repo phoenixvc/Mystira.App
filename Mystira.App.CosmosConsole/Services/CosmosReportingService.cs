@@ -45,6 +45,7 @@ public class CosmosReportingService : ICosmosReportingService
                     SessionId = session.Id,
                     StartedUtc = session.StartTime,
                     CompletedUtc = session.EndTime,
+                    Duration = session.EndTime.HasValue ? (session.EndTime.Value - session.StartTime).ToString(@"hh\:mm\:ss") : "",
                     Status = session.EndTime.HasValue ? "Completed" : "In Progress",
         
                     // Account information
@@ -117,6 +118,7 @@ public class CosmosReportingService : ICosmosReportingService
         public string ScenarioId { get; set; }
         public string ScenarioName { get; set; }
         public string PlayerNames { get; set; }
+        public string Duration { get; set; }
     }
 
     
