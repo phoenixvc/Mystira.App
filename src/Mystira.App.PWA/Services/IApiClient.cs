@@ -16,5 +16,19 @@ public interface IApiClient
     Task<GameSession?> EndGameSessionAsync(string sessionId);
     Task<List<GameSession>?> GetSessionsByAccountAsync(string accountId);
     Task<Account?> GetAccountByEmailAsync(string email);
+    
+    // Character endpoints
+    Task<Character?> GetCharacterAsync(string id);
+    Task<List<Character>?> GetCharactersAsync();
+    
+    // Profile endpoints
+    Task<UserProfile?> GetProfileAsync(string name);
+    Task<UserProfile?> GetProfileByIdAsync(string id);
+    Task<List<UserProfile>?> GetProfilesByAccountAsync(string accountId);
+    Task<UserProfile?> CreateProfileAsync(CreateUserProfileRequest request);
+    Task<List<UserProfile>?> CreateMultipleProfilesAsync(CreateMultipleProfilesRequest request);
+    Task<UserProfile?> UpdateProfileAsync(string id, UpdateUserProfileRequest request);
+    Task<bool> DeleteProfileAsync(string id);
+    
     string GetApiBaseAddress();
 }
