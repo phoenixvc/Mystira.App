@@ -26,6 +26,77 @@ public class GameSessionsController : ControllerBase
     }
 
     /// <summary>
+    /// Start a new game session
+    /// </summary>
+    [HttpPost]
+    public async Task<ActionResult<GameSession>> StartSession([FromBody] StartGameSessionRequest request)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new ErrorResponse 
+                { 
+                    Message = "Validation failed",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            var session = await _sessionService.StartSessionAsync(request);
+            return CreatedAtAction(nameof(GetSession), new { id = session.Id }, session);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Validation error starting session");
+            return BadRequest(new ErrorResponse 
+            { 
+                Message = ex.Message,
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error starting session");
+            return StatusCode(500, new ErrorResponse 
+            { 
+                Message = "Internal server error while starting session",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
+    /// End a game session
+    /// </summary>
+    [HttpPost("{id}/end")]
+    public async Task<ActionResult<GameSession>> EndSession(string id)
+    {
+        try
+        {
+            var session = await _sessionService.EndSessionAsync(id);
+            if (session == null)
+            {
+                return NotFound(new ErrorResponse 
+                { 
+                    Message = $"Session not found: {id}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            return Ok(session);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error ending session {SessionId}", id);
+            return StatusCode(500, new ErrorResponse 
+            { 
+                Message = "Internal server error while ending session",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
     /// Get a specific game session
     /// </summary>
     [HttpGet("{id}")]

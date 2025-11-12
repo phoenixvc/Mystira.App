@@ -168,17 +168,25 @@ public class GameSessionService : IGameSessionService
         }
     }
 
-    public Task<bool> CompleteGameSessionAsync()
+    public async Task<bool> CompleteGameSessionAsync()
     {
         try
         {
             if (CurrentGameSession == null)
             {
                 _logger.LogWarning("Cannot complete game session - no active session");
-                return Task.FromResult(false);
+                return false;
             }
 
             _logger.LogInformation("Completing game session for scenario: {ScenarioName}", CurrentGameSession.ScenarioName);
+
+            // Call the API to end the session
+            var apiSession = await _apiClient.EndGameSessionAsync(CurrentGameSession.Id);
+            if (apiSession == null)
+            {
+                _logger.LogWarning("Failed to end game session via API");
+                // Still mark as completed locally for UI consistency
+            }
 
             CurrentGameSession.IsCompleted = true;
             
@@ -186,12 +194,12 @@ public class GameSessionService : IGameSessionService
             GameSessionChanged?.Invoke(this, CurrentGameSession);
 
             _logger.LogInformation("Game session completed successfully");
-            return Task.FromResult(true);
+            return true;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error completing game session");
-            return Task.FromResult(false);
+            return false;
         }
     }
 

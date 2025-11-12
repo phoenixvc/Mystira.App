@@ -341,6 +341,63 @@ public class ApiClient : IApiClient
         }
     }
 
+    public async Task<GameSession?> EndGameSessionAsync(string sessionId)
+    {
+        try
+        {
+            _logger.LogInformation("Ending game session: {SessionId}", sessionId);
+            
+            var response = await _httpClient.PostAsync($"api/gamesessions/{sessionId}/end", null);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var gameSession = await response.Content.ReadFromJsonAsync<GameSession>(_jsonOptions);
+                _logger.LogInformation("Game session ended successfully: {SessionId}", sessionId);
+                return gameSession;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to end game session with status: {StatusCode} for session: {SessionId}", 
+                    response.StatusCode, sessionId);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error ending game session: {SessionId}", sessionId);
+            return null;
+        }
+    }
+
+    public async Task<List<GameSession>?> GetSessionsByAccountAsync(string accountId)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching sessions for account: {AccountId}", accountId);
+            
+            var response = await _httpClient.GetAsync($"api/gamesessions/account/{accountId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var sessions = await response.Content.ReadFromJsonAsync<List<GameSession>>(_jsonOptions);
+                _logger.LogInformation("Successfully fetched {Count} sessions for account: {AccountId}", 
+                    sessions?.Count ?? 0, accountId);
+                return sessions;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to fetch sessions with status: {StatusCode} for account: {AccountId}", 
+                    response.StatusCode, accountId);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching sessions for account: {AccountId}", accountId);
+            return null;
+        }
+    }
+    
     public string GetApiBaseAddress()
     {
         return _httpClient.BaseAddress!.ToString();
