@@ -111,11 +111,11 @@ public class StartGameSessionRequest
 
     [Required]
     [StringLength(100, MinimumLength = 1)]
-    public string DmAccountId { get; set; } = string.Empty;
+    public string AccountId { get; set; } = string.Empty;
 
     [Required]
     [StringLength(100, MinimumLength = 1)]
-    public string DmProfileId { get; set; } = string.Empty;
+    public string ProfileId { get; set; } = string.Empty;
 
     [Required]
     public List<string> PlayerNames { get; set; } = new();
@@ -181,8 +181,8 @@ public class GameSessionResponse
 {
     public string Id { get; set; } = string.Empty;
     public string ScenarioId { get; set; } = string.Empty;
-    public string DmAccountId { get; set; } = string.Empty;
-    public string DmProfileId { get; set; } = string.Empty;
+    public string AccountId { get; set; } = string.Empty;
+    public string ProfileId { get; set; } = string.Empty;
     public List<string> PlayerNames { get; set; } = new();
     public SessionStatus Status { get; set; }
     public string CurrentSceneId { get; set; } = string.Empty;

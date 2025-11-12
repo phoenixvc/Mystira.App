@@ -36,8 +36,8 @@ public class GameSessionApiService : IGameSessionApiService
         {
             Id = Guid.NewGuid().ToString(),
             ScenarioId = request.ScenarioId,
-            DmAccountId = request.DmAccountId,
-            DmProfileId = request.DmProfileId,
+            AccountId = request.AccountId,
+            ProfileId = request.ProfileId,
             PlayerNames = request.PlayerNames,
             Status = SessionStatus.InProgress,
             CurrentSceneId = scenario.Scenes.First().Id,
@@ -61,8 +61,8 @@ public class GameSessionApiService : IGameSessionApiService
         _context.GameSessions.Add(session);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Started new game session: {SessionId} for DM Account: {DmAccountId}, Profile: {DmProfileId}", 
-            session.Id, session.DmAccountId, session.DmProfileId);
+        _logger.LogInformation("Started new game session: {SessionId} for Account: {AccountId}, Profile: {ProfileId}", 
+            session.Id, session.AccountId, session.ProfileId);
         return session;
     }
 
@@ -75,14 +75,14 @@ public class GameSessionApiService : IGameSessionApiService
     public async Task<List<GameSessionResponse>> GetSessionsByAccountAsync(string accountId)
     {
         return await _context.GameSessions
-            .Where(s => s.DmAccountId == accountId)
+            .Where(s => s.AccountId == accountId)
             .OrderByDescending(s => s.StartTime)
             .Select(s => new GameSessionResponse
             {
                 Id = s.Id,
                 ScenarioId = s.ScenarioId,
-                DmAccountId = s.DmAccountId,
-                DmProfileId = s.DmProfileId,
+                AccountId = s.AccountId,
+                ProfileId = s.ProfileId,
                 PlayerNames = s.PlayerNames,
                 Status = s.Status,
                 CurrentSceneId = s.CurrentSceneId,
@@ -102,14 +102,14 @@ public class GameSessionApiService : IGameSessionApiService
     public async Task<List<GameSessionResponse>> GetSessionsByProfileAsync(string profileId)
     {
         return await _context.GameSessions
-            .Where(s => s.DmProfileId == profileId)
+            .Where(s => s.ProfileId == profileId)
             .OrderByDescending(s => s.StartTime)
             .Select(s => new GameSessionResponse
             {
                 Id = s.Id,
                 ScenarioId = s.ScenarioId,
-                DmAccountId = s.DmAccountId,
-                DmProfileId = s.DmProfileId,
+                AccountId = s.AccountId,
+                ProfileId = s.ProfileId,
                 PlayerNames = s.PlayerNames,
                 Status = s.Status,
                 CurrentSceneId = s.CurrentSceneId,
@@ -402,11 +402,11 @@ public class GameSessionApiService : IGameSessionApiService
         try
         {
             // Game sessions can be linked to profiles in multiple ways:
-            // 1. By DM profile ID (if the profile is the DM)
+            // 1. By profile ID (if the profile owns the session)
             // 2. By player names (if the profile is a player)
             
             var sessions = await _context.GameSessions
-                .Where(s => s.DmProfileId == profileId || s.PlayerNames.Contains(profileId))
+                .Where(s => s.ProfileId == profileId || s.PlayerNames.Contains(profileId))
                 .OrderByDescending(s => s.StartTime)
                 .ToListAsync();
 

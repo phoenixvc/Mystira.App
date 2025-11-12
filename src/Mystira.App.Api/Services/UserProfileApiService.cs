@@ -195,7 +195,7 @@ public class UserProfileApiService : IUserProfileApiService
 
         // COPPA compliance: Also delete associated sessions, badges, and data
         var sessions = await _context.GameSessions
-            .Where(s => s.DmProfileId == profile.Id)
+            .Where(s => s.ProfileId == profile.Id)
             .ToListAsync();
 
         var badges = await _context.UserBadges
