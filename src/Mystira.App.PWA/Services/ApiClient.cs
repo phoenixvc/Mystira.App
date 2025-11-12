@@ -398,4 +398,8 @@ public class ApiClient : IApiClient
         }
     }
     
+    public string GetApiBaseAddress()
+    {
+        return _httpClient.BaseAddress!.ToString();
+    }
 }
