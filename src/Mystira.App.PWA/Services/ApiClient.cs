@@ -398,6 +398,284 @@ public class ApiClient : IApiClient
         }
     }
     
+    public async Task<Character?> GetCharacterAsync(string id)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching character {Id} from API...", id);
+            
+            var response = await _httpClient.GetAsync($"api/characters/{id}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var character = await response.Content.ReadFromJsonAsync<Character>(_jsonOptions);
+                _logger.LogInformation("Successfully fetched character {Id}", id);
+                return character;
+            }
+            else
+            {
+                _logger.LogWarning("API request failed with status: {StatusCode}. Character {Id} not available.", response.StatusCode, id);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching character {Id} from API.", id);
+            return null;
+        }
+    }
+
+    public async Task<List<Character>?> GetCharactersAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Fetching characters from API...");
+            
+            var response = await _httpClient.GetAsync("api/charactermaps");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var characters = await response.Content.ReadFromJsonAsync<List<Character>>(_jsonOptions);
+                _logger.LogInformation("Successfully fetched {Count} characters", characters?.Count ?? 0);
+                return characters;
+            }
+            else
+            {
+                _logger.LogWarning("API request failed with status: {StatusCode}. No characters available.", response.StatusCode);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching characters from API.");
+            return null;
+        }
+    }
+
+    public async Task<UserProfile?> GetProfileAsync(string name)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching profile {Name} from API...", name);
+            
+            var encodedName = Uri.EscapeDataString(name);
+            var response = await _httpClient.GetAsync($"api/userprofiles/{encodedName}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var profile = await response.Content.ReadFromJsonAsync<UserProfile>(_jsonOptions);
+                _logger.LogInformation("Successfully fetched profile {Name}", name);
+                return profile;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Profile not found: {Name}", name);
+                return null;
+            }
+            else
+            {
+                _logger.LogWarning("API request failed with status: {StatusCode} for profile: {Name}", response.StatusCode, name);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching profile {Name} from API.", name);
+            return null;
+        }
+    }
+
+    public async Task<UserProfile?> GetProfileByIdAsync(string id)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching profile by ID {Id} from API...", id);
+            
+            var response = await _httpClient.GetAsync($"api/userprofiles/id/{id}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var profile = await response.Content.ReadFromJsonAsync<UserProfile>(_jsonOptions);
+                _logger.LogInformation("Successfully fetched profile by ID {Id}", id);
+                return profile;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Profile not found by ID: {Id}", id);
+                return null;
+            }
+            else
+            {
+                _logger.LogWarning("API request failed with status: {StatusCode} for profile ID: {Id}", response.StatusCode, id);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching profile by ID {Id} from API.", id);
+            return null;
+        }
+    }
+
+    public async Task<List<UserProfile>?> GetProfilesByAccountAsync(string accountId)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching profiles for account {AccountId} from API...", accountId);
+            
+            // First get the account to get profile IDs
+            var accountResponse = await _httpClient.GetAsync($"api/accounts/{accountId}");
+            if (!accountResponse.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to fetch account {AccountId} with status: {StatusCode}", accountId, accountResponse.StatusCode);
+                return null;
+            }
+
+            var account = await accountResponse.Content.ReadFromJsonAsync<Account>(_jsonOptions);
+            if (account?.UserProfileIds == null || !account.UserProfileIds.Any())
+            {
+                _logger.LogInformation("No profiles found for account {AccountId}", accountId);
+                return new List<UserProfile>();
+            }
+
+            // Fetch each profile individually
+            var profiles = new List<UserProfile>();
+            foreach (var profileId in account.UserProfileIds)
+            {
+                var profile = await GetProfileByIdAsync(profileId);
+                if (profile != null)
+                {
+                    profiles.Add(profile);
+                }
+            }
+
+            _logger.LogInformation("Successfully fetched {Count} profiles for account {AccountId}", profiles.Count, accountId);
+            return profiles;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching profiles for account {AccountId} from API.", accountId);
+            return null;
+        }
+    }
+
+    public async Task<UserProfile?> CreateProfileAsync(CreateUserProfileRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("Creating profile {Name} via API...", request.Name);
+            
+            var response = await _httpClient.PostAsJsonAsync("api/userprofiles", request, _jsonOptions);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var profile = await response.Content.ReadFromJsonAsync<UserProfile>(_jsonOptions);
+                _logger.LogInformation("Successfully created profile {Name} with ID {Id}", request.Name, profile?.Id);
+                return profile;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to create profile with status: {StatusCode} for name: {Name}", response.StatusCode, request.Name);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating profile {Name} via API.", request.Name);
+            return null;
+        }
+    }
+
+    public async Task<List<UserProfile>?> CreateMultipleProfilesAsync(CreateMultipleProfilesRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("Creating {Count} profiles via API...", request.Profiles.Count);
+            
+            var response = await _httpClient.PostAsJsonAsync("api/userprofiles/batch", request, _jsonOptions);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var profiles = await response.Content.ReadFromJsonAsync<List<UserProfile>>(_jsonOptions);
+                _logger.LogInformation("Successfully created {Count} profiles", profiles?.Count ?? 0);
+                return profiles;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to create multiple profiles with status: {StatusCode}", response.StatusCode);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating multiple profiles via API.");
+            return null;
+        }
+    }
+
+    public async Task<UserProfile?> UpdateProfileAsync(string id, UpdateUserProfileRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("Updating profile {Id} via API...", id);
+            
+            var response = await _httpClient.PutAsJsonAsync($"api/userprofiles/{id}", request, _jsonOptions);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var profile = await response.Content.ReadFromJsonAsync<UserProfile>(_jsonOptions);
+                _logger.LogInformation("Successfully updated profile {Id}", id);
+                return profile;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Profile not found for update: {Id}", id);
+                return null;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to update profile with status: {StatusCode} for ID: {Id}", response.StatusCode, id);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating profile {Id} via API.", id);
+            return null;
+        }
+    }
+
+    public async Task<bool> DeleteProfileAsync(string id)
+    {
+        try
+        {
+            _logger.LogInformation("Deleting profile {Id} via API...", id);
+            
+            var response = await _httpClient.DeleteAsync($"api/userprofiles/{id}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Successfully deleted profile {Id}", id);
+                return true;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Profile not found for deletion: {Id}", id);
+                return false;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to delete profile with status: {StatusCode} for ID: {Id}", response.StatusCode, id);
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting profile {Id} via API.", id);
+            return false;
+        }
+    }
+
     public string GetApiBaseAddress()
     {
         return _httpClient.BaseAddress!.ToString();

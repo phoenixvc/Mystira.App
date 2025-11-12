@@ -1,0 +1,612 @@
+@page "/character-assignment/{scenarioId}"
+@inject NavigationManager NavigationManager
+@inject ICharacterAssignmentService CharacterAssignmentService
+@inject IAuthService AuthService
+@inject IGameSessionService GameSessionService
+@inject IApiClient ApiClient
+@inject ILogger<CharacterAssignment> Logger
+@using System.Linq
+
+<PageTitle>Assign Players - Mystira</PageTitle>
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+        <div class="text-center">
+            <div class="spinner-border text-primary-custom mb-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted">Preparing character assignment...</p>
+        </div>
+    </div>
+}
+else if (assignmentData?.Scenario == null)
+{
+    <div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+        <div class="text-center">
+            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+            <h3>Scenario Not Found</h3>
+            <p class="text-muted mb-4">We couldn't load the scenario for character assignment.</p>
+            <button class="btn btn-primary-custom" @onclick="GoBack">
+                <i class="fas fa-arrow-left me-2"></i>Back to Adventures
+            </button>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex align-items-center mb-3">
+                    <button class="btn btn-outline-secondary me-3" @onclick="GoBack">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div>
+                        <h2 class="mb-1">Assign Players</h2>
+                        <p class="text-muted mb-0">@assignmentData.Scenario.Title</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Character Cards Grid -->
+        <div class="row g-4 mb-4">
+            @for (int i = 0; i < characterAssignments.Count; i++)
+            {
+                var assignment = characterAssignments[i];
+                var cardIndex = i;
+                
+                <div class="col-md-6 col-lg-3">
+                    <div class="card h-100 character-card @(assignment.IsUnused ? "border-secondary bg-light" : "border-primary")">
+                        <div class="card-body d-flex flex-column">
+                            <!-- Character Info -->
+                            <div class="text-center mb-3">
+                                @if (!string.IsNullOrEmpty(assignment.Image))
+                                {
+                                    <img src="@assignment.Image" class="character-avatar mb-2" alt="@assignment.CharacterName" />
+                                }
+                                else
+                                {
+                                    <div class="character-avatar-placeholder mb-2">
+                                        <i class="fas fa-user fa-2x"></i>
+                                    </div>
+                                }
+                                <h6 class="card-title mb-1">@assignment.CharacterName</h6>
+                                <small class="text-muted">@assignment.DisplayInfo</small>
+                            </div>
+
+                            <!-- Media Controls -->
+                            <div class="d-flex justify-content-center gap-2 mb-3">
+                                @if (!string.IsNullOrEmpty(assignment.Image))
+                                {
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => PreviewImage(assignment.Image)" title="View Image">
+                                        <i class="fas fa-image"></i>
+                                    </button>
+                                }
+                                @if (!string.IsNullOrEmpty(assignment.Audio))
+                                {
+                                    <button class="btn btn-sm btn-outline-success" @onclick="() => PlayAudio(assignment.Audio)" title="Play Audio">
+                                        <i class="fas @(isPlayingAudio == assignment.Audio ? "fa-pause" : "fa-play")"></i>
+                                    </button>
+                                }
+                            </div>
+
+                            <!-- Player Assignment -->
+                            <div class="mt-auto">
+                                @if (assignment.IsUnused)
+                                {
+                                    <div class="text-center text-muted py-2">
+                                        <i class="fas fa-minus-circle mb-1"></i>
+                                        <small>Unused Character</small>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="player-assignment">
+                                        @if (assignment.PlayerAssignment == null)
+                                        {
+                                            <button class="btn btn-outline-primary btn-sm w-100" @onclick="() => OpenPlayerAssignment(cardIndex)">
+                                                <i class="fas fa-user-plus me-1"></i>Assign Player
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <div class="assigned-player p-2 bg-light rounded">
+                                                <div class="d-flex align-items-center">
+                                                    @if (!string.IsNullOrEmpty(assignment.PlayerAssignment.ProfileImage))
+                                                    {
+                                                        <img src="@assignment.PlayerAssignment.ProfileImage" class="player-avatar me-2" alt="Player" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="player-avatar-placeholder me-2">
+                                                            <i class="fas fa-user"></i>
+                                                        </div>
+                                                    }
+                                                    <div class="flex-grow-1">
+                                                        <div class="fw-bold">@GetPlayerDisplayName(assignment.PlayerAssignment)</div>
+                                                        <small class="text-muted">@assignment.PlayerAssignment.Type</small>
+                                                    </div>
+                                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => RemovePlayerAssignment(cardIndex)" title="Remove">
+                                                       <i class="fas fa-times"></i>
+                                                    </button>
+                                                    @if (assignment.PlayerAssignment?.Type == "Guest")
+                                                    {
+                                                       <button class="btn btn-sm btn-outline-primary ms-1" @onclick="() => CreateProfileFromGuest(assignment.PlayerAssignment)" title="Create Profile">
+                                                           <i class="fas fa-user-plus"></i>
+                                                       </button>
+                                                    }
+                                                    </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <button class="btn btn-outline-secondary" @onclick="GoBack">
+                        <i class="fas fa-arrow-left me-2"></i>Back
+                    </button>
+                    
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary" @onclick="ManageProfiles">
+                            <i class="fas fa-users me-2"></i>Manage Profiles
+                        </button>
+                        
+                        <button class="btn btn-primary-custom btn-lg" @onclick="BeginSession" disabled="@(!CanBeginSession)">
+                            @if (isStartingSession)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <span>Starting...</span>
+                            }
+                            else
+                            {
+                                <i class="fas fa-play me-2"></i><span>Begin Session</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+                
+                @if (!CanBeginSession)
+                {
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Please assign players to all character slots before beginning the session.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Player Assignment Modal -->
+@if (showPlayerAssignmentModal)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Assign Player to @currentAssignment?.CharacterName</h5>
+                    <button type="button" class="btn-close" @onclick="ClosePlayerAssignment"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Tab Navigation -->
+                    <ul class="nav nav-tabs mb-3">
+                        <li class="nav-item">
+                            <button class="nav-link @(assignmentTab == "profiles" ? "active" : "")" 
+                                    @onclick="@(() => SetAssignmentTab("profiles"))">
+                                <i class="fas fa-users me-1"></i>Profiles
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link @(assignmentTab == "guest" ? "active" : "")" 
+                                    @onclick="@(() => SetAssignmentTab("guest"))">
+                                <i class="fas fa-user-plus me-1"></i>Guest
+                            </button>
+                        </li>
+                    </ul>
+
+                    @if (assignmentTab == "profiles")
+                    {
+                        <!-- Profiles Tab -->
+                        <div class="mb-3">
+                            <label class="form-label">Select Profile</label>
+                            <select class="form-select" @bind="selectedProfileId">
+                                <option value="">Choose a profile...</option>
+                                @foreach (var profile in availableProfiles)
+                                {
+                                    <option value="@profile.Id">@profile.Name (@profile.DisplayAgeRange)</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- Guest Tab -->
+                        <div class="mb-3">
+                            <label class="form-label">Display Name *</label>
+                            <input type="text" class="form-control" @bind="guestName" placeholder="Enter guest name" />
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Age Range</label>
+                            <select class="form-select" @bind="guestAgeRange">
+                                <option value="">Select age range...</option>
+                                @foreach (var ageRange in AgeRanges.All)
+                                {
+                                    <option value="@ageRange">@AgeRanges.GetDisplayName(ageRange)</option>
+                                }
+                            </select>
+                        </div>
+                        
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" @bind="saveGuestAsProfile" />
+                            <label class="form-check-label">
+                                Save as profile after this session
+                            </label>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="ClosePlayerAssignment">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="ConfirmPlayerAssignment" disabled="@(!CanConfirmAssignment)">
+                        Assign Player
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Image Preview Modal -->
+@if (showImagePreview)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.8);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-transparent border-0">
+                <div class="modal-body p-0 text-center">
+                    <img src="@previewImage" class="img-fluid" alt="Character Preview" />
+                    <button type="button" class="btn btn-light btn-lg position-absolute top-0 end-0 m-3" @onclick="CloseImagePreview">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string ScenarioId { get; set; } = string.Empty;
+
+    private CharacterAssignmentResponse? assignmentData;
+    private List<CharacterAssignment> characterAssignments = new();
+    private List<UserProfile> availableProfiles = new();
+    private bool isLoading = true;
+    private bool isStartingSession = false;
+    private string? isPlayingAudio;
+
+    // Modal state
+    private bool showPlayerAssignmentModal = false;
+    private bool showImagePreview = false;
+    private string assignmentTab = "profiles";
+    private CharacterAssignment? currentAssignment;
+    private int currentAssignmentIndex = -1;
+
+    // Form state
+    private string selectedProfileId = string.Empty;
+    private string guestName = string.Empty;
+    private string guestAgeRange = string.Empty;
+    private bool saveGuestAsProfile = false;
+    private string? previewImage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Logger.LogInformation("Initializing character assignment for scenario: {ScenarioId}", ScenarioId);
+            
+            await LoadCharacterAssignmentData();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing character assignment");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadCharacterAssignmentData()
+    {
+        assignmentData = await CharacterAssignmentService.GetCharacterAssignmentDataAsync(ScenarioId);
+        
+        if (assignmentData != null)
+        {
+            characterAssignments = assignmentData.CharacterAssignments;
+            availableProfiles = assignmentData.AvailableProfiles;
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/home");
+    }
+
+    private void OpenPlayerAssignment(int index)
+    {
+        currentAssignmentIndex = index;
+        currentAssignment = characterAssignments[index];
+        showPlayerAssignmentModal = true;
+        
+        // Reset form state
+        selectedProfileId = string.Empty;
+        guestName = string.Empty;
+        guestAgeRange = string.Empty;
+        saveGuestAsProfile = false;
+        assignmentTab = "profiles";
+    }
+
+    private void ClosePlayerAssignment()
+    {
+        showPlayerAssignmentModal = false;
+        currentAssignment = null;
+        currentAssignmentIndex = -1;
+    }
+
+    private void SetAssignmentTab(string tab)
+    {
+        assignmentTab = tab;
+    }
+
+    private void ConfirmPlayerAssignment()
+    {
+        if (currentAssignmentIndex < 0 || currentAssignment == null) return;
+
+        var playerAssignment = new PlayerAssignment();
+
+        if (assignmentTab == "profiles" && !string.IsNullOrEmpty(selectedProfileId))
+        {
+            var profile = availableProfiles.FirstOrDefault(p => p.Id == selectedProfileId);
+            if (profile != null)
+            {
+                playerAssignment.Type = "Profile";
+                playerAssignment.ProfileId = profile.Id;
+                playerAssignment.ProfileName = profile.Name;
+                playerAssignment.ProfileImage = null; // TODO: Add avatar to profile
+            }
+        }
+        else if (assignmentTab == "guest" && !string.IsNullOrEmpty(guestName))
+        {
+            playerAssignment.Type = "Guest";
+            playerAssignment.GuestName = guestName;
+            playerAssignment.GuestAgeRange = guestAgeRange;
+            playerAssignment.SaveAsProfile = saveGuestAsProfile;
+        }
+
+        if (!string.IsNullOrEmpty(playerAssignment.Type))
+        {
+            characterAssignments[currentAssignmentIndex].PlayerAssignment = playerAssignment;
+            ClosePlayerAssignment();
+            StateHasChanged();
+        }
+    }
+
+    private void RemovePlayerAssignment(int index)
+    {
+        characterAssignments[index].PlayerAssignment = null;
+        StateHasChanged();
+    }
+
+    private async Task BeginSession()
+    {
+        if (!CanBeginSession) return;
+
+        try
+        {
+            isStartingSession = true;
+            StateHasChanged();
+
+            Logger.LogInformation("Beginning session with character assignments for scenario: {ScenarioId}", ScenarioId);
+
+            // Get current account
+            var account = await AuthService.GetCurrentAccountAsync();
+            if (account == null)
+            {
+                Logger.LogError("No account found for starting session");
+                return;
+            }
+
+            // Create guest profiles if needed
+            var guestProfilesToCreate = characterAssignments
+                .Where(ca => ca.PlayerAssignment?.Type == "Guest" && ca.PlayerAssignment.SaveAsProfile == true)
+                .Select(ca => ca.PlayerAssignment!)
+                .ToList();
+
+            foreach (var guest in guestProfilesToCreate)
+            {
+                var guestProfileRequest = new CreateGuestProfileRequest
+                {
+                    Name = guest.GuestName!,
+                    AgeRange = guest.GuestAgeRange,
+                    AccountId = account.Id,
+                    IsGuest = false // Saving as real profile
+                };
+
+                var createdProfile = await CharacterAssignmentService.CreateGuestProfileAsync(guestProfileRequest);
+                if (createdProfile != null)
+                {
+                    guest.ProfileId = createdProfile.Id;
+                    guest.ProfileName = createdProfile.Name;
+                }
+            }
+
+            // Start the game session
+            var request = new StartGameSessionRequest
+            {
+                ScenarioId = ScenarioId,
+                AccountId = account.Id,
+                ProfileId = account.UserProfileIds.FirstOrDefault() ?? "default-profile",
+                CharacterAssignments = characterAssignments,
+                TargetAgeGroup = assignmentData!.Scenario.AgeGroup ?? "6-9"
+            };
+
+            var success = await CharacterAssignmentService.StartGameSessionWithAssignmentsAsync(request);
+
+            if (success)
+            {
+                Logger.LogInformation("Session started successfully, navigating to game");
+                NavigationManager.NavigateTo("/game");
+            }
+            else
+            {
+                Logger.LogError("Failed to start game session");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error beginning session");
+        }
+        finally
+        {
+            isStartingSession = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ManageProfiles()
+    {
+        // TODO: Navigate to profiles management page or open modal
+        Logger.LogInformation("Manage profiles clicked - not implemented yet");
+    }
+
+    private void PreviewImage(string imageUrl)
+    {
+        previewImage = imageUrl;
+        showImagePreview = true;
+    }
+
+    private void CloseImagePreview()
+    {
+        showImagePreview = false;
+        previewImage = null;
+    }
+
+    private async Task PlayAudio(string audioUrl)
+    {
+        // TODO: Implement audio playback
+        await Task.CompletedTask;
+        
+        if (isPlayingAudio == audioUrl)
+        {
+            isPlayingAudio = null; // Stop playing
+        }
+        else
+        {
+            isPlayingAudio = audioUrl; // Start playing
+        }
+        StateHasChanged();
+    }
+
+    private async Task CreateProfileFromGuest(PlayerAssignment guest)
+    {
+        try
+        {
+            var account = await AuthService.GetCurrentAccountAsync();
+            if (account == null)
+            {
+                Logger.LogError("No account found for creating profile");
+                return;
+            }
+
+            var profileRequest = new CreateUserProfileRequest
+            {
+                Name = guest.GuestName!,
+                AgeGroupName = GetAgeGroupNameFromRange(guest.GuestAgeRange),
+                AccountId = account.Id,
+                IsGuest = false // This is now a real profile
+            };
+
+            var createdProfile = await ApiClient.CreateProfileAsync(profileRequest);
+            if (createdProfile != null)
+            {
+                // Update the guest assignment to use the new profile
+                guest.ProfileId = createdProfile.Id;
+                guest.ProfileName = createdProfile.Name;
+                guest.Type = "Profile"; // Change from Guest to Profile
+                
+                // Refresh available profiles
+                await LoadCharacterAssignmentData();
+                
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error creating profile from guest: {GuestName}", guest.GuestName);
+        }
+    }
+
+    private string GetAgeGroupNameFromRange(string? ageRange)
+    {
+        return ageRange switch
+        {
+            "1-2" => "toddlers",
+            "3-5" => "preschoolers",
+            "6-9" => "school",
+            "10-12" => "preteens",
+            "13-18" => "teens",
+            _ => "school"
+        };
+    }
+
+    private string ToTitleCase(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return string.Empty;
+            
+        return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(input.ToLower());
+    }
+
+    private string GetPlayerDisplayName(PlayerAssignment assignment)
+    {
+        return assignment.Type switch
+        {
+            "Profile" => assignment.ProfileName ?? "Unknown Profile",
+            "Guest" => assignment.GuestName ?? "Unknown Guest",
+            _ => "Unknown Player"
+        };
+    }
+
+    private bool CanConfirmAssignment
+    {
+        get
+        {
+            if (assignmentTab == "profiles")
+                return !string.IsNullOrEmpty(selectedProfileId);
+            else
+                return !string.IsNullOrEmpty(guestName);
+        }
+    }
+
+    private bool CanBeginSession
+    {
+        get
+        {
+            return characterAssignments.All(ca => 
+                ca.IsUnused || (ca.PlayerAssignment != null && !string.IsNullOrEmpty(ca.PlayerAssignment.Type)));
+        }
+    }
+}

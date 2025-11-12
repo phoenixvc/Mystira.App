@@ -446,25 +446,10 @@
             // Clear any existing game session
             GameSessionService.ClearGameSession();
             
-            // Get the full scenario with scenes
-            var fullScenario = await ApiClient.GetScenarioAsync(scenario.Id);
-            if (fullScenario == null)
-            {
-                Logger.LogError("Could not load scenario details for: {ScenarioName}", scenario.Name);
-                return;
-            }
-            
-            // Start the game session
-            var success = await GameSessionService.StartGameSessionAsync(fullScenario);
-            if (success)
-            {
-                Logger.LogInformation("Game session started successfully for: {ScenarioName}", scenario.Name);
-                Navigation.NavigateTo("/game");
-            }
-            else
-            {
-                Logger.LogError("Failed to start game session for: {ScenarioName}", scenario.Name);
-            }
+            // Navigate to character assignment page
+            Logger.LogInformation("Navigating to character assignment for scenario: {ScenarioId}", scenario.Id);
+            await Task.CompletedTask;
+            Navigation.NavigateTo($"/character-assignment/{scenario.Id}");
         }
         catch (Exception ex)
         {

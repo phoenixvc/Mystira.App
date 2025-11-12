@@ -26,6 +26,7 @@ public class Scenario
     public string Summary { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public List<string> CoreAxes { get; set; } = new();
+    public List<ScenarioCharacter> Characters { get; set; } = new();
     
     // Backward compatibility properties
     public string Name => Title;
@@ -125,4 +126,23 @@ public enum MediaType
     Image = 0,
     Audio = 1,
     Video = 2
+}
+
+public class ScenarioCharacter
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Image { get; set; }
+    public string? Audio { get; set; }
+    public ScenarioCharacterMetadata Metadata { get; set; } = new();
+}
+
+public class ScenarioCharacterMetadata
+{
+    public List<string> Role { get; set; } = new();
+    public List<string> Archetype { get; set; } = new();
+    public string Species { get; set; } = string.Empty;
+    public int Age { get; set; }
+    public List<string> Traits { get; set; } = new();
+    public string Backstory { get; set; } = string.Empty;
 }

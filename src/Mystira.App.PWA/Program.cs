@@ -45,6 +45,7 @@ builder.Services.Configure<JsonSerializerOptions>(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IGameSessionService, GameSessionService>();
 builder.Services.AddScoped<IIndexedDbService, IndexedDbService>();
+builder.Services.AddScoped<ICharacterAssignmentService, CharacterAssignmentService>();
 
 // Logging configuration
 builder.Logging.SetMinimumLevel(LogLevel.Information);
