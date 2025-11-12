@@ -382,11 +382,28 @@ else
         return Task.CompletedTask;
     }
 
-    private void FinishAdventure()
+    private async Task CompleteSession()
+    {
+        Logger.LogInformation("Completing adventure (changing game state to finished)... ");
+        try
+        {
+            await GameSessionService.CompleteGameSessionAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error when completing adventure.");
+        }
+    }
+
+    
+    private async Task FinishAdventure()
     {
         try
         {
             Logger.LogInformation("Finishing adventure and returning to main menu");
+
+            // Complete the session
+            await CompleteSession();
             
             // Clear the current game session
             GameSessionService.ClearGameSession();
