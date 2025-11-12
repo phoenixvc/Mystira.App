@@ -4,7 +4,8 @@ public class GameSession
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string ScenarioId { get; set; } = string.Empty;
-    public string DmName { get; set; } = string.Empty;
+    public string DmAccountId { get; set; } = string.Empty;
+    public string DmProfileId { get; set; } = string.Empty;
     public List<string> PlayerNames { get; set; } = new(); // Names only, no accounts for children
     public SessionStatus Status { get; set; } = SessionStatus.NotStarted;
     public string CurrentSceneId { get; set; } = string.Empty;

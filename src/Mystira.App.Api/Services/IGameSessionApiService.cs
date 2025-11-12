@@ -7,7 +7,8 @@ public interface IGameSessionApiService
 {
     Task<GameSession> StartSessionAsync(StartGameSessionRequest request);
     Task<GameSession?> GetSessionAsync(string sessionId);
-    Task<List<GameSessionResponse>> GetSessionsByDmAsync(string dmName);
+    Task<List<GameSessionResponse>> GetSessionsByAccountAsync(string accountId);
+    Task<List<GameSessionResponse>> GetSessionsByProfileAsync(string profileId);
     Task<GameSession?> MakeChoiceAsync(MakeChoiceRequest request);
     Task<GameSession?> PauseSessionAsync(string sessionId);
     Task<GameSession?> ResumeSessionAsync(string sessionId);

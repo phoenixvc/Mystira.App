@@ -102,23 +102,46 @@ public class GameSessionsController : ControllerBase
     }
 
     /// <summary>
-    /// Get all sessions for a specific DM
+    /// Get all sessions for a specific account
     /// </summary>
-    [HttpGet("dm/{dmName}")]
-    [Authorize] // Requires DM authentication
-    public async Task<ActionResult<List<GameSessionResponse>>> GetSessionsByDm(string dmName)
+    [HttpGet("account/{accountId}")]
+    [Authorize] // Requires authentication
+    public async Task<ActionResult<List<GameSessionResponse>>> GetSessionsByAccount(string accountId)
     {
         try
         {
-            var sessions = await _sessionService.GetSessionsByDmAsync(dmName);
+            var sessions = await _sessionService.GetSessionsByAccountAsync(accountId);
             return Ok(sessions);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting sessions for DM {DmName}", dmName);
+            _logger.LogError(ex, "Error getting sessions for account {AccountId}", accountId);
             return StatusCode(500, new ErrorResponse 
             { 
-                Message = "Internal server error while fetching DM sessions",
+                Message = "Internal server error while fetching account sessions",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get all sessions for a specific profile
+    /// </summary>
+    [HttpGet("profile/{profileId}")]
+    [Authorize] // Requires authentication
+    public async Task<ActionResult<List<GameSessionResponse>>> GetSessionsByProfile(string profileId)
+    {
+        try
+        {
+            var sessions = await _sessionService.GetSessionsByProfileAsync(profileId);
+            return Ok(sessions);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting sessions for profile {ProfileId}", profileId);
+            return StatusCode(500, new ErrorResponse 
+            { 
+                Message = "Internal server error while fetching profile sessions",
                 TraceId = HttpContext.TraceIdentifier
             });
         }
@@ -403,8 +426,8 @@ public class GameSessionsController : ControllerBase
     /// <summary>
     /// Get all game sessions for profiles belonging to an account (identified by email)
     /// </summary>
-    [HttpGet("account/{email}")]
-    public async Task<ActionResult<List<GameSession>>> GetSessionsForAccount(string email)
+    [HttpGet("account/email/{email}")]
+    public async Task<ActionResult<List<GameSession>>> GetSessionsForAccountByEmail(string email)
     {
         try
         {
