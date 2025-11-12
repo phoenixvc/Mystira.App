@@ -47,33 +47,55 @@
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <h6 class="card-title mb-3">
-                            <i class="fas fa-filter me-2"></i>Filter by Age Group
+                            <i class="fas fa-filter me-2"></i>Filter Adventures
                         </h6>
-                        <div class="d-flex flex-wrap gap-2">
-                            @foreach (var ageGroup in availableAgeGroups)
-                            {
-                                var isSelected = selectedAgeGroups.Contains(ageGroup);
-                                <button class="btn @(isSelected ? "btn-primary-custom" : "btn-outline-secondary")"
-                                        @onclick="() => ToggleAgeGroupFilter(ageGroup)">
-                                    <i class="fas fa-users me-1"></i>
-                                    Ages @ageGroup
-                                    @if (isSelected)
-                                    {
-                                        <i class="fas fa-check ms-1"></i>
-                                    }
-                                </button>
-                            }
-                            @if (selectedAgeGroups.Any())
-                            {
-                                <button class="btn btn-outline-danger" @onclick="ClearAllFilters">
-                                    <i class="fas fa-times me-1"></i>Clear All
-                                </button>
-                            }
+                        
+                        <!-- Show Completed Stories Toggle -->
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="showCompletedToggle" 
+                                       checked="@showCompletedStories" @onchange="ToggleCompletedStories">
+                                <label class="form-check-label" for="showCompletedToggle">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    Show Completed Stories
+                                </label>
+                            </div>
                         </div>
+                        
+                        <!-- Age Group Filters -->
+                        <div class="mb-2">
+                            <small class="text-muted d-block mb-2">Filter by Age Group:</small>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var ageGroup in availableAgeGroups)
+                                {
+                                    var isSelected = selectedAgeGroups.Contains(ageGroup);
+                                    <button class="btn @(isSelected ? "btn-primary-custom" : "btn-outline-secondary")"
+                                            @onclick="() => ToggleAgeGroupFilter(ageGroup)">
+                                        <i class="fas fa-users me-1"></i>
+                                        Ages @ageGroup
+                                        @if (isSelected)
+                                        {
+                                            <i class="fas fa-check ms-1"></i>
+                                        }
+                                    </button>
+                                }
+                                @if (selectedAgeGroups.Any())
+                                {
+                                    <button class="btn btn-outline-danger" @onclick="ClearAllFilters">
+                                        <i class="fas fa-times me-1"></i>Clear All
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                        
                         @if (selectedAgeGroups.Any())
                         {
                             <div class="mt-2 text-muted small">
                                 Showing @filteredScenarios.Count of @scenarios.Count adventures
+                                @if (!showCompletedStories)
+                                {
+                                    <text> (@completedScenarioIds.Count completed hidden)</text>
+                                }
                             </div>
                         }
                     </div>
@@ -145,10 +167,19 @@
         <div class="row">
             @foreach (var scenario in filteredScenarios)
             {
+                var isCompleted = completedScenarioIds.Contains(scenario.Id);
                 <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card scenario-card h-100">
+                    <div class="card scenario-card h-100 @(isCompleted ? "border-success" : "")">
                         <div class="card-body d-flex flex-column">
-                            <h5 class="card-title">@scenario.Name</h5>
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title">@scenario.Name</h5>
+                                @if (isCompleted)
+                                {
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Completed
+                                    </span>
+                                }
+                            </div>
                             <p class="card-text flex-grow-1">@scenario.Description</p>
                             
                             <div class="mt-auto">
@@ -253,6 +284,8 @@
     private bool isLoading = true;
     private bool isStartingAdventure = false;
     private bool isAuthenticated = false;
+    private bool showCompletedStories = true;
+    private HashSet<string> completedScenarioIds = new();
     
     // Age group filter state
     private readonly HashSet<string> selectedAgeGroups = new();
@@ -276,6 +309,7 @@
             if (isAuthenticated) 
             {
                 await LoadScenarios();
+                await LoadCompletedScenarios();
             }
             else 
             {
@@ -299,12 +333,14 @@
             if (authenticated)
             {
                 await LoadScenarios();
+                await LoadCompletedScenarios();
             }
             else 
             {
                 scenarios.Clear();
                 filteredScenarios.Clear();
                 selectedAgeGroups.Clear();
+                completedScenarioIds.Clear();
             }
             StateHasChanged();
         });
@@ -341,6 +377,49 @@
             isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task LoadCompletedScenarios()
+    {
+        try
+        {
+            Logger.LogInformation("Loading completed scenarios...");
+            
+            // Get current account
+            var account = await AuthService.GetCurrentAccountAsync();
+            if (account == null)
+            {
+                Logger.LogWarning("No account found for loading completed scenarios");
+                return;
+            }
+
+            // Get sessions for this account
+            var sessions = await ApiClient.GetSessionsByAccountAsync(account.Id);
+            if (sessions != null)
+            {
+                completedScenarioIds = sessions
+                    .Where(s => s.IsCompleted)
+                    .Select(s => s.ScenarioId)
+                    .ToHashSet();
+                
+                Logger.LogInformation("Loaded {Count} completed scenarios for account {AccountId}", 
+                    completedScenarioIds.Count, account.Id);
+            }
+            
+            // Apply filters to show/hide completed scenarios
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading completed scenarios");
+        }
+    }
+
+    private void ToggleCompletedStories(ChangeEventArgs e)
+    {
+        showCompletedStories = (bool)e.Value!;
+        ApplyFilters();
+        StateHasChanged();
     }
 
     private async Task StartAdventure(Scenario scenario)
@@ -410,18 +489,23 @@
 
     private void ApplyFilters()
     {
-        if (!selectedAgeGroups.Any())
+        var filtered = scenarios.AsEnumerable();
+        
+        // Apply age group filter
+        if (selectedAgeGroups.Any())
         {
-            filteredScenarios = scenarios.ToList();
-        }
-        else
-        {
-            filteredScenarios = scenarios
-                .Where(s => selectedAgeGroups.Contains(s.AgeGroup))
-                .ToList();
+            filtered = filtered.Where(s => selectedAgeGroups.Contains(s.AgeGroup));
         }
         
-        Logger.LogInformation("Applied age group filters. Selected: [{SelectedFilters}], Showing {Count} of {Total} scenarios", 
-            string.Join(", ", selectedAgeGroups), filteredScenarios.Count, scenarios.Count);
+        // Apply completed stories filter
+        if (!showCompletedStories)
+        {
+            filtered = filtered.Where(s => !completedScenarioIds.Contains(s.Id));
+        }
+        
+        filteredScenarios = filtered.ToList();
+        
+        Logger.LogInformation("Applied filters. Age groups: [{SelectedFilters}], Show completed: {ShowCompleted}, Showing {Count} of {Total} scenarios", 
+            string.Join(", ", selectedAgeGroups), showCompletedStories, filteredScenarios.Count, scenarios.Count);
     }
 }
