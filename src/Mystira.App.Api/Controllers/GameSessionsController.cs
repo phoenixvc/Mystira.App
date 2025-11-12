@@ -26,32 +26,9 @@ public class GameSessionsController : ControllerBase
     }
 
     /// <summary>
-    /// Get count of active game sessions
-    /// </summary>
-    [HttpGet("active/count")]
-    public async Task<ActionResult<object>> GetActiveSessionsCount()
-    {
-        try
-        {
-            var count = await _sessionService.GetActiveSessionsCountAsync();
-            return Ok(new { count });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting active sessions count");
-            return StatusCode(500, new ErrorResponse 
-            { 
-                Message = "Internal server error while getting active sessions count",
-                TraceId = HttpContext.TraceIdentifier
-            });
-        }
-    }
-
-    /// <summary>
     /// Start a new game session
     /// </summary>
     [HttpPost]
-    //[Authorize] // Requires DM authentication
     public async Task<ActionResult<GameSession>> StartSession([FromBody] StartGameSessionRequest request)
     {
         try
@@ -360,7 +337,6 @@ public class GameSessionsController : ControllerBase
     /// Check for new achievements in a session
     /// </summary>
     [HttpGet("{id}/achievements")]
-    [Authorize] // Requires DM authentication
     public async Task<ActionResult<List<SessionAchievement>>> GetAchievements(string id)
     {
         try
@@ -374,38 +350,6 @@ public class GameSessionsController : ControllerBase
             return StatusCode(500, new ErrorResponse 
             { 
                 Message = "Internal server error while checking achievements",
-                TraceId = HttpContext.TraceIdentifier
-            });
-        }
-    }
-
-    /// <summary>
-    /// Delete a game session (COPPA compliance)
-    /// </summary>
-    [HttpDelete("{id}")]
-    [Authorize] // Requires DM authentication
-    public async Task<ActionResult> DeleteSession(string id)
-    {
-        try
-        {
-            var deleted = await _sessionService.DeleteSessionAsync(id);
-            if (!deleted)
-            {
-                return NotFound(new ErrorResponse 
-                { 
-                    Message = $"Session not found: {id}",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deleting session {SessionId}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
-                Message = "Internal server error while deleting session",
                 TraceId = HttpContext.TraceIdentifier
             });
         }

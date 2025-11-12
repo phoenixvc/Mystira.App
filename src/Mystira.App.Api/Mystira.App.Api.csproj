@@ -33,4 +33,25 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="Views\Admin\AppStatus.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\CharacterMaps.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\CharacterMediaMetadata.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\Dashboard.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\EditScenario.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\ImportBadges.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\ImportBundle.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\ImportCharacterMap.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\ImportMedia.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\ImportScenario.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\Login.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\Media.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\MediaMetadata.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Admin\Scenarios.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Shared\_AdminLayout.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\Shared\_Layout.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\_ViewImports.cshtml" />
+    <_ContentIncludedByDefault Remove="Views\_ViewStart.cshtml" />
+  </ItemGroup>
+
 </Project>

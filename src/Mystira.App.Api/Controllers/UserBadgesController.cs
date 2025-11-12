@@ -29,7 +29,6 @@ public class UserBadgesController : ControllerBase
     /// Award a badge to a user profile
     /// </summary>
     [HttpPost("award")]
-    [Authorize]
     public async Task<ActionResult<UserBadge>> AwardBadge([FromBody] AwardBadgeRequest request)
     {
         try
@@ -75,7 +74,6 @@ public class UserBadgesController : ControllerBase
     /// Get all badges for a user profile
     /// </summary>
     [HttpGet("user/{userProfileId}")]
-    [Authorize]
     public async Task<ActionResult<List<UserBadge>>> GetUserBadges(string userProfileId)
     {
         try
@@ -98,7 +96,6 @@ public class UserBadgesController : ControllerBase
     /// Get badges for a specific axis for a user profile
     /// </summary>
     [HttpGet("user/{userProfileId}/axis/{axis}")]
-    [Authorize]
     public async Task<ActionResult<List<UserBadge>>> GetUserBadgesForAxis(string userProfileId, string axis)
     {
         try
@@ -122,7 +119,6 @@ public class UserBadgesController : ControllerBase
     /// Check if a user has earned a specific badge
     /// </summary>
     [HttpGet("user/{userProfileId}/badge/{badgeConfigurationId}/earned")]
-    [Authorize]
     public async Task<ActionResult<bool>> HasUserEarnedBadge(string userProfileId, string badgeConfigurationId)
     {
         try
@@ -143,43 +139,9 @@ public class UserBadgesController : ControllerBase
     }
 
     /// <summary>
-    /// Remove a badge from a user profile (admin function)
-    /// </summary>
-    [HttpDelete("user/{userProfileId}/badge/{badgeId}")]
-    [Authorize] // Could add admin role check
-    public async Task<ActionResult> RemoveBadge(string userProfileId, string badgeId)
-    {
-        try
-        {
-            var removed = await _badgeService.RemoveBadgeAsync(userProfileId, badgeId);
-            if (!removed)
-            {
-                return NotFound(new ErrorResponse 
-                { 
-                    Message = $"Badge not found for user: {userProfileId}",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error removing badge {BadgeId} from user {UserProfileId}", 
-                badgeId, userProfileId);
-            return StatusCode(500, new ErrorResponse 
-            { 
-                Message = "Internal server error while removing badge",
-                TraceId = HttpContext.TraceIdentifier
-            });
-        }
-    }
-
-    /// <summary>
     /// Get badge statistics for a user profile
     /// </summary>
     [HttpGet("user/{userProfileId}/statistics")]
-    [Authorize]
     public async Task<ActionResult<Dictionary<string, int>>> GetBadgeStatistics(string userProfileId)
     {
         try
