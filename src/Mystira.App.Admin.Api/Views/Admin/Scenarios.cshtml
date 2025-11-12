@@ -292,7 +292,7 @@ function viewScenario(scenarioId) {
                 <div class="col-md-6">
                     <h6>Additional Info</h6>
                     <p><strong>Archetypes:</strong> ${scenario.archetypes.join(', ')}</p>
-                    <p><strong>Compass Axes:</strong> ${scenario.compassAxes.join(', ')}</p>
+                    <p><strong>Compass Axes:</strong> ${scenario.compassAxes?.join(', ') != null ? scenario.compassAxes?.join(', ') : null }</p>
                     <p><strong>Scene Count:</strong> ${scenario.scenes.length}</p>
                     <p><strong>Created:</strong> ${new Date(scenario.createdAt).toLocaleString()}</p>
                 </div>
