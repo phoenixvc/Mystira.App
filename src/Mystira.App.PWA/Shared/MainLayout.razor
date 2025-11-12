@@ -1,6 +1,7 @@
 @using Mystira.App.PWA.Models
 @using Mystira.App.PWA.Services
 @inherits LayoutComponentBase
+@implements IDisposable
 
 <div class="page">
     <!-- Offline Indicator -->
@@ -38,6 +39,36 @@
                             </span>
                         </li>
                     }
+                    @if (isAuthenticated)
+                    {
+                        <li class="nav-item dropdown">
+                            <button class="btn btn-link nav-link dropdown-toggle" 
+                                    type="button"
+                                    @onclick="ToggleProfileMenu"
+                                    @onclick:stopPropagation="true">
+                                <i class="fas fa-user-circle me-1"></i>
+                                @GetProfileDisplayName()
+                            </button>
+                            @if (isProfileMenuOpen)
+                            {
+                                <div class="dropdown-menu show dropdown-menu-end" style="position: absolute; right: 0;">
+                                    <button class="dropdown-item" @onclick="SignOutAsync">
+                                        <i class="fas fa-sign-out-alt me-2"></i>
+                                        Sign Out
+                                    </button>
+                                </div>
+                            }
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" href="/signin">
+                                <i class="fas fa-sign-in-alt me-1"></i>
+                                Sign In
+                            </a>
+                        </li>
+                    }
                 </ul>
             </div>
         </div>
@@ -69,14 +100,36 @@
 
 @code {
     [Inject] private IGameSessionService GameSessionService { get; set; } = default!;
-    
-    private GameSession? CurrentGameSession { get; set; }
+    [Inject] private IAuthService AuthService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
 
-    protected override void OnInitialized()
+    private GameSession? CurrentGameSession { get; set; }
+    private Account? CurrentAccount { get; set; }
+    private bool isAuthenticated;
+    private bool isProfileMenuOpen;
+
+    protected override async Task OnInitializedAsync()
     {
-        // Subscribe to game session changes
         GameSessionService.GameSessionChanged += OnGameSessionChanged;
         CurrentGameSession = GameSessionService.CurrentGameSession;
+
+        AuthService.AuthenticationStateChanged += OnAuthenticationStateChanged;
+
+        await LoadAuthenticationStateAsync();
+    }
+
+    private async Task LoadAuthenticationStateAsync()
+    {
+        try
+        {
+            isAuthenticated = await AuthService.IsAuthenticatedAsync();
+            CurrentAccount = isAuthenticated ? await AuthService.GetCurrentAccountAsync() : null;
+        }
+        catch
+        {
+            isAuthenticated = false;
+            CurrentAccount = null;
+        }
     }
 
     private void OnGameSessionChanged(object? sender, GameSession? gameSession)
@@ -85,9 +138,73 @@
         InvokeAsync(StateHasChanged);
     }
 
-    public void Dispose()
+    private async void OnAuthenticationStateChanged(object? sender, bool authenticated)
+    {
+        isAuthenticated = authenticated;
+
+        if (!authenticated)
+        {
+            CurrentAccount = null;
+            isProfileMenuOpen = false;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        CurrentAccount = await AuthService.GetCurrentAccountAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string GetProfileDisplayName()
+    {
+        if (!string.IsNullOrWhiteSpace(CurrentAccount?.DisplayName))
+        {
+            return CurrentAccount!.DisplayName!;
+        }
+
+        return CurrentAccount?.Email ?? "Profile";
+    }
+
+    private void ToggleProfileMenu()
+    {
+        if (!isAuthenticated)
+        {
+            return;
+        }
+
+        isProfileMenuOpen = !isProfileMenuOpen;
+    }
+
+    private void CloseProfileMenu()
+    {
+        if (isProfileMenuOpen)
+        {
+            isProfileMenuOpen = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SignOutAsync()
+    {
+        try
+        {
+            await AuthService.LogoutAsync();
+        }
+        catch
+        {
+            // Ignore errors during logout for now
+        }
+        finally
+        {
+            isProfileMenuOpen = false;
+            await LoadAuthenticationStateAsync();
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    public new void Dispose()
     {
         GameSessionService.GameSessionChanged -= OnGameSessionChanged;
+        AuthService.AuthenticationStateChanged -= OnAuthenticationStateChanged;
     }
 }
 

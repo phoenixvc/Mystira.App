@@ -142,17 +142,10 @@ public class AzureEmailService : IEmailService
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f5f5f5;
-        }}
-        .container {{
-            background-color: white;
-            border-radius: 8px;
-            padding: 40px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }}
         .header {{
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }}
         .logo {{
             font-size: 28px;
@@ -161,26 +154,22 @@ public class AzureEmailService : IEmailService
             margin-bottom: 10px;
         }}
         .title {{
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             color: #1F2937;
             margin-bottom: 10px;
         }}
-        .subtitle {{
-            font-size: 14px;
-            color: #6B7280;
-        }}
         .content {{
-            margin: 30px 0;
+            margin: 20px 0;
         }}
         .greeting {{
             font-size: 16px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             color: #1F2937;
         }}
         .code-section {{
             text-align: center;
-            margin: 30px 0;
+            margin: 25px 0;
             padding: 20px;
             background-color: #F9FAFB;
             border-radius: 8px;
@@ -191,64 +180,38 @@ public class AzureEmailService : IEmailService
             letter-spacing: 4px;
             color: #8B5CF6;
             font-family: 'Courier New', monospace;
-            margin: 15px 0;
-        }}
-        .code-description {{
-            font-size: 14px;
-            color: #6B7280;
-            margin-top: 10px;
+            margin: 10px 0;
         }}
         .footer {{
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #E5E7EB;
+            margin-top: 25px;
             text-align: center;
             font-size: 12px;
             color: #9CA3AF;
         }}
-        .warning {{
-            background-color: #FEF3C7;
-            border-left: 4px solid #FBBF24;
-            padding: 12px;
-            border-radius: 4px;
-            margin: 20px 0;
-            font-size: 13px;
-            color: #92400E;
-        }}
     </style>
 </head>
 <body>
-    <div class=""container"">
-        <div class=""header"">
-            <div class=""logo"">🐉 Mystira</div>
-            <div class=""title"">Verify Your Email</div>
-            <div class=""subtitle"">Complete your sign-up to start your adventure</div>
+    <div class=""header"">
+        <div class=""logo"">🐉 Mystira</div>
+        <div class=""title"">Verify Your Email</div>
+    </div>
+
+    <div class=""content"">
+        <div class=""greeting"">
+            Hi {displayName},
         </div>
 
-        <div class=""content"">
-            <div class=""greeting"">
-                Hi {displayName},
-            </div>
+        <p>Welcome to Mystira! Enter this code to complete your sign-up:</p>
 
-            <p>Welcome to Mystira! We're excited to have you join us. To complete your sign-up and start creating magical adventures for young heroes, please verify your email with the code below:</p>
-
-            <div class=""code-section"">
-                <div class=""code"">{code}</div>
-                <div class=""code-description"">Your verification code (valid for 15 minutes)</div>
-            </div>
-
-            <div class=""warning"">
-                <strong>⏰ This code will expire in 15 minutes</strong><br>
-                If you didn't request this code, you can safely ignore this email.
-            </div>
-
-            <p>If you have any questions or need help, please don't hesitate to reach out to our support team.</p>
+        <div class=""code-section"">
+            <div class=""code"">{code}</div>
         </div>
 
-        <div class=""footer"">
-            <p>&copy; 2024 Mystira. All rights reserved.</p>
-            <p>This is an automated message, please do not reply to this email.</p>
-        </div>
+        <p style=""font-size: 14px; color: #6B7280;"">This code expires in 15 minutes.</p>
+    </div>
+
+    <div class=""footer"">
+        <p>&copy; 2024 Mystira. All rights reserved.</p>
     </div>
 </body>
 </html>";
@@ -271,17 +234,10 @@ public class AzureEmailService : IEmailService
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f5f5f5;
-        }}
-        .container {{
-            background-color: white;
-            border-radius: 8px;
-            padding: 40px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }}
         .header {{
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }}
         .logo {{
             font-size: 28px;
@@ -290,26 +246,22 @@ public class AzureEmailService : IEmailService
             margin-bottom: 10px;
         }}
         .title {{
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             color: #1F2937;
             margin-bottom: 10px;
         }}
-        .subtitle {{
-            font-size: 14px;
-            color: #6B7280;
-        }}
         .content {{
-            margin: 30px 0;
+            margin: 20px 0;
         }}
         .greeting {{
             font-size: 16px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             color: #1F2937;
         }}
         .code-section {{
             text-align: center;
-            margin: 30px 0;
+            margin: 25px 0;
             padding: 20px;
             background-color: #F9FAFB;
             border-radius: 8px;
@@ -320,64 +272,38 @@ public class AzureEmailService : IEmailService
             letter-spacing: 4px;
             color: #8B5CF6;
             font-family: 'Courier New', monospace;
-            margin: 15px 0;
-        }}
-        .code-description {{
-            font-size: 14px;
-            color: #6B7280;
-            margin-top: 10px;
+            margin: 10px 0;
         }}
         .footer {{
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #E5E7EB;
+            margin-top: 25px;
             text-align: center;
             font-size: 12px;
             color: #9CA3AF;
         }}
-        .warning {{
-            background-color: #FEF3C7;
-            border-left: 4px solid #FBBF24;
-            padding: 12px;
-            border-radius: 4px;
-            margin: 20px 0;
-            font-size: 13px;
-            color: #92400E;
-        }}
     </style>
 </head>
 <body>
-    <div class=""container"">
-        <div class=""header"">
-            <div class=""logo"">🐉 Mystira</div>
-            <div class=""title"">Sign In to Your Account</div>
-            <div class=""subtitle"">Welcome back to your adventure</div>
+    <div class=""header"">
+        <div class=""logo"">🐉 Mystira</div>
+        <div class=""title"">Sign In to Mystira</div>
+    </div>
+
+    <div class=""content"">
+        <div class=""greeting"">
+            Hi {displayName},
         </div>
 
-        <div class=""content"">
-            <div class=""greeting"">
-                Hi {displayName},
-            </div>
+        <p>Use this code to continue your adventure:</p>
 
-            <p>Welcome back to Mystira! To sign in to your account and continue your adventures, please use the verification code below:</p>
-
-            <div class=""code-section"">
-                <div class=""code"">{code}</div>
-                <div class=""code-description"">Your sign-in code (valid for 15 minutes)</div>
-            </div>
-
-            <div class=""warning"">
-                <strong>⏰ This code will expire in 15 minutes</strong><br>
-                If you didn't request this code, you can safely ignore this email.
-            </div>
-
-            <p>If you have any questions or need help, please don't hesitate to reach out to our support team.</p>
+        <div class=""code-section"">
+            <div class=""code"">{code}</div>
         </div>
 
-        <div class=""footer"">
-            <p>&copy; 2024 Mystira. All rights reserved.</p>
-            <p>This is an automated message, please do not reply to this email.</p>
-        </div>
+        <p style=""font-size: 14px; color: #6B7280;"">The code expires in 15 minutes.</p>
+    </div>
+
+    <div class=""footer"">
+        <p>&copy; 2024 Mystira. All rights reserved.</p>
     </div>
 </body>
 </html>";
