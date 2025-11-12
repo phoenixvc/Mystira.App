@@ -1,7 +1,10 @@
+@inject NavigationManager NavigationManager
+
 @page "/"
 @page "/home"
 @using Mystira.App.PWA.Models
 @using Mystira.App.PWA.Services
+@using Mystira.App.PWA.Components
 @implements IDisposable
 
 <PageTitle>Mystira</PageTitle>
@@ -16,6 +19,15 @@
             <p class="lead text-muted mb-3">
                 Where imagination meets growth
             </p>
+            <div class="row">
+                <div class="col-12 text-center mb-4">
+                    <MystiraImage 
+                        MediaId="image-final-logo-fe3f75db"
+                        Alt="This is a magical picture, but it seems to be having a difficult time loading!"
+                        Width="600"
+                        Height="600" />
+                </div>
+            </div>
             <div class="row justify-content-center">
                 <div class="col-md-8 col-lg-6">
                     <p class="text-muted mb-4">

@@ -376,7 +376,7 @@ async function uploadMetadata(e) {
         // Read file content
         const fileContent = await file.text();
         
-        const response = await fetch(`/api/mediametadata/import?overwriteExisting=${overwrite}`, {
+        const response = await fetch(`/api/admin/mediametadataadmin/import?overwriteExisting=${overwrite}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -482,7 +482,7 @@ async function uploadSingleFile() {
     showProgress('Uploading file...');
     
     try {
-        const response = await fetch('/api/media/upload', {
+        const response = await fetch('/api/admin/MediaAdmin/upload', {
             method: 'POST',
             body: formData
         });
@@ -511,7 +511,7 @@ async function uploadBulkFiles() {
     showProgress('Uploading files...');
     
     try {
-        const response = await fetch('/api/media/bulk-upload', {
+        const response = await fetch('/api/admin/MediaAdmin/bulk-upload', {
             method: 'POST',
             body: formData
         });

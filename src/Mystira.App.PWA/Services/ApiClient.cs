@@ -340,5 +340,9 @@ public class ApiClient : IApiClient
             return null;
         }
     }
-    
+
+    public string GetApiBaseAddress()
+    {
+        return _httpClient.BaseAddress!.ToString();
+    }
 }
