@@ -247,29 +247,6 @@ public class GameSessionsController : ControllerBase
     }
 
     /// <summary>
-    /// Get all sessions for a specific account
-    /// </summary>
-    [HttpGet("account/{accountId}")]
-    [Authorize] // Requires authentication
-    public async Task<ActionResult<List<GameSessionResponse>>> GetSessionsByAccount(string accountId)
-    {
-        try
-        {
-            var sessions = await _sessionService.GetSessionsByAccountAsync(accountId);
-            return Ok(sessions);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting sessions for account {AccountId}", accountId);
-            return StatusCode(500, new ErrorResponse 
-            { 
-                Message = "Internal server error while fetching account sessions",
-                TraceId = HttpContext.TraceIdentifier
-            });
-        }
-    }
-
-    /// <summary>
     /// Get all sessions for a specific profile
     /// </summary>
     [HttpGet("profile/{profileId}")]
