@@ -34,12 +34,22 @@ public class CreateUserProfileRequest
     /// <summary>
     /// Identifier representing the associated account.
     /// </summary>
-    public string AccountId { get; set; }
+    public string? AccountId { get; set; }
     
     /// <summary>
     /// Indicates if the user has completed onboarding
     /// </summary>
     public bool HasCompletedOnboarding { get; set; }
+    
+    /// <summary>
+    /// Pronouns for the profile (e.g., they/them, she/her, he/him)
+    /// </summary>
+    public string? Pronouns { get; set; }
+    
+    /// <summary>
+    /// Bio or description for the profile
+    /// </summary>
+    public string? Bio { get; set; }
 }
 
 public class UpdateUserProfileRequest
@@ -51,6 +61,8 @@ public class UpdateUserProfileRequest
     public bool? IsGuest { get; set; }
     public bool? IsNpc { get; set; }
     public string? AccountId { get; set; }
+    public string? Pronouns { get; set; }
+    public string? Bio { get; set; }
 }
 
 public class CreateGuestProfileRequest

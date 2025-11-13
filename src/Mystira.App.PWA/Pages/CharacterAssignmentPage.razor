@@ -106,12 +106,12 @@ else
                                 else
                                 {
                                     <div class="player-assignment">
-                                        @if (assignment.PlayerAssignment == null)
-                                        {
-                                            <button class="btn btn-outline-primary btn-sm w-100" @onclick="() => OpenPlayerAssignment(cardIndex)">
-                                                <i class="fas fa-user-plus me-1"></i>Assign Player
-                                            </button>
-                                        }
+                                         @if (assignment.PlayerAssignment == null)
+                                         {
+                                             <button class="btn btn-outline-primary btn-sm w-100" @onclick="async () => await OpenPlayerAssignment(cardIndex)">
+                                                 <i class="fas fa-user-plus me-1"></i>Assign Player
+                                             </button>
+                                         }
                                         else
                                         {
                                             <div class="assigned-player p-2 bg-light rounded">
@@ -406,19 +406,34 @@ else
         }
     }
 
-    private void OpenPlayerAssignment(int index)
+    private async Task OpenPlayerAssignment(int index)
     {
-        currentAssignmentIndex = index;
-        currentAssignment = characterAssignments[index];
-        showPlayerAssignmentModal = true;
-        
-        // Reset form state
-        selectedProfileId = string.Empty;
-        guestName = string.Empty;
-        guestAgeRange = string.Empty;
-        saveGuestAsProfile = false;
-        assignmentTab = "profiles";
-        validationMessage = string.Empty;
+        try
+        {
+            currentAssignmentIndex = index;
+            currentAssignment = characterAssignments[index];
+            showPlayerAssignmentModal = true;
+            
+            // Reset form state
+            selectedProfileId = string.Empty;
+            guestName = string.Empty;
+            guestAgeRange = string.Empty;
+            saveGuestAsProfile = false;
+            assignmentTab = "profiles";
+            validationMessage = string.Empty;
+            
+            // Pre-load profiles when modal opens
+            if (!availableProfiles.Any())
+            {
+                Logger.LogInformation("Pre-loading available profiles for character assignment");
+                availableProfiles = await CharacterAssignmentService.GetAvailableProfilesAsync() ?? new List<UserProfile>();
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error opening player assignment modal");
+        }
     }
 
     private void ClosePlayerAssignment()
@@ -574,8 +589,8 @@ else
 
     private void ManageProfiles()
     {
-        // TODO: Navigate to profiles management page or open modal
-        Logger.LogInformation("Manage profiles clicked - not implemented yet");
+        Logger.LogInformation("Navigating to profiles management page");
+        NavigationManager.NavigateTo("/profiles");
     }
 
     private void PreviewImage(string imageUrl)
