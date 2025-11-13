@@ -88,7 +88,7 @@ public class ScenarioApiService : IScenarioApiService
         {
             foreach (var archetype in request.Archetypes)
             {
-                query = query.Where(s => s.Archetypes.Contains(archetype));
+                query = query.Where(s => s.Archetypes.Select(a => a.Value).Contains(archetype));
             }
         }
 
@@ -96,7 +96,7 @@ public class ScenarioApiService : IScenarioApiService
         {
             foreach (var axis in request.CoreAxes)
             {
-                query = query.Where(s => s.CoreAxes.Contains(axis));
+                query = query.Where(s => s.CoreAxes.Select(a => a.Value).Contains(axis));
             }
         }
 
@@ -150,10 +150,10 @@ public class ScenarioApiService : IScenarioApiService
             Tags = request.Tags,
             Difficulty = request.Difficulty,
             SessionLength = request.SessionLength,
-            Archetypes = request.Archetypes,
+            Archetypes = request.Archetypes.Select(a => Archetype.Parse(a)!).ToList(),
             AgeGroup = request.AgeGroup,
             MinimumAge = request.MinimumAge,
-            CoreAxes = request.CoreAxes,
+            CoreAxes = request.CoreAxes.Select(a => CoreAxis.Parse(a)!).ToList(),
             Characters = request.Characters,
             Scenes = request.Scenes,
             CreatedAt = DateTime.UtcNow
@@ -190,10 +190,10 @@ public class ScenarioApiService : IScenarioApiService
         scenario.Tags = request.Tags;
         scenario.Difficulty = request.Difficulty;
         scenario.SessionLength = request.SessionLength;
-        scenario.Archetypes = request.Archetypes;
+        scenario.Archetypes = request.Archetypes.Select(a => Archetype.Parse(a)!).ToList();
         scenario.AgeGroup = request.AgeGroup;
         scenario.MinimumAge = request.MinimumAge;
-        scenario.CoreAxes = request.CoreAxes;
+        scenario.CoreAxes = request.CoreAxes.Select(a => CoreAxis.Parse(a)!).ToList();
         scenario.Characters = request.Characters;
         scenario.Scenes = request.Scenes;
 
@@ -251,7 +251,7 @@ public class ScenarioApiService : IScenarioApiService
             return null;
         }
 
-        var knownGroup = AgeGroup.GetByName(ageGroup);
+        var knownGroup = AgeGroup.Parse(ageGroup);
         if (knownGroup != null)
         {
             return knownGroup.MinimumAge;
@@ -422,9 +422,8 @@ public class ScenarioApiService : IScenarioApiService
                     if (echo.Strength < 0.1 || echo.Strength > 1.0)
                         throw new ScenarioValidationException($"Echo log strength must be between 0.1 and 1.0 (Scene ID: {scene.Id}, Choice: {branch.Choice})");
 
-                    // todo update master list
-                    // if (!MasterLists.EchoTypes.Contains(echo.EchoType))
-                    //     throw new ScenarioValidationException($"Invalid echo type '{echo.EchoType}' (Scene ID: {scene.Id}, Choice: {branch.Choice})");
+                    if (EchoType.Parse(echo.EchoType.Value) == null)
+                        throw new ScenarioValidationException($"Invalid echo type '{echo.EchoType}' (Scene ID: {scene.Id}, Choice: {branch.Choice})");
                         
                     if (string.IsNullOrWhiteSpace(echo.Description))
                         throw new ScenarioValidationException($"Echo log description cannot be empty (Scene ID: {scene.Id}, Choice: {branch.Choice})");
@@ -440,7 +439,7 @@ public class ScenarioApiService : IScenarioApiService
                     if (string.IsNullOrWhiteSpace(change.Axis))
                         throw new ScenarioValidationException($"Compass axis cannot be empty (Scene ID: {scene.Id}, Choice: {branch.Choice})");
 
-                    if (!scenario.CoreAxes.Contains(change.Axis))
+                    if (!scenario.CoreAxes.Select(a => a.Value).Contains(change.Axis))
                     {
                         // TODO: re-enable strict validation when master axis list is finalized.
                         //throw new ScenarioValidationException($"Invalid compass axis '{change.Axis}' not defined in scenario (Scene ID: {scene.Id}, Choice: {branch.Choice})");

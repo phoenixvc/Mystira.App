@@ -49,9 +49,9 @@ public class GameSessionApiService : IGameSessionApiService
         // Initialize compass tracking for scenario axes
         foreach (var axis in scenario.CoreAxes)
         {
-            session.CompassValues[axis] = new CompassTracking
+            session.CompassValues[axis.Value] = new CompassTracking
             {
-                Axis = axis,
+                Axis = axis.Value,
                 CurrentValue = 0.0f,
                 History = new List<CompassChange>(),
                 LastUpdated = DateTime.UtcNow
@@ -431,7 +431,7 @@ public class GameSessionApiService : IGameSessionApiService
             return true;
         }
 
-        var target = AgeGroup.GetByName(targetAgeGroup);
+        var target = AgeGroup.Parse(targetAgeGroup);
         if (target != null)
         {
             return target.MinimumAge >= scenarioMinimumAge;

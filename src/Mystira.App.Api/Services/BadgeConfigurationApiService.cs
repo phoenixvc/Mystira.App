@@ -114,9 +114,9 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
         }
 
         // Validate that the axis is from the master list
-        if (!MasterLists.CoreAxes.Contains(request.Axis))
+        if (CoreAxis.Parse(request.Axis) == null)
         {
-            throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", MasterLists.CoreAxes)}");
+            throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", CoreAxis.ValueMap.Keys)}");
         }
 
         var badgeConfig = new BadgeConfiguration
@@ -158,9 +158,9 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
 
         if (!string.IsNullOrWhiteSpace(request.Axis))
         {
-            if (!MasterLists.CoreAxes.Contains(request.Axis))
+            if (CoreAxis.Parse(request.Axis) == null)
             {
-                throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", MasterLists.CoreAxes)}");
+                throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", CoreAxis.ValueMap.Keys)}");
             }
             badgeConfig.Axis = request.Axis;
         }
@@ -238,9 +238,9 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
         foreach (var yamlEntry in badgeConfigYaml.Badges)
         {
             // Validate axis
-            if (!MasterLists.CoreAxes.Contains(yamlEntry.Axis))
+            if (CoreAxis.Parse(yamlEntry.Axis) == null)
             {
-                throw new ArgumentException($"Invalid compass axis in YAML: {yamlEntry.Axis}. Must be one of: {string.Join(", ", MasterLists.CoreAxes)}");
+                throw new ArgumentException($"Invalid compass axis in YAML: {yamlEntry.Axis}. Must be one of: {string.Join(", ", CoreAxis.ValueMap.Keys)}");
             }
 
             var badgeConfig = new BadgeConfiguration

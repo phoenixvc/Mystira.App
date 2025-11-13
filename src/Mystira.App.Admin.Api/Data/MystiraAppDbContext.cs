@@ -57,10 +57,10 @@ public class MystiraAppDbContext : DbContext
             
             entity.Property(e => e.PreferredFantasyThemes)
                   .HasConversion(
-                      v => string.Join(',', v),
-                      v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
-                  .Metadata.SetValueComparer(new ValueComparer<List<string>>(
-                      (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2), 
+                        v => string.Join(',', v.Select(e => e.Value)),
+                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => FantasyTheme.Parse(s)!).ToList())
+                  .Metadata.SetValueComparer(new ValueComparer<List<FantasyTheme>>(
+                      (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                       c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                       c => c.ToList()));
 
@@ -187,23 +187,21 @@ public class MystiraAppDbContext : DbContext
 
             entity.Property(e => e.Archetypes)
                   .HasConversion(
-                      v => string.Join(',', v),
-                      v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
-                  )
-                  .Metadata.SetValueComparer(new ValueComparer<List<string>>(
-                      (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
-                      c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-                      c => c.ToList()));
+                        v => string.Join(',', v.Select(e => e.Value)),
+                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => Archetype.Parse(s)!).ToList())
+                  .Metadata.SetValueComparer(new ValueComparer<List<Archetype>>(
+                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                        c => c.ToList()));
 
             entity.Property(e => e.CoreAxes)
                   .HasConversion(
-                      v => string.Join(',', v),
-                      v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
-                  )
-                  .Metadata.SetValueComparer(new ValueComparer<List<string>>(
-                      (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
-                      c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-                      c => c.ToList()));
+                        v => string.Join(',', v.Select(e => e.Value)),
+                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => CoreAxis.Parse(s)!).ToList())
+                  .Metadata.SetValueComparer(new ValueComparer<List<CoreAxis>>(
+                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                        c => c.ToList()));
 
             entity.OwnsMany(e => e.Characters, character =>
             {
@@ -220,9 +218,9 @@ public class MystiraAppDbContext : DbContext
 
                     metadata.Property(m => m.Archetype)
                             .HasConversion(
-                                v => string.Join(',', v),
-                                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
-                            .Metadata.SetValueComparer(new ValueComparer<List<string>>(
+                                v => string.Join(',', v.Select(e => e.Value)),
+                                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => Archetype.Parse(s)!).ToList())
+                            .Metadata.SetValueComparer(new ValueComparer<List<Archetype>>(
                                 (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                                 c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                                 c => c.ToList()));
