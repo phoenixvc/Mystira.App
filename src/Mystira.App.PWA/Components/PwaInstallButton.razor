@@ -1,0 +1,89 @@
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+@if (showInstallButton)
+{
+    <div class="pwa-install-container">
+        <button class="btn btn-pwa-install" @onclick="InstallPwaAsync">
+            <i class="fas fa-download me-2"></i>
+            Install App
+        </button>
+    </div>
+}
+
+@code {
+    private bool showInstallButton;
+    private DotNetObjectReference<PwaInstallButton>? objRef;
+    private IJSObjectReference? jsModule;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                    "import", "./js/pwaInstall.js");
+
+                objRef = DotNetObjectReference.Create(this);
+
+                await jsModule.InvokeVoidAsync("initializePwaInstall", objRef);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing PWA install: {ex.Message}");
+            }
+        }
+    }
+
+    [JSInvokable]
+    public Task ShowInstallButton()
+        => InvokeAsync(() =>
+        {
+            showInstallButton = true;
+            StateHasChanged();
+        });
+
+    [JSInvokable]
+    public Task HideInstallButton()
+        => InvokeAsync(() =>
+        {
+            showInstallButton = false;
+            StateHasChanged();
+        });
+
+    private async Task InstallPwaAsync()
+    {
+        try
+        {
+            if (jsModule != null)
+            {
+                await jsModule.InvokeVoidAsync("installPwa");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error installing PWA: {ex.Message}");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (jsModule != null)
+        {
+            try
+            {
+                await jsModule.InvokeVoidAsync("cleanup");
+                await jsModule.DisposeAsync();
+            }
+            catch
+            {
+                // Ignore disposal errors
+            }
+        }
+
+        jsModule = null;
+        objRef?.Dispose();
+        objRef = null;
+    }
+}
