@@ -305,4 +305,10 @@ public class GameSessionService : IGameSessionService
         _logger.LogInformation("Clearing game session");
         CurrentGameSession = null;
     }
+
+    public void SetCurrentGameSession(GameSession? session)
+    {
+        _logger.LogInformation("Setting current game session: {SessionId}", session?.Id ?? "null");
+        CurrentGameSession = session;
+    }
 }
