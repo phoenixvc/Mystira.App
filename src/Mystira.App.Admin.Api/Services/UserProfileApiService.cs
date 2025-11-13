@@ -37,7 +37,7 @@ public class UserProfileApiService : IUserProfileApiService
         {
             Name = request.Name,
             PreferredFantasyThemes = request.PreferredFantasyThemes,
-            AgeGroupName = request.AgeGroup,
+            AgeGroup = request.AgeGroup,
             DateOfBirth = request.DateOfBirth,
             IsGuest = request.IsGuest,
             IsNpc = request.IsNpc,
@@ -84,7 +84,7 @@ public class UserProfileApiService : IUserProfileApiService
         {
             Name = name,
             PreferredFantasyThemes = new List<string>(), // Empty for guest profiles
-            AgeGroupName = request.AgeGroup,
+            AgeGroup = request.AgeGroup,
             IsGuest = true,
             IsNpc = false,
             HasCompletedOnboarding = true, // Guests don't need onboarding
@@ -158,7 +158,7 @@ public class UserProfileApiService : IUserProfileApiService
             if (!AgeGroup.IsValid(request.AgeGroup))
                 throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All.Select(a => a.Name))}");
             
-            profile.AgeGroupName = request.AgeGroup;
+            profile.AgeGroup = request.AgeGroup;
         }
 
         if (request.DateOfBirth.HasValue)

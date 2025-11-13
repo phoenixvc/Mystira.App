@@ -13,25 +13,14 @@ public class UserProfile
     public DateTime? DateOfBirth { get; set; }
     public bool IsGuest { get; set; } = false;
     public bool IsNpc { get; set; } = false;
-    public string AgeGroupName { get; set; } = "school";
+    public string AgeGroup { get; set; } = string.Empty;
     public int? CurrentAge { get; set; }
     public bool HasCompletedOnboarding { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public string? AccountId { get; set; }
     
-    // Convenience properties
-    public string AgeRange => AgeGroupName switch
-    {
-        "toddlers" => "1-2",
-        "preschoolers" => "3-5", 
-        "school" => "6-9",
-        "preteens" => "10-12",
-        "teens" => "13-18",
-        _ => "6-9"
-    };
-    
-    public string DisplayAgeRange => AgeRanges.GetDisplayName(AgeRange);
+    public string DisplayAgeRange => AgeRanges.GetDisplayName(AgeGroup);
 }
 
 /// <summary>
@@ -44,7 +33,7 @@ public class CreateUserProfileRequest
     public DateTime? DateOfBirth { get; set; }
     public bool IsGuest { get; set; } = false;
     public bool IsNpc { get; set; } = false;
-    public string AgeGroupName { get; set; } = "school";
+    public string AgeGroup { get; set; }
     public bool HasCompletedOnboarding { get; set; } = false;
     public string? AccountId { get; set; }
 }

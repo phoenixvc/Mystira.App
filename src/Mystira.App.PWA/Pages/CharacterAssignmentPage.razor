@@ -378,7 +378,7 @@ else
             var profileRequest = new CreateUserProfileRequest
             {
                 Name = guest.GuestName!,
-                AgeGroupName = GetAgeGroupNameFromRange(guest.GuestAgeRange),
+                AgeGroup = guest.GuestAgeRange ?? "1-2",
                 AccountId = account.Id,
                 IsGuest = false // This is now a real profile
             };
@@ -644,7 +644,7 @@ else
             var profileRequest = new CreateUserProfileRequest
             {
                 Name = guest.GuestName!,
-                AgeGroupName = GetAgeGroupNameFromRange(guest.GuestAgeRange),
+                AgeGroup = guest.GuestAgeRange ?? "1-2",
                 AccountId = account.Id,
                 IsGuest = false // This is now a real profile
             };

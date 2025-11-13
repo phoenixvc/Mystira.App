@@ -29,7 +29,6 @@ public class UserProfilesController : ControllerBase
     /// Create a new DM profile
     /// </summary>
     [HttpPost]
-    [Authorize]
     public async Task<ActionResult<UserProfile>> CreateProfile([FromBody] CreateUserProfileRequest request)
     {
         try
@@ -256,7 +255,6 @@ public class UserProfilesController : ControllerBase
     /// Assign a character to a profile
     /// </summary>
     [HttpPost("{profileId}/assign-character")]
-    [Authorize]
     public async Task<ActionResult> AssignCharacterToProfile(string profileId, [FromBody] ProfileAssignmentRequest request)
     {
         try
