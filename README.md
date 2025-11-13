@@ -203,6 +203,9 @@ docker run -p 8080:80 mystira-app-api
 - `GET /api/health/ready` - Readiness probe
 - `GET /api/health/live` - Liveness probe
 
+#### Version Information
+- `GET /api/version` - Get API version, build date, and environment information
+
 ## 🔐 Authentication & Security
 
 ### Passwordless Sign-Up Flow

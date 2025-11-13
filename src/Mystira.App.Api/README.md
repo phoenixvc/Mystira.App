@@ -118,6 +118,9 @@ The Mystira.App API provides the core backend services for the Mystira.App MAUI 
 - `GET /api/health/ready` - Readiness probe
 - `GET /api/health/live` - Liveness probe
 
+### Version
+- `GET /api/version` - Get API version information (version number, API name, build date, environment)
+
 ## Authentication
 
 The API uses JWT Bearer token authentication for DM accounts. Include the token in the Authorization header:
