@@ -107,6 +107,13 @@ public class GameSessionService : IGameSessionService
                 IsCompleted = false
             };
 
+            // Set empty character assignments for scenarios that skip character assignment
+            // This ensures text replacement functionality works (even though no replacements will occur)
+            if (!_characterAssignments.Any())
+            {
+                _characterAssignments = new List<CharacterAssignment>();
+            }
+
             _logger.LogInformation("Game session started successfully with ID: {SessionId}", apiGameSession.Id);
             return true;
         }
