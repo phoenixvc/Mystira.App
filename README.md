@@ -295,6 +295,7 @@ GitHub Actions workflows automatically deploy on:
 - **Push to `main`**: Production deployment
 - **Push to `develop`**: Development environment
 - **Pull requests**: Build and test validation
+  - **Note**: Pull requests with titles containing `[WIP]` or `WIP:` will skip Azure Static Web Apps deployment to reduce staging environment usage
 
 #### Manual Deployment
 ```bash
