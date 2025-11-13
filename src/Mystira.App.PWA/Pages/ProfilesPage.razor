@@ -1,0 +1,536 @@
+@page "/profiles"
+@inject NavigationManager NavigationManager
+@inject IAuthService AuthService
+@inject IApiClient ApiClient
+@inject ILogger<ProfilesPage> Logger
+@using System.Linq
+
+<PageTitle>Manage Profiles - Mystira</PageTitle>
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+        <div class="text-center">
+            <div class="spinner-border text-primary-custom mb-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted">Loading profiles...</p>
+        </div>
+    </div>
+}
+else if (!isAuthenticated)
+{
+    <div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+        <div class="text-center">
+            <i class="fas fa-lock fa-3x text-warning mb-3"></i>
+            <h3>Authentication Required</h3>
+            <p class="text-muted mb-4">Please sign in to manage your profiles.</p>
+            <a href="/signin" class="btn btn-primary-custom">
+                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+            </a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center">
+                        <button class="btn btn-outline-secondary me-3" @onclick="GoBack">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <div>
+                            <h2 class="mb-1">Manage Profiles</h2>
+                            <p class="text-muted mb-0">Create, edit, and manage player profiles for your adventures</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary-custom" @onclick="OpenCreateModal">
+                        <i class="fas fa-user-plus me-2"></i>New Profile
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle me-2"></i>
+                        @successMessage
+                        <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        @errorMessage
+                        <button type="button" class="btn-close" @onclick="() => errorMessage = string.Empty"></button>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Profiles List -->
+        @if (!profiles.Any())
+        {
+            <div class="row">
+                <div class="col-12">
+                    <div class="card text-center">
+                        <div class="card-body py-5">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <h5 class="card-title">No Profiles Yet</h5>
+                            <p class="text-muted mb-4">You haven't created any profiles yet. Create your first profile to get started!</p>
+                            <button class="btn btn-primary-custom" @onclick="OpenCreateModal">
+                                <i class="fas fa-user-plus me-2"></i>Create Your First Profile
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var profile in profiles)
+                {
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body">
+                                <!-- Profile Header -->
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h6 class="card-title mb-1">@profile.Name</h6>
+                                        <small class="text-muted">
+                                            @GetAgeRangeDisplay(profile.AgeGroup)
+                                            @if (!string.IsNullOrEmpty(profile.Pronouns))
+                                            {
+                                                <text> • @profile.Pronouns</text>
+                                            }
+                                        </small>
+                                    </div>
+                                    @if (profile.IsGuest)
+                                    {
+                                        <span class="badge bg-info">Guest</span>
+                                    }
+                                </div>
+
+                                <!-- Profile Details -->
+                                <div class="mb-3">
+                                    @if (!string.IsNullOrEmpty(profile.Bio))
+                                    {
+                                        <p class="small text-muted mb-2">@profile.Bio</p>
+                                    }
+                                    
+                                    <div class="small">
+                                        <div class="mb-1">
+                                            <strong>Created:</strong> @FormatDate(profile.CreatedAt)
+                                        </div>
+                                        @if (profile.HasCompletedOnboarding)
+                                        {
+                                            <div class="mb-1">
+                                                <i class="fas fa-check-circle text-success me-1"></i>
+                                                <strong>Onboarding Complete</strong>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenEditModal(profile)">
+                                        <i class="fas fa-edit me-1"></i>Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(profile)">
+                                        <i class="fas fa-trash me-1"></i>Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+<!-- Create/Edit Modal -->
+@if (showModal)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        @if (isEditMode)
+                        {
+                            <span>Edit Profile: @editingProfile?.Name</span>
+                        }
+                        else
+                        {
+                            <span>Create New Profile</span>
+                        }
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Validation Messages -->
+                    @if (!string.IsNullOrEmpty(modalValidationMessage))
+                    {
+                        <div class="alert alert-warning mb-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            @modalValidationMessage
+                        </div>
+                    }
+
+                    <!-- Profile Name -->
+                    <div class="mb-3">
+                        <label class="form-label">Profile Name *</label>
+                        <input type="text" class="form-control" @bind="formData.Name" placeholder="Enter profile name" />
+                    </div>
+
+                    <!-- Age Group -->
+                    <div class="mb-3">
+                        <label class="form-label">Age Range</label>
+                        <select class="form-select" @bind="formData.AgeGroup">
+                            <option value="">Select age range...</option>
+                            <option value="1-2">Toddlers (1-2 years)</option>
+                            <option value="3-5">Preschoolers (3-5 years)</option>
+                            <option value="6-9">School Age (6-9 years)</option>
+                            <option value="10-12">Pre-teens (10-12 years)</option>
+                            <option value="13-18">Teens (13-18 years)</option>
+                        </select>
+                    </div>
+
+                    <!-- Pronouns -->
+                    <div class="mb-3">
+                        <label class="form-label">Pronouns</label>
+                        <input type="text" class="form-control" @bind="formData.Pronouns" placeholder="e.g., they/them, she/her, he/him" />
+                    </div>
+
+                    <!-- Bio -->
+                    <div class="mb-3">
+                        <label class="form-label">Bio</label>
+                        <textarea class="form-control" rows="3" @bind="formData.Bio" placeholder="Tell us about this character..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveProfile" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span>Saving...</span>
+                        }
+                        else
+                        {
+                            <span>@(isEditMode ? "Update" : "Create")</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteConfirm)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Profile</h5>
+                    <button type="button" class="btn-close" @onclick="CloseDeleteConfirm"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the profile <strong>@profileToDelete?.Name</strong>?</p>
+                    <p class="text-muted small">This action cannot be undone and will remove all associated data.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteConfirm">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="DeleteProfile" disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span>Deleting...</span>
+                        }
+                        else
+                        {
+                            <span>Delete Profile</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<UserProfile> profiles = new();
+    private Account? currentAccount;
+    private bool isLoading = true;
+    private bool isAuthenticated = false;
+
+    // Modal state
+    private bool showModal = false;
+    private bool isEditMode = false;
+    private bool isSaving = false;
+    private UserProfile? editingProfile;
+    private ProfileFormData formData = new();
+
+    // Delete confirmation
+    private bool showDeleteConfirm = false;
+    private bool isDeleting = false;
+    private UserProfile? profileToDelete;
+
+    // Messages
+    private string successMessage = string.Empty;
+    private string errorMessage = string.Empty;
+    private string modalValidationMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Logger.LogInformation("Initializing Profiles page");
+            
+            currentAccount = await AuthService.GetCurrentAccountAsync();
+            if (currentAccount == null)
+            {
+                isAuthenticated = false;
+                isLoading = false;
+                StateHasChanged();
+                return;
+            }
+
+            isAuthenticated = true;
+            await LoadProfiles();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing profiles page");
+            errorMessage = "Failed to load profiles. Please refresh the page.";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadProfiles()
+    {
+        try
+        {
+            Logger.LogInformation("Loading profiles for account {AccountId}", currentAccount?.Id);
+            
+            if (currentAccount == null) return;
+            
+            profiles = await ApiClient.GetProfilesByAccountAsync(currentAccount.Id) ?? new List<UserProfile>();
+            Logger.LogInformation("Loaded {Count} profiles", profiles.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading profiles");
+            errorMessage = "Failed to load profiles";
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/home");
+    }
+
+    private void OpenCreateModal()
+    {
+        isEditMode = false;
+        editingProfile = null;
+        formData = new ProfileFormData();
+        modalValidationMessage = string.Empty;
+        showModal = true;
+    }
+
+    private void OpenEditModal(UserProfile profile)
+    {
+        isEditMode = true;
+        editingProfile = profile;
+        formData = new ProfileFormData
+        {
+            Name = profile.Name,
+            AgeGroup = profile.AgeGroup,
+            Pronouns = profile.Pronouns,
+            Bio = profile.Bio
+        };
+        modalValidationMessage = string.Empty;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        editingProfile = null;
+        formData = new ProfileFormData();
+        modalValidationMessage = string.Empty;
+    }
+
+    private async Task SaveProfile()
+    {
+        try
+        {
+            modalValidationMessage = string.Empty;
+
+            // Validate
+            if (string.IsNullOrWhiteSpace(formData.Name))
+            {
+                modalValidationMessage = "Profile name is required";
+                return;
+            }
+
+            isSaving = true;
+            StateHasChanged();
+
+            if (isEditMode && editingProfile != null)
+            {
+                // Update existing profile
+                var updateRequest = new UpdateUserProfileRequest
+                {
+                    AgeGroup = formData.AgeGroup,
+                    Pronouns = formData.Pronouns,
+                    Bio = formData.Bio
+                };
+
+                var updated = await ApiClient.UpdateProfileAsync(editingProfile.Id, updateRequest);
+                if (updated != null)
+                {
+                    successMessage = $"Profile '{formData.Name}' updated successfully";
+                    await LoadProfiles();
+                    CloseModal();
+                }
+                else
+                {
+                    errorMessage = "Failed to update profile. Please try again.";
+                }
+            }
+            else
+            {
+                // Create new profile
+                if (currentAccount == null) return;
+
+                var createRequest = new CreateUserProfileRequest
+                {
+                    Name = formData.Name,
+                    AgeGroup = formData.AgeGroup,
+                    Pronouns = formData.Pronouns,
+                    Bio = formData.Bio,
+                    AccountId = currentAccount.Id,
+                    IsGuest = false,
+                    HasCompletedOnboarding = false
+                };
+
+                var created = await ApiClient.CreateProfileAsync(createRequest);
+                if (created != null)
+                {
+                    successMessage = $"Profile '{formData.Name}' created successfully";
+                    await LoadProfiles();
+                    CloseModal();
+                }
+                else
+                {
+                    errorMessage = "Failed to create profile. Please try again.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving profile");
+            errorMessage = "An error occurred while saving the profile";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ConfirmDelete(UserProfile profile)
+    {
+        profileToDelete = profile;
+        showDeleteConfirm = true;
+    }
+
+    private void CloseDeleteConfirm()
+    {
+        showDeleteConfirm = false;
+        profileToDelete = null;
+    }
+
+    private async Task DeleteProfile()
+    {
+        try
+        {
+            if (profileToDelete == null) return;
+
+            isDeleting = true;
+            StateHasChanged();
+
+            var success = await ApiClient.DeleteProfileAsync(profileToDelete.Id);
+            if (success)
+            {
+                successMessage = $"Profile '{profileToDelete.Name}' deleted successfully";
+                await LoadProfiles();
+                CloseDeleteConfirm();
+            }
+            else
+            {
+                errorMessage = "Failed to delete profile. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting profile");
+            errorMessage = "An error occurred while deleting the profile";
+        }
+        finally
+        {
+            isDeleting = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetAgeRangeDisplay(string? ageGroup)
+    {
+        return ageGroup switch
+        {
+            "1-2" => "Ages 1-2",
+            "3-5" => "Ages 3-5",
+            "6-9" => "Ages 6-9",
+            "10-12" => "Ages 10-12",
+            "13-18" => "Ages 13-18",
+            _ => "Age group not specified"
+        };
+    }
+
+    private string FormatDate(DateTime? date)
+    {
+        return date?.ToString("MMM d, yyyy") ?? "Unknown";
+    }
+
+    private class ProfileFormData
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? AgeGroup { get; set; }
+        public string? Pronouns { get; set; }
+        public string? Bio { get; set; }
+    }
+}

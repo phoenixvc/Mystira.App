@@ -68,7 +68,6 @@ public class AccountsController : ControllerBase
     /// Create a new account
     /// </summary>
     [HttpPost]
-    [Authorize]
     public async Task<ActionResult<Account>> CreateAccount([FromBody] CreateAccountRequest request)
     {
         try
@@ -111,7 +110,6 @@ public class AccountsController : ControllerBase
     /// Update an existing account
     /// </summary>
     [HttpPut("{accountId}")]
-    [Authorize]
     public async Task<ActionResult<Account>> UpdateAccount(string accountId, [FromBody] UpdateAccountRequest request)
     {
         try
@@ -157,7 +155,6 @@ public class AccountsController : ControllerBase
     /// Delete an account
     /// </summary>
     [HttpDelete("{accountId}")]
-    [Authorize]
     public async Task<ActionResult> DeleteAccount(string accountId)
     {
         try
@@ -181,7 +178,6 @@ public class AccountsController : ControllerBase
     /// Link user profiles to an account
     /// </summary>
     [HttpPost("{accountId}/profiles")]
-    [Authorize]
     public async Task<ActionResult> LinkProfilesToAccount(string accountId, [FromBody] LinkProfilesRequest request)
     {
         try

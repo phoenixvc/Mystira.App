@@ -619,7 +619,7 @@ public class ApiClient : IApiClient
         {
             _logger.LogInformation("Updating profile {Id} via API...", id);
             
-            var response = await _httpClient.PutAsJsonAsync($"api/userprofiles/{id}", request, _jsonOptions);
+            var response = await _httpClient.PutAsJsonAsync($"api/userprofiles/id/{id}", request, _jsonOptions);
             
             if (response.IsSuccessStatusCode)
             {

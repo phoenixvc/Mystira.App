@@ -29,7 +29,6 @@ public class UserProfilesController : ControllerBase
     /// Create a new DM profile
     /// </summary>
     [HttpPost]
-    [Authorize]
     public async Task<ActionResult<UserProfile>> CreateProfile([FromBody] CreateUserProfileRequest request)
     {
         try
@@ -102,7 +101,7 @@ public class UserProfilesController : ControllerBase
     }
 
     /// <summary>
-    /// Update a DM profile
+    /// Update a DM profile by name
     /// </summary>
     [HttpPut("{name}")]
     public async Task<ActionResult<UserProfile>> UpdateProfile(string name, [FromBody] UpdateUserProfileRequest request)
@@ -146,6 +145,69 @@ public class UserProfilesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating profile {Name}", name);
+            return StatusCode(500, new ErrorResponse 
+            { 
+                Message = "Internal server error while updating profile",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
+    /// Update a DM profile by ID
+    /// </summary>
+    [HttpPut("id/{profileId}")]
+    public async Task<ActionResult<UserProfile>> UpdateProfileById(string profileId, [FromBody] UpdateUserProfileRequest request)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new ValidationErrorResponse
+                {
+                    Message = "Validation failed",
+                    ValidationErrors = ModelState.ToDictionary(
+                        kvp => kvp.Key,
+                        kvp => kvp.Value?.Errors.Select(e => e.ErrorMessage).ToList() ?? new List<string>()
+                    ),
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            var profile = await _profileService.GetProfileByIdAsync(profileId);
+            if (profile == null)
+            {
+                return NotFound(new ErrorResponse 
+                { 
+                    Message = $"Profile not found: {profileId}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            var updatedProfile = await _profileService.UpdateProfileAsync(profile.Name, request);
+            if (updatedProfile == null)
+            {
+                return NotFound(new ErrorResponse 
+                { 
+                    Message = $"Profile not found: {profileId}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            return Ok(updatedProfile);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Validation error updating profile {ProfileId}", profileId);
+            return BadRequest(new ErrorResponse 
+            { 
+                Message = ex.Message,
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating profile {ProfileId}", profileId);
             return StatusCode(500, new ErrorResponse 
             { 
                 Message = "Internal server error while updating profile",
@@ -256,7 +318,6 @@ public class UserProfilesController : ControllerBase
     /// Assign a character to a profile
     /// </summary>
     [HttpPost("{profileId}/assign-character")]
-    [Authorize]
     public async Task<ActionResult> AssignCharacterToProfile(string profileId, [FromBody] ProfileAssignmentRequest request)
     {
         try

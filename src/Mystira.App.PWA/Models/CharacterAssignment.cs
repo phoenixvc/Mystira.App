@@ -63,6 +63,9 @@ public class StartGameSessionRequest
     public string ProfileId { get; set; } = string.Empty; // Primary profile (DM/facilitator)
     public List<CharacterAssignment> CharacterAssignments { get; set; } = new();
     public string TargetAgeGroup { get; set; } = string.Empty;
+    
+    [JsonIgnore]
+    public Scenario? Scenario { get; set; } // Full scenario for local game session setup
 }
 
 /// <summary>
