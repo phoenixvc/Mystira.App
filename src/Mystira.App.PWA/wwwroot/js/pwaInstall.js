@@ -19,29 +19,8 @@ function isIos() {
     return platform === 'MacIntel' && navigator.maxTouchPoints > 1;
 }
 
-function isMobileOrTablet() {
-    if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
-        if (navigator.userAgentData.mobile) {
-            return true;
-        }
-    }
-
-    if (isIos()) {
-        return true;
-    }
-
-    const ua = (navigator.userAgent || navigator.vendor || window.opera || '').toLowerCase();
-    if (mobilePattern.test(ua)) {
-        return true;
-    }
-
-    const hasTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 1 || navigator.msMaxTouchPoints > 1;
-    if (!hasTouch) {
-        return false;
-    }
-
-    const minViewport = Math.min(window.innerWidth, window.innerHeight);
-    return minViewport <= 1024;
+function isDeviceSupported() {
+    return true;
 }
 
 function isAppInstalled() {
@@ -56,7 +35,7 @@ function updateButtonVisibility() {
         return;
     }
 
-    if (deferredPrompt && isMobileOrTablet() && !isAppInstalled()) {
+    if (deferredPrompt && isDeviceSupported() && !isAppInstalled()) {
         dotNetRef.invokeMethodAsync('ShowInstallButton');
     } else {
         dotNetRef.invokeMethodAsync('HideInstallButton');

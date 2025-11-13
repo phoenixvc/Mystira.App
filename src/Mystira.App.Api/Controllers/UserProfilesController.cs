@@ -176,17 +176,7 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-            var profile = await _profileService.GetProfileByIdAsync(id);
-            if (profile == null)
-            {
-                return NotFound(new ErrorResponse 
-                { 
-                    Message = $"Profile not found: {id}",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            var updatedProfile = await _profileService.UpdateProfileAsync(profile.Name, request);
+            var updatedProfile = await _profileService.UpdateProfileByIdAsync(id, request);
             if (updatedProfile == null)
             {
                 return NotFound(new ErrorResponse 
@@ -239,17 +229,7 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-            var profile = await _profileService.GetProfileByIdAsync(profileId);
-            if (profile == null)
-            {
-                return NotFound(new ErrorResponse 
-                { 
-                    Message = $"Profile not found: {profileId}",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            var updatedProfile = await _profileService.UpdateProfileAsync(profile.Name, request);
+            var updatedProfile = await _profileService.UpdateProfileByIdAsync(profileId, request);
             if (updatedProfile == null)
             {
                 return NotFound(new ErrorResponse 
