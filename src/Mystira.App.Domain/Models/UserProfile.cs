@@ -21,21 +21,9 @@ public class UserProfile
     /// </summary>
     public bool IsNpc { get; set; } = false;
     
-    // Store as string for database compatibility, but provide AgeGroup access
-    private string _ageGroup = AgeGroup.School.Name;
-    public string AgeGroupName 
-    { 
-        get => _ageGroup; 
-        set => _ageGroup = value; 
-    }
-    
     // Convenience property to get AgeGroup object
-    public AgeGroup AgeGroup 
-    { 
-        get => AgeGroup.GetByName(_ageGroup) ?? AgeGroup.School;
-        set => _ageGroup = value?.Name ?? AgeGroup.School.Name;
-    }
-    
+    public string AgeGroup { get; set; } = string.Empty;
+
     /// <summary>
     /// Calculate current age from date of birth, or return null if not available
     /// </summary>
@@ -65,13 +53,8 @@ public class UserProfile
         var currentAge = CurrentAge.Value;
         
         // Find the appropriate age group based on current age
-        var appropriateAgeGroup = AgeGroup.All.FirstOrDefault(ag => 
-            currentAge >= ag.MinimumAge && currentAge <= ag.MaximumAge);
-            
-        if (appropriateAgeGroup != null)
-        {
-            AgeGroup = appropriateAgeGroup;
-        }
+        var validAgeGroupsMap = new Dictionary<int, string> { {1, "1-2"}, {3, "3-5"}, {6, "6-9"}, {10, "10-12"}, {13, "13-18"} };
+        AgeGroup = validAgeGroupsMap.FirstOrDefault(kvp => kvp.Key <= currentAge).Value ?? "1-2";
     }
     
     /// <summary>

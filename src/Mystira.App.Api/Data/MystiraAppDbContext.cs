@@ -63,31 +63,37 @@ public class MystiraAppDbContext : DbContext
                       (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2), 
                       c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                       c => c.ToList()));
-
-        });
-
-        // Configure UserBadge
-        modelBuilder.Entity<UserBadge>(entity =>
-        {
-            entity.HasKey(e => e.Id);
             
-            // Only apply Cosmos DB configurations when not using in-memory database
-            if (!isInMemoryDatabase)
+            // Configure UserBadge as owned by UserProfile
+            entity.OwnsMany(p => p.EarnedBadges, badges =>
             {
-                entity.ToContainer("UserBadges")
-                      .HasPartitionKey(e => e.UserProfileId);
-            }
-            
-            entity.Property(e => e.UserProfileId).IsRequired();
-            entity.Property(e => e.BadgeConfigurationId).IsRequired();
-            entity.Property(e => e.BadgeName).IsRequired();
-            entity.Property(e => e.BadgeMessage).IsRequired();
-            entity.Property(e => e.Axis).IsRequired();
-            
-            // Create index on UserProfileId for efficient querying
-            entity.HasIndex(e => e.UserProfileId);
-            entity.HasIndex(e => new { e.UserProfileId, e.BadgeConfigurationId }).IsUnique();
+                badges.WithOwner().HasForeignKey(b => b.UserProfileId);
+                badges.HasKey(b => b.Id);
+        
+                // Only apply Cosmos DB specific configurations when not using in-memory database
+                if (!isInMemoryDatabase)
+                {
+                    // No need for ToContainer or HasPartitionKey for owned entities
+                    // They'll be embedded in the UserProfile document
+                }
+        
+                badges.Property(b => b.UserProfileId).IsRequired();
+                badges.Property(b => b.BadgeConfigurationId).IsRequired();
+                badges.Property(b => b.BadgeName).IsRequired();
+                badges.Property(b => b.BadgeMessage).IsRequired();
+                badges.Property(b => b.Axis).IsRequired();
+        
+                // Indexes may not be applicable for owned entities in Cosmos DB
+                // If using SQL Server, you can still configure these:
+                if (isInMemoryDatabase)
+                {
+                    badges.HasIndex(b => b.UserProfileId);
+                    badges.HasIndex(b => new { b.UserProfileId, b.BadgeConfigurationId }).IsUnique();
+                }
+            });
         });
+        
+        modelBuilder.Entity<UserProfile>().OwnsMany(p => p.EarnedBadges);
 
         // Configure Account
         modelBuilder.Entity<Account>(entity =>

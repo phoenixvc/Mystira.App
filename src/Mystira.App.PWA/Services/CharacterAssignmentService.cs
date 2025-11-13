@@ -178,8 +178,8 @@ public class CharacterAssignmentService : ICharacterAssignmentService
                 Name = request.Name,
                 IsGuest = request.IsGuest,
                 AccountId = request.AccountId,
-                AgeGroupName = GetAgeGroupNameFromRange(request.AgeRange),
-                HasCompletedOnboarding = true // Guest profiles skip onboarding
+                AgeGroup = request.AgeRange ?? "1-2",
+                HasCompletedOnboarding = request.IsGuest // Guest profiles skip onboarding
             };
 
             var profile = await _apiClient.CreateProfileAsync(createRequest);
@@ -299,18 +299,5 @@ public class CharacterAssignmentService : ICharacterAssignmentService
         }
 
         return assignments;
-    }
-
-    private string GetAgeGroupNameFromRange(string? ageRange)
-    {
-        return ageRange switch
-        {
-            "1-2" => "toddlers",
-            "3-5" => "preschoolers",
-            "6-9" => "school",
-            "10-12" => "preteens",
-            "13-18" => "teens",
-            _ => "school"
-        };
     }
 }

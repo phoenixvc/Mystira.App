@@ -10,6 +10,7 @@ public class UserProfileApiService : IUserProfileApiService
 {
     private readonly MystiraAppDbContext _context;
     private readonly ILogger<UserProfileApiService> _logger;
+    private static readonly string[] AllowableAgeGroups = ["1-2", "3-5", "6-9", "10-12", "13-18"];
 
     public UserProfileApiService(MystiraAppDbContext context, ILogger<UserProfileApiService> logger)
     {
@@ -30,14 +31,14 @@ public class UserProfileApiService : IUserProfileApiService
             throw new ArgumentException($"Invalid fantasy themes: {string.Join(", ", invalidThemes)}");
 
         // Validate age group
-        if (!AgeGroup.IsValid(request.AgeGroup))
+        if (!AllowableAgeGroups.Contains(request.AgeGroup))
             throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All.Select(a => a.Name))}");
 
         var profile = new UserProfile
         {
             Name = request.Name,
             PreferredFantasyThemes = request.PreferredFantasyThemes,
-            AgeGroupName = request.AgeGroup,
+            AgeGroup = request.AgeGroup,
             DateOfBirth = request.DateOfBirth,
             IsGuest = request.IsGuest,
             IsNpc = request.IsNpc,
@@ -84,7 +85,7 @@ public class UserProfileApiService : IUserProfileApiService
         {
             Name = name,
             PreferredFantasyThemes = new List<string>(), // Empty for guest profiles
-            AgeGroupName = request.AgeGroup,
+            AgeGroup = request.AgeGroup,
             IsGuest = true,
             IsNpc = false,
             HasCompletedOnboarding = true, // Guests don't need onboarding
@@ -158,7 +159,7 @@ public class UserProfileApiService : IUserProfileApiService
             if (!AgeGroup.IsValid(request.AgeGroup))
                 throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All.Select(a => a.Name))}");
             
-            profile.AgeGroupName = request.AgeGroup;
+            profile.AgeGroup = request.AgeGroup;
         }
 
         if (request.DateOfBirth.HasValue)

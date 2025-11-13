@@ -8,7 +8,6 @@ namespace Mystira.App.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
-[Authorize] // Admin only
 public class MediaMetadataController : ControllerBase
 {
     private readonly IMediaMetadataService _mediaMetadataService;

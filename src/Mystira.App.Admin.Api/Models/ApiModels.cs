@@ -30,6 +30,16 @@ public class CreateUserProfileRequest
     /// Indicates if this profile represents an NPC
     /// </summary>
     public bool IsNpc { get; set; } = false;
+
+    /// <summary>
+    /// Identifier representing the associated account.
+    /// </summary>
+    public string AccountId { get; set; }
+    
+    /// <summary>
+    /// Indicates if the user has completed onboarding
+    /// </summary>
+    public bool HasCompletedOnboarding { get; set; }
 }
 
 public class UpdateUserProfileRequest
