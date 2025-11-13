@@ -156,7 +156,7 @@ public class UserProfileApiService : IUserProfileApiService
         if (request.AgeGroup != null)
         {
             // Validate age group
-            if ((new[] {"1-2", "3-5", "6-9", "10-12", "12-18"}).Contains(request.AgeGroup))
+            if (!new[] {"1-2", "3-5", "6-9", "10-12", "12-18"}.Contains(request.AgeGroup))
                 throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All.Select(a => a.Name))}");
             
             profile.AgeGroup = request.AgeGroup;
@@ -199,18 +199,12 @@ public class UserProfileApiService : IUserProfileApiService
             .Where(s => s.ProfileId == profile.Id)
             .ToListAsync();
 
-        var badges = await _context.UserBadges
-            .Where(b => b.UserProfileId == profile.Id)
-            .ToListAsync();
-
         _context.GameSessions.RemoveRange(sessions);
-        _context.UserBadges.RemoveRange(badges);
         _context.UserProfiles.Remove(profile);
         
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Deleted user profile and associated data: {Name} (badges: {BadgeCount})", 
-            name, badges.Count);
+        _logger.LogInformation("Deleted user profile and associated data: {Name}", name);
         return true;
     }
 
