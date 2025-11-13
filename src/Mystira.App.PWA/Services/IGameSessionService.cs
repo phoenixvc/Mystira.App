@@ -14,4 +14,14 @@ public interface IGameSessionService
     Task<bool> CompleteGameSessionAsync();
     void ClearGameSession();
     void SetCurrentGameSession(GameSession? session);
+    
+    /// <summary>
+    /// Sets character assignments for the current session (for text replacement)
+    /// </summary>
+    void SetCharacterAssignments(List<CharacterAssignment> assignments);
+    
+    /// <summary>
+    /// Replaces character placeholders [c:CharacterName] with player names in text
+    /// </summary>
+    string ReplaceCharacterPlaceholders(string text);
 }

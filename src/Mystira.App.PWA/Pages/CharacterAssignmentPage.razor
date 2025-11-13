@@ -201,6 +201,15 @@ else
                     <button type="button" class="btn-close" @onclick="ClosePlayerAssignment"></button>
                 </div>
                 <div class="modal-body">
+                    <!-- Validation Message -->
+                    @if (!string.IsNullOrEmpty(validationMessage))
+                    {
+                        <div class="alert alert-warning mb-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            @validationMessage
+                        </div>
+                    }
+                    
                     <!-- Tab Navigation -->
                     <ul class="nav nav-tabs mb-3">
                         <li class="nav-item">
@@ -309,6 +318,7 @@ else
     private string guestAgeRange = string.Empty;
     private bool saveGuestAsProfile = false;
     private string? previewImage;
+    private string validationMessage = string.Empty;
 
     // Audio
     private string? isPlayingAudio = null;
@@ -354,6 +364,48 @@ else
         NavigationManager.NavigateTo("/home");
     }
 
+    private async Task CreateGuestProfileImmediately(PlayerAssignment guest)
+    {
+        try
+        {
+            var account = await AuthService.GetCurrentAccountAsync();
+            if (account == null)
+            {
+                Logger.LogError("No account found for creating profile");
+                return;
+            }
+
+            var profileRequest = new CreateUserProfileRequest
+            {
+                Name = guest.GuestName!,
+                AgeGroupName = GetAgeGroupNameFromRange(guest.GuestAgeRange),
+                AccountId = account.Id,
+                IsGuest = false // This is now a real profile
+            };
+
+            var createdProfile = await ApiClient.CreateProfileAsync(profileRequest);
+            if (createdProfile != null)
+            {
+                // Update the guest assignment to use the new profile
+                guest.ProfileId = createdProfile.Id;
+                guest.ProfileName = createdProfile.Name;
+                guest.Type = "Profile"; // Change from Guest to Profile
+                
+                Logger.LogInformation("Successfully created profile from guest: {ProfileName}", createdProfile.Name);
+                
+                // Refresh available profiles
+                await LoadCharacterAssignmentData();
+                
+                // Update UI
+                InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error creating profile from guest: {GuestName}", guest.GuestName);
+        }
+    }
+
     private void OpenPlayerAssignment(int index)
     {
         currentAssignmentIndex = index;
@@ -366,6 +418,7 @@ else
         guestAgeRange = string.Empty;
         saveGuestAsProfile = false;
         assignmentTab = "profiles";
+        validationMessage = string.Empty;
     }
 
     private void ClosePlayerAssignment()
@@ -384,6 +437,9 @@ else
     {
         if (currentAssignmentIndex < 0 || currentAssignment == null) return;
 
+        // Clear previous validation message
+        validationMessage = string.Empty;
+
         var playerAssignment = new PlayerAssignment();
 
         if (assignmentTab == "profiles" && !string.IsNullOrEmpty(selectedProfileId))
@@ -399,10 +455,24 @@ else
         }
         else if (assignmentTab == "guest" && !string.IsNullOrEmpty(guestName))
         {
+            // Validate age group if saving as profile
+            if (saveGuestAsProfile && string.IsNullOrEmpty(guestAgeRange))
+            {
+                validationMessage = "Please select an age group when creating a profile.";
+                StateHasChanged();
+                return;
+            }
+
             playerAssignment.Type = "Guest";
             playerAssignment.GuestName = guestName;
             playerAssignment.GuestAgeRange = guestAgeRange;
             playerAssignment.SaveAsProfile = saveGuestAsProfile;
+
+            // Create profile immediately if saveGuestAsProfile is checked
+            if (saveGuestAsProfile && !string.IsNullOrEmpty(guestAgeRange))
+            {
+                _ = Task.Run(async () => await CreateGuestProfileImmediately(playerAssignment));
+            }
         }
 
         if (!string.IsNullOrEmpty(playerAssignment.Type))
@@ -438,9 +508,9 @@ else
                 return;
             }
 
-            // Create guest profiles if needed
+            // Create guest profiles if needed (for any remaining guests that weren't created immediately)
             var guestProfilesToCreate = characterAssignments
-                .Where(ca => ca.PlayerAssignment?.Type == "Guest" && ca.PlayerAssignment.SaveAsProfile == true)
+                .Where(ca => ca.PlayerAssignment?.Type == "Guest" && ca.PlayerAssignment.SaveAsProfile == true && string.IsNullOrEmpty(ca.PlayerAssignment.ProfileId))
                 .Select(ca => ca.PlayerAssignment!)
                 .ToList();
 
@@ -465,6 +535,9 @@ else
                 }
             }
 
+            // Set character assignments in GameSessionService for text replacement
+            GameSessionService.SetCharacterAssignments(characterAssignments);
+
             // Start the game session
             var request = new StartGameSessionRequest
             {
@@ -472,7 +545,7 @@ else
                 AccountId = account.Id,
                 ProfileId = account.UserProfileIds.FirstOrDefault() ?? "default-profile",
                 CharacterAssignments = characterAssignments,
-                TargetAgeGroup = assignmentData!.Scenario.AgeGroup ?? "6-9",
+                TargetAgeGroup = assignmentData!.Scenario.AgeGroup,
                 Scenario = assignmentData!.Scenario // Pass the full scenario for local session setup
             };
 

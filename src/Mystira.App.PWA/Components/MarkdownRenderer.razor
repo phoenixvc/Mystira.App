@@ -1,5 +1,6 @@
 @using Markdig
 @inject ILogger<MarkdownRenderer> Logger
+@inject IGameSessionService GameSessionService
 
 @if (!string.IsNullOrEmpty(Content))
 {
@@ -12,7 +13,21 @@
     [Parameter]
     public string Content { get; set; } = string.Empty;
 
-    private string RenderedContent => ParseMarkdown(Content);
+    private string RenderedContent => ParseMarkdown(ProcessCharacterPlaceholders(Content));
+
+    private string ProcessCharacterPlaceholders(string content)
+    {
+        try
+        {
+            // Use GameSessionService to replace character placeholders
+            return GameSessionService.ReplaceCharacterPlaceholders(content);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error processing character placeholders");
+            return content;
+        }
+    }
 
     private string ParseMarkdown(string markdown)
     {
