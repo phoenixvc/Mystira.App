@@ -41,9 +41,6 @@ else
         <div class="row mb-4">
             <div class="col-12">
                 <div class="d-flex align-items-center mb-3">
-                    <button class="btn btn-outline-secondary me-3" @onclick="GoBack">
-                        <i class="fas fa-arrow-left"></i>
-                    </button>
                     <div>
                         <h2 class="mb-1">Assign Players</h2>
                         <p class="text-muted mb-0">@assignmentData.Scenario.Title</p>
@@ -83,13 +80,13 @@ else
                                 @if (!string.IsNullOrEmpty(assignment.Image))
                                 {
                                     <button class="btn btn-sm btn-outline-primary" @onclick="() => PreviewImage(ApiClient.GetMediaResourceEndpointUrl(assignment.Image))" title="View Image">
-                                        <i class="🖼️"></i>
+                                        &#128444;
                                     </button>
                                 }
                                 @if (!string.IsNullOrEmpty(assignment.Audio))
                                 {
                                     <button class="btn btn-sm btn-outline-success" @onclick="() => PlayAudio(ApiClient.GetMediaResourceEndpointUrl(assignment.Audio))" title="Play Audio">
-                                        <i class="@(isPlayingAudio == assignment.Audio ? "⏸️" : "▶️")"></i>
+                                        @((MarkupString)(isPlayingAudio == assignment.Audio ? "&#x23F8;" : "&#128266;"))
                                     </button>
                                 }
                             </div>
@@ -288,7 +285,7 @@ else
                 <div class="modal-body p-0 text-center">
                     <img src="@previewImage" class="img-fluid" alt="Character Preview" />
                     <button type="button" class="btn btn-light btn-lg position-absolute top-0 end-0 m-3" @onclick="CloseImagePreview">
-                        <i class="fas fa-times"></i>
+                        &#10060;
                     </button>
                 </div>
             </div>

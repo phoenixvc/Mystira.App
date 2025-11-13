@@ -47,7 +47,7 @@ public class UserProfilesController : ControllerBase
             }
 
             var profile = await _profileService.CreateProfileAsync(request);
-            return CreatedAtAction(nameof(GetProfile), new { name = profile.Name }, profile);
+            return CreatedAtAction(nameof(GetProfileById), new { id = profile.Id }, profile);
         }
         catch (ArgumentException ex)
         {
@@ -70,10 +70,65 @@ public class UserProfilesController : ControllerBase
     }
 
     /// <summary>
-    /// Get a DM profile by name
+    /// Get all profiles for an account
     /// </summary>
-    [HttpGet("{name}")]
-    public async Task<ActionResult<UserProfile>> GetProfile(string name)
+    [HttpGet("account/{accountId}")]
+    public async Task<ActionResult<List<UserProfile>>> GetProfilesByAccount(string accountId)
+    {
+        try
+        {
+            _logger.LogInformation("Getting profiles for account {AccountId}", accountId);
+            
+            var profiles = await _accountService.GetUserProfilesForAccountAsync(accountId);
+            return Ok(profiles);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting profiles for account {AccountId}", accountId);
+            return StatusCode(500, new ErrorResponse 
+            { 
+                Message = "Internal server error while fetching profiles",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get a DM profile by ID
+    /// </summary>
+    [HttpGet("{id}")]
+    public async Task<ActionResult<UserProfile>> GetProfileById(string id)
+    {
+        try
+        {
+            var profile = await _profileService.GetProfileByIdAsync(id);
+            if (profile == null)
+            {
+                return NotFound(new ErrorResponse 
+                { 
+                    Message = $"Profile not found: {id}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            return Ok(profile);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting profile {Id}", id);
+            return StatusCode(500, new ErrorResponse 
+            { 
+                Message = "Internal server error while fetching profile",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get a DM profile by name (legacy endpoint)
+    /// </summary>
+    [HttpGet("name/{name}")]
+    public async Task<ActionResult<UserProfile>> GetProfileByName(string name)
     {
         try
         {
@@ -101,10 +156,10 @@ public class UserProfilesController : ControllerBase
     }
 
     /// <summary>
-    /// Update a DM profile by name
+    /// Update a DM profile by ID
     /// </summary>
-    [HttpPut("{name}")]
-    public async Task<ActionResult<UserProfile>> UpdateProfile(string name, [FromBody] UpdateUserProfileRequest request)
+    [HttpPut("{id}")]
+    public async Task<ActionResult<UserProfile>> UpdateProfile(string id, [FromBody] UpdateUserProfileRequest request)
     {
         try
         {
@@ -121,21 +176,31 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-            var profile = await _profileService.UpdateProfileAsync(name, request);
+            var profile = await _profileService.GetProfileByIdAsync(id);
             if (profile == null)
             {
                 return NotFound(new ErrorResponse 
                 { 
-                    Message = $"Profile not found: {name}",
+                    Message = $"Profile not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
             }
 
-            return Ok(profile);
+            var updatedProfile = await _profileService.UpdateProfileAsync(profile.Name, request);
+            if (updatedProfile == null)
+            {
+                return NotFound(new ErrorResponse 
+                { 
+                    Message = $"Profile not found: {id}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            return Ok(updatedProfile);
         }
         catch (ArgumentException ex)
         {
-            _logger.LogWarning(ex, "Validation error updating profile {Name}", name);
+            _logger.LogWarning(ex, "Validation error updating profile {Id}", id);
             return BadRequest(new ErrorResponse 
             { 
                 Message = ex.Message,
@@ -144,7 +209,7 @@ public class UserProfilesController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating profile {Name}", name);
+            _logger.LogError(ex, "Error updating profile {Id}", id);
             return StatusCode(500, new ErrorResponse 
             { 
                 Message = "Internal server error while updating profile",
@@ -219,17 +284,27 @@ public class UserProfilesController : ControllerBase
     /// <summary>
     /// Delete a DM profile and all associated data (COPPA compliance)
     /// </summary>
-    [HttpDelete("{name}")]
-    public async Task<ActionResult> DeleteProfile(string name)
+    [HttpDelete("{id}")]
+    public async Task<ActionResult> DeleteProfile(string id)
     {
         try
         {
-            var deleted = await _profileService.DeleteProfileAsync(name);
+            var profile = await _profileService.GetProfileByIdAsync(id);
+            if (profile == null)
+            {
+                return NotFound(new ErrorResponse 
+                { 
+                    Message = $"Profile not found: {id}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            var deleted = await _profileService.DeleteProfileAsync(profile.Name);
             if (!deleted)
             {
                 return NotFound(new ErrorResponse 
                 { 
-                    Message = $"Profile not found: {name}",
+                    Message = $"Profile not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
             }
@@ -238,7 +313,7 @@ public class UserProfilesController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting profile {Name}", name);
+            _logger.LogError(ex, "Error deleting profile {Id}", id);
             return StatusCode(500, new ErrorResponse 
             { 
                 Message = "Internal server error while deleting profile",
@@ -250,17 +325,27 @@ public class UserProfilesController : ControllerBase
     /// <summary>
     /// Mark onboarding as complete for a DM
     /// </summary>
-    [HttpPost("{name}/complete-onboarding")]
-    public async Task<ActionResult> CompleteOnboarding(string name)
+    [HttpPost("{id}/complete-onboarding")]
+    public async Task<ActionResult> CompleteOnboarding(string id)
     {
         try
         {
-            var success = await _profileService.CompleteOnboardingAsync(name);
+            var profile = await _profileService.GetProfileByIdAsync(id);
+            if (profile == null)
+            {
+                return NotFound(new ErrorResponse 
+                { 
+                    Message = $"Profile not found: {id}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            var success = await _profileService.CompleteOnboardingAsync(profile.Name);
             if (!success)
             {
                 return NotFound(new ErrorResponse 
                 { 
-                    Message = $"Profile not found: {name}",
+                    Message = $"Profile not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
             }
@@ -269,7 +354,7 @@ public class UserProfilesController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error completing onboarding for {Name}", name);
+            _logger.LogError(ex, "Error completing onboarding for {Id}", id);
             return StatusCode(500, new ErrorResponse 
             { 
                 Message = "Internal server error while completing onboarding",

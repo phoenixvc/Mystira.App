@@ -38,6 +38,8 @@ public class UserProfileApiService : IUserProfileApiService
             Name = request.Name,
             PreferredFantasyThemes = request.PreferredFantasyThemes.Select(t => FantasyTheme.Parse(t)!).ToList(),
             AgeGroupName = request.AgeGroup,
+            AccountId = request.AccountId,
+            AgeGroup = request.AgeGroup,
             DateOfBirth = request.DateOfBirth,
             IsGuest = request.IsGuest,
             IsNpc = request.IsNpc,
