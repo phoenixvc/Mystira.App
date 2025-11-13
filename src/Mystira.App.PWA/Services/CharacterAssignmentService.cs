@@ -268,20 +268,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
                 Archetype = scenarioChar.Metadata?.Archetype?.FirstOrDefault() ?? "",
                 IsUnused = false
             };
-
-            // Get full character details if available
-            if (!string.IsNullOrEmpty(assignment.CharacterId))
-            {
-                var fullCharacter = await GetCharacterDetailsAsync(assignment.CharacterId);
-                if (fullCharacter != null)
-                {
-                    assignment.Image = fullCharacter.Image;
-                    assignment.Audio = fullCharacter.Audio;
-                    assignment.Role = fullCharacter.Role ?? assignment.Role;
-                    assignment.Archetype = fullCharacter.Archetype ?? assignment.Archetype;
-                }
-            }
-
+            
             assignments.Add(assignment);
         }
 

@@ -22,17 +22,16 @@ public class CharacterAssignment
         {
             var parts = new List<string>();
             if (!string.IsNullOrEmpty(Role)) parts.Add(Role);
-            if (!string.IsNullOrEmpty(Archetype)) parts.Add(ToTitleCase(Archetype));
+            if (!string.IsNullOrEmpty(Archetype)) parts.Add(ToTitleCaseAndUnderscoresReplaced(Archetype));
             return parts.Count > 0 ? string.Join(" • ", parts) : "Character";
         }
     }
 
-    private static string ToTitleCase(string input)
+    private static string ToTitleCaseAndUnderscoresReplaced(string input)
     {
-        if (string.IsNullOrEmpty(input))
-            return string.Empty;
-            
-        return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(input.ToLower());
+        return string.IsNullOrEmpty(input) 
+            ? string.Empty 
+            : System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(input.ToLower()).Replace("_", " ");
     }
 }
 

@@ -26,7 +26,7 @@ public class UserProfilesController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new DM profile
+    /// Create a new User profile
     /// </summary>
     [HttpPost]
     public async Task<ActionResult<UserProfile>> CreateProfile([FromBody] CreateUserProfileRequest request)
@@ -94,7 +94,7 @@ public class UserProfilesController : ControllerBase
     }
 
     /// <summary>
-    /// Get a DM profile by ID
+    /// Get a User profile by ID
     /// </summary>
     [HttpGet("{id}")]
     public async Task<ActionResult<UserProfile>> GetProfileById(string id)
@@ -125,7 +125,7 @@ public class UserProfilesController : ControllerBase
     }
 
     /// <summary>
-    /// Get a DM profile by name (legacy endpoint)
+    /// Get a User profile by name (legacy endpoint)
     /// </summary>
     [HttpGet("name/{name}")]
     public async Task<ActionResult<UserProfile>> GetProfileByName(string name)
@@ -156,7 +156,7 @@ public class UserProfilesController : ControllerBase
     }
 
     /// <summary>
-    /// Update a DM profile by ID
+    /// Update a User profile by ID
     /// </summary>
     [HttpPut("{id}")]
     public async Task<ActionResult<UserProfile>> UpdateProfile(string id, [FromBody] UpdateUserProfileRequest request)
@@ -219,7 +219,7 @@ public class UserProfilesController : ControllerBase
     }
 
     /// <summary>
-    /// Update a DM profile by ID
+    /// Update a User profile by ID
     /// </summary>
     [HttpPut("id/{profileId}")]
     public async Task<ActionResult<UserProfile>> UpdateProfileById(string profileId, [FromBody] UpdateUserProfileRequest request)
@@ -282,7 +282,7 @@ public class UserProfilesController : ControllerBase
     }
 
     /// <summary>
-    /// Delete a DM profile and all associated data (COPPA compliance)
+    /// Delete a User profile and all associated data (COPPA compliance)
     /// </summary>
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteProfile(string id)
@@ -323,7 +323,7 @@ public class UserProfilesController : ControllerBase
     }
 
     /// <summary>
-    /// Mark onboarding as complete for a DM
+    /// Mark onboarding as complete for a User
     /// </summary>
     [HttpPost("{id}/complete-onboarding")]
     public async Task<ActionResult> CompleteOnboarding(string id)

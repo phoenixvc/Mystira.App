@@ -128,14 +128,15 @@ else
                                                         <small class="text-muted">@assignment.PlayerAssignment.Type</small>
                                                     </div>
                                                     <button class="btn btn-sm btn-outline-danger" @onclick="() => RemovePlayerAssignment(cardIndex)" title="Remove">
-                                                       <i class="fas fa-times"></i>
+                                                        &#10060;
                                                     </button>
+                                                    <!-- hiding plus button to add as profile for now
                                                     @if (assignment.PlayerAssignment?.Type == "Guest")
                                                     {
                                                        <button class="btn btn-sm btn-outline-primary ms-1" @onclick="() => CreateProfileFromGuest(assignment.PlayerAssignment)" title="Create Profile">
                                                            <i class="fas fa-user-plus"></i>
                                                        </button>
-                                                    }
+                                                    }-->
                                                     </div>
                                             </div>
                                         }
@@ -256,11 +257,10 @@ else
                             </select>
                         </div>
                         
-                        
                         <div class="form-check mb-3">
                             <input class="form-check-input" type="checkbox" @bind="saveGuestAsProfile" />
                             <label class="form-check-label">
-                                Save as profile after this session
+                                Save as new profile
                             </label>
                         </div>
                     }
@@ -445,7 +445,7 @@ else
         assignmentTab = tab;
     }
 
-    private void ConfirmPlayerAssignment()
+    private async Task ConfirmPlayerAssignment()
     {
         if (currentAssignmentIndex < 0 || currentAssignment == null) return;
 
@@ -483,7 +483,7 @@ else
             // Create profile immediately if saveGuestAsProfile is checked
             if (saveGuestAsProfile && !string.IsNullOrEmpty(guestAgeRange))
             {
-                _ = Task.Run(async () => await CreateGuestProfileImmediately(playerAssignment));
+                await CreateGuestProfileImmediately(playerAssignment);
             }
         }
 

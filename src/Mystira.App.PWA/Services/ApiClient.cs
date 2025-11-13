@@ -404,7 +404,7 @@ public class ApiClient : IApiClient
         {
             _logger.LogInformation("Fetching character {Id} from API...", id);
             
-            var response = await _httpClient.GetAsync($"api/characters/{id}");
+            var response = await _httpClient.GetAsync($"api/character/{id}");
             
             if (response.IsSuccessStatusCode)
             {
