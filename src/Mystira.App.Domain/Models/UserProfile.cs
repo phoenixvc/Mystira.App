@@ -4,7 +4,7 @@ public class UserProfile
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Name { get; set; } = string.Empty;
-    public List<string> PreferredFantasyThemes { get; set; } = new();
+    public List<FantasyTheme> PreferredFantasyThemes { get; set; } = new();
     
     /// <summary>
     /// Date of birth for dynamic age calculation (COPPA compliance: stored securely)
@@ -22,7 +22,7 @@ public class UserProfile
     public bool IsNpc { get; set; } = false;
     
     // Store as string for database compatibility, but provide AgeGroup access
-    private string _ageGroup = AgeGroup.School.Name;
+    private string _ageGroup = AgeGroup.School.Value;
     public string AgeGroupName 
     { 
         get => _ageGroup; 
@@ -32,8 +32,8 @@ public class UserProfile
     // Convenience property to get AgeGroup object
     public AgeGroup AgeGroup 
     { 
-        get => AgeGroup.GetByName(_ageGroup) ?? AgeGroup.School;
-        set => _ageGroup = value?.Name ?? AgeGroup.School.Name;
+        get => AgeGroup.Parse(_ageGroup) ?? AgeGroup.School;
+        set => _ageGroup = value?.Value ?? AgeGroup.School.Value;
     }
     
     /// <summary>
@@ -45,11 +45,12 @@ public class UserProfile
         {
             if (!DateOfBirth.HasValue)
                 return null;
-                
-            var age = DateTime.Today.Year - DateOfBirth.Value.Year;
-            if (DateOfBirth.Value.Date > DateTime.Today.AddYears(-age))
+
+            var today = DateTime.Today;
+            var age = today.Year - DateOfBirth.Value.Year;
+            if (DateOfBirth.Value.Date > today.AddYears(-age))
                 age--;
-                
+
             return age;
         }
     }
@@ -59,25 +60,41 @@ public class UserProfile
     /// </summary>
     public void UpdateAgeGroupFromBirthDate()
     {
-        if (!CurrentAge.HasValue)
-            return;
-            
-        var currentAge = CurrentAge.Value;
-        
-        // Find the appropriate age group based on current age
-        var appropriateAgeGroup = AgeGroup.All.FirstOrDefault(ag => 
-            currentAge >= ag.MinimumAge && currentAge <= ag.MaximumAge);
-            
-        if (appropriateAgeGroup != null)
+        var ageGroup = GetAgeGroupFromBirthDate();
+        if (ageGroup != null)
         {
-            AgeGroup = appropriateAgeGroup;
+            AgeGroup = ageGroup;
         }
+    }
+
+    public AgeGroup? GetAgeGroupFromBirthDate()
+    {
+        if (!CurrentAge.HasValue)
+        {
+            return null;
+        }
+
+        var currentAge = CurrentAge.Value;
+        var ageGroups = AgeGroup.ValueMap.Values;
+        var appropriateAgeGroup = ageGroups.FirstOrDefault(ag =>
+            currentAge >= ag.MinimumAge && currentAge <= ag.MaximumAge);
+
+        if (appropriateAgeGroup == null)
+        {
+            var maxAgeGroup = ageGroups.OrderByDescending(ag => ag.MaximumAge).FirstOrDefault();
+            if (maxAgeGroup != null && currentAge > maxAgeGroup.MaximumAge)
+            {
+                appropriateAgeGroup = maxAgeGroup;
+            }
+        }
+
+        return appropriateAgeGroup;
     }
     
     /// <summary>
     /// Badges earned by this user profile
     /// </summary>
-    public virtual List<UserBadge> EarnedBadges { get; set; } = new();
+    public virtual List<UserBadge> EarnedBadges { get; private set; } = new();
     
     /// <summary>
     /// Get badges earned for a specific axis
@@ -120,139 +137,36 @@ public class UserProfile
     public string? AccountId { get; set; } // Link to Account
 }
 
-public class AgeGroup
+public class AgeGroup : StringEnum<AgeGroup>
 {
-    private static readonly Dictionary<string, AgeGroup> AgeGroupLookup = new();
-    
-    public static AgeGroup Toddlers = new("toddlers", 1, 3);     // 1-3
-    public static AgeGroup Preschoolers = new("preschoolers", 4, 5); // 4-5  
-    public static AgeGroup School = new("school", 6, 9);         // 6-9
-    public static AgeGroup Preteens = new("preteens", 10, 12);     // 10-12
-    public static AgeGroup Teens = new("teens", 13, 18);           // 13-18
-
-    public static readonly AgeGroup[] All = [Toddlers, Preschoolers, School, Preteens, Teens];
-    
-    public string Name { get; set; }
-    public int MinimumAge { get; set; }
-    public int MaximumAge { get; set; }
+    public int MinimumAge { get; }
+    public int MaximumAge { get; }
     public string AgeRange => $"{MinimumAge}-{MaximumAge}";
-    
-    private AgeGroup(string name, int minimumAge, int maximumAge)
+
+    public AgeGroup(string name, int minimumAge, int maximumAge) : base(name)
     {
-        Name = name;
         MinimumAge = minimumAge;
         MaximumAge = maximumAge;
-        AgeGroupLookup[name] = this;
     }
 
-    public AgeGroup()
-    {
-    }
-    
-    /// <summary>
-    /// Check if this age group is appropriate for a given minimum age requirement
-    /// </summary>
-    /// <param name="requiredMinimumAge">The minimum age requirement</param>
-    /// <returns>True if this age group meets the requirement</returns>
     public bool IsAppropriateFor(int requiredMinimumAge)
     {
         return MinimumAge >= requiredMinimumAge;
     }
-    
-    /// <summary>
-    /// Check if this age group is appropriate for another age group
-    /// </summary>
-    /// <param name="targetAgeGroup">The target age group to check against</param>
-    /// <returns>True if this age group meets the target's minimum age</returns>
+
     public bool IsAppropriateFor(AgeGroup targetAgeGroup)
     {
         return MinimumAge >= targetAgeGroup.MinimumAge;
     }
-    
-    /// <summary>
-    /// Get an age group by name
-    /// </summary>
-    /// <param name="name">The age group name</param>
-    /// <returns>The age group or null if not found</returns>
-    public static AgeGroup? GetByName(string name)
-    {
-        return AgeGroupLookup.TryGetValue(name?.ToLower() ?? "", out var ageGroup) ? ageGroup : null;
-    }
-    
-    /// <summary>
-    /// Check if an age group name is valid
-    /// </summary>
-    /// <param name="name">The age group name to validate</param>
-    /// <returns>True if valid</returns>
-    public static bool IsValid(string name)
-    {
-        return !string.IsNullOrEmpty(name) && AgeGroupLookup.ContainsKey(name.ToLower());
-    }
-    
-    /// <summary>
-    /// Get the age range string for an age group name
-    /// </summary>
-    /// <param name="name">The age group name</param>
-    /// <returns>The age range string or "Unknown" if not found</returns>
-    public static string GetAgeRange(string name)
-    {
-        var ageGroup = GetByName(name);
-        return ageGroup?.AgeRange ?? "Unknown";
-    }
-    
-    /// <summary>
-    /// Check if content with a minimum age group is appropriate for a target age group
-    /// </summary>
-    /// <param name="contentMinimumAgeGroup">The minimum age group for the content</param>
-    /// <param name="targetAgeGroup">The target age group</param>
-    /// <returns>True if appropriate</returns>
+
     public static bool IsContentAppropriate(string contentMinimumAgeGroup, string targetAgeGroup)
     {
-        var contentAge = GetByName(contentMinimumAgeGroup);
-        var targetAge = GetByName(targetAgeGroup);
-        
+        var contentAge = Parse(contentMinimumAgeGroup);
+        var targetAge = Parse(targetAgeGroup);
+
         if (contentAge == null || targetAge == null)
-            return true; // Default to allowing if unknown
-            
+            return true;
+
         return targetAge.MinimumAge >= contentAge.MinimumAge;
     }
-    
-    public override string ToString() => Name;
-    
-    public override bool Equals(object? obj)
-    {
-        return obj is AgeGroup other && Name == other.Name;
-    }
-    
-    public override int GetHashCode()
-    {
-        return Name.GetHashCode();
-    }
-    
-    public static bool operator ==(AgeGroup? left, AgeGroup? right)
-    {
-        return Equals(left, right);
-    }
-    
-    public static bool operator !=(AgeGroup? left, AgeGroup? right)
-    {
-        return !Equals(left, right);
-    }
-}
-
-public static class FantasyThemes
-{
-    public static readonly string[] Available =
-        [
-            "Classic Fantasy",
-            "Medieval Adventure",
-            "Magic & Wizards",
-            "Dragons & Knights",
-            "Forest Adventures",
-            "Mystery & Puzzles",
-            "Fairy Tales",
-            "Animal Companions",
-            "Underwater Worlds",
-            "Sky Adventures"
-        ];
 }

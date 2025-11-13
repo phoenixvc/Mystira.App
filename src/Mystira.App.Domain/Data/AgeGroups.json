@@ -1,0 +1,27 @@
+[
+  {
+    "Name": "toddlers",
+    "MinimumAge": 1,
+    "MaximumAge": 3
+  },
+  {
+    "Name": "preschoolers",
+    "MinimumAge": 4,
+    "MaximumAge": 5
+  },
+  {
+    "Name": "school",
+    "MinimumAge": 6,
+    "MaximumAge": 9
+  },
+  {
+    "Name": "preteens",
+    "MinimumAge": 10,
+    "MaximumAge": 12
+  },
+  {
+    "Name": "teens",
+    "MinimumAge": 13,
+    "MaximumAge": 18
+  }
+]
