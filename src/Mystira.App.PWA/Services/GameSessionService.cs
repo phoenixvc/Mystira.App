@@ -198,10 +198,29 @@ public class GameSessionService : IGameSessionService
                 // Still mark as completed locally for UI consistency
             }
 
-            CurrentGameSession.IsCompleted = true;
-            
-            // Trigger the event to notify subscribers
-            GameSessionChanged?.Invoke(this, CurrentGameSession);
+            // Mark scenario as completed for the account
+            var account = await _authService.GetCurrentAccountAsync();
+            if (account != null && CurrentGameSession != null)
+            {
+                var success = await _apiClient.CompleteScenarioForAccountAsync(account.Id, CurrentGameSession.ScenarioId);
+                if (success)
+                {
+                    _logger.LogInformation("Marked scenario {ScenarioId} as completed for account {AccountId}", 
+                        CurrentGameSession.ScenarioId, account.Id);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to mark scenario as completed for account");
+                }
+            }
+
+            if (CurrentGameSession != null)
+            {
+                CurrentGameSession.IsCompleted = true;
+
+                // Trigger the event to notify subscribers
+                GameSessionChanged?.Invoke(this, CurrentGameSession);
+            }
 
             _logger.LogInformation("Game session completed successfully");
             return true;

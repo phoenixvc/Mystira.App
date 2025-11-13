@@ -660,6 +660,67 @@ public class ApiClient : IApiClient
         }
     }
 
+    public async Task<ScenarioGameStateResponse?> GetScenariosWithGameStateAsync(string accountId)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching scenarios with game state for account: {AccountId}", accountId);
+            
+            var response = await _httpClient.GetAsync($"api/scenarios/with-game-state/{accountId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var gameStateResponse = await response.Content.ReadFromJsonAsync<ScenarioGameStateResponse>(_jsonOptions);
+                _logger.LogInformation("Successfully fetched game state for {Count} scenarios", gameStateResponse?.TotalCount ?? 0);
+                return gameStateResponse;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to fetch scenarios with game state with status: {StatusCode} for account: {AccountId}", 
+                    response.StatusCode, accountId);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching scenarios with game state for account: {AccountId}", accountId);
+            return null;
+        }
+    }
+
+    public async Task<bool> CompleteScenarioForAccountAsync(string accountId, string scenarioId)
+    {
+        try
+        {
+            _logger.LogInformation("Marking scenario {ScenarioId} as complete for account {AccountId}", scenarioId, accountId);
+            
+            var request = new CompleteScenarioRequest 
+            { 
+                AccountId = accountId, 
+                ScenarioId = scenarioId 
+            };
+            
+            var response = await _httpClient.PostAsJsonAsync("api/gamesessions/complete-scenario", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Successfully marked scenario {ScenarioId} as complete for account {AccountId}", 
+                    scenarioId, accountId);
+                return true;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to complete scenario with status: {StatusCode}", response.StatusCode);
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error completing scenario {ScenarioId} for account {AccountId}", scenarioId, accountId);
+            return false;
+        }
+    }
+
     public string GetApiBaseAddress()
     {
         return _httpClient.BaseAddress!.ToString();
