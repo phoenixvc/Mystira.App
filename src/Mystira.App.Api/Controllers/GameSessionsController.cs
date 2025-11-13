@@ -230,7 +230,6 @@ public class GameSessionsController : ControllerBase
     /// Mark a scenario as completed for an account
     /// </summary>
     [HttpPost("complete-scenario")]
-    [Authorize]
     public async Task<ActionResult> CompleteScenarioForAccount([FromBody] CompleteScenarioRequest request)
     {
         try

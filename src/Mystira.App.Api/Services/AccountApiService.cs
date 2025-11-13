@@ -214,7 +214,10 @@ public class AccountApiService : IAccountApiService
                 _logger.LogWarning("Account not found: {AccountId}", accountId);
                 return false;
             }
-
+            
+            if (account.CompletedScenarioIds == null)
+                account.CompletedScenarioIds = new List<string>();
+            
             if (!account.CompletedScenarioIds.Contains(scenarioId))
             {
                 account.CompletedScenarioIds.Add(scenarioId);

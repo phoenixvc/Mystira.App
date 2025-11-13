@@ -121,7 +121,6 @@ public class ScenariosController : ControllerBase
     /// Get scenarios with game state for account
     /// </summary>
     [HttpGet("with-game-state/{accountId}")]
-    [Authorize]
     public async Task<ActionResult<ScenarioGameStateResponse>> GetScenariosWithGameState(string accountId)
     {
         try

@@ -214,10 +214,13 @@ public class GameSessionService : IGameSessionService
                 }
             }
 
-            CurrentGameSession.IsCompleted = true;
-            
-            // Trigger the event to notify subscribers
-            GameSessionChanged?.Invoke(this, CurrentGameSession);
+            if (CurrentGameSession != null)
+            {
+                CurrentGameSession.IsCompleted = true;
+
+                // Trigger the event to notify subscribers
+                GameSessionChanged?.Invoke(this, CurrentGameSession);
+            }
 
             _logger.LogInformation("Game session completed successfully");
             return true;
