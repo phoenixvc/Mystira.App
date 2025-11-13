@@ -6,7 +6,7 @@ public abstract class StringEnum<T> where T : StringEnum<T>
 {
     private static readonly Lazy<Dictionary<string, T>> LazyValueMap = new(GetAll);
 
-    private static Dictionary<string, T> ValueMap => LazyValueMap.Value;
+    internal static Dictionary<string, T> ValueMap => LazyValueMap.Value;
 
     public string Value { get; }
 

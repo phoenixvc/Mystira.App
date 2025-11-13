@@ -22,7 +22,7 @@ public class UserProfile
     public bool IsNpc { get; set; } = false;
     
     // Store as string for database compatibility, but provide AgeGroup access
-    private string _ageGroup = AgeGroup.School.Value;
+    private string _ageGroup = "school";
     public string AgeGroupName 
     { 
         get => _ageGroup; 
@@ -32,8 +32,8 @@ public class UserProfile
     // Convenience property to get AgeGroup object
     public AgeGroup AgeGroup 
     { 
-        get => AgeGroup.Parse(_ageGroup) ?? AgeGroup.School;
-        set => _ageGroup = value?.Value ?? AgeGroup.School.Value;
+        get => AgeGroup.Parse(_ageGroup) ?? new AgeGroup("school", 6, 9);
+        set => _ageGroup = value?.Value ?? "school";
     }
     
     /// <summary>

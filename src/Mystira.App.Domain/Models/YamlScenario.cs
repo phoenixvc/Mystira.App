@@ -64,10 +64,10 @@ public class YamlScenario
             Tags = Tags,
             Difficulty = Enum.Parse<DifficultyLevel>(Difficulty),
             SessionLength = Enum.Parse<SessionLength>(SessionLength),
-            Archetypes = Archetypes,
+            Archetypes = Archetypes.Select(a => Archetype.Parse(a)).ToList(),
             AgeGroup = AgeGroup,
             MinimumAge = MinimumAge,
-            CoreAxes = axes,
+            CoreAxes = axes.Select(a => CoreAxis.Parse(a)).ToList(),
             CreatedAt = DateTime.TryParse(CreatedAt, out var createdAt) ? createdAt : DateTime.UtcNow,
             Scenes = Scenes.Select(s => s.ToDomainModel()).ToList()
         };
@@ -197,7 +197,7 @@ public class YamlEchoLog
     {
         return new EchoLog
         {
-            EchoType = EchoType,
+            EchoType = EchoType.Parse(EchoType),
             Description = Description,
             Strength = Strength,
             Timestamp = DateTime.UtcNow
@@ -251,7 +251,7 @@ public class YamlEchoRevealReference
     {
         return new EchoReveal
         {
-            EchoType = EchoType,
+            EchoType = EchoType.Parse(EchoType),
             MinStrength = MinStrength,
             TriggerSceneId = TriggerSceneId,
             RevealMechanic = RevealMechanic,
