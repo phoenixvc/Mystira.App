@@ -30,6 +30,10 @@ public interface IApiClient
     Task<UserProfile?> UpdateProfileAsync(string id, UpdateUserProfileRequest request);
     Task<bool> DeleteProfileAsync(string id);
     
+    // Game state endpoints
+    Task<ScenarioGameStateResponse?> GetScenariosWithGameStateAsync(string accountId);
+    Task<bool> CompleteScenarioForAccountAsync(string accountId, string scenarioId);
+    
     string GetApiBaseAddress();
     
     string GetMediaResourceEndpointUrl(string mediaId);

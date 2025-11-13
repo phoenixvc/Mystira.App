@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Mystira.App.Domain.Models;
 using Mystira.App.Api.Models;
 using Mystira.App.Api.Services;
@@ -111,6 +112,31 @@ public class ScenariosController : ControllerBase
             return StatusCode(500, new ErrorResponse 
             { 
                 Message = "Internal server error while fetching featured scenarios",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get scenarios with game state for account
+    /// </summary>
+    [HttpGet("with-game-state/{accountId}")]
+    [Authorize]
+    public async Task<ActionResult<ScenarioGameStateResponse>> GetScenariosWithGameState(string accountId)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching scenarios with game state for account: {AccountId}", accountId);
+            
+            var result = await _scenarioService.GetScenariosWithGameStateAsync(accountId);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting scenarios with game state for account {AccountId}", accountId);
+            return StatusCode(500, new ErrorResponse 
+            { 
+                Message = "Internal server error while fetching scenarios with game state",
                 TraceId = HttpContext.TraceIdentifier
             });
         }
