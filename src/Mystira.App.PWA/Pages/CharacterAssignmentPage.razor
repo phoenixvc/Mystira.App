@@ -472,7 +472,8 @@ else
                 AccountId = account.Id,
                 ProfileId = account.UserProfileIds.FirstOrDefault() ?? "default-profile",
                 CharacterAssignments = characterAssignments,
-                TargetAgeGroup = assignmentData!.Scenario.AgeGroup ?? "6-9"
+                TargetAgeGroup = assignmentData!.Scenario.AgeGroup ?? "6-9",
+                Scenario = assignmentData!.Scenario // Pass the full scenario for local session setup
             };
 
             var success = await CharacterAssignmentService.StartGameSessionWithAssignmentsAsync(request);

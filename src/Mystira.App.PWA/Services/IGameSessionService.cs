@@ -13,4 +13,5 @@ public interface IGameSessionService
     Task<bool> GoToNextSceneAsync();
     Task<bool> CompleteGameSessionAsync();
     void ClearGameSession();
+    void SetCurrentGameSession(GameSession? session);
 }

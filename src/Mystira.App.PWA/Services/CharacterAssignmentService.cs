@@ -8,15 +8,18 @@ public class CharacterAssignmentService : ICharacterAssignmentService
     private readonly ILogger<CharacterAssignmentService> _logger;
     private readonly IApiClient _apiClient;
     private readonly IAuthService _authService;
+    private readonly IGameSessionService _gameSessionService;
 
     public CharacterAssignmentService(
         ILogger<CharacterAssignmentService> logger,
         IApiClient apiClient,
-        IAuthService authService)
+        IAuthService authService,
+        IGameSessionService gameSessionService)
     {
         _logger = logger;
         _apiClient = apiClient;
         _authService = authService;
+        _gameSessionService = gameSessionService;
     }
 
     public async Task<CharacterAssignmentResponse> GetCharacterAssignmentDataAsync(string scenarioId)
@@ -71,23 +74,89 @@ public class CharacterAssignmentService : ICharacterAssignmentService
 
             // Use the existing API client method for now - this will need to be updated on the backend
             // to support character assignments
-            var gameSession = await _apiClient.StartGameSessionAsync(
+            var apiGameSession = await _apiClient.StartGameSessionAsync(
                 request.ScenarioId,
                 request.AccountId,
                 request.ProfileId,
                 playerNames,
                 request.TargetAgeGroup);
 
-            if (gameSession == null)
+            if (apiGameSession == null)
             {
                 _logger.LogWarning("Failed to start game session for scenario: {ScenarioId}", request.ScenarioId);
                 return false;
             }
 
+            // Populate the local game session so GameSessionPage can access it
+            if (request.Scenario != null)
+            {
+                _logger.LogInformation("Populating local game session with scenario data");
+                
+                // Find the starting scene - look for a scene that's not referenced by any other scene
+                var scenario = request.Scenario;
+                var allReferencedSceneIds = scenario.Scenes
+                    .Where(s => !string.IsNullOrEmpty(s.NextSceneId))
+                    .Select(s => s.NextSceneId)
+                    .Concat(scenario.Scenes
+                        .SelectMany(s => s.Branches)
+                        .Where(b => !string.IsNullOrEmpty(b.NextSceneId))
+                        .Select(b => b.NextSceneId))
+                    .Where(id => !string.IsNullOrEmpty(id))
+                    .ToHashSet();
+                
+                var startingScene = scenario.Scenes.FirstOrDefault(s => !allReferencedSceneIds.Contains(s.Id));
+                
+                if (startingScene == null)
+                {
+                    // Fallback to first scene if we can't determine the starting scene
+                    startingScene = scenario.Scenes.FirstOrDefault();
+                }
+                
+                if (startingScene != null)
+                {
+                    // Resolve media URLs for the starting scene
+                    startingScene.AudioUrl = !string.IsNullOrEmpty(startingScene.Media?.Audio) 
+                        ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Audio) 
+                        : null;
+                    startingScene.ImageUrl = !string.IsNullOrEmpty(startingScene.Media?.Image) 
+                        ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Image) 
+                        : null;
+                    startingScene.VideoUrl = !string.IsNullOrEmpty(startingScene.Media?.Video) 
+                        ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Video) 
+                        : null;
+
+                    // Create local game session
+                    var localGameSession = new GameSession
+                    {
+                        Id = apiGameSession.Id,
+                        Scenario = scenario,
+                        ScenarioId = scenario.Id,
+                        ScenarioName = scenario.Title,
+                        CurrentScene = startingScene,
+                        StartedAt = apiGameSession.StartedAt,
+                        CompletedScenes = new List<Scene>(),
+                        IsCompleted = false
+                    };
+
+                    // Set the current game session in GameSessionService
+                    _gameSessionService.SetCurrentGameSession(localGameSession);
+                    
+                    _logger.LogInformation("Local game session populated with starting scene: {SceneTitle}", startingScene.Title);
+                }
+                else
+                {
+                    _logger.LogWarning("No starting scene found for scenario: {ScenarioId}", request.ScenarioId);
+                }
+            }
+            else
+            {
+                _logger.LogWarning("No scenario provided in request, local game session will not be populated");
+            }
+
             // TODO: Save character assignments to the game session
             // This would require a new API endpoint to update the game session with character assignments
 
-            _logger.LogInformation("Game session started successfully with ID: {SessionId}", gameSession.Id);
+            _logger.LogInformation("Game session started successfully with ID: {SessionId}", apiGameSession.Id);
             return true;
         }
         catch (Exception ex)
