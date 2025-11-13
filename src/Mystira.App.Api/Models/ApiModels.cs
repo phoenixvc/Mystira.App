@@ -40,16 +40,6 @@ public class CreateUserProfileRequest
     /// Indicates if the user has completed onboarding
     /// </summary>
     public bool HasCompletedOnboarding { get; set; }
-    
-    /// <summary>
-    /// Pronouns for the profile (e.g., they/them, she/her, he/him)
-    /// </summary>
-    public string? Pronouns { get; set; }
-    
-    /// <summary>
-    /// Bio or description for the profile
-    /// </summary>
-    public string? Bio { get; set; }
 }
 
 public class UpdateUserProfileRequest

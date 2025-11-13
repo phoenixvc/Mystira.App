@@ -101,16 +101,6 @@ public class UserProfile
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string? AccountId { get; set; } // Link to Account
-    
-    /// <summary>
-    /// Pronouns for the profile (e.g., they/them, she/her, he/him)
-    /// </summary>
-    public string? Pronouns { get; set; }
-    
-    /// <summary>
-    /// Bio or description for the profile
-    /// </summary>
-    public string? Bio { get; set; }
 }
 
 public class AgeGroup

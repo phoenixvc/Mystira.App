@@ -36,6 +36,7 @@ public class UserProfileApiService : IUserProfileApiService
         var profile = new UserProfile
         {
             Name = request.Name,
+            AccountId = request.AccountId,
             PreferredFantasyThemes = request.PreferredFantasyThemes,
             AgeGroup = request.AgeGroup,
             DateOfBirth = request.DateOfBirth,

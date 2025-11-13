@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Domain.Models;
-using System.Linq;
 using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
 
@@ -37,6 +36,7 @@ public class UserProfileApiService : IUserProfileApiService
         var profile = new UserProfile
         {
             Name = request.Name,
+            AccountId = request.AccountId,
             PreferredFantasyThemes = request.PreferredFantasyThemes,
             AgeGroup = request.AgeGroup,
             DateOfBirth = request.DateOfBirth,
@@ -156,7 +156,7 @@ public class UserProfileApiService : IUserProfileApiService
         if (request.AgeGroup != null)
         {
             // Validate age group
-            if (!AgeGroup.IsValid(request.AgeGroup))
+            if ((new[] {"1-2", "3-5", "6-9", "10-12", "12-18"}).Contains(request.AgeGroup))
                 throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All.Select(a => a.Name))}");
             
             profile.AgeGroup = request.AgeGroup;
