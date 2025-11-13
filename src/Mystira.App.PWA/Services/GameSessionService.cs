@@ -21,6 +21,9 @@ public class GameSessionService : IGameSessionService
         }
     }
 
+    // Store character assignments for text replacement
+    private List<CharacterAssignment> _characterAssignments = new();
+
     public GameSessionService(ILogger<GameSessionService> logger, IApiClient apiClient, IAuthService authService)
     {
         _logger = logger;
@@ -304,11 +307,55 @@ public class GameSessionService : IGameSessionService
     {
         _logger.LogInformation("Clearing game session");
         CurrentGameSession = null;
+        _characterAssignments.Clear();
     }
 
     public void SetCurrentGameSession(GameSession? session)
     {
         _logger.LogInformation("Setting current game session: {SessionId}", session?.Id ?? "null");
         CurrentGameSession = session;
+    }
+
+    /// <summary>
+    /// Sets character assignments for the current session (for text replacement)
+    /// </summary>
+    public void SetCharacterAssignments(List<CharacterAssignment> assignments)
+    {
+        _characterAssignments = assignments ?? new List<CharacterAssignment>();
+        _logger.LogInformation("Set {Count} character assignments for text replacement", _characterAssignments.Count);
+    }
+
+    /// <summary>
+    /// Replaces character placeholders [c:CharacterName] with player names in text
+    /// </summary>
+    public string ReplaceCharacterPlaceholders(string text)
+    {
+        if (string.IsNullOrEmpty(text) || !_characterAssignments.Any())
+            return text;
+
+        foreach (var assignment in _characterAssignments)
+        {
+            if (assignment.PlayerAssignment != null)
+            {
+                string playerName = assignment.PlayerAssignment.Type switch
+                {
+                    "Profile" => assignment.PlayerAssignment.ProfileName ?? "Player",
+                    "Guest" => assignment.PlayerAssignment.GuestName ?? "Player",
+                    _ => "Player"
+                };
+
+                string placeholder = $"[c:{assignment.CharacterName}]";
+                text = text.Replace(placeholder, playerName);
+            }
+        }
+
+        // Replace any remaining [c:...] patterns with "Player"
+        var remainingPattern = System.Text.RegularExpressions.Regex.Matches(text, @"\[c:([^\]]+)\]");
+        foreach (System.Text.RegularExpressions.Match match in remainingPattern)
+        {
+            text = text.Replace(match.Value, "Player");
+        }
+
+        return text;
     }
 }
