@@ -8,7 +8,7 @@ public static class BadgeThresholds
     public static readonly Dictionary<AgeGroup, Dictionary<string, float>> AgeGroupThresholds = new()
     {
         {
-            AgeGroup.Parse("school"), // Ages 6-9
+            AgeGroup.Parse("school")!, // Ages 6-9
             new Dictionary<string, float>
             {
                 { "kindness", 0.5f },
@@ -18,7 +18,7 @@ public static class BadgeThresholds
             }
         },
         {
-            AgeGroup.Parse("preteens"), // Ages 10-12
+            AgeGroup.Parse("preteens")!, // Ages 10-12
             new Dictionary<string, float>
             {
                 { "loyalty", 0.6f },
@@ -29,7 +29,7 @@ public static class BadgeThresholds
             }
         },
         {
-            AgeGroup.Parse("teens"), // Ages 13-18
+            AgeGroup.Parse("teens")!, // Ages 13-18
             new Dictionary<string, float>
             {
                 { "integrity", 0.7f },
