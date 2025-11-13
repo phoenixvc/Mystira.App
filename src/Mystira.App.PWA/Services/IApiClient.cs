@@ -22,7 +22,7 @@ public interface IApiClient
     Task<List<Character>?> GetCharactersAsync();
     
     // Profile endpoints
-    Task<UserProfile?> GetProfileAsync(string name);
+    Task<UserProfile?> GetProfileAsync(string id);
     Task<UserProfile?> GetProfileByIdAsync(string id);
     Task<List<UserProfile>?> GetProfilesByAccountAsync(string accountId);
     Task<UserProfile?> CreateProfileAsync(CreateUserProfileRequest request);

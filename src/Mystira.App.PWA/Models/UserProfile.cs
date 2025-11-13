@@ -19,9 +19,6 @@ public class UserProfile
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public string? AccountId { get; set; }
-    public string? Pronouns { get; set; }
-    public string? Bio { get; set; }
-    
     public string DisplayAgeRange => AgeRanges.GetDisplayName(AgeGroup);
 }
 
@@ -38,8 +35,6 @@ public class CreateUserProfileRequest
     public string AgeGroup { get; set; }
     public bool HasCompletedOnboarding { get; set; } = false;
     public string? AccountId { get; set; }
-    public string? Pronouns { get; set; }
-    public string? Bio { get; set; }
 }
 
 /// <summary>
@@ -55,8 +50,6 @@ public class UpdateUserProfileRequest
     public string? AgeGroup { get; set; }
     public bool? HasCompletedOnboarding { get; set; }
     public string? AccountId { get; set; }
-    public string? Pronouns { get; set; }
-    public string? Bio { get; set; }
 }
 
 /// <summary>

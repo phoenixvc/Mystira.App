@@ -110,11 +110,3 @@ public static class AgeRanges
         };
     }
 }
-
-/// <summary>
-/// Pronoun options for guest profiles
-/// </summary>
-public static class PronounOptions
-{
-    public static readonly string[] All = ["he/him", "she/her", "they/them", "he/they", "she/they", "prefer not to say"];
-}

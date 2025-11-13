@@ -452,35 +452,34 @@ public class ApiClient : IApiClient
         }
     }
 
-    public async Task<UserProfile?> GetProfileAsync(string name)
+    public async Task<UserProfile?> GetProfileAsync(string id)
     {
         try
         {
-            _logger.LogInformation("Fetching profile {Name} from API...", name);
+            _logger.LogInformation("Fetching profile {Id} from API...", id);
             
-            var encodedName = Uri.EscapeDataString(name);
-            var response = await _httpClient.GetAsync($"api/userprofiles/{encodedName}");
+            var response = await _httpClient.GetAsync($"api/userprofiles/{id}");
             
             if (response.IsSuccessStatusCode)
             {
                 var profile = await response.Content.ReadFromJsonAsync<UserProfile>(_jsonOptions);
-                _logger.LogInformation("Successfully fetched profile {Name}", name);
+                _logger.LogInformation("Successfully fetched profile {Id}", id);
                 return profile;
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                _logger.LogWarning("Profile not found: {Name}", name);
+                _logger.LogWarning("Profile not found: {Id}", id);
                 return null;
             }
             else
             {
-                _logger.LogWarning("API request failed with status: {StatusCode} for profile: {Name}", response.StatusCode, name);
+                _logger.LogWarning("API request failed with status: {StatusCode} for profile: {Id}", response.StatusCode, id);
                 return null;
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching profile {Name} from API.", name);
+            _logger.LogError(ex, "Error fetching profile {Id} from API.", id);
             return null;
         }
     }
@@ -523,34 +522,19 @@ public class ApiClient : IApiClient
         {
             _logger.LogInformation("Fetching profiles for account {AccountId} from API...", accountId);
             
-            // First get the account to get profile IDs
-            var accountResponse = await _httpClient.GetAsync($"api/accounts/{accountId}");
-            if (!accountResponse.IsSuccessStatusCode)
+            var response = await _httpClient.GetAsync($"api/userprofiles/account/{accountId}");
+            
+            if (response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Failed to fetch account {AccountId} with status: {StatusCode}", accountId, accountResponse.StatusCode);
+                var profiles = await response.Content.ReadFromJsonAsync<List<UserProfile>>(_jsonOptions);
+                _logger.LogInformation("Successfully fetched {Count} profiles for account {AccountId}", profiles?.Count ?? 0, accountId);
+                return profiles;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to fetch profiles with status: {StatusCode} for account: {AccountId}", response.StatusCode, accountId);
                 return null;
             }
-
-            var account = await accountResponse.Content.ReadFromJsonAsync<Account>(_jsonOptions);
-            if (account?.UserProfileIds == null || !account.UserProfileIds.Any())
-            {
-                _logger.LogInformation("No profiles found for account {AccountId}", accountId);
-                return new List<UserProfile>();
-            }
-
-            // Fetch each profile individually
-            var profiles = new List<UserProfile>();
-            foreach (var profileId in account.UserProfileIds)
-            {
-                var profile = await GetProfileByIdAsync(profileId);
-                if (profile != null)
-                {
-                    profiles.Add(profile);
-                }
-            }
-
-            _logger.LogInformation("Successfully fetched {Count} profiles for account {AccountId}", profiles.Count, accountId);
-            return profiles;
         }
         catch (Exception ex)
         {
@@ -619,7 +603,7 @@ public class ApiClient : IApiClient
         {
             _logger.LogInformation("Updating profile {Id} via API...", id);
             
-            var response = await _httpClient.PutAsJsonAsync($"api/userprofiles/id/{id}", request, _jsonOptions);
+            var response = await _httpClient.PutAsJsonAsync($"api/userprofiles/{id}", request, _jsonOptions);
             
             if (response.IsSuccessStatusCode)
             {
