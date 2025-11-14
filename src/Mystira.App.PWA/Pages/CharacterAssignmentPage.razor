@@ -347,7 +347,7 @@ else
 
     private async Task LoadCharacterAssignmentData()
     {
-        assignmentData = await CharacterAssignmentService.GetCharacterAssignmentDataAsync(ScenarioId);
+        assignmentData = await CharacterAssignmentService.GetCharacterAssignmentDataAsync(ScenarioId, characterAssignments);
         
         if (assignmentData != null)
         {

@@ -211,7 +211,7 @@ public class AzureEmailService : IEmailService
     </div>
 
     <div class=""footer"">
-        <p>&copy; 2024 Mystira. All rights reserved.</p>
+        <p>&copy; 2025 Mystira. All rights reserved.</p>
     </div>
 </body>
 </html>";
@@ -303,7 +303,7 @@ public class AzureEmailService : IEmailService
     </div>
 
     <div class=""footer"">
-        <p>&copy; 2024 Mystira. All rights reserved.</p>
+        <p>&copy; 2025 Mystira. All rights reserved.</p>
     </div>
 </body>
 </html>";
