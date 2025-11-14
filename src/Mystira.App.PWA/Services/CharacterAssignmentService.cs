@@ -22,7 +22,8 @@ public class CharacterAssignmentService : ICharacterAssignmentService
         _gameSessionService = gameSessionService;
     }
 
-    public async Task<CharacterAssignmentResponse> GetCharacterAssignmentDataAsync(string scenarioId)
+    public async Task<CharacterAssignmentResponse> GetCharacterAssignmentDataAsync(string scenarioId,
+        List<CharacterAssignment> existingAssignments)
     {
         try
         {
@@ -41,6 +42,17 @@ public class CharacterAssignmentService : ICharacterAssignmentService
 
             // Create character assignments (always 4 slots)
             var characterAssignments = await CreateCharacterAssignmentsAsync(scenario);
+
+            // Update character assignments with existing  data
+            foreach (var assignment in existingAssignments)
+            {
+                if (assignment.PlayerAssignment == null) continue; // Skip unused assignments
+
+                var existingAssignment = characterAssignments.FirstOrDefault(a => a.CharacterId == assignment.CharacterId);
+                if (existingAssignment == null) continue;
+                existingAssignment.PlayerAssignment = assignment.PlayerAssignment;
+                existingAssignment.IsUnused = assignment.IsUnused;
+            }
 
             _logger.LogInformation("Created {Count} character assignments for scenario: {ScenarioId}", 
                 characterAssignments.Count, scenarioId);
