@@ -53,6 +53,17 @@
       }
     },
     {
+      "route": "/*.html.gz",
+      "methods": ["GET"],
+      "allowedRoles": ["anonymous", "authenticated"],
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0",
+        "Content-Encoding": "gzip"
+      }
+    },
+    {
       "route": "/_framework/*.wasm",
       "methods": ["GET"],
       "allowedRoles": ["anonymous", "authenticated"],
@@ -60,6 +71,28 @@
         "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
         "Pragma": "no-cache",
         "Expires": "0"
+      }
+    },
+    {
+      "route": "/_framework/*.wasm.br",
+      "methods": ["GET"],
+      "allowedRoles": ["anonymous", "authenticated"],
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0",
+        "Content-Encoding": "br"
+      }
+    },
+    {
+      "route": "/_framework/*.wasm.gz",
+      "methods": ["GET"],
+      "allowedRoles": ["anonymous", "authenticated"],
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0",
+        "Content-Encoding": "gzip"
       }
     },
     {
@@ -81,6 +114,39 @@
         "Pragma": "no-cache",
         "Expires": "0",
         "Content-Encoding": "br"
+      }
+    },
+    {
+      "route": "/_framework/*.js.gz",
+      "methods": ["GET"],
+      "allowedRoles": ["anonymous", "authenticated"],
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0",
+        "Content-Encoding": "gzip"
+      }
+    },
+    {
+      "route": "/_framework/*.dll.br",
+      "methods": ["GET"],
+      "allowedRoles": ["anonymous", "authenticated"],
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0",
+        "Content-Encoding": "br"
+      }
+    },
+    {
+      "route": "/_framework/*.dll.gz",
+      "methods": ["GET"],
+      "allowedRoles": ["anonymous", "authenticated"],
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0",
+        "Content-Encoding": "gzip"
       }
     },
     {

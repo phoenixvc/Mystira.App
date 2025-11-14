@@ -99,18 +99,24 @@ self.addEventListener('fetch', event => {
     const isIcon = url.pathname.match(/\.(ico|png)$/i) &&
         (url.pathname.includes('/icons/') || url.pathname.includes('/favicon.ico'));
 
-    // Check if request is for HTML files (including index.html and .html.br)
+    // Check if request is for HTML files (including index.html, .html.br, .html.gz)
     // These should NOT be cached to avoid SRI integrity issues
     const isHtmlFile = url.pathname.endsWith('.html') || 
                       url.pathname.endsWith('.html.br') ||
+                      url.pathname.endsWith('.html.gz') ||
                       url.pathname === '/';
 
     // Check if request is for framework files (.wasm, blazor.webassembly.js, etc.)
     // These should NOT be cached to ensure SRI hashes are always fresh
     const isFrameworkFile = url.pathname.includes('/_framework/') && 
                            (url.pathname.endsWith('.wasm') || 
+                            url.pathname.endsWith('.wasm.br') ||
+                            url.pathname.endsWith('.wasm.gz') ||
                             url.pathname.includes('blazor.webassembly.js') ||
-                            url.pathname.endsWith('.js.br'));
+                            url.pathname.endsWith('.js.br') ||
+                            url.pathname.endsWith('.js.gz') ||
+                            url.pathname.endsWith('.dll.br') ||
+                            url.pathname.endsWith('.dll.gz'));
 
     // Check if request is for core PWA files (non-HTML, non-framework)
     const isCoreFile = coreFilesToCache.some(file => {

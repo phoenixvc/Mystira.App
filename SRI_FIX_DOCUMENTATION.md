@@ -56,9 +56,15 @@ Created comprehensive cache control headers for all critical files:
 - `/index.html` - Main HTML file
 - `/*.html` - All HTML files
 - `/*.html.br` - Brotli-compressed HTML
+- `/*.html.gz` - Gzip-compressed HTML
 - `/_framework/*.wasm` - WebAssembly files
+- `/_framework/*.wasm.br` - Brotli-compressed WASM
+- `/_framework/*.wasm.gz` - Gzip-compressed WASM
 - `/_framework/*.js` - Framework JavaScript
 - `/_framework/*.js.br` - Brotli-compressed JS
+- `/_framework/*.js.gz` - Gzip-compressed JS
+- `/_framework/*.dll.br` - Brotli-compressed assemblies
+- `/_framework/*.dll.gz` - Gzip-compressed assemblies
 - `/manifest.json` - PWA manifest
 - `/service-worker.js` - Service worker itself
 
@@ -115,12 +121,24 @@ The solution handles various caching layers:
 4. **CDN/Proxy Cache**: Prevented by `no-cache` directive
 5. **Brotli Compression Cache**: Same cache headers apply to .br files
 
+## Compression Optimization
+
+Starting from Release builds, Blazor compression is enabled:
+- **Debug builds**: Compression disabled for faster iteration during development
+- **Release builds**: Compression enabled to generate compressed files
+- **Compression formats**: Both gzip (.gz) and Brotli (.br) are supported for optimal compression
+- **Compressed files**: .wasm.gz, .wasm.br, .dll.gz, .dll.br, .js.gz, .js.br, .html.gz, .html.br are served with proper Content-Encoding headers
+- **Atomic deployment**: When new framework files are built, their compressed variants are also regenerated
+- **SRI compatibility**: Compressed files maintain SRI hash integrity through Azure Static Web Apps configuration
+- **Browser compatibility**: Browsers negotiate which compression format to accept; Azure Static Web Apps serves the best available variant
+
 ## Backward Compatibility
 
 - Changes are transparent to users
 - Improved reliability for new users and installations
 - Existing cached files will be naturally invalidated through the network-first strategy
 - No breaking changes to the application code
+- Compression optimization only applies to Release builds, no impact on Development builds
 
 ## Testing the Fix
 
@@ -146,17 +164,25 @@ The solution handles various caching layers:
    - Updated cache files list (removed index.html and blazor.webassembly.js)
    - Added network-first strategy for HTML and framework files
    - Added detection logic for framework files
+   - Added support for compressed framework files (.wasm.br, .dll.br)
 
 3. **src/Mystira.App.PWA/wwwroot/service-worker.published.js**
    - Added fetch event handler
    - Implements network-first strategy for HTML and framework files
    - Maintains cache clearing behavior
+   - Added support for compressed framework files (.wasm.br, .dll.br)
 
-4. **src/Mystira.App.PWA/wwwroot/staticwebapp.config.json** (NEW)
+4. **src/Mystira.App.PWA/wwwroot/staticwebapp.config.json** (ENHANCED)
    - Created Azure Static Web Apps configuration
    - Defines cache headers for all resource types
    - No-cache for HTML, framework files, and service worker
    - Long-cache for versioned assets (CSS, JS, icons)
+   - Added routes for compressed framework files (.wasm.br, .dll.br)
+
+5. **src/Mystira.App.PWA/Mystira.App.PWA.csproj** (ENHANCED)
+   - Enabled BlazorEnableCompression for Release builds
+   - Maintains disabled compression for Debug builds for faster iteration
+   - Ensures .br compressed files are generated during Release builds
 
 ## Future Enhancements
 

@@ -52,13 +52,19 @@ self.addEventListener('fetch', (event) => {
     // Check if request is for HTML files
     const isHtmlFile = url.pathname.endsWith('.html') || 
                       url.pathname.endsWith('.html.br') ||
+                      url.pathname.endsWith('.html.gz') ||
                       url.pathname === '/';
 
     // Check if request is for framework files
     const isFrameworkFile = url.pathname.includes('/_framework/') && 
                            (url.pathname.endsWith('.wasm') || 
+                            url.pathname.endsWith('.wasm.br') ||
+                            url.pathname.endsWith('.wasm.gz') ||
                             url.pathname.includes('blazor.webassembly.js') ||
-                            url.pathname.endsWith('.js.br'));
+                            url.pathname.endsWith('.js.br') ||
+                            url.pathname.endsWith('.js.gz') ||
+                            url.pathname.endsWith('.dll.br') ||
+                            url.pathname.endsWith('.dll.gz'));
 
     // For HTML and framework files, use network-first strategy to ensure SRI hashes are fresh
     if (isHtmlFile || isFrameworkFile) {
