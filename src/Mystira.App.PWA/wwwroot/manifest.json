@@ -10,6 +10,7 @@
   "lang": "en",
   "orientation": "portrait-primary",
   "categories": ["games", "entertainment", "education"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icons/icon-192.png",
@@ -54,7 +55,7 @@
       "short_name": "Adventure",
       "description": "Start a new D&D adventure",
       "url": "/",
-      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
     }
   ],
   "screenshots": [
