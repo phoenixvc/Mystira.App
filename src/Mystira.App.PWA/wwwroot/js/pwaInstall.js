@@ -132,7 +132,7 @@ function stopEngagementTracking() {
     }
 }
 
-function isAppInstalled() {
+export function isAppInstalled() {
     return window.matchMedia('(display-mode: standalone)').matches ||
         window.matchMedia('(display-mode: fullscreen)').matches ||
         window.matchMedia('(display-mode: minimal-ui)').matches ||
