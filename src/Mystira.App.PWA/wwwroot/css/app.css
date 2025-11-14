@@ -149,12 +149,6 @@ html, body {
     transform: translateY(0);
 }
 
-@media (min-width: 1025px) {
-    .pwa-install-container {
-        display: none !important;
-    }
-}
-
 @media (max-width: 576px) {
     .pwa-install-container {
         bottom: 1rem;

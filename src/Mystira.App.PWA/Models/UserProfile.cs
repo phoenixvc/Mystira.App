@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace Mystira.App.PWA.Models;
 
 /// <summary>
@@ -27,6 +25,7 @@ public class UserProfile
 /// </summary>
 public class CreateUserProfileRequest
 {
+    public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Name { get; set; } = string.Empty;
     public List<string> PreferredFantasyThemes { get; set; } = new();
     public DateTime? DateOfBirth { get; set; }

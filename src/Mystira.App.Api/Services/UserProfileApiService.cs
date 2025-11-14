@@ -20,7 +20,7 @@ public class UserProfileApiService : IUserProfileApiService
     public async Task<UserProfile> CreateProfileAsync(CreateUserProfileRequest request)
     {
         // Check if profile already exists
-        var existingProfile = await GetProfileAsync(request.Name);
+        var existingProfile = await GetProfileByIdAsync(request.Id);
         if (existingProfile != null)
             throw new ArgumentException($"Profile already exists for name: {request.Name}");
 
@@ -71,15 +71,15 @@ public class UserProfileApiService : IUserProfileApiService
         // Ensure name is unique for guest profiles
         var baseName = name;
         var counter = 1;
-        while (await GetProfileAsync(name) != null)
+        while (await GetProfileByIdAsync(request.Id) != null)
         {
             name = $"{baseName} {counter}";
             counter++;
         }
 
         // Validate age group
-        if (!AgeGroup.IsValid(request.AgeGroup))
-            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All.Select(a => a.Name))}");
+        if (!AllowableAgeGroups.Contains(request.AgeGroup))
+            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AllowableAgeGroups)}");
 
         var profile = new UserProfile
         {
@@ -122,23 +122,16 @@ public class UserProfileApiService : IUserProfileApiService
         return createdProfiles;
     }
 
-    public async Task<UserProfile?> GetProfileAsync(string name)
-    {
-        return await _context.UserProfiles
-            .Include(p => p.EarnedBadges)
-            .FirstOrDefaultAsync(p => p.Name == name);
-    }
-
     public async Task<UserProfile?> GetProfileByIdAsync(string id)
     {
         return await _context.UserProfiles
             .Include(p => p.EarnedBadges)
             .FirstOrDefaultAsync(p => p.Id == id);
-    }
+     }
 
-    public async Task<UserProfile?> UpdateProfileAsync(string name, UpdateUserProfileRequest request)
+    public async Task<UserProfile?> UpdateProfileByIdAsync(string id, UpdateUserProfileRequest request)
     {
-        var profile = await GetProfileAsync(name);
+        var profile = await GetProfileByIdAsync(id);
         if (profile == null)
             return null;
 
@@ -158,7 +151,7 @@ public class UserProfileApiService : IUserProfileApiService
             // Validate age group
             if (!new[] {"1-2", "3-5", "6-9", "10-12", "13-18"}.Contains(request.AgeGroup))
                 throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All.Select(a => a.Name))}");
-            
+
             profile.AgeGroup = request.AgeGroup;
         }
 
@@ -184,13 +177,13 @@ public class UserProfileApiService : IUserProfileApiService
         profile.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Updated user profile: {Name}", profile.Name);
+        _logger.LogInformation("Updated user profile by ID: {Id}", id);
         return profile;
     }
 
-    public async Task<bool> DeleteProfileAsync(string name)
+    public async Task<bool> DeleteProfileAsync(string id)
     {
-        var profile = await GetProfileAsync(name);
+        var profile = await GetProfileByIdAsync(id);
         if (profile == null)
             return false;
 
@@ -204,21 +197,20 @@ public class UserProfileApiService : IUserProfileApiService
         
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Deleted user profile and associated data: {Name}", 
-            name);
+        _logger.LogInformation("Deleted user profile and associated data: {Name}", profile.Name);
         return true;
     }
 
-    public async Task<bool> CompleteOnboardingAsync(string name)
+    public async Task<bool> CompleteOnboardingAsync(string id)
     {
-        var profile = await GetProfileAsync(name);
+        var profile = await GetProfileByIdAsync(id);
         if (profile == null)
             return false;
 
         profile.HasCompletedOnboarding = true;
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Completed onboarding for user: {Name}", name);
+        _logger.LogInformation("Completed onboarding for user: {Name}", profile.Name);
         return true;
     }
 

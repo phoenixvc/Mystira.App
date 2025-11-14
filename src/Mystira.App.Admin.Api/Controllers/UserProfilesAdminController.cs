@@ -143,13 +143,7 @@ public class UserProfilesAdminController : ControllerBase
                 return BadRequest(ModelState);
             }
 
-            var profile = await _profileService.GetProfileByIdAsync(profileId);
-            if (profile == null)
-            {
-                return NotFound(new { message = $"Profile not found: {profileId}" });
-            }
-
-            var updatedProfile = await _profileService.UpdateProfileAsync(profile.Name, request);
+            var updatedProfile = await _profileService.UpdateProfileByIdAsync(profileId, request);
             if (updatedProfile == null)
             {
                 return NotFound(new { message = $"Profile not found: {profileId}" });

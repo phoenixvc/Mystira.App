@@ -11,6 +11,7 @@ public interface IUserProfileApiService
     Task<UserProfile?> GetProfileAsync(string name);
     Task<UserProfile?> GetProfileByIdAsync(string id);
     Task<UserProfile?> UpdateProfileAsync(string name, UpdateUserProfileRequest request);
+    Task<UserProfile?> UpdateProfileByIdAsync(string id, UpdateUserProfileRequest request);
     Task<bool> DeleteProfileAsync(string name);
     Task<bool> CompleteOnboardingAsync(string name);
     Task<List<UserProfile>> GetAllProfilesAsync();
