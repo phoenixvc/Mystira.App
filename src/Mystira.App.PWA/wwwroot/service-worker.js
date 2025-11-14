@@ -18,16 +18,13 @@ const filesToCache = [
 ];
 
 // Core PWA files to cache for offline functionality
+// NOTE: index.html and _framework/blazor.webassembly.js are NOT cached to avoid SRI issues
+// These files should always be fetched from the network to ensure fresh SRI hashes
 const coreFilesToCache = [
-    // Core application files
-    './',
-    './index.html',
+    // Root manifest and CSS
     './manifest.json',
-    // Framework files
-    './_framework/blazor.webassembly.js',
-    // CSS
     './css/app.css',
-    // Essential JS
+    // Essential JS (non-framework)
     './js/pwaInstall.js',
     './js/imageCacheManager.js',
     './js/audioPlayer.js',
@@ -84,7 +81,7 @@ self.addEventListener('activate', event => {
     return self.clients.claim();
 });
 
-// Fetch event - Cache-first for core files, icons from cache, network fallback
+// Fetch event - Handle different resource types appropriately
 self.addEventListener('fetch', event => {
     // Skip cross-origin requests
     if (!event.request.url.startsWith(self.location.origin)) {
@@ -102,7 +99,20 @@ self.addEventListener('fetch', event => {
     const isIcon = url.pathname.match(/\.(ico|png)$/i) &&
         (url.pathname.includes('/icons/') || url.pathname.includes('/favicon.ico'));
 
-    // Check if request is for core PWA files
+    // Check if request is for HTML files (including index.html and .html.br)
+    // These should NOT be cached to avoid SRI integrity issues
+    const isHtmlFile = url.pathname.endsWith('.html') || 
+                      url.pathname.endsWith('.html.br') ||
+                      url.pathname === '/';
+
+    // Check if request is for framework files (.wasm, blazor.webassembly.js, etc.)
+    // These should NOT be cached to ensure SRI hashes are always fresh
+    const isFrameworkFile = url.pathname.includes('/_framework/') && 
+                           (url.pathname.endsWith('.wasm') || 
+                            url.pathname.includes('blazor.webassembly.js') ||
+                            url.pathname.endsWith('.js.br'));
+
+    // Check if request is for core PWA files (non-HTML, non-framework)
     const isCoreFile = coreFilesToCache.some(file => {
         const coreUrl = new URL(file, self.location.origin);
         return url.pathname === coreUrl.pathname;
@@ -132,6 +142,30 @@ self.addEventListener('fetch', event => {
                         });
                 })
         );
+    } else if (isHtmlFile || isFrameworkFile) {
+        // For HTML and framework files, use network-first strategy
+        // This ensures fresh SRI hashes are always used
+        event.respondWith(
+            fetch(event.request)
+                .then(response => {
+                    // Return the network response if successful
+                    if (!response || response.status !== 200) {
+                        return response;
+                    }
+                    return response;
+                })
+                .catch(() => {
+                    // If network fails, try to return cached version as fallback
+                    return caches.match(event.request)
+                        .then(cachedResponse => {
+                            if (cachedResponse) {
+                                return cachedResponse;
+                            }
+                            // If nothing is cached and network fails, fail gracefully
+                            throw new Error('Failed to fetch ' + event.request.url);
+                        });
+                })
+        );
     } else if (isCoreFile) {
         // For core files, use cache-first strategy with network fallback
         event.respondWith(
@@ -153,12 +187,6 @@ self.addEventListener('fetch', event => {
                                 .then(cache => cache.put(event.request, responseToCache));
 
                             return response;
-                        })
-                        .catch(() => {
-                            // If network fails and it's the index.html, serve cached version
-                            if (url.pathname === '/' || url.pathname.endsWith('index.html')) {
-                                return caches.match('/index.html');
-                            }
                         });
                 })
         );
