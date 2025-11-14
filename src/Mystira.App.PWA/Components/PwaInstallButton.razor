@@ -1,7 +1,8 @@
 @inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
 @implements IAsyncDisposable
 
-@if (showInstallButton)
+@if (showInstallButton && IsOnHomePage && !IsAuthenticated)
 {
     <div class="pwa-install-container">
         <button class="btn btn-pwa-install" @onclick="InstallPwaAsync">
@@ -12,9 +13,23 @@
 }
 
 @code {
+    [Parameter]
+    public bool IsAuthenticated { get; set; }
+
     private bool showInstallButton;
     private DotNetObjectReference<PwaInstallButton>? objRef;
     private IJSObjectReference? jsModule;
+
+    private bool IsOnHomePage
+    {
+        get
+        {
+            var uri = NavigationManager.Uri;
+            var baseUri = NavigationManager.BaseUri;
+            var relative = uri[baseUri.Length..];
+            return relative == "" || relative.StartsWith("home") || relative.StartsWith("/");
+        }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

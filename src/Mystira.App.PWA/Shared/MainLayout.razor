@@ -58,6 +58,7 @@
                             @if (isProfileMenuOpen)
                             {
                                 <div class="dropdown-menu show dropdown-menu-end" style="position: absolute; right: 0;">
+                                    <AccountInstallOption />
                                     <a class="dropdown-item" href="/profiles">
                                         <i class="fas fa-users me-2"></i>
                                         Manage Profiles
@@ -103,7 +104,7 @@
     </main>
 
     <!-- PWA Install Button -->
-    <PwaInstallButton />
+    <PwaInstallButton IsAuthenticated="isAuthenticated" />
 
     <!-- Footer -->
     <footer class="bg-light py-3 mt-4">

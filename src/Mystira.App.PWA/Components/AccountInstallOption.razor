@@ -1,0 +1,73 @@
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+@if (showInstallOption)
+{
+    <button class="dropdown-item" @onclick="InstallPwaAsync">
+        <i class="fas fa-download me-2"></i>
+        Install App
+    </button>
+    <div class="dropdown-divider"></div>
+}
+
+@code {
+    private bool showInstallOption;
+    private IJSObjectReference? jsModule;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                jsModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                    "import", "./js/pwaInstall.js");
+
+                // Check if app is installed
+                var isInstalled = await jsModule.InvokeAsync<bool>("isAppInstalled");
+                showInstallOption = !isInstalled;
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing account install option: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task InstallPwaAsync()
+    {
+        try
+        {
+            if (jsModule != null)
+            {
+                await jsModule.InvokeVoidAsync("installPwa");
+                // Check if installed after attempting install
+                var isInstalled = await jsModule.InvokeAsync<bool>("isAppInstalled");
+                showInstallOption = !isInstalled;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error installing PWA from account menu: {ex.Message}");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (jsModule != null)
+        {
+            try
+            {
+                await jsModule.DisposeAsync();
+            }
+            catch
+            {
+                // Ignore disposal errors
+            }
+        }
+
+        jsModule = null;
+    }
+}
