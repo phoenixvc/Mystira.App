@@ -16,7 +16,41 @@ function isIos() {
     }
 
     const platform = navigator.platform || navigator.userAgentData?.platform || '';
-    return platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    if (platform === 'MacIntel' && navigator.maxTouchPoints > 1) {
+        return true;
+    }
+
+    // Additional iOS detection for newer devices
+    if (platform === 'iPad' || platform === 'iPhone' || platform === 'iPod') {
+        return true;
+    }
+
+    // Check for iOS using platform with userAgent
+    if (/(iPad|iPhone|iPod)/.test(navigator.platform)) {
+        return true;
+    }
+
+    return false;
+}
+
+function isMobile() {
+    // Check if device is mobile or tablet
+    const ua = (navigator.userAgent || navigator.vendor || window.opera || '').toLowerCase();
+    if (mobilePattern.test(ua)) {
+        return true;
+    }
+
+    // Check for touch device
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        return true;
+    }
+
+    // Check screen size as fallback
+    if (window.screen.width <= 1024) {
+        return true;
+    }
+
+    return false;
 }
 
 function isDeviceSupported() {
@@ -35,9 +69,28 @@ function updateButtonVisibility() {
         return;
     }
 
-    if (deferredPrompt && isDeviceSupported() && !isAppInstalled()) {
+    // Hide button if app is already installed
+    if (isAppInstalled()) {
+        console.log('PWA Install: App already installed, hiding button');
+        dotNetRef.invokeMethodAsync('HideInstallButton');
+        return;
+    }
+
+    // Show button if:
+    // 1. We have a deferred prompt (Chrome/Edge native support)
+    // 2. OR it's iOS (manual instructions)
+    // 3. OR it's any mobile device (fallback with manual instructions)
+    const shouldShow = deferredPrompt || isIos() || isMobile();
+
+    if (shouldShow && isDeviceSupported()) {
+        console.log('PWA Install: Showing install button', {
+            hasDeferredPrompt: !!deferredPrompt,
+            isIos: isIos(),
+            isMobile: isMobile()
+        });
         dotNetRef.invokeMethodAsync('ShowInstallButton');
     } else {
+        console.log('PWA Install: Hiding install button');
         dotNetRef.invokeMethodAsync('HideInstallButton');
     }
 }
@@ -87,20 +140,47 @@ function unregisterDisplayModeListener() {
 }
 
 function showIosInstallInstructions() {
-    const message = [
-        'To install Mystira on your device:',
-        '\u2022 Tap the share icon (square with an upward arrow).',
-        '\u2022 Choose "Add to Home Screen".',
-        '\u2022 Confirm by tapping "Add".',
-        '',
-        'Once added, launch Mystira from your home screen for a full-screen, chromeless experience.'
-    ].join('\n');
+    let message;
+    
+    if (isIos()) {
+        message = [
+            'To install Mystira on your iOS device:',
+            '\u2022 Tap the Share icon (square with an upward arrow).',
+            '\u2022 Scroll down and choose "Add to Home Screen".',
+            '\u2022 Confirm by tapping "Add".',
+            '',
+            'Once added, launch Mystira from your home screen for a full-screen experience.'
+        ].join('\n');
+    } else {
+        // Generic instructions for other mobile browsers
+        message = [
+            'To install Mystira on your device:',
+            '',
+            'Chrome/Samsung Internet:',
+            '\u2022 Tap the menu (three dots) in the browser.',
+            '\u2022 Select "Add to Home screen" or "Install app".',
+            '',
+            'Firefox:',
+            '\u2022 Tap the home icon in the address bar.',
+            '\u2022 Select "Add to Home Screen".',
+            '',
+            'Once installed, you can launch Mystira from your home screen.'
+        ].join('\n');
+    }
 
     window.alert(message);
 }
 
 export function initializePwaInstall(dotNetReference) {
     dotNetRef = dotNetReference;
+
+    console.log('PWA Install: Starting initialization', {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        isIos: isIos(),
+        isMobile: isMobile(),
+        isInstalled: isAppInstalled()
+    });
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
@@ -114,14 +194,18 @@ export function initializePwaInstall(dotNetReference) {
         assignDeferredPrompt(window.deferredPrompt);
     }
 
-    // Provide an install button experience for iOS devices
+    // Provide an install button experience for iOS and mobile devices
     if (!deferredPrompt && isIos() && !isAppInstalled()) {
+        console.log('PWA Install: iOS device detected, setting IOS_PROMPT');
         assignDeferredPrompt(IOS_PROMPT);
+    } else if (!deferredPrompt && isMobile() && !isAppInstalled()) {
+        console.log('PWA Install: Mobile device detected without native prompt, showing manual instructions');
+        assignDeferredPrompt(IOS_PROMPT); // Reuse iOS prompt mechanism for generic instructions
     }
 
     updateButtonVisibility();
 
-    console.log('PWA Install: initialization complete');
+    console.log('PWA Install: Initialization complete');
 }
 
 export async function installPwa() {
