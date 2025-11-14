@@ -5,6 +5,8 @@ let dotNetRef = null;
 let displayModeMediaQuery = null;
 let userEngagementTimer = null;
 let engagementTime = 0;
+let hasCheckedCriteria = false; // Flag to prevent redundant criteria checks
+let lastButtonState = null; // Track last button visibility state to reduce logging
 const mobilePattern = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
 const MIN_ENGAGEMENT_TIME = 30000; // 30 seconds of engagement before auto-prompt
 
@@ -62,11 +64,16 @@ function trackUserEngagement() {
     if (!userEngagementTimer) {
         userEngagementTimer = setInterval(() => {
             engagementTime += 1000;
-            console.log(`PWA Install: User engagement time: ${engagementTime / 1000}s`);
             
-            // After sufficient engagement, try to trigger installation if possible
-            if (engagementTime >= MIN_ENGAGEMENT_TIME && !deferredPrompt && !isAppInstalled()) {
-                console.log('PWA Install: Sufficient engagement, checking if install criteria met');
+            // Only log every 10 seconds to reduce console spam
+            if (engagementTime % 10000 === 0) {
+                console.log(`PWA Install: User engagement time: ${engagementTime / 1000}s`);
+            }
+            
+            // After sufficient engagement, try to trigger installation if possible (only once)
+            if (engagementTime >= MIN_ENGAGEMENT_TIME && !deferredPrompt && !isAppInstalled() && !hasCheckedCriteria) {
+                console.log('PWA Install: Sufficient engagement reached, checking install criteria');
+                hasCheckedCriteria = true; // Prevent redundant checks
                 const criteriaMet = checkInstallCriteria();
                 
                 // If criteria are met and we're in Chrome, try to auto-install
@@ -86,7 +93,7 @@ function trackUserEngagement() {
 function checkInstallCriteria() {
     // Check if we can trigger installation
     if (deferredPrompt && deferredPrompt !== IOS_PROMPT) {
-        console.log('PWA Install: Auto-triggering install prompt');
+        console.log('PWA Install: Deferred prompt available, updating button visibility');
         // Don't auto-prompt, just make button more prominent
         updateButtonVisibility();
         return true;
@@ -94,8 +101,7 @@ function checkInstallCriteria() {
     
     // For Chrome, try to manually trigger install if criteria might be met
     if (navigator.userAgent.includes('Chrome') && !isIos() && !isAppInstalled()) {
-        console.log('PWA Install: Chrome detected, checking if install criteria met');
-        // Try to trigger the install UI manually
+        // Try to trigger the install UI manually (no logging here to reduce spam)
         tryTriggerChromeInstall();
         return false;
     }
@@ -108,8 +114,6 @@ function tryTriggerChromeInstall() {
     // This is a workaround for when beforeinstallprompt doesn't fire
     // but the app meets installation criteria
     
-    console.log('PWA Install: Attempting to trigger Chrome install UI');
-    
     // Check if we're in Chrome and the page meets basic criteria
     if (window.location.protocol === 'https:' && 
         document.querySelector('link[rel="manifest"]') &&
@@ -119,7 +123,7 @@ function tryTriggerChromeInstall() {
         // Try to show the install button after a short delay
         setTimeout(() => {
             if (!deferredPrompt && !isAppInstalled()) {
-                console.log('PWA Install: Chrome install criteria likely met, showing install button');
+                console.log('PWA Install: Chrome criteria met, showing install button');
                 updateButtonVisibility();
             }
         }, 2000);
@@ -162,7 +166,10 @@ function updateButtonVisibility() {
 
     // Hide button if app is already installed
     if (isAppInstalled()) {
-        console.log('PWA Install: App already installed, hiding button');
+        if (lastButtonState !== 'hidden-installed') {
+            console.log('PWA Install: App already installed, hiding button');
+            lastButtonState = 'hidden-installed';
+        }
         dotNetRef.invokeMethodAsync('HideInstallButton');
         stopEngagementTracking();
         return;
@@ -176,15 +183,21 @@ function updateButtonVisibility() {
     const shouldShow = deferredPrompt || isIos() || isMobile() || engagementTime >= MIN_ENGAGEMENT_TIME;
 
     if (shouldShow && isDeviceSupported()) {
-        console.log('PWA Install: Showing install button', {
-            hasDeferredPrompt: !!deferredPrompt,
-            isIos: isIos(),
-            isMobile: isMobile(),
-            engagementTime: engagementTime / 1000
-        });
+        if (lastButtonState !== 'shown') {
+            console.log('PWA Install: Showing install button', {
+                hasDeferredPrompt: !!deferredPrompt,
+                isIos: isIos(),
+                isMobile: isMobile(),
+                engagementTime: engagementTime / 1000
+            });
+            lastButtonState = 'shown';
+        }
         dotNetRef.invokeMethodAsync('ShowInstallButton');
     } else {
-        console.log('PWA Install: Hiding install button');
+        if (lastButtonState !== 'hidden') {
+            console.log('PWA Install: Hiding install button');
+            lastButtonState = 'hidden';
+        }
         dotNetRef.invokeMethodAsync('HideInstallButton');
     }
 }
@@ -382,4 +395,6 @@ export function cleanup() {
 
     dotNetRef = null;
     assignDeferredPrompt(null);
+    hasCheckedCriteria = false; // Reset criteria check flag
+    lastButtonState = null; // Reset button state tracking
 }
