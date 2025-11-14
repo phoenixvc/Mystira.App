@@ -47,6 +47,17 @@
     <!-- Scripts -->
     <script src="js/imageCacheManager.js"></script>
     <script src="js/audioPlayer.js"></script>
+
+    <!-- Application Insights -->
+    <script type="text/javascript">
+        !function(T,l,y){var S=T.location,k="script",D="instrumentationKey",C="ingestionendpoint",I="disableExceptionTracking",E="ai.device.",b="toLowerCase",w="crossOrigin",N="POST",e="appInsightsSDK",t="head",i="config",a=function(){var o={};return o.initialize=function(n){o[i]=n},o.loadAppInsights=function(){var r=T[e]={};r.queue=[];for(var s=["trackEvent","trackPageView","trackException","trackTrace","trackDependencyData","trackMetric","startTrackEvent","stopTrackEvent","startTrackPage","stopTrackPage","flush"],c=0;c<s.length;c++)r[s[c]]=function(t){return function(){var n=arguments;try{r.queue.push(function(){r[t].apply(r,n)})}catch(e){}}}(s[c]);var f=n.src||"https://js.monitor.azure.com/scripts/b/ai.2.min.js";var t=l.createElement(k);t.src=f,t.async=!0,t[w]=n[w],l.getElementsByTagName(k)[0].parentNode.appendChild(t)},o},u=T[e]||a();u.initialize({
+            connectionString: "InstrumentationKey=6c9db606-e0bd-4b74-ade5-68c3bf5b2865;IngestionEndpoint=https://westeurope-5.in.applicationinsights.azure.com/;LiveEndpoint=https://westeurope.livediagnostics.monitor.azure.com/;ApplicationId=009864dd-fb88-4dce-bc62-7a9b8df50c1f",
+            enableAutoRouteTracking: true
+        }),u.loadAppInsights();
+            T.appInsights=u;
+        }(window,document);
+    </script>
+
 </head>
 
 <body>
