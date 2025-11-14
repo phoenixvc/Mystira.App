@@ -1,4 +1,5 @@
 const IOS_PROMPT = Symbol('IOS_PROMPT');
+const INSTALL_FLAG_KEY = 'mystira_pwa_installed';
 let deferredPrompt = window.deferredPrompt ?? null;
 let dotNetRef = null;
 let displayModeMediaQuery = null;
@@ -133,10 +134,21 @@ function stopEngagementTracking() {
 }
 
 export function isAppInstalled() {
-    return window.matchMedia('(display-mode: standalone)').matches ||
+    // Check if running in standalone mode (PWA is currently running as installed app)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
         window.matchMedia('(display-mode: fullscreen)').matches ||
         window.matchMedia('(display-mode: minimal-ui)').matches ||
         window.navigator.standalone === true;
+    
+    // If running in standalone mode, mark as installed
+    if (isStandalone) {
+        localStorage.setItem(INSTALL_FLAG_KEY, 'true');
+        return true;
+    }
+    
+    // Check persistent storage flag (app was installed in a previous session)
+    const wasInstalled = localStorage.getItem(INSTALL_FLAG_KEY) === 'true';
+    return wasInstalled;
 }
 
 function isDeviceSupported() {
@@ -185,7 +197,8 @@ const handleBeforeInstallPrompt = (event) => {
 };
 
 const handleAppInstalled = () => {
-    console.log('PWA Install: appinstalled');
+    console.log('PWA Install: appinstalled event fired - marking as installed');
+    localStorage.setItem(INSTALL_FLAG_KEY, 'true');
     assignDeferredPrompt(null);
     updateButtonVisibility();
 };
@@ -332,7 +345,8 @@ export async function installPwa() {
         console.log(`PWA Install: User choice - ${choiceResult.outcome}`);
         
         if (choiceResult.outcome === 'accepted') {
-            console.log('PWA Install: User accepted installation');
+            console.log('PWA Install: User accepted installation - marking as installed');
+            localStorage.setItem(INSTALL_FLAG_KEY, 'true');
         } else {
             console.log('PWA Install: User dismissed installation');
         }
@@ -343,6 +357,13 @@ export async function installPwa() {
     }
 
     assignDeferredPrompt(null);
+    updateButtonVisibility();
+}
+
+export function resetInstallState() {
+    // Clear the install flag (useful for testing or if user uninstalls)
+    console.log('PWA Install: Resetting install state');
+    localStorage.removeItem(INSTALL_FLAG_KEY);
     updateButtonVisibility();
 }
 
