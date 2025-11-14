@@ -9,7 +9,6 @@ public class UserProfileApiService : IUserProfileApiService
 {
     private readonly MystiraAppDbContext _context;
     private readonly ILogger<UserProfileApiService> _logger;
-    private static readonly string[] AllowableAgeGroups = ["1-2", "3-5", "6-9", "10-12", "13-18"];
 
     public UserProfileApiService(MystiraAppDbContext context, ILogger<UserProfileApiService> logger)
     {
@@ -30,8 +29,8 @@ public class UserProfileApiService : IUserProfileApiService
             throw new ArgumentException($"Invalid fantasy themes: {string.Join(", ", invalidThemes)}");
 
         // Validate age group
-        if (!AllowableAgeGroups.Contains(request.AgeGroup))
-            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All.Select(a => a.Name))}");
+        if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
+            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
 
         var profile = new UserProfile
         {
@@ -78,8 +77,8 @@ public class UserProfileApiService : IUserProfileApiService
         }
 
         // Validate age group
-        if (!AllowableAgeGroups.Contains(request.AgeGroup))
-            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AllowableAgeGroups)}");
+        if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
+            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
 
         var profile = new UserProfile
         {
@@ -149,8 +148,8 @@ public class UserProfileApiService : IUserProfileApiService
         if (request.AgeGroup != null)
         {
             // Validate age group
-            if (!new[] {"1-2", "3-5", "6-9", "10-12", "13-18"}.Contains(request.AgeGroup))
-                throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All.Select(a => a.Name))}");
+            if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
+                throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
 
             profile.AgeGroup = request.AgeGroup;
         }

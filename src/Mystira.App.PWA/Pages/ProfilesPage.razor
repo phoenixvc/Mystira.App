@@ -195,11 +195,10 @@ else
                         <label class="form-label">Age Range*</label>
                         <select class="form-select" @bind="formData.AgeGroup">
                             <option value="">Select age range...</option>
-                            <option value="1-2">Toddlers (1-2 years)</option>
-                            <option value="3-5">Preschoolers (3-5 years)</option>
-                            <option value="6-9">School Age (6-9 years)</option>
-                            <option value="10-12">Pre-teens (10-12 years)</option>
-                            <option value="13-18">Teens (13-18 years)</option>
+                            @foreach (var ageRange in AgeRanges.All)
+                            {
+                                <option value="@ageRange">@AgeRanges.GetDisplayName(ageRange)</option>
+                            }
                         </select>
                     </div>
                 </div>
