@@ -125,37 +125,6 @@ public class UserProfilesController : ControllerBase
     }
 
     /// <summary>
-    /// Get a User profile by name (legacy endpoint)
-    /// </summary>
-    [HttpGet("name/{name}")]
-    public async Task<ActionResult<UserProfile>> GetProfileByName(string name)
-    {
-        try
-        {
-            var profile = await _profileService.GetProfileAsync(name);
-            if (profile == null)
-            {
-                return NotFound(new ErrorResponse 
-                { 
-                    Message = $"Profile not found: {name}",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            return Ok(profile);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting profile {Name}", name);
-            return StatusCode(500, new ErrorResponse 
-            { 
-                Message = "Internal server error while fetching profile",
-                TraceId = HttpContext.TraceIdentifier
-            });
-        }
-    }
-
-    /// <summary>
     /// Update a User profile by ID
     /// </summary>
     [HttpPut("{id}")]
@@ -279,7 +248,7 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-            var deleted = await _profileService.DeleteProfileAsync(profile.Name);
+            var deleted = await _profileService.DeleteProfileAsync(profile.Id);
             if (!deleted)
             {
                 return NotFound(new ErrorResponse 
@@ -456,7 +425,7 @@ public class UserProfilesController : ControllerBase
                 }
 
                 // Clear profile's account ID
-                await _profileService.UpdateProfileAsync(profileId, new UpdateUserProfileRequest
+                await _profileService.UpdateProfileByIdAsync(profileId, new UpdateUserProfileRequest
                 {
                     AccountId = null
                 });
