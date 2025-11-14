@@ -18,7 +18,7 @@ builder.Services.AddScoped(sp => new HttpClient
 // Configure API HttpClient
 builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
 {
-    client.BaseAddress = new Uri(builder.Configuration.GetValue<string>("ApiBaseUrl") ?? "https://mystira-app-dev-api.azurewebsites.net/");
+    client.BaseAddress = new Uri(builder.Configuration.GetValue<string>("ApiBaseUrl") ?? "https://prod-wus-app-mystira-api.azurewebsites.net/");
     client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
 });
 
