@@ -1,9 +1,10 @@
-// Service Worker for PWA - Limited Caching (Icons Only)
+// Service Worker for PWA - Enhanced Caching for Installation Support
 
 // Cache names
 const ICON_CACHE_NAME = 'pwa-icon-cache-v1';
+const CORE_CACHE_NAME = 'pwa-core-cache-v1';
 
-// Files to cache (icons only)
+// Files to cache (essential PWA files)
 const filesToCache = [
     // PWA Icons
     './icons/apple-icon-180.png',
@@ -16,7 +17,24 @@ const filesToCache = [
     './icons/favicon.png'
 ];
 
-// Install event - Cache icon assets only
+// Core PWA files to cache for offline functionality
+const coreFilesToCache = [
+    // Core application files
+    './',
+    './index.html',
+    './manifest.json',
+    // Framework files
+    './_framework/blazor.webassembly.js',
+    // CSS
+    './css/app.css',
+    // Essential JS
+    './js/pwaInstall.js',
+    './js/imageCacheManager.js',
+    './js/audioPlayer.js',
+    './dice.js'
+];
+
+// Install event - Cache essential PWA files
 self.addEventListener('install', event => {
     console.log('Service Worker: Installing...');
 
@@ -24,13 +42,22 @@ self.addEventListener('install', event => {
     self.skipWaiting();
 
     event.waitUntil(
-        caches.open(ICON_CACHE_NAME)
-            .then(cache => {
-                console.log('Service Worker: Caching Icon Files');
-                return cache.addAll(filesToCache);
-            })
-            .then(() => console.log('Service Worker: All Icon Files Cached'))
-            .catch(error => console.error('Failed to cache icon assets:', error))
+        Promise.all([
+            // Cache icons
+            caches.open(ICON_CACHE_NAME)
+                .then(cache => {
+                    console.log('Service Worker: Caching Icon Files');
+                    return cache.addAll(filesToCache);
+                }),
+            // Cache core files
+            caches.open(CORE_CACHE_NAME)
+                .then(cache => {
+                    console.log('Service Worker: Caching Core Files');
+                    return cache.addAll(coreFilesToCache);
+                })
+        ])
+        .then(() => console.log('Service Worker: All Essential Files Cached'))
+        .catch(error => console.error('Failed to cache PWA assets:', error))
     );
 });
 
@@ -45,7 +72,7 @@ self.addEventListener('activate', event => {
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cache => {
-                    if (cache !== ICON_CACHE_NAME) {
+                    if (cache !== ICON_CACHE_NAME && cache !== CORE_CACHE_NAME) {
                         console.log('Service Worker: Clearing Old Cache:', cache);
                         return caches.delete(cache);
                     }
@@ -57,7 +84,7 @@ self.addEventListener('activate', event => {
     return self.clients.claim();
 });
 
-// Fetch event - Serve only icon files from cache, everything else from network
+// Fetch event - Cache-first for core files, icons from cache, network fallback
 self.addEventListener('fetch', event => {
     // Skip cross-origin requests
     if (!event.request.url.startsWith(self.location.origin)) {
@@ -69,10 +96,17 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Check if the request is for an icon file
     const url = new URL(event.request.url);
+    
+    // Check if the request is for an icon file
     const isIcon = url.pathname.match(/\.(ico|png)$/i) &&
         (url.pathname.includes('/icons/') || url.pathname.includes('/favicon.ico'));
+
+    // Check if request is for core PWA files
+    const isCoreFile = coreFilesToCache.some(file => {
+        const coreUrl = new URL(file, self.location.origin);
+        return url.pathname === coreUrl.pathname;
+    });
 
     if (isIcon) {
         // For icons, use cache-first strategy
@@ -80,7 +114,6 @@ self.addEventListener('fetch', event => {
             caches.match(event.request)
                 .then(cachedResponse => {
                     if (cachedResponse) {
-                        // Return cached icon
                         return cachedResponse;
                     }
 
@@ -91,22 +124,46 @@ self.addEventListener('fetch', event => {
                                 return response;
                             }
 
-                            // Clone the response
                             const responseToCache = response.clone();
-
-                            // Add the icon to the cache
                             caches.open(ICON_CACHE_NAME)
-                                .then(cache => {
-                                    cache.put(event.request, responseToCache);
-                                });
+                                .then(cache => cache.put(event.request, responseToCache));
 
                             return response;
                         });
                 })
         );
+    } else if (isCoreFile) {
+        // For core files, use cache-first strategy with network fallback
+        event.respondWith(
+            caches.match(event.request)
+                .then(cachedResponse => {
+                    if (cachedResponse) {
+                        return cachedResponse;
+                    }
+
+                    // If not in cache, fetch from network and cache it
+                    return fetch(event.request)
+                        .then(response => {
+                            if (!response || response.status !== 200) {
+                                return response;
+                            }
+
+                            const responseToCache = response.clone();
+                            caches.open(CORE_CACHE_NAME)
+                                .then(cache => cache.put(event.request, responseToCache));
+
+                            return response;
+                        })
+                        .catch(() => {
+                            // If network fails and it's the index.html, serve cached version
+                            if (url.pathname === '/' || url.pathname.endsWith('index.html')) {
+                                return caches.match('/index.html');
+                            }
+                        });
+                })
+        );
     } else {
-        // For non-icon requests, just use the network
-        // No caching for other resources
+        // For all other requests, use network-only strategy
         return;
     }
 });

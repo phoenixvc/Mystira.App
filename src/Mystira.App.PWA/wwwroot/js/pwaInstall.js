@@ -2,7 +2,10 @@ const IOS_PROMPT = Symbol('IOS_PROMPT');
 let deferredPrompt = window.deferredPrompt ?? null;
 let dotNetRef = null;
 let displayModeMediaQuery = null;
+let userEngagementTimer = null;
+let engagementTime = 0;
 const mobilePattern = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
+const MIN_ENGAGEMENT_TIME = 30000; // 30 seconds of engagement before auto-prompt
 
 function assignDeferredPrompt(value) {
     deferredPrompt = value ?? null;
@@ -53,8 +56,80 @@ function isMobile() {
     return false;
 }
 
-function isDeviceSupported() {
-    return true;
+function trackUserEngagement() {
+    // Track user engagement to meet Chrome's installation criteria
+    if (!userEngagementTimer) {
+        userEngagementTimer = setInterval(() => {
+            engagementTime += 1000;
+            console.log(`PWA Install: User engagement time: ${engagementTime / 1000}s`);
+            
+            // After sufficient engagement, try to trigger installation if possible
+            if (engagementTime >= MIN_ENGAGEMENT_TIME && !deferredPrompt && !isAppInstalled()) {
+                console.log('PWA Install: Sufficient engagement, checking if install criteria met');
+                const criteriaMet = checkInstallCriteria();
+                
+                // If criteria are met and we're in Chrome, try to auto-install
+                if (criteriaMet && navigator.userAgent.includes('Chrome') && !isIos()) {
+                    console.log('PWA Install: Auto-installing after engagement');
+                    setTimeout(() => {
+                        if (!isAppInstalled()) {
+                            installPwa(); // Attempt automatic installation
+                        }
+                    }, 3000); // Give user 3 seconds to see the button first
+                }
+            }
+        }, 1000);
+    }
+}
+
+function checkInstallCriteria() {
+    // Check if we can trigger installation
+    if (deferredPrompt && deferredPrompt !== IOS_PROMPT) {
+        console.log('PWA Install: Auto-triggering install prompt');
+        // Don't auto-prompt, just make button more prominent
+        updateButtonVisibility();
+        return true;
+    }
+    
+    // For Chrome, try to manually trigger install if criteria might be met
+    if (navigator.userAgent.includes('Chrome') && !isIos() && !isAppInstalled()) {
+        console.log('PWA Install: Chrome detected, checking if install criteria met');
+        // Try to trigger the install UI manually
+        tryTriggerChromeInstall();
+        return false;
+    }
+    
+    return false;
+}
+
+function tryTriggerChromeInstall() {
+    // Attempt to trigger Chrome's install UI
+    // This is a workaround for when beforeinstallprompt doesn't fire
+    // but the app meets installation criteria
+    
+    console.log('PWA Install: Attempting to trigger Chrome install UI');
+    
+    // Check if we're in Chrome and the page meets basic criteria
+    if (window.location.protocol === 'https:' && 
+        document.querySelector('link[rel="manifest"]') &&
+        navigator.serviceWorker && 
+        navigator.serviceWorker.controller) {
+        
+        // Try to show the install button after a short delay
+        setTimeout(() => {
+            if (!deferredPrompt && !isAppInstalled()) {
+                console.log('PWA Install: Chrome install criteria likely met, showing install button');
+                updateButtonVisibility();
+            }
+        }, 2000);
+    }
+}
+
+function stopEngagementTracking() {
+    if (userEngagementTimer) {
+        clearInterval(userEngagementTimer);
+        userEngagementTimer = null;
+    }
 }
 
 function isAppInstalled() {
@@ -62,6 +137,10 @@ function isAppInstalled() {
         window.matchMedia('(display-mode: fullscreen)').matches ||
         window.matchMedia('(display-mode: minimal-ui)').matches ||
         window.navigator.standalone === true;
+}
+
+function isDeviceSupported() {
+    return true;
 }
 
 function updateButtonVisibility() {
@@ -73,6 +152,7 @@ function updateButtonVisibility() {
     if (isAppInstalled()) {
         console.log('PWA Install: App already installed, hiding button');
         dotNetRef.invokeMethodAsync('HideInstallButton');
+        stopEngagementTracking();
         return;
     }
 
@@ -80,13 +160,15 @@ function updateButtonVisibility() {
     // 1. We have a deferred prompt (Chrome/Edge native support)
     // 2. OR it's iOS (manual instructions)
     // 3. OR it's any mobile device (fallback with manual instructions)
-    const shouldShow = deferredPrompt || isIos() || isMobile();
+    // 4. OR user has been engaged for sufficient time (try to meet Chrome criteria)
+    const shouldShow = deferredPrompt || isIos() || isMobile() || engagementTime >= MIN_ENGAGEMENT_TIME;
 
     if (shouldShow && isDeviceSupported()) {
         console.log('PWA Install: Showing install button', {
             hasDeferredPrompt: !!deferredPrompt,
             isIos: isIos(),
-            isMobile: isMobile()
+            isMobile: isMobile(),
+            engagementTime: engagementTime / 1000
         });
         dotNetRef.invokeMethodAsync('ShowInstallButton');
     } else {
@@ -156,13 +238,16 @@ function showIosInstallInstructions() {
         message = [
             'To install Mystira on your device:',
             '',
-            'Chrome/Samsung Internet:',
-            '\u2022 Tap the menu (three dots) in the browser.',
-            '\u2022 Select "Add to Home screen" or "Install app".',
+            'Chrome Desktop/Android:',
+            '\u2022 Click the install button when prompted by Chrome, or',
+            '\u2022 Look for the install icon in the address bar, or',
+            '\u2022 Go to Chrome menu (three dots) > "Install app"',
             '',
-            'Firefox:',
-            '\u2022 Tap the home icon in the address bar.',
-            '\u2022 Select "Add to Home Screen".',
+            'Note: The install option appears after you\'ve used the app for a few minutes.',
+            '',
+            'Other browsers (Firefox, Samsung Internet, etc.):',
+            '\u2022 Look for "Add to Home Screen" in the browser menu',
+            '\u2022 Check for a home icon in the address bar',
             '',
             'Once installed, you can launch Mystira from your home screen.'
         ].join('\n');
@@ -179,13 +264,21 @@ export function initializePwaInstall(dotNetReference) {
         platform: navigator.platform,
         isIos: isIos(),
         isMobile: isMobile(),
-        isInstalled: isAppInstalled()
+        isInstalled: isAppInstalled(),
+        protocol: window.location.protocol,
+        hasServiceWorker: !!navigator.serviceWorker,
+        hasManifest: !!document.querySelector('link[rel="manifest"]')
     });
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
     window.addEventListener('resize', updateButtonVisibility);
     window.addEventListener('orientationchange', updateButtonVisibility);
+    
+    // Track user engagement for Chrome installation criteria
+    document.addEventListener('click', trackUserEngagement, { once: true });
+    document.addEventListener('scroll', trackUserEngagement, { once: true });
+    document.addEventListener('keydown', trackUserEngagement, { once: true });
 
     registerDisplayModeListener();
 
@@ -203,6 +296,14 @@ export function initializePwaInstall(dotNetReference) {
         assignDeferredPrompt(IOS_PROMPT); // Reuse iOS prompt mechanism for generic instructions
     }
 
+    // Aggressive Chrome detection - check if criteria are met immediately
+    if (navigator.userAgent.includes('Chrome') && !isIos() && !isAppInstalled()) {
+        console.log('PWA Install: Chrome detected, checking install criteria immediately');
+        setTimeout(() => {
+            tryTriggerChromeInstall();
+        }, 1000); // Check after 1 second
+    }
+
     updateButtonVisibility();
 
     console.log('PWA Install: Initialization complete');
@@ -215,16 +316,30 @@ export async function installPwa() {
     }
 
     if (!deferredPrompt) {
-        console.log('PWA Install: No deferred prompt available');
+        console.log('PWA Install: No deferred prompt available, trying to trigger install');
+        // Try to trigger install manually for Chrome
+        if (navigator.userAgent.includes('Chrome') && !isIos()) {
+            showIosInstallInstructions(); // Show updated instructions
+            return;
+        }
         return;
     }
 
     try {
-        deferredPrompt.prompt();
+        console.log('PWA Install: Triggering native install prompt');
+        await deferredPrompt.prompt();
         const choiceResult = await deferredPrompt.userChoice;
         console.log(`PWA Install: User choice - ${choiceResult.outcome}`);
+        
+        if (choiceResult.outcome === 'accepted') {
+            console.log('PWA Install: User accepted installation');
+        } else {
+            console.log('PWA Install: User dismissed installation');
+        }
     } catch (error) {
         console.error('PWA Install: Error while prompting install', error);
+        // Fallback to manual instructions
+        showIosInstallInstructions();
     }
 
     assignDeferredPrompt(null);
@@ -236,8 +351,13 @@ export function cleanup() {
     window.removeEventListener('appinstalled', handleAppInstalled);
     window.removeEventListener('resize', updateButtonVisibility);
     window.removeEventListener('orientationchange', updateButtonVisibility);
+    
+    document.removeEventListener('click', trackUserEngagement);
+    document.removeEventListener('scroll', trackUserEngagement);
+    document.removeEventListener('keydown', trackUserEngagement);
 
     unregisterDisplayModeListener();
+    stopEngagementTracking();
 
     dotNetRef = null;
     assignDeferredPrompt(null);
