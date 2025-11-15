@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.PWA.Models;
 
@@ -94,18 +95,10 @@ public class CharacterAssignmentResponse
 /// </summary>
 public static class AgeRanges
 {
-    public static readonly string[] All = ["1-2", "3-5", "6-9", "10-12", "13-18"];
+    public static readonly string[] All = AgeGroupConstants.AllAgeGroups;
     
     public static string GetDisplayName(string ageRange)
     {
-        return ageRange switch
-        {
-            "1-2" => "Ages 1-2 (Toddlers)",
-            "3-5" => "Ages 3-5 (Preschoolers)",
-            "6-9" => "Ages 6-9 (School Age)",
-            "10-12" => "Ages 10-12 (Preteens)",
-            "13-18" => "Ages 13-18 (Teens)",
-            _ => ageRange
-        };
+        return AgeGroupConstants.GetDisplayName(ageRange);
     }
 }
