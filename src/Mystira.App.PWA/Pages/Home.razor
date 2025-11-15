@@ -14,7 +14,7 @@
         <div class="col-12 text-center mb-4">
             <h1 class="display-4 text-primary-custom">
                 <i class="fas fa-dragon me-3"></i>
-                Mystira
+                Mystira <small class="text-muted" style="font-size: 0.5em; vertical-align: super;">ALPHA</small>
             </h1>
             <p class="lead text-muted mb-3">
                 Where imagination meets growth
@@ -478,7 +478,7 @@
             GameSessionService.ClearGameSession();
             
             // Check if we should skip character assignment for young age groups
-            if (scenario.AgeGroup == "1-2" || scenario.AgeGroup == "3-5")
+            if (scenario.AgeGroup == "1-2")
             {
                 Logger.LogInformation("Skipping character assignment for age group {AgeGroup}, starting game directly", scenario.AgeGroup);
                 
