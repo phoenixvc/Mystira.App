@@ -1,4 +1,4 @@
-name: Azure Static Web Apps CI/CD
+name: Azure Static Web Apps CI/CD - Dev
 
 on:
   push:
@@ -19,6 +19,23 @@ jobs:
         with:
           submodules: true
           lfs: false
+
+      # ---------------------------------------------------------
+      # ✅ DEV-ONLY OVERRIDE: Force Blazor to "Development" mode
+      # ---------------------------------------------------------
+      - name: Generate staticwebapp.config.json for DEV environment
+        run: |
+          cat << 'EOF' > staticwebapp.config.json
+          {
+            "globalHeaders": {
+              "Blazor-Environment": "Development"
+            }
+          }
+          EOF
+
+      # ---------------------------------------------------------
+      # Deploy the app INCLUDING the generated config file above
+      # ---------------------------------------------------------
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -26,11 +43,10 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_MANGO_WATER_04FDB1C03 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
           action: "upload"
-          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
-          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          app_location: "./src/Mystira.App.PWA" # App source code path
-          api_location: "" # Api source code path - optional
-          output_location: "wwwroot" # Built app content directory - optional
+          ###### Repository/Build Configurations ######
+          app_location: "./src/Mystira.App.PWA"
+          api_location: ""
+          output_location: "wwwroot"
           ###### End of Repository/Build Configurations ######
 
   close_pull_request_job:
@@ -44,4 +60,3 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_MANGO_WATER_04FDB1C03 }}
           action: "close"
-
