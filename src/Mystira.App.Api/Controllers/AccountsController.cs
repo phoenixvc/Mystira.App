@@ -1,6 +1,5 @@
 using Mystira.App.Domain.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
 using Mystira.App.Api.Services;
 
 namespace Mystira.App.Api.Controllers;
