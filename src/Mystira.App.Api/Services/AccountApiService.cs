@@ -1,6 +1,5 @@
 using Mystira.App.Domain.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Mystira.App.Api.Data;
 
 namespace Mystira.App.Api.Services;
