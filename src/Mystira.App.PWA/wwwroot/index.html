@@ -80,8 +80,18 @@
         <div class="alert alert-danger" role="alert">
             <h4 class="alert-heading">Application Error</h4>
             <p>An error has occurred. This application may no longer respond until reloaded.</p>
+            <div id="sri-error-message" style="display: none;">
+                <p><strong>SRI Integrity Error Detected</strong></p>
+                <p>This usually happens when the browser has cached an old version of the application. Please try the following steps:</p>
+                <ol>
+                    <li>Click "Clear Cache & Reload" below</li>
+                    <li>If that doesn't work, try a hard refresh (Ctrl+F5 or Cmd+Shift+R)</li>
+                    <li>As a last resort, clear your browser cache completely</li>
+                </ol>
+            </div>
             <hr>
-            <button type="button" class="btn btn-outline-danger" onclick="window.location.reload()">Reload</button>
+            <button type="button" class="btn btn-outline-danger me-2" onclick="window.location.reload()">Reload</button>
+            <button type="button" class="btn btn-outline-warning" onclick="clearCacheAndReload()">Clear Cache & Reload</button>
         </div>
     </div>
 
@@ -90,30 +100,123 @@
 
     <!-- Dice Component Script -->
     <script src="dice.js"></script>
+
+    <!-- SRI Error Detection and Cache Clearing -->
+    <script>
+        // Function to clear all caches and reload
+        async function clearCacheAndReload() {
+            console.log('Clearing all caches and reloading...');
+            
+            try {
+                // Clear service worker caches
+                if ('caches' in window) {
+                    const cacheKeys = await caches.keys();
+                    await Promise.all(cacheKeys.map(key => caches.delete(key)));
+                    console.log('Cleared', cacheKeys.length, 'cache(s)');
+                }
+                
+                // Unregister service workers
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(registrations.map(registration => registration.unregister()));
+                    console.log('Unregistered', registrations.length, 'service worker(s)');
+                }
+                
+                // Reload with a timestamp to bypass browser cache
+                const timestamp = new Date().getTime();
+                window.location.href = window.location.pathname + '?t=' + timestamp;
+            } catch (error) {
+                console.error('Error clearing cache:', error);
+                // Fallback to simple reload
+                window.location.reload(true);
+            }
+        }
+
+        // Detect SRI errors and show appropriate message
+        window.addEventListener('error', function(event) {
+            const errorMessage = event.message || '';
+            const errorUrl = event.filename || '';
+            
+            if (errorMessage.includes('integrity') || 
+                errorMessage.includes('SRI') || 
+                errorMessage.includes('digest') ||
+                (errorUrl.includes('.wasm') && errorMessage.includes('Failed to fetch'))) {
+                
+                console.log('SRI error detected:', errorMessage);
+                
+                // Show SRI-specific error message
+                const errorUi = document.getElementById('blazor-error-ui');
+                const sriMessage = document.getElementById('sri-error-message');
+                
+                if (errorUi) {
+                    errorUi.style.display = 'block';
+                    if (sriMessage) {
+                        sriMessage.style.display = 'block';
+                    }
+                }
+            }
+        }, true);
+
+        // Also listen for unhandled promise rejections
+        window.addEventListener('unhandledrejection', function(event) {
+            const errorMessage = event.reason?.message || '';
+            
+            if (errorMessage.includes('integrity') || 
+                errorMessage.includes('SRI') || 
+                errorMessage.includes('digest') ||
+                errorMessage.includes('Mystira.App.Domain.wasm')) {
+                
+                console.log('SRI promise rejection detected:', errorMessage);
+                
+                // Show SRI-specific error message
+                const errorUi = document.getElementById('blazor-error-ui');
+                const sriMessage = document.getElementById('sri-error-message');
+                
+                if (errorUi) {
+                    errorUi.style.display = 'block';
+                    if (sriMessage) {
+                        sriMessage.style.display = 'block';
+                    }
+                }
+            }
+        });
+    </script>
     
     <!-- Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('service-worker.js')
-                    .then(async (registration) => {
+                    .then((registration) => {
                         console.log('ServiceWorker registration successful with scope: ', registration.scope);
 
-                        if (navigator.serviceWorker.controller) {
-                            navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHES' });
+                        // Check for service worker updates periodically
+                        registration.addEventListener('updatefound', () => {
+                            console.log('New service worker found, installing...');
+                            const newWorker = registration.installing;
+                            
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New worker is installed, we have an old worker controlling the page
+                                    console.log('New service worker ready, prompting user to refresh');
+                                    
+                                    // Optionally, you could show a toast notification here
+                                    // For now, we'll let the service worker activation handle cache clearing
+                                }
+                            });
+                        });
+
+                        // Only clear caches on first visit or when service worker updates
+                        // This prevents race conditions with WASM file loading and SRI checks
+                        if (!navigator.serviceWorker.controller) {
+                            console.log('First visit - waiting for service worker to activate');
+                        } else if (registration.active && registration.active !== registration.installing) {
+                            // Service worker was already active, no need to clear caches
+                            console.log('Service worker already active - no cache clearing needed');
                         }
 
-                        if ('caches' in window) {
-                            try {
-                                const cacheKeys = await caches.keys();
-                                if (cacheKeys.length > 0) {
-                                    await Promise.all(cacheKeys.map((key) => caches.delete(key)));
-                                    console.log('Cleared caches from window context:', cacheKeys);
-                                }
-                            } catch (cacheError) {
-                                console.warn('Failed to clear caches from window context:', cacheError);
-                            }
-                        }
+                        // Force update check to ensure latest version
+                        registration.update();
                     })
                     .catch((err) => {
                         console.log('ServiceWorker registration failed: ', err);
