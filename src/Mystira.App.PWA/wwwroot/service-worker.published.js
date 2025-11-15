@@ -23,20 +23,24 @@ async function clearAllCaches() {
 }
 
 self.addEventListener('install', (event) => {
-    console.log(`${LOG_PREFIX} Install - skipping waiting and clearing caches`);
+    console.log(`${LOG_PREFIX} Install - skipping waiting`);
 
     event.waitUntil((async () => {
-        await clearAllCaches();
+        // Don't clear all caches on install to prevent race conditions
+        // Only clear when explicitly needed
         await self.skipWaiting();
     })());
 });
 
 self.addEventListener('activate', (event) => {
-    console.log(`${LOG_PREFIX} Activate - ensuring caches are cleared`);
+    console.log(`${LOG_PREFIX} Activate - taking control and cleaning old caches`);
 
     event.waitUntil((async () => {
+        // Clear all caches to ensure fresh assets and prevent SRI issues
+        // This is safe during activate since the new service worker is already in control
         await clearAllCaches();
         await self.clients.claim();
+        console.log(`${LOG_PREFIX} Activation complete - caches cleared and clients claimed`);
     })());
 });
 
@@ -69,19 +73,39 @@ self.addEventListener('fetch', (event) => {
     // For HTML and framework files, use network-first strategy to ensure SRI hashes are fresh
     if (isHtmlFile || isFrameworkFile) {
         event.respondWith(
-            fetch(event.request)
-                .catch(() => {
-                    // Network failed, try cache as fallback
-                    return caches.match(event.request)
-                        .then(response => response || new Response('Network error', { status: 503 }));
-                })
+            fetch(event.request, { 
+                cache: 'no-store',  // Bypass HTTP cache completely
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate'
+                }
+            })
+            .then(response => {
+                if (!response || response.status !== 200) {
+                    return response;
+                }
+                return response;
+            })
+            .catch((error) => {
+                console.warn(`${LOG_PREFIX} Network request failed for`, event.request.url, error);
+                // Network failed, try cache as fallback
+                return caches.match(event.request)
+                    .then(response => {
+                        if (response) {
+                            console.log(`${LOG_PREFIX} Serving from cache fallback:`, event.request.url);
+                            return response;
+                        }
+                        return new Response('Network error', { status: 503 });
+                    });
+            })
         );
     }
 });
 
 self.addEventListener('message', (event) => {
     if (event?.data?.type === 'CLEAR_CACHES') {
-        console.log(`${LOG_PREFIX} Received CLEAR_CACHES message`);
-        event.waitUntil(clearAllCaches());
+        console.log(`${LOG_PREFIX} Received CLEAR_CACHES message - but being conservative to prevent race conditions`);
+        // Don't clear caches aggressively to prevent SRI race conditions
+        // Cache clearing should only happen during service worker updates, not on every page load
+        event.waitUntil(Promise.resolve());
     }
 });

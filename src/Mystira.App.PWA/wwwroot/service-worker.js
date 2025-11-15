@@ -69,6 +69,7 @@ self.addEventListener('activate', event => {
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cache => {
+                    // Only clear caches that don't match our current cache names
                     if (cache !== ICON_CACHE_NAME && cache !== CORE_CACHE_NAME) {
                         console.log('Service Worker: Clearing Old Cache:', cache);
                         return caches.delete(cache);
@@ -76,9 +77,8 @@ self.addEventListener('activate', event => {
                 })
             );
         })
+        .then(() => console.log('Service Worker: Cache cleanup completed'))
     );
-
-    return self.clients.claim();
 });
 
 // Fetch event - Handle different resource types appropriately
@@ -152,25 +152,32 @@ self.addEventListener('fetch', event => {
         // For HTML and framework files, use network-first strategy
         // This ensures fresh SRI hashes are always used
         event.respondWith(
-            fetch(event.request)
-                .then(response => {
-                    // Return the network response if successful
-                    if (!response || response.status !== 200) {
-                        return response;
-                    }
+            fetch(event.request, { 
+                cache: 'no-store',  // Bypass HTTP cache completely
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate'
+                }
+            })
+            .then(response => {
+                // Return the network response if successful
+                if (!response || response.status !== 200) {
                     return response;
-                })
-                .catch(() => {
-                    // If network fails, try to return cached version as fallback
-                    return caches.match(event.request)
-                        .then(cachedResponse => {
-                            if (cachedResponse) {
-                                return cachedResponse;
-                            }
-                            // If nothing is cached and network fails, fail gracefully
-                            throw new Error('Failed to fetch ' + event.request.url);
-                        });
-                })
+                }
+                return response;
+            })
+            .catch((error) => {
+                console.warn('Network request failed for', event.request.url, error);
+                // If network fails, try to return cached version as fallback
+                return caches.match(event.request)
+                    .then(cachedResponse => {
+                        if (cachedResponse) {
+                            console.log('Serving from cache fallback:', event.request.url);
+                            return cachedResponse;
+                        }
+                        // If nothing is cached and network fails, fail gracefully
+                        throw new Error('Failed to fetch ' + event.request.url);
+                    });
+            })
         );
     } else if (isCoreFile) {
         // For core files, use cache-first strategy with network fallback
@@ -213,4 +220,13 @@ self.addEventListener('push', event => {
     event.waitUntil(
         self.registration.showNotification(title, options)
     );
+});
+
+// Handle messages from clients
+self.addEventListener('message', event => {
+    if (event?.data?.type === 'CLEAR_CACHES') {
+        console.log('[Mystira ServiceWorker] Received CLEAR_CACHES message - but being conservative to prevent race conditions');
+        // Don't clear caches aggressively to prevent SRI race conditions
+        // Cache clearing should only happen during service worker updates, not on every page load
+    }
 });
