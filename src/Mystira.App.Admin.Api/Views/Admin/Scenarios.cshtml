@@ -307,7 +307,7 @@ function viewScenario(scenarioId) {
 function deleteScenario(scenarioId) {
     if (confirm('Are you sure you want to delete this scenario? This action cannot be undone.')) {
         $.ajax({
-            url: `/api/scenarios/${scenarioId}`,
+            url: `/api/admin/ScenariosAdmin/${scenarioId}`,
             type: 'DELETE',
             success: function() {
                 alert('Scenario deleted successfully');

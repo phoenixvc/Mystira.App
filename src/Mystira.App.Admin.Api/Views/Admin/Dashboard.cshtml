@@ -312,7 +312,7 @@ $(document).ready(function() {
 
 function loadDashboardData() {
     // Load scenarios count
-    $.get('/api/scenarios?pageSize=1', function(data) {
+    $.get('/api/admin/ScenariosAdmin?pageSize=1', function(data) {
         $('#totalScenarios, #scenarioCount').text(data.totalCount || 0);
     });
 
