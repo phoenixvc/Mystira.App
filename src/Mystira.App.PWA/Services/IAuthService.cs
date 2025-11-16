@@ -12,5 +12,7 @@ public interface IAuthService
     Task<(bool Success, string Message, Account? Account)> VerifyPasswordlessSignupAsync(string email, string code);
     Task<(bool Success, string Message)> RequestPasswordlessSigninAsync(string email);
     Task<(bool Success, string Message, Account? Account)> VerifyPasswordlessSigninAsync(string email, string code);
+    Task<(bool Success, string Message, string? Token, string? RefreshToken)> RefreshTokenAsync(string token, string refreshToken);
+    Task<string?> GetCurrentTokenAsync();
     event EventHandler<bool>? AuthenticationStateChanged;
 }

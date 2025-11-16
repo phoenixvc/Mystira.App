@@ -11,11 +11,13 @@ public class ApiClient : IApiClient
     private readonly HttpClient _httpClient;
     private readonly ILogger<ApiClient> _logger;
     private readonly JsonSerializerOptions _jsonOptions;
+    private readonly IAuthService _authService;
 
-    public ApiClient(HttpClient httpClient, ILogger<ApiClient> logger)
+    public ApiClient(HttpClient httpClient, ILogger<ApiClient> logger, IAuthService authService)
     {
         _httpClient = httpClient;
         _logger = logger;
+        _authService = authService;
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -24,11 +26,46 @@ public class ApiClient : IApiClient
         };
     }
 
+    private async Task SetAuthorizationHeaderAsync()
+    {
+        try
+        {
+            // Clear existing authorization header
+            _httpClient.DefaultRequestHeaders.Authorization = null;
+            
+            // Get current account to check if authenticated
+            var account = await _authService.GetCurrentAccountAsync();
+            if (account != null)
+            {
+                // For now, we'll need to access the token differently since it's not exposed publicly
+                // In a real implementation, you might want to expose the token from AuthService
+                // For now, let's create a simple solution by getting the token from storage
+                // This is a temporary approach - ideally the AuthService should expose the current token
+                var token = await GetStoredTokenAsync();
+                if (!string.IsNullOrEmpty(token))
+                {
+                    _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error setting authorization header");
+        }
+    }
+
+    private async Task<string?> GetStoredTokenAsync()
+    {
+        return await _authService.GetCurrentTokenAsync();
+    }
+
     public async Task<List<Scenario>> GetScenariosAsync()
     {
         try
         {
             _logger.LogInformation("Fetching scenarios from API...");
+            
+            await SetAuthorizationHeaderAsync();
             
             var request = new HttpRequestMessage(HttpMethod.Get, "api/scenarios");
             // This is the key line for CORS
@@ -265,6 +302,34 @@ public class ApiClient : IApiClient
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error verifying passwordless signin for email: {Email}", email);
+            return null;
+        }
+    }
+
+    public async Task<RefreshTokenResponse?> RefreshTokenAsync(string token, string refreshToken)
+    {
+        try
+        {
+            _logger.LogInformation("Refreshing token");
+            
+            var request = new { token, refreshToken };
+            var response = await _httpClient.PostAsJsonAsync("api/auth/refresh", request, _jsonOptions);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<RefreshTokenResponse>(_jsonOptions);
+                _logger.LogInformation("Token refresh successful");
+                return result;
+            }
+            else
+            {
+                _logger.LogWarning("Token refresh failed with status: {StatusCode}", response.StatusCode);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing token");
             return null;
         }
     }

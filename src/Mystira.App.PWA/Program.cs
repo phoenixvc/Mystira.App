@@ -57,6 +57,7 @@ builder.Services.AddScoped<IGameSessionService, GameSessionService>();
 builder.Services.AddScoped<IIndexedDbService, IndexedDbService>();
 builder.Services.AddScoped<ICharacterAssignmentService, CharacterAssignmentService>();
 builder.Services.AddSingleton<IImageCacheService, ImageCacheService>();
+builder.Services.AddProtectedLocalStorage();
 
 // Logging configuration
 builder.Logging.SetMinimumLevel(LogLevel.Information);
