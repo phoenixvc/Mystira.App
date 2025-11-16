@@ -426,6 +426,8 @@ public class AuthService : IAuthService
             
             if (response?.Success == true)
             {
+                await SetStoredToken(response.Token);
+                await SetStoredRefreshToken(response.RefreshToken, _rememberMe); // Use current remember me setting
                 _logger.LogInformation("Token refreshed successfully");
                 return (true, response.Message, response.Token, response.RefreshToken);
             }
