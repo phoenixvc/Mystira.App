@@ -370,7 +370,7 @@ public class GameSessionService : IGameSessionService
                     _ => "Player"
                 };
 
-                string placeholder = $"[c:{assignment.CharacterName}]";
+                string placeholder = $"[c:{assignment.CharacterName.ToLower()}]";
                 text = text.Replace(placeholder, playerName);
             }
         }
