@@ -12,6 +12,7 @@ public interface IApiClient
     Task<PasswordlessVerifyResponse?> VerifyPasswordlessSignupAsync(string email, string code);
     Task<PasswordlessSigninResponse?> RequestPasswordlessSigninAsync(string email);
     Task<PasswordlessVerifyResponse?> VerifyPasswordlessSigninAsync(string email, string code);
+    Task<RefreshTokenResponse?> RefreshTokenAsync(string token, string refreshToken);
     Task<GameSession?> StartGameSessionAsync(string scenarioId, string accountId, string profileId, List<string> playerNames, string targetAgeGroup);
     Task<GameSession?> EndGameSessionAsync(string sessionId);
     Task<List<GameSession>?> GetSessionsByAccountAsync(string accountId);

@@ -36,6 +36,17 @@
                                        disabled="@isSubmitting" />
                             </div>
 
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" 
+                                       class="form-check-input" 
+                                       id="rememberMe" 
+                                       @bind="rememberMe" />
+                                <label class="form-check-label" for="rememberMe">
+                                    <i class="fas fa-heart me-2"></i>Remember me for 30 days
+                                </label>
+                                <div class="form-text">Stay signed in on this device for faster access</div>
+                            </div>
+
                             @if (!string.IsNullOrEmpty(errorMessage))
                             {
                                 <div class="alert alert-danger" role="alert">
@@ -190,6 +201,7 @@
     private string successMessage = string.Empty;
     private int resendCountdown = 0;
     private bool isResendingCode = false;
+    private bool rememberMe = false;
     private System.Timers.Timer? countdownTimer;
 
     private async Task RequestSigninCode()
@@ -279,6 +291,9 @@
             successMessage = string.Empty;
 
             Logger.LogInformation("Verifying sign-in code for email: {Email}", email);
+
+            // Set remember me preference before verification
+            AuthService.SetRememberMe(rememberMe);
 
             var (success, message, account) = await AuthService.VerifyPasswordlessSigninAsync(email, inputCode);
 

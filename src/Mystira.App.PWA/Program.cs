@@ -52,6 +52,7 @@ builder.Services.Configure<JsonSerializerOptions>(options =>
 // }
 
 // Register services
+builder.Services.AddScoped<ITokenProvider, LocalStorageTokenProvider>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IGameSessionService, GameSessionService>();
 builder.Services.AddScoped<IIndexedDbService, IndexedDbService>();

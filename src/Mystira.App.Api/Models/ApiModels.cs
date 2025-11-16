@@ -658,6 +658,9 @@ public class PasswordlessVerifyResponse
     public string Message { get; set; } = string.Empty;
     public Account? Account { get; set; }
     public string? Token { get; set; }
+    public string? RefreshToken { get; set; }
+    public DateTime? TokenExpiresAt { get; set; }
+    public DateTime? RefreshTokenExpiresAt { get; set; }
 }
 
 // Passwordless Signin Models
@@ -712,4 +715,24 @@ public class CompleteScenarioRequest
     
     [Required]
     public string ScenarioId { get; set; } = string.Empty;
+}
+
+// JWT Token Refresh Models
+public class RefreshTokenRequest
+{
+    [Required]
+    public string Token { get; set; } = string.Empty;
+    
+    [Required]
+    public string RefreshToken { get; set; } = string.Empty;
+}
+
+public class RefreshTokenResponse
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public string? Token { get; set; }
+    public string? RefreshToken { get; set; }
+    public DateTime? TokenExpiresAt { get; set; }
+    public DateTime? RefreshTokenExpiresAt { get; set; }
 }
