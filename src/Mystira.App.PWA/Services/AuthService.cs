@@ -27,8 +27,6 @@ public class AuthService : IAuthService
         _logger = logger;
         _apiClient = apiClient;
         _jsRuntime = jsRuntime;
-            // Load auth data asynchronously in background
-        _ = Task.Run(LoadStoredAuthData);
     }
 
     public async Task<bool> IsAuthenticatedAsync()

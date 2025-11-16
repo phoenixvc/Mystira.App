@@ -11,13 +11,13 @@ public class ApiClient : IApiClient
     private readonly HttpClient _httpClient;
     private readonly ILogger<ApiClient> _logger;
     private readonly JsonSerializerOptions _jsonOptions;
-    private readonly IAuthService _authService;
+    private ITokenProvider _tokenProvider;
 
-    public ApiClient(HttpClient httpClient, ILogger<ApiClient> logger, IAuthService authService)
+    public ApiClient(HttpClient httpClient, ILogger<ApiClient> logger, ITokenProvider tokenProvider)
     {
+        _tokenProvider = tokenProvider;
         _httpClient = httpClient;
         _logger = logger;
-        _authService = authService;
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -30,33 +30,23 @@ public class ApiClient : IApiClient
     {
         try
         {
-            // Clear existing authorization header
             _httpClient.DefaultRequestHeaders.Authorization = null;
-            
-            // Get current account to check if authenticated
-            var account = await _authService.GetCurrentAccountAsync();
-            if (account != null)
+
+            var isAuthenticated = await _tokenProvider.IsAuthenticatedAsync();
+            if (!isAuthenticated)
+                return;
+
+            var token = await _tokenProvider.GetCurrentTokenAsync();
+            if (!string.IsNullOrEmpty(token))
             {
-                // For now, we'll need to access the token differently since it's not exposed publicly
-                // In a real implementation, you might want to expose the token from AuthService
-                // For now, let's create a simple solution by getting the token from storage
-                // This is a temporary approach - ideally the AuthService should expose the current token
-                var token = await GetStoredTokenAsync();
-                if (!string.IsNullOrEmpty(token))
-                {
-                    _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-                }
+                _httpClient.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Error setting authorization header");
         }
-    }
-
-    private async Task<string?> GetStoredTokenAsync()
-    {
-        return await _authService.GetCurrentTokenAsync();
     }
 
     public async Task<List<Scenario>> GetScenariosAsync()
