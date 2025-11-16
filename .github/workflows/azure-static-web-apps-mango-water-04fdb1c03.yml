@@ -19,6 +19,18 @@ jobs:
         with:
           submodules: true
           lfs: false
+
+      # DEV-ONLY: Force Blazor environment to "Development" in Azure SWA
+      - name: Generate staticwebapp.config.json for DEV environment
+        run: |
+          cat << 'EOF' > src/Mystira.App.PWA/wwwroot/staticwebapp.config.json
+          {
+            "globalHeaders": {
+              "Blazor-Environment": "Development"
+            }
+          }
+          EOF
+
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -26,8 +38,7 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_MANGO_WATER_04FDB1C03 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
           action: "upload"
-          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
-          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
+          ###### Repository/Build Configurations ######
           app_location: "./src/Mystira.App.PWA" # App source code path
           api_location: "" # Api source code path - optional
           output_location: "wwwroot" # Built app content directory - optional
@@ -44,5 +55,3 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_MANGO_WATER_04FDB1C03 }}
           action: "close"
-
-
