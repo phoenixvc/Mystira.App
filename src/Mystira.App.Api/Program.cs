@@ -116,9 +116,10 @@ builder.Services.AddHealthChecks()
     .AddCheck<BlobStorageHealthCheck>("blob_storage");
 
 // Configure CORS for frontend integration
+var policyName = "MystiraAppPolicy";
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("MystiraAppPolicy", policy =>
+    options.AddPolicy(policyName, policy =>
     {
         policy.WithOrigins(
                 "http://localhost:7000",
@@ -154,9 +155,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("MystiraAppPolicy");
 
 app.UseRouting();
+
+// ✅ CORS must be between UseRouting and auth/endpoints
+app.UseCors(policyName);
+
 app.UseAuthentication();
 app.UseAuthorization();
 
