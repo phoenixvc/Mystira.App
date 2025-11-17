@@ -201,6 +201,12 @@ else
                             }
                         </select>
                     </div>
+
+                    <!-- Avatar Selection -->
+                    <div class="mb-3">
+                        <label class="form-label">Choose Avatar</label>
+                        <AvatarCarousel OnAvatarSelected="OnAvatarSelected" />
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
@@ -276,6 +282,7 @@ else
     private string successMessage = string.Empty;
     private string errorMessage = string.Empty;
     private string modalValidationMessage = string.Empty;
+    private string selectedAvatar = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -347,6 +354,7 @@ else
         {
             Name = profile.Name,
             AgeGroup = profile.AgeGroup,
+            AvatarMediaId = profile.AvatarMediaId ?? string.Empty
         };
         modalValidationMessage = string.Empty;
         showModal = true;
@@ -388,7 +396,9 @@ else
                 // Update existing profile
                 var updateRequest = new UpdateUserProfileRequest
                 {
-                    AgeGroup = formData.AgeGroup
+                    Name = formData.Name,
+                    AgeGroup = formData.AgeGroup,
+                    AvatarMediaId = formData.AvatarMediaId
                 };
 
                 var updated = await ApiClient.UpdateProfileAsync(editingProfile.Id, updateRequest);
@@ -412,6 +422,7 @@ else
                 {
                     Name = formData.Name,
                     AgeGroup = formData.AgeGroup,
+                    AvatarMediaId = formData.AvatarMediaId,
                     AccountId = currentAccount.Id,
                     IsGuest = false,
                     HasCompletedOnboarding = false
@@ -500,6 +511,12 @@ else
         };
     }
 
+    private void OnAvatarSelected(string avatarMediaId)
+    {
+        selectedAvatar = avatarMediaId;
+        formData.AvatarMediaId = avatarMediaId;
+    }
+
     private string FormatDate(DateTime? date)
     {
         return date?.ToString("MMM d, yyyy") ?? "Unknown";
@@ -509,5 +526,6 @@ else
     {
         public string Name { get; set; } = string.Empty;
         public string? AgeGroup { get; set; }
+        public string AvatarMediaId { get; set; } = string.Empty;
     }
 }

@@ -23,6 +23,11 @@ public class UserProfile
     
     // Convenience property to get AgeGroup object
     public string AgeGroup { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Media ID for the profile avatar image
+    /// </summary>
+    public string? AvatarMediaId { get; set; }
 
     /// <summary>
     /// Calculate current age from date of birth, or return null if not available

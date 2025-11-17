@@ -33,17 +33,27 @@ else
         <div class="row">
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <h2 class="text-primary-custom mb-1">
-                            <MarkdownRenderer Content="@gameSession.CurrentScene.Title" />
-                        </h2>
-                        <small class="text-muted">@gameSession.ScenarioName</small>
+                    <div class="d-flex align-items-center">
+                        <div class="me-4">
+                            <h2 class="text-primary-custom mb-1">
+                                Welcome "@(gameSession.PlayerNames.FirstOrDefault() ?? "Player")"! What adventures await us today?
+                            </h2>
+                        </div>
+                        <div class="avatar-placeholder">
+                            <CachedMystiraImage 
+                                MediaId="placeholder-avatar-default"
+                                Alt="Player avatar"
+                                Width="60"
+                                Height="60"
+                                ImageClass="rounded-circle border border-2 border-primary" />
+                        </div>
                     </div>
                     <div>
-                        <a href="/" class="btn btn-outline-secondary">
-                            <i class="fas fa-home me-1"></i>
-                            Exit
-                        </a>
+                        <CachedMystiraImage 
+                            MediaId="image-final-logo-fe3f75db"
+                            Alt="Mystira Logo"
+                            Width="120"
+                            Height="120" />
                     </div>
                 </div>
             </div>

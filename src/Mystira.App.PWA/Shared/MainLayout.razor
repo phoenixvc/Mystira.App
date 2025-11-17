@@ -39,6 +39,12 @@
                     @if (isAuthenticated)
                     {
                         <li class="nav-item">
+                            <a class="nav-link" href="/profiles">
+                                <i class="fas fa-users me-1"></i>
+                                Profiles
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="/game">
                                 <i class="fas fa-compass me-1"></i>
                                 Adventures
@@ -68,10 +74,6 @@
                             {
                                 <div class="dropdown-menu show dropdown-menu-end" style="position: absolute; right: 0;">
                                     <AccountInstallOption />
-                                    <a class="dropdown-item" href="/profiles">
-                                        <i class="fas fa-users me-2"></i>
-                                        Manage Profiles
-                                    </a>
                                     <div class="dropdown-divider"></div>
                                     <button class="dropdown-item" @onclick="SignOutAsync">
                                         <i class="fas fa-sign-out-alt me-2"></i>

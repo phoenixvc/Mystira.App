@@ -106,6 +106,7 @@ public class GameSession
     public string ScenarioName { get; set; } = string.Empty;
     public Scene? CurrentScene { get; set; }
     public List<Scene> CompletedScenes { get; set; } = new();
+    public List<string> PlayerNames { get; set; } = new();
     public DateTime StartedAt { get; set; }
     public bool IsCompleted { get; set; }
     public Scenario Scenario { get; set; } = new();

@@ -1,0 +1,81 @@
+@inject IApiClient ApiClient
+
+<div class="avatar-selector">
+    <div class="d-flex align-items-center justify-content-center">
+        <button class="btn btn-outline-secondary me-3" @onclick="NavigatePrevious" disabled="@(currentIndex == 0)">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        
+        <div class="avatar-display text-center">
+            @if (currentIndex == 0)
+            {
+                <div class="avatar-placeholder">
+                    <i class="fas fa-user-circle fa-4x text-muted mb-2"></i>
+                    <p class="text-muted small mb-0">No Avatar</p>
+                </div>
+            }
+            else
+            {
+                <CachedMystiraImage 
+                    MediaId="@avatarOptions[currentIndex - 1]"
+                    Alt="@(new[] { "Avatar option 1", "Avatar option 2", "Avatar option 3" }[currentIndex - 1])"
+                    Width="80"
+                    Height="80"
+                    ImageClass="rounded-circle border border-2 border-primary" />
+            }
+        </div>
+        
+        <button class="btn btn-outline-secondary ms-3" @onclick="NavigateNext" disabled="@(currentIndex == avatarOptions.Count)">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+    
+    @if (currentIndex > 0)
+    {
+        <div class="text-center mt-2">
+            <small class="text-muted">Avatar @(currentIndex) of @avatarOptions.Count</small>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback<string> OnAvatarSelected { get; set; }
+    
+    private List<string> avatarOptions = new()
+    {
+        "placeholder-avatar-1", // These will be placeholder media IDs
+        "placeholder-avatar-2",
+        "placeholder-avatar-3"
+    };
+    
+    private int currentIndex = 0;
+    
+    private void NavigatePrevious()
+    {
+        if (currentIndex > 0)
+        {
+            currentIndex--;
+            NotifyAvatarChanged();
+        }
+    }
+    
+    private void NavigateNext()
+    {
+        if (currentIndex < avatarOptions.Count)
+        {
+            currentIndex++;
+            NotifyAvatarChanged();
+        }
+    }
+    
+    private void NotifyAvatarChanged()
+    {
+        var selectedAvatar = currentIndex == 0 ? string.Empty : avatarOptions[currentIndex - 1];
+        OnAvatarSelected.InvokeAsync(selectedAvatar);
+    }
+    
+    protected override void OnInitialized()
+    {
+        NotifyAvatarChanged();
+    }
+}
