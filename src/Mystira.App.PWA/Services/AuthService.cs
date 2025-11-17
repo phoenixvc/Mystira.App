@@ -86,7 +86,7 @@ public class AuthService : IAuthService
     {
         try
         {
-            return await GetStoredTokenAsync();
+            return await GetCurrentTokenAsync();
         }
         catch (Exception ex)
         {
