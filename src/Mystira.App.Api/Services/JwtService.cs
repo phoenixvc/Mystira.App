@@ -40,7 +40,7 @@ public class JwtService : IJwtService
                 new Claim("email", email),
                 new Claim("name", displayName)
             }),
-            Expires = DateTime.UtcNow.AddMinutes(30), // Access token expires in 30 minutes
+            Expires = DateTime.UtcNow.AddHours(6), // Access token expires in 30 minutes
             Issuer = _issuer,
             Audience = _audience,
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
