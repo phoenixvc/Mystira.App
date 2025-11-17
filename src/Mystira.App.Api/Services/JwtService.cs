@@ -18,28 +18,58 @@ public class JwtService : IJwtService
     {
         _configuration = configuration;
         _logger = logger;
-        _secretKey = _configuration["JwtSettings:SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey not configured");
-        _issuer = _configuration["JwtSettings:Issuer"] ?? "MystiraAPI";
-        _audience = _configuration["JwtSettings:Audience"] ?? "MystiraPWA";
+        
+        // Fail fast if JWT configuration is missing - no hardcoded fallbacks
+        _secretKey = _configuration["JwtSettings:SecretKey"] 
+            ?? _configuration["Jwt:Key"]
+            ?? throw new InvalidOperationException(
+                "JWT SecretKey not configured. Please provide JwtSettings:SecretKey or Jwt:Key in configuration " +
+                "(e.g., via Azure Key Vault, AWS Secrets Manager, or secure environment variables). " +
+                "Never hardcode secrets in source code.");
+        
+        _issuer = _configuration["JwtSettings:Issuer"] 
+            ?? _configuration["Jwt:Issuer"]
+            ?? throw new InvalidOperationException("JWT Issuer not configured. Please provide JwtSettings:Issuer or Jwt:Issuer in configuration.");
+        
+        _audience = _configuration["JwtSettings:Audience"] 
+            ?? _configuration["Jwt:Audience"]
+            ?? throw new InvalidOperationException("JWT Audience not configured. Please provide JwtSettings:Audience or Jwt:Audience in configuration.");
+        
         _invalidatedRefreshTokens = new HashSet<string>();
+        
+        _logger.LogInformation("JwtService initialized with Issuer: {Issuer}, Audience: {Audience}", _issuer, _audience);
     }
 
-    public string GenerateAccessToken(string userId, string email, string displayName)
+    public string GenerateAccessToken(string userId, string email, string displayName, string? role = null)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_secretKey);
         
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId),
+            new Claim(ClaimTypes.Email, email),
+            new Claim(ClaimTypes.Name, displayName),
+            new Claim("sub", userId),
+            new Claim("email", email),
+            new Claim("name", displayName),
+            new Claim("account_id", userId)
+        };
+
+        // Add role claim if provided
+        if (!string.IsNullOrEmpty(role))
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+        else
+        {
+            // Default role is Guest
+            claims.Add(new Claim(ClaimTypes.Role, "Guest"));
+        }
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, userId),
-                new Claim(ClaimTypes.Email, email),
-                new Claim(ClaimTypes.Name, displayName),
-                new Claim("sub", userId),
-                new Claim("email", email),
-                new Claim("name", displayName)
-            }),
+            Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddHours(6), // Access token expires in 30 minutes
             Issuer = _issuer,
             Audience = _audience,

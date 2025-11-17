@@ -56,7 +56,7 @@ public class GameSessionsController : ControllerBase
                 });
             }
 
-            var session = await _sessionService.StartSessionAsync(request, accountId);
+            var session = await _sessionService.StartSessionAsync(request);
             return CreatedAtAction(nameof(GetSession), new { id = session.Id }, session);
         }
         catch (ArgumentException ex)

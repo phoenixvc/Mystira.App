@@ -8,8 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using System.Text;
-using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -92,10 +90,29 @@ else
 // Add Azure Infrastructure Services
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 
-// Configure JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "Mystira-app-Development-Secret-Key-2024-Very-Long-For-Security";
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "mystira-app-api";
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "mystira-app";
+// Configure JWT Authentication - Load from secure configuration only
+var jwtKey = builder.Configuration["Jwt:Key"];
+var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+var jwtAudience = builder.Configuration["Jwt:Audience"];
+
+// Fail fast if JWT configuration is missing
+if (string.IsNullOrEmpty(jwtKey))
+{
+    throw new InvalidOperationException(
+        "JWT Key is not configured. Please provide Jwt:Key in configuration " +
+        "(e.g., via Azure Key Vault, AWS Secrets Manager, or secure environment variables). " +
+        "Never hardcode secrets in source code.");
+}
+
+if (string.IsNullOrEmpty(jwtIssuer))
+{
+    throw new InvalidOperationException("JWT Issuer (Jwt:Issuer) is not configured.");
+}
+
+if (string.IsNullOrEmpty(jwtAudience))
+{
+    throw new InvalidOperationException("JWT Audience (Jwt:Audience) is not configured.");
+}
 
 builder.Services.AddAuthentication(options =>
     {
@@ -131,20 +148,6 @@ builder.Services.AddAuthentication(options =>
                 logger.LogInformation("JWT token validated for user: {User}", context.Principal?.Identity?.Name);
                 return Task.CompletedTask;
             }
-        };
-    })
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSettings["Issuer"] ?? "MystiraAPI",
-            ValidAudience = jwtSettings["Audience"] ?? "MystiraPWA",
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-            ClockSkew = TimeSpan.Zero
         };
     });
 
