@@ -91,19 +91,13 @@ else
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 
 // Configure JWT Authentication - Load from secure configuration only
-var jwtKey = builder.Configuration["Jwt:Key"];
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
 var jwtAudience = builder.Configuration["Jwt:Audience"];
+var jwtRsaPublicKey = builder.Configuration["Jwt:RsaPublicKey"];
+var jwtKey = builder.Configuration["Jwt:Key"];
+var jwksEndpoint = builder.Configuration["Jwt:JwksEndpoint"];
 
 // Fail fast if JWT configuration is missing
-if (string.IsNullOrEmpty(jwtKey))
-{
-    throw new InvalidOperationException(
-        "JWT Key is not configured. Please provide Jwt:Key in configuration " +
-        "(e.g., via Azure Key Vault, AWS Secrets Manager, or secure environment variables). " +
-        "Never hardcode secrets in source code.");
-}
-
 if (string.IsNullOrEmpty(jwtIssuer))
 {
     throw new InvalidOperationException("JWT Issuer (Jwt:Issuer) is not configured.");
@@ -114,6 +108,21 @@ if (string.IsNullOrEmpty(jwtAudience))
     throw new InvalidOperationException("JWT Audience (Jwt:Audience) is not configured.");
 }
 
+// Determine which signing method to use
+bool useAsymmetric = !string.IsNullOrEmpty(jwtRsaPublicKey) || !string.IsNullOrEmpty(jwksEndpoint);
+bool useSymmetric = !string.IsNullOrEmpty(jwtKey);
+
+if (!useAsymmetric && !useSymmetric)
+{
+    throw new InvalidOperationException(
+        "JWT signing key not configured. Please provide either:\n" +
+        "- Jwt:RsaPublicKey for asymmetric RS256 verification (recommended), OR\n" +
+        "- Jwt:JwksEndpoint for JWKS-based key rotation (recommended), OR\n" +
+        "- Jwt:Key for symmetric HS256 verification (legacy)\n" +
+        "Keys must be loaded from secure stores (Azure Key Vault, AWS Secrets Manager, etc.). " +
+        "Never hardcode secrets in source code.");
+}
+
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = "Bearer";
@@ -122,7 +131,7 @@ builder.Services.AddAuthentication(options =>
     })
     .AddJwtBearer("Bearer", options =>
     {
-        options.TokenValidationParameters = new TokenValidationParameters
+        var validationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
@@ -130,9 +139,48 @@ builder.Services.AddAuthentication(options =>
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
             ClockSkew = TimeSpan.FromMinutes(5)
         };
+
+        if (!string.IsNullOrEmpty(jwksEndpoint))
+        {
+            // Use JWKS endpoint for key rotation support (most secure)
+            options.MetadataAddress = jwksEndpoint;
+            options.RequireHttpsMetadata = true; // Always require HTTPS in production
+            validationParameters.IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>
+            {
+                // This will automatically fetch keys from the JWKS endpoint
+                var client = new HttpClient();
+                var response = client.GetStringAsync(jwksEndpoint).Result;
+                var keys = new JsonWebKeySet(response);
+                return keys.Keys;
+            };
+        }
+        else if (!string.IsNullOrEmpty(jwtRsaPublicKey))
+        {
+            // Use RSA public key for asymmetric verification (recommended)
+            try
+            {
+                var rsa = System.Security.Cryptography.RSA.Create();
+                rsa.ImportFromPem(jwtRsaPublicKey);
+                validationParameters.IssuerSigningKey = new RsaSecurityKey(rsa);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    "Failed to load RSA public key. Ensure Jwt:RsaPublicKey contains a valid PEM-encoded RSA public key " +
+                    "from a secure store (Azure Key Vault, AWS Secrets Manager, etc.)", ex);
+            }
+        }
+        else if (!string.IsNullOrEmpty(jwtKey))
+        {
+            // Fall back to symmetric key (legacy - should be phased out)
+            validationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            // Log warning during startup (will be logged when app runs)
+            Console.WriteLine("WARNING: Using symmetric HS256 JWT signing. Consider migrating to asymmetric RS256 with JWKS for better security.");
+        }
+
+        options.TokenValidationParameters = validationParameters;
         
         options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
         {
