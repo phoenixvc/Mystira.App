@@ -415,7 +415,7 @@ else
                 await LoadCharacterAssignmentData();
                 
                 // Update UI
-                InvokeAsync(StateHasChanged);
+                await InvokeAsync(StateHasChanged);
             }
         }
         catch (Exception ex)
