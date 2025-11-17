@@ -59,7 +59,7 @@
             </div>
             <div class="col-md-6">
                 <label class="form-label">&nbsp;</label>
-                <button class="btn btn-info w-100" onclick="loadAvailableMedia()">
+                <button class="btn btn-info w-100" onclick="searchAvailableMedia()">
                     <i class="fas fa-search me-2"></i>Search Available Media
                 </button>
             </div>
@@ -167,26 +167,29 @@ async function loadAvailableMedia() {
         showError('Please select an age group first.');
         return;
     }
-    
+
     try {
-        const response = await fetch('/api/admin/mediaadmin?mediaType=image&pageSize=100', {
+        const url = `/api/admin/mediaadmin?mediaType=image&pageSize=100`;
+        console.log('loadAvailableMedia URL (no search):', url);
+
+        const response = await fetch(url, {
             headers: {
                 'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || '')
             }
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
         allMedia = data.media || [];
         availableMediaCache = {};
-        
+
         allMedia.forEach(media => {
             availableMediaCache[media.mediaId] = media;
         });
-        
+
         document.getElementById('availableMediaContainer').style.display = 'block';
         displayAvailableMedia(allMedia);
     } catch (error) {
@@ -229,13 +232,48 @@ function displayAvailableMedia(mediaList) {
     container.innerHTML = html;
 }
 
-function searchAvailableMedia() {
-    const searchTerm = document.getElementById('mediaSearch').value.toLowerCase();
-    const filtered = allMedia.filter(m => 
-        m.mediaId.toLowerCase().includes(searchTerm) || 
-        (m.description && m.description.toLowerCase().includes(searchTerm))
-    );
-    displayAvailableMedia(filtered);
+async function searchAvailableMedia() {
+    if (!currentAgeGroup) {
+        showError('Please select an age group first.');
+        return;
+    }
+
+    const raw = document.getElementById('mediaSearch').value;
+    const searchTerm = raw.trim();
+
+    const encodedSearch = searchTerm
+        ? `&search=${encodeURIComponent(searchTerm)}`
+        : '';
+
+    const url = `/api/admin/mediaadmin?mediaType=image&pageSize=100${encodedSearch}`;
+    console.log('searchAvailableMedia term:', searchTerm);
+    console.log('searchAvailableMedia URL:', url);
+
+    try {
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || '')
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        allMedia = data.media || [];
+        availableMediaCache = {};
+
+        allMedia.forEach(media => {
+            availableMediaCache[media.mediaId] = media;
+        });
+
+        document.getElementById('availableMediaContainer').style.display = 'block';
+        displayAvailableMedia(allMedia);
+    } catch (error) {
+        console.error('Error loading available media:', error);
+        showError('Failed to load available media. Please try again.');
+    }
 }
 
 async function addAvatarToGroup(mediaId) {
@@ -243,7 +281,7 @@ async function addAvatarToGroup(mediaId) {
         showError('Please select an age group first.');
         return;
     }
-    
+
     try {
         const response = await fetch(`/api/admin/avataradmin/${currentAgeGroup}/add`, {
             method: 'POST',
@@ -253,15 +291,27 @@ async function addAvatarToGroup(mediaId) {
             },
             body: JSON.stringify(mediaId)
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         showSuccess(`Avatar added to ${currentAgeGroup} group!`);
-        await loadAvatars();
-        await displayCurrentAvatars();
-        await loadAvailableMedia();
+
+        // ✅ Update local avatar config for the current age group
+        if (!currentAvatars[currentAgeGroup]) {
+            currentAvatars[currentAgeGroup] = [];
+        }
+        if (!currentAvatars[currentAgeGroup].includes(mediaId)) {
+            currentAvatars[currentAgeGroup].push(mediaId);
+        }
+
+        // ✅ Re-render current avatars section
+        displayCurrentAvatars();
+
+        // ✅ Re-render available media using the *current* filtered list
+        // so the "+ Add" button becomes "✓ Added" without losing the search
+        displayAvailableMedia(allMedia);
     } catch (error) {
         console.error('Error adding avatar:', error);
         showError('Failed to add avatar. Please try again.');
