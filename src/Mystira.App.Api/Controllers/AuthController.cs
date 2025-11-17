@@ -80,7 +80,7 @@ namespace Mystira.App.Api.Controllers
                 Account = account,
                 Token = accessToken,
                 RefreshToken = refreshToken,
-                TokenExpiresAt = DateTime.UtcNow.AddMinutes(30),
+                TokenExpiresAt = DateTime.UtcNow.AddHours(6),
                 RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(30) // Refresh token valid for 30 days
             });
         }
@@ -144,7 +144,7 @@ namespace Mystira.App.Api.Controllers
                 Account = account,
                 Token = accessToken,
                 RefreshToken = refreshToken,
-                TokenExpiresAt = DateTime.UtcNow.AddMinutes(30),
+                TokenExpiresAt = DateTime.UtcNow.AddHours(6),
                 RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(30) // Refresh token valid for 30 days
             });
         }
@@ -202,7 +202,7 @@ namespace Mystira.App.Api.Controllers
                     Message = "Token refreshed successfully",
                     Token = newAccessToken,
                     RefreshToken = newRefreshToken,
-                    TokenExpiresAt = DateTime.UtcNow.AddMinutes(30),
+                    TokenExpiresAt = DateTime.UtcNow.AddHours(6),
                     RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(30)
                 });
             }
