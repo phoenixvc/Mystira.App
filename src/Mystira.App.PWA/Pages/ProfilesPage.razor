@@ -193,7 +193,7 @@ else
                     <!-- Age Group -->
                     <div class="mb-3">
                         <label class="form-label">Age Range*</label>
-                        <select class="form-select" @bind="formData.AgeGroup">
+                        <select class="form-select" @bind="formData.AgeGroup" @bind:after="OnAgeGroupChanged">
                             <option value="">Select age range...</option>
                             @foreach (var ageRange in AgeRanges.All)
                             {
@@ -201,6 +201,14 @@ else
                             }
                         </select>
                     </div>
+
+                    <!-- Avatar Selection -->
+                    @if (!string.IsNullOrEmpty(formData.AgeGroup))
+                    {
+                        <div class="mb-3">
+                            <AvatarCarousel AgeGroup="@formData.AgeGroup" OnAvatarSelected="OnAvatarSelected" />
+                        </div>
+                    }
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
@@ -505,9 +513,23 @@ else
         return date?.ToString("MMM d, yyyy") ?? "Unknown";
     }
 
+    private void OnAgeGroupChanged()
+    {
+        formData.SelectedAvatarMediaId = null;
+        StateHasChanged();
+    }
+
+    private async Task OnAvatarSelected(string mediaId)
+    {
+        formData.SelectedAvatarMediaId = mediaId;
+        Logger.LogInformation("Avatar selected for profile: {MediaId}", mediaId);
+        StateHasChanged();
+    }
+
     private class ProfileFormData
     {
         public string Name { get; set; } = string.Empty;
         public string? AgeGroup { get; set; }
+        public string? SelectedAvatarMediaId { get; set; }
     }
 }
