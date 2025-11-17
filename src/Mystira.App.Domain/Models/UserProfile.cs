@@ -25,6 +25,11 @@ public class UserProfile
     public string AgeGroup { get; set; } = string.Empty;
 
     /// <summary>
+    /// Media ID for the user's selected avatar
+    /// </summary>
+    public string? SelectedAvatarMediaId { get; set; }
+
+    /// <summary>
     /// Calculate current age from date of birth, or return null if not available
     /// </summary>
     public int? CurrentAge

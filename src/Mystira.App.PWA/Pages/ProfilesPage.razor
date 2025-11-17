@@ -109,11 +109,25 @@ else
                             <div class="card-body">
                                 <!-- Profile Header -->
                                 <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <div>
-                                        <h6 class="card-title mb-1">@profile.Name</h6>
-                                        <small class="text-muted">
-                                            @GetAgeRangeDisplay(profile.AgeGroup)
-                                        </small>
+                                    <div class="d-flex align-items-start gap-2" style="flex: 1;">
+                                        @if (!string.IsNullOrEmpty(profile.SelectedAvatarMediaId))
+                                        {
+                                            <div style="flex-shrink: 0;">
+                                                @{ var altText = $"{profile.Name} avatar"; }
+                                                <CachedMystiraImage 
+                                                    MediaId="@profile.SelectedAvatarMediaId" 
+                                                    Alt="@altText" 
+                                                    ImageClass="rounded"
+                                                    Width="60"
+                                                    Height="60" />
+                                            </div>
+                                        }
+                                        <div>
+                                            <h6 class="card-title mb-1">@profile.Name</h6>
+                                            <small class="text-muted">
+                                                @GetAgeRangeDisplay(profile.AgeGroup)
+                                            </small>
+                                        </div>
                                     </div>
                                     @if (profile.IsGuest)
                                     {
@@ -355,6 +369,7 @@ else
         {
             Name = profile.Name,
             AgeGroup = profile.AgeGroup,
+            SelectedAvatarMediaId = profile.SelectedAvatarMediaId
         };
         modalValidationMessage = string.Empty;
         showModal = true;
@@ -396,7 +411,8 @@ else
                 // Update existing profile
                 var updateRequest = new UpdateUserProfileRequest
                 {
-                    AgeGroup = formData.AgeGroup
+                    AgeGroup = formData.AgeGroup,
+                    SelectedAvatarMediaId = formData.SelectedAvatarMediaId
                 };
 
                 var updated = await ApiClient.UpdateProfileAsync(editingProfile.Id, updateRequest);
@@ -422,7 +438,8 @@ else
                     AgeGroup = formData.AgeGroup,
                     AccountId = currentAccount.Id,
                     IsGuest = false,
-                    HasCompletedOnboarding = false
+                    HasCompletedOnboarding = false,
+                    SelectedAvatarMediaId = formData.SelectedAvatarMediaId
                 };
 
                 var created = await ApiClient.CreateProfileAsync(createRequest);

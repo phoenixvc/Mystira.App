@@ -43,6 +43,11 @@ public class CreateUserProfileRequest
     /// Indicates if the user has completed onboarding
     /// </summary>
     public bool HasCompletedOnboarding { get; set; }
+
+    /// <summary>
+    /// Media ID for the user's selected avatar
+    /// </summary>
+    public string? SelectedAvatarMediaId { get; set; }
 }
 
 public class UpdateUserProfileRequest
@@ -56,6 +61,7 @@ public class UpdateUserProfileRequest
     public string? AccountId { get; set; }
     public string? Pronouns { get; set; }
     public string? Bio { get; set; }
+    public string? SelectedAvatarMediaId { get; set; }
 }
 
 public class CreateGuestProfileRequest
