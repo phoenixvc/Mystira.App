@@ -82,7 +82,7 @@ namespace Mystira.App.Api.Controllers
                 Success = true, 
                 Message = "Account created successfully",
                 Account = account,
-                Token = GenerateJwtToken(account.Id, account.Email, account.DisplayName)
+                Token = accessToken,
                 RefreshToken = refreshToken,
                 TokenExpiresAt = DateTime.UtcNow.AddHours(6),
                 RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(30) // Refresh token valid for 30 days
@@ -221,7 +221,7 @@ namespace Mystira.App.Api.Controllers
             }
         }
 
-        private string GenerateDemoToken(string userId)
+        private string GenerateDemoToken(string accountId, string email, string displayName)
         {
             var jwtKey = _configuration["Jwt:Key"] ?? "Mystira-app-Development-Secret-Key-2024-Very-Long-For-Security";
             var jwtIssuer = _configuration["Jwt:Issuer"] ?? "mystira-app-api";
