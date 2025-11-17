@@ -226,11 +226,14 @@ function registerDisplayModeListener() {
         return;
     }
 
+    // Always prefer addEventListener (supported in almost all browsers since 2022)
     if (typeof displayModeMediaQuery.addEventListener === 'function') {
         displayModeMediaQuery.addEventListener('change', updateButtonVisibility);
-    } else if (typeof displayModeMediaQuery.addListener === 'function') {
-        displayModeMediaQuery.addListener(updateButtonVisibility);
     }
+    // Remove else branch for legacy addListener (if you do not support very old browsers)
+    // else if (typeof displayModeMediaQuery.addListener === 'function') {
+    //     displayModeMediaQuery.addListener(updateButtonVisibility);
+    // }
 }
 
 function unregisterDisplayModeListener() {
@@ -240,9 +243,11 @@ function unregisterDisplayModeListener() {
 
     if (typeof displayModeMediaQuery.removeEventListener === 'function') {
         displayModeMediaQuery.removeEventListener('change', updateButtonVisibility);
-    } else if (typeof displayModeMediaQuery.removeListener === 'function') {
-        displayModeMediaQuery.removeListener(updateButtonVisibility);
     }
+    // Remove else branch for legacy removeListener (if you do not support very old browsers)
+    // else if (typeof displayModeMediaQuery.removeListener === 'function') {
+    //     displayModeMediaQuery.removeListener(updateButtonVisibility);
+    // }
 
     displayModeMediaQuery = null;
 }

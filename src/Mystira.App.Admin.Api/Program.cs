@@ -138,6 +138,7 @@ builder.Services.AddScoped<IMediaMetadataService, MediaMetadataService>();
 builder.Services.AddScoped<ICharacterMediaMetadataService, CharacterMediaMetadataService>();
 builder.Services.AddScoped<IBadgeConfigurationApiService, BadgeConfigurationApiService>();
 builder.Services.AddScoped<IMediaApiService, MediaApiService>();
+builder.Services.AddScoped<IAvatarApiService, AvatarApiService>();
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
 builder.Services.AddScoped<IEmailService, AzureEmailService>();
 
