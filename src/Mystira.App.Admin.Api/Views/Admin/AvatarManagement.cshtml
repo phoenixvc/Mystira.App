@@ -261,23 +261,28 @@ async function addAvatarToGroup(mediaId) {
     }
 
     try {
+        console.log('addAvatarToGroup called with mediaId:', mediaId, 'ageGroup:', currentAgeGroup);
+        
         const response = await fetch(`/api/admin/avataradmin/${currentAgeGroup}/add`, {
             method: 'POST',
             headers: {
                 'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || ''),
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(mediaId)   // 🔁 Same payload shape you had before
+            body: JSON.stringify(mediaId)
         });
 
-        const responseText = await response.text();
-        console.log('addAvatarToGroup status:', response.status);
-        console.log('addAvatarToGroup body:', responseText);
-
+        console.log('addAvatarToGroup response status:', response.status);
+        
         if (!response.ok) {
+            const responseText = await response.text();
+            console.error('addAvatarToGroup error response:', responseText);
             throw new Error(`Add avatar failed: ${response.status} - ${responseText}`);
         }
 
+        const data = await response.json();
+        console.log('addAvatarToGroup success response:', data);
+        
         showSuccess(`Avatar added to ${currentAgeGroup} group!`);
 
         // ✅ Update local avatar list for this age group
@@ -286,6 +291,7 @@ async function addAvatarToGroup(mediaId) {
         }
         if (!currentAvatars[currentAgeGroup].includes(mediaId)) {
             currentAvatars[currentAgeGroup].push(mediaId);
+            console.log('Updated local currentAvatars:', currentAvatars);
         }
 
         // ✅ Re-render the current avatars (top section)

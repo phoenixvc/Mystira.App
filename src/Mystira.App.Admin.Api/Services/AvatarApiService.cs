@@ -118,6 +118,8 @@ public class AvatarApiService : IAvatarApiService
             {
                 _context.Entry(existingFile).CurrentValues.SetValues(file);
                 existingFile.AgeGroupAvatars = file.AgeGroupAvatars;
+                // Mark the complex property as modified so EF Core recognizes the change
+                _context.Entry(existingFile).Property(e => e.AgeGroupAvatars).IsModified = true;
             }
             else
             {
