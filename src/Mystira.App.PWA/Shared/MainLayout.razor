@@ -36,6 +36,15 @@
                             About
                         </a>
                     </li>
+                    @if (isAuthenticated)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" href="/game">
+                                <i class="fas fa-compass me-1"></i>
+                                Adventures
+                            </a>
+                        </li>
+                    }
                     @if (CurrentGameSession != null)
                     {
                         <li class="nav-item">

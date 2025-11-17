@@ -5,6 +5,9 @@ using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,24 +65,28 @@ else
 // Add Azure Infrastructure Services
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 
-// Configure Cookie Authentication (no JWT)
+// Configure JWT Authentication
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey not configured");
+
 builder.Services.AddAuthentication(options =>
     {
-        options.DefaultScheme = "Cookies";
-        options.DefaultSignInScheme = "Cookies";
-        options.DefaultChallengeScheme = "Cookies";
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
     })
-    .AddCookie("Cookies", options =>
+    .AddJwtBearer(options =>
     {
-        options.Cookie.Name = "Mystira.App.Auth";
-        options.Cookie.HttpOnly = true;
-        options.Cookie.SameSite = SameSiteMode.Strict;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-        options.ExpireTimeSpan = TimeSpan.FromDays(7);
-        options.SlidingExpiration = true;
-        options.LoginPath = "/api/auth/login";
-        options.LogoutPath = "/api/auth/logout";
-        options.AccessDeniedPath = "/api/auth/forbidden";
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings["Issuer"] ?? "MystiraAPI",
+            ValidAudience = jwtSettings["Audience"] ?? "MystiraPWA",
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+            ClockSkew = TimeSpan.Zero
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -102,15 +109,17 @@ builder.Services.AddScoped<IBundleService, BundleService>();
 builder.Services.AddScoped<ICharacterMapFileService, CharacterMapFileService>();
 builder.Services.AddScoped<IPasswordlessAuthService, PasswordlessAuthService>();
 builder.Services.AddScoped<IEmailService, AzureEmailService>();
+builder.Services.AddScoped<IJwtService, JwtService>();
 
 // Configure Health Checks
 builder.Services.AddHealthChecks()
     .AddCheck<BlobStorageHealthCheck>("blob_storage");
 
 // Configure CORS for frontend integration
+var policyName = "MystiraAppPolicy";
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("MystiraAppPolicy", policy =>
+    options.AddPolicy(policyName, policy =>
     {
         policy.WithOrigins(
                 "http://localhost:7000",
@@ -146,9 +155,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("MystiraAppPolicy");
 
 app.UseRouting();
+
+// ✅ CORS must be between UseRouting and auth/endpoints
+app.UseCors(policyName);
+
 app.UseAuthentication();
 app.UseAuthorization();
 
