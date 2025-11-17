@@ -168,34 +168,9 @@ async function loadAvailableMedia() {
         return;
     }
 
-    try {
-        const url = `/api/admin/mediaadmin?mediaType=image&pageSize=100`;
-        console.log('loadAvailableMedia URL (no search):', url);
-
-        const response = await fetch(url, {
-            headers: {
-                'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || '')
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        allMedia = data.media || [];
-        availableMediaCache = {};
-
-        allMedia.forEach(media => {
-            availableMediaCache[media.mediaId] = media;
-        });
-
-        document.getElementById('availableMediaContainer').style.display = 'block';
-        displayAvailableMedia(allMedia);
-    } catch (error) {
-        console.error('Error loading available media:', error);
-        showError('Failed to load available media. Please try again.');
-    }
+    // Clear search box and just reuse searchAvailableMedia with empty term
+    document.getElementById('mediaSearch').value = '';
+    await searchAvailableMedia();
 }
 
 function displayAvailableMedia(mediaList) {
@@ -261,6 +236,8 @@ async function searchAvailableMedia() {
         }
 
         const data = await response.json();
+        console.log('searchAvailableMedia response:', data);
+
         allMedia = data.media || [];
         availableMediaCache = {};
 
@@ -276,6 +253,7 @@ async function searchAvailableMedia() {
     }
 }
 
+
 async function addAvatarToGroup(mediaId) {
     if (!currentAgeGroup) {
         showError('Please select an age group first.');
@@ -289,16 +267,20 @@ async function addAvatarToGroup(mediaId) {
                 'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || ''),
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(mediaId)
+            body: JSON.stringify(mediaId)   // 🔁 Same payload shape you had before
         });
 
+        const responseText = await response.text();
+        console.log('addAvatarToGroup status:', response.status);
+        console.log('addAvatarToGroup body:', responseText);
+
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`Add avatar failed: ${response.status} - ${responseText}`);
         }
 
         showSuccess(`Avatar added to ${currentAgeGroup} group!`);
 
-        // ✅ Update local avatar config for the current age group
+        // ✅ Update local avatar list for this age group
         if (!currentAvatars[currentAgeGroup]) {
             currentAvatars[currentAgeGroup] = [];
         }
@@ -306,11 +288,10 @@ async function addAvatarToGroup(mediaId) {
             currentAvatars[currentAgeGroup].push(mediaId);
         }
 
-        // ✅ Re-render current avatars section
+        // ✅ Re-render the current avatars (top section)
         displayCurrentAvatars();
 
-        // ✅ Re-render available media using the *current* filtered list
-        // so the "+ Add" button becomes "✓ Added" without losing the search
+        // ✅ Re-render the *current* media list so "+ Add" → "✓ Added"
         displayAvailableMedia(allMedia);
     } catch (error) {
         console.error('Error adding avatar:', error);
