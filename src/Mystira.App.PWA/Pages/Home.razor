@@ -17,9 +17,6 @@
 <div class="container-fluid py-4">
     <div class="row">
         <div class="col-12 text-center mb-4">
-            <p class="lead text-muted mb-3">
-                Where imagination meets growth
-            </p>
             <div class="row">
                 <div class="col-12 text-center mb-4">
                     <CachedMystiraImage 
@@ -29,82 +26,47 @@
                         Height="600" />
                 </div>
             </div>
-            @if (!isAuthenticated)
-            {
-                <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
-                    <a href="/signin" class="btn btn-primary-custom btn-lg">
-                        <i class="fas fa-sign-in-alt me-2"></i>
-                        Sign In
-                    </a>
-                    <a href="/signup" class="btn btn-outline-primary btn-lg">
-                        <i class="fas fa-user-plus me-2"></i>
-                        Register
-                    </a>
-                </div>
-            }
         </div>
     </div>
     
-    <!-- Profile Prompt -->
-    @if (isAuthenticated && !isLoadingProfiles && !hasProfiles)
+    <!-- Game Session Content (shown when user has profiles and active game) -->
+    @if (isAuthenticated && hasProfiles && gameSession != null)
     {
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="alert alert-info alert-dismissible" role="alert">
-                    <div class="d-flex align-items-center">
-                        <i class="fas fa-user-circle fa-2x me-3"></i>
-                        <div class="flex-grow-1">
-                            <h5 class="alert-heading mb-1">Create Your First Profile!</h5>
-                            <p class="mb-0">Before you can start your adventures, you'll need to create a player profile. Profiles help us personalize your experience.</p>
-                        </div>
-                        <a href="/profiles" class="btn btn-primary-custom ms-3">
-                            <i class="fas fa-user-plus me-2"></i>
-                            Create Profile
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        }
-
-        <!-- Game Session Content (shown when user has profiles and active game) -->
-        @if (isAuthenticated && hasProfiles && gameSession != null)
-        {
         <div class="container-fluid py-4">
-        <div class="row">
-            <div class="col-12">
-                <div class="row">
-                    <div class="col-md-8">
-                        <div class="d-flex align-items-center mb-4">
-                            <div class="me-4">
-                                <h2 class="text-primary-custom mb-1">
-                                    Welcome "@(gameSession.PlayerNames.FirstOrDefault() ?? "Player")"! What adventures await us today?
-                                </h2>
-                            </div>
-                            <div class="avatar-placeholder">
-                                <CachedMystiraImage
-                                    MediaId="placeholder-avatar-default"
-                                    Alt="Player avatar"
-                                    Width="60"
-                                    Height="60"
-                                    ImageClass="rounded-circle border border-2 border-primary" />
+            <div class="row">
+                <div class="col-12">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center mb-4">
+                                <div class="me-4">
+                                    <h2 class="text-primary-custom mb-1">
+                                        Welcome "@(gameSession.PlayerNames.FirstOrDefault() ?? "Player")"! What adventures await us today?
+                                    </h2>
+                                </div>
+                                <div class="avatar-placeholder">
+                                    <CachedMystiraImage 
+                                        MediaId="placeholder-avatar-default"
+                                        Alt="Player avatar"
+                                        Width="60"
+                                        Height="60"
+                                        ImageClass="rounded-circle border border-2 border-primary" />
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-md-4 text-end">
-                    <CachedMystiraImage
-                        MediaId="image-final-logo-fe3f75db"
-                        Alt="Mystira Logo"
-                        Width="120"
-                        Height="120" />
+                    <div class="col-md-4 text-end">
+                        <CachedMystiraImage 
+                            MediaId="image-final-logo-fe3f75db"
+                            Alt="Mystira Logo"
+                            Width="120"
+                            Height="120" />
+                    </div>
                 </div>
             </div>
         </div>
-        </div>
-        }
-
-        <!-- Age Group Filters -->
+    }
+    
+    <!-- Age Group Filters -->
     @if (isAuthenticated && !isLoading)
     {
         <div class="row mb-4">
@@ -262,52 +224,25 @@
                                             <i class="fas fa-clock me-1"></i>@scenario.SessionLength
                                         </span>
                                     </div>
-        
-                                    <!-- Core Axes in a separate row -->
-                                    @if (scenario.CoreAxes != null && scenario.CoreAxes.Any())
-                                    {
-                                        <div class="d-flex flex-wrap mb-2">
-                                            @foreach (var axis in scenario.CoreAxes.Take(4))
-                                            {
-                                                <span class="badge bg-primary me-1 mb-1">@axis</span>
-                                            }
-                                            @if (scenario.CoreAxes.Count > 4)
-                                            {
-                                                <span class="badge bg-primary mb-1">+@(scenario.CoreAxes.Count - 4)</span>
-                                            }
-                                        </div>
-                                    }
-        
-                                    <!-- Tags in a separate row -->
-                                    @if (scenario.Tags?.Any() == true)
-                                    {
-                                        <div class="d-flex flex-wrap">
-                                            @foreach (var tag in scenario.Tags.Take(3))
-                                            {
-                                                <span class="badge bg-secondary me-1 mb-1">@System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(tag.ToLower())</span>
-                                            }
-                                            @if (scenario.Tags.Length > 3)
-                                            {
-                                                <span class="badge bg-secondary mb-1">+@(scenario.Tags.Length - 3)</span>
-                                            }
-                                        </div>
-                                    }
                                 </div>
                                 
-                                <button class="btn btn-primary-custom btn-lg w-100" 
-                                        @onclick="() => StartAdventure(scenario)"
-                                        disabled="@isStartingAdventure">
-                                    @if (isStartingAdventure)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                        <span>Starting...</span>
-                                    }
-                                    else
-                                    {
-                                        <i class="fas fa-play me-2"></i>
-                                        <span>Start Adventure</span>
-                                    }
-                                </button>
+                                <!-- Action Buttons -->
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-primary-custom flex-fill" 
+                                            @onclick="() => StartAdventure(scenario)"
+                                            disabled="@isStartingAdventure">
+                                        @if (isStartingAdventure)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                            <span>Loading...</span>
+                                        }
+                                        else
+                                        {
+                                            <i class="fas fa-play me-2"></i>
+                                            <span>Start Adventure</span>
+                                        }
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -409,6 +344,7 @@
     private bool gameStateLoadingComplete = false;
     private bool hasProfiles = false;
     private bool isLoadingProfiles = false;
+    private GameSession? gameSession;
     
     // Age group filter state
     private readonly HashSet<string> selectedAgeGroups = new();
@@ -423,6 +359,9 @@
             // Subscribe to authentication state changes
             AuthService.AuthenticationStateChanged += OnAuthenticationStateChanged;
             
+            // Subscribe to game session changes
+            GameSessionService.GameSessionChanged += OnGameSessionChanged;
+            
             // Check current authentication status
             isAuthenticated = await AuthService.IsAuthenticatedAsync();
             
@@ -435,6 +374,8 @@
                 await LoadProfiles();
                 // Start loading game state in background
                 _ = LoadGameStateAsync();
+                // Get current game session
+                gameSession = GameSessionService.CurrentGameSession;
             }
             else 
             {
@@ -460,6 +401,8 @@
                 await LoadScenarios();
                 await LoadProfiles();
                 _ = LoadGameStateAsync();
+                // Get current game session
+                gameSession = GameSessionService.CurrentGameSession;
             }
             else 
             {
@@ -469,9 +412,16 @@
                 completedScenarioIds.Clear();
                 gameStateLoadingComplete = false;
                 hasProfiles = false;
+                gameSession = null;
             }
             StateHasChanged();
         });
+    }
+
+    private void OnGameSessionChanged(object? sender, GameSession? session)
+    {
+        gameSession = session;
+        InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
@@ -479,6 +429,10 @@
         if (AuthService != null)
         {
             AuthService.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        }
+        if (GameSessionService != null)
+        {
+            GameSessionService.GameSessionChanged -= OnGameSessionChanged;
         }
     }
 
@@ -545,38 +499,30 @@
             isLoadingGameState = true;
             StateHasChanged();
             
-            Logger.LogInformation("Loading game state for scenarios...");
-            
-            var account = await AuthService.GetCurrentAccountAsync();
-            if (account == null)
+            var currentAccount = await AuthService.GetCurrentAccountAsync();
+            if (currentAccount != null)
             {
-                Logger.LogWarning("No account found for loading game state");
-                gameStateLoadingComplete = true;
-                isLoadingGameState = false;
-                StateHasChanged();
-                return;
-            }
-
-            var gameStateResponse = await ApiClient.GetScenariosWithGameStateAsync(account.Id);
-            if (gameStateResponse != null)
-            {
-                completedScenarioIds = gameStateResponse.Scenarios
-                    .Where(s => s.GameState == ScenarioGameState.Completed)
-                    .Select(s => s.ScenarioId)
-                    .ToHashSet();
+                Logger.LogInformation("Loading game state for account {AccountId}", currentAccount.Id);
                 
-                Logger.LogInformation("Loaded game state for {Count} scenarios, {CompletedCount} completed", 
-                    gameStateResponse.TotalCount, completedScenarioIds.Count);
+                var gameStateResponse = await ApiClient.GetScenariosWithGameStateAsync(currentAccount.Id);
+                if (gameStateResponse != null)
+                {
+                    completedScenarioIds = new HashSet<string>(gameStateResponse.CompletedScenarioIds ?? new List<string>());
+                    Logger.LogInformation("Loaded game state: {CompletedCount} completed scenarios", completedScenarioIds.Count);
+                }
+                else
+                {
+                    Logger.LogWarning("Failed to load game state response");
+                    completedScenarioIds = new HashSet<string>();
+                }
             }
             
             gameStateLoadingComplete = true;
-            
-            // Apply filters once game state is loaded
-            ApplyFilters();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading game state");
+            completedScenarioIds = new HashSet<string>();
             gameStateLoadingComplete = true;
         }
         finally
@@ -584,28 +530,6 @@
             isLoadingGameState = false;
             StateHasChanged();
         }
-    }
-
-    private async void ToggleCompletedStories(ChangeEventArgs e)
-    {
-        showCompletedStories = (bool)e.Value!;
-        
-        // Wait for game state to load if it hasn't finished yet
-        if (isLoadingGameState && !gameStateLoadingComplete)
-        {
-            Logger.LogInformation("Game state loading in progress, waiting for completion...");
-            await Task.Run(async () =>
-            {
-                var timeout = DateTime.UtcNow.AddSeconds(5);
-                while (isLoadingGameState && !gameStateLoadingComplete && DateTime.UtcNow < timeout)
-                {
-                    await Task.Delay(100);
-                }
-            });
-        }
-        
-        ApplyFilters();
-        StateHasChanged();
     }
 
     private async Task StartAdventure(Scenario scenario)
@@ -681,6 +605,13 @@
     private void ClearAllFilters()
     {
         selectedAgeGroups.Clear();
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private void ToggleCompletedStories()
+    {
+        showCompletedStories = !showCompletedStories;
         ApplyFilters();
         StateHasChanged();
     }
