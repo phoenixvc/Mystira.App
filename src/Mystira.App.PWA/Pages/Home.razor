@@ -1,8 +1,8 @@
 @inject NavigationManager NavigationManager
 @inject IAuthService AuthService
 @inject IProfileService ProfileService
-@inject IApiClient ApiClient
 @inject IGameSessionService GameSessionService
+@inject IApiClient ApiClient
 @inject ILogger<Home> Logger
 
 @page "/"
@@ -65,9 +65,46 @@
                 </div>
             </div>
         </div>
-    }
-    
-    <!-- Age Group Filters -->
+        }
+
+        <!-- Game Session Content (shown when user has profiles and active game) -->
+        @if (isAuthenticated && hasProfiles && gameSession != null)
+        {
+        <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="me-4">
+                                <h2 class="text-primary-custom mb-1">
+                                    Welcome "@(gameSession.PlayerNames.FirstOrDefault() ?? "Player")"! What adventures await us today?
+                                </h2>
+                            </div>
+                            <div class="avatar-placeholder">
+                                <CachedMystiraImage
+                                    MediaId="placeholder-avatar-default"
+                                    Alt="Player avatar"
+                                    Width="60"
+                                    Height="60"
+                                    ImageClass="rounded-circle border border-2 border-primary" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <CachedMystiraImage
+                        MediaId="image-final-logo-fe3f75db"
+                        Alt="Mystira Logo"
+                        Width="120"
+                        Height="120" />
+                </div>
+            </div>
+        </div>
+        </div>
+        }
+
+        <!-- Age Group Filters -->
     @if (isAuthenticated && !isLoading)
     {
         <div class="row mb-4">
