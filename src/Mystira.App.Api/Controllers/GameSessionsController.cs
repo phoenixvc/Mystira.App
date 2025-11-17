@@ -208,7 +208,7 @@ public class GameSessionsController : ControllerBase
             _logger.LogError(ex, "Error making choice in session {SessionId}", request.SessionId);
             return StatusCode(500, new ErrorResponse 
             { 
-                Message = "Internal server error while ending session",
+                Message = "Internal server error while making choice",
                 TraceId = HttpContext.TraceIdentifier
             });
         }
