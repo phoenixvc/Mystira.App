@@ -268,11 +268,11 @@ else
         GameSessionService.GameSessionChanged += OnGameSessionChanged;
         
         // If no game session, redirect to home
-        if (gameSession == null)
-        {
-            Logger.LogWarning("No active game session found, redirecting to home");
-            Navigation.NavigateTo("/");
-        }
+        // if (gameSession == null)
+        // {
+        //     Logger.LogWarning("No active game session found, redirecting to home");
+        //     Navigation.NavigateTo("/");
+        // }
     }
 
     private void OnGameSessionChanged(object? sender, GameSession? session)

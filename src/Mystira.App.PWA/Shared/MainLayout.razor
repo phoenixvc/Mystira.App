@@ -65,10 +65,10 @@
                         <li class="nav-item dropdown">
                             <button class="btn btn-link nav-link dropdown-toggle" 
                                     type="button"
-                                    @onclick="ToggleProfileMenu"
+                                    @onclick="ToggleSettingsMenu"
                                     @onclick:stopPropagation="true">
                                 <i class="fas fa-user-circle me-1"></i>
-                                @GetProfileDisplayName()
+                                Settings
                             </button>
                             @if (isProfileMenuOpen)
                             {
@@ -194,7 +194,7 @@
         return CurrentAccount?.Email ?? "Profile";
     }
 
-    private void ToggleProfileMenu()
+    private void ToggleSettingsMenu()
     {
         if (!isAuthenticated)
         {
