@@ -93,26 +93,10 @@ public class AuthService : IAuthService
         {
             _logger.LogInformation("Attempting login for email: {Email}", email);
 
-            // Demo authentication until real API is connected
-            var demoAccount = new Account
-            {
-                Auth0UserId = $"demo|{Guid.NewGuid():N}",
-                Email = email,
-                DisplayName = email.Split('@')[0]
-            };
-
-            var demoToken = $"{DemoTokenPrefix}{Guid.NewGuid():N}";
-
-            SetStoredToken(demoToken);
-            SetStoredAccount(demoAccount);
-
-            _isAuthenticated = true;
-            _currentAccount = demoAccount;
-
-            _logger.LogInformation("Login successful for: {Email}", email);
-            AuthenticationStateChanged?.Invoke(this, true);
-
-            return Task.FromResult(true);
+            // Login not implemented - use passwordless authentication methods instead
+            _logger.LogWarning("LoginAsync called with email: {Email}, but is not implemented. Use passwordless methods instead.", email);
+            
+            return Task.FromResult(false);
         }
         catch (Exception ex)
         {
