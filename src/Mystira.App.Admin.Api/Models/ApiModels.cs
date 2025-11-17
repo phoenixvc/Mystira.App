@@ -30,6 +30,16 @@ public class CreateUserProfileRequest
     /// Indicates if this profile represents an NPC
     /// </summary>
     public bool IsNpc { get; set; } = false;
+
+    /// <summary>
+    /// Identifier representing the associated account.
+    /// </summary>
+    public string? AccountId { get; set; }
+    
+    /// <summary>
+    /// Indicates if the user has completed onboarding
+    /// </summary>
+    public bool HasCompletedOnboarding { get; set; }
 }
 
 public class UpdateUserProfileRequest
@@ -41,6 +51,8 @@ public class UpdateUserProfileRequest
     public bool? IsGuest { get; set; }
     public bool? IsNpc { get; set; }
     public string? AccountId { get; set; }
+    public string? Pronouns { get; set; }
+    public string? Bio { get; set; }
 }
 
 public class CreateGuestProfileRequest
@@ -655,4 +667,16 @@ public class PasswordlessSigninResponse
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
     public string? Email { get; set; }
+}
+
+// Avatar Response Models
+public class AvatarResponse
+{
+    public Dictionary<string, List<string>> AgeGroupAvatars { get; set; } = new();
+}
+
+public class AvatarConfigurationResponse
+{
+    public string AgeGroup { get; set; } = string.Empty;
+    public List<string> AvatarMediaIds { get; set; } = new();
 }

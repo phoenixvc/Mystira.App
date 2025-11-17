@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Data;
-using System.Linq;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Models;

@@ -29,6 +29,7 @@ public class MystiraAppDbContext : DbContext
     public DbSet<MediaMetadataFile> MediaMetadataFiles { get; set; }
     public DbSet<CharacterMediaMetadataFile> CharacterMediaMetadataFiles { get; set; }
     public DbSet<CharacterMapFile> CharacterMapFiles { get; set; }
+    public DbSet<AvatarConfigurationFile> AvatarConfigurationFiles { get; set; }
 
     // Game Session Management
     public DbSet<GameSession> GameSessions { get; set; }
@@ -46,13 +47,13 @@ public class MystiraAppDbContext : DbContext
         // Configure UserProfile
         modelBuilder.Entity<UserProfile>(entity =>
         {
-            entity.HasKey(e => e.Name); // Keep using Name as primary key for backward compatibility
+            entity.HasKey(e => e.Id);
             
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
                 entity.ToContainer("UserProfiles")
-                      .HasPartitionKey(e => e.Name);
+                      .HasPartitionKey(e => e.Id);
             }
             
             entity.Property(e => e.PreferredFantasyThemes)
@@ -63,31 +64,37 @@ public class MystiraAppDbContext : DbContext
                       (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2), 
                       c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                       c => c.ToList()));
-
-        });
-
-        // Configure UserBadge
-        modelBuilder.Entity<UserBadge>(entity =>
-        {
-            entity.HasKey(e => e.Id);
             
-            // Only apply Cosmos DB configurations when not using in-memory database
-            if (!isInMemoryDatabase)
+            // Configure UserBadge as owned by UserProfile
+            entity.OwnsMany(p => p.EarnedBadges, badges =>
             {
-                entity.ToContainer("UserBadges")
-                      .HasPartitionKey(e => e.UserProfileId);
-            }
-            
-            entity.Property(e => e.UserProfileId).IsRequired();
-            entity.Property(e => e.BadgeConfigurationId).IsRequired();
-            entity.Property(e => e.BadgeName).IsRequired();
-            entity.Property(e => e.BadgeMessage).IsRequired();
-            entity.Property(e => e.Axis).IsRequired();
-            
-            // Create index on UserProfileId for efficient querying
-            entity.HasIndex(e => e.UserProfileId);
-            entity.HasIndex(e => new { e.UserProfileId, e.BadgeConfigurationId }).IsUnique();
+                badges.WithOwner().HasForeignKey(b => b.UserProfileId);
+                badges.HasKey(b => b.Id);
+        
+                // Only apply Cosmos DB specific configurations when not using in-memory database
+                if (!isInMemoryDatabase)
+                {
+                    // No need for ToContainer or HasPartitionKey for owned entities
+                    // They'll be embedded in the UserProfile document
+                }
+        
+                badges.Property(b => b.UserProfileId).IsRequired();
+                badges.Property(b => b.BadgeConfigurationId).IsRequired();
+                badges.Property(b => b.BadgeName).IsRequired();
+                badges.Property(b => b.BadgeMessage).IsRequired();
+                badges.Property(b => b.Axis).IsRequired();
+        
+                // Indexes may not be applicable for owned entities in Cosmos DB
+                // If using SQL Server, you can still configure these:
+                if (isInMemoryDatabase)
+                {
+                    badges.HasIndex(b => b.UserProfileId);
+                    badges.HasIndex(b => new { b.UserProfileId, b.BadgeConfigurationId }).IsUnique();
+                }
+            });
         });
+        
+        modelBuilder.Entity<UserProfile>().OwnsMany(p => p.EarnedBadges);
 
         // Configure Account
         modelBuilder.Entity<Account>(entity =>
@@ -447,6 +454,26 @@ public class MystiraAppDbContext : DbContext
                                 c => c.ToList()));
                 });
             });
+        });
+
+        // Configure AvatarConfigurationFile
+        modelBuilder.Entity<AvatarConfigurationFile>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            
+            // Only apply Cosmos DB configurations when not using in-memory database
+            if (!isInMemoryDatabase)
+            {
+                entity.ToContainer("AvatarConfigurationFiles")
+                      .HasPartitionKey(e => e.Id);
+            }
+
+            // Convert Dictionary<string, List<string>> for storage
+            entity.Property(e => e.AgeGroupAvatars)
+                  .HasConversion(
+                      v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
+                      v => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, List<string>>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new Dictionary<string, List<string>>()
+                  );
         });
 
         // Configure CompassTracking as a separate container for analytics

@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
 using Mystira.App.Api.Models;
 using Mystira.App.Api.Services;
 
@@ -8,7 +7,6 @@ namespace Mystira.App.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
-[Authorize] // Admin only
 public class MediaMetadataController : ControllerBase
 {
     private readonly IMediaMetadataService _mediaMetadataService;

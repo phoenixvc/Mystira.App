@@ -218,7 +218,6 @@ public class GameSessionsController : ControllerBase
     /// Get a specific game session
     /// </summary>
     [HttpGet("{id}")]
-    [Authorize] // Requires DM authentication
     public async Task<ActionResult<GameSession>> GetSession(string id)
     {
         try
@@ -250,7 +249,6 @@ public class GameSessionsController : ControllerBase
     /// Get all sessions for a specific profile
     /// </summary>
     [HttpGet("profile/{profileId}")]
-    [Authorize] // Requires authentication
     public async Task<ActionResult<List<GameSessionResponse>>> GetSessionsByProfile(string profileId)
     {
         try
@@ -318,6 +316,47 @@ public class GameSessionsController : ControllerBase
             return StatusCode(500, new ErrorResponse 
             { 
                 Message = "Internal server error while checking achievements",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
+    /// Mark a scenario as completed for an account
+    /// </summary>
+    [HttpPost("complete-scenario")]
+    public async Task<ActionResult> CompleteScenarioForAccount([FromBody] CompleteScenarioRequest request)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(request.AccountId) || string.IsNullOrEmpty(request.ScenarioId))
+            {
+                return BadRequest(new ErrorResponse 
+                { 
+                    Message = "AccountId and ScenarioId are required",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            var success = await _accountService.AddCompletedScenarioAsync(request.AccountId, request.ScenarioId);
+            if (!success)
+            {
+                return NotFound(new ErrorResponse 
+                { 
+                    Message = $"Account not found: {request.AccountId}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error completing scenario {ScenarioId} for account {AccountId}", 
+                request.ScenarioId, request.AccountId);
+            return StatusCode(500, new ErrorResponse 
+            { 
+                Message = "Internal server error while completing scenario",
                 TraceId = HttpContext.TraceIdentifier
             });
         }

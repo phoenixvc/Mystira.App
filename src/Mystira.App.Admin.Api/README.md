@@ -1,26 +1,37 @@
-# Mystira.App API
+# Mystira.App Admin API
 
-Backend API infrastructure for Mystira.App - Dynamic Story App for Child Development
+Administrative API for content management and system administration.
 
 ## Overview
 
-The Mystira.App API provides the core backend services for the Mystira.App MAUI mobile application, implementing:
+The Mystira.App Admin API provides backend services for administrative and content management operations, separate from the client-facing API. This separation ensures better security, scalability, and maintainability.
 
-- **Scenario Management**: CRUD operations for D&D scenarios with branching narratives
-- **Game Session Management**: Real-time session tracking with choice history and moral compass
-- **User Profile Management**: DM account management with COPPA compliance
-- **Media Asset Management**: Azure Blob Storage integration for multimedia content
-- **Echo & Compass Tracking**: Moral choice tracking and achievement system
-- **Health Monitoring**: Comprehensive health checks for production deployment
+**Key Features:**
+- **Content Management**: Create, update, and delete scenarios, media, and characters
+- **Admin Dashboard**: Web-based UI for system administration
+- **Media Upload**: Bulk upload and management of multimedia assets
+- **System Configuration**: Badge configurations, character maps, and app status
+- **Data Import/Export**: YAML-based import/export for content management
 
 ## Architecture
 
 - **.NET 9.0 Web API** with Azure App Service deployment
-- **Azure Cosmos DB** for structured data persistence
+- **Shared Azure Cosmos DB** with client API for data persistence
 - **Azure Blob Storage** for multimedia assets
-- **JWT Authentication** for DM-only access (no child accounts per COPPA)
+- **JWT Authentication** for admin access
 - **RESTful API Design** with OpenAPI/Swagger documentation
-- **Health Checks** for monitoring and diagnostics
+- **MVC Views** for admin dashboard UI
+- **Port 7001** for local development (client API uses 7000)
+
+## Separation from Client API
+
+This Admin API is separate from the client-facing API (`Mystira.App.Api`) to:
+- **Enhance Security**: Admin operations isolated from public endpoints
+- **Independent Scaling**: Admin and client can scale separately
+- **Better Maintainability**: Clear separation of concerns
+- **Flexible Deployment**: Can deploy to different infrastructure
+
+See [Admin API Separation](../../docs/features/ADMIN_API_SEPARATION.md) for architectural details.
 
 ## Prerequisites
 
@@ -32,10 +43,9 @@ The Mystira.App API provides the core backend services for the Mystira.App MAUI 
 
 ### Local Development
 
-1. **Clone the repository**
+1. **Navigate to Admin API directory**
    ```bash
-   git clone <repository-url>
-   cd Mystira.App.Api
+   cd src/Mystira.App.Admin.Api
    ```
 
 2. **Restore dependencies**
@@ -56,14 +66,16 @@ The Mystira.App API provides the core backend services for the Mystira.App MAUI 
      }
    }
    ```
+   
+   **Note**: Use the same connection strings as the client API since they share the database.
 
 4. **Run the application**
    ```bash
    dotnet run
    ```
 
-5. **Access Swagger UI**
-   Navigate to `https://localhost:5001` or `http://localhost:5000`
+5. **Access Admin Dashboard**
+   Navigate to `https://localhost:7001/admin` or `http://localhost:7001/admin`
 
 ### Docker Deployment
 
@@ -79,136 +91,162 @@ The Mystira.App API provides the core backend services for the Mystira.App MAUI 
 
 ## API Endpoints
 
-### Scenarios
-- `GET /api/scenarios` - Get scenarios with filtering
-- `GET /api/scenarios/{id}` - Get specific scenario
-- `POST /api/scenarios` - Create new scenario (Auth required)
-- `PUT /api/scenarios/{id}` - Update scenario (Auth required)
-- `DELETE /api/scenarios/{id}` - Delete scenario (Auth required)
-- `GET /api/scenarios/age-group/{ageGroup}` - Get age-appropriate scenarios
-- `GET /api/scenarios/featured` - Get featured scenarios
+### Admin Dashboard (UI)
+- `GET /admin` - Main dashboard
+- `GET /admin/login` - Login page
+- `GET /admin/scenarios` - Scenario management page
+- `GET /admin/media` - Media management page
+- `GET /admin/media-metadata` - Media metadata management
+- `GET /admin/charactermaps` - Character maps management
+- `GET /admin/status` - App status management
+- `POST /admin/status` - Update app status
 
-### Game Sessions
-- `POST /api/gamesessions` - Start new session (Auth required)
-- `GET /api/gamesessions/{id}` - Get session details (Auth required)
-- `GET /api/gamesessions/dm/{dmName}` - Get DM's sessions (Auth required)
-- `POST /api/gamesessions/choice` - Make choice in session (Auth required)
-- `POST /api/gamesessions/{id}/pause` - Pause session (Auth required)
-- `POST /api/gamesessions/{id}/resume` - Resume session (Auth required)
-- `POST /api/gamesessions/{id}/end` - End session (Auth required)
-- `GET /api/gamesessions/{id}/stats` - Get session statistics (Auth required)
-- `DELETE /api/gamesessions/{id}` - Delete session (Auth required)
+### Scenario Management (API)
+- `POST /api/admin/scenariosadmin` - Create scenario
+- `PUT /api/admin/scenariosadmin/{id}` - Update scenario
+- `DELETE /api/admin/scenariosadmin/{id}` - Delete scenario
+- `POST /api/admin/scenariosadmin/validate` - Validate scenario
+- `GET /api/admin/scenariosadmin/{id}` - Get scenario details
 
-### User Profiles
-- `POST /api/userprofiles` - Create DM profile
-- `GET /api/userprofiles/{name}` - Get profile (Auth required)
-- `PUT /api/userprofiles/{name}` - Update profile (Auth required)
-- `DELETE /api/userprofiles/{name}` - Delete profile (Auth required)
-- `POST /api/userprofiles/{name}/complete-onboarding` - Complete onboarding (Auth required)
+### Media Management (API)
+- `POST /api/admin/mediaadmin/upload` - Upload single media file
+- `POST /api/admin/mediaadmin/bulk-upload` - Bulk upload media
+- `PUT /api/admin/mediaadmin/{mediaId}` - Update media asset
+- `DELETE /api/admin/mediaadmin/{mediaId}` - Delete media asset
+- `POST /api/admin/mediaadmin/validate` - Validate media references
+- `GET /api/admin/mediaadmin/statistics` - Get usage statistics
 
-### Media
-- `POST /api/media/upload` - Upload media file (Auth required)
-- `GET /api/media/{blobName}/url` - Get media URL
-- `GET /api/media/{blobName}/download` - Download media file
-- `GET /api/media` - List media files (Auth required)
-- `DELETE /api/media/{blobName}` - Delete media file (Auth required)
+### Character Management (API)
+- `POST /api/admin/characteradmin` - Add character
+- `PUT /api/admin/characteradmin/{id}` - Update character
+- `DELETE /api/admin/characteradmin/{id}` - Delete character
 
-### Health
-- `GET /api/health` - Comprehensive health check
-- `GET /api/health/ready` - Readiness probe
-- `GET /api/health/live` - Liveness probe
+### Character Map Management (API)
+- `POST /api/admin/charactermapsadmin` - Create character map
+- `PUT /api/admin/charactermapsadmin/{id}` - Update character map
+- `DELETE /api/admin/charactermapsadmin/{id}` - Delete character map
+- `POST /api/admin/charactermapsadmin/import` - Import from YAML
+- `GET /api/admin/charactermapsadmin/export` - Export to YAML
+
+### Badge Configuration (API)
+- `POST /api/badgeconfigurationsadmin` - Create badge configuration
+- `PUT /api/badgeconfigurationsadmin/{id}` - Update badge configuration
+- `DELETE /api/badgeconfigurationsadmin/{id}` - Delete badge configuration
+- `POST /api/badgeconfigurationsadmin/import` - Import from YAML
+- `GET /api/badgeconfigurationsadmin/export` - Export to YAML
 
 ## Authentication
 
-The API uses JWT Bearer token authentication for DM accounts. Include the token in the Authorization header:
+The Admin API uses JWT Bearer token authentication for admin access. Include the token in the Authorization header:
 
 ```
 Authorization: Bearer <your-jwt-token>
 ```
 
+Admin authentication is required for all content management operations.
+
+## Running with Client API
+
+For full functionality, run both APIs simultaneously:
+
+```bash
+# Terminal 1 - Client API (port 7000)
+cd src/Mystira.App.Api
+dotnet run
+
+# Terminal 2 - Admin API (port 7001)
+cd src/Mystira.App.Admin.Api
+dotnet run
+```
+
+Both APIs connect to the same database, so changes in the Admin API are immediately available in the Client API.
+
 ## Data Models
 
-### Scenario
-Core adventure definition with scenes, choices, and branching narratives.
+### Admin-Managed Entities
 
-### GameSession
-Session lifecycle tracking with choice history, echo logging, and compass values.
+- **Scenario** - Interactive story definitions with scenes and choices
+- **MediaAsset** - Multimedia files stored in Azure Blob Storage
+- **Character** - Character definitions for scenarios
+- **CharacterMap** - Mappings of characters to media assets
+- **BadgeConfiguration** - Achievement badge definitions
 
-### UserProfile
-DM account information with fantasy theme preferences and age group settings.
-
-### EchoLog
-Moral choice tracking with strength values and echo types from master list.
-
-### CompassTracking
-Real-time moral axis tracking with historical changes and threshold monitoring.
+All models are shared with the Client API through the Domain project.
 
 ## Azure Deployment
 
-### Infrastructure as Code
+### Infrastructure
 
-Use the provided Bicep templates for Azure deployment:
+The Admin API should be deployed separately from the Client API:
 
-```bash
-# Deploy all infrastructure
-az deployment group create \
-  --resource-group mystira-app-prod-rg \
-  --template-file Infrastructure/Azure/main.bicep \
-  --parameters environment=prod
-```
+- **Client API**: `mystiraapp.azurewebsites.net`
+- **Admin API**: `admin-mystiraapp.azurewebsites.net` or subdomain
+
+Both connect to the same Cosmos DB database and Azure Blob Storage.
 
 ### CI/CD Pipeline
 
-GitHub Actions workflow is configured for:
-- **Build & Test** on every push
-- **Deploy to Development** on develop branch
-- **Deploy to Production** on main branch
-- **Infrastructure Deployment** with commit message `[deploy-infra]`
+Configure GitHub Actions workflow to deploy Admin API to its own App Service:
+
+```yaml
+- name: Deploy Admin API
+  uses: azure/webapps-deploy@v2
+  with:
+    app-name: 'mystira-admin-api'
+    package: './admin-api-package'
+```
 
 ## Configuration
 
 ### Environment Variables
 
 - `ASPNETCORE_ENVIRONMENT` - Environment name (Development, Staging, Production)
-- `ConnectionStrings__CosmosDb` - Cosmos DB connection string
-- `ConnectionStrings__AzureStorage` - Azure Storage connection string
-- `Jwt__Key` - JWT signing key
+- `ConnectionStrings__CosmosDb` - Cosmos DB connection string (shared with Client API)
+- `ConnectionStrings__AzureStorage` - Azure Storage connection string (shared with Client API)
+- `Jwt__Key` - JWT signing key (must match Client API)
 - `Jwt__Issuer` - JWT issuer claim
 - `Jwt__Audience` - JWT audience claim
+
+**Important**: Use the same database and storage credentials as the Client API.
+
+## CORS Configuration
+
+The Admin API has a separate CORS policy (`MystiraAdminPolicy`) that allows:
+- `http://localhost:7001`
+- `https://localhost:7001`
+- `https://admin.mystiraapp.azurewebsites.net`
+- `https://admin.mystira.app`
 
 ## Security
 
 - **HTTPS Only** - All endpoints require HTTPS in production
-- **JWT Authentication** - DM accounts only, no child accounts (COPPA compliance)
-- **CORS Configuration** - Restricted to known frontend domains
+- **JWT Authentication** - Admin-only access with token validation
+- **CORS Configuration** - Restricted to admin domains only
 - **Input Validation** - Comprehensive validation on all endpoints
-- **Content Filtering** - Age-appropriate content validation
-- **Data Encryption** - All personal data encrypted in transit and at rest
-
-## Monitoring
-
-- **Health Checks** - Database and Blob Storage connectivity
-- **Application Insights** - Performance and error monitoring
-- **Structured Logging** - JSON formatted logs for Azure monitoring
+- **Isolated from Client API** - Enhanced security through separation
+- **Data Encryption** - All data encrypted in transit and at rest
 
 ## Development Guidelines
 
 ### Code Structure
-- **Controllers** - API endpoints with input validation
-- **Services** - Business logic and data access
-- **Models** - Request/response DTOs
-- **Infrastructure** - Cross-cutting concerns (health checks, etc.)
+- **Controllers** - Admin API endpoints and dashboard views
+- **Services** - Business logic for content management
+- **Models** - Request/response DTOs and view models
+- **Views** - Razor views for admin dashboard UI
 
-### Testing
-- Unit tests for all services
-- Integration tests for API endpoints
-- Health check validation
+### Admin Dashboard Features
+- Scenario creation and editing
+- Media upload and management
+- Character map configuration
+- Badge configuration
+- System status monitoring
 
-### Content Safety
-- All scenarios validated against age appropriateness
-- Echo/compass values within specified ranges
-- Maximum limits enforced (4 archetypes, 4 compass axes per scenario)
+## Related Documentation
+
+- **[Admin API Separation](../../docs/features/ADMIN_API_SEPARATION.md)** - Architecture details
+- **[Client API README](../Mystira.App.Api/README.md)** - Client API documentation
+- **[Main README](../../README.md)** - Project overview
 
 ## License
 
-Copyright (c) 2025 Mystira Team. All rights reserved.
+Copyright (c) 2025 Mystira. All rights reserved.

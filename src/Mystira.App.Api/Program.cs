@@ -7,6 +7,9 @@ using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -130,17 +133,19 @@ builder.Services.AddAuthentication(options =>
             }
         };
     })
-    .AddCookie("Cookies", options =>
+    .AddJwtBearer(options =>
     {
-        options.Cookie.Name = "Mystira.App.Auth";
-        options.Cookie.HttpOnly = true;
-        options.Cookie.SameSite = SameSiteMode.Strict;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-        options.ExpireTimeSpan = TimeSpan.FromDays(7);
-        options.SlidingExpiration = true;
-        options.LoginPath = "/api/auth/login";
-        options.LogoutPath = "/api/auth/logout";
-        options.AccessDeniedPath = "/api/auth/forbidden";
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings["Issuer"] ?? "MystiraAPI",
+            ValidAudience = jwtSettings["Audience"] ?? "MystiraPWA",
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+            ClockSkew = TimeSpan.Zero
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -161,23 +166,27 @@ builder.Services.AddScoped<IMediaMetadataService, MediaMetadataService>();
 builder.Services.AddScoped<ICharacterMediaMetadataService, CharacterMediaMetadataService>();
 builder.Services.AddScoped<IBundleService, BundleService>();
 builder.Services.AddScoped<ICharacterMapFileService, CharacterMapFileService>();
+builder.Services.AddScoped<IAvatarApiService, AvatarApiService>();
 builder.Services.AddScoped<IPasswordlessAuthService, PasswordlessAuthService>();
 builder.Services.AddScoped<IEmailService, AzureEmailService>();
+builder.Services.AddScoped<IJwtService, JwtService>();
 
 // Configure Health Checks
 builder.Services.AddHealthChecks()
     .AddCheck<BlobStorageHealthCheck>("blob_storage");
 
 // Configure CORS for frontend integration
+var policyName = "MystiraAppPolicy";
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("MystiraAppPolicy", policy =>
+    options.AddPolicy(policyName, policy =>
     {
         policy.WithOrigins(
                 "http://localhost:7000",
                 "https://localhost:7000",
                 "https://mystiraapp.azurewebsites.net", 
-                "https://mystira.app")
+                "https://mystira.app",
+                "https://mango-water-04fdb1c03.3.azurestaticapps.net")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .SetIsOriginAllowedToAllowWildcardSubdomains()
@@ -195,20 +204,20 @@ var logger = app.Logger;
 logger.LogInformation(useCosmosDb ? "Using Azure Cosmos DB (Cloud Database)" : "Using In-Memory Database (Local Development)");
 
 // Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Mystira API v1");
-        c.RoutePrefix = string.Empty; // Serve Swagger UI at root
-    });
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Mystira API v1");
+    c.RoutePrefix = string.Empty; // Serve Swagger UI at root
+});
 
 app.UseHttpsRedirection();
-app.UseCors("MystiraAppPolicy");
 
 app.UseRouting();
+
+// ✅ CORS must be between UseRouting and auth/endpoints
+app.UseCors(policyName);
+
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -21,6 +21,9 @@ public class GameSessionService : IGameSessionService
         }
     }
 
+    // Store character assignments for text replacement
+    private List<CharacterAssignment> _characterAssignments = new();
+
     public GameSessionService(ILogger<GameSessionService> logger, IApiClient apiClient, IAuthService authService)
     {
         _logger = logger;
@@ -103,6 +106,13 @@ public class GameSessionService : IGameSessionService
                 CompletedScenes = new List<Scene>(),
                 IsCompleted = false
             };
+
+            // Set empty character assignments for scenarios that skip character assignment
+            // This ensures text replacement functionality works (even though no replacements will occur)
+            if (!_characterAssignments.Any())
+            {
+                _characterAssignments = new List<CharacterAssignment>();
+            }
 
             _logger.LogInformation("Game session started successfully with ID: {SessionId}", apiGameSession.Id);
             return true;
@@ -188,10 +198,29 @@ public class GameSessionService : IGameSessionService
                 // Still mark as completed locally for UI consistency
             }
 
-            CurrentGameSession.IsCompleted = true;
-            
-            // Trigger the event to notify subscribers
-            GameSessionChanged?.Invoke(this, CurrentGameSession);
+            // Mark scenario as completed for the account
+            var account = await _authService.GetCurrentAccountAsync();
+            if (account != null && CurrentGameSession != null)
+            {
+                var success = await _apiClient.CompleteScenarioForAccountAsync(account.Id, CurrentGameSession.ScenarioId);
+                if (success)
+                {
+                    _logger.LogInformation("Marked scenario {ScenarioId} as completed for account {AccountId}", 
+                        CurrentGameSession.ScenarioId, account.Id);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to mark scenario as completed for account");
+                }
+            }
+
+            if (CurrentGameSession != null)
+            {
+                CurrentGameSession.IsCompleted = true;
+
+                // Trigger the event to notify subscribers
+                GameSessionChanged?.Invoke(this, CurrentGameSession);
+            }
 
             _logger.LogInformation("Game session completed successfully");
             return true;
@@ -304,5 +333,55 @@ public class GameSessionService : IGameSessionService
     {
         _logger.LogInformation("Clearing game session");
         CurrentGameSession = null;
+        _characterAssignments.Clear();
+    }
+
+    public void SetCurrentGameSession(GameSession? session)
+    {
+        _logger.LogInformation("Setting current game session: {SessionId}", session?.Id ?? "null");
+        CurrentGameSession = session;
+    }
+
+    /// <summary>
+    /// Sets character assignments for the current session (for text replacement)
+    /// </summary>
+    public void SetCharacterAssignments(List<CharacterAssignment> assignments)
+    {
+        _characterAssignments = assignments ?? new List<CharacterAssignment>();
+        _logger.LogInformation("Set {Count} character assignments for text replacement", _characterAssignments.Count);
+    }
+
+    /// <summary>
+    /// Replaces character placeholders [c:CharacterName] with player names in text
+    /// </summary>
+    public string ReplaceCharacterPlaceholders(string text)
+    {
+        if (string.IsNullOrEmpty(text) || !_characterAssignments.Any())
+            return text;
+
+        foreach (var assignment in _characterAssignments)
+        {
+            if (assignment.PlayerAssignment != null)
+            {
+                string playerName = assignment.PlayerAssignment.Type switch
+                {
+                    "Profile" => assignment.PlayerAssignment.ProfileName ?? "Player",
+                    "Guest" => assignment.PlayerAssignment.GuestName ?? "Player",
+                    _ => "Player"
+                };
+
+                string placeholder = $"[c:{assignment.CharacterName.ToLower()}]";
+                text = text.Replace(placeholder, playerName);
+            }
+        }
+
+        // Replace any remaining [c:...] patterns with "Player"
+        var remainingPattern = System.Text.RegularExpressions.Regex.Matches(text, @"\[c:([^\]]+)\]");
+        foreach (System.Text.RegularExpressions.Match match in remainingPattern)
+        {
+            text = text.Replace(match.Value, "Player");
+        }
+
+        return text;
     }
 }

@@ -36,8 +36,9 @@ public class UserProfileApiService : IUserProfileApiService
         var profile = new UserProfile
         {
             Name = request.Name,
+            AccountId = request.AccountId,
             PreferredFantasyThemes = request.PreferredFantasyThemes,
-            AgeGroupName = request.AgeGroup,
+            AgeGroup = request.AgeGroup,
             DateOfBirth = request.DateOfBirth,
             IsGuest = request.IsGuest,
             IsNpc = request.IsNpc,
@@ -84,7 +85,7 @@ public class UserProfileApiService : IUserProfileApiService
         {
             Name = name,
             PreferredFantasyThemes = new List<string>(), // Empty for guest profiles
-            AgeGroupName = request.AgeGroup,
+            AgeGroup = request.AgeGroup,
             IsGuest = true,
             IsNpc = false,
             HasCompletedOnboarding = true, // Guests don't need onboarding
@@ -136,8 +137,60 @@ public class UserProfileApiService : IUserProfileApiService
     }
 
     public async Task<UserProfile?> UpdateProfileAsync(string name, UpdateUserProfileRequest request)
+     {
+         var profile = await GetProfileAsync(name);
+         if (profile == null)
+             return null;
+
+         // Apply updates
+         if (request.PreferredFantasyThemes != null)
+         {
+             // Validate fantasy themes
+             var invalidThemes = request.PreferredFantasyThemes.Except(FantasyThemes.Available).ToList();
+             if (invalidThemes.Any())
+                 throw new ArgumentException($"Invalid fantasy themes: {string.Join(", ", invalidThemes)}");
+
+             profile.PreferredFantasyThemes = request.PreferredFantasyThemes;
+         }
+
+         if (request.AgeGroup != null)
+         {
+             // Validate age group
+             if (!AgeGroup.IsValid(request.AgeGroup))
+                 throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All.Select(a => a.Name))}");
+
+             profile.AgeGroup = request.AgeGroup;
+         }
+
+         if (request.DateOfBirth.HasValue)
+         {
+             profile.DateOfBirth = request.DateOfBirth;
+             // Update age group automatically if date of birth is provided
+             profile.UpdateAgeGroupFromBirthDate();
+         }
+
+         if (request.HasCompletedOnboarding.HasValue)
+             profile.HasCompletedOnboarding = request.HasCompletedOnboarding.Value;
+
+         if (request.IsGuest.HasValue)
+             profile.IsGuest = request.IsGuest.Value;
+
+         if (request.IsNpc.HasValue)
+             profile.IsNpc = request.IsNpc.Value;
+
+         if (request.AccountId != null)
+             profile.AccountId = request.AccountId;
+
+         profile.UpdatedAt = DateTime.UtcNow;
+         await _context.SaveChangesAsync();
+
+         _logger.LogInformation("Updated user profile: {Name}", profile.Name);
+         return profile;
+     }
+
+    public async Task<UserProfile?> UpdateProfileByIdAsync(string id, UpdateUserProfileRequest request)
     {
-        var profile = await GetProfileAsync(name);
+        var profile = await GetProfileByIdAsync(id);
         if (profile == null)
             return null;
 
@@ -157,8 +210,8 @@ public class UserProfileApiService : IUserProfileApiService
             // Validate age group
             if (!AgeGroup.IsValid(request.AgeGroup))
                 throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All.Select(a => a.Name))}");
-            
-            profile.AgeGroupName = request.AgeGroup;
+
+            profile.AgeGroup = request.AgeGroup;
         }
 
         if (request.DateOfBirth.HasValue)
@@ -183,7 +236,7 @@ public class UserProfileApiService : IUserProfileApiService
         profile.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Updated user profile: {Name}", profile.Name);
+        _logger.LogInformation("Updated user profile by ID: {Id}", id);
         return profile;
     }
 

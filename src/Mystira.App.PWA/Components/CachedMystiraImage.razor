@@ -1,0 +1,143 @@
+﻿@inject IImageCacheService ImageCache
+@inject IApiClient ApiClient
+@inject ILogger<CachedMystiraImage> Logger
+@inject IJSRuntime JSRuntime
+
+<div class="@ContainerClass">
+    @if (!string.IsNullOrEmpty(MediaId))
+    {
+        <img src="@_imageUrl"
+             alt="@Alt"
+             class="@ImageClass"
+             width="@Width"
+             height="@Height"
+             loading="@Loading" />
+    }
+    else
+    {
+        <div class="text-danger">
+            <small>No media ID specified</small>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string MediaId { get; set; } = "";
+    [Parameter] public string Alt { get; set; } = "Image";
+    [Parameter] public string ImageClass { get; set; } = "img-fluid";
+    [Parameter] public string ContainerClass { get; set; } = "";
+    [Parameter] public string Width { get; set; } = "auto";
+    [Parameter] public string Height { get; set; } = "auto";
+    [Parameter] public string Loading { get; set; } = "lazy";
+    
+    private string _imageUrl = string.Empty;
+    private bool _jsInitialized = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        // Load the JS module first
+        try
+        {
+            // Ensure the JS is loaded
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                if (typeof window.imageCacheManager === 'undefined') {
+                    window.imageCacheManager = {
+                        cacheName: 'mystira-image-cache',
+                        
+                        async getOrCacheImage(mediaId, imageUrl) {
+                            try {
+                                const cache = await caches.open(this.cacheName);
+                                const cachedResponse = await cache.match(imageUrl);
+                                
+                                if (cachedResponse && cachedResponse.ok) {
+                                    console.log(`Image ${mediaId} found in cache`);
+                                    return imageUrl; 
+                                }
+                                
+                                console.log(`Caching image ${mediaId} from ${imageUrl}`);
+                                const response = await fetch(imageUrl, { cache: 'no-store' });
+                                
+                                if (response.ok) {
+                                    await cache.put(imageUrl, response.clone());
+                                    return imageUrl;
+                                } else {
+                                    console.error(`Failed to fetch image: ${response.status}`);
+                                    return imageUrl;
+                                }
+                            } catch (error) {
+                                console.error('Error in image caching:', error);
+                                return imageUrl;
+                            }
+                        },
+                        
+                        async clearCache() {
+                            try {
+                                await caches.delete(this.cacheName);
+                                console.log('Image cache cleared');
+                            } catch (error) {
+                                console.error('Error clearing image cache:', error);
+                            }
+                        }
+                    };
+                    console.log('Image cache manager initialized dynamically');
+                }
+            ");
+            _jsInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to initialize JS for image caching");
+        }
+    }
+    
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrEmpty(MediaId))
+        {
+            return;
+        }
+        
+        // Get the original URL
+        string originalUrl = GetFullImageUrl();
+        
+        if (string.IsNullOrEmpty(originalUrl))
+        {
+            return;
+        }
+        
+        // First attempt - use the service
+        try
+        {
+            if (_jsInitialized)
+            {
+                _imageUrl = await ImageCache.GetOrCacheImageAsync(MediaId, originalUrl);
+            }
+            else
+            {
+                _imageUrl = originalUrl; // Fallback
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Error caching image for mediaId: {MediaId}", MediaId);
+            _imageUrl = originalUrl; // Fallback to original URL
+        }
+    }
+    
+    private string GetFullImageUrl()
+    {
+        // Construct the full URL to the API endpoint
+        try
+        {
+            var baseUrl = ApiClient.GetApiBaseAddress();
+            var apiUrl = $"{baseUrl}api/media/{MediaId}";
+            ApiClient.GetMediaUrlFromId(MediaId);
+            return apiUrl;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "MystiraImage component could not load image with Id {S}", MediaId);
+            return string.Empty;
+        }
+    }
+}

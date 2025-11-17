@@ -14,14 +14,14 @@
         <div class="col-12 text-center mb-4">
             <h1 class="display-4 text-primary-custom">
                 <i class="fas fa-dragon me-3"></i>
-                Mystira
+                Mystira <small class="text-muted" style="font-size: 0.5em; vertical-align: super;">ALPHA</small>
             </h1>
             <p class="lead text-muted mb-3">
                 Where imagination meets growth
             </p>
             <div class="row">
                 <div class="col-12 text-center mb-4">
-                    <MystiraImage 
+                    <CachedMystiraImage 
                         MediaId="image-final-logo-fe3f75db"
                         Alt="This is a magical picture, but it seems to be having a difficult time loading!"
                         Width="600"
@@ -298,10 +298,12 @@
     private bool isAuthenticated = false;
     private bool showCompletedStories = true;
     private HashSet<string> completedScenarioIds = new();
+    private bool isLoadingGameState = false;
+    private bool gameStateLoadingComplete = false;
     
     // Age group filter state
     private readonly HashSet<string> selectedAgeGroups = new();
-    private readonly string[] availableAgeGroups = { "1-2", "3-5", "6-9", "10-12", "13-18" };
+    private readonly string[] availableAgeGroups = { "1-2", "3-5", "6-9", "10-12", "13-18", "19+" };
 
     protected override async Task OnInitializedAsync()
     {
@@ -321,7 +323,8 @@
             if (isAuthenticated) 
             {
                 await LoadScenarios();
-                await LoadCompletedScenarios();
+                // Start loading game state in background
+                _ = LoadGameStateAsync();
             }
             else 
             {
@@ -345,7 +348,7 @@
             if (authenticated)
             {
                 await LoadScenarios();
-                await LoadCompletedScenarios();
+                _ = LoadGameStateAsync();
             }
             else 
             {
@@ -353,6 +356,7 @@
                 filteredScenarios.Clear();
                 selectedAgeGroups.Clear();
                 completedScenarioIds.Clear();
+                gameStateLoadingComplete = false;
             }
             StateHasChanged();
         });
@@ -391,45 +395,72 @@
         }
     }
 
-    private async Task LoadCompletedScenarios()
+    private async Task LoadGameStateAsync()
     {
         try
         {
-            Logger.LogInformation("Loading completed scenarios...");
+            isLoadingGameState = true;
+            StateHasChanged();
             
-            // Get current account
+            Logger.LogInformation("Loading game state for scenarios...");
+            
             var account = await AuthService.GetCurrentAccountAsync();
             if (account == null)
             {
-                Logger.LogWarning("No account found for loading completed scenarios");
+                Logger.LogWarning("No account found for loading game state");
+                gameStateLoadingComplete = true;
+                isLoadingGameState = false;
+                StateHasChanged();
                 return;
             }
 
-            // Get sessions for this account
-            var sessions = await ApiClient.GetSessionsByAccountAsync(account.Id);
-            if (sessions != null)
+            var gameStateResponse = await ApiClient.GetScenariosWithGameStateAsync(account.Id);
+            if (gameStateResponse != null)
             {
-                completedScenarioIds = sessions
-                    .Where(s => s.IsCompleted)
+                completedScenarioIds = gameStateResponse.Scenarios
+                    .Where(s => s.GameState == ScenarioGameState.Completed)
                     .Select(s => s.ScenarioId)
                     .ToHashSet();
                 
-                Logger.LogInformation("Loaded {Count} completed scenarios for account {AccountId}", 
-                    completedScenarioIds.Count, account.Id);
+                Logger.LogInformation("Loaded game state for {Count} scenarios, {CompletedCount} completed", 
+                    gameStateResponse.TotalCount, completedScenarioIds.Count);
             }
             
-            // Apply filters to show/hide completed scenarios
+            gameStateLoadingComplete = true;
+            
+            // Apply filters once game state is loaded
             ApplyFilters();
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error loading completed scenarios");
+            Logger.LogError(ex, "Error loading game state");
+            gameStateLoadingComplete = true;
+        }
+        finally
+        {
+            isLoadingGameState = false;
+            StateHasChanged();
         }
     }
 
-    private void ToggleCompletedStories(ChangeEventArgs e)
+    private async void ToggleCompletedStories(ChangeEventArgs e)
     {
         showCompletedStories = (bool)e.Value!;
+        
+        // Wait for game state to load if it hasn't finished yet
+        if (isLoadingGameState && !gameStateLoadingComplete)
+        {
+            Logger.LogInformation("Game state loading in progress, waiting for completion...");
+            await Task.Run(async () =>
+            {
+                var timeout = DateTime.UtcNow.AddSeconds(5);
+                while (isLoadingGameState && !gameStateLoadingComplete && DateTime.UtcNow < timeout)
+                {
+                    await Task.Delay(100);
+                }
+            });
+        }
+        
         ApplyFilters();
         StateHasChanged();
     }
@@ -446,24 +477,36 @@
             // Clear any existing game session
             GameSessionService.ClearGameSession();
             
-            // Get the full scenario with scenes
-            var fullScenario = await ApiClient.GetScenarioAsync(scenario.Id);
-            if (fullScenario == null)
+            // Check if we should skip character assignment for young age groups
+            if (scenario.AgeGroup == "1-2")
             {
-                Logger.LogError("Could not load scenario details for: {ScenarioName}", scenario.Name);
-                return;
-            }
-            
-            // Start the game session
-            var success = await GameSessionService.StartGameSessionAsync(fullScenario);
-            if (success)
-            {
-                Logger.LogInformation("Game session started successfully for: {ScenarioName}", scenario.Name);
-                Navigation.NavigateTo("/game");
+                Logger.LogInformation("Skipping character assignment for age group {AgeGroup}, starting game directly", scenario.AgeGroup);
+                
+                // Get the full scenario with scenes
+                var fullScenario = await ApiClient.GetScenarioAsync(scenario.Id);
+                if (fullScenario == null)
+                {
+                    Logger.LogError("Failed to load full scenario details for: {ScenarioName}", scenario.Name);
+                    return;
+                }
+                
+                // Start game session directly without character assignment
+                var success = await GameSessionService.StartGameSessionAsync(fullScenario);
+                if (success)
+                {
+                    Navigation.NavigateTo("/game");
+                }
+                else
+                {
+                    Logger.LogError("Failed to start game session directly for scenario: {ScenarioName}", scenario.Name);
+                }
             }
             else
             {
-                Logger.LogError("Failed to start game session for: {ScenarioName}", scenario.Name);
+                // Navigate to character assignment page
+                Logger.LogInformation("Navigating to character assignment for scenario: {ScenarioId}", scenario.Id);
+                await Task.CompletedTask;
+                Navigation.NavigateTo($"/character-assignment/{scenario.Id}");
             }
         }
         catch (Exception ex)

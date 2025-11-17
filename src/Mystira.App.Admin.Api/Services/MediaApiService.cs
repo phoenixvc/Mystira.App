@@ -2,6 +2,7 @@ using Mystira.App.Infrastructure.Azure.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text;
+using System.IO.Compression;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Models;
 
@@ -16,7 +17,7 @@ public class MediaApiService : IMediaApiService
     private readonly IAzureBlobService _blobStorageService;
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ILogger<MediaApiService> _logger;
-    
+
     private readonly Dictionary<string, string> _mimeTypeMap = new()
     {
         // Audio
@@ -122,7 +123,7 @@ public class MediaApiService : IMediaApiService
 
         // Validate that media metadata entry exists and resolve the media ID
         var resolvedMediaId = await ValidateAndResolveMediaId(mediaId, file.FileName);
-        
+
         // Check if media with this ID already exists
         var existingMedia = await GetMediaByIdAsync(resolvedMediaId);
         if (existingMedia != null)
@@ -132,7 +133,7 @@ public class MediaApiService : IMediaApiService
 
         // Calculate file hash
         var hash = await CalculateFileHashAsync(file);
-        
+
         // Upload to blob storage and get URL
         var url = await _blobStorageService.UploadMediaAsync(file.OpenReadStream(), file.FileName, file.ContentType ?? GetMimeType(file.FileName));
 
@@ -274,7 +275,7 @@ public class MediaApiService : IMediaApiService
             // Extract blob name from URL for deletion
             var uri = new Uri(mediaAsset.Url);
             var blobName = Path.GetFileName(uri.LocalPath);
-            
+
             // Delete from blob storage
             await _blobStorageService.DeleteMediaAsync(blobName);
 
@@ -392,16 +393,16 @@ public class MediaApiService : IMediaApiService
     private string DetectMediaTypeFromExtension(string fileName)
     {
         var extension = Path.GetExtension(fileName).ToLower();
-        
+
         if (new[] { ".mp3", ".wav", ".ogg", ".aac", ".m4a" }.Contains(extension))
             return "audio";
-        
+
         if (new[] { ".mp4", ".avi", ".mov", ".wmv", ".mkv" }.Contains(extension))
             return "video";
-        
+
         if (new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" }.Contains(extension))
             return "image";
-        
+
         return "unknown";
     }
 
@@ -431,7 +432,7 @@ public class MediaApiService : IMediaApiService
             return $"{bytes / (double)mb:F2} MB";
         if (bytes >= kb)
             return $"{bytes / (double)kb:F2} KB";
-        
+
         return $"{bytes} bytes";
     }
 
@@ -456,7 +457,7 @@ public class MediaApiService : IMediaApiService
             {
                 throw new InvalidOperationException($"No media metadata entry found for media ID '{mediaId}' or filename '{fileName}'. Please ensure the media metadata file contains an entry for this media before uploading.");
             }
-            
+
             // Return the resolved media ID from metadata
             mediaId = metadataEntry.Id;
         }
@@ -485,7 +486,7 @@ public class MediaApiService : IMediaApiService
 
             var stream = await response.Content.ReadAsStreamAsync();
             var fileName = Path.GetFileName(new Uri(mediaAsset.Url).LocalPath);
-            
+
             return (stream, mediaAsset.MimeType, fileName);
         }
         catch (Exception ex)
@@ -529,5 +530,199 @@ public class MediaApiService : IMediaApiService
     {
         var mediaAsset = await GetMediaByFileNameAsync(fileName);
         return mediaAsset?.Url;
+    }
+
+    /// <inheritdoc />
+    public async Task<ZipUploadResult> UploadMediaFromZipAsync(IFormFile zipFile, bool overwriteMetadata = false, bool overwriteMedia = false)
+    {
+        var result = new ZipUploadResult { Success = false };
+
+        try
+        {
+            if (zipFile == null || zipFile.Length == 0)
+            {
+                result.AllErrors.Add("No zip file provided");
+                result.Message = "No zip file provided";
+                return result;
+            }
+
+            // Extract zip to memory
+            var zipEntries = new Dictionary<string, byte[]>();
+            string? metadataJsonContent = null;
+
+            using (var stream = zipFile.OpenReadStream())
+            using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
+            {
+                foreach (var entry in archive.Entries)
+                {
+                    if (entry.FullName == "media-metadata.json")
+                    {
+                        using (var entryStream = entry.Open())
+                        using (var reader = new StreamReader(entryStream))
+                        {
+                            metadataJsonContent = await reader.ReadToEndAsync();
+                        }
+                    }
+                    else if (!entry.FullName.EndsWith("/"))
+                    {
+                        using (var entryStream = entry.Open())
+                        using (var memoryStream = new MemoryStream())
+                        {
+                            await entryStream.CopyToAsync(memoryStream);
+                            zipEntries[entry.Name] = memoryStream.ToArray();
+                        }
+                    }
+                }
+            }
+
+            // Step 1: Import metadata first
+            if (string.IsNullOrEmpty(metadataJsonContent))
+            {
+                result.AllErrors.Add("No media-metadata.json file found in the zip");
+                result.Message = "Failed: media-metadata.json not found in zip file";
+                return result;
+            }
+
+            try
+            {
+                var importedMetadata = await _mediaMetadataService.ImportMediaMetadataEntriesAsync(metadataJsonContent, overwriteMetadata);
+
+                result.MetadataResult = new MetadataImportResult
+                {
+                    Success = true,
+                    Message = $"Successfully imported {importedMetadata.Entries.Count} metadata entries",
+                    ImportedCount = importedMetadata.Entries.Count
+                };
+
+                _logger.LogInformation("Metadata imported successfully from zip: {Count} entries", importedMetadata.Entries.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to import metadata from zip file");
+                result.MetadataResult = new MetadataImportResult
+                {
+                    Success = false,
+                    Message = $"Failed to import metadata: {ex.Message}",
+                    Errors = new List<string> { ex.Message }
+                };
+                result.AllErrors.Add($"Metadata import failed: {ex.Message}");
+                result.Message = "Failed: metadata import error";
+                return result;
+            }
+
+            // Step 2: Upload media files if metadata was successful
+            var metadataFile = await _mediaMetadataService.GetMediaMetadataFileAsync();
+            if (metadataFile == null || metadataFile.Entries.Count == 0)
+            {
+                result.AllErrors.Add("Failed to retrieve imported metadata");
+                result.Message = "Metadata imported but could not be retrieved for file processing";
+                return result;
+            }
+
+            foreach (var (fileName, fileBytes) in zipEntries)
+            {
+                try
+                {
+                    var metadataEntry = metadataFile.Entries.FirstOrDefault(e => e.FileName == fileName);
+                    if (metadataEntry == null)
+                    {
+                        result.MediaErrors.Add($"No metadata entry found for file: {fileName}");
+                        result.FailedMediaCount++;
+                        continue;
+                    }
+
+                    var mediaId = metadataEntry.Id;
+                    var mediaType = metadataEntry.Type;
+
+                    // Check if media already exists
+                    var existingMedia = await GetMediaByIdAsync(mediaId);
+                    if (existingMedia != null && !overwriteMedia)
+                    {
+                        result.MediaErrors.Add($"Media with ID '{mediaId}' already exists (skipped)");
+                        result.FailedMediaCount++;
+                        continue;
+                    }
+
+                    if (existingMedia != null && overwriteMedia)
+                    {
+                        await DeleteMediaAsync(mediaId);
+                    }
+
+                    // Create temporary IFormFile from bytes
+                    using (var memoryStream = new MemoryStream(fileBytes))
+                    {
+                        var mimeType = GetMimeType(fileName);
+
+                        // Calculate hash
+                        var hash = CalculateHashFromBytes(fileBytes);
+
+                        // Upload to blob storage
+                        var url = await _blobStorageService.UploadMediaAsync(memoryStream, fileName, mimeType);
+
+                        // Create media asset record
+                        var mediaAsset = new MediaAsset
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            MediaId = mediaId,
+                            Url = url,
+                            MediaType = mediaType,
+                            MimeType = mimeType,
+                            FileSizeBytes = fileBytes.Length,
+                            Description = metadataEntry.Description,
+                            Tags = metadataEntry.ClassificationTags.Select(t => $"{t.Key}:{t.Value}").ToList(),
+                            Hash = hash,
+                            Version = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+
+                        _context.MediaAssets.Add(mediaAsset);
+                        await _context.SaveChangesAsync();
+
+                        result.SuccessfulMediaUploads.Add(mediaId);
+                        result.UploadedMediaCount++;
+
+                        _logger.LogInformation("Media uploaded from zip successfully: {MediaId} from {FileName}", mediaId, fileName);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    result.MediaErrors.Add($"Failed to upload {fileName}: {ex.Message}");
+                    result.FailedMediaCount++;
+                    _logger.LogError(ex, "Failed to upload media file from zip: {FileName}", fileName);
+                }
+            }
+
+            // Prepare final result
+            result.Success = result.FailedMediaCount == 0;
+            result.AllErrors.AddRange(result.MediaErrors);
+
+            if (result.Success)
+            {
+                result.Message = $"Successfully imported metadata and uploaded {result.UploadedMediaCount} media files";
+            }
+            else
+            {
+                result.Message = $"Metadata imported successfully. Uploaded {result.UploadedMediaCount} media files, {result.FailedMediaCount} failed";
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing zip file upload");
+            result.AllErrors.Add($"Zip processing error: {ex.Message}");
+            result.Message = $"Error processing zip file: {ex.Message}";
+            return result;
+        }
+    }
+
+    private string CalculateHashFromBytes(byte[] data)
+    {
+        using (var sha256 = SHA256.Create())
+        {
+            var hashBytes = sha256.ComputeHash(data);
+            return Convert.ToBase64String(hashBytes);
+        }
     }
 }

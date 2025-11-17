@@ -21,21 +21,14 @@ public class UserProfile
     /// </summary>
     public bool IsNpc { get; set; } = false;
     
-    // Store as string for database compatibility, but provide AgeGroup access
-    private string _ageGroup = AgeGroup.School.Name;
-    public string AgeGroupName 
-    { 
-        get => _ageGroup; 
-        set => _ageGroup = value; 
-    }
-    
     // Convenience property to get AgeGroup object
-    public AgeGroup AgeGroup 
-    { 
-        get => AgeGroup.GetByName(_ageGroup) ?? AgeGroup.School;
-        set => _ageGroup = value?.Name ?? AgeGroup.School.Name;
-    }
-    
+    public string AgeGroup { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Media ID for the user's selected avatar
+    /// </summary>
+    public string? SelectedAvatarMediaId { get; set; }
+
     /// <summary>
     /// Calculate current age from date of birth, or return null if not available
     /// </summary>
@@ -62,16 +55,7 @@ public class UserProfile
         if (!CurrentAge.HasValue)
             return;
             
-        var currentAge = CurrentAge.Value;
-        
-        // Find the appropriate age group based on current age
-        var appropriateAgeGroup = AgeGroup.All.FirstOrDefault(ag => 
-            currentAge >= ag.MinimumAge && currentAge <= ag.MaximumAge);
-            
-        if (appropriateAgeGroup != null)
-        {
-            AgeGroup = appropriateAgeGroup;
-        }
+        AgeGroup = AgeGroupConstants.GetAgeGroupForAge(CurrentAge.Value);
     }
     
     /// <summary>
@@ -129,8 +113,9 @@ public class AgeGroup
     public static AgeGroup School = new("school", 6, 9);         // 6-9
     public static AgeGroup Preteens = new("preteens", 10, 12);     // 10-12
     public static AgeGroup Teens = new("teens", 13, 18);           // 13-18
+    public static AgeGroup Adults = new("adults", 19, 120);        // 19+
 
-    public static readonly AgeGroup[] All = [Toddlers, Preschoolers, School, Preteens, Teens];
+    public static readonly AgeGroup[] All = [Toddlers, Preschoolers, School, Preteens, Teens, Adults];
     
     public string Name { get; set; }
     public int MinimumAge { get; set; }
