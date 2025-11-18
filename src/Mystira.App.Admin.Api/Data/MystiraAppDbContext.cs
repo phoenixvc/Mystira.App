@@ -531,7 +531,7 @@ public class ClassificationTagListConverter : ValueConverter<List<Classification
 
 public class ClassificationTagComparer : IEqualityComparer<ClassificationTag>
 {
-    public bool Equals(ClassificationTag x, ClassificationTag y)
+    public bool Equals(ClassificationTag? x, ClassificationTag? y)
     {
         if (x == null && y == null)
             return true;
@@ -585,7 +585,7 @@ public class ModifierListConverter : ValueConverter<List<Modifier>, string>
 
 public class ModifierComparer : IEqualityComparer<Modifier>
 {
-    public bool Equals(Modifier x, Modifier y)
+    public bool Equals(Modifier? x, Modifier? y)
     {
         if (x == null && y == null)
             return true;
