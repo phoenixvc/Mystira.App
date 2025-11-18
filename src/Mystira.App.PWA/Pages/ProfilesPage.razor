@@ -221,7 +221,31 @@ else
                     {
                         <div class="mb-3">
                             <label class="form-label">Choose Avatar</label>
-                            <AvatarCarousel AgeGroup="@formData.AgeGroup" OnAvatarSelected="OnAvatarSelected" />
+                            
+                            @if (isAvatarSelected && !string.IsNullOrEmpty(formData.SelectedAvatarMediaId))
+                            {
+                                <!-- Show selected avatar -->
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <div class="mb-3">
+                                            <CachedMystiraImage 
+                                                MediaId="@formData.SelectedAvatarMediaId" 
+                                                Alt="Selected Avatar" 
+                                                ImageClass="rounded"
+                                                Width="150"
+                                                Height="150" />
+                                        </div>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ChangeAvatar">
+                                            <i class="fas fa-sync-alt me-2"></i>Change Avatar
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <!-- Show avatar carousel -->
+                                <AvatarCarousel AgeGroup="@formData.AgeGroup" OnAvatarSelected="OnAvatarSelected" />
+                            }
                         </div>
                     }
                     else
@@ -298,6 +322,7 @@ else
     private bool isSaving = false;
     private UserProfile? editingProfile;
     private ProfileFormData formData = new();
+    private bool isAvatarSelected = false;
 
     // Delete confirmation
     private bool showDeleteConfirm = false;
@@ -369,6 +394,7 @@ else
         editingProfile = null;
         formData = new ProfileFormData();
         modalValidationMessage = string.Empty;
+        isAvatarSelected = false;
         showModal = true;
     }
 
@@ -383,6 +409,7 @@ else
             SelectedAvatarMediaId = profile.SelectedAvatarMediaId
         };
         modalValidationMessage = string.Empty;
+        isAvatarSelected = !string.IsNullOrEmpty(profile.SelectedAvatarMediaId);
         showModal = true;
     }
 
@@ -392,6 +419,7 @@ else
         editingProfile = null;
         formData = new ProfileFormData();
         modalValidationMessage = string.Empty;
+        isAvatarSelected = false;
     }
 
     private async Task SaveProfile()
@@ -546,6 +574,8 @@ else
     private void OnAgeGroupChanged()
     {
         formData.SelectedAvatarMediaId = null;
+        formData.AvatarMediaId = null;
+        isAvatarSelected = false;
         StateHasChanged();
     }
 
@@ -553,7 +583,14 @@ else
     {
         formData.AvatarMediaId = mediaId;
         formData.SelectedAvatarMediaId = mediaId;
+        isAvatarSelected = true;
         Logger.LogInformation("Avatar selected for profile: {MediaId}", mediaId);
+        StateHasChanged();
+    }
+
+    private void ChangeAvatar()
+    {
+        isAvatarSelected = false;
         StateHasChanged();
     }
 
