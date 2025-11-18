@@ -331,7 +331,7 @@ public class ApiClient : IApiClient
             _logger.LogInformation("Starting game session for scenario: {ScenarioId}, Account: {AccountId}, Profile: {ProfileId}", 
                 scenarioId, accountId, profileId);
             
-            var request = new 
+            var requestData = new 
             { 
                 scenarioId, 
                 accountId, 
@@ -340,7 +340,7 @@ public class ApiClient : IApiClient
                 targetAgeGroup 
             };
             
-            var response = await _httpClient.PostAsJsonAsync("api/gamesessions", request, _jsonOptions);
+            var response = await _httpClient.PostAsJsonAsync("api/gamesessions", requestData, _jsonOptions);
             
             if (response.IsSuccessStatusCode)
             {
@@ -350,8 +350,9 @@ public class ApiClient : IApiClient
             }
             else
             {
-                _logger.LogWarning("Failed to start game session with status: {StatusCode} for scenario: {ScenarioId}", 
-                    response.StatusCode, scenarioId);
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to start game session with status: {StatusCode} for scenario: {ScenarioId}. Error: {Error}", 
+                    response.StatusCode, scenarioId, errorContent);
                 return null;
             }
         }

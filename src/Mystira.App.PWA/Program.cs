@@ -15,7 +15,13 @@ builder.Services.AddScoped(sp => new HttpClient
     BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) 
 });
 
-// Configure API HttpClient
+// Register AuthService first (no dependencies)
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Register the auth header handler
+builder.Services.AddScoped<AuthHeaderHandler>();
+
+// Configure API HttpClient with auth header handler
 builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
 {
     var url = builder.Configuration.GetConnectionString("MystiraApiBaseUrl");
@@ -30,7 +36,8 @@ builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
         client.BaseAddress = new Uri(url);
         client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
     }
-});
+})
+.AddHttpMessageHandler<AuthHeaderHandler>();
 
 // Configure JSON serialization with enum string conversion
 builder.Services.Configure<JsonSerializerOptions>(options =>

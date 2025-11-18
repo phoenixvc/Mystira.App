@@ -108,17 +108,17 @@ public class CosmosReportingService : ICosmosReportingService
 
     private class SessionTableRow
     {
-        public string SessionId { get; set; }
+        public string SessionId { get; set; } = string.Empty;
         public DateTime StartedUtc { get; set; }
         public DateTime? CompletedUtc { get; set; }
-        public string Status { get; set; }
-        public string AccountId { get; set; }
-        public string AccountDisplayName { get; set; }
-        public string AccountEmail { get; set; }
-        public string ScenarioId { get; set; }
-        public string ScenarioName { get; set; }
-        public string PlayerNames { get; set; }
-        public string Duration { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string AccountId { get; set; } = string.Empty;
+        public string AccountDisplayName { get; set; } = string.Empty;
+        public string AccountEmail { get; set; } = string.Empty;
+        public string ScenarioId { get; set; } = string.Empty;
+        public string ScenarioName { get; set; } = string.Empty;
+        public string PlayerNames { get; set; } = string.Empty;
+        public string Duration { get; set; } = string.Empty;
     }
 
     

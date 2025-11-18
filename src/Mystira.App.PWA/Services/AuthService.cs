@@ -82,6 +82,19 @@ public class AuthService : IAuthService
         }
     }
 
+    public async Task<string?> GetTokenAsync()
+    {
+        try
+        {
+            return await GetCurrentTokenAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting token");
+            return null;
+        }
+    }
+    
     public void SetRememberMe(bool rememberMe)
     {
         _rememberMe = rememberMe;
@@ -303,7 +316,7 @@ public class AuthService : IAuthService
 
     private async Task<bool> RefreshTokenIfNeeded()
     {
-        if (string.IsNullOrEmpty(_currentRefreshToken))
+        if (string.IsNullOrEmpty(_currentRefreshToken) || string.IsNullOrEmpty(_currentToken))
         {
             return false;
         }

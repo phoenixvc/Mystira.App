@@ -331,7 +331,6 @@ else
     private string selectedProfileId = string.Empty;
     private string guestName = string.Empty;
     private string guestAgeRange = string.Empty;
-    private bool saveGuestAsProfile = false;
     private string newProfileName = string.Empty;
     private string newProfileAgeRange = string.Empty;
     private string? selectedAvatarMediaId;
@@ -341,7 +340,6 @@ else
     // Audio
     private string? isPlayingAudio = null;
     private IJSObjectReference? audioModule;
-    private ElementReference audioPlayer;
     
     protected override async Task OnInitializedAsync()
     {
@@ -415,7 +413,7 @@ else
                 await LoadCharacterAssignmentData();
                 
                 // Update UI
-                InvokeAsync(StateHasChanged);
+                await InvokeAsync(StateHasChanged);
             }
         }
         catch (Exception ex)
@@ -436,7 +434,6 @@ else
             selectedProfileId = string.Empty;
             guestName = string.Empty;
             guestAgeRange = string.Empty;
-            saveGuestAsProfile = false;
             newProfileName = string.Empty;
             newProfileAgeRange = string.Empty;
             selectedAvatarMediaId = null;
