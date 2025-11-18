@@ -113,9 +113,16 @@ else
                                         {
                                             <div class="assigned-player p-2 bg-light rounded">
                                                 <div class="d-flex align-items-center">
-                                                    @if (!string.IsNullOrEmpty(assignment.PlayerAssignment.ProfileImage))
+                                                    @if (!string.IsNullOrEmpty(assignment.PlayerAssignment.SelectedAvatarMediaId))
                                                     {
-                                                        <img src="@assignment.PlayerAssignment.ProfileImage" class="player-avatar me-2" alt="Player" />
+                                                        <div class="player-avatar me-2">
+                                                            <CachedMystiraImage 
+                                                                MediaId="@assignment.PlayerAssignment.SelectedAvatarMediaId" 
+                                                                Alt="Player Avatar" 
+                                                                ImageClass="rounded-circle"
+                                                                Width="40"
+                                                                Height="40" />
+                                                        </div>
                                                     }
                                                     else
                                                     {
@@ -531,7 +538,8 @@ else
                 playerAssignment.Type = "Profile";
                 playerAssignment.ProfileId = profile.Id;
                 playerAssignment.ProfileName = profile.Name;
-                playerAssignment.ProfileImage = null; // TODO: Add avatar to profile
+                playerAssignment.ProfileImage = null;
+                playerAssignment.SelectedAvatarMediaId = profile.SelectedAvatarMediaId;
             }
         }
         else if (assignmentTab == "new-profile" && !string.IsNullOrEmpty(newProfileName) && !string.IsNullOrEmpty(newProfileAgeRange))
