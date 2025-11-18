@@ -49,15 +49,23 @@
 
     <!-- Scripts -->
     <script src="js/imageCacheManager.js"></script>
-    <script src="js/audioPlayer.js"></script>
 
     <!-- Application Insights -->
     <script type="text/javascript">
-        !function(T,l,y){var S=T.location,k="script",D="instrumentationKey",C="ingestionendpoint",I="disableExceptionTracking",E="ai.device.",b="toLowerCase",w="crossOrigin",N="POST",e="appInsightsSDK",t="head",i="config",a=function(){var o={};return o.initialize=function(n){o[i]=n},o.loadAppInsights=function(){var r=T[e]={};r.queue=[];for(var s=["trackEvent","trackPageView","trackException","trackTrace","trackDependencyData","trackMetric","startTrackEvent","stopTrackEvent","startTrackPage","stopTrackPage","flush"],c=0;c<s.length;c++)r[s[c]]=function(t){return function(){var n=arguments;try{r.queue.push(function(){r[t].apply(r,n)})}catch(e){}}}(s[c]);var f=n.src||"https://js.monitor.azure.com/scripts/b/ai.2.min.js";var t=l.createElement(k);t.src=f,t.async=!0,t[w]=n[w],l.getElementsByTagName(k)[0].parentNode.appendChild(t)},o},u=T[e]||a();u.initialize({
-            connectionString: "InstrumentationKey=6c9db606-e0bd-4b74-ade5-68c3bf5b2865;IngestionEndpoint=https://westeurope-5.in.applicationinsights.azure.com/;LiveEndpoint=https://westeurope.livediagnostics.monitor.azure.com/;ApplicationId=009864dd-fb88-4dce-bc62-7a9b8df50c1f",
-            enableAutoRouteTracking: true
-        }),u.loadAppInsights();
-            T.appInsights=u;
+        !function(T,l,y){
+            var S=T.location,
+                k="script",
+                D="instrumentationKey",
+                C="ingestionendpoint",
+                I="disableExceptionTracking",
+                E="ai.device.",
+                b="toLowerCase",
+                w="crossOrigin",
+                N="POST",
+                e="appInsightsSDK",
+                t=l.documentElement,
+                n=S.protocol==="https:"?"https:":"http:",
+                u=function(e){e.queue=[],e.version=2;var t=l.createElement(k);t.async=!0,t.src=n+"//js.monitor.azure.com/scripts/b/ai.2.min.js",t.setAttribute("crossorigin","anonymous");var i=l.getElementsByTagName(k)[0];i.parentNode.insertBefore(t,i)};var i={config:{connectionString:"InstrumentationKey=6c9db606-e0bd-4b74-ade5-68c3bf5b2865;IngestionEndpoint=https://westeurope-5.in.applicationinsights.azure.com/;LiveEndpoint=https://westeurope.livediagnostics.monitor.azure.com/;ApplicationId=009864dd-fb88-4dce-bc62-7a9b8df50c1f",enableAutoRouteTracking:!0}};var s=T[e]||function(e){function t(e){i[e]=function(){var t=arguments;i.queue.push(function(){i[e].apply(i,t)})}}var i={config:e};i.initialize=!0;var n=l.createElement(k);n.src=e.url||"https://js.monitor.azure.com/scripts/b/ai.2.min.js",l.getElementsByTagName(k)[0].parentNode.appendChild(n);try{i.cookie=l.cookie}catch(e){}i.queue=[],i.version=2;for(var a=["trackEvent","trackPageView","trackException","trackTrace","trackDependencyData","trackMetric","startTrackEvent","stopTrackEvent","startTrackPage","stopTrackPage","flush"],o=0;o<a.length;o++)t(a[o]);return i}(i.config);T[e]=s,s.queue&&0===s.queue.length?s.trackPageView({}):l.write("<"+'script src="https://js.monitor.azure.com/scripts/b/ai.2.min.js"><\/script>')
         }(window,document);
     </script>
 
