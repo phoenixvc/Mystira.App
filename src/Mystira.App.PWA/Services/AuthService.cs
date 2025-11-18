@@ -316,7 +316,7 @@ public class AuthService : IAuthService
 
     private async Task<bool> RefreshTokenIfNeeded()
     {
-        if (string.IsNullOrEmpty(_currentRefreshToken))
+        if (string.IsNullOrEmpty(_currentRefreshToken) || string.IsNullOrEmpty(_currentToken))
         {
             return false;
         }

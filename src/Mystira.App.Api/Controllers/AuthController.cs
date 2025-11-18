@@ -221,6 +221,20 @@ namespace Mystira.App.Api.Controllers
             }
         }
 
+        private string GenerateDemoToken(string accountId, string email, string displayName)
+        {
+            var jwtKey = _configuration["Jwt:Key"] ?? "Mystira-app-Development-Secret-Key-2024-Very-Long-For-Security";
+            var jwtIssuer = _configuration["Jwt:Issuer"] ?? "mystira-app-api";
+            var jwtAudience = _configuration["Jwt:Audience"] ?? "mystira-app";
+
+            var claims = new[]
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, accountId),
+                new Claim(JwtRegisteredClaimNames.Email, email),
+                new Claim(JwtRegisteredClaimNames.Name, displayName),
+                new Claim("account_id", accountId),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
 
     }
 

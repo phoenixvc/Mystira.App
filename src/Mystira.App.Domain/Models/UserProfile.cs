@@ -132,6 +132,7 @@ public class AgeGroup
 
     public AgeGroup()
     {
+        Name = string.Empty;
     }
     
     /// <summary>
