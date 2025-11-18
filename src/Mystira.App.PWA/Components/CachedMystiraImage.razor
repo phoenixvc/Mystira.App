@@ -1,7 +1,9 @@
-﻿@inject IImageCacheService ImageCache
+﻿
+@implements IAsyncDisposable
+@inject IImageCacheService ImageCache
 @inject IApiClient ApiClient
 @inject ILogger<CachedMystiraImage> Logger
-@inject IJSRuntime JSRuntime
+@inject IJSRuntime JS
 
 <div class="@ContainerClass">
     @if (!string.IsNullOrEmpty(MediaId))
@@ -31,64 +33,6 @@
     [Parameter] public string Loading { get; set; } = "lazy";
     
     private string _imageUrl = string.Empty;
-    private bool _jsInitialized = false;
-    
-    protected override async Task OnInitializedAsync()
-    {
-        // Load the JS module first
-        try
-        {
-            // Ensure the JS is loaded
-            await JSRuntime.InvokeVoidAsync("eval", @"
-                if (typeof window.imageCacheManager === 'undefined') {
-                    window.imageCacheManager = {
-                        cacheName: 'mystira-image-cache',
-                        
-                        async getOrCacheImage(mediaId, imageUrl) {
-                            try {
-                                const cache = await caches.open(this.cacheName);
-                                const cachedResponse = await cache.match(imageUrl);
-                                
-                                if (cachedResponse && cachedResponse.ok) {
-                                    console.log(`Image ${mediaId} found in cache`);
-                                    return imageUrl; 
-                                }
-                                
-                                console.log(`Caching image ${mediaId} from ${imageUrl}`);
-                                const response = await fetch(imageUrl, { cache: 'no-store' });
-                                
-                                if (response.ok) {
-                                    await cache.put(imageUrl, response.clone());
-                                    return imageUrl;
-                                } else {
-                                    console.error(`Failed to fetch image: ${response.status}`);
-                                    return imageUrl;
-                                }
-                            } catch (error) {
-                                console.error('Error in image caching:', error);
-                                return imageUrl;
-                            }
-                        },
-                        
-                        async clearCache() {
-                            try {
-                                await caches.delete(this.cacheName);
-                                console.log('Image cache cleared');
-                            } catch (error) {
-                                console.error('Error clearing image cache:', error);
-                            }
-                        }
-                    };
-                    console.log('Image cache manager initialized dynamically');
-                }
-            ");
-            _jsInitialized = true;
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Failed to initialize JS for image caching");
-        }
-    }
     
     protected override async Task OnParametersSetAsync()
     {
@@ -105,28 +49,26 @@
             return;
         }
         
-        // First attempt - use the service
+        // Use the service to cache the image
         try
         {
-            if (_jsInitialized)
+            var previousUrl = _imageUrl;
+            var newUrl = await ImageCache.GetOrCacheImageAsync(MediaId, originalUrl);
+
+            // If we are switching from one blob URL to another, revoke the old one
+            if (!string.IsNullOrWhiteSpace(previousUrl) && previousUrl != newUrl && previousUrl.StartsWith("blob:", StringComparison.OrdinalIgnoreCase))
             {
-                _imageUrl = await ImageCache.GetOrCacheImageAsync(MediaId, originalUrl);
+                try
+                {
+                    await JS.InvokeVoidAsync("imageCacheManager.revokeObjectUrl", previousUrl);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogDebug(ex, "Failed to revoke previous object URL for mediaId: {MediaId}", MediaId);
+                }
             }
-            else
-            {
-                _imageUrl = originalUrl; // Fallback
-            }
-        }
-        catch (JSDisconnectedException)
-        {
-            // Browser disconnected - use fallback
-            Logger.LogDebug("JS disconnected while caching image {MediaId}, using fallback URL", MediaId);
-            _imageUrl = originalUrl;
-        }
-        catch (TaskCanceledException)
-        {
-            // Operation cancelled - use fallback
-            _imageUrl = originalUrl;
+
+            _imageUrl = newUrl;
         }
         catch (Exception ex)
         {
@@ -142,13 +84,28 @@
         {
             var baseUrl = ApiClient.GetApiBaseAddress();
             var apiUrl = $"{baseUrl}api/media/{MediaId}";
-            ApiClient.GetMediaUrlFromId(MediaId);
             return apiUrl;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "MystiraImage component could not load image with Id {S}", MediaId);
+            Logger.LogError(ex, "MystiraImage component could not load image with Id {MediaId}", MediaId);
             return string.Empty;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // Revoke any active object URL to free memory
+        if (!string.IsNullOrWhiteSpace(_imageUrl) && _imageUrl.StartsWith("blob:", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("imageCacheManager.revokeObjectUrl", _imageUrl);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Failed to revoke object URL during dispose for mediaId: {MediaId}", MediaId);
+            }
         }
     }
 }

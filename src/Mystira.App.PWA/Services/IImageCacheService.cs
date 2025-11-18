@@ -1,4 +1,5 @@
-﻿using Microsoft.JSInterop;
+﻿
+using Microsoft.JSInterop;
 
 namespace Mystira.App.PWA.Services
 {
@@ -26,18 +27,13 @@ namespace Mystira.App.PWA.Services
 
             try
             {
-                // First check if the function exists
-                var exists = await _jsRuntime.InvokeAsync<bool>("eval", 
-                    "typeof window.imageCacheManager !== 'undefined' && typeof window.imageCacheManager.getOrCacheImage === 'function'");
-                
-                if (!exists)
-                {
-                    _logger.LogWarning("Image cache manager not initialized, falling back to uncached image");
-                    return imageUrl;
-                }
-                
-                // Call JavaScript to get/cache the image
+                // Call JavaScript directly - it will handle the error if not initialized
                 return await _jsRuntime.InvokeAsync<string>("imageCacheManager.getOrCacheImage", mediaId, imageUrl);
+            }
+            catch (JSException jsEx)
+            {
+                _logger.LogWarning(jsEx, "Image cache manager not available, falling back to uncached image");
+                return imageUrl;
             }
             catch (Exception ex)
             {
@@ -51,13 +47,11 @@ namespace Mystira.App.PWA.Services
         {
             try
             {
-                var exists = await _jsRuntime.InvokeAsync<bool>("eval", 
-                    "typeof window.imageCacheManager !== 'undefined' && typeof window.imageCacheManager.clearCache === 'function'");
-                
-                if (exists)
-                {
-                    await _jsRuntime.InvokeVoidAsync("imageCacheManager.clearCache");
-                }
+                await _jsRuntime.InvokeVoidAsync("imageCacheManager.clearCache");
+            }
+            catch (JSException jsEx)
+            {
+                _logger.LogWarning(jsEx, "Image cache manager not available for clearing");
             }
             catch (Exception ex)
             {
