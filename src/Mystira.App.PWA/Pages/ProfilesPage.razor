@@ -217,10 +217,22 @@ else
                     </div>
 
                     <!-- Avatar Selection -->
-                    <div class="mb-3">
-                        <label class="form-label">Choose Avatar</label>
-                        <AvatarCarousel OnAvatarSelected="OnAvatarSelected" />
-                    </div>
+                    @if (!string.IsNullOrEmpty(formData.AgeGroup))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Choose Avatar</label>
+                            <AvatarCarousel AgeGroup="@formData.AgeGroup" OnAvatarSelected="OnAvatarSelected" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Please select an age range first to see available avatars.
+                            </div>
+                        </div>
+                    }
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>

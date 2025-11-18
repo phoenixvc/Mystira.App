@@ -515,7 +515,9 @@ else
                 Name = newProfileName,
                 AgeGroup = newProfileAgeRange,
                 AccountId = account.Id,
-                IsGuest = false
+                IsGuest = false,
+                AvatarMediaId = selectedAvatarMediaId,
+                SelectedAvatarMediaId = selectedAvatarMediaId
             };
 
             var createdProfile = await ApiClient.CreateProfileAsync(profileRequest);
