@@ -507,7 +507,11 @@
                 var gameStateResponse = await ApiClient.GetScenariosWithGameStateAsync(currentAccount.Id);
                 if (gameStateResponse != null)
                 {
-                    completedScenarioIds = new HashSet<string>(gameStateResponse.CompletedScenarioIds ?? new List<string>());
+                    completedScenarioIds = new HashSet<string>(
+                        gameStateResponse.Scenarios
+                            .Where(s => s.GameState == ScenarioGameState.Completed)
+                            .Select(s => s.ScenarioId)
+                    );
                     Logger.LogInformation("Loaded game state: {CompletedCount} completed scenarios", completedScenarioIds.Count);
                 }
                 else
