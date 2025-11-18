@@ -26,7 +26,7 @@ public class UserProfilesController : ControllerBase
     }
 
     /// <summary>
-    /// Create a new DM profile
+    /// Create a new User profile
     /// </summary>
     [HttpPost]
     public async Task<ActionResult<UserProfile>> CreateProfile([FromBody] CreateUserProfileRequest request)
@@ -94,7 +94,7 @@ public class UserProfilesController : ControllerBase
     }
 
     /// <summary>
-    /// Get a DM profile by ID
+    /// Get a User profile by ID
     /// </summary>
     [HttpGet("{id}")]
     public async Task<ActionResult<UserProfile>> GetProfileById(string id)
@@ -125,38 +125,7 @@ public class UserProfilesController : ControllerBase
     }
 
     /// <summary>
-    /// Get a DM profile by name (legacy endpoint)
-    /// </summary>
-    [HttpGet("name/{name}")]
-    public async Task<ActionResult<UserProfile>> GetProfileByName(string name)
-    {
-        try
-        {
-            var profile = await _profileService.GetProfileAsync(name);
-            if (profile == null)
-            {
-                return NotFound(new ErrorResponse 
-                { 
-                    Message = $"Profile not found: {name}",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            return Ok(profile);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting profile {Name}", name);
-            return StatusCode(500, new ErrorResponse 
-            { 
-                Message = "Internal server error while fetching profile",
-                TraceId = HttpContext.TraceIdentifier
-            });
-        }
-    }
-
-    /// <summary>
-    /// Update a DM profile by ID
+    /// Update a User profile by ID
     /// </summary>
     [HttpPut("{id}")]
     public async Task<ActionResult<UserProfile>> UpdateProfile(string id, [FromBody] UpdateUserProfileRequest request)
@@ -176,17 +145,7 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-            var profile = await _profileService.GetProfileByIdAsync(id);
-            if (profile == null)
-            {
-                return NotFound(new ErrorResponse 
-                { 
-                    Message = $"Profile not found: {id}",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            var updatedProfile = await _profileService.UpdateProfileAsync(profile.Name, request);
+            var updatedProfile = await _profileService.UpdateProfileByIdAsync(id, request);
             if (updatedProfile == null)
             {
                 return NotFound(new ErrorResponse 
@@ -219,7 +178,7 @@ public class UserProfilesController : ControllerBase
     }
 
     /// <summary>
-    /// Update a DM profile by ID
+    /// Update a User profile by ID
     /// </summary>
     [HttpPut("id/{profileId}")]
     public async Task<ActionResult<UserProfile>> UpdateProfileById(string profileId, [FromBody] UpdateUserProfileRequest request)
@@ -239,17 +198,7 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-            var profile = await _profileService.GetProfileByIdAsync(profileId);
-            if (profile == null)
-            {
-                return NotFound(new ErrorResponse 
-                { 
-                    Message = $"Profile not found: {profileId}",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            var updatedProfile = await _profileService.UpdateProfileAsync(profile.Name, request);
+            var updatedProfile = await _profileService.UpdateProfileByIdAsync(profileId, request);
             if (updatedProfile == null)
             {
                 return NotFound(new ErrorResponse 
@@ -282,7 +231,7 @@ public class UserProfilesController : ControllerBase
     }
 
     /// <summary>
-    /// Delete a DM profile and all associated data (COPPA compliance)
+    /// Delete a User profile and all associated data (COPPA compliance)
     /// </summary>
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteProfile(string id)
@@ -299,7 +248,7 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-            var deleted = await _profileService.DeleteProfileAsync(profile.Name);
+            var deleted = await _profileService.DeleteProfileAsync(profile.Id);
             if (!deleted)
             {
                 return NotFound(new ErrorResponse 
@@ -323,7 +272,7 @@ public class UserProfilesController : ControllerBase
     }
 
     /// <summary>
-    /// Mark onboarding as complete for a DM
+    /// Mark onboarding as complete for a User
     /// </summary>
     [HttpPost("{id}/complete-onboarding")]
     public async Task<ActionResult> CompleteOnboarding(string id)
@@ -476,7 +425,7 @@ public class UserProfilesController : ControllerBase
                 }
 
                 // Clear profile's account ID
-                await _profileService.UpdateProfileAsync(profileId, new UpdateUserProfileRequest
+                await _profileService.UpdateProfileByIdAsync(profileId, new UpdateUserProfileRequest
                 {
                     AccountId = null
                 });

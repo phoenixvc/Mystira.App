@@ -8,7 +8,8 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <BlazorEnableCompression>false</BlazorEnableCompression>
+    <BlazorEnableCompression Condition="'$(Configuration)' == 'Release'">true</BlazorEnableCompression>
+    <BlazorEnableCompression Condition="'$(Configuration)' != 'Release'">false</BlazorEnableCompression>
     <BlazorWebAssemblyEnableLinking>false</BlazorWebAssemblyEnableLinking>
     <RunAOTCompilation>false</RunAOTCompilation>
   </PropertyGroup>
@@ -30,6 +31,11 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
     <PackageReference Include="System.Text.Json" Version="8.0.5" />
     <PackageReference Include="Markdig" Version="0.37.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Mystira.App.Domain/Mystira.App.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -37,8 +43,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="wwwroot\js\" />
     <Folder Include="wwwroot\sounds\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="wwwroot\appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\appsettings.Development.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\appsettings.Production.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

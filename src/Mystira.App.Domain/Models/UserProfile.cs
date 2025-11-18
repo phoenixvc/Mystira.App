@@ -25,6 +25,11 @@ public class UserProfile
     public string AgeGroup { get; set; } = string.Empty;
 
     /// <summary>
+    /// Media ID for the user's selected avatar
+    /// </summary>
+    public string? SelectedAvatarMediaId { get; set; }
+
+    /// <summary>
     /// Calculate current age from date of birth, or return null if not available
     /// </summary>
     public int? CurrentAge
@@ -50,11 +55,7 @@ public class UserProfile
         if (!CurrentAge.HasValue)
             return;
             
-        var currentAge = CurrentAge.Value;
-        
-        // Find the appropriate age group based on current age
-        var validAgeGroupsMap = new Dictionary<int, string> { {1, "1-2"}, {3, "3-5"}, {6, "6-9"}, {10, "10-12"}, {13, "13-18"} };
-        AgeGroup = validAgeGroupsMap.FirstOrDefault(kvp => kvp.Key <= currentAge).Value ?? "1-2";
+        AgeGroup = AgeGroupConstants.GetAgeGroupForAge(CurrentAge.Value);
     }
     
     /// <summary>
@@ -112,8 +113,9 @@ public class AgeGroup
     public static AgeGroup School = new("school", 6, 9);         // 6-9
     public static AgeGroup Preteens = new("preteens", 10, 12);     // 10-12
     public static AgeGroup Teens = new("teens", 13, 18);           // 13-18
+    public static AgeGroup Adults = new("adults", 19, 120);        // 19+
 
-    public static readonly AgeGroup[] All = [Toddlers, Preschoolers, School, Preteens, Teens];
+    public static readonly AgeGroup[] All = [Toddlers, Preschoolers, School, Preteens, Teens, Adults];
     
     public string Name { get; set; }
     public int MinimumAge { get; set; }
@@ -130,6 +132,7 @@ public class AgeGroup
 
     public AgeGroup()
     {
+        Name = string.Empty;
     }
     
     /// <summary>

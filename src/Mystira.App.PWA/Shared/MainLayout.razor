@@ -36,6 +36,15 @@
                             About
                         </a>
                     </li>
+                    @if (isAuthenticated)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" href="/game">
+                                <i class="fas fa-compass me-1"></i>
+                                Adventures
+                            </a>
+                        </li>
+                    }
                     @if (CurrentGameSession != null)
                     {
                         <li class="nav-item">
@@ -58,6 +67,7 @@
                             @if (isProfileMenuOpen)
                             {
                                 <div class="dropdown-menu show dropdown-menu-end" style="position: absolute; right: 0;">
+                                    <AccountInstallOption />
                                     <a class="dropdown-item" href="/profiles">
                                         <i class="fas fa-users me-2"></i>
                                         Manage Profiles
@@ -102,13 +112,8 @@
         @Body
     </main>
 
-    <!-- PWA Install Prompt -->
-    <div id="install-prompt" class="install-prompt" style="display: none;">
-        <button id="install-button" class="btn btn-install" onclick="installPWA()">
-            <i class="fas fa-download me-2"></i>
-            Install App
-        </button>
-    </div>
+    <!-- PWA Install Button -->
+    <PwaInstallButton IsAuthenticated="isAuthenticated" />
 
     <!-- Footer -->
     <footer class="bg-light py-3 mt-4">
@@ -224,7 +229,7 @@
         }
     }
 
-    public new void Dispose()
+    public void Dispose()
     {
         GameSessionService.GameSessionChanged -= OnGameSessionChanged;
         AuthService.AuthenticationStateChanged -= OnAuthenticationStateChanged;

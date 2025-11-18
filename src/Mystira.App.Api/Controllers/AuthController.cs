@@ -1,4 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using System.Text;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.IdentityModel.Tokens;
 using Mystira.App.Api.Models;
 using Mystira.App.Api.Services;
 
@@ -10,12 +14,14 @@ namespace Mystira.App.Api.Controllers
     {
         private readonly IConfiguration _configuration;
         private readonly IPasswordlessAuthService _passwordlessAuthService;
+        private readonly IJwtService _jwtService;
         private readonly ILogger<AuthController> _logger;
 
-        public AuthController(IConfiguration configuration, IPasswordlessAuthService passwordlessAuthService, ILogger<AuthController> logger)
+        public AuthController(IConfiguration configuration, IPasswordlessAuthService passwordlessAuthService, IJwtService jwtService, ILogger<AuthController> logger)
         {
             _configuration = configuration;
             _passwordlessAuthService = passwordlessAuthService;
+            _jwtService = jwtService;
             _logger = logger;
         }
 
@@ -68,12 +74,18 @@ namespace Mystira.App.Api.Controllers
 
             _logger.LogInformation("Passwordless signup verified: email={Email}", request.Email);
 
+            var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName, account.Role);
+            var refreshToken = _jwtService.GenerateRefreshToken();
+
             return Ok(new PasswordlessVerifyResponse 
             { 
                 Success = true, 
                 Message = "Account created successfully",
                 Account = account,
-                Token = GenerateDemoToken(account.Auth0UserId)
+                Token = accessToken,
+                RefreshToken = refreshToken,
+                TokenExpiresAt = DateTime.UtcNow.AddHours(6),
+                RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(30) // Refresh token valid for 30 days
             });
         }
 
@@ -126,18 +138,116 @@ namespace Mystira.App.Api.Controllers
 
             _logger.LogInformation("Passwordless signin verified: email={Email}", request.Email);
 
+            var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName, account.Role);
+            var refreshToken = _jwtService.GenerateRefreshToken();
+
             return Ok(new PasswordlessVerifyResponse 
             { 
                 Success = true, 
                 Message = "Sign-in successful",
                 Account = account,
-                Token = GenerateDemoToken(account.Auth0UserId)
+                Token = accessToken,
+                RefreshToken = refreshToken,
+                TokenExpiresAt = DateTime.UtcNow.AddHours(6),
+                RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(30) // Refresh token valid for 30 days
             });
         }
 
-        private string GenerateDemoToken(string userId)
+        [HttpPost("refresh")]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
         {
-            return $"demo_token_{userId}_{Guid.NewGuid():N}";
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new RefreshTokenResponse 
+                    { 
+                        Success = false, 
+                        Message = "Invalid token data" 
+                    });
+                }
+
+                // Validate the current access token to get user info
+                var (isValid, userId) = _jwtService.ValidateAndExtractUserId(request.Token);
+                
+                if (!isValid || string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new RefreshTokenResponse 
+                    { 
+                        Success = false, 
+                        Message = "Invalid access token" 
+                    });
+                }
+
+                // In a real implementation, you would validate the refresh token against stored data
+                // For now, we'll just generate new tokens (this is a simplified approach)
+                // In production, you should store refresh tokens in a database and validate them
+                
+                // Get user account info
+                var account = await _passwordlessAuthService.GetAccountByUserIdAsync(userId);
+                if (account == null)
+                {
+                    return Unauthorized(new RefreshTokenResponse 
+                    { 
+                        Success = false, 
+                        Message = "User not found" 
+                    });
+                }
+
+                // Generate new tokens
+                var newAccessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName, account.Role);
+                var newRefreshToken = _jwtService.GenerateRefreshToken();
+
+                _logger.LogInformation("Token refreshed successfully for user: {UserId}", userId);
+
+                return Ok(new RefreshTokenResponse 
+                { 
+                    Success = true, 
+                    Message = "Token refreshed successfully",
+                    Token = newAccessToken,
+                    RefreshToken = newRefreshToken,
+                    TokenExpiresAt = DateTime.UtcNow.AddHours(6),
+                    RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(30)
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing token");
+                return StatusCode(500, new RefreshTokenResponse 
+                { 
+                    Success = false, 
+                    Message = "An error occurred while refreshing token" 
+                });
+            }
+        }
+
+        private string GenerateDemoToken(string accountId, string email, string displayName)
+        {
+            var jwtKey = _configuration["Jwt:Key"] ?? "Mystira-app-Development-Secret-Key-2024-Very-Long-For-Security";
+            var jwtIssuer = _configuration["Jwt:Issuer"] ?? "mystira-app-api";
+            var jwtAudience = _configuration["Jwt:Audience"] ?? "mystira-app";
+
+            var claims = new[]
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, accountId),
+                new Claim(JwtRegisteredClaimNames.Email, email),
+                new Claim(JwtRegisteredClaimNames.Name, displayName),
+                new Claim("account_id", accountId),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            };
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(
+                issuer: jwtIssuer,
+                audience: jwtAudience,
+                claims: claims,
+                expires: DateTime.UtcNow.AddDays(7),
+                signingCredentials: credentials
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
 

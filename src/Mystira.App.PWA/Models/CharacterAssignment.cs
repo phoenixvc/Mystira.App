@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.PWA.Models;
 
@@ -22,17 +23,16 @@ public class CharacterAssignment
         {
             var parts = new List<string>();
             if (!string.IsNullOrEmpty(Role)) parts.Add(Role);
-            if (!string.IsNullOrEmpty(Archetype)) parts.Add(ToTitleCase(Archetype));
+            if (!string.IsNullOrEmpty(Archetype)) parts.Add(ToTitleCaseAndUnderscoresReplaced(Archetype));
             return parts.Count > 0 ? string.Join(" • ", parts) : "Character";
         }
     }
 
-    private static string ToTitleCase(string input)
+    private static string ToTitleCaseAndUnderscoresReplaced(string input)
     {
-        if (string.IsNullOrEmpty(input))
-            return string.Empty;
-            
-        return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(input.ToLower());
+        return string.IsNullOrEmpty(input) 
+            ? string.Empty 
+            : System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(input.ToLower()).Replace("_", " ");
     }
 }
 
@@ -45,6 +45,7 @@ public class PlayerAssignment
     public string? ProfileId { get; set; }
     public string? ProfileName { get; set; }
     public string? ProfileImage { get; set; }
+    public string? SelectedAvatarMediaId { get; set; }
     
     // Guest properties
     public string? GuestName { get; set; }
@@ -95,18 +96,10 @@ public class CharacterAssignmentResponse
 /// </summary>
 public static class AgeRanges
 {
-    public static readonly string[] All = ["1-2", "3-5", "6-9", "10-12", "13-18"];
+    public static readonly string[] All = AgeGroupConstants.AllAgeGroups;
     
     public static string GetDisplayName(string ageRange)
     {
-        return ageRange switch
-        {
-            "1-2" => "Ages 1-2 (Toddlers)",
-            "3-5" => "Ages 3-5 (Preschoolers)",
-            "6-9" => "Ages 6-9 (School Age)",
-            "10-12" => "Ages 10-12 (Preteens)",
-            "13-18" => "Ages 13-18 (Teens)",
-            _ => ageRange
-        };
+        return AgeGroupConstants.GetDisplayName(ageRange);
     }
 }

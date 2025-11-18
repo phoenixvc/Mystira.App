@@ -6,7 +6,9 @@ public class Account
     public string Auth0UserId { get; set; } = string.Empty; // Auth0 user identifier
     public string Email { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
+    public string Role { get; set; } = "Guest"; // Default role is Guest, can be Admin
     public List<string> UserProfileIds { get; set; } = new(); // Can have multiple user profiles
+    public List<string> CompletedScenarioIds { get; set; } = new(); // Scenarios completed by this account
     public SubscriptionDetails Subscription { get; set; } = new();
     public AccountSettings Settings { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
