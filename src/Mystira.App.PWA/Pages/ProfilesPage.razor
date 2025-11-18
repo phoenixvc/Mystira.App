@@ -117,7 +117,7 @@ else
                                                 <CachedMystiraImage 
                                                     MediaId="@profile.SelectedAvatarMediaId" 
                                                     Alt="@altText" 
-                                                    ImageClass="rounded"
+                                                    ImageClass="thumbnail-image"
                                                     Width="60"
                                                     Height="60" />
                                             </div>
@@ -217,10 +217,46 @@ else
                     </div>
 
                     <!-- Avatar Selection -->
-                    <div class="mb-3">
-                        <label class="form-label">Choose Avatar</label>
-                        <AvatarCarousel OnAvatarSelected="OnAvatarSelected" />
-                    </div>
+                    @if (!string.IsNullOrEmpty(formData.AgeGroup))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Choose Avatar</label>
+                            
+                            @if (isAvatarSelected && !string.IsNullOrEmpty(formData.SelectedAvatarMediaId))
+                            {
+                                <!-- Show selected avatar -->
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <div class="mb-3">
+                                            <CachedMystiraImage 
+                                                MediaId="@formData.SelectedAvatarMediaId" 
+                                                Alt="Selected Avatar" 
+                                                ImageClass="thumbnail-image"
+                                                Width="150"
+                                                Height="150" />
+                                        </div>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ChangeAvatar">
+                                            <i class="fas fa-sync-alt me-2"></i>Change Avatar
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <!-- Show avatar carousel -->
+                                <AvatarCarousel AgeGroup="@formData.AgeGroup" OnAvatarSelected="OnAvatarSelected" />
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Please select an age range first to see available avatars.
+                            </div>
+                        </div>
+                    }
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
@@ -286,6 +322,7 @@ else
     private bool isSaving = false;
     private UserProfile? editingProfile;
     private ProfileFormData formData = new();
+    private bool isAvatarSelected = false;
 
     // Delete confirmation
     private bool showDeleteConfirm = false;
@@ -357,6 +394,7 @@ else
         editingProfile = null;
         formData = new ProfileFormData();
         modalValidationMessage = string.Empty;
+        isAvatarSelected = false;
         showModal = true;
     }
 
@@ -368,9 +406,11 @@ else
         {
             Name = profile.Name,
             AgeGroup = profile.AgeGroup,
+            AvatarMediaId = profile.SelectedAvatarMediaId,
             SelectedAvatarMediaId = profile.SelectedAvatarMediaId
         };
         modalValidationMessage = string.Empty;
+        isAvatarSelected = !string.IsNullOrEmpty(profile.SelectedAvatarMediaId);
         showModal = true;
     }
 
@@ -380,6 +420,7 @@ else
         editingProfile = null;
         formData = new ProfileFormData();
         modalValidationMessage = string.Empty;
+        isAvatarSelected = false;
     }
 
     private async Task SaveProfile()
@@ -534,6 +575,8 @@ else
     private void OnAgeGroupChanged()
     {
         formData.SelectedAvatarMediaId = null;
+        formData.AvatarMediaId = null;
+        isAvatarSelected = false;
         StateHasChanged();
     }
 
@@ -541,7 +584,14 @@ else
     {
         formData.AvatarMediaId = mediaId;
         formData.SelectedAvatarMediaId = mediaId;
+        isAvatarSelected = true;
         Logger.LogInformation("Avatar selected for profile: {MediaId}", mediaId);
+        StateHasChanged();
+    }
+
+    private void ChangeAvatar()
+    {
+        isAvatarSelected = false;
         StateHasChanged();
     }
 

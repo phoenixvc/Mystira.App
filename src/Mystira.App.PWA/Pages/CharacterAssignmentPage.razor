@@ -113,9 +113,15 @@ else
                                         {
                                             <div class="assigned-player p-2 bg-light rounded">
                                                 <div class="d-flex align-items-center">
-                                                    @if (!string.IsNullOrEmpty(assignment.PlayerAssignment.ProfileImage))
+                                                    @if (!string.IsNullOrEmpty(assignment.PlayerAssignment.SelectedAvatarMediaId))
                                                     {
-                                                        <img src="@assignment.PlayerAssignment.ProfileImage" class="player-avatar me-2" alt="Player" />
+                                                        <div class="player-avatar me-2" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
+                                                            <CachedMystiraImage 
+                                                                MediaId="@assignment.PlayerAssignment.SelectedAvatarMediaId" 
+                                                                Alt="Player Avatar" 
+                                                                Width="80"
+                                                                Height="80" />
+                                                        </div>
                                                     }
                                                     else
                                                     {
@@ -270,7 +276,32 @@ else
                          @if (!string.IsNullOrEmpty(newProfileAgeRange))
                          {
                              <div class="mb-3">
-                                 <AvatarCarousel AgeGroup="@newProfileAgeRange" OnAvatarSelected="OnAvatarSelected" />
+                                 <label class="form-label">Choose Avatar</label>
+                                 
+                                 @if (isAvatarSelected && !string.IsNullOrEmpty(selectedAvatarMediaId))
+                                 {
+                                     <!-- Show selected avatar -->
+                                     <div class="card">
+                                         <div class="card-body text-center">
+                                             <div class="mb-3">
+                                                 <CachedMystiraImage 
+                                                     MediaId="@selectedAvatarMediaId" 
+                                                     Alt="Selected Avatar" 
+                                                     ImageClass="thumbnail-image"
+                                                     Width="150"
+                                                     Height="150" />
+                                             </div>
+                                             <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ChangeAvatar">
+                                                 <i class="fas fa-sync-alt me-2"></i>Change Avatar
+                                             </button>
+                                         </div>
+                                     </div>
+                                 }
+                                 else
+                                 {
+                                     <!-- Show avatar carousel -->
+                                     <AvatarCarousel AgeGroup="@newProfileAgeRange" OnAvatarSelected="OnAvatarSelected" />
+                                 }
                              </div>
                          }
                     }
@@ -336,6 +367,7 @@ else
     private string? selectedAvatarMediaId;
     private string? previewImage;
     private string validationMessage = string.Empty;
+    private bool isAvatarSelected = false;
 
     // Audio
     private string? isPlayingAudio = null;
@@ -437,6 +469,7 @@ else
             newProfileName = string.Empty;
             newProfileAgeRange = string.Empty;
             selectedAvatarMediaId = null;
+            isAvatarSelected = false;
             assignmentTab = "profiles";
             validationMessage = string.Empty;
             
@@ -469,13 +502,21 @@ else
     private void OnAgeGroupChanged()
     {
         selectedAvatarMediaId = null;
+        isAvatarSelected = false;
         StateHasChanged();
     }
 
     private async Task OnAvatarSelected(string mediaId)
     {
         selectedAvatarMediaId = mediaId;
+        isAvatarSelected = true;
         Logger.LogInformation("Avatar selected: {MediaId}", mediaId);
+        StateHasChanged();
+    }
+
+    private void ChangeAvatar()
+    {
+        isAvatarSelected = false;
         StateHasChanged();
     }
 
@@ -496,7 +537,8 @@ else
                 playerAssignment.Type = "Profile";
                 playerAssignment.ProfileId = profile.Id;
                 playerAssignment.ProfileName = profile.Name;
-                playerAssignment.ProfileImage = null; // TODO: Add avatar to profile
+                playerAssignment.ProfileImage = null;
+                playerAssignment.SelectedAvatarMediaId = profile.SelectedAvatarMediaId;
             }
         }
         else if (assignmentTab == "new-profile" && !string.IsNullOrEmpty(newProfileName) && !string.IsNullOrEmpty(newProfileAgeRange))
@@ -515,7 +557,9 @@ else
                 Name = newProfileName,
                 AgeGroup = newProfileAgeRange,
                 AccountId = account.Id,
-                IsGuest = false
+                IsGuest = false,
+                AvatarMediaId = selectedAvatarMediaId,
+                SelectedAvatarMediaId = selectedAvatarMediaId
             };
 
             var createdProfile = await ApiClient.CreateProfileAsync(profileRequest);
@@ -525,10 +569,13 @@ else
                 playerAssignment.ProfileId = createdProfile.Id;
                 playerAssignment.ProfileName = createdProfile.Name;
                 playerAssignment.ProfileImage = null;
-                playerAssignment.SelectedAvatarMediaId = selectedAvatarMediaId;
+                playerAssignment.SelectedAvatarMediaId = createdProfile.SelectedAvatarMediaId;
                 
-                // Refresh available profiles
-                await LoadCharacterAssignmentData();
+                // Add the newly created profile to available profiles list
+                availableProfiles.Add(createdProfile);
+                
+                Logger.LogInformation("Added new profile to available profiles: {ProfileName} with avatar: {AvatarId}", 
+                    createdProfile.Name, createdProfile.SelectedAvatarMediaId);
             }
             else
             {
