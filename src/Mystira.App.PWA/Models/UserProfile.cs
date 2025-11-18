@@ -12,6 +12,7 @@ public class UserProfile
     public bool IsGuest { get; set; } = false;
     public bool IsNpc { get; set; } = false;
     public string AgeGroup { get; set; } = string.Empty;
+    public string? AvatarMediaId { get; set; }
     public int? CurrentAge { get; set; }
     public bool HasCompletedOnboarding { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -32,7 +33,8 @@ public class CreateUserProfileRequest
     public DateTime? DateOfBirth { get; set; }
     public bool IsGuest { get; set; } = false;
     public bool IsNpc { get; set; } = false;
-    public string AgeGroup { get; set; } = string.Empty;
+    public string AgeGroup { get; set; }
+    public string? AvatarMediaId { get; set; }
     public bool HasCompletedOnboarding { get; set; } = false;
     public string? AccountId { get; set; }
     public string? SelectedAvatarMediaId { get; set; }
@@ -49,6 +51,7 @@ public class UpdateUserProfileRequest
     public bool? IsGuest { get; set; }
     public bool? IsNpc { get; set; }
     public string? AgeGroup { get; set; }
+    public string? AvatarMediaId { get; set; }
     public bool? HasCompletedOnboarding { get; set; }
     public string? AccountId { get; set; }
     public string? SelectedAvatarMediaId { get; set; }

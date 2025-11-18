@@ -217,12 +217,10 @@ else
                     </div>
 
                     <!-- Avatar Selection -->
-                    @if (!string.IsNullOrEmpty(formData.AgeGroup))
-                    {
-                        <div class="mb-3">
-                            <AvatarCarousel AgeGroup="@formData.AgeGroup" OnAvatarSelected="OnAvatarSelected" />
-                        </div>
-                    }
+                    <div class="mb-3">
+                        <label class="form-label">Choose Avatar</label>
+                        <AvatarCarousel OnAvatarSelected="OnAvatarSelected" />
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
@@ -298,6 +296,7 @@ else
     private string successMessage = string.Empty;
     private string errorMessage = string.Empty;
     private string modalValidationMessage = string.Empty;
+    private string selectedAvatar = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -411,6 +410,7 @@ else
                 // Update existing profile
                 var updateRequest = new UpdateUserProfileRequest
                 {
+                    Name = formData.Name,
                     AgeGroup = formData.AgeGroup,
                     SelectedAvatarMediaId = formData.SelectedAvatarMediaId
                 };
@@ -436,6 +436,7 @@ else
                 {
                     Name = formData.Name,
                     AgeGroup = formData.AgeGroup,
+                    AvatarMediaId = formData.AvatarMediaId,
                     AccountId = currentAccount.Id,
                     IsGuest = false,
                     HasCompletedOnboarding = false,
@@ -538,6 +539,7 @@ else
 
     private async Task OnAvatarSelected(string mediaId)
     {
+        formData.AvatarMediaId = mediaId;
         formData.SelectedAvatarMediaId = mediaId;
         Logger.LogInformation("Avatar selected for profile: {MediaId}", mediaId);
         StateHasChanged();
@@ -547,6 +549,7 @@ else
     {
         public string Name { get; set; } = string.Empty;
         public string? AgeGroup { get; set; }
+        public string? AvatarMediaId { get; set; }
         public string? SelectedAvatarMediaId { get; set; }
     }
 }

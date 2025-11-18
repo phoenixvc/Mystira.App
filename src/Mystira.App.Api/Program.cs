@@ -91,21 +91,21 @@ else
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 
 // Configure JWT Authentication - Load from secure configuration only
-var jwtIssuer = builder.Configuration["Jwt:Issuer"];
-var jwtAudience = builder.Configuration["Jwt:Audience"];
-var jwtRsaPublicKey = builder.Configuration["Jwt:RsaPublicKey"];
-var jwtKey = builder.Configuration["Jwt:Key"];
-var jwksEndpoint = builder.Configuration["Jwt:JwksEndpoint"];
+var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];
+var jwtAudience = builder.Configuration["JwtSettings:Audience"];
+var jwtRsaPublicKey = builder.Configuration["JwtSettings:RsaPublicKey"];
+var jwtKey = builder.Configuration["JwtSettings:SecretKey"];
+var jwksEndpoint = builder.Configuration["JwtSettings:JwksEndpoint"];
 
 // Fail fast if JWT configuration is missing
 if (string.IsNullOrEmpty(jwtIssuer))
 {
-    throw new InvalidOperationException("JWT Issuer (Jwt:Issuer) is not configured.");
+    throw new InvalidOperationException("JWT Issuer (JwtSettings:Issuer) is not configured.");
 }
 
 if (string.IsNullOrEmpty(jwtAudience))
 {
-    throw new InvalidOperationException("JWT Audience (Jwt:Audience) is not configured.");
+    throw new InvalidOperationException("JWT Audience (JwtSettings:Audience) is not configured.");
 }
 
 // Determine which signing method to use
@@ -116,9 +116,9 @@ if (!useAsymmetric && !useSymmetric)
 {
     throw new InvalidOperationException(
         "JWT signing key not configured. Please provide either:\n" +
-        "- Jwt:RsaPublicKey for asymmetric RS256 verification (recommended), OR\n" +
-        "- Jwt:JwksEndpoint for JWKS-based key rotation (recommended), OR\n" +
-        "- Jwt:Key for symmetric HS256 verification (legacy)\n" +
+        "- JwtSettings:RsaPublicKey for asymmetric RS256 verification (recommended), OR\n" +
+        "- JwtSettings:JwksEndpoint for JWKS-based key rotation (recommended), OR\n" +
+        "- JwtSettings:Key for symmetric HS256 verification (legacy)\n" +
         "Keys must be loaded from secure stores (Azure Key Vault, AWS Secrets Manager, etc.). " +
         "Never hardcode secrets in source code.");
 }
