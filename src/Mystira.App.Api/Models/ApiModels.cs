@@ -43,6 +43,11 @@ public class CreateUserProfileRequest
     /// Indicates if the user has completed onboarding
     /// </summary>
     public bool HasCompletedOnboarding { get; set; }
+
+    /// <summary>
+    /// Media ID for the user's selected avatar
+    /// </summary>
+    public string? SelectedAvatarMediaId { get; set; }
 }
 
 public class UpdateUserProfileRequest
@@ -56,6 +61,7 @@ public class UpdateUserProfileRequest
     public string? AccountId { get; set; }
     public string? Pronouns { get; set; }
     public string? Bio { get; set; }
+    public string? SelectedAvatarMediaId { get; set; }
 }
 
 public class CreateGuestProfileRequest
@@ -735,4 +741,16 @@ public class RefreshTokenResponse
     public string? RefreshToken { get; set; }
     public DateTime? TokenExpiresAt { get; set; }
     public DateTime? RefreshTokenExpiresAt { get; set; }
+}
+
+// Avatar Response Models
+public class AvatarResponse
+{
+    public Dictionary<string, List<string>> AgeGroupAvatars { get; set; } = new();
+}
+
+public class AvatarConfigurationResponse
+{
+    public string AgeGroup { get; set; } = string.Empty;
+    public List<string> AvatarMediaIds { get; set; } = new();
 }

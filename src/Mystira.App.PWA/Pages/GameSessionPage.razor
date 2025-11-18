@@ -133,7 +133,10 @@ else
                                 @if (!rollResult.HasValue)
                                 {
                                     <h5 class="mb-4 text-muted">Time to test your luck!</h5>
-                                    <p class="mb-4">You need to roll @gameSession.CurrentScene.RollTarget or higher.</p>
+                                    if (gameSession.Scenario.AgeGroup != "1-2")
+                                    {
+                                        <p class="mb-4">You need to roll @gameSession.CurrentScene.RollTarget or higher.</p>
+                                    }
                                     <div class="dice-roller-container">
                                         <DiceRoller DiceCount="1" Faces="20" SoundOn="true" HapticsOn="true" DarkMode="false" 
                                                     RollDurationMs="1500" WaitAfterRollDuration="500" OnRollResult="HandleRollResult"/>
@@ -164,11 +167,6 @@ else
                                                 {
                                                     string[] youngExclamations = new[] { "Yipee!", "Hooray!", "Wow!" };
                                                     successMsg = youngExclamations[new Random().Next(youngExclamations.Length)];
-                                                }
-                                                else if (gameSession.Scenario.AgeGroup == "3-5")
-                                                {
-                                                    string[] olderExclamations = new[] { "Yipee!", "Hooray!", "Wow!", "Neat!", "Tada!", "Whoa!", "Good Job!", "Amazing!" };
-                                                    successMsg = olderExclamations[new Random().Next(olderExclamations.Length)];
                                                 }
                                                 else
                                                 {

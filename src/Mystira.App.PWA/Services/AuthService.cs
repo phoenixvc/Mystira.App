@@ -82,6 +82,19 @@ public class AuthService : IAuthService
         }
     }
 
+    public async Task<string?> GetTokenAsync()
+    {
+        try
+        {
+            return await GetCurrentTokenAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting token");
+            return null;
+        }
+    }
+    
     public void SetRememberMe(bool rememberMe)
     {
         _rememberMe = rememberMe;
@@ -93,26 +106,10 @@ public class AuthService : IAuthService
         {
             _logger.LogInformation("Attempting login for email: {Email}", email);
 
-            // Demo authentication until real API is connected
-            var demoAccount = new Account
-            {
-                Auth0UserId = $"demo|{Guid.NewGuid():N}",
-                Email = email,
-                DisplayName = email.Split('@')[0]
-            };
-
-            var demoToken = $"{DemoTokenPrefix}{Guid.NewGuid():N}";
-
-            SetStoredToken(demoToken);
-            SetStoredAccount(demoAccount);
-
-            _isAuthenticated = true;
-            _currentAccount = demoAccount;
-
-            _logger.LogInformation("Login successful for: {Email}", email);
-            AuthenticationStateChanged?.Invoke(this, true);
-
-            return Task.FromResult(true);
+            // Login not implemented - use passwordless authentication methods instead
+            _logger.LogWarning("LoginAsync called with email: {Email}, but is not implemented. Use passwordless methods instead.", email);
+            
+            return Task.FromResult(false);
         }
         catch (Exception ex)
         {
@@ -319,7 +316,7 @@ public class AuthService : IAuthService
 
     private async Task<bool> RefreshTokenIfNeeded()
     {
-        if (string.IsNullOrEmpty(_currentRefreshToken))
+        if (string.IsNullOrEmpty(_currentRefreshToken) || string.IsNullOrEmpty(_currentToken))
         {
             return false;
         }

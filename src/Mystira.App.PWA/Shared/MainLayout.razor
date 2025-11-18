@@ -231,7 +231,7 @@
         }
     }
 
-    public new void Dispose()
+    public void Dispose()
     {
         GameSessionService.GameSessionChanged -= OnGameSessionChanged;
         AuthService.AuthenticationStateChanged -= OnAuthenticationStateChanged;

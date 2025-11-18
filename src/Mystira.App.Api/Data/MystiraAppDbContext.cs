@@ -29,6 +29,7 @@ public class MystiraAppDbContext : DbContext
     public DbSet<MediaMetadataFile> MediaMetadataFiles { get; set; }
     public DbSet<CharacterMediaMetadataFile> CharacterMediaMetadataFiles { get; set; }
     public DbSet<CharacterMapFile> CharacterMapFiles { get; set; }
+    public DbSet<AvatarConfigurationFile> AvatarConfigurationFiles { get; set; }
 
     // Game Session Management
     public DbSet<GameSession> GameSessions { get; set; }
@@ -455,6 +456,26 @@ public class MystiraAppDbContext : DbContext
             });
         });
 
+        // Configure AvatarConfigurationFile
+        modelBuilder.Entity<AvatarConfigurationFile>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            
+            // Only apply Cosmos DB configurations when not using in-memory database
+            if (!isInMemoryDatabase)
+            {
+                entity.ToContainer("AvatarConfigurationFiles")
+                      .HasPartitionKey(e => e.Id);
+            }
+
+            // Convert Dictionary<string, List<string>> for storage
+            entity.Property(e => e.AgeGroupAvatars)
+                  .HasConversion(
+                      v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
+                      v => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, List<string>>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new Dictionary<string, List<string>>()
+                  );
+        });
+
         // Configure CompassTracking as a separate container for analytics
         modelBuilder.Entity<CompassTracking>(entity =>
         {
@@ -510,7 +531,7 @@ public class ClassificationTagListConverter : ValueConverter<List<Classification
 
 public class ClassificationTagComparer : IEqualityComparer<ClassificationTag>
 {
-    public bool Equals(ClassificationTag x, ClassificationTag y)
+    public bool Equals(ClassificationTag? x, ClassificationTag? y)
     {
         if (x == null && y == null)
             return true;
@@ -564,7 +585,7 @@ public class ModifierListConverter : ValueConverter<List<Modifier>, string>
 
 public class ModifierComparer : IEqualityComparer<Modifier>
 {
-    public bool Equals(Modifier x, Modifier y)
+    public bool Equals(Modifier? x, Modifier? y)
     {
         if (x == null && y == null)
             return true;

@@ -331,7 +331,7 @@ public class ApiClient : IApiClient
             _logger.LogInformation("Starting game session for scenario: {ScenarioId}, Account: {AccountId}, Profile: {ProfileId}", 
                 scenarioId, accountId, profileId);
             
-            var request = new 
+            var requestData = new 
             { 
                 scenarioId, 
                 accountId, 
@@ -340,7 +340,7 @@ public class ApiClient : IApiClient
                 targetAgeGroup 
             };
             
-            var response = await _httpClient.PostAsJsonAsync("api/gamesessions", request, _jsonOptions);
+            var response = await _httpClient.PostAsJsonAsync("api/gamesessions", requestData, _jsonOptions);
             
             if (response.IsSuccessStatusCode)
             {
@@ -350,8 +350,9 @@ public class ApiClient : IApiClient
             }
             else
             {
-                _logger.LogWarning("Failed to start game session with status: {StatusCode} for scenario: {ScenarioId}", 
-                    response.StatusCode, scenarioId);
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to start game session with status: {StatusCode} for scenario: {ScenarioId}. Error: {Error}", 
+                    response.StatusCode, scenarioId, errorContent);
                 return null;
             }
         }
@@ -784,5 +785,64 @@ public class ApiClient : IApiClient
     public string GetMediaResourceEndpointUrl(string mediaId)
     {
         return $"{GetApiBaseAddress()}api/media/{mediaId}";
+    }
+
+    public async Task<Dictionary<string, List<string>>?> GetAvatarsAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Fetching avatars from API...");
+            
+            var response = await _httpClient.GetAsync("api/avatars");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var avatarResponse = await response.Content.ReadFromJsonAsync<AvatarResponse>(_jsonOptions);
+                _logger.LogInformation("Successfully fetched avatars");
+                return avatarResponse?.AgeGroupAvatars;
+            }
+            else
+            {
+                _logger.LogWarning("API request failed with status: {StatusCode}. Unable to fetch avatars.", response.StatusCode);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching avatars from API");
+            return null;
+        }
+    }
+
+    public async Task<List<string>?> GetAvatarsByAgeGroupAsync(string ageGroup)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(ageGroup))
+            {
+                return null;
+            }
+
+            _logger.LogInformation("Fetching avatars for age group {AgeGroup} from API...", ageGroup);
+            
+            var response = await _httpClient.GetAsync($"api/avatars/{ageGroup}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var configResponse = await response.Content.ReadFromJsonAsync<AvatarConfigurationResponse>(_jsonOptions);
+                _logger.LogInformation("Successfully fetched {Count} avatars for age group {AgeGroup}", configResponse?.AvatarMediaIds?.Count ?? 0, ageGroup);
+                return configResponse?.AvatarMediaIds;
+            }
+            else
+            {
+                _logger.LogWarning("API request failed with status: {StatusCode}. Unable to fetch avatars for age group {AgeGroup}.", response.StatusCode, ageGroup);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching avatars for age group {AgeGroup} from API", ageGroup);
+            return null;
+        }
     }
 }

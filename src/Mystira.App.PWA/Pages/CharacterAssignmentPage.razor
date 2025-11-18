@@ -250,22 +250,29 @@ else
                     }
                     else if (assignmentTab == "new-profile")
                     {
-                        <!-- New Profile Tab -->
-                        <div class="mb-3">
-                            <label class="form-label">Profile Name *</label>
-                            <input type="text" class="form-control" @bind="newProfileName" placeholder="Enter profile name" />
-                        </div>
+                         <!-- New Profile Tab -->
+                         <div class="mb-3">
+                             <label class="form-label">Profile Name *</label>
+                             <input type="text" class="form-control" @bind="newProfileName" placeholder="Enter profile name" />
+                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Age Group *</label>
-                            <select class="form-select" @bind="newProfileAgeRange">
-                                <option value="">Select age range...</option>
-                                @foreach (var ageRange in AgeRanges.All)
-                                {
-                                    <option value="@ageRange">@AgeRanges.GetDisplayName(ageRange)</option>
-                                }
-                            </select>
-                        </div>
+                         <div class="mb-3">
+                             <label class="form-label">Age Group *</label>
+                             <select class="form-select" @bind="newProfileAgeRange" @bind:after="OnAgeGroupChanged">
+                                 <option value="">Select age range...</option>
+                                 @foreach (var ageRange in AgeRanges.All)
+                                 {
+                                     <option value="@ageRange">@AgeRanges.GetDisplayName(ageRange)</option>
+                                 }
+                             </select>
+                         </div>
+
+                         @if (!string.IsNullOrEmpty(newProfileAgeRange))
+                         {
+                             <div class="mb-3">
+                                 <AvatarCarousel AgeGroup="@newProfileAgeRange" OnAvatarSelected="OnAvatarSelected" />
+                             </div>
+                         }
                     }
                     else
                     {
@@ -324,16 +331,15 @@ else
     private string selectedProfileId = string.Empty;
     private string guestName = string.Empty;
     private string guestAgeRange = string.Empty;
-    private bool saveGuestAsProfile = false;
     private string newProfileName = string.Empty;
     private string newProfileAgeRange = string.Empty;
+    private string? selectedAvatarMediaId;
     private string? previewImage;
     private string validationMessage = string.Empty;
 
     // Audio
     private string? isPlayingAudio = null;
     private IJSObjectReference? audioModule;
-    private ElementReference audioPlayer;
     
     protected override async Task OnInitializedAsync()
     {
@@ -407,7 +413,7 @@ else
                 await LoadCharacterAssignmentData();
                 
                 // Update UI
-                InvokeAsync(StateHasChanged);
+                await InvokeAsync(StateHasChanged);
             }
         }
         catch (Exception ex)
@@ -428,9 +434,9 @@ else
             selectedProfileId = string.Empty;
             guestName = string.Empty;
             guestAgeRange = string.Empty;
-            saveGuestAsProfile = false;
             newProfileName = string.Empty;
             newProfileAgeRange = string.Empty;
+            selectedAvatarMediaId = null;
             assignmentTab = "profiles";
             validationMessage = string.Empty;
             
@@ -458,6 +464,19 @@ else
     private void SetAssignmentTab(string tab)
     {
         assignmentTab = tab;
+    }
+
+    private void OnAgeGroupChanged()
+    {
+        selectedAvatarMediaId = null;
+        StateHasChanged();
+    }
+
+    private async Task OnAvatarSelected(string mediaId)
+    {
+        selectedAvatarMediaId = mediaId;
+        Logger.LogInformation("Avatar selected: {MediaId}", mediaId);
+        StateHasChanged();
     }
 
     private async Task ConfirmPlayerAssignment()
@@ -506,6 +525,7 @@ else
                 playerAssignment.ProfileId = createdProfile.Id;
                 playerAssignment.ProfileName = createdProfile.Name;
                 playerAssignment.ProfileImage = null;
+                playerAssignment.SelectedAvatarMediaId = selectedAvatarMediaId;
                 
                 // Refresh available profiles
                 await LoadCharacterAssignmentData();

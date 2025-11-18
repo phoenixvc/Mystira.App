@@ -18,6 +18,7 @@ public class UserProfile
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public string? AccountId { get; set; }
+    public string? SelectedAvatarMediaId { get; set; }
     public string DisplayAgeRange => AgeRanges.GetDisplayName(AgeGroup);
 }
 
@@ -36,6 +37,7 @@ public class CreateUserProfileRequest
     public string? AvatarMediaId { get; set; }
     public bool HasCompletedOnboarding { get; set; } = false;
     public string? AccountId { get; set; }
+    public string? SelectedAvatarMediaId { get; set; }
 }
 
 /// <summary>
@@ -52,6 +54,7 @@ public class UpdateUserProfileRequest
     public string? AvatarMediaId { get; set; }
     public bool? HasCompletedOnboarding { get; set; }
     public string? AccountId { get; set; }
+    public string? SelectedAvatarMediaId { get; set; }
 }
 
 /// <summary>
