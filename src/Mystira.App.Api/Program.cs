@@ -232,15 +232,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(policyName, policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:7000",
-                "https://localhost:7000",
-                "https://mystiraapp.azurewebsites.net", 
-                "https://mystira.app",
-                "https://mango-water-04fdb1c03.3.azurestaticapps.net")
+        var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .SetIsOriginAllowedToAllowWildcardSubdomains()
               .AllowCredentials();
     });
 });

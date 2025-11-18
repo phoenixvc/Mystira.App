@@ -3,6 +3,8 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 
+@inject IJSRuntime JSRuntime
+
 <div class="page">
     <!-- Offline Indicator -->
     <div id="offline-indicator" class="offline-indicator" style="display: none;">
@@ -62,7 +64,7 @@
                     }
                     @if (isAuthenticated)
                     {
-                        <li class="nav-item dropdown">
+                        <li class="nav-item dropdown" @ref="profileMenuElement" id="profile-menu">
                             <button class="btn btn-link nav-link dropdown-toggle" 
                                     type="button"
                                     @onclick="ToggleSettingsMenu"
@@ -137,6 +139,8 @@
     private Account? CurrentAccount { get; set; }
     private bool isAuthenticated;
     private bool isProfileMenuOpen;
+    private ElementReference profileMenuElement;
+    private IJSObjectReference? outsideClickHandler;
 
     protected override async Task OnInitializedAsync()
     {
@@ -146,6 +150,17 @@
         AuthService.AuthenticationStateChanged += OnAuthenticationStateChanged;
 
         await LoadAuthenticationStateAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            outsideClickHandler = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "outsideClickHandler.initialize",
+                DotNetObjectReference.Create(this),
+                "profile-menu");
+        }
     }
 
     private async Task LoadAuthenticationStateAsync()
@@ -184,14 +199,14 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private string GetProfileDisplayName()
+    [JSInvokable]
+    public void HandleOutsideClick()
     {
-        if (!string.IsNullOrWhiteSpace(CurrentAccount?.DisplayName))
+        if (isProfileMenuOpen)
         {
-            return CurrentAccount!.DisplayName!;
+            isProfileMenuOpen = false;
+            StateHasChanged();
         }
-
-        return CurrentAccount?.Email ?? "Profile";
     }
 
     private void ToggleSettingsMenu()
@@ -202,15 +217,6 @@
         }
 
         isProfileMenuOpen = !isProfileMenuOpen;
-    }
-
-    private void CloseProfileMenu()
-    {
-        if (isProfileMenuOpen)
-        {
-            isProfileMenuOpen = false;
-            StateHasChanged();
-        }
     }
 
     private async Task SignOutAsync()
@@ -231,10 +237,16 @@
         }
     }
 
-    public void Dispose()
+    public async void Dispose()
     {
         GameSessionService.GameSessionChanged -= OnGameSessionChanged;
         AuthService.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+
+        if (outsideClickHandler != null)
+        {
+            await outsideClickHandler.InvokeVoidAsync("dispose");
+            await outsideClickHandler.DisposeAsync();
+        }
     }
 }
 
