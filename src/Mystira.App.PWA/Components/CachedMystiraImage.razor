@@ -117,6 +117,17 @@
                 _imageUrl = originalUrl; // Fallback
             }
         }
+        catch (JSDisconnectedException)
+        {
+            // Browser disconnected - use fallback
+            Logger.LogDebug("JS disconnected while caching image {MediaId}, using fallback URL", MediaId);
+            _imageUrl = originalUrl;
+        }
+        catch (TaskCanceledException)
+        {
+            // Operation cancelled - use fallback
+            _imageUrl = originalUrl;
+        }
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Error caching image for mediaId: {MediaId}", MediaId);
