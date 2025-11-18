@@ -21,7 +21,7 @@ public class GameSessionApiService : IGameSessionApiService
         _logger = logger;
     }
 
-    public async Task<GameSession> StartSessionAsync(StartGameSessionRequest request, string accountId)
+    public async Task<GameSession> StartSessionAsync(StartGameSessionRequest request)
     {
         // Validate scenario exists
         var scenario = await _scenarioService.GetScenarioByIdAsync(request.ScenarioId);

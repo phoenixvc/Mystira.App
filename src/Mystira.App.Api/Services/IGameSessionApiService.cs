@@ -5,7 +5,7 @@ namespace Mystira.App.Api.Services;
 
 public interface IGameSessionApiService
 {
-    Task<GameSession> StartSessionAsync(StartGameSessionRequest request, string accountId);
+    Task<GameSession> StartSessionAsync(StartGameSessionRequest request);
     Task<GameSession?> GetSessionAsync(string sessionId);
     Task<List<GameSessionResponse>> GetSessionsByAccountAsync(string accountId);
     Task<List<GameSessionResponse>> GetSessionsByProfileAsync(string profileId);

@@ -74,7 +74,7 @@ namespace Mystira.App.Api.Controllers
 
             _logger.LogInformation("Passwordless signup verified: email={Email}", request.Email);
 
-            var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName);
+            var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName, account.Role);
             var refreshToken = _jwtService.GenerateRefreshToken();
 
             return Ok(new PasswordlessVerifyResponse 
@@ -138,7 +138,7 @@ namespace Mystira.App.Api.Controllers
 
             _logger.LogInformation("Passwordless signin verified: email={Email}", request.Email);
 
-            var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName);
+            var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName, account.Role);
             var refreshToken = _jwtService.GenerateRefreshToken();
 
             return Ok(new PasswordlessVerifyResponse 
@@ -195,7 +195,7 @@ namespace Mystira.App.Api.Controllers
                 }
 
                 // Generate new tokens
-                var newAccessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName);
+                var newAccessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName, account.Role);
                 var newRefreshToken = _jwtService.GenerateRefreshToken();
 
                 _logger.LogInformation("Token refreshed successfully for user: {UserId}", userId);
@@ -236,19 +236,6 @@ namespace Mystira.App.Api.Controllers
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var token = new JwtSecurityToken(
-                issuer: jwtIssuer,
-                audience: jwtAudience,
-                claims: claims,
-                expires: DateTime.UtcNow.AddDays(7),
-                signingCredentials: credentials
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
     }
 
     public class LoginRequest
