@@ -74,7 +74,7 @@ namespace Mystira.App.Api.Controllers
 
             _logger.LogInformation("Passwordless signup verified: email={Email}", request.Email);
 
-            var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName);
+            var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName, account.Role);
             var refreshToken = _jwtService.GenerateRefreshToken();
 
             return Ok(new PasswordlessVerifyResponse 
@@ -82,7 +82,7 @@ namespace Mystira.App.Api.Controllers
                 Success = true, 
                 Message = "Account created successfully",
                 Account = account,
-                Token = GenerateJwtToken(account.Id, account.Email, account.DisplayName)
+                Token = accessToken,
                 RefreshToken = refreshToken,
                 TokenExpiresAt = DateTime.UtcNow.AddHours(6),
                 RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(30) // Refresh token valid for 30 days
@@ -138,7 +138,7 @@ namespace Mystira.App.Api.Controllers
 
             _logger.LogInformation("Passwordless signin verified: email={Email}", request.Email);
 
-            var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName);
+            var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName, account.Role);
             var refreshToken = _jwtService.GenerateRefreshToken();
 
             return Ok(new PasswordlessVerifyResponse 
@@ -195,7 +195,7 @@ namespace Mystira.App.Api.Controllers
                 }
 
                 // Generate new tokens
-                var newAccessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName);
+                var newAccessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName, account.Role);
                 var newRefreshToken = _jwtService.GenerateRefreshToken();
 
                 _logger.LogInformation("Token refreshed successfully for user: {UserId}", userId);
@@ -221,34 +221,7 @@ namespace Mystira.App.Api.Controllers
             }
         }
 
-        private string GenerateDemoToken(string userId)
-        {
-            var jwtKey = _configuration["Jwt:Key"] ?? "Mystira-app-Development-Secret-Key-2024-Very-Long-For-Security";
-            var jwtIssuer = _configuration["Jwt:Issuer"] ?? "mystira-app-api";
-            var jwtAudience = _configuration["Jwt:Audience"] ?? "mystira-app";
 
-            var claims = new[]
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, accountId),
-                new Claim(JwtRegisteredClaimNames.Email, email),
-                new Claim(JwtRegisteredClaimNames.Name, displayName),
-                new Claim("account_id", accountId),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var token = new JwtSecurityToken(
-                issuer: jwtIssuer,
-                audience: jwtAudience,
-                claims: claims,
-                expires: DateTime.UtcNow.AddDays(7),
-                signingCredentials: credentials
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
     }
 
     public class LoginRequest
