@@ -115,13 +115,12 @@ else
                                                 <div class="d-flex align-items-center">
                                                     @if (!string.IsNullOrEmpty(assignment.PlayerAssignment.SelectedAvatarMediaId))
                                                     {
-                                                        <div class="player-avatar me-2">
+                                                        <div class="player-avatar me-2" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
                                                             <CachedMystiraImage 
                                                                 MediaId="@assignment.PlayerAssignment.SelectedAvatarMediaId" 
                                                                 Alt="Player Avatar" 
-                                                                ImageClass="rounded"
-                                                                Width="40"
-                                                                Height="40" />
+                                                                Width="80"
+                                                                Height="80" />
                                                         </div>
                                                     }
                                                     else
@@ -288,7 +287,7 @@ else
                                                  <CachedMystiraImage 
                                                      MediaId="@selectedAvatarMediaId" 
                                                      Alt="Selected Avatar" 
-                                                     ImageClass="rounded"
+                                                     ImageClass="thumbnail-image"
                                                      Width="150"
                                                      Height="150" />
                                              </div>
