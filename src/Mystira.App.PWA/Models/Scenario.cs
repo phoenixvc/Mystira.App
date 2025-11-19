@@ -53,7 +53,10 @@ public class Scene
         "choice" => SceneType.Choice,
         "narrative" => SceneType.Narrative,
         "special" => SceneType.Special,
-        _ => throw new ArgumentOutOfRangeException(nameof(Type), Type, "Expected on of roll, choice, narrative, or special")
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(Type),
+            Type,
+            "Expected one of 'roll', 'choice', 'narrative', or 'special' for scene type.")
     };
     
     public string? ImageUrl { get; set; }

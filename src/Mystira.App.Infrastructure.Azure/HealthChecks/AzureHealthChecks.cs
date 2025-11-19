@@ -13,16 +13,25 @@ public class CosmosDbHealthCheck : IHealthCheck
 
     public CosmosDbHealthCheck(DbContext context)
     {
-        _context = context;
+        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
-    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+    public async Task<HealthCheckResult> CheckHealthAsync(
+        HealthCheckContext context,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            // Try to connect to the database
-            await _context.Database.CanConnectAsync(cancellationToken);
-            return HealthCheckResult.Healthy("Cosmos DB connection is healthy");
+            // Lightweight connectivity check. This should not be an expensive query.
+            var canConnect = await _context.Database.CanConnectAsync(cancellationToken).ConfigureAwait(false);
+            return canConnect
+                ? HealthCheckResult.Healthy("Cosmos DB connection is healthy")
+                : HealthCheckResult.Unhealthy("Cosmos DB connection test returned false");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Respect cancellation; let the hosting environment decide how to treat this.
+            throw;
         }
         catch (Exception ex)
         {
@@ -37,16 +46,23 @@ public class BlobStorageHealthCheck : IHealthCheck
 
     public BlobStorageHealthCheck(BlobServiceClient blobServiceClient)
     {
-        _blobServiceClient = blobServiceClient;
+        _blobServiceClient = blobServiceClient ?? throw new ArgumentNullException(nameof(blobServiceClient));
     }
 
-    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+    public async Task<HealthCheckResult> CheckHealthAsync(
+        HealthCheckContext context,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            // Try to get blob service properties
-            await _blobServiceClient.GetPropertiesAsync(cancellationToken);
+            // Try to get blob service properties as a lightweight connectivity check.
+            await _blobServiceClient.GetPropertiesAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
             return HealthCheckResult.Healthy("Blob storage connection is healthy");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Respect cancellation; higher-layer health infrastructure decides how to interpret this.
+            throw;
         }
         catch (Exception ex)
         {
