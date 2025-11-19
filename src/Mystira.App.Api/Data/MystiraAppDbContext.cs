@@ -3,6 +3,7 @@ using Mystira.App.Domain.Models;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Mystira.App.Api.Models;
+using System.Text.Json;
 
 namespace Mystira.App.Api.Data;
 
@@ -21,6 +22,7 @@ public class MystiraAppDbContext : DbContext
 
     // Scenario Management
     public DbSet<Scenario> Scenarios { get; set; }
+    public DbSet<ContentBundle> ContentBundles { get; set; }
     public DbSet<CharacterMap> CharacterMaps { get; set; }
     public DbSet<BadgeConfiguration> BadgeConfigurations { get; set; }
 
@@ -130,6 +132,36 @@ public class MystiraAppDbContext : DbContext
             });
 
             entity.OwnsOne(e => e.Settings);
+        });
+
+        // Configure ContentBundle
+        modelBuilder.Entity<ContentBundle>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            if (!isInMemoryDatabase)
+            {
+                entity.ToContainer("ContentBundles")
+                      .HasPartitionKey(e => e.Id);
+            }
+
+            entity.Property(e => e.ScenarioIds)
+                  .HasConversion(
+                      v => string.Join(',', v),
+                      v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
+                  .Metadata.SetValueComparer(new ValueComparer<List<string>>(
+                      (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+                      c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                      c => c.ToList()));
+
+            entity.Property(e => e.Prices)
+                  .HasConversion(
+                      v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                      v => JsonSerializer.Deserialize<List<BundlePrice>>(v, (JsonSerializerOptions?)null) ?? new List<BundlePrice>())
+                  .Metadata.SetValueComparer(new ValueComparer<List<BundlePrice>>(
+                      (c1, c2) => c1 != null && c2 != null && c1.Count == c2.Count && c1.Zip(c2).All(x => x.First.Value == x.Second.Value && x.First.Currency == x.Second.Currency),
+                      c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.Value.GetHashCode(), v.Currency.GetHashCode())),
+                      c => c.Select(p => new BundlePrice { Value = p.Value, Currency = p.Currency }).ToList()));
         });
 
         // Configure CharacterMap

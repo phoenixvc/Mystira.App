@@ -89,6 +89,9 @@ else
 // Add Azure Infrastructure Services
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 
+// Register Content Bundle admin service
+builder.Services.AddScoped<IContentBundleAdminService, ContentBundleAdminService>();
+
 // Configure JWT Authentication
 var jwtKey = builder.Configuration["JwtSettings:SecretKey"] ?? "Mystira-app-Development-Secret-Key-2024-Very-Long-For-Security";
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "mystira-admin-api";

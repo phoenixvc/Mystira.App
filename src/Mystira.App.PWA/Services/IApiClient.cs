@@ -38,6 +38,10 @@ public interface IApiClient
     // Avatar endpoints
     Task<Dictionary<string, List<string>>?> GetAvatarsAsync();
     Task<List<string>?> GetAvatarsByAgeGroupAsync(string ageGroup);
+
+    // Content bundles
+    Task<List<ContentBundle>> GetBundlesAsync();
+    Task<List<ContentBundle>> GetBundlesByAgeGroupAsync(string ageGroup);
     
     string GetApiBaseAddress();
     
