@@ -36,19 +36,14 @@ else
                     <div class="d-flex align-items-center">
                         <div class="me-4">
                             <h2 class="text-primary-custom mb-1">
-                                Welcome "@(gameSession.PlayerNames.FirstOrDefault() ?? "Player")"! What adventures await us today?
+                                @gameSession.Scenario.Title
                             </h2>
                         </div>
-                        <div class="avatar-placeholder">
-                            <CachedMystiraImage 
-                                MediaId="placeholder-avatar-default"
-                                Alt="Player avatar"
-                                Width="60"
-                                Height="60"
-                                ImageClass="thumbnail-image" />
-                        </div>
                     </div>
-                    <div>
+                    <div class="d-flex align-items-center gap-3">
+                        <button class="btn btn-outline-danger" @onclick="ExitAdventure" disabled="@isProcessing">
+                            <i class="fas fa-door-open me-1"></i> Exit Adventure
+                        </button>                        
                         <CachedMystiraImage 
                             MediaId="image-final-logo-fe3f75db"
                             Alt="Mystira Logo"
@@ -315,6 +310,21 @@ else
         {
             isProcessing = false;
             StateHasChanged();
+        }
+    }
+
+    private void ExitAdventure()
+    {
+        try
+        {
+            isProcessing = true;
+            // Clear the current game session and navigate back to Home
+            GameSessionService.ClearGameSession();
+            Navigation.NavigateTo("/");
+        }
+        finally
+        {
+            isProcessing = false;
         }
     }
 

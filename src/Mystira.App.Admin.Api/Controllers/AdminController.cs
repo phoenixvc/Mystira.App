@@ -108,6 +108,15 @@ public class AdminController : Controller
     }
 
     /// <summary>
+    /// Content bundles management page
+    /// </summary>
+    [HttpGet("bundles")]
+    public IActionResult Bundles()
+    {
+        return View("Bundles");
+    }
+
+    /// <summary>
     /// Avatar management page
     /// </summary>
     [HttpGet("avatars")]

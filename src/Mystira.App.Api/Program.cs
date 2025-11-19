@@ -90,6 +90,9 @@ else
 // Add Azure Infrastructure Services
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 
+// Register Content Bundle services
+builder.Services.AddScoped<IContentBundleService, ContentBundleService>();
+
 // Configure JWT Authentication - Load from secure configuration only
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];
 var jwtAudience = builder.Configuration["JwtSettings:Audience"];
@@ -232,7 +235,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(policyName, policy =>
     {
-        var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+        var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string>()?.Split(',') ?? Array.Empty<string>();
         policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()

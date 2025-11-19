@@ -115,7 +115,7 @@
                             </div>
                         </div>
                         
-                        @if (selectedAgeGroups.Any())
+                        @if (selectedAgeGroups.Any() && !string.IsNullOrEmpty(selectedBundleId))
                         {
                             <div class="mt-2 text-muted small">
                                 Showing @filteredScenarios.Count of @scenarios.Count adventures
@@ -127,6 +127,83 @@
                         }
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Content Bundles Grid -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="mb-0">
+                        <i class="fas fa-boxes-stacked me-2"></i>
+                        @if (!string.IsNullOrEmpty(selectedBundleId))
+                        {
+                            <span>Selected Bundle: @selectedBundleTitle</span>
+                        }
+                        else
+                        {
+                            <span>Available Bundles</span>
+                        }
+                    </h5>
+                    @if (!string.IsNullOrEmpty(selectedBundleId))
+                    {
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="ClearSelectedBundle">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Bundles
+                        </button>
+                    }
+                </div>
+
+                @if (isLoadingBundles)
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-spinner fa-spin me-2"></i> Loading bundles...
+                    </div>
+                }
+                else if (!filteredBundles.Any())
+                {
+                    <div class="alert alert-info">No bundles found for the selected filters.</div>
+                }
+                else if (string.IsNullOrEmpty(selectedBundleId))
+                {
+                    <div class="row">
+                        @foreach (var bundle in filteredBundles)
+                        {
+                            <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
+                                <div class="card h-100" style="cursor: pointer;" @onclick="() => SelectBundle(bundle)">
+                                    <CachedMystiraImage 
+                                        MediaId="@bundle.ImageId"
+                                        Alt="@bundle.Title"
+                                        Width="400"
+                                        Height="250"
+                                        ImageClass="card-img-top" />
+                                    <div class="card-body">
+                                        <h6 class="card-title mb-1">@bundle.Title</h6>
+                                        <p class="card-text small text-muted">@bundle.Description</p>
+                                        @{
+                                            var totalInBundle = bundle.ScenarioIds?.Count ?? 0;
+                                            var completedInBundle = completedScenarioIds.Count == 0 
+                                                ? 0 
+                                                : (bundle.ScenarioIds?.Count(id => completedScenarioIds.Contains(id)) ?? 0);
+                                        }
+                                        <span class="badge bg-primary">@totalInBundle adventures</span>
+                                        @if (gameStateLoadingComplete)
+                                        {
+                                            <span class="badge bg-secondary ms-2">@completedInBundle completed</span>
+                                        }
+                                        @if (bundle.IsFree)
+                                        {
+                                            <span class="badge bg-success ms-2">Free</span>
+                                        }
+                                    </div>
+                                    <div class="card-footer d-flex justify-content-between small">
+                                        <span><strong>Age Group: @bundle.AgeGroup</strong></span>
+                                        <span class="text-muted">Open</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
             </div>
         </div>
     }
@@ -189,7 +266,7 @@
             </div>
         </div>
     }
-    else if (hasProfiles && filteredScenarios.Any())
+    else if (hasProfiles && !string.IsNullOrEmpty(selectedBundleId) && filteredScenarios.Any())
     {
         <div class="row">
             @foreach (var scenario in filteredScenarios)
@@ -250,7 +327,7 @@
             }
         </div>
     }
-    else if (isAuthenticated && hasProfiles && !filteredScenarios.Any() && scenarios.Any())
+    else if (isAuthenticated && hasProfiles && !string.IsNullOrEmpty(selectedBundleId) && !filteredScenarios.Any() && scenarios.Any())
     {
         <div class="row justify-content-center">
             <div class="col-md-6 text-center">
@@ -270,7 +347,7 @@
             </div>
         </div>
     }
-    else if (isAuthenticated && hasProfiles && !scenarios.Any())
+    else if (isAuthenticated && hasProfiles && !string.IsNullOrEmpty(selectedBundleId) && !scenarios.Any())
     {
         <div class="row justify-content-center">
             <div class="col-md-6 text-center">
@@ -310,6 +387,10 @@
             </div>
         </div>
     }
+    else if (isAuthenticated && hasProfiles && string.IsNullOrEmpty(selectedBundleId))
+    {
+        <!-- Bundles are shown above; no scenarios until a bundle is selected -->
+    }
     else
     {
         <div class="row justify-content-center">
@@ -335,6 +416,11 @@
 @code {
     private List<Scenario> scenarios = new();
     private List<Scenario> filteredScenarios = new();
+    private List<ContentBundle> bundles = new();
+    private List<ContentBundle> filteredBundles = new();
+    private bool isLoadingBundles = false;
+    private string? selectedBundleId;
+    private string selectedBundleTitle => bundles.FirstOrDefault(b => b.Id == selectedBundleId)?.Title ?? string.Empty;
     private bool isLoading = true;
     private bool isStartingAdventure = false;
     private bool isAuthenticated = false;
@@ -370,6 +456,7 @@
             // Load scenarios only if authenticated
             if (isAuthenticated) 
             {
+                await LoadBundles();
                 await LoadScenarios();
                 await LoadProfiles();
                 // Start loading game state in background
@@ -398,6 +485,7 @@
         {
             if (authenticated)
             {
+                await LoadBundles();
                 await LoadScenarios();
                 await LoadProfiles();
                 _ = LoadGameStateAsync();
@@ -408,6 +496,8 @@
             {
                 scenarios.Clear();
                 filteredScenarios.Clear();
+                bundles.Clear();
+                filteredBundles.Clear();
                 selectedAgeGroups.Clear();
                 completedScenarioIds.Clear();
                 gameStateLoadingComplete = false;
@@ -488,6 +578,30 @@
         finally
         {
             isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadBundles()
+    {
+        try
+        {
+            isLoadingBundles = true;
+            StateHasChanged();
+
+            Logger.LogInformation("Loading content bundles...");
+            bundles = await ApiClient.GetBundlesAsync();
+            Logger.LogInformation("Loaded {Count} bundles", bundles.Count);
+
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading bundles");
+        }
+        finally
+        {
+            isLoadingBundles = false;
             StateHasChanged();
         }
     }
@@ -622,7 +736,22 @@
 
     private void ApplyFilters()
     {
+        // Filter bundles by selected age groups
+        var bundleFiltered = bundles.AsEnumerable();
+        if (selectedAgeGroups.Any())
+        {
+            bundleFiltered = bundleFiltered.Where(b => selectedAgeGroups.Contains(b.AgeGroup));
+        }
+        filteredBundles = bundleFiltered.ToList();
+
+        // Filter scenarios, optionally by selected bundle
         var filtered = scenarios.AsEnumerable();
+        if (!string.IsNullOrEmpty(selectedBundleId))
+        {
+            var selected = bundles.FirstOrDefault(b => b.Id == selectedBundleId);
+            var ids = selected?.ScenarioIds ?? new List<string>();
+            filtered = filtered.Where(s => ids.Contains(s.Id));
+        }
         
         // Apply age group filter
         if (selectedAgeGroups.Any())
@@ -640,5 +769,19 @@
         
         Logger.LogInformation("Applied filters. Age groups: [{SelectedFilters}], Show completed: {ShowCompleted}, Showing {Count} of {Total} scenarios", 
             string.Join(", ", selectedAgeGroups), showCompletedStories, filteredScenarios.Count, scenarios.Count);
+    }
+
+    private void SelectBundle(ContentBundle bundle)
+    {
+        selectedBundleId = bundle.Id;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private void ClearSelectedBundle()
+    {
+        selectedBundleId = null;
+        ApplyFilters();
+        StateHasChanged();
     }
 }

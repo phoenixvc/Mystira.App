@@ -115,6 +115,44 @@ public class ApiClient : IApiClient
         }
     }
 
+    public async Task<List<ContentBundle>> GetBundlesAsync()
+    {
+        try
+        {
+            await SetAuthorizationHeaderAsync();
+            var response = await _httpClient.GetAsync("api/bundles");
+            if (response.IsSuccessStatusCode)
+            {
+                var bundles = await response.Content.ReadFromJsonAsync<List<ContentBundle>>(_jsonOptions);
+                return bundles ?? new List<ContentBundle>();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching bundles");
+        }
+        return new List<ContentBundle>();
+    }
+
+    public async Task<List<ContentBundle>> GetBundlesByAgeGroupAsync(string ageGroup)
+    {
+        try
+        {
+            await SetAuthorizationHeaderAsync();
+            var response = await _httpClient.GetAsync($"api/bundles/age-group/{ageGroup}");
+            if (response.IsSuccessStatusCode)
+            {
+                var bundles = await response.Content.ReadFromJsonAsync<List<ContentBundle>>(_jsonOptions);
+                return bundles ?? new List<ContentBundle>();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching bundles by age group {AgeGroup}", ageGroup);
+        }
+        return new List<ContentBundle>();
+    }
+
     public async Task<Scene?> GetSceneAsync(string scenarioId, string sceneId)
     {
         try
