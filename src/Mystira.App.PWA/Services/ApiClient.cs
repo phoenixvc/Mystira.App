@@ -463,6 +463,35 @@ public class ApiClient : IApiClient
         }
     }
 
+    public async Task<GameSession?> ProgressSessionSceneAsync(string sessionId, string sceneId)
+    {
+        try
+        {
+            _logger.LogInformation("Progressing session {SessionId} to scene {SceneId}", sessionId, sceneId);
+            
+            var requestData = new { sceneId };
+            var response = await _httpClient.PostAsJsonAsync($"api/gamesessions/{sessionId}/progress-scene", requestData, _jsonOptions);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var gameSession = await response.Content.ReadFromJsonAsync<GameSession>(_jsonOptions);
+                _logger.LogInformation("Game session progressed successfully: {SessionId} to scene {SceneId}", sessionId, sceneId);
+                return gameSession;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to progress session with status: {StatusCode} for session: {SessionId}, scene: {SceneId}", 
+                    response.StatusCode, sessionId, sceneId);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error progressing session {SessionId} to scene {SceneId}", sessionId, sceneId);
+            return null;
+        }
+    }
+
     public async Task<List<GameSession>?> GetSessionsByAccountAsync(string accountId)
     {
         try
@@ -488,6 +517,36 @@ public class ApiClient : IApiClient
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching sessions for account: {AccountId}", accountId);
+            return null;
+        }
+    }
+
+    public async Task<List<GameSession>?> GetInProgressSessionsAsync(string accountId)
+    {
+        try
+        {
+            _logger.LogInformation("Fetching in-progress sessions for account: {AccountId}", accountId);
+            
+            await SetAuthorizationHeaderAsync();
+            var response = await _httpClient.GetAsync($"api/gamesessions/account/{accountId}/in-progress");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var sessions = await response.Content.ReadFromJsonAsync<List<GameSession>>(_jsonOptions);
+                _logger.LogInformation("Successfully fetched {Count} in-progress sessions for account: {AccountId}", 
+                    sessions?.Count ?? 0, accountId);
+                return sessions;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to fetch in-progress sessions with status: {StatusCode} for account: {AccountId}", 
+                    response.StatusCode, accountId);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching in-progress sessions for account: {AccountId}", accountId);
             return null;
         }
     }

@@ -163,6 +163,15 @@ public class MakeChoiceRequest
     public string NextSceneId { get; set; } = string.Empty;
 }
 
+public class ProgressSceneRequest
+{
+    [Required]
+    public string SessionId { get; set; } = string.Empty;
+
+    [Required]
+    public string SceneId { get; set; } = string.Empty;
+}
+
 public class ScenarioQueryRequest
 {
     public DifficultyLevel? Difficulty { get; set; }

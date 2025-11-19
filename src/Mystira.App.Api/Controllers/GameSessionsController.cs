@@ -268,6 +268,47 @@ public class GameSessionsController : ControllerBase
     }
 
     /// <summary>
+    /// Get in-progress and paused game sessions for a specific account
+    /// </summary>
+    [HttpGet("account/{accountId}/in-progress")]
+    [Authorize]
+    public async Task<ActionResult<List<GameSessionResponse>>> GetInProgressSessions(string accountId)
+    {
+        try
+        {
+            var requestingAccountId = User.FindFirst("sub")?.Value 
+                ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                ?? User.FindFirst("account_id")?.Value;
+
+            if (string.IsNullOrEmpty(requestingAccountId))
+            {
+                return Unauthorized(new ErrorResponse 
+                { 
+                    Message = "Account ID not found in authentication claims",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            if (requestingAccountId != accountId && !User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
+
+            var sessions = await _sessionService.GetInProgressSessionsAsync(accountId);
+            return Ok(sessions);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting in-progress sessions for account {AccountId}", accountId);
+            return StatusCode(500, new ErrorResponse 
+            { 
+                Message = "Internal server error while fetching in-progress sessions",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
     /// Get session statistics and analytics
     /// </summary>
     [HttpGet("{id}/stats")]
@@ -316,6 +357,65 @@ public class GameSessionsController : ControllerBase
             return StatusCode(500, new ErrorResponse 
             { 
                 Message = "Internal server error while checking achievements",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
+    /// Progress a game session to a new scene
+    /// </summary>
+    [HttpPost("{id}/progress-scene")]
+    public async Task<ActionResult<GameSession>> ProgressScene(string id, [FromBody] ProgressSceneRequest request)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new ErrorResponse 
+                { 
+                    Message = "Validation failed",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            request.SessionId = id;
+            var session = await _sessionService.ProgressToSceneAsync(request);
+            if (session == null)
+            {
+                return NotFound(new ErrorResponse 
+                { 
+                    Message = $"Session not found: {id}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            return Ok(session);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid operation progressing scene in session {SessionId}", id);
+            return BadRequest(new ErrorResponse 
+            { 
+                Message = ex.Message,
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid argument progressing scene in session {SessionId}", id);
+            return BadRequest(new ErrorResponse 
+            { 
+                Message = ex.Message,
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error progressing scene in session {SessionId}", id);
+            return StatusCode(500, new ErrorResponse 
+            { 
+                Message = "Internal server error while progressing scene",
                 TraceId = HttpContext.TraceIdentifier
             });
         }

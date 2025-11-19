@@ -66,6 +66,48 @@
         </div>
     }
     
+    <!-- In-Progress Adventures Section -->
+    @if (isAuthenticated && hasProfiles && inProgressSessions.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-warning">
+                    <div class="card-body">
+                        <h6 class="card-title mb-3">
+                            <i class="fas fa-play-circle me-2"></i>Continue Your Adventures
+                        </h6>
+                        <div class="row">
+                            @foreach (var session in inProgressSessions)
+                            {
+                                var scenario = scenarios.FirstOrDefault(s => s.Id == session.ScenarioId);
+                                if (scenario != null)
+                                {
+                                    var scenarioProgress = (session.CurrentSceneId != null) ? $"{session.ChoiceCount} choices made" : "Just started";
+                                    <div class="col-md-6 col-lg-4 mb-3">
+                                        <div class="card h-100 border-warning">
+                                            <div class="card-body d-flex flex-column">
+                                                <h5 class="card-title">@scenario.Title</h5>
+                                                <p class="card-text small text-muted">@scenarioProgress</p>
+                                                <div class="mt-auto">
+                                                    <button class="btn btn-warning btn-sm w-100" 
+                                                            @onclick="() => StartAdventure(scenario)"
+                                                            disabled="@isStartingAdventure">
+                                                        <i class="fas fa-redo me-2"></i>
+                                                        Resume
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    
     <!-- Age Group Filters -->
     @if (isAuthenticated && !isLoading)
     {
@@ -418,6 +460,7 @@
     private List<Scenario> filteredScenarios = new();
     private List<ContentBundle> bundles = new();
     private List<ContentBundle> filteredBundles = new();
+    private List<GameSession> inProgressSessions = new();
     private bool isLoadingBundles = false;
     private string? selectedBundleId;
     private string selectedBundleTitle => bundles.FirstOrDefault(b => b.Id == selectedBundleId)?.Title ?? string.Empty;
@@ -459,6 +502,7 @@
                 await LoadBundles();
                 await LoadScenarios();
                 await LoadProfiles();
+                await LoadInProgressSessions();
                 // Start loading game state in background
                 _ = LoadGameStateAsync();
                 // Get current game session
@@ -488,6 +532,7 @@
                 await LoadBundles();
                 await LoadScenarios();
                 await LoadProfiles();
+                await LoadInProgressSessions();
                 _ = LoadGameStateAsync();
                 // Get current game session
                 gameSession = GameSessionService.CurrentGameSession;
@@ -498,6 +543,7 @@
                 filteredScenarios.Clear();
                 bundles.Clear();
                 filteredBundles.Clear();
+                inProgressSessions.Clear();
                 selectedAgeGroups.Clear();
                 completedScenarioIds.Clear();
                 gameStateLoadingComplete = false;
@@ -554,6 +600,30 @@
         {
             isLoadingProfiles = false;
             StateHasChanged();
+        }
+    }
+
+    private async Task LoadInProgressSessions()
+    {
+        try
+        {
+            var currentAccount = await AuthService.GetCurrentAccountAsync();
+            if (currentAccount == null)
+            {
+                inProgressSessions.Clear();
+                return;
+            }
+
+            Logger.LogInformation("Loading in-progress sessions for account {AccountId}", currentAccount.Id);
+            var sessions = await ApiClient.GetInProgressSessionsAsync(currentAccount.Id);
+            inProgressSessions = sessions ?? new List<GameSession>();
+            Logger.LogInformation("Loaded {Count} in-progress sessions", inProgressSessions.Count);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading in-progress sessions");
+            inProgressSessions.Clear();
         }
     }
 
@@ -659,6 +729,16 @@
             
             Logger.LogInformation("Starting adventure: {ScenarioName}", scenario.Name);
             
+            // Check if there's an in-progress session for this scenario
+            var inProgressSession = inProgressSessions.FirstOrDefault(s => s.ScenarioId == scenario.Id);
+            if (inProgressSession != null)
+            {
+                Logger.LogInformation("Found in-progress session {SessionId} for scenario {ScenarioId}, resuming it", 
+                    inProgressSession.Id, scenario.Id);
+                await ResumeInProgressSession(inProgressSession);
+                return;
+            }
+            
             // Clear any existing game session
             GameSessionService.ClearGameSession();
             
@@ -702,6 +782,61 @@
         {
             isStartingAdventure = false;
             StateHasChanged();
+        }
+    }
+
+    private async Task ResumeInProgressSession(GameSession session)
+    {
+        try
+        {
+            Logger.LogInformation("Resuming in-progress session {SessionId}", session.Id);
+            
+            // Get the full scenario with scenes
+            var fullScenario = await ApiClient.GetScenarioAsync(session.ScenarioId);
+            if (fullScenario == null)
+            {
+                Logger.LogError("Failed to load scenario for in-progress session: {ScenarioId}", session.ScenarioId);
+                return;
+            }
+
+            // Find the current scene
+            var currentScene = fullScenario.Scenes.FirstOrDefault(s => s.Id == session.CurrentSceneId);
+            if (currentScene == null)
+            {
+                Logger.LogWarning("Current scene not found in scenario, using first scene");
+                currentScene = fullScenario.Scenes.FirstOrDefault();
+            }
+
+            if (currentScene == null)
+            {
+                Logger.LogError("No scenes available in scenario");
+                return;
+            }
+
+            // Load media for the current scene
+            currentScene.AudioUrl = !string.IsNullOrEmpty(currentScene.Media?.Audio) ? await ApiClient.GetMediaUrlFromId(currentScene.Media.Audio) : null;
+            currentScene.ImageUrl = !string.IsNullOrEmpty(currentScene.Media?.Image) ? await ApiClient.GetMediaUrlFromId(currentScene.Media.Image) : null;
+            currentScene.VideoUrl = !string.IsNullOrEmpty(currentScene.Media?.Video) ? await ApiClient.GetMediaUrlFromId(currentScene.Media.Video) : null;
+
+            // Create a game session object for the service
+            var localSession = new GameSession
+            {
+                Id = session.Id,
+                Scenario = fullScenario,
+                ScenarioId = fullScenario.Id,
+                ScenarioName = fullScenario.Title,
+                CurrentScene = currentScene,
+                StartedAt = session.StartedAt,
+                CompletedScenes = new List<Scene>(),
+                IsCompleted = false
+            };
+
+            GameSessionService.SetCurrentGameSession(localSession);
+            NavigationManager.NavigateTo("/game");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error resuming in-progress session {SessionId}", session.Id);
         }
     }
 
