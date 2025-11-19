@@ -28,14 +28,15 @@ public class UserProfile
         get => _ageGroup; 
         set => _ageGroup = value; 
     }
-    
-    // Convenience property to get AgeGroup object
+    // Compatibility: expose AgeGroup as string for DB, but also as object for code
     public AgeGroup AgeGroup 
     { 
         get => AgeGroup.Parse(_ageGroup) ?? new AgeGroup("school", 6, 9);
         set => _ageGroup = value?.Value ?? "school";
     }
-    
+    // New properties from dev branch
+    public string? AvatarMediaId { get; set; }
+    public string? SelectedAvatarMediaId { get; set; }
     /// <summary>
     /// Calculate current age from date of birth, or return null if not available
     /// </summary>
@@ -159,6 +160,19 @@ public class AgeGroup : StringEnum<AgeGroup>
         MaximumAge = maximumAge;
     }
 
+<<<<<<< HEAD
+=======
+    public AgeGroup()
+    {
+        Name = string.Empty;
+    }
+    
+    /// <summary>
+    /// Check if this age group is appropriate for a given minimum age requirement
+    /// </summary>
+    /// <param name="requiredMinimumAge">The minimum age requirement</param>
+    /// <returns>True if this age group meets the requirement</returns>
+>>>>>>> origin/dev
     public bool IsAppropriateFor(int requiredMinimumAge)
     {
         return MinimumAge >= requiredMinimumAge;

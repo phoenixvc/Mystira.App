@@ -3,6 +3,8 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 
+@inject IJSRuntime JSRuntime
+
 <div class="page">
     <!-- Offline Indicator -->
     <div id="offline-indicator" class="offline-indicator" style="display: none;">
@@ -39,6 +41,12 @@
                     @if (isAuthenticated)
                     {
                         <li class="nav-item">
+                            <a class="nav-link" href="/profiles">
+                                <i class="fas fa-users me-1"></i>
+                                Profiles
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="/game">
                                 <i class="fas fa-compass me-1"></i>
                                 Adventures
@@ -56,22 +64,18 @@
                     }
                     @if (isAuthenticated)
                     {
-                        <li class="nav-item dropdown">
+                        <li class="nav-item dropdown" @ref="profileMenuElement" id="profile-menu">
                             <button class="btn btn-link nav-link dropdown-toggle" 
                                     type="button"
-                                    @onclick="ToggleProfileMenu"
+                                    @onclick="ToggleSettingsMenu"
                                     @onclick:stopPropagation="true">
                                 <i class="fas fa-user-circle me-1"></i>
-                                @GetProfileDisplayName()
+                                Settings
                             </button>
                             @if (isProfileMenuOpen)
                             {
                                 <div class="dropdown-menu show dropdown-menu-end" style="position: absolute; right: 0;">
                                     <AccountInstallOption />
-                                    <a class="dropdown-item" href="/profiles">
-                                        <i class="fas fa-users me-2"></i>
-                                        Manage Profiles
-                                    </a>
                                     <div class="dropdown-divider"></div>
                                     <button class="dropdown-item" @onclick="SignOutAsync">
                                         <i class="fas fa-sign-out-alt me-2"></i>
@@ -135,6 +139,8 @@
     private Account? CurrentAccount { get; set; }
     private bool isAuthenticated;
     private bool isProfileMenuOpen;
+    private ElementReference profileMenuElement;
+    private IJSObjectReference? outsideClickHandler;
 
     protected override async Task OnInitializedAsync()
     {
@@ -144,6 +150,17 @@
         AuthService.AuthenticationStateChanged += OnAuthenticationStateChanged;
 
         await LoadAuthenticationStateAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            outsideClickHandler = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "outsideClickHandler.initialize",
+                DotNetObjectReference.Create(this),
+                "profile-menu");
+        }
     }
 
     private async Task LoadAuthenticationStateAsync()
@@ -182,17 +199,17 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private string GetProfileDisplayName()
+    [JSInvokable]
+    public void HandleOutsideClick()
     {
-        if (!string.IsNullOrWhiteSpace(CurrentAccount?.DisplayName))
+        if (isProfileMenuOpen)
         {
-            return CurrentAccount!.DisplayName!;
+            isProfileMenuOpen = false;
+            StateHasChanged();
         }
-
-        return CurrentAccount?.Email ?? "Profile";
     }
 
-    private void ToggleProfileMenu()
+    private void ToggleSettingsMenu()
     {
         if (!isAuthenticated)
         {
@@ -200,15 +217,6 @@
         }
 
         isProfileMenuOpen = !isProfileMenuOpen;
-    }
-
-    private void CloseProfileMenu()
-    {
-        if (isProfileMenuOpen)
-        {
-            isProfileMenuOpen = false;
-            StateHasChanged();
-        }
     }
 
     private async Task SignOutAsync()
@@ -229,10 +237,16 @@
         }
     }
 
-    public new void Dispose()
+    public async void Dispose()
     {
         GameSessionService.GameSessionChanged -= OnGameSessionChanged;
         AuthService.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+
+        if (outsideClickHandler != null)
+        {
+            await outsideClickHandler.InvokeVoidAsync("dispose");
+            await outsideClickHandler.DisposeAsync();
+        }
     }
 }
 

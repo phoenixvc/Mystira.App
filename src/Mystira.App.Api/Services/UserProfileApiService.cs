@@ -43,7 +43,9 @@ public class UserProfileApiService : IUserProfileApiService
             IsNpc = request.IsNpc,
             HasCompletedOnboarding = false,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            AvatarMediaId = request.SelectedAvatarMediaId,
+            SelectedAvatarMediaId = request.SelectedAvatarMediaId
         };
 
         // If date of birth is provided, update age group automatically
@@ -173,6 +175,12 @@ public class UserProfileApiService : IUserProfileApiService
         if (request.AccountId != null)
             profile.AccountId = request.AccountId;
 
+        if (request.SelectedAvatarMediaId != null)
+        {
+            profile.SelectedAvatarMediaId = request.SelectedAvatarMediaId;
+            profile.AvatarMediaId = request.SelectedAvatarMediaId;
+        }
+        
         profile.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 

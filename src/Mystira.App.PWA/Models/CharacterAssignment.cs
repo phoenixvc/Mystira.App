@@ -45,6 +45,7 @@ public class PlayerAssignment
     public string? ProfileId { get; set; }
     public string? ProfileName { get; set; }
     public string? ProfileImage { get; set; }
+    public string? SelectedAvatarMediaId { get; set; }
     
     // Guest properties
     public string? GuestName { get; set; }

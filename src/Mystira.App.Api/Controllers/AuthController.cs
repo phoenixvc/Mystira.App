@@ -70,7 +70,7 @@ namespace Mystira.App.Api.Controllers
 
             _logger.LogInformation("Passwordless signup verified: email={Email}", request.Email);
 
-            var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName);
+            var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName, account.Role);
             var refreshToken = _jwtService.GenerateRefreshToken();
 
             return Ok(new PasswordlessVerifyResponse 
@@ -134,7 +134,7 @@ namespace Mystira.App.Api.Controllers
 
             _logger.LogInformation("Passwordless signin verified: email={Email}", request.Email);
 
-            var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName);
+            var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName, account.Role);
             var refreshToken = _jwtService.GenerateRefreshToken();
 
             return Ok(new PasswordlessVerifyResponse 
@@ -191,7 +191,7 @@ namespace Mystira.App.Api.Controllers
                 }
 
                 // Generate new tokens
-                var newAccessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName);
+                var newAccessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName, account.Role);
                 var newRefreshToken = _jwtService.GenerateRefreshToken();
 
                 _logger.LogInformation("Token refreshed successfully for user: {UserId}", userId);
@@ -215,11 +215,6 @@ namespace Mystira.App.Api.Controllers
                     Message = "An error occurred while refreshing token" 
                 });
             }
-        }
-
-        private string GenerateDemoToken(string userId)
-        {
-            return $"demo_token_{userId}_{Guid.NewGuid():N}";
         }
     }
 

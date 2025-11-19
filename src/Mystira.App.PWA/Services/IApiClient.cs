@@ -35,6 +35,10 @@ public interface IApiClient
     Task<ScenarioGameStateResponse?> GetScenariosWithGameStateAsync(string accountId);
     Task<bool> CompleteScenarioForAccountAsync(string accountId, string scenarioId);
     
+    // Avatar endpoints
+    Task<Dictionary<string, List<string>>?> GetAvatarsAsync();
+    Task<List<string>?> GetAvatarsByAgeGroupAsync(string ageGroup);
+    
     string GetApiBaseAddress();
     
     string GetMediaResourceEndpointUrl(string mediaId);

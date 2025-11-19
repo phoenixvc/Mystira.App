@@ -108,6 +108,15 @@ public class AdminController : Controller
     }
 
     /// <summary>
+    /// Avatar management page
+    /// </summary>
+    [HttpGet("avatars")]
+    public IActionResult AvatarManagement()
+    {
+        return View("AvatarManagement");
+    }
+
+    /// <summary>
     /// Create new scenario page
     /// </summary>
     [HttpGet("scenarios/import")]

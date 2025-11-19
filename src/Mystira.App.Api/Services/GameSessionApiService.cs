@@ -402,8 +402,12 @@ public class GameSessionApiService : IGameSessionApiService
         try
         {
             // Game sessions can be linked to profiles in multiple ways:
-            // 1. By profile ID (if the profile owns the session)
+            // 1. By account ID (if the profile owner is the account holder)
             // 2. By player names (if the profile is a player)
+            // 3. By a direct profile relationship (if we had such a field)
+            
+            // For now, we'll search by matching the profile name with player names
+            // This is a simplification - in practice, you might want to add a more direct relationship
             
             var sessions = await _context.GameSessions
                 .Where(s => s.ProfileId == profileId || s.PlayerNames.Contains(profileId))

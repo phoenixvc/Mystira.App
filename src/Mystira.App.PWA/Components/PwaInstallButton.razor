@@ -76,6 +76,12 @@
 
     private async Task CheckInstallationState()
     {
+        // Add cancellation check
+        if (cts?.Token.IsCancellationRequested == true)
+        {
+            return;
+        }
+        
         try
         {
             if (jsModule != null)
@@ -85,9 +91,18 @@
                 {
                     // App is installed, hide the button
                     showInstallButton = false;
-                    StateHasChanged();
+                    await InvokeAsync(StateHasChanged);
                 }
             }
+        }
+        catch (JSDisconnectedException)
+        {
+            // Browser disconnected - stop the timer
+            cts?.Cancel();
+        }
+        catch (TaskCanceledException)
+        {
+            // Expected during disposal
         }
         catch (Exception ex)
         {
@@ -128,9 +143,14 @@
 
     public async ValueTask DisposeAsync()
     {
+        // Cancel first to stop any pending operations
         cts?.Cancel();
-        cts?.Dispose();
+        
+        // Small delay to allow cancellation to propagate
+        await Task.Delay(50);
+        
         checkTimer?.Dispose();
+        cts?.Dispose();
         
         if (jsModule != null)
         {
@@ -139,9 +159,13 @@
                 await jsModule.InvokeVoidAsync("cleanup");
                 await jsModule.DisposeAsync();
             }
+            catch (JSDisconnectedException)
+            {
+                // Expected - browser already disconnected
+            }
             catch
             {
-                // Ignore disposal errors
+                // Ignore other disposal errors
             }
         }
 
