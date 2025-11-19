@@ -211,4 +211,4 @@ GitHub Actions workflow is configured for:
 
 ## License
 
-Copyright (c) 2025 Mystira Team. All rights reserved.
+Copyright (c) 2025 Mystira. All rights reserved.

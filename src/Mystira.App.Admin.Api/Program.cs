@@ -89,10 +89,13 @@ else
 // Add Azure Infrastructure Services
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 
+// Register Content Bundle admin service
+builder.Services.AddScoped<IContentBundleAdminService, ContentBundleAdminService>();
+
 // Configure JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "Mystira-app-Development-Secret-Key-2024-Very-Long-For-Security";
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "mystira-admin-api";
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "mystira-app";
+var jwtKey = builder.Configuration["JwtSettings:SecretKey"] ?? "Mystira-app-Development-Secret-Key-2024-Very-Long-For-Security";
+var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "mystira-admin-api";
+var jwtAudience = builder.Configuration["JwtSettings:Audience"] ?? "mystira-app";
 
 builder.Services.AddAuthentication(options =>
     {
@@ -138,6 +141,7 @@ builder.Services.AddScoped<IMediaMetadataService, MediaMetadataService>();
 builder.Services.AddScoped<ICharacterMediaMetadataService, CharacterMediaMetadataService>();
 builder.Services.AddScoped<IBadgeConfigurationApiService, BadgeConfigurationApiService>();
 builder.Services.AddScoped<IMediaApiService, MediaApiService>();
+builder.Services.AddScoped<IAvatarApiService, AvatarApiService>();
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
 builder.Services.AddScoped<IEmailService, AzureEmailService>();
 
@@ -151,10 +155,11 @@ builder.Services.AddCors(options =>
     options.AddPolicy("MystiraAdminPolicy", policy =>
     {
         policy.WithOrigins(
-                "http://localhost:7001",
-                "https://localhost:7001",
-                "https://admin.mystiraapp.azurewebsites.net", 
-                "https://admin.mystira.app")
+                "http://localhost:7000",
+                "https://localhost:7000",
+                "https://mystiraapp.azurewebsites.net", 
+                "https://mystira.app",
+                "https://mango-water-04fdb1c03.3.azurestaticapps.net")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .SetIsOriginAllowedToAllowWildcardSubdomains()

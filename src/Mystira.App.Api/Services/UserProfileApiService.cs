@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Domain.Models;
-using System.Linq;
 using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
 
@@ -20,7 +19,7 @@ public class UserProfileApiService : IUserProfileApiService
     public async Task<UserProfile> CreateProfileAsync(CreateUserProfileRequest request)
     {
         // Check if profile already exists
-        var existingProfile = await GetProfileAsync(request.Name);
+        var existingProfile = await GetProfileByIdAsync(request.Id);
         if (existingProfile != null)
             throw new ArgumentException($"Profile already exists for name: {request.Name}");
 
@@ -30,20 +29,23 @@ public class UserProfileApiService : IUserProfileApiService
             throw new ArgumentException($"Invalid fantasy themes: {string.Join(", ", invalidThemes)}");
 
         // Validate age group
-        if (AgeGroup.Parse(request.AgeGroup) == null)
-            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.ValueMap.Keys)}");
+        if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
+            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
 
         var profile = new UserProfile
         {
             Name = request.Name,
-            PreferredFantasyThemes = request.PreferredFantasyThemes.Select(t => FantasyTheme.Parse(t)!).ToList(),
+            AccountId = request.AccountId,
+            PreferredFantasyThemes = request.PreferredFantasyThemes?.Select(t => FantasyTheme.Parse(t)!).ToList() ?? new List<FantasyTheme>(),
             AgeGroupName = request.AgeGroup,
             DateOfBirth = request.DateOfBirth,
             IsGuest = request.IsGuest,
             IsNpc = request.IsNpc,
             HasCompletedOnboarding = false,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            AvatarMediaId = request.SelectedAvatarMediaId,
+            SelectedAvatarMediaId = request.SelectedAvatarMediaId
         };
 
         // If date of birth is provided, update age group automatically
@@ -70,15 +72,15 @@ public class UserProfileApiService : IUserProfileApiService
         // Ensure name is unique for guest profiles
         var baseName = name;
         var counter = 1;
-        while (await GetProfileAsync(name) != null)
+        while (await GetProfileByIdAsync(request.Id) != null)
         {
             name = $"{baseName} {counter}";
             counter++;
         }
 
         // Validate age group
-        if (AgeGroup.Parse(request.AgeGroup) == null)
-            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.ValueMap.Keys)}");
+        if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
+            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
 
         var profile = new UserProfile
         {
@@ -121,23 +123,16 @@ public class UserProfileApiService : IUserProfileApiService
         return createdProfiles;
     }
 
-    public async Task<UserProfile?> GetProfileAsync(string name)
-    {
-        return await _context.UserProfiles
-            .Include(p => p.EarnedBadges)
-            .FirstOrDefaultAsync(p => p.Name == name);
-    }
-
     public async Task<UserProfile?> GetProfileByIdAsync(string id)
     {
         return await _context.UserProfiles
             .Include(p => p.EarnedBadges)
             .FirstOrDefaultAsync(p => p.Id == id);
-    }
+     }
 
-    public async Task<UserProfile?> UpdateProfileAsync(string name, UpdateUserProfileRequest request)
+    public async Task<UserProfile?> UpdateProfileByIdAsync(string id, UpdateUserProfileRequest request)
     {
-        var profile = await GetProfileAsync(name);
+        var profile = await GetProfileByIdAsync(id);
         if (profile == null)
             return null;
 
@@ -155,9 +150,9 @@ public class UserProfileApiService : IUserProfileApiService
         if (request.AgeGroup != null)
         {
             // Validate age group
-            if (AgeGroup.Parse(request.AgeGroup) == null)
-                throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.ValueMap.Keys)}");
-            
+            if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
+                throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
+
             profile.AgeGroupName = request.AgeGroup;
         }
 
@@ -180,16 +175,22 @@ public class UserProfileApiService : IUserProfileApiService
         if (request.AccountId != null)
             profile.AccountId = request.AccountId;
 
+        if (request.SelectedAvatarMediaId != null)
+        {
+            profile.SelectedAvatarMediaId = request.SelectedAvatarMediaId;
+            profile.AvatarMediaId = request.SelectedAvatarMediaId;
+        }
+        
         profile.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Updated user profile: {Name}", profile.Name);
+        _logger.LogInformation("Updated user profile by ID: {Id}", id);
         return profile;
     }
 
-    public async Task<bool> DeleteProfileAsync(string name)
+    public async Task<bool> DeleteProfileAsync(string id)
     {
-        var profile = await GetProfileAsync(name);
+        var profile = await GetProfileByIdAsync(id);
         if (profile == null)
             return false;
 
@@ -198,31 +199,25 @@ public class UserProfileApiService : IUserProfileApiService
             .Where(s => s.ProfileId == profile.Id)
             .ToListAsync();
 
-        var badges = await _context.UserBadges
-            .Where(b => b.UserProfileId == profile.Id)
-            .ToListAsync();
-
         _context.GameSessions.RemoveRange(sessions);
-        _context.UserBadges.RemoveRange(badges);
         _context.UserProfiles.Remove(profile);
         
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Deleted user profile and associated data: {Name} (badges: {BadgeCount})", 
-            name, badges.Count);
+        _logger.LogInformation("Deleted user profile and associated data: {Name}", profile.Name);
         return true;
     }
 
-    public async Task<bool> CompleteOnboardingAsync(string name)
+    public async Task<bool> CompleteOnboardingAsync(string id)
     {
-        var profile = await GetProfileAsync(name);
+        var profile = await GetProfileByIdAsync(id);
         if (profile == null)
             return false;
 
         profile.HasCompletedOnboarding = true;
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Completed onboarding for user: {Name}", name);
+        _logger.LogInformation("Completed onboarding for user: {Name}", profile.Name);
         return true;
     }
 

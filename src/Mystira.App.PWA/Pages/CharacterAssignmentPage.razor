@@ -41,9 +41,6 @@ else
         <div class="row mb-4">
             <div class="col-12">
                 <div class="d-flex align-items-center mb-3">
-                    <button class="btn btn-outline-secondary me-3" @onclick="GoBack">
-                        <i class="fas fa-arrow-left"></i>
-                    </button>
                     <div>
                         <h2 class="mb-1">Assign Players</h2>
                         <p class="text-muted mb-0">@assignmentData.Scenario.Title</p>
@@ -83,13 +80,13 @@ else
                                 @if (!string.IsNullOrEmpty(assignment.Image))
                                 {
                                     <button class="btn btn-sm btn-outline-primary" @onclick="() => PreviewImage(ApiClient.GetMediaResourceEndpointUrl(assignment.Image))" title="View Image">
-                                        <i class="🖼️"></i>
+                                        &#128444;
                                     </button>
                                 }
                                 @if (!string.IsNullOrEmpty(assignment.Audio))
                                 {
                                     <button class="btn btn-sm btn-outline-success" @onclick="() => PlayAudio(ApiClient.GetMediaResourceEndpointUrl(assignment.Audio))" title="Play Audio">
-                                        <i class="@(isPlayingAudio == assignment.Audio ? "⏸️" : "▶️")"></i>
+                                        @((MarkupString)(isPlayingAudio == assignment.Audio ? "&#x23F8;" : "&#128266;"))
                                     </button>
                                 }
                             </div>
@@ -116,9 +113,15 @@ else
                                         {
                                             <div class="assigned-player p-2 bg-light rounded">
                                                 <div class="d-flex align-items-center">
-                                                    @if (!string.IsNullOrEmpty(assignment.PlayerAssignment.ProfileImage))
+                                                    @if (!string.IsNullOrEmpty(assignment.PlayerAssignment.SelectedAvatarMediaId))
                                                     {
-                                                        <img src="@assignment.PlayerAssignment.ProfileImage" class="player-avatar me-2" alt="Player" />
+                                                        <div class="player-avatar me-2" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
+                                                            <CachedMystiraImage 
+                                                                MediaId="@assignment.PlayerAssignment.SelectedAvatarMediaId" 
+                                                                Alt="Player Avatar" 
+                                                                Width="80"
+                                                                Height="80" />
+                                                        </div>
                                                     }
                                                     else
                                                     {
@@ -131,14 +134,15 @@ else
                                                         <small class="text-muted">@assignment.PlayerAssignment.Type</small>
                                                     </div>
                                                     <button class="btn btn-sm btn-outline-danger" @onclick="() => RemovePlayerAssignment(cardIndex)" title="Remove">
-                                                       <i class="fas fa-times"></i>
+                                                        &#10060;
                                                     </button>
+                                                    <!-- hiding plus button to add as profile for now
                                                     @if (assignment.PlayerAssignment?.Type == "Guest")
                                                     {
                                                        <button class="btn btn-sm btn-outline-primary ms-1" @onclick="() => CreateProfileFromGuest(assignment.PlayerAssignment)" title="Create Profile">
                                                            <i class="fas fa-user-plus"></i>
                                                        </button>
-                                                    }
+                                                    }-->
                                                     </div>
                                             </div>
                                         }
@@ -219,9 +223,15 @@ else
                             </button>
                         </li>
                         <li class="nav-item">
+                            <button class="nav-link @(assignmentTab == "new-profile" ? "active" : "")" 
+                                    @onclick="@(() => SetAssignmentTab("new-profile"))">
+                                <i class="fas fa-user-plus me-1"></i>New Profile
+                            </button>
+                        </li>
+                        <li class="nav-item">
                             <button class="nav-link @(assignmentTab == "guest" ? "active" : "")" 
                                     @onclick="@(() => SetAssignmentTab("guest"))">
-                                <i class="fas fa-user-plus me-1"></i>Guest
+                                <i class="fas fa-user-circle me-1"></i>Guest
                             </button>
                         </li>
                     </ul>
@@ -229,6 +239,10 @@ else
                     @if (assignmentTab == "profiles")
                     {
                         <!-- Profiles Tab -->
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <small>Note: A single profile can be used for multiple character assignments.</small>
+                        </div>
                         <div class="mb-3">
                             <label class="form-label">Select Profile</label>
                             <select class="form-select" @bind="selectedProfileId">
@@ -240,32 +254,64 @@ else
                             </select>
                         </div>
                     }
+                    else if (assignmentTab == "new-profile")
+                    {
+                         <!-- New Profile Tab -->
+                         <div class="mb-3">
+                             <label class="form-label">Profile Name *</label>
+                             <input type="text" class="form-control" @bind="newProfileName" placeholder="Enter profile name" />
+                         </div>
+
+                         <div class="mb-3">
+                             <label class="form-label">Age Group *</label>
+                             <select class="form-select" @bind="newProfileAgeRange" @bind:after="OnAgeGroupChanged">
+                                 <option value="">Select age range...</option>
+                                 @foreach (var ageRange in AgeRanges.All)
+                                 {
+                                     <option value="@ageRange">@AgeRanges.GetDisplayName(ageRange)</option>
+                                 }
+                             </select>
+                         </div>
+
+                         @if (!string.IsNullOrEmpty(newProfileAgeRange))
+                         {
+                             <div class="mb-3">
+                                 <label class="form-label">Choose Avatar</label>
+                                 
+                                 @if (isAvatarSelected && !string.IsNullOrEmpty(selectedAvatarMediaId))
+                                 {
+                                     <!-- Show selected avatar -->
+                                     <div class="card">
+                                         <div class="card-body text-center">
+                                             <div class="mb-3">
+                                                 <CachedMystiraImage 
+                                                     MediaId="@selectedAvatarMediaId" 
+                                                     Alt="Selected Avatar" 
+                                                     ImageClass="thumbnail-image"
+                                                     Width="150"
+                                                     Height="150" />
+                                             </div>
+                                             <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ChangeAvatar">
+                                                 <i class="fas fa-sync-alt me-2"></i>Change Avatar
+                                             </button>
+                                         </div>
+                                     </div>
+                                 }
+                                 else
+                                 {
+                                     <!-- Show avatar carousel -->
+                                     <AvatarCarousel AgeGroup="@newProfileAgeRange" OnAvatarSelected="OnAvatarSelected" />
+                                 }
+                             </div>
+                         }
+                    }
                     else
                     {
-                        <!-- Guest Tab -->
-                        <div class="mb-3">
-                            <label class="form-label">Display Name *</label>
-                            <input type="text" class="form-control" @bind="guestName" placeholder="Enter guest name" />
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Age Range</label>
-                            <select class="form-select" @bind="guestAgeRange">
-                                <option value="">Select age range...</option>
-                                @foreach (var ageRange in AgeRanges.All)
-                                {
-                                    <option value="@ageRange">@AgeRanges.GetDisplayName(ageRange)</option>
-                                }
-                            </select>
-                        </div>
-                        
-                        
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" @bind="saveGuestAsProfile" />
-                            <label class="form-check-label">
-                                Save as profile after this session
-                            </label>
-                        </div>
+                         <!-- Guest Tab -->
+                         <div class="mb-3">
+                             <label class="form-label">Display Name *</label>
+                             <input type="text" class="form-control" @bind="guestName" placeholder="Enter guest name" />
+                         </div>
                     }
                 </div>
                 <div class="modal-footer">
@@ -288,7 +334,7 @@ else
                 <div class="modal-body p-0 text-center">
                     <img src="@previewImage" class="img-fluid" alt="Character Preview" />
                     <button type="button" class="btn btn-light btn-lg position-absolute top-0 end-0 m-3" @onclick="CloseImagePreview">
-                        <i class="fas fa-times"></i>
+                        &#10060;
                     </button>
                 </div>
             </div>
@@ -316,14 +362,16 @@ else
     private string selectedProfileId = string.Empty;
     private string guestName = string.Empty;
     private string guestAgeRange = string.Empty;
-    private bool saveGuestAsProfile = false;
+    private string newProfileName = string.Empty;
+    private string newProfileAgeRange = string.Empty;
+    private string? selectedAvatarMediaId;
     private string? previewImage;
     private string validationMessage = string.Empty;
+    private bool isAvatarSelected = false;
 
     // Audio
     private string? isPlayingAudio = null;
     private IJSObjectReference? audioModule;
-    private ElementReference audioPlayer;
     
     protected override async Task OnInitializedAsync()
     {
@@ -350,7 +398,7 @@ else
 
     private async Task LoadCharacterAssignmentData()
     {
-        assignmentData = await CharacterAssignmentService.GetCharacterAssignmentDataAsync(ScenarioId);
+        assignmentData = await CharacterAssignmentService.GetCharacterAssignmentDataAsync(ScenarioId, characterAssignments);
         
         if (assignmentData != null)
         {
@@ -397,7 +445,7 @@ else
                 await LoadCharacterAssignmentData();
                 
                 // Update UI
-                InvokeAsync(StateHasChanged);
+                await InvokeAsync(StateHasChanged);
             }
         }
         catch (Exception ex)
@@ -418,7 +466,10 @@ else
             selectedProfileId = string.Empty;
             guestName = string.Empty;
             guestAgeRange = string.Empty;
-            saveGuestAsProfile = false;
+            newProfileName = string.Empty;
+            newProfileAgeRange = string.Empty;
+            selectedAvatarMediaId = null;
+            isAvatarSelected = false;
             assignmentTab = "profiles";
             validationMessage = string.Empty;
             
@@ -448,7 +499,28 @@ else
         assignmentTab = tab;
     }
 
-    private void ConfirmPlayerAssignment()
+    private void OnAgeGroupChanged()
+    {
+        selectedAvatarMediaId = null;
+        isAvatarSelected = false;
+        StateHasChanged();
+    }
+
+    private async Task OnAvatarSelected(string mediaId)
+    {
+        selectedAvatarMediaId = mediaId;
+        isAvatarSelected = true;
+        Logger.LogInformation("Avatar selected: {MediaId}", mediaId);
+        StateHasChanged();
+    }
+
+    private void ChangeAvatar()
+    {
+        isAvatarSelected = false;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmPlayerAssignment()
     {
         if (currentAssignmentIndex < 0 || currentAssignment == null) return;
 
@@ -465,29 +537,59 @@ else
                 playerAssignment.Type = "Profile";
                 playerAssignment.ProfileId = profile.Id;
                 playerAssignment.ProfileName = profile.Name;
-                playerAssignment.ProfileImage = null; // TODO: Add avatar to profile
+                playerAssignment.ProfileImage = null;
+                playerAssignment.SelectedAvatarMediaId = profile.SelectedAvatarMediaId;
             }
         }
-        else if (assignmentTab == "guest" && !string.IsNullOrEmpty(guestName))
+        else if (assignmentTab == "new-profile" && !string.IsNullOrEmpty(newProfileName) && !string.IsNullOrEmpty(newProfileAgeRange))
         {
-            // Validate age group if saving as profile
-            if (saveGuestAsProfile && string.IsNullOrEmpty(guestAgeRange))
+            // Create the new profile immediately
+            var account = await AuthService.GetCurrentAccountAsync();
+            if (account == null)
             {
-                validationMessage = "Please select an age group when creating a profile.";
+                validationMessage = "Unable to create profile. Please try again.";
                 StateHasChanged();
                 return;
             }
 
+            var profileRequest = new CreateUserProfileRequest
+            {
+                Name = newProfileName,
+                AgeGroup = newProfileAgeRange,
+                AccountId = account.Id,
+                IsGuest = false,
+                AvatarMediaId = selectedAvatarMediaId,
+                SelectedAvatarMediaId = selectedAvatarMediaId
+            };
+
+            var createdProfile = await ApiClient.CreateProfileAsync(profileRequest);
+            if (createdProfile != null)
+            {
+                playerAssignment.Type = "Profile";
+                playerAssignment.ProfileId = createdProfile.Id;
+                playerAssignment.ProfileName = createdProfile.Name;
+                playerAssignment.ProfileImage = null;
+                playerAssignment.SelectedAvatarMediaId = createdProfile.SelectedAvatarMediaId;
+                
+                // Add the newly created profile to available profiles list
+                availableProfiles.Add(createdProfile);
+                
+                Logger.LogInformation("Added new profile to available profiles: {ProfileName} with avatar: {AvatarId}", 
+                    createdProfile.Name, createdProfile.SelectedAvatarMediaId);
+            }
+            else
+            {
+                validationMessage = "Failed to create profile. Please try again.";
+                StateHasChanged();
+                return;
+            }
+        }
+        else if (assignmentTab == "guest" && !string.IsNullOrEmpty(guestName))
+        {
             playerAssignment.Type = "Guest";
             playerAssignment.GuestName = guestName;
             playerAssignment.GuestAgeRange = guestAgeRange;
-            playerAssignment.SaveAsProfile = saveGuestAsProfile;
-
-            // Create profile immediately if saveGuestAsProfile is checked
-            if (saveGuestAsProfile && !string.IsNullOrEmpty(guestAgeRange))
-            {
-                _ = Task.Run(async () => await CreateGuestProfileImmediately(playerAssignment));
-            }
+            playerAssignment.SaveAsProfile = false;
         }
 
         if (!string.IsNullOrEmpty(playerAssignment.Type))
@@ -721,6 +823,8 @@ else
         {
             if (assignmentTab == "profiles")
                 return !string.IsNullOrEmpty(selectedProfileId);
+            else if (assignmentTab == "new-profile")
+                return !string.IsNullOrEmpty(newProfileName) && !string.IsNullOrEmpty(newProfileAgeRange);
             else
                 return !string.IsNullOrEmpty(guestName);
         }

@@ -194,7 +194,7 @@ async function validateScenario() {
         button.disabled = true;
         button.textContent = 'Validating...';
         
-        const response = await fetch(`/api/scenarios/${scenarioId}/validate-references`);
+        const response = await fetch(`/api/admin/ScenariosAdmin/${scenarioId}/validate-references`);
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);

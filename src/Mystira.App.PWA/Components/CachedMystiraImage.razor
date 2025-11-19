@@ -1,0 +1,111 @@
+﻿
+@implements IAsyncDisposable
+@inject IImageCacheService ImageCache
+@inject IApiClient ApiClient
+@inject ILogger<CachedMystiraImage> Logger
+@inject IJSRuntime JS
+
+<div class="@ContainerClass">
+    @if (!string.IsNullOrEmpty(MediaId))
+    {
+        <img src="@_imageUrl"
+             alt="@Alt"
+             class="@ImageClass"
+             width="@Width"
+             height="@Height"
+             loading="@Loading" />
+    }
+    else
+    {
+        <div class="text-danger">
+            <small>No media ID specified</small>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string MediaId { get; set; } = "";
+    [Parameter] public string Alt { get; set; } = "Image";
+    [Parameter] public string ImageClass { get; set; } = "img-fluid";
+    [Parameter] public string ContainerClass { get; set; } = "";
+    [Parameter] public string Width { get; set; } = "auto";
+    [Parameter] public string Height { get; set; } = "auto";
+    [Parameter] public string Loading { get; set; } = "lazy";
+    
+    private string _imageUrl = string.Empty;
+    
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrEmpty(MediaId))
+        {
+            return;
+        }
+        
+        // Get the original URL
+        string originalUrl = GetFullImageUrl();
+        
+        if (string.IsNullOrEmpty(originalUrl))
+        {
+            return;
+        }
+        
+        // Use the service to cache the image
+        try
+        {
+            var previousUrl = _imageUrl;
+            var newUrl = await ImageCache.GetOrCacheImageAsync(MediaId, originalUrl);
+
+            // If we are switching from one blob URL to another, revoke the old one
+            if (!string.IsNullOrWhiteSpace(previousUrl) && previousUrl != newUrl && previousUrl.StartsWith("blob:", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    await JS.InvokeVoidAsync("imageCacheManager.revokeObjectUrl", previousUrl);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogDebug(ex, "Failed to revoke previous object URL for mediaId: {MediaId}", MediaId);
+                }
+            }
+
+            _imageUrl = newUrl;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Error caching image for mediaId: {MediaId}", MediaId);
+            _imageUrl = originalUrl; // Fallback to original URL
+        }
+    }
+    
+    private string GetFullImageUrl()
+    {
+        // Construct the full URL to the API endpoint
+        try
+        {
+            var baseUrl = ApiClient.GetApiBaseAddress();
+            var apiUrl = $"{baseUrl}api/media/{MediaId}";
+            return apiUrl;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "MystiraImage component could not load image with Id {MediaId}", MediaId);
+            return string.Empty;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // Revoke any active object URL to free memory
+        if (!string.IsNullOrWhiteSpace(_imageUrl) && _imageUrl.StartsWith("blob:", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("imageCacheManager.revokeObjectUrl", _imageUrl);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Failed to revoke object URL during dispose for mediaId: {MediaId}", MediaId);
+            }
+        }
+    }
+}

@@ -108,6 +108,24 @@ public class AdminController : Controller
     }
 
     /// <summary>
+    /// Content bundles management page
+    /// </summary>
+    [HttpGet("bundles")]
+    public IActionResult Bundles()
+    {
+        return View("Bundles");
+    }
+
+    /// <summary>
+    /// Avatar management page
+    /// </summary>
+    [HttpGet("avatars")]
+    public IActionResult AvatarManagement()
+    {
+        return View("AvatarManagement");
+    }
+
+    /// <summary>
     /// Create new scenario page
     /// </summary>
     [HttpGet("scenarios/import")]

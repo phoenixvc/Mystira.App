@@ -87,7 +87,7 @@ public class ScenarioApiService : IScenarioApiService
         {
             foreach (var archetype in request.Archetypes)
             {
-                query = query.Where(s => s.Archetypes.Select(a => a.Value).Contains(archetype));
+                query = query.Where(s => s.Archetypes.Any(a => a.Value == archetype));
             }
         }
 
@@ -95,7 +95,7 @@ public class ScenarioApiService : IScenarioApiService
         {
             foreach (var axis in request.CoreAxes)
             {
-                query = query.Where(s => s.CoreAxes.Select(a => a.Value).Contains(axis));
+                query = query.Where(s => s.CoreAxes.Any(a => a.Value == axis));
             }
         }
 
@@ -113,10 +113,10 @@ public class ScenarioApiService : IScenarioApiService
                 Tags = s.Tags,
                 Difficulty = s.Difficulty,
                 SessionLength = s.SessionLength,
-                Archetypes = s.Archetypes,
+                Archetypes = s.Archetypes.Select(a => a.Value).ToList(),
                 MinimumAge = s.MinimumAge,
                 AgeGroup = s.AgeGroup,
-                CoreAxes = s.CoreAxes,
+                CoreAxes = s.CoreAxes.Select(a => a.Value).ToList(),
                 CreatedAt = s.CreatedAt
             })
             .ToListAsync();
@@ -149,10 +149,10 @@ public class ScenarioApiService : IScenarioApiService
             Tags = request.Tags,
             Difficulty = request.Difficulty,
             SessionLength = request.SessionLength,
-            Archetypes = request.Archetypes.Select(a => Archetype.Parse(a)!).ToList(),
+            Archetypes = request.Archetypes?.Select(a => Archetype.Parse(a)!).ToList() ?? new List<Archetype>(),
             AgeGroup = request.AgeGroup,
             MinimumAge = request.MinimumAge,
-            CoreAxes = request.CoreAxes.Select(a => CoreAxis.Parse(a)!).ToList(),
+            CoreAxes = request.CoreAxes?.Select(a => CoreAxis.Parse(a)!).ToList() ?? new List<CoreAxis>(),
             Characters = request.Characters,
             Scenes = request.Scenes,
             CreatedAt = DateTime.UtcNow
@@ -189,10 +189,10 @@ public class ScenarioApiService : IScenarioApiService
         scenario.Tags = request.Tags;
         scenario.Difficulty = request.Difficulty;
         scenario.SessionLength = request.SessionLength;
-        scenario.Archetypes = request.Archetypes.Select(a => Archetype.Parse(a)!).ToList();
+        scenario.Archetypes = request.Archetypes?.Select(a => Archetype.Parse(a)!).ToList() ?? new List<Archetype>();
         scenario.AgeGroup = request.AgeGroup;
         scenario.MinimumAge = request.MinimumAge;
-        scenario.CoreAxes = request.CoreAxes.Select(a => CoreAxis.Parse(a)!).ToList();
+        scenario.CoreAxes = request.CoreAxes?.Select(a => CoreAxis.Parse(a)!).ToList() ?? new List<CoreAxis>();
         scenario.Characters = request.Characters;
         scenario.Scenes = request.Scenes;
 
@@ -307,7 +307,7 @@ public class ScenarioApiService : IScenarioApiService
                 Metadata = character.Metadata == null ? null : new
                 {
                     Role = character.Metadata.Role ?? new List<string>(),
-                    Archetype = character.Metadata.Archetype ?? new List<string>(),
+                    Archetype = character.Metadata.Archetype?.Select(a => a.Value).ToList() ?? new List<string>(),
                     Species = character.Metadata.Species,
                     Age = character.Metadata.Age,
                     Traits = character.Metadata.Traits ?? new List<string>(),
@@ -671,6 +671,82 @@ public class ScenarioApiService : IScenarioApiService
                     });
                 }
             }
+        }
+    }
+
+    public async Task<ScenarioGameStateResponse> GetScenariosWithGameStateAsync(string accountId)
+    {
+        try
+        {
+            _logger.LogInformation("Getting scenarios with game state for account: {AccountId}", accountId);
+            
+            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == accountId);
+            if (account == null)
+            {
+                _logger.LogWarning("Account not found: {AccountId}", accountId);
+                return new ScenarioGameStateResponse { Scenarios = new(), TotalCount = 0 };
+            }
+
+            var allScenarios = await _context.Scenarios.ToListAsync();
+            var sessions = await _context.GameSessions
+                .Where(s => s.AccountId == accountId)
+                .ToListAsync();
+
+            var scenariosWithState = new List<ScenarioWithGameState>();
+
+            foreach (var scenario in allScenarios)
+            {
+                var gameState = ScenarioGameState.NotStarted;
+                DateTime? lastPlayedAt = null;
+                int? playCount = null;
+
+                var scenarioSessions = sessions.Where(s => s.ScenarioId == scenario.Id).ToList();
+                if (scenarioSessions.Any())
+                {
+                    playCount = scenarioSessions.Count;
+                    lastPlayedAt = scenarioSessions.Max(s => s.StartTime);
+
+                    if (account.CompletedScenarioIds.Contains(scenario.Id))
+                    {
+                        gameState = ScenarioGameState.Completed;
+                    }
+                    else if (scenarioSessions.Any(s => s.Status == SessionStatus.InProgress))
+                    {
+                        gameState = ScenarioGameState.InProgress;
+                    }
+                    else
+                    {
+                        gameState = ScenarioGameState.InProgress;
+                    }
+                }
+
+                scenariosWithState.Add(new ScenarioWithGameState
+                {
+                    ScenarioId = scenario.Id,
+                    Title = scenario.Title,
+                    Description = scenario.Description,
+                    AgeGroup = scenario.AgeGroup,
+                    Difficulty = scenario.Difficulty.ToString(),
+                    SessionLength = scenario.SessionLength.ToString(),
+                    CoreAxes = scenario.CoreAxes.Select(a => a.Value).ToList(),
+                    Tags = scenario.Tags.ToArray(),
+                    Archetypes = scenario.Archetypes.Select(a => a.Value).ToArray(),
+                    GameState = gameState,
+                    LastPlayedAt = lastPlayedAt,
+                    PlayCount = playCount
+                });
+            }
+
+            return new ScenarioGameStateResponse 
+            { 
+                Scenarios = scenariosWithState,
+                TotalCount = scenariosWithState.Count
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting scenarios with game state for account: {AccountId}", accountId);
+            return new ScenarioGameStateResponse { Scenarios = new(), TotalCount = 0 };
         }
     }
 

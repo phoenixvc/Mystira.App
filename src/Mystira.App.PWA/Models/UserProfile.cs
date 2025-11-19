@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace Mystira.App.PWA.Models;
 
 /// <summary>
@@ -14,14 +12,13 @@ public class UserProfile
     public bool IsGuest { get; set; } = false;
     public bool IsNpc { get; set; } = false;
     public string AgeGroup { get; set; } = string.Empty;
+    public string? AvatarMediaId { get; set; }
     public int? CurrentAge { get; set; }
     public bool HasCompletedOnboarding { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public string? AccountId { get; set; }
-    public string? Pronouns { get; set; }
-    public string? Bio { get; set; }
-    
+    public string? SelectedAvatarMediaId { get; set; }
     public string DisplayAgeRange => AgeRanges.GetDisplayName(AgeGroup);
 }
 
@@ -30,16 +27,17 @@ public class UserProfile
 /// </summary>
 public class CreateUserProfileRequest
 {
+    public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Name { get; set; } = string.Empty;
     public List<string> PreferredFantasyThemes { get; set; } = new();
     public DateTime? DateOfBirth { get; set; }
     public bool IsGuest { get; set; } = false;
     public bool IsNpc { get; set; } = false;
     public string AgeGroup { get; set; }
+    public string? AvatarMediaId { get; set; }
     public bool HasCompletedOnboarding { get; set; } = false;
     public string? AccountId { get; set; }
-    public string? Pronouns { get; set; }
-    public string? Bio { get; set; }
+    public string? SelectedAvatarMediaId { get; set; }
 }
 
 /// <summary>
@@ -53,10 +51,10 @@ public class UpdateUserProfileRequest
     public bool? IsGuest { get; set; }
     public bool? IsNpc { get; set; }
     public string? AgeGroup { get; set; }
+    public string? AvatarMediaId { get; set; }
     public bool? HasCompletedOnboarding { get; set; }
     public string? AccountId { get; set; }
-    public string? Pronouns { get; set; }
-    public string? Bio { get; set; }
+    public string? SelectedAvatarMediaId { get; set; }
 }
 
 /// <summary>

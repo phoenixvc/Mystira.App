@@ -258,7 +258,7 @@ public static class ScenarioRequestCreator
         var metadata = new ScenarioCharacterMetadata
         {
             Role = ToStringList(roleObj),
-            Archetype = ToStringList(archetypeObj),
+            Archetype = ToStringList(archetypeObj).Select(a => Archetype.Parse(a)!).ToList(),
             Traits = ToStringList(traitsObj)
         };
 
@@ -374,7 +374,6 @@ public static class ScenarioRequestCreator
         {
             Timestamp = DateTime.UtcNow // Default to current UTC time
         };
-        
         // Parse EchoType (required)
         if (echoLogDict.TryGetValue("echoType", out var echoTypeObj) || 
             echoLogDict.TryGetValue("echo_type", out echoTypeObj) ||
@@ -382,7 +381,10 @@ public static class ScenarioRequestCreator
         {
             if (echoTypeObj != null)
             {
-                echoLog.EchoType = echoTypeObj.ToString() ?? string.Empty;
+                var parsed = EchoType.Parse(echoTypeObj.ToString());
+                if (parsed == null)
+                    throw new ArgumentException($"Invalid EchoType: {echoTypeObj}");
+                echoLog.EchoType = parsed;
             }
             else
             {
@@ -520,7 +522,10 @@ public static class ScenarioRequestCreator
         {
             if (echoTypeObj != null)
             {
-                reveal.EchoType = echoTypeObj.ToString() ?? string.Empty;
+                var parsed = EchoType.Parse(echoTypeObj.ToString());
+                if (parsed == null)
+                    throw new ArgumentException($"Invalid EchoType: {echoTypeObj}");
+                reveal.EchoType = parsed;
             }
             else
             {

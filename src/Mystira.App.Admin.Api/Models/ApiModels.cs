@@ -40,16 +40,6 @@ public class CreateUserProfileRequest
     /// Indicates if the user has completed onboarding
     /// </summary>
     public bool HasCompletedOnboarding { get; set; }
-    
-    /// <summary>
-    /// Pronouns for the profile (e.g., they/them, she/her, he/him)
-    /// </summary>
-    public string? Pronouns { get; set; }
-    
-    /// <summary>
-    /// Bio or description for the profile
-    /// </summary>
-    public string? Bio { get; set; }
 }
 
 public class UpdateUserProfileRequest
@@ -677,4 +667,16 @@ public class PasswordlessSigninResponse
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
     public string? Email { get; set; }
+}
+
+// Avatar Response Models
+public class AvatarResponse
+{
+    public Dictionary<string, List<string>> AgeGroupAvatars { get; set; } = new();
+}
+
+public class AvatarConfigurationResponse
+{
+    public string AgeGroup { get; set; } = string.Empty;
+    public List<string> AvatarMediaIds { get; set; } = new();
 }
