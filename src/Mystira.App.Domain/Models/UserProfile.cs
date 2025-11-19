@@ -139,7 +139,6 @@ public class UserProfile
 public class AgeGroup : StringEnum<AgeGroup>
 {
     private static readonly Dictionary<string, AgeGroup> AgeGroupLookup = new();
-    
     public static AgeGroup Toddlers = new("toddlers", 1, 3);     // 1-3
     public static AgeGroup Preschoolers = new("preschoolers", 4, 5); // 4-5  
     public static AgeGroup School = new("school", 6, 9);         // 6-9
@@ -147,11 +146,9 @@ public class AgeGroup : StringEnum<AgeGroup>
     public static AgeGroup Teens = new("teens", 13, 18);           // 13-18
     public static AgeGroup Adults = new("adults", 19, 120);        // 19+
     public static readonly AgeGroup[] All = [Toddlers, Preschoolers, School, Preteens, Teens, Adults];
-    
     public string Name { get; set; }
     public int MinimumAge { get; set; }
     public int MaximumAge { get; set; }
->>>>>>> origin/main
     public string AgeRange => $"{MinimumAge}-{MaximumAge}";
 
     public AgeGroup(string name, int minimumAge, int maximumAge) : base(name)
@@ -160,19 +157,16 @@ public class AgeGroup : StringEnum<AgeGroup>
         MaximumAge = maximumAge;
     }
 
-<<<<<<< HEAD
-=======
-    public AgeGroup()
+    public AgeGroup() : base("")
     {
         Name = string.Empty;
     }
-    
+
     /// <summary>
     /// Check if this age group is appropriate for a given minimum age requirement
     /// </summary>
     /// <param name="requiredMinimumAge">The minimum age requirement</param>
     /// <returns>True if this age group meets the requirement</returns>
->>>>>>> origin/dev
     public bool IsAppropriateFor(int requiredMinimumAge)
     {
         return MinimumAge >= requiredMinimumAge;
