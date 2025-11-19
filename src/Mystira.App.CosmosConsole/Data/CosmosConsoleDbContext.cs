@@ -125,8 +125,8 @@ public class CosmosConsoleDbContext : DbContext
         ConfigureListStringProperty<GameSession>(modelBuilder, e => e.PlayerNames);
     
         // Configure all List<string> properties on Scenario
-        ConfigureListStringProperty<Scenario>(modelBuilder, e => e.Archetypes);
-        ConfigureListStringProperty<Scenario>(modelBuilder, e => e.CoreAxes);
+        modelBuilder.Entity<Scenario>().Property(e => e.Archetypes).HasConversion(v => SerializeList(v.Select(e => e.Value).ToList()), v => DeserializeList(v).Select(s => Archetype.Parse(s)!).ToList());
+        modelBuilder.Entity<Scenario>().Property(e => e.CoreAxes).HasConversion(v => SerializeList(v.Select(e => e.Value).ToList()), v => DeserializeList(v).Select(s => CoreAxis.Parse(s)!).ToList());
         ConfigureListStringProperty<Scenario>(modelBuilder, e => e.Tags);
         
         // Add configuration for the Character class
@@ -135,10 +135,10 @@ public class CosmosConsoleDbContext : DbContext
             // Configure the Archetype property if it should be a List<string>
             metadata.Property(m => m.Archetype)
                 .HasConversion(
-                    v => SerializeList(v),
-                    v => DeserializeList(v)
+                    v => SerializeList(v.Select(e => e.Value).ToList()),
+                    v => DeserializeList(v).Select(s => Archetype.Parse(s)!).ToList()
                 )
-                .Metadata.SetValueComparer(new ValueComparer<List<string>>(
+                .Metadata.SetValueComparer(new ValueComparer<List<Archetype>>(
                     (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                     c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                     c => c.ToList()

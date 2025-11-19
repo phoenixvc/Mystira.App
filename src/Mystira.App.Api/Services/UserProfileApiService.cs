@@ -24,7 +24,7 @@ public class UserProfileApiService : IUserProfileApiService
             throw new ArgumentException($"Profile already exists for name: {request.Name}");
 
         // Validate fantasy themes
-        var invalidThemes = request.PreferredFantasyThemes.Except(FantasyThemes.Available).ToList();
+        var invalidThemes = request.PreferredFantasyThemes.Where(t => FantasyTheme.Parse(t) == null).ToList();
         if (invalidThemes.Any())
             throw new ArgumentException($"Invalid fantasy themes: {string.Join(", ", invalidThemes)}");
 
@@ -36,8 +36,8 @@ public class UserProfileApiService : IUserProfileApiService
         {
             Name = request.Name,
             AccountId = request.AccountId,
-            PreferredFantasyThemes = request.PreferredFantasyThemes,
-            AgeGroup = request.AgeGroup,
+            PreferredFantasyThemes = request.PreferredFantasyThemes?.Select(t => FantasyTheme.Parse(t)!).ToList() ?? new List<FantasyTheme>(),
+            AgeGroupName = request.AgeGroup,
             DateOfBirth = request.DateOfBirth,
             IsGuest = request.IsGuest,
             IsNpc = request.IsNpc,
@@ -85,8 +85,8 @@ public class UserProfileApiService : IUserProfileApiService
         var profile = new UserProfile
         {
             Name = name,
-            PreferredFantasyThemes = new List<string>(), // Empty for guest profiles
-            AgeGroup = request.AgeGroup,
+            PreferredFantasyThemes = new List<FantasyTheme>(), // Empty for guest profiles
+            AgeGroupName = request.AgeGroup,
             IsGuest = true,
             IsNpc = false,
             HasCompletedOnboarding = true, // Guests don't need onboarding
@@ -140,11 +140,11 @@ public class UserProfileApiService : IUserProfileApiService
         if (request.PreferredFantasyThemes != null)
         {
             // Validate fantasy themes
-            var invalidThemes = request.PreferredFantasyThemes.Except(FantasyThemes.Available).ToList();
+            var invalidThemes = request.PreferredFantasyThemes.Where(t => FantasyTheme.Parse(t) == null).ToList();
             if (invalidThemes.Any())
                 throw new ArgumentException($"Invalid fantasy themes: {string.Join(", ", invalidThemes)}");
 
-            profile.PreferredFantasyThemes = request.PreferredFantasyThemes;
+            profile.PreferredFantasyThemes = request.PreferredFantasyThemes.Select(t => FantasyTheme.Parse(t)!).ToList();
         }
 
         if (request.AgeGroup != null)
@@ -153,7 +153,7 @@ public class UserProfileApiService : IUserProfileApiService
             if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
                 throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
 
-            profile.AgeGroup = request.AgeGroup;
+            profile.AgeGroupName = request.AgeGroup;
         }
 
         if (request.DateOfBirth.HasValue)

@@ -20,7 +20,7 @@ public class GameSession
     public DateTime? PausedAt { get; set; }
     public int SceneCount { get; set; }
     // Store as string for database compatibility, but provide AgeGroup access
-    private string _targetAgeGroup = AgeGroup.School.Name;
+    private string _targetAgeGroup = "school";
     public string TargetAgeGroupName 
     { 
         get => _targetAgeGroup; 
@@ -30,10 +30,24 @@ public class GameSession
     // Convenience property to get AgeGroup object
     public AgeGroup TargetAgeGroup 
     { 
-        get => AgeGroup.GetByName(_targetAgeGroup) ?? AgeGroup.School;
-        set => _targetAgeGroup = value?.Name ?? AgeGroup.School.Name;
+        get => AgeGroup.Parse(_targetAgeGroup) ?? new AgeGroup("school", 6, 9);
+        set => _targetAgeGroup = value?.Value ?? "school";
     }
     public string? SelectedCharacterId { get; set; } // Character selected from character map
+
+    public TimeSpan GetTotalElapsedTime()
+    {
+        var totalTime = ElapsedTime;
+        if (IsPaused && PausedAt.HasValue)
+        {
+            totalTime += DateTime.UtcNow - PausedAt.Value;
+        }
+        else if (Status == SessionStatus.InProgress)
+        {
+            totalTime += DateTime.UtcNow - StartTime;
+        }
+        return totalTime;
+    }
 }
 
 public class SessionChoice

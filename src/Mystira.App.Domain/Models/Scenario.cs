@@ -8,13 +8,49 @@ public class Scenario
     public List<string> Tags { get; set; } = new();
     public DifficultyLevel Difficulty { get; set; }
     public SessionLength SessionLength { get; set; }
-    public List<string> Archetypes { get; set; } = new();
+    public List<Archetype> Archetypes { get; set; } = new();
     public string AgeGroup { get; set; } = string.Empty;
     public int MinimumAge { get; set; }
-    public List<string> CoreAxes { get; set; } = new();
+    public List<CoreAxis> CoreAxes { get; set; } = new();
     public List<ScenarioCharacter> Characters { get; set; } = new();
     public List<Scene> Scenes { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public bool Validate(out List<string> errors)
+    {
+        errors = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(Title))
+        {
+            errors.Add("Scenario title cannot be empty.");
+        }
+
+        if (Scenes == null || !Scenes.Any())
+        {
+            errors.Add("Scenario must have at least one scene.");
+        }
+        else
+        {
+            var sceneIds = new HashSet<string>(Scenes.Select(s => s.Id));
+            foreach (var scene in Scenes)
+            {
+                if (!string.IsNullOrEmpty(scene.NextSceneId) && !sceneIds.Contains(scene.NextSceneId))
+                {
+                    errors.Add($"Scene '{scene.Title}' has an invalid NextSceneId: {scene.NextSceneId}");
+                }
+
+                foreach (var branch in scene.Branches)
+                {
+                    if (!sceneIds.Contains(branch.NextSceneId))
+                    {
+                        errors.Add($"Scene '{scene.Title}' has a branch with an invalid NextSceneId: {branch.NextSceneId}");
+                    }
+                }
+            }
+        }
+
+        return !errors.Any();
+    }
 }
 
 public class ScenarioCharacter
@@ -29,7 +65,7 @@ public class ScenarioCharacter
 public class ScenarioCharacterMetadata
 {
     public List<string> Role { get; set; } = new();
-    public List<string> Archetype { get; set; } = new();
+    public List<Archetype> Archetype { get; set; } = new();
     public string Species { get; set; } = string.Empty;
     public int Age { get; set; }
     public List<string> Traits { get; set; } = new();
@@ -66,7 +102,7 @@ public class MediaReferences
 
 public class EchoLog
 {
-    public string EchoType { get; set; } = string.Empty;
+    public EchoType EchoType { get; set; } = EchoType.Parse("honesty")!;
     public string Description { get; set; } = string.Empty;
     public double Strength { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
@@ -81,7 +117,7 @@ public class CompassChange
 
 public class EchoReveal
 {
-    public string EchoType { get; set; } = string.Empty;
+    public EchoType EchoType { get; set; } = EchoType.Parse("honesty")!;
     public double MinStrength { get; set; }
     public string TriggerSceneId { get; set; } = string.Empty;
     public int? MaxAgeScenes { get; set; }
@@ -120,43 +156,3 @@ public enum SceneType
     Special = 3
 }
 
-public static class MasterLists
-{
-    public static readonly List<string> Archetypes = new()
-    {
-        "heroic", "guardian", "trickster", "wise/mental", "inner", "moral", "elemental"
-    };
-
-    public static readonly List<string> CoreAxes = new()
-    {
-        "honesty", "bravery", "generosity", "loyalty", "humility", "empathy", "resilience",
-        "responsibility", "justice", "trust", "kindness", "discipline", "patience", "curiosity",
-        "forgiveness", "self_awareness", "integrity", "assertiveness", "fairness", "self_control",
-        "cooperation", "adaptability", "courage", "compassion", "gratitude", "perseverance",
-        "open_mindedness", "decisiveness", "emotional_intelligence", "altruism", "ambition",
-        "creativity", "independence", "respect", "self_acceptance", "focus", "moral_consistency",
-        "self_reflection", "social_bonding", "conflict_resolution", "ethical_reasoning",
-        "identity_alignment", "relational_security", "growth_mindset"
-    };
-
-    public static readonly List<string> EchoTypes = new()
-    {
-        "honesty", "deception", "loyalty", "betrayal", "justice", "injustice", "fairness", "bias",
-        "forgiveness", "revenge", "sacrifice", "selfishness", "obedience", "rebellion", "doubt",
-        "confidence", "shame", "pride", "regret", "hope", "despair", "grief", "denial", "acceptance",
-        "awakening", "resignation", "growth", "stagnation", "kindness", "neglect", "compassion",
-        "coldness", "generosity", "envy", "gratitude", "resentment", "love", "jealousy", "trust",
-        "manipulation", "support", "abandonment", "bravery", "fear", "aggression", "cowardice",
-        "protection", "avoidance", "confrontation", "flight", "freeze", "rescue", "denial_of_help",
-        "risk_taking", "panic", "resilience", "authenticity", "masking", "conformity", "individualism",
-        "dependence", "independence", "attention_seeking", "withdrawal", "role_adoption", "role_rejection",
-        "listening", "interrupting", "mockery", "encouragement", "humiliation", "respect", "disrespect",
-        "sharing", "withholding", "blaming", "apologizing", "curiosity", "closed-mindedness",
-        "truth_seeking", "value_conflict", "reflection", "projection", "mirroring", "internalization",
-        "breakthrough", "denial_of_truth", "clarity", "pattern_repetition", "pattern_break",
-        "echo_amplification", "influence_spread", "echo_collision", "legacy_creation", "reputation_change",
-        "morality_shift", "alignment_pull", "world_change", "first_blood", "oath_made", "oath_broken",
-        "promise", "secret_revealed", "lie_exposed", "lesson_learned", "lesson_ignored", "role_locked",
-        "destiny_revealed"
-    };
-}

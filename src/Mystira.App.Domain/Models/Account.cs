@@ -24,6 +24,21 @@ public class SubscriptionDetails
     public string? PurchaseToken { get; set; } // For app store verification
     public DateTime? LastVerified { get; set; } // Last time subscription was verified with app store
     public List<string> PurchasedScenarios { get; set; } = new(); // Individual scenario purchases
+
+    public bool IsSubscriptionActive()
+    {
+        if (!IsActive)
+        {
+            return false;
+        }
+
+        if (ValidUntil.HasValue && ValidUntil.Value < DateTime.UtcNow)
+        {
+            return false;
+        }
+
+        return true;
+    }
 }
 
 public class AccountSettings

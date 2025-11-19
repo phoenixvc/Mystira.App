@@ -64,10 +64,10 @@ public class YamlScenario
             Tags = Tags,
             Difficulty = Enum.Parse<DifficultyLevel>(Difficulty),
             SessionLength = Enum.Parse<SessionLength>(SessionLength),
-            Archetypes = Archetypes,
+            Archetypes = Archetypes.Select(Archetype.Parse).Where(a => a != null).ToList()!,
             AgeGroup = AgeGroup,
             MinimumAge = MinimumAge,
-            CoreAxes = axes,
+            CoreAxes = axes.Select(CoreAxis.Parse).Where(a => a != null).ToList()!,
             CreatedAt = DateTime.TryParse(CreatedAt, out var createdAt) ? createdAt : DateTime.UtcNow,
             Scenes = Scenes.Select(s => s.ToDomainModel()).ToList()
         };
@@ -197,7 +197,7 @@ public class YamlEchoLog
     {
         return new EchoLog
         {
-            EchoType = EchoType,
+            EchoType = Mystira.App.Domain.Models.EchoType.Parse(EchoType)!,
             Description = Description,
             Strength = Strength,
             Timestamp = DateTime.UtcNow
@@ -251,7 +251,7 @@ public class YamlEchoRevealReference
     {
         return new EchoReveal
         {
-            EchoType = EchoType,
+            EchoType = Mystira.App.Domain.Models.EchoType.Parse(EchoType)!,
             MinStrength = MinStrength,
             TriggerSceneId = TriggerSceneId,
             RevealMechanic = RevealMechanic,

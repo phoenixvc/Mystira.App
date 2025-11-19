@@ -24,12 +24,16 @@ public class UserProfileTests
     [Theory]
     [AutoData]
     public void UserProfile_SetProperties_SetsValuesCorrectly(
-        string name,
-        List<string> preferredThemes)
+        string name)
     {
         // Arrange
         var userProfile = new UserProfile();
         var testTime = DateTime.UtcNow;
+        var preferredThemes = new List<FantasyTheme>
+        {
+            FantasyTheme.ClassicFantasy,
+            FantasyTheme.DragonsAndKnights
+        };
 
         // Act
         userProfile.Name = name;
@@ -51,7 +55,7 @@ public class UserProfileTests
     {
         // Arrange
         var userProfile = new UserProfile();
-        const string theme = "Classic Fantasy";
+        var theme = FantasyTheme.ClassicFantasy;
 
         // Act
         userProfile.PreferredFantasyThemes.Add(theme);
@@ -66,7 +70,12 @@ public class UserProfileTests
     {
         // Arrange
         var userProfile = new UserProfile();
-        var themes = new List<string> { "Classic Fantasy", "Dragons & Knights", "Mystery & Puzzles" };
+        var themes = new List<FantasyTheme>
+        {
+            FantasyTheme.ClassicFantasy,
+            FantasyTheme.DragonsAndKnights,
+            FantasyTheme.MysteryAndPuzzles
+        };
 
         // Act
         userProfile.PreferredFantasyThemes = themes;
@@ -75,39 +84,52 @@ public class UserProfileTests
         userProfile.PreferredFantasyThemes.Should().BeEquivalentTo(themes);
         userProfile.PreferredFantasyThemes.Should().HaveCount(3);
     }
-}
 
-public class FantasyThemesTests
-{
     [Fact]
-    public void FantasyThemes_Available_ContainsExpectedThemes()
+    public void UserProfile_CurrentAge_CalculatesCorrectly()
     {
-        // Act & Assert
-        FantasyThemes.Available.Should().NotBeEmpty();
-        FantasyThemes.Available.Should().Contain("Classic Fantasy");
-        FantasyThemes.Available.Should().Contain("Medieval Adventure");
-        FantasyThemes.Available.Should().Contain("Magic & Wizards");
-        FantasyThemes.Available.Should().Contain("Dragons & Knights");
-        FantasyThemes.Available.Should().Contain("Forest Adventures");
-        FantasyThemes.Available.Should().Contain("Mystery & Puzzles");
-        FantasyThemes.Available.Should().Contain("Fairy Tales");
-        FantasyThemes.Available.Should().Contain("Animal Companions");
-        FantasyThemes.Available.Should().Contain("Underwater Worlds");
-        FantasyThemes.Available.Should().Contain("Sky Adventures");
+        // Arrange
+        var userProfile = new UserProfile();
+        var today = DateTime.Today;
+        userProfile.DateOfBirth = new DateTime(today.Year - 10, today.Month, today.Day);
+
+        // Act
+        var age = userProfile.CurrentAge;
+
+        // Assert
+        age.Should().Be(10);
+    }
+
+
+    [Fact]
+    public void UpdateAgeGroupFromBirthDate_HandlesAgesAboveMax()
+    {
+        // Arrange
+        var userProfile = new UserProfile
+        {
+            DateOfBirth = DateTime.Today.AddYears(-25)
+        };
+
+        // Act
+        userProfile.UpdateAgeGroupFromBirthDate();
+
+        // Assert
+        userProfile.AgeGroup.Should().Be(AgeGroup.Teens);
     }
 
     [Fact]
-    public void FantasyThemes_Available_HasExpectedCount()
+    public void GetAgeGroupFromBirthDate_ReturnsCorrectAgeGroup()
     {
-        // Act & Assert
-        FantasyThemes.Available.Should().HaveCount(10);
-    }
+        // Arrange
+        var userProfile = new UserProfile
+        {
+            DateOfBirth = DateTime.Today.AddYears(-10)
+        };
 
-    [Fact]
-    public void FantasyThemes_Available_AllThemesAreStrings()
-    {
-        // Act & Assert
-        FantasyThemes.Available.Should().AllBeOfType<string>();
-        FantasyThemes.Available.Should().OnlyContain(theme => !string.IsNullOrEmpty(theme));
+        // Act
+        var ageGroup = userProfile.GetAgeGroupFromBirthDate();
+
+        // Assert
+        ageGroup.Should().Be(AgeGroup.Preteens);
     }
 }
