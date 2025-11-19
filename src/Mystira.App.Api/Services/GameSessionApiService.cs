@@ -32,6 +32,22 @@ public class GameSessionApiService : IGameSessionApiService
         if (!IsAgeGroupCompatible(scenario.MinimumAge, request.TargetAgeGroup))
             throw new ArgumentException($"Scenario minimum age ({scenario.MinimumAge}) exceeds target age group ({request.TargetAgeGroup})");
 
+        // Check for existing InProgress session for this scenario and account
+        var existingSession = await _context.GameSessions
+            .FirstOrDefaultAsync(s => s.ScenarioId == request.ScenarioId 
+                && s.AccountId == request.AccountId 
+                && s.Status == SessionStatus.InProgress);
+        
+        if (existingSession != null)
+        {
+            _logger.LogInformation("Found existing InProgress session {ExistingSessionId} for scenario {ScenarioId}, pausing it", 
+                existingSession.Id, request.ScenarioId);
+            
+            existingSession.Status = SessionStatus.Paused;
+            existingSession.IsPaused = true;
+            existingSession.PausedAt = DateTime.UtcNow;
+        }
+
         var session = new GameSession
         {
             Id = Guid.NewGuid().ToString(),
@@ -103,6 +119,33 @@ public class GameSessionApiService : IGameSessionApiService
     {
         return await _context.GameSessions
             .Where(s => s.ProfileId == profileId)
+            .OrderByDescending(s => s.StartTime)
+            .Select(s => new GameSessionResponse
+            {
+                Id = s.Id,
+                ScenarioId = s.ScenarioId,
+                AccountId = s.AccountId,
+                ProfileId = s.ProfileId,
+                PlayerNames = s.PlayerNames,
+                Status = s.Status,
+                CurrentSceneId = s.CurrentSceneId,
+                ChoiceCount = s.ChoiceHistory.Count,
+                EchoCount = s.EchoHistory.Count,
+                AchievementCount = s.Achievements.Count,
+                StartTime = s.StartTime,
+                EndTime = s.EndTime,
+                ElapsedTime = s.ElapsedTime,
+                IsPaused = s.IsPaused,
+                SceneCount = s.SceneCount,
+                TargetAgeGroup = s.TargetAgeGroupName
+            })
+            .ToListAsync();
+    }
+
+    public async Task<List<GameSessionResponse>> GetInProgressSessionsAsync(string accountId)
+    {
+        return await _context.GameSessions
+            .Where(s => s.AccountId == accountId && (s.Status == SessionStatus.InProgress || s.Status == SessionStatus.Paused))
             .OrderByDescending(s => s.StartTime)
             .Select(s => new GameSessionResponse
             {
@@ -269,6 +312,40 @@ public class GameSessionApiService : IGameSessionApiService
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Ended session: {SessionId}", sessionId);
+        return session;
+    }
+
+    public async Task<GameSession?> ProgressToSceneAsync(ProgressSceneRequest request)
+    {
+        var session = await GetSessionAsync(request.SessionId);
+        if (session == null)
+            return null;
+
+        if (session.Status != SessionStatus.InProgress && session.Status != SessionStatus.Paused)
+            throw new InvalidOperationException("Can only progress scenes in active or paused sessions");
+
+        var scenario = await _scenarioService.GetScenarioByIdAsync(session.ScenarioId);
+        if (scenario == null)
+            throw new InvalidOperationException("Scenario not found for session");
+
+        var targetScene = scenario.Scenes.FirstOrDefault(s => s.Id == request.SceneId);
+        if (targetScene == null)
+            throw new ArgumentException("Scene not found in scenario");
+
+        session.CurrentSceneId = request.SceneId;
+        session.ElapsedTime = DateTime.UtcNow - session.StartTime;
+
+        // Resume session if it was paused
+        if (session.Status == SessionStatus.Paused)
+        {
+            session.Status = SessionStatus.InProgress;
+            session.IsPaused = false;
+            session.PausedAt = null;
+        }
+
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Progressed session {SessionId} to scene {SceneId}", request.SessionId, request.SceneId);
         return session;
     }
 

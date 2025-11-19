@@ -113,6 +113,9 @@ public class GameSession
     public DateTime StartedAt { get; set; }
     public bool IsCompleted { get; set; }
     public Scenario Scenario { get; set; } = new();
+    public string CurrentSceneId { get; set; } = string.Empty;
+    public int ChoiceCount { get; set; }
+    public string Status { get; set; } = string.Empty;
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

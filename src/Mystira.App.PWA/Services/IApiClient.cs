@@ -15,6 +15,7 @@ public interface IApiClient
     Task<RefreshTokenResponse?> RefreshTokenAsync(string token, string refreshToken);
     Task<GameSession?> StartGameSessionAsync(string scenarioId, string accountId, string profileId, List<string> playerNames, string targetAgeGroup);
     Task<GameSession?> EndGameSessionAsync(string sessionId);
+    Task<GameSession?> ProgressSessionSceneAsync(string sessionId, string sceneId);
     Task<List<GameSession>?> GetSessionsByAccountAsync(string accountId);
     Task<Account?> GetAccountByEmailAsync(string email);
     
@@ -34,6 +35,7 @@ public interface IApiClient
     // Game state endpoints
     Task<ScenarioGameStateResponse?> GetScenariosWithGameStateAsync(string accountId);
     Task<bool> CompleteScenarioForAccountAsync(string accountId, string scenarioId);
+    Task<List<GameSession>?> GetInProgressSessionsAsync(string accountId);
     
     // Avatar endpoints
     Task<Dictionary<string, List<string>>?> GetAvatarsAsync();
