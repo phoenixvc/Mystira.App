@@ -1,8 +1,21 @@
-// Service Worker for Mystira PWA
-// Caching has been disabled to avoid stale assets across deployments.
+/*
+ * Service Worker for Mystira PWA (development build)
+ *
+ * Current strategy:
+ * - Caching of assets is disabled to avoid stale behaviour during development.
+ * - All caches are cleared on install and activate.
+ * - A CLEAR_CACHES message can be sent from the client to force cache clearing.
+ *
+ * NOTE:
+ * - If you introduce caching here (for local offline testing), ensure that
+ *   published builds (service-worker.published.js) use a compatible strategy.
+ */
 
 const LOG_PREFIX = '[Mystira ServiceWorker]';
 
+/**
+ * Clear all caches associated with this origin.
+ */
 async function clearAllCaches() {
     if (!self.caches) {
         return;
@@ -22,7 +35,7 @@ async function clearAllCaches() {
 }
 
 self.addEventListener('install', (event) => {
-    console.log(`${LOG_PREFIX} Install - skipping waiting and clearing caches`);
+    console.log(`${LOG_PREFIX} Install - clearing caches and skipping waiting`);
 
     event.waitUntil((async () => {
         await clearAllCaches();
@@ -31,7 +44,7 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-    console.log(`${LOG_PREFIX} Activate - ensuring caches are cleared`);
+    console.log(`${LOG_PREFIX} Activate - ensuring caches are cleared and claiming clients`);
 
     event.waitUntil((async () => {
         await clearAllCaches();
@@ -45,3 +58,16 @@ self.addEventListener('message', (event) => {
         event.waitUntil(clearAllCaches());
     }
 });
+
+/*
+ * No fetch handler is registered.
+ *
+ * This means:
+ * - Requests go straight to the network (or browser default cache rules).
+ * - The service worker is primarily used here for cache clearing and PWA lifecycle hooks.
+ *
+ * If you decide to add offline caching:
+ * - Introduce a 'fetch' event listener.
+ * - Use a minimal app-shell cache and versioned cache names.
+ * - Keep the CLEAR_CACHES handler for manual invalidation.
+ */
