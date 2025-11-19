@@ -9,7 +9,7 @@ on:
       - '.github/workflows/ci-cd-admin.yml'
   pull_request:
     branches: [ dev ]  # PRs targeting dev
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened]
     paths:
       - 'src/Mystira.App.Admin.Api/**'
       - 'src/Mystira.App.Domain/**'
