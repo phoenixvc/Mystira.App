@@ -1,192 +1,150 @@
-# Mystira.App.CosmosConsole
+# Mystira Application Suite
 
-A console application for interfacing with Cosmos DB to generate reports and statistics for the Mystira application.
+![.NET 9](https://img.shields.io/badge/.NET-9.0-512BD4?logo=dotnet&logoColor=white)
+![Azure Cosmos DB](https://img.shields.io/badge/Azure-Cosmos%20DB-0089D6?logo=microsoftazure&logoColor=white)
+![Blazor PWA](https://img.shields.io/badge/Client-Blazor%20PWA-5C2D91?logo=blazor&logoColor=white)
+![CI Ready](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)
+![Repo Type](https://img.shields.io/badge/Repo-Monorepo-6f42c1?logo=github&logoColor=white)
+![Quality Gates](https://img.shields.io/badge/Tests-dotnet%20test,%20dotnet%20format,%20npm%20run%20lint-20C997?logo=github&logoColor=white)
 
-## Features
+The Mystira repository hosts the full suite of services, libraries, and client applications that power the Mystira experience. It includes backend APIs, domain and infrastructure libraries, the Cosmos-analytical console tool, and the Blazor PWA front-end—all sharing a cohesive domain model and now standardised on .NET 9.
 
-### Export Game Sessions to CSV
+> **Why this matters:** Everything in the repo builds against the same runtime, which simplifies dependency management, improves security posture, and keeps developer tooling consistent.
 
-Exports all game sessions from the Cosmos DB, joined with account information to extract user email and alias.
+## Contents
 
-Usage:
+- [Repository Overview](#repository-overview)
+- [Technology Stack](#technology-stack)
+- [Getting Started](#getting-started)
+- [Upgrade Verification Checklist](#upgrade-verification-checklist)
+- [Project Analysis](#project-analysis)
+- [Recommendations](#recommendations)
+- [Testing & Quality Gates](#testing--quality-gates)
+- [Contributing / PR Checklist](#contributing--pr-checklist)
+- [Developer Quality of Life](#developer-quality-of-life)
+- [Further Reading](#further-reading)
 
-```bash
-Mystira.App.CosmosConsole export --output sessions.csv
-```
+## Repository Overview
 
-Output CSV columns:
+| Label | Area | Description |
+| --- | --- | --- |
+| 🧠 Domain | `src/Mystira.App.Domain` | Core domain models, enumerations, and shared business logic reused across every layer. |
+| ☁️ Azure Infra | `src/Mystira.App.Infrastructure.Azure` | Azure-specific configuration objects plus Cosmos DB & Blob Storage health checks. |
+| 🌐 Public API | `src/Mystira.App.Api` | ASP.NET Core API serving Mystira clients on top of Cosmos DB. |
+| 🛡️ Admin API | `src/Mystira.App.Admin.Api` | Internal-facing API surface for moderation, content workflows, and tooling. |
+| 📱 PWA | `src/Mystira.App.PWA` | Blazor WebAssembly PWA with offline assets, IndexedDB sync, audio helpers, and haptics. |
+| 📊 Ops Console | `Mystira.App.CosmosConsole` | Command-line utility for Cosmos DB exports, stats, and operational insights. |
 
-- SessionId: Unique identifier for the game session
-- ScenarioId: ID of the scenario played
-- ScenarioName: Name/title of the scenario
-- AccountId: Account ID of the user
-- AccountEmail: Email address of the user account
-- AccountAlias: Display name/alias of the user account
-- ProfileId: Profile ID used in the session
-- StartedAt: Date and time when the session started
-- IsCompleted: Boolean indicating if the session was completed
-- CompletedAt: Date and time when the session was completed (null if not completed)
+## Technology Stack
 
-### Scenario Statistics
+- **Languages & Runtimes:** C# / ASP.NET Core on .NET 9 across APIs, console, and PWA host.
+- **Data Layer:** Azure Cosmos DB (EF Core provider) and Azure Blob Storage for binary assets.
+- **Client Enhancements:** Service workers, IndexedDB caching, audio/haptics JS interop, and dice utilities.
+- **Tooling:** CsvHelper (exports), System.CommandLine, Microsoft.Extensions.* configuration/logging, Azure health checks.
 
-Shows completion statistics for each scenario, including per-account breakdowns.
+## Getting Started
 
-Usage:
+### Prerequisites
+- .NET 9 SDK (`dotnet --list-sdks` should show 9.x).
+- Node.js 18+ for PWA build tooling/service-worker bundling.
+- Azure resources (Cosmos DB account, Blob Storage) or emulators.
+- Repository secrets (connection strings, credentials) supplied via User Secrets, environment variables, or Azure Key Vault.
 
-```bash
-Mystira.App.CosmosConsole stats
-```
-
-Output includes:
-
-- Total sessions per scenario
-- Number of completed sessions per scenario
-- Completion rate (percentage)
-- Per-account breakdown showing:
-  - Individual session counts
-  - Individual completion counts
-  - Per-account completion rates
-
-## Configuration
-
-The application requires configuration in `appsettings.json`:
-
-```json
-{
-  "ConnectionStrings": {
-    "CosmosDb": "AccountEndpoint=https://your-cosmos-account.documents.azure.com:443/;AccountKey=your-account-key;"
-  },
-  "Database": {
-    "Name": "MystiraAppDb"
-  }
-}
-```
-
-### Getting Cosmos DB Connection String
-
-1. Navigate to your Azure Portal.
-2. Go to your Cosmos DB account.
-3. Select "Keys" from the left menu.
-4. Copy either the PRIMARY KEY or SECONDARY KEY.
-5. Replace the placeholder values in the `appsettings.json`.
-
-Security note: treat this connection string as a secret and do not commit real values to source control.
-
-## Building
+### Build
 
 ```bash
-dotnet build
+dotnet build Mystira.sln
 ```
 
-## Running
-
-The console application supports two main commands:
-
-### Export Command
+### Run Key Projects
 
 ```bash
-# Export all game sessions with account data to CSV
-Mystira.App.CosmosConsole export --output path/to/sessions.csv
+# Public API
+dotnet run --project src/Mystira.App.Api/Mystira.App.Api.csproj
+
+# Admin API
+dotnet run --project src/Mystira.App.Admin.Api/Mystira.App.Admin.Api.csproj
+
+# Cosmos console exports
+dotnet run --project Mystira.App.CosmosConsole/Mystira.App.CosmosConsole.csproj -- export --output sessions.csv
+
+# Blazor PWA host
+dotnet run --project src/Mystira.App.PWA/Mystira.App.PWA.csproj
 ```
 
-### Statistics Command
+Configure `appsettings.Development.json`, user secrets, or environment variables with Cosmos and Blob credentials before running services.
 
-```bash
-# Show scenario completion statistics
-Mystira.App.CosmosConsole stats
-```
+## Upgrade Verification Checklist
 
-## Implementation Details
+| Project File | Target Framework | Notes |
+| --- | --- | --- |
+| `src/Mystira.App.Api/Mystira.App.Api.csproj` | `net9.0` | Public API upgraded to .NET 9 for C# 12 features and ASP.NET Core perf. |
+| `src/Mystira.App.Admin.Api/Mystira.App.Admin.Api.csproj` | `net9.0` | Admin API matches the public surface to avoid dependency drift. |
+| `src/Mystira.App.PWA/Mystira.App.PWA.csproj` | `net9.0` | Blazor host upgraded; WebAssembly assets continue to run on latest runtime. |
+| `Mystira.App.CosmosConsole/Mystira.App.CosmosConsole.csproj` | `net9.0` | Operational tooling aligned so it benefits from the same SDK/tooling pipeline. |
 
-### Architecture
+> **Packages refreshed:** Blazor WebAssembly client libraries (`Microsoft.AspNetCore.Components.WebAssembly`, DevServer, `Microsoft.Extensions.Http`, `System.Text.Json`) now target version 9.0.0 to match the runtime upgrade.
 
-- Dependency Injection: Uses Microsoft.Extensions.DependencyInjection for service management.
-- Entity Framework Core: Uses EF Core with Cosmos DB provider.
-- CSV Export: Uses CsvHelper (or similar) for CSV generation.
-- Configuration: Uses Microsoft.Extensions.Configuration for app settings.
-- Logging: Uses Microsoft.Extensions.Logging for structured logging.
+> **Tip:** If you upgrade additional projects, run `dotnet workload update` to keep WebAssembly and MAUI workloads in sync with the 9.0 SDK.
 
-### Data Models
+## Project Analysis
 
-The console uses the same domain models as the main application:
+### Strengths
+- **Shared Domain Contracts:** Centralised models (`ClassificationTag`, `Modifier`, `Character`, etc.) keep APIs, console, and PWA aligned.
+- **Operational Tooling:** Cosmos console exports plus Azure health checks provide observability and data-access workflows.
+- **Offline-first Client:** IndexedDB caching, service workers, audio, dice haptics, and other device integrations deliver a richer PWA experience.
 
-- `GameSession`: Game session data with completion status.
-- `Account`: User account information with email and display name.
-- `Scenario`: Scenario information for reporting.
-- `SessionStatus`: Enum for session completion status.
+### Risks & Gaps
+- **Configuration Duplication:** APIs and console each define Cosmos/Blob configuration blocks, risking drift.
+- **PII Handling:** Multiple components expose user PII (emails, aliases) without documented redaction/logging standards.
+- **Documentation Coverage:** Service-specific runbooks and environment guides are still sparse despite the new high-level README.
 
-### Error Handling
+### Opportunities
+- **Consolidated Configuration Package:** Extract shared options (CosmosDbOptions, BlobStorageOptions, email settings) into a reusable assembly.
+- **Automated Exports:** Enhance the console with date/scenario filters, scheduled runs, and automatic Blob uploads or Power BI triggers.
+- **Testing & Validation:** Add contract/integration tests for EF converters (classification tags, modifiers), IndexedDB abstractions, and Azure health checks.
+- **Security Posture:** Document Key Vault integration, standardise Managed Identity/Azure AD usage, and highlight PII-safe logging practices.
+- **Front-end Resilience:** Strengthen service-worker caching and IndexedDB migrations to improve offline robustness and release rollouts.
 
-- Comprehensive error handling with detailed logging.
-- User-friendly error messages.
-- Graceful handling of missing configuration or connection issues.
+## Recommendations
 
-## Example Output
+1. **Unify Configuration & Secrets Management:** Ship a shared configuration package plus deployment guidance so every service consumes Cosmos/Blob/email credentials consistently (ideally via Key Vault or Managed Identity).
+2. **Document Service Runbooks:** Add `/docs` pages or per-project READMEs covering environment variables, local-debug steps, and smoke tests for App API, Admin API, and PWA.
+3. **Expand Automated Reporting:** Extend the console tool with filterable exports, scheduling hooks, and optional PII masking to integrate into analytics pipelines.
+4. **PII Governance:** Define redaction rules for logs/CSV exports, establish handling guidance (storage duration, secure transfer), and automate masking where possible.
+5. **Quality Gates:** Introduce CI-backed integration tests for shared domain conversions, Azure health checks, and PWA storage helpers to catch regressions early.
 
-### CSV Export Example
+## Testing & Quality Gates
 
-```csv
-SessionId,ScenarioId,ScenarioName,AccountId,AccountEmail,AccountAlias,ProfileId,StartedAt,IsCompleted,CompletedAt
-abc123,scenario1,The Dragon's Quest,user123,dragon@adventure.com,Dragon Master,profile456,2023-11-15T10:30:00Z,True,2023-11-15T11:45:00Z
-def456,scenario2,The Lost Kingdom,user123,dragon@adventure.com,Dragon Master,profile789,2023-11-14T14:20:00Z,False,
-```
+| Stage | Command | Purpose |
+| --- | --- | --- |
+| Unit / Integration Tests | `dotnet test Mystira.sln` | Runs cross-project tests (APIs, domain, infrastructure). |
+| Formatting | `dotnet format Mystira.sln` | Keeps C# style consistent before pushing a PR. |
+| PWA Lint / Build | `npm install` (once), `npm run lint` / `npm run build` (inside `src/Mystira.App.PWA` if JS assets are modified) | Ensures JS/service-worker assets remain valid. |
+| Console Smoke Test | `dotnet run --project Mystira.App.CosmosConsole/... -- stats` | Confirms Cosmos CLI still connects post-change. |
 
-### Statistics Output Example
+Wire these into CI (GitHub Actions/Azure DevOps) to block merges when quality gates fail.
 
-```text
-Scenario Completion Statistics:
-================================
+## Contributing / PR Checklist
 
-Scenario: The Dragon's Quest
-  Total Sessions: 25
-  Completed Sessions: 20
-  Completion Rate: 80.0%
-  Account Breakdown:
-    dragon@adventure.com (Dragon Master):
-      Sessions: 15
-      Completed: 12
-      Completion Rate: 80.0%
-    wizard@adventure.com (Spell Caster):
-      Sessions: 10
-      Completed: 8
-      Completion Rate: 80.0%
+1. **Create a feature branch** off `main`.
+2. **Update code + tests**, keeping target frameworks at `net9.0`.
+3. **Run quality gates** listed above.
+4. **Update documentation** (README or `/docs/*`) if behaviour/config changes.
+5. **Open a PR** describing:
+   - Motivation and scope.
+   - Testing performed (commands + outcomes).
+   - Any config/secret implications or follow-up tasks.
+6. **Request review** from at least one API maintainer and one client-side maintainer when changes cross boundaries.
 
-Scenario: The Lost Kingdom
-  Total Sessions: 18
-  Completed Sessions: 9
-  Completion Rate: 50.0%
-  Account Breakdown:
-    dragon@adventure.com (Dragon Master):
-      Sessions: 12
-      Completed: 6
-      Completion Rate: 50.0%
-    wizard@adventure.com (Spell Caster):
-      Sessions: 6
-      Completed: 3
-      Completion Rate: 50.0%
+## Developer Quality of Life
 
-================================
-```
+- **Dev Containers / Codespaces:** Base images should include the .NET 9 SDK, Node.js 18, and Azure CLI for parity with local builds.
+- **CI Hooks:** Ensure GitHub Actions (or equivalent) build the solution, run unit/integration tests, and execute the console tool’s smoke commands.
+- **Observability:** Leverage the existing health-check endpoints in deployment manifests and surface them in dashboards/alerts.
 
-## Requirements
+## Further Reading
 
-- .NET 8.0 SDK
-- Access to an Azure Cosmos DB account
-- Valid Cosmos DB connection string
-- Appropriate permissions to read `GameSessions`, `Accounts`, and `Scenarios` containers
-
-## Security Notes
-
-- Store Cosmos DB connection strings securely (Key Vault, user secrets, etc.).
-- Use Azure AD authentication where possible.
-- Never commit real connection strings to source control.
-- Ensure least-privilege access for the Cosmos DB account.
-- When making changes to reporting, be mindful of PII (emails, display names) and how exported CSVs are handled.
-
-## Next Iteration Starting Points
-
-For future improvements to analytics, reporting, or this console tool, see:
-
-- `docs/NEXT_ITERATION_PLAN.md`
-
-That document contains a broader set of ideas and context for the whole system, which can help guide deeper improvements or new features in this console application.
+- `docs/NEXT_ITERATION_PLAN.md` – roadmap context and future iteration ideas.
+- `src/*/Validation/ScenarioSchemaDefinitions.cs` – schema enforcement shared across services.
+- `src/Mystira.App.Infrastructure.Azure/HealthChecks` – Cosmos/Blob readiness probes used by the APIs.
