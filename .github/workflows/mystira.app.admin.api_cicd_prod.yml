@@ -9,7 +9,7 @@ on:
       - '.github/workflows/ci-cd-admin-prod.yml'
   pull_request:
     branches: [ main ]  # PRs targeting main (prod)
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened]
     paths:
       - 'src/Mystira.App.Admin.Api/**'
       - 'src/Mystira.App.Domain/**'
