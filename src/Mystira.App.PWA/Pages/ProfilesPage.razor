@@ -113,10 +113,6 @@ else
                                         <h6 class="card-title mb-1">@profile.Name</h6>
                                         <small class="text-muted">
                                             @GetAgeRangeDisplay(profile.AgeGroup)
-                                            @if (!string.IsNullOrEmpty(profile.Pronouns))
-                                            {
-                                                <text> • @profile.Pronouns</text>
-                                            }
                                         </small>
                                     </div>
                                     @if (profile.IsGuest)
@@ -127,11 +123,6 @@ else
 
                                 <!-- Profile Details -->
                                 <div class="mb-3">
-                                    @if (!string.IsNullOrEmpty(profile.Bio))
-                                    {
-                                        <p class="small text-muted mb-2">@profile.Bio</p>
-                                    }
-                                    
                                     <div class="small">
                                         <div class="mb-1">
                                             <strong>Created:</strong> @FormatDate(profile.CreatedAt)
@@ -195,33 +186,20 @@ else
 
                     <!-- Profile Name -->
                     <div class="mb-3">
-                        <label class="form-label">Profile Name *</label>
+                        <label class="form-label">Profile Name*</label>
                         <input type="text" class="form-control" @bind="formData.Name" placeholder="Enter profile name" />
                     </div>
 
                     <!-- Age Group -->
                     <div class="mb-3">
-                        <label class="form-label">Age Range</label>
+                        <label class="form-label">Age Range*</label>
                         <select class="form-select" @bind="formData.AgeGroup">
                             <option value="">Select age range...</option>
-                            <option value="1-2">Toddlers (1-2 years)</option>
-                            <option value="3-5">Preschoolers (3-5 years)</option>
-                            <option value="6-9">School Age (6-9 years)</option>
-                            <option value="10-12">Pre-teens (10-12 years)</option>
-                            <option value="13-18">Teens (13-18 years)</option>
+                            @foreach (var ageRange in AgeRanges.All)
+                            {
+                                <option value="@ageRange">@AgeRanges.GetDisplayName(ageRange)</option>
+                            }
                         </select>
-                    </div>
-
-                    <!-- Pronouns -->
-                    <div class="mb-3">
-                        <label class="form-label">Pronouns</label>
-                        <input type="text" class="form-control" @bind="formData.Pronouns" placeholder="e.g., they/them, she/her, he/him" />
-                    </div>
-
-                    <!-- Bio -->
-                    <div class="mb-3">
-                        <label class="form-label">Bio</label>
-                        <textarea class="form-control" rows="3" @bind="formData.Bio" placeholder="Tell us about this character..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -369,8 +347,6 @@ else
         {
             Name = profile.Name,
             AgeGroup = profile.AgeGroup,
-            Pronouns = profile.Pronouns,
-            Bio = profile.Bio
         };
         modalValidationMessage = string.Empty;
         showModal = true;
@@ -397,6 +373,13 @@ else
                 return;
             }
 
+            // Validate
+            if (string.IsNullOrWhiteSpace(formData.AgeGroup))
+            {
+                modalValidationMessage = "Age Range is required";
+                return;
+            }
+            
             isSaving = true;
             StateHasChanged();
 
@@ -405,9 +388,7 @@ else
                 // Update existing profile
                 var updateRequest = new UpdateUserProfileRequest
                 {
-                    AgeGroup = formData.AgeGroup,
-                    Pronouns = formData.Pronouns,
-                    Bio = formData.Bio
+                    AgeGroup = formData.AgeGroup
                 };
 
                 var updated = await ApiClient.UpdateProfileAsync(editingProfile.Id, updateRequest);
@@ -431,8 +412,6 @@ else
                 {
                     Name = formData.Name,
                     AgeGroup = formData.AgeGroup,
-                    Pronouns = formData.Pronouns,
-                    Bio = formData.Bio,
                     AccountId = currentAccount.Id,
                     IsGuest = false,
                     HasCompletedOnboarding = false
@@ -530,7 +509,5 @@ else
     {
         public string Name { get; set; } = string.Empty;
         public string? AgeGroup { get; set; }
-        public string? Pronouns { get; set; }
-        public string? Bio { get; set; }
     }
 }

@@ -70,9 +70,7 @@ public class UserProfile
     public AgeGroup? GetAgeGroupFromBirthDate()
     {
         if (!CurrentAge.HasValue)
-        {
             return null;
-        }
 
         var currentAge = CurrentAge.Value;
         var ageGroups = AgeGroup.ValueMap.Values;
@@ -135,22 +133,24 @@ public class UserProfile
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string? AccountId { get; set; } // Link to Account
-    
-    /// <summary>
-    /// Pronouns for the profile (e.g., they/them, she/her, he/him)
-    /// </summary>
-    public string? Pronouns { get; set; }
-    
-    /// <summary>
-    /// Bio or description for the profile
-    /// </summary>
-    public string? Bio { get; set; }
 }
 
 public class AgeGroup : StringEnum<AgeGroup>
 {
-    public int MinimumAge { get; }
-    public int MaximumAge { get; }
+    private static readonly Dictionary<string, AgeGroup> AgeGroupLookup = new();
+    
+    public static AgeGroup Toddlers = new("toddlers", 1, 3);     // 1-3
+    public static AgeGroup Preschoolers = new("preschoolers", 4, 5); // 4-5  
+    public static AgeGroup School = new("school", 6, 9);         // 6-9
+    public static AgeGroup Preteens = new("preteens", 10, 12);     // 10-12
+    public static AgeGroup Teens = new("teens", 13, 18);           // 13-18
+    public static AgeGroup Adults = new("adults", 19, 120);        // 19+
+    public static readonly AgeGroup[] All = [Toddlers, Preschoolers, School, Preteens, Teens, Adults];
+    
+    public string Name { get; set; }
+    public int MinimumAge { get; set; }
+    public int MaximumAge { get; set; }
+>>>>>>> origin/main
     public string AgeRange => $"{MinimumAge}-{MaximumAge}";
 
     public AgeGroup(string name, int minimumAge, int maximumAge) : base(name)

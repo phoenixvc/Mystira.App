@@ -225,4 +225,45 @@ public class GameSessionsController : ControllerBase
             });
         }
     }
+
+    /// <summary>
+    /// Mark a scenario as completed for an account
+    /// </summary>
+    [HttpPost("complete-scenario")]
+    public async Task<ActionResult> CompleteScenarioForAccount([FromBody] CompleteScenarioRequest request)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(request.AccountId) || string.IsNullOrEmpty(request.ScenarioId))
+            {
+                return BadRequest(new ErrorResponse 
+                { 
+                    Message = "AccountId and ScenarioId are required",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            var success = await _accountService.AddCompletedScenarioAsync(request.AccountId, request.ScenarioId);
+            if (!success)
+            {
+                return NotFound(new ErrorResponse 
+                { 
+                    Message = $"Account not found: {request.AccountId}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error completing scenario {ScenarioId} for account {AccountId}", 
+                request.ScenarioId, request.AccountId);
+            return StatusCode(500, new ErrorResponse 
+            { 
+                Message = "Internal server error while completing scenario",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
 }

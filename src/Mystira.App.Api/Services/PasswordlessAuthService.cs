@@ -253,6 +253,22 @@ public class PasswordlessAuthService : IPasswordlessAuthService
         }
     }
 
+    public async Task<Account?> GetAccountByUserIdAsync(string userId)
+    {
+        try
+        {
+            var account = await _context.Accounts
+                .FirstOrDefaultAsync(a => a.Auth0UserId == userId);
+            
+            return account;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting account by user ID: {UserId}", userId);
+            return null;
+        }
+    }
+
     private string GenerateCode()
     {
         var random = new Random();

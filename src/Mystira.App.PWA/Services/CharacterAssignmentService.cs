@@ -22,7 +22,8 @@ public class CharacterAssignmentService : ICharacterAssignmentService
         _gameSessionService = gameSessionService;
     }
 
-    public async Task<CharacterAssignmentResponse> GetCharacterAssignmentDataAsync(string scenarioId)
+    public async Task<CharacterAssignmentResponse> GetCharacterAssignmentDataAsync(string scenarioId,
+        List<CharacterAssignment> existingAssignments)
     {
         try
         {
@@ -41,6 +42,17 @@ public class CharacterAssignmentService : ICharacterAssignmentService
 
             // Create character assignments (always 4 slots)
             var characterAssignments = await CreateCharacterAssignmentsAsync(scenario);
+
+            // Update character assignments with existing  data
+            foreach (var assignment in existingAssignments)
+            {
+                if (assignment.PlayerAssignment == null) continue; // Skip unused assignments
+
+                var existingAssignment = characterAssignments.FirstOrDefault(a => a.CharacterId == assignment.CharacterId);
+                if (existingAssignment == null) continue;
+                existingAssignment.PlayerAssignment = assignment.PlayerAssignment;
+                existingAssignment.IsUnused = assignment.IsUnused;
+            }
 
             _logger.LogInformation("Created {Count} character assignments for scenario: {ScenarioId}", 
                 characterAssignments.Count, scenarioId);
@@ -268,20 +280,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
                 Archetype = scenarioChar.Metadata?.Archetype?.FirstOrDefault() ?? "",
                 IsUnused = false
             };
-
-            // Get full character details if available
-            if (!string.IsNullOrEmpty(assignment.CharacterId))
-            {
-                var fullCharacter = await GetCharacterDetailsAsync(assignment.CharacterId);
-                if (fullCharacter != null)
-                {
-                    assignment.Image = fullCharacter.Image;
-                    assignment.Audio = fullCharacter.Audio;
-                    assignment.Role = fullCharacter.Role ?? assignment.Role;
-                    assignment.Archetype = fullCharacter.Archetype ?? assignment.Archetype;
-                }
-            }
-
+            
             assignments.Add(assignment);
         }
 

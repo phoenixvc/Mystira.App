@@ -674,6 +674,82 @@ public class ScenarioApiService : IScenarioApiService
         }
     }
 
+    public async Task<ScenarioGameStateResponse> GetScenariosWithGameStateAsync(string accountId)
+    {
+        try
+        {
+            _logger.LogInformation("Getting scenarios with game state for account: {AccountId}", accountId);
+            
+            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == accountId);
+            if (account == null)
+            {
+                _logger.LogWarning("Account not found: {AccountId}", accountId);
+                return new ScenarioGameStateResponse { Scenarios = new(), TotalCount = 0 };
+            }
+
+            var allScenarios = await _context.Scenarios.ToListAsync();
+            var sessions = await _context.GameSessions
+                .Where(s => s.AccountId == accountId)
+                .ToListAsync();
+
+            var scenariosWithState = new List<ScenarioWithGameState>();
+
+            foreach (var scenario in allScenarios)
+            {
+                var gameState = ScenarioGameState.NotStarted;
+                DateTime? lastPlayedAt = null;
+                int? playCount = null;
+
+                var scenarioSessions = sessions.Where(s => s.ScenarioId == scenario.Id).ToList();
+                if (scenarioSessions.Any())
+                {
+                    playCount = scenarioSessions.Count;
+                    lastPlayedAt = scenarioSessions.Max(s => s.StartTime);
+
+                    if (account.CompletedScenarioIds.Contains(scenario.Id))
+                    {
+                        gameState = ScenarioGameState.Completed;
+                    }
+                    else if (scenarioSessions.Any(s => s.Status == SessionStatus.InProgress))
+                    {
+                        gameState = ScenarioGameState.InProgress;
+                    }
+                    else
+                    {
+                        gameState = ScenarioGameState.InProgress;
+                    }
+                }
+
+                scenariosWithState.Add(new ScenarioWithGameState
+                {
+                    ScenarioId = scenario.Id,
+                    Title = scenario.Title,
+                    Description = scenario.Description,
+                    AgeGroup = scenario.AgeGroup,
+                    Difficulty = scenario.Difficulty.ToString(),
+                    SessionLength = scenario.SessionLength.ToString(),
+                    CoreAxes = scenario.CoreAxes,
+                    Tags = scenario.Tags.ToArray(),
+                    Archetypes = scenario.Archetypes.ToArray(),
+                    GameState = gameState,
+                    LastPlayedAt = lastPlayedAt,
+                    PlayCount = playCount
+                });
+            }
+
+            return new ScenarioGameStateResponse 
+            { 
+                Scenarios = scenariosWithState,
+                TotalCount = scenariosWithState.Count
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting scenarios with game state for account: {AccountId}", accountId);
+            return new ScenarioGameStateResponse { Scenarios = new(), TotalCount = 0 };
+        }
+    }
+
     // Define a custom exception for scenario validation errors
     public class ScenarioValidationException : Exception
     {

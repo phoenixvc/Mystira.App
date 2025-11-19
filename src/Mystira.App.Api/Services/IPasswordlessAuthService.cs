@@ -9,4 +9,5 @@ public interface IPasswordlessAuthService
     Task<(bool Success, string Message, string? Code)> RequestSigninAsync(string email);
     Task<(bool Success, string Message, Account? Account)> VerifySigninAsync(string email, string code);
     Task<bool> CleanupExpiredSignupsAsync();
+    Task<Account?> GetAccountByUserIdAsync(string userId);
 }

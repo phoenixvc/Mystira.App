@@ -46,13 +46,13 @@ public class MystiraAppDbContext : DbContext
         // Configure UserProfile
         modelBuilder.Entity<UserProfile>(entity =>
         {
-            entity.HasKey(e => e.Name); // Keep using Name as primary key for backward compatibility
+            entity.HasKey(e => e.Id);
             
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
                 entity.ToContainer("UserProfiles")
-                      .HasPartitionKey(e => e.Name);
+                      .HasPartitionKey(e => e.Id);
             }
             
             entity.Property(e => e.PreferredFantasyThemes)

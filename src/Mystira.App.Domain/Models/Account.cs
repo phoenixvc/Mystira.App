@@ -7,6 +7,7 @@ public class Account
     public string Email { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public List<string> UserProfileIds { get; set; } = new(); // Can have multiple user profiles
+    public List<string> CompletedScenarioIds { get; set; } = new(); // Scenarios completed by this account
     public SubscriptionDetails Subscription { get; set; } = new();
     public AccountSettings Settings { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

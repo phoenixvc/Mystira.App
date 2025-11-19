@@ -7,6 +7,9 @@ namespace Mystira.App.Api.Models;
 public class CreateUserProfileRequest
 {
     [Required]
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    
+    [Required]
     [StringLength(100, MinimumLength = 2)]
     public string Name { get; set; } = string.Empty;
 
@@ -40,16 +43,6 @@ public class CreateUserProfileRequest
     /// Indicates if the user has completed onboarding
     /// </summary>
     public bool HasCompletedOnboarding { get; set; }
-    
-    /// <summary>
-    /// Pronouns for the profile (e.g., they/them, she/her, he/him)
-    /// </summary>
-    public string? Pronouns { get; set; }
-    
-    /// <summary>
-    /// Bio or description for the profile
-    /// </summary>
-    public string? Bio { get; set; }
 }
 
 public class UpdateUserProfileRequest
@@ -67,6 +60,9 @@ public class UpdateUserProfileRequest
 
 public class CreateGuestProfileRequest
 {
+    [Required]
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    
     /// <summary>
     /// Optional name for guest profile. If not provided, a random name will be generated.
     /// </summary>
@@ -662,6 +658,9 @@ public class PasswordlessVerifyResponse
     public string Message { get; set; } = string.Empty;
     public Account? Account { get; set; }
     public string? Token { get; set; }
+    public string? RefreshToken { get; set; }
+    public DateTime? TokenExpiresAt { get; set; }
+    public DateTime? RefreshTokenExpiresAt { get; set; }
 }
 
 // Passwordless Signin Models
@@ -677,4 +676,63 @@ public class PasswordlessSigninResponse
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
     public string? Email { get; set; }
+}
+
+// Scenario Game State Models
+public enum ScenarioGameState
+{
+    NotStarted,
+    InProgress,
+    Completed
+}
+
+public class ScenarioWithGameState
+{
+    public string ScenarioId { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string AgeGroup { get; set; } = string.Empty;
+    public string Difficulty { get; set; } = string.Empty;
+    public string SessionLength { get; set; } = string.Empty;
+    public List<string> CoreAxes { get; set; } = new();
+    public string[] Tags { get; set; } = [];
+    public string[] Archetypes { get; set; } = [];
+    public ScenarioGameState GameState { get; set; } = ScenarioGameState.NotStarted;
+    public DateTime? LastPlayedAt { get; set; }
+    public int? PlayCount { get; set; }
+}
+
+public class ScenarioGameStateResponse
+{
+    public List<ScenarioWithGameState> Scenarios { get; set; } = new();
+    public int TotalCount { get; set; }
+}
+
+public class CompleteScenarioRequest
+{
+    [Required]
+    public string AccountId { get; set; } = string.Empty;
+    
+    [Required]
+    public string ScenarioId { get; set; } = string.Empty;
+}
+
+// JWT Token Refresh Models
+public class RefreshTokenRequest
+{
+    [Required]
+    public string Token { get; set; } = string.Empty;
+    
+    [Required]
+    public string RefreshToken { get; set; } = string.Empty;
+}
+
+public class RefreshTokenResponse
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public string? Token { get; set; }
+    public string? RefreshToken { get; set; }
+    public DateTime? TokenExpiresAt { get; set; }
+    public DateTime? RefreshTokenExpiresAt { get; set; }
 }

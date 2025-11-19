@@ -2,21 +2,22 @@ name: Mystira.App API CI/CD
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ main ]
     paths:
-      - 'src/Mystira.App.Api/**'
-      - 'src/Mystira.App.Domain/**'
+      - 'Mystira.App.Admin.Api/**'
+      - 'Mystira.App.Api/**'
+      - 'Mystira.App.Domain/**'
       - '.github/workflows/ci-cd.yml'
   pull_request:
     branches: [ main ]
     paths:
-      - 'src/Mystira.App.Api/**'
-      - 'src/Mystira.App.Domain/**'
-  workflow_dispatch:
+      - 'Mystira.App.Admin.Api/**'
+      - 'Mystira.App.Api/**'
+      - 'Mystira.App.Domain/**'
 
 env:
   DOTNET_VERSION: '9.0.x'
-  AZURE_WEBAPP_NAME: 'mystira-app-dev-api'
+  AZURE_WEBAPP_NAME: 'prod-wus-app-mystira-api'
   AZURE_WEBAPP_PACKAGE_PATH: './publish'
 
 jobs:
@@ -41,7 +42,7 @@ jobs:
       run: dotnet test --no-build --configuration Release --verbosity normal
     
     - name: Publish
-      run: dotnet publish src/Mystira.App.Api/Mystira.App.Api.csproj --configuration Release --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+      run: dotnet publish Mystira.App.Api/Mystira.Api.csproj --configuration Release --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
     
     - name: Upload artifact for deployment job
       uses: actions/upload-artifact@v4
@@ -69,6 +70,26 @@ jobs:
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV }}
         package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
+  deploy-prod:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Download artifact from build job
+      uses: actions/download-artifact@v4
+      with:
+        name: mystira-app-api
+        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+    
+    - name: Deploy to Azure Web App (Production)
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'prod-wus-app-mystira-api'
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
+        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
   infrastructure:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[deploy-infra]')
@@ -86,5 +107,5 @@ jobs:
       with:
         subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         resourceGroupName: 'prod-wus-rg-mystira-app'
-        template: '.src//Mystira.App.Api/Infrastructure/Azure/main.bicep'
+        template: './Mystira.App.Api/Infrastructure/Azure/main.bicep'
         parameters: 'environment=prod jwtSecretKey=${{ secrets.JWT_SECRET_KEY }}'

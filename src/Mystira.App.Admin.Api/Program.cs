@@ -151,10 +151,11 @@ builder.Services.AddCors(options =>
     options.AddPolicy("MystiraAdminPolicy", policy =>
     {
         policy.WithOrigins(
-                "http://localhost:7001",
-                "https://localhost:7001",
-                "https://admin.mystiraapp.azurewebsites.net", 
-                "https://admin.mystira.app")
+                "http://localhost:7000",
+                "https://localhost:7000",
+                "https://mystiraapp.azurewebsites.net", 
+                "https://mystira.app",
+                "https://mango-water-04fdb1c03.3.azurestaticapps.net")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .SetIsOriginAllowedToAllowWildcardSubdomains()
