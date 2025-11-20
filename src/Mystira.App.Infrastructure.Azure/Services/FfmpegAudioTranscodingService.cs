@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using FFMpegCore;
-using FFMpegCore.Enums;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -57,10 +56,8 @@ public sealed class FfmpegAudioTranscodingService : IAudioTranscodingService
             var process = FFMpegArguments
                 .FromFileInput(inputPath)
                 .OutputToFile(outputPath, overwrite: true, options =>
-                    options.WithAudioCodec(AudioCodec.LibMp3Lame)
-                           .WithAudioBitrate(AudioBitrate._128k));
-
-            await process.ProcessAsynchronously(cancellationToken);
+                    options.WithAudioCodec("libmp3lame"));
+            await process.ProcessAsynchronously();
 
             if (!File.Exists(outputPath))
             {

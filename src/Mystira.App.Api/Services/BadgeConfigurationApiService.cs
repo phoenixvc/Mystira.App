@@ -20,14 +20,14 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
     public async Task<List<BadgeConfiguration>> GetAllBadgeConfigurationsAsync()
     {
         var badgeConfigs = await _context.BadgeConfigurations.ToListAsync();
-        
+
         // Initialize with default data if empty
         if (!badgeConfigs.Any())
         {
             await InitializeDefaultBadgeConfigurationsAsync();
             badgeConfigs = await _context.BadgeConfigurations.ToListAsync();
         }
-        
+
         return badgeConfigs;
     }
 
@@ -116,7 +116,7 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
         // Validate that the axis is from the master list
         if (CoreAxis.Parse(request.Axis) == null)
         {
-            throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", CoreAxis.ValueMap.Keys)}");
+            throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", StringEnum<CoreAxis>.ValueMap.Keys)}");
         }
 
         var badgeConfig = new BadgeConfiguration
@@ -160,7 +160,7 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
         {
             if (CoreAxis.Parse(request.Axis) == null)
             {
-                throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", CoreAxis.ValueMap.Keys)}");
+                throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", StringEnum<CoreAxis>.ValueMap.Keys)}");
             }
             badgeConfig.Axis = request.Axis;
         }
@@ -232,7 +232,7 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
         var yamlContent = await reader.ReadToEndAsync();
 
         var badgeConfigYaml = deserializer.Deserialize<BadgeConfigurationYaml>(yamlContent);
-        
+
         var importedBadgeConfigs = new List<BadgeConfiguration>();
 
         foreach (var yamlEntry in badgeConfigYaml.Badges)
@@ -240,7 +240,7 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
             // Validate axis
             if (CoreAxis.Parse(yamlEntry.Axis) == null)
             {
-                throw new ArgumentException($"Invalid compass axis in YAML: {yamlEntry.Axis}. Must be one of: {string.Join(", ", CoreAxis.ValueMap.Keys)}");
+                throw new ArgumentException($"Invalid compass axis in YAML: {yamlEntry.Axis}. Must be one of: {string.Join(", ", StringEnum<CoreAxis>.ValueMap.Keys)}");
             }
 
             var badgeConfig = new BadgeConfiguration
@@ -261,7 +261,7 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
             {
                 _context.BadgeConfigurations.Remove(existing);
             }
-            
+
             _context.BadgeConfigurations.Add(badgeConfig);
             importedBadgeConfigs.Add(badgeConfig);
         }

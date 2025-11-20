@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Domain.Models;
-using System.Linq;
 using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
+using Mystira.App.Domain.Models;
+using System.Linq;
 
 namespace Mystira.App.Api.Services;
 
@@ -31,7 +31,7 @@ public class UserProfileApiService : IUserProfileApiService
 
         // Validate age group
         if (AgeGroup.Parse(request.AgeGroup) == null)
-            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.ValueMap.Keys)}");
+            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", StringEnum<AgeGroup>.ValueMap.Keys)}");
 
         var profile = new UserProfile
         {
@@ -55,7 +55,7 @@ public class UserProfileApiService : IUserProfileApiService
         _context.UserProfiles.Add(profile);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Created new user profile: {Name} (Guest: {IsGuest}, NPC: {IsNPC})", 
+        _logger.LogInformation("Created new user profile: {Name} (Guest: {IsGuest}, NPC: {IsNPC})",
             profile.Name, profile.IsGuest, profile.IsNpc);
         return profile;
     }
@@ -63,8 +63,8 @@ public class UserProfileApiService : IUserProfileApiService
     public async Task<UserProfile> CreateGuestProfileAsync(CreateGuestProfileRequest request)
     {
         // Generate random name if not provided
-        var name = !string.IsNullOrEmpty(request.Name) 
-            ? request.Name 
+        var name = !string.IsNullOrEmpty(request.Name)
+            ? request.Name
             : RandomNameGenerator.GenerateGuestName(request.UseAdjectiveNames);
 
         // Ensure name is unique for guest profiles
@@ -78,7 +78,7 @@ public class UserProfileApiService : IUserProfileApiService
 
         // Validate age group
         if (AgeGroup.Parse(request.AgeGroup) == null)
-            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.ValueMap.Keys)}");
+            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", StringEnum<AgeGroup>.ValueMap.Keys)}");
 
         var profile = new UserProfile
         {
@@ -102,7 +102,7 @@ public class UserProfileApiService : IUserProfileApiService
     public async Task<List<UserProfile>> CreateMultipleProfilesAsync(CreateMultipleProfilesRequest request)
     {
         var createdProfiles = new List<UserProfile>();
-        
+
         foreach (var profileRequest in request.Profiles)
         {
             try
@@ -116,7 +116,7 @@ public class UserProfileApiService : IUserProfileApiService
                 // Continue with other profiles
             }
         }
-        
+
         _logger.LogInformation("Created {Count} profiles in batch", createdProfiles.Count);
         return createdProfiles;
     }
@@ -156,8 +156,8 @@ public class UserProfileApiService : IUserProfileApiService
         {
             // Validate age group
             if (AgeGroup.Parse(request.AgeGroup) == null)
-                throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.ValueMap.Keys)}");
-            
+                throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", StringEnum<AgeGroup>.ValueMap.Keys)}");
+
             profile.AgeGroupName = request.AgeGroup;
         }
 
@@ -205,10 +205,10 @@ public class UserProfileApiService : IUserProfileApiService
         _context.GameSessions.RemoveRange(sessions);
         _context.UserBadges.RemoveRange(badges);
         _context.UserProfiles.Remove(profile);
-        
+
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Deleted user profile and associated data: {Name} (badges: {BadgeCount})", 
+        _logger.LogInformation("Deleted user profile and associated data: {Name} (badges: {BadgeCount})",
             name, badges.Count);
         return true;
     }
@@ -269,7 +269,7 @@ public class UserProfileApiService : IUserProfileApiService
         profile.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Assigned character {CharacterId} to profile {ProfileId} (NPC: {IsNPC})", 
+        _logger.LogInformation("Assigned character {CharacterId} to profile {ProfileId} (NPC: {IsNPC})",
             characterId, profileId, isNpc);
 
         return true;

@@ -29,7 +29,7 @@ public class ScenarioApiService : IScenarioApiService
     };
 
     public ScenarioApiService(
-        MystiraAppDbContext context, 
+        MystiraAppDbContext context,
         ILogger<ScenarioApiService> logger,
         IMediaApiService mediaService,
         ICharacterMapFileService characterService,
@@ -114,10 +114,10 @@ public class ScenarioApiService : IScenarioApiService
                 Tags = s.Tags,
                 Difficulty = s.Difficulty,
                 SessionLength = s.SessionLength,
-                Archetypes = s.Archetypes,
+                Archetypes = s.Archetypes.Select(a => a.Value).ToList(),
                 MinimumAge = s.MinimumAge,
                 AgeGroup = s.AgeGroup,
-                CoreAxes = s.CoreAxes,
+                CoreAxes = s.CoreAxes.Select(a => a.Value).ToList(),
                 CreatedAt = s.CreatedAt
             })
             .ToListAsync();
@@ -308,7 +308,7 @@ public class ScenarioApiService : IScenarioApiService
                 Metadata = character.Metadata == null ? null : new
                 {
                     Role = character.Metadata.Role ?? new List<string>(),
-                    Archetype = character.Metadata.Archetype ?? new List<string>(),
+                    Archetype = character.Metadata.Archetype?.Select(a => a.Value).ToList() ?? new List<string>(),
                     Species = character.Metadata.Species,
                     Age = character.Metadata.Age,
                     Traits = character.Metadata.Traits ?? new List<string>(),
@@ -395,7 +395,7 @@ public class ScenarioApiService : IScenarioApiService
             // Validate basic scenario structure
             if (string.IsNullOrWhiteSpace(scenario.Title))
                 throw new ScenarioValidationException("Scenario title cannot be empty");
-                
+
             if (string.IsNullOrWhiteSpace(scenario.Description))
                 throw new ScenarioValidationException("Scenario description cannot be empty");
 
@@ -407,7 +407,7 @@ public class ScenarioApiService : IScenarioApiService
             {
                 if (string.IsNullOrWhiteSpace(scene.Id))
                     throw new ScenarioValidationException($"Scene is missing an ID (Title: {scene.Title})");
-                    
+
                 if (string.IsNullOrWhiteSpace(scene.Title))
                     throw new ScenarioValidationException($"Scene is missing a title (ID: {scene.Id})");
 
@@ -424,7 +424,7 @@ public class ScenarioApiService : IScenarioApiService
 
                     if (EchoType.Parse(echo.EchoType.Value) == null)
                         throw new ScenarioValidationException($"Invalid echo type '{echo.EchoType}' (Scene ID: {scene.Id}, Choice: {branch.Choice})");
-                        
+
                     if (string.IsNullOrWhiteSpace(echo.Description))
                         throw new ScenarioValidationException($"Echo log description cannot be empty (Scene ID: {scene.Id}, Choice: {branch.Choice})");
                 }
@@ -445,14 +445,14 @@ public class ScenarioApiService : IScenarioApiService
                         //throw new ScenarioValidationException($"Invalid compass axis '{change.Axis}' not defined in scenario (Scene ID: {scene.Id}, Choice: {branch.Choice})");
                     }
                 }
-                
+
                 // Validate branches have valid next scene IDs
                 foreach (var branch in scene.Branches)
                 {
                     // todo consider enforcing next scene ID is not END
                     // if (string.IsNullOrWhiteSpace(branch.NextSceneId))
                     //     throw new ScenarioValidationException($"Branch is missing next scene ID (Scene ID: {scene.Id}, Choice: {branch.Choice})");
-                        
+
                     if (branch.NextSceneId != "" && branch.NextSceneId != "END" && !scenario.Scenes.Any(s => s.Id == branch.NextSceneId))
                         throw new ScenarioValidationException($"Branch references non-existent next scene ID '{branch.NextSceneId}' (Scene ID: {scene.Id}, Choice: {branch.Choice})");
                 }
@@ -640,7 +640,7 @@ public class ScenarioApiService : IScenarioApiService
         foreach (var character in allCharacters.Values)
         {
             var characterNameLower = character.Name.ToLower();
-            
+
             // Check if character name appears in scene content
             if (sceneContent.Contains(characterNameLower))
             {
