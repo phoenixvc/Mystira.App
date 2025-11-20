@@ -151,12 +151,20 @@ public class GameSessionService : IGameSessionService
                 return false;
             }
 
+            // Call API to progress the session to the new scene
+            var updatedSession = await _apiClient.ProgressSessionSceneAsync(CurrentGameSession.Id, sceneId);
+            if (updatedSession == null)
+            {
+                _logger.LogWarning("Failed to progress session via API for scene: {SceneId}, continuing with local state", sceneId);
+            }
+
             // Resolve Media URLs
             scene.AudioUrl = !string.IsNullOrEmpty(scene.Media?.Audio) ? await _apiClient.GetMediaUrlFromId(scene.Media.Audio) : null;
             scene.ImageUrl = !string.IsNullOrEmpty(scene.Media?.Image) ? await _apiClient.GetMediaUrlFromId(scene.Media.Image) : null;
             scene.VideoUrl = !string.IsNullOrEmpty(scene.Media?.Video) ? await _apiClient.GetMediaUrlFromId(scene.Media.Video) : null;
             
             CurrentGameSession.CurrentScene = scene;
+            CurrentGameSession.CurrentSceneId = sceneId;
             
             // Check if this is a final scene
             if (scene is { SceneType: SceneType.Special, NextSceneId: null })
