@@ -3,6 +3,7 @@ using Mystira.App.Api.Data;
 using Mystira.App.Api.Services;
 using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
+using Mystira.App.Infrastructure.Azure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
@@ -61,6 +62,8 @@ else
 
 // Add Azure Infrastructure Services
 builder.Services.AddAzureBlobStorage(builder.Configuration);
+builder.Services.Configure<AudioTranscodingOptions>(builder.Configuration.GetSection(AudioTranscodingOptions.SectionName));
+builder.Services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingService>();
 
 // Configure Cookie Authentication (no JWT)
 builder.Services.AddAuthentication(options =>
@@ -115,7 +118,7 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
                 "http://localhost:7000",
                 "https://localhost:7000",
-                "https://mystiraapp.azurewebsites.net", 
+                "https://mystiraapp.azurewebsites.net",
                 "https://mystira.app")
               .AllowAnyHeader()
               .AllowAnyMethod()

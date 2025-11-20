@@ -4,6 +4,7 @@ using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
+using Mystira.App.Infrastructure.Azure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -88,6 +89,8 @@ else
 
 // Add Azure Infrastructure Services
 builder.Services.AddAzureBlobStorage(builder.Configuration);
+builder.Services.Configure<AudioTranscodingOptions>(builder.Configuration.GetSection(AudioTranscodingOptions.SectionName));
+builder.Services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingService>();
 
 // Configure JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "Mystira-app-Development-Secret-Key-2024-Very-Long-For-Security";
@@ -153,7 +156,7 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
                 "http://localhost:7001",
                 "https://localhost:7001",
-                "https://admin.mystiraapp.azurewebsites.net", 
+                "https://admin.mystiraapp.azurewebsites.net",
                 "https://admin.mystira.app")
               .AllowAnyHeader()
               .AllowAnyMethod()
