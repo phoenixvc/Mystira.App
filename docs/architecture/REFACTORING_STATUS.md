@@ -22,6 +22,8 @@
 ### 4. Repository Layer Implementation
 - ✅ Implemented `Repository<T>` base class
 - ✅ Implemented `GameSessionRepository` with domain-specific queries
+- ✅ Implemented `UserProfileRepository` with domain-specific queries
+- ✅ Implemented `AccountRepository` with domain-specific queries
 - ✅ Implemented `UnitOfWork` for transaction management
 - ✅ Registered repositories and UnitOfWork in DI containers (Api and Admin.Api)
 - ✅ Migrated `GameSessionApiService` to use repository pattern instead of direct DbContext access
@@ -32,13 +34,15 @@
 
 #### Phase 1: Repository Implementation (In Progress)
 1. ✅ Implement `GameSessionRepository` in `Infrastructure.Data`
-2. ✅ Implement `UnitOfWork` with DbContext
-3. 🔄 Register repositories in DI container (Api and Admin.Api)
-4. 🔄 Migrate `GameSessionApiService` to use `GameSessionRepository`
-5. Create repositories for other entities:
+2. ✅ Implement `UserProfileRepository` in `Infrastructure.Data`
+3. ✅ Implement `AccountRepository` in `Infrastructure.Data`
+4. ✅ Implement `UnitOfWork` with DbContext
+5. ✅ Register repositories in DI container (Api and Admin.Api)
+6. ✅ Migrate `GameSessionApiService` to use `GameSessionRepository`
+7. 🔄 Migrate `UserProfileApiService` to use `UserProfileRepository`
+8. 🔄 Migrate `AccountApiService` to use `AccountRepository`
+9. Create repositories for other entities:
    - `IScenarioRepository`
-   - `IUserProfileRepository`
-   - `IAccountRepository`
    - `IMediaRepository`
 
 #### Phase 2: DTOs Migration
