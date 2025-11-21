@@ -5,37 +5,37 @@ public class UserProfile
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Name { get; set; } = string.Empty;
     public List<FantasyTheme> PreferredFantasyThemes { get; set; } = new();
-    
+
     /// <summary>
     /// Date of birth for dynamic age calculation (COPPA compliance: stored securely)
     /// </summary>
     public DateTime? DateOfBirth { get; set; }
-    
+
     /// <summary>
     /// Indicates if this is a guest profile (temporary, not persisted long-term)
     /// </summary>
     public bool IsGuest { get; set; } = false;
-    
+
     /// <summary>
     /// Indicates if this profile represents an NPC
     /// </summary>
     public bool IsNpc { get; set; } = false;
-    
+
     // Store as string for database compatibility, but provide AgeGroup access
     private string _ageGroup = "school";
-    public string AgeGroupName 
-    { 
-        get => _ageGroup; 
-        set => _ageGroup = value; 
+    public string AgeGroupName
+    {
+        get => _ageGroup;
+        set => _ageGroup = value;
     }
-    
+
     // Convenience property to get AgeGroup object
-    public AgeGroup AgeGroup 
-    { 
+    public AgeGroup AgeGroup
+    {
         get => AgeGroup.Parse(_ageGroup) ?? new AgeGroup("school", 6, 9);
         set => _ageGroup = value?.Value ?? "school";
     }
-    
+
     /// <summary>
     /// Calculate current age from date of birth, or return null if not available
     /// </summary>
@@ -44,17 +44,21 @@ public class UserProfile
         get
         {
             if (!DateOfBirth.HasValue)
+            {
                 return null;
+            }
 
             var today = DateTime.Today;
             var age = today.Year - DateOfBirth.Value.Year;
             if (DateOfBirth.Value.Date > today.AddYears(-age))
+            {
                 age--;
+            }
 
             return age;
         }
     }
-    
+
     /// <summary>
     /// Update age group based on current age (if date of birth is available)
     /// </summary>
@@ -90,12 +94,12 @@ public class UserProfile
 
         return appropriateAgeGroup;
     }
-    
+
     /// <summary>
     /// Badges earned by this user profile
     /// </summary>
     public virtual List<UserBadge> EarnedBadges { get; private set; } = new();
-    
+
     /// <summary>
     /// Get badges earned for a specific axis
     /// </summary>
@@ -107,7 +111,7 @@ public class UserProfile
                           .OrderByDescending(b => b.EarnedAt)
                           .ToList();
     }
-    
+
     /// <summary>
     /// Check if a badge has already been earned
     /// </summary>
@@ -117,7 +121,7 @@ public class UserProfile
     {
         return EarnedBadges.Any(b => b.BadgeConfigurationId == badgeConfigurationId);
     }
-    
+
     /// <summary>
     /// Add a new earned badge
     /// </summary>
@@ -126,21 +130,21 @@ public class UserProfile
     {
         if (!HasEarnedBadge(badge.BadgeConfigurationId))
         {
-            badge.UserProfileId = this.Id;
+            badge.UserProfileId = Id;
             EarnedBadges.Add(badge);
         }
     }
-    
+
     public bool HasCompletedOnboarding { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string? AccountId { get; set; } // Link to Account
-    
+
     /// <summary>
     /// Pronouns for the profile (e.g., they/them, she/her, he/him)
     /// </summary>
     public string? Pronouns { get; set; }
-    
+
     /// <summary>
     /// Bio or description for the profile
     /// </summary>
@@ -175,7 +179,9 @@ public class AgeGroup : StringEnum<AgeGroup>
         var targetAge = Parse(targetAgeGroup);
 
         if (contentAge == null || targetAge == null)
+        {
             return true;
+        }
 
         return targetAge.MinimumAge >= contentAge.MinimumAge;
     }

@@ -1,8 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Mystira.App.Domain.Models;
+using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Api.Models;
 using Mystira.App.Api.Services;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;
 
@@ -16,7 +16,7 @@ public class GameSessionsController : ControllerBase
     private readonly ILogger<GameSessionsController> _logger;
 
     public GameSessionsController(
-        IGameSessionApiService sessionService, 
+        IGameSessionApiService sessionService,
         IAccountApiService accountService,
         ILogger<GameSessionsController> logger)
     {
@@ -35,8 +35,8 @@ public class GameSessionsController : ControllerBase
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new ErrorResponse 
-                { 
+                return BadRequest(new ErrorResponse
+                {
                     Message = "Validation failed",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -48,8 +48,8 @@ public class GameSessionsController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error starting session");
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -57,8 +57,8 @@ public class GameSessionsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error starting session");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while starting session",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -76,8 +76,8 @@ public class GameSessionsController : ControllerBase
             var session = await _sessionService.EndSessionAsync(id);
             if (session == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Session not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -88,8 +88,8 @@ public class GameSessionsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error ending session {SessionId}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while ending session",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -107,8 +107,8 @@ public class GameSessionsController : ControllerBase
             var session = await _sessionService.GetSessionAsync(id);
             if (session == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Session not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -119,8 +119,8 @@ public class GameSessionsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting session {SessionId}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching session",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -142,8 +142,8 @@ public class GameSessionsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting sessions for account {AccountId}", accountId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching account sessions",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -164,8 +164,8 @@ public class GameSessionsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting sessions for profile {ProfileId}", profileId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching profile sessions",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -184,8 +184,8 @@ public class GameSessionsController : ControllerBase
             var stats = await _sessionService.GetSessionStatsAsync(id);
             if (stats == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Session not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -196,8 +196,8 @@ public class GameSessionsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting session stats {SessionId}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching session stats",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -218,9 +218,49 @@ public class GameSessionsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting achievements for session {SessionId}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while checking achievements",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
+    /// Progress a session to a new scene
+    /// </summary>
+    [HttpPost("{id}/progress-scene")]
+    public async Task<ActionResult<GameSession>> ProgressSessionScene(string id, [FromBody] ProgressSceneRequest request)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new ErrorResponse
+                {
+                    Message = "Validation failed",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            var session = await _sessionService.ProgressSessionSceneAsync(id, request.NewSceneId);
+            if (session == null)
+            {
+                return NotFound(new ErrorResponse
+                {
+                    Message = $"Session not found or cannot be progressed: {id}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            return Ok(session);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error progressing session {SessionId} to scene {SceneId}", id, request.NewSceneId);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = "Internal server error while progressing session",
                 TraceId = HttpContext.TraceIdentifier
             });
         }

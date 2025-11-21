@@ -1,8 +1,8 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Mystira.App.Domain.Models;
 using Mystira.App.CosmosConsole.Data;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.CosmosConsole.Services;
 
@@ -26,7 +26,7 @@ public class CosmosReportingService : ICosmosReportingService
             var sessions = await _context.GameSessions.ToListAsync();
             var scenarios = await _context.Scenarios.ToListAsync();
             var accounts = await _context.Accounts.ToListAsync();
-            
+
             // Create a dictionary for quick lookup of accounts by Id
             var accountsDict = accounts.ToDictionary(a => a.Id);
 
@@ -34,7 +34,7 @@ public class CosmosReportingService : ICosmosReportingService
             var scenariosDict = scenarios.ToDictionary(s => s.Id);
 
             // Join sessions with accounts and scenarios
-            var sessionList = sessions.Select<GameSession, SessionTableRow>(session => 
+            var sessionList = sessions.Select<GameSession, SessionTableRow>(session =>
             {
                 // Look up the account and scenario for this session
                 accountsDict.TryGetValue(session.AccountId, out var account);
@@ -47,16 +47,16 @@ public class CosmosReportingService : ICosmosReportingService
                     CompletedUtc = session.EndTime,
                     Duration = session.EndTime.HasValue ? (session.EndTime.Value - session.StartTime).ToString(@"hh\:mm\:ss") : "",
                     Status = session.EndTime.HasValue ? "Completed" : "In Progress",
-        
+
                     // Account information
                     AccountId = session.AccountId,
                     AccountDisplayName = account?.DisplayName ?? "",
                     AccountEmail = account?.Email ?? "",
-        
+
                     // Scenario information
                     ScenarioId = session.ScenarioId,
                     ScenarioName = scenario?.Title ?? "Unknown Scenario",
-        
+
                     // Other session information
                     PlayerNames = string.Join(",", session.PlayerNames)
                 };
@@ -82,7 +82,7 @@ public class CosmosReportingService : ICosmosReportingService
             foreach (var item in sessionList)
             {
                 DataRow row = dataTable.NewRow();
-    
+
                 row["SessionId"] = item.SessionId;
                 row["StartedUtc"] = item.StartedUtc;
                 row["CompletedUtc"] = item.CompletedUtc.HasValue ? item.CompletedUtc.Value : DBNull.Value;
@@ -93,7 +93,7 @@ public class CosmosReportingService : ICosmosReportingService
                 row["ScenarioId"] = item.ScenarioId;
                 row["ScenarioName"] = item.ScenarioName;
                 row["PlayerNames"] = item.PlayerNames;
-    
+
                 dataTable.Rows.Add(row);
             }
 
@@ -121,7 +121,7 @@ public class CosmosReportingService : ICosmosReportingService
         public string Duration { get; set; }
     }
 
-    
+
     public async Task<List<ScenarioStatistics>> GetScenarioStatisticsAsync()
     {
         try
@@ -144,7 +144,7 @@ public class CosmosReportingService : ICosmosReportingService
             {
                 var scenario = scenarios.FirstOrDefault(sc => sc.Id == group.Key);
                 var scenarioName = scenario?.Title ?? "Unknown Scenario";
-                
+
                 var scenarioStat = new ScenarioStatistics
                 {
                     ScenarioId = group.Key,

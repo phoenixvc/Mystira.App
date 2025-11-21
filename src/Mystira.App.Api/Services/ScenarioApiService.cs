@@ -1,11 +1,11 @@
-using Microsoft.EntityFrameworkCore;
-using Mystira.App.Domain.Models;
-using Mystira.App.Api.Data;
-using Mystira.App.Api.Models;
-using Mystira.App.Admin.Api.Validation;
-using NJsonSchema;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
+using Mystira.App.Admin.Api.Validation;
+using Mystira.App.Api.Data;
+using Mystira.App.Api.Models;
+using Mystira.App.Domain.Models;
+using NJsonSchema;
 
 namespace Mystira.App.Api.Services;
 
@@ -180,7 +180,9 @@ public class ScenarioApiService : IScenarioApiService
     {
         var scenario = await _context.Scenarios.FirstOrDefaultAsync(s => s.Id == id);
         if (scenario == null)
+        {
             return null;
+        }
 
         ValidateAgainstSchema(request);
 
@@ -208,7 +210,9 @@ public class ScenarioApiService : IScenarioApiService
     {
         var scenario = await _context.Scenarios.FirstOrDefaultAsync(s => s.Id == id);
         if (scenario == null)
+        {
             return false;
+        }
 
         _context.Scenarios.Remove(scenario);
         await _context.SaveChangesAsync();
@@ -393,39 +397,57 @@ public class ScenarioApiService : IScenarioApiService
         {
             // Validate basic scenario structure
             if (string.IsNullOrWhiteSpace(scenario.Title))
+            {
                 throw new ScenarioValidationException("Scenario title cannot be empty");
+            }
 
             if (string.IsNullOrWhiteSpace(scenario.Description))
+            {
                 throw new ScenarioValidationException("Scenario description cannot be empty");
+            }
 
             if (!scenario.Scenes.Any())
+            {
                 throw new ScenarioValidationException("Scenario must contain at least one scene");
+            }
 
             // Validate scene structure
             foreach (var scene in scenario.Scenes)
             {
                 if (string.IsNullOrWhiteSpace(scene.Id))
+                {
                     throw new ScenarioValidationException($"Scene is missing an ID (Title: {scene.Title})");
+                }
 
                 if (string.IsNullOrWhiteSpace(scene.Title))
+                {
                     throw new ScenarioValidationException($"Scene is missing a title (ID: {scene.Id})");
+                }
 
                 // Only choice scenes can have echo logs
                 if (scene.Type != SceneType.Choice && scene.Branches.Any(b => b.EchoLog != null))
+                {
                     throw new ScenarioValidationException($"Only choice scenes can have echo logs (Scene ID: {scene.Id})");
+                }
 
                 // Validate echo log values
                 foreach (var branch in scene.Branches.Where(b => b.EchoLog != null))
                 {
                     var echo = branch.EchoLog!;
                     if (echo.Strength < 0.1 || echo.Strength > 1.0)
+                    {
                         throw new ScenarioValidationException($"Echo log strength must be between 0.1 and 1.0 (Scene ID: {scene.Id}, Choice: {branch.Choice})");
+                    }
 
                     if (EchoType.Parse(echo.EchoType.Value) == null)
+                    {
                         throw new ScenarioValidationException($"Invalid echo type '{echo.EchoType}' (Scene ID: {scene.Id}, Choice: {branch.Choice})");
+                    }
 
                     if (string.IsNullOrWhiteSpace(echo.Description))
+                    {
                         throw new ScenarioValidationException($"Echo log description cannot be empty (Scene ID: {scene.Id}, Choice: {branch.Choice})");
+                    }
                 }
 
                 // Validate compass changes
@@ -433,10 +455,14 @@ public class ScenarioApiService : IScenarioApiService
                 {
                     var change = branch.CompassChange!;
                     if (change.Delta < -1.0 || change.Delta > 1.0)
+                    {
                         throw new ScenarioValidationException($"Compass change delta must be between -1.0 and 1.0 (Scene ID: {scene.Id}, Choice: {branch.Choice})");
+                    }
 
                     if (string.IsNullOrWhiteSpace(change.Axis))
+                    {
                         throw new ScenarioValidationException($"Compass axis cannot be empty (Scene ID: {scene.Id}, Choice: {branch.Choice})");
+                    }
 
                     if (!scenario.CoreAxes.Select(a => a.Value).Contains(change.Axis))
                     {
@@ -453,7 +479,9 @@ public class ScenarioApiService : IScenarioApiService
                     //     throw new ScenarioValidationException($"Branch is missing next scene ID (Scene ID: {scene.Id}, Choice: {branch.Choice})");
 
                     if (branch.NextSceneId != "" && branch.NextSceneId != "END" && !scenario.Scenes.Any(s => s.Id == branch.NextSceneId))
+                    {
                         throw new ScenarioValidationException($"Branch references non-existent next scene ID '{branch.NextSceneId}' (Scene ID: {scene.Id}, Choice: {branch.Choice})");
+                    }
                 }
             }
 
@@ -581,7 +609,10 @@ public class ScenarioApiService : IScenarioApiService
         ScenarioReferenceValidation validation,
         bool includeMetadataValidation)
     {
-        if (string.IsNullOrEmpty(mediaId)) return;
+        if (string.IsNullOrEmpty(mediaId))
+        {
+            return;
+        }
 
         var mediaExists = allMedia.ContainsKey(mediaId);
         var hasMetadata = includeMetadataValidation && mediaMetadata?.Entries.Any(e => e.Id == mediaId) == true;
@@ -680,5 +711,4 @@ public class ScenarioApiService : IScenarioApiService
         public ScenarioValidationException(string message) : base(message) { }
         public ScenarioValidationException(string message, Exception innerException) : base(message, innerException) { }
     }
-
 }

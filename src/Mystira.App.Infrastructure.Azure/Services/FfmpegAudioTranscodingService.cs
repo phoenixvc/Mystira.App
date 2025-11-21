@@ -37,8 +37,15 @@ public sealed class FfmpegAudioTranscodingService : IAudioTranscodingService
     /// <inheritdoc />
     public async Task<AudioTranscodingResult?> ConvertWhatsAppVoiceNoteAsync(Stream source, string originalFileName, CancellationToken cancellationToken = default)
     {
-        if (source == null) throw new ArgumentNullException(nameof(source));
-        if (string.IsNullOrWhiteSpace(originalFileName)) throw new ArgumentException("Value cannot be null or whitespace.", nameof(originalFileName));
+        if (source == null)
+        {
+            throw new ArgumentNullException(nameof(source));
+        }
+
+        if (string.IsNullOrWhiteSpace(originalFileName))
+        {
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(originalFileName));
+        }
 
         Directory.CreateDirectory(_workingDirectory);
 

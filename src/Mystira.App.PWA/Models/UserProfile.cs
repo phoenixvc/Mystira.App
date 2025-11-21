@@ -21,7 +21,7 @@ public class UserProfile
     public string? AccountId { get; set; }
     public string? Pronouns { get; set; }
     public string? Bio { get; set; }
-    
+
     public string DisplayAgeRange => AgeRanges.GetDisplayName(AgeGroup);
 }
 

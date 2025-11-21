@@ -117,15 +117,15 @@ public class AuthService : IAuthService
         try
         {
             _logger.LogInformation("Requesting passwordless signup for: {Email}", email);
-            
+
             var response = await _apiClient.RequestPasswordlessSignupAsync(email, displayName);
-            
+
             if (response?.Success == true)
             {
                 _logger.LogInformation("Passwordless signup requested successfully for: {Email}", email);
                 return (true, response.Message);
             }
-            
+
             _logger.LogWarning("Passwordless signup request failed for: {Email}", email);
             return (false, response?.Message ?? "Failed to request signup code");
         }
@@ -141,13 +141,13 @@ public class AuthService : IAuthService
         try
         {
             _logger.LogInformation("Verifying passwordless signup for: {Email}", email);
-            
+
             var response = await _apiClient.VerifyPasswordlessSignupAsync(email, code);
-            
+
             if (response?.Success == true && response.Account != null)
             {
                 SetStoredToken(response.Token ?? $"{DemoTokenPrefix}{Guid.NewGuid():N}");
-                
+
                 // Fetch full account details from API
                 var fullAccount = await _apiClient.GetAccountByEmailAsync(email);
                 if (fullAccount != null)
@@ -168,7 +168,7 @@ public class AuthService : IAuthService
                     return (true, "Account created successfully", response.Account);
                 }
             }
-            
+
             _logger.LogWarning("Passwordless signup verification failed for: {Email}", email);
             return (false, response?.Message ?? "Verification failed", null);
         }
@@ -209,15 +209,15 @@ public class AuthService : IAuthService
         try
         {
             _logger.LogInformation("Requesting passwordless signin for: {Email}", email);
-            
+
             var response = await _apiClient.RequestPasswordlessSigninAsync(email);
-            
+
             if (response?.Success == true)
             {
                 _logger.LogInformation("Passwordless signin requested successfully for: {Email}", email);
                 return (true, response.Message);
             }
-            
+
             _logger.LogWarning("Passwordless signin request failed for: {Email}", email);
             return (false, response?.Message ?? "Failed to request signin code");
         }
@@ -233,13 +233,13 @@ public class AuthService : IAuthService
         try
         {
             _logger.LogInformation("Verifying passwordless signin for: {Email}", email);
-            
+
             var response = await _apiClient.VerifyPasswordlessSigninAsync(email, code);
-            
+
             if (response?.Success == true && response.Account != null)
             {
                 SetStoredToken(response.Token ?? $"{DemoTokenPrefix}{Guid.NewGuid():N}");
-                
+
                 // Fetch full account details from API
                 var fullAccount = await _apiClient.GetAccountByEmailAsync(email);
                 if (fullAccount != null)
@@ -260,7 +260,7 @@ public class AuthService : IAuthService
                     return (true, "Sign-in successful", response.Account);
                 }
             }
-            
+
             _logger.LogWarning("Passwordless signin verification failed for: {Email}", email);
             return (false, response?.Message ?? "Verification failed", null);
         }

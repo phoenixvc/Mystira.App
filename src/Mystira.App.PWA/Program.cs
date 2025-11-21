@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Mystira.App.PWA;
 using Mystira.App.PWA.Services;
 
@@ -10,9 +10,9 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // Configure HttpClient
-builder.Services.AddScoped(sp => new HttpClient 
-{ 
-    BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) 
+builder.Services.AddScoped(sp => new HttpClient
+{
+    BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
 });
 
 // Configure API HttpClient
@@ -51,28 +51,28 @@ builder.Services.AddScoped<ICharacterAssignmentService, CharacterAssignmentServi
 builder.Logging.SetMinimumLevel(LogLevel.Information);
 builder.Logging.AddFilter("Microsoft.AspNetCore.Components.WebAssembly", LogLevel.Warning);
 
-try 
+try
 {
     Console.WriteLine("Starting Mystira...");
-    
+
     var host = builder.Build();
-    
+
     // Initialize services
     var logger = host.Services.GetRequiredService<ILogger<Program>>();
     logger.LogInformation("Mystira PWA starting up");
-    
+
     // Verify service registration
     var authService = host.Services.GetService<IAuthService>();
     var apiClient = host.Services.GetService<IApiClient>();
     var gameSessionService = host.Services.GetService<IGameSessionService>();
     var indexedDbService = host.Services.GetService<IIndexedDbService>();
-    
+
     logger.LogInformation("Services registered:");
     logger.LogInformation("- AuthService: {AuthService}", authService?.GetType().Name ?? "Not registered");
     logger.LogInformation("- ApiClient: {ApiClient}", apiClient?.GetType().Name ?? "Not registered");
     logger.LogInformation("- GameSessionService: {GameSessionService}", gameSessionService?.GetType().Name ?? "Not registered");
     logger.LogInformation("- IndexedDbService: {IndexedDbService}", indexedDbService?.GetType().Name ?? "Not registered");
-    
+
     await host.RunAsync();
 }
 catch (Exception ex)

@@ -1,8 +1,8 @@
+using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
 using Mystira.App.Domain.Models;
-using System.Linq;
 
 namespace Mystira.App.Api.Services;
 
@@ -22,16 +22,22 @@ public class UserProfileApiService : IUserProfileApiService
         // Check if profile already exists
         var existingProfile = await GetProfileAsync(request.Name);
         if (existingProfile != null)
+        {
             throw new ArgumentException($"Profile already exists for name: {request.Name}");
+        }
 
         // Validate fantasy themes
         var invalidThemes = request.PreferredFantasyThemes.Where(t => FantasyTheme.Parse(t) == null).ToList();
         if (invalidThemes.Any())
+        {
             throw new ArgumentException($"Invalid fantasy themes: {string.Join(", ", invalidThemes)}");
+        }
 
         // Validate age group
         if (AgeGroup.Parse(request.AgeGroup) == null)
+        {
             throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", StringEnum<AgeGroup>.ValueMap.Keys)}");
+        }
 
         var profile = new UserProfile
         {
@@ -78,7 +84,9 @@ public class UserProfileApiService : IUserProfileApiService
 
         // Validate age group
         if (AgeGroup.Parse(request.AgeGroup) == null)
+        {
             throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", StringEnum<AgeGroup>.ValueMap.Keys)}");
+        }
 
         var profile = new UserProfile
         {
@@ -139,7 +147,9 @@ public class UserProfileApiService : IUserProfileApiService
     {
         var profile = await GetProfileAsync(name);
         if (profile == null)
+        {
             return null;
+        }
 
         // Apply updates
         if (request.PreferredFantasyThemes != null)
@@ -147,7 +157,9 @@ public class UserProfileApiService : IUserProfileApiService
             // Validate fantasy themes
             var invalidThemes = request.PreferredFantasyThemes.Where(t => FantasyTheme.Parse(t) == null).ToList();
             if (invalidThemes.Any())
+            {
                 throw new ArgumentException($"Invalid fantasy themes: {string.Join(", ", invalidThemes)}");
+            }
 
             profile.PreferredFantasyThemes = request.PreferredFantasyThemes.Select(t => FantasyTheme.Parse(t)!).ToList();
         }
@@ -156,7 +168,9 @@ public class UserProfileApiService : IUserProfileApiService
         {
             // Validate age group
             if (AgeGroup.Parse(request.AgeGroup) == null)
+            {
                 throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", StringEnum<AgeGroup>.ValueMap.Keys)}");
+            }
 
             profile.AgeGroupName = request.AgeGroup;
         }
@@ -169,16 +183,24 @@ public class UserProfileApiService : IUserProfileApiService
         }
 
         if (request.HasCompletedOnboarding.HasValue)
+        {
             profile.HasCompletedOnboarding = request.HasCompletedOnboarding.Value;
+        }
 
         if (request.IsGuest.HasValue)
+        {
             profile.IsGuest = request.IsGuest.Value;
+        }
 
         if (request.IsNpc.HasValue)
+        {
             profile.IsNpc = request.IsNpc.Value;
+        }
 
         if (request.AccountId != null)
+        {
             profile.AccountId = request.AccountId;
+        }
 
         profile.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
@@ -191,7 +213,9 @@ public class UserProfileApiService : IUserProfileApiService
     {
         var profile = await GetProfileAsync(name);
         if (profile == null)
+        {
             return false;
+        }
 
         // COPPA compliance: Also delete associated sessions, badges, and data
         var sessions = await _context.GameSessions
@@ -217,7 +241,9 @@ public class UserProfileApiService : IUserProfileApiService
     {
         var profile = await GetProfileAsync(name);
         if (profile == null)
+        {
             return false;
+        }
 
         profile.HasCompletedOnboarding = true;
         await _context.SaveChangesAsync();
@@ -256,12 +282,16 @@ public class UserProfileApiService : IUserProfileApiService
     {
         var profile = await _context.UserProfiles.FirstOrDefaultAsync(p => p.Id == profileId);
         if (profile == null)
+        {
             return false;
+        }
 
         // Check if character exists
         var character = await _context.CharacterMaps.FirstOrDefaultAsync(c => c.Id == characterId);
         if (character == null)
+        {
             return false;
+        }
 
         // This is a conceptual assignment - in practice, this would be stored in a game session
         // or a separate assignment table. For now, we'll log it and return success.

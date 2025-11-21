@@ -1,8 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Mystira.App.Domain.Models;
+using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
@@ -34,8 +34,8 @@ public class BadgeConfigurationsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting all badge configurations");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching badge configurations",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -53,8 +53,8 @@ public class BadgeConfigurationsController : ControllerBase
             var badgeConfig = await _badgeConfigService.GetBadgeConfigurationAsync(id);
             if (badgeConfig == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Badge configuration not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -65,8 +65,8 @@ public class BadgeConfigurationsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting badge configuration {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching badge configuration",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -87,8 +87,8 @@ public class BadgeConfigurationsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting badge configurations for axis {Axis}", axis);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching badge configurations",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -123,8 +123,8 @@ public class BadgeConfigurationsController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error creating badge configuration");
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -132,8 +132,8 @@ public class BadgeConfigurationsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating badge configuration");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while creating badge configuration",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -165,8 +165,8 @@ public class BadgeConfigurationsController : ControllerBase
             var badgeConfig = await _badgeConfigService.UpdateBadgeConfigurationAsync(id, request);
             if (badgeConfig == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Badge configuration not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -177,8 +177,8 @@ public class BadgeConfigurationsController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error updating badge configuration {Id}", id);
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -186,8 +186,8 @@ public class BadgeConfigurationsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating badge configuration {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while updating badge configuration",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -206,8 +206,8 @@ public class BadgeConfigurationsController : ControllerBase
             var deleted = await _badgeConfigService.DeleteBadgeConfigurationAsync(id);
             if (!deleted)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Badge configuration not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -218,8 +218,8 @@ public class BadgeConfigurationsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting badge configuration {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while deleting badge configuration",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -241,8 +241,8 @@ public class BadgeConfigurationsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error exporting badge configurations");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while exporting badge configurations",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -260,8 +260,8 @@ public class BadgeConfigurationsController : ControllerBase
         {
             if (file == null || file.Length == 0)
             {
-                return BadRequest(new ErrorResponse 
-                { 
+                return BadRequest(new ErrorResponse
+                {
                     Message = "No file provided",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -269,8 +269,8 @@ public class BadgeConfigurationsController : ControllerBase
 
             if (!file.FileName.EndsWith(".yaml") && !file.FileName.EndsWith(".yml"))
             {
-                return BadRequest(new ErrorResponse 
-                { 
+                return BadRequest(new ErrorResponse
+                {
                     Message = "File must be a YAML file (.yaml or .yml)",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -283,8 +283,8 @@ public class BadgeConfigurationsController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error importing badge configurations");
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -292,8 +292,8 @@ public class BadgeConfigurationsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error importing badge configurations");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while importing badge configurations",
                 TraceId = HttpContext.TraceIdentifier
             });

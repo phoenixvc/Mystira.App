@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
 
@@ -34,8 +34,8 @@ public class MediaMetadataAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting media metadata file");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while getting media metadata file",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -56,8 +56,8 @@ public class MediaMetadataAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating media metadata file");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while updating media metadata file",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -75,8 +75,8 @@ public class MediaMetadataAdminController : ControllerBase
             var entry = await _mediaMetadataService.GetMediaMetadataEntryAsync(entryId);
             if (entry == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Media metadata entry not found: {entryId}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -86,8 +86,8 @@ public class MediaMetadataAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting media metadata entry: {EntryId}", entryId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while getting media metadata entry",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -107,8 +107,8 @@ public class MediaMetadataAdminController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -116,8 +116,8 @@ public class MediaMetadataAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error adding media metadata entry: {EntryId}", entry.Id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while adding media metadata entry",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -137,8 +137,8 @@ public class MediaMetadataAdminController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(new ErrorResponse 
-            { 
+            return NotFound(new ErrorResponse
+            {
                 Message = $"Media metadata entry not found: {entryId}",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -146,8 +146,8 @@ public class MediaMetadataAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating media metadata entry: {EntryId}", entryId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while updating media metadata entry",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -167,8 +167,8 @@ public class MediaMetadataAdminController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(new ErrorResponse 
-            { 
+            return NotFound(new ErrorResponse
+            {
                 Message = $"Media metadata entry not found: {entryId}",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -176,8 +176,8 @@ public class MediaMetadataAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error removing media metadata entry: {EntryId}", entryId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while removing media metadata entry",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -197,8 +197,8 @@ public class MediaMetadataAdminController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -206,8 +206,8 @@ public class MediaMetadataAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error importing media metadata entries");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while importing media metadata entries",
                 TraceId = HttpContext.TraceIdentifier
             });

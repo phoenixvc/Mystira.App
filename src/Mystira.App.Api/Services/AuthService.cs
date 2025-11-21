@@ -1,11 +1,11 @@
-﻿namespace Mystira.App.Api.Services;
+namespace Mystira.App.Api.Services;
 
 public class AuthService : IAuthService
 {
     private readonly HttpClient _httpClient;
     private readonly string _baseUrl;
     private readonly ILogger<AuthService> _logger;
-    
+
     public string? AuthToken { get; private set; }
     public bool IsAuthenticated => !string.IsNullOrEmpty(AuthToken);
 
@@ -14,11 +14,11 @@ public class AuthService : IAuthService
         _httpClient = httpClient;
         _logger = logger;
         _baseUrl = configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7096";
-        
+
         // Configure HttpClient
         _httpClient.BaseAddress = new Uri(_baseUrl);
     }
-    
+
     public async Task<bool> LoginAsync(string username, string password)
     {
         try
@@ -28,9 +28,9 @@ public class AuthService : IAuthService
                 Username = username,
                 Password = password
             };
-            
+
             var response = await _httpClient.PostAsJsonAsync("/api/auth/login", loginRequest);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
@@ -40,7 +40,7 @@ public class AuthService : IAuthService
                     return true;
                 }
             }
-            
+
             _logger.LogWarning("Failed to authenticate. Status: {StatusCode}", response.StatusCode);
             return false;
         }
@@ -50,12 +50,12 @@ public class AuthService : IAuthService
             return false;
         }
     }
-    
+
     public void Logout()
     {
         AuthToken = null;
     }
-    
+
     private class AuthResponse
     {
         public string Token { get; set; } = string.Empty;

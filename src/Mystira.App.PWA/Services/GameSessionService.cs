@@ -7,12 +7,12 @@ public class GameSessionService : IGameSessionService
     private readonly ILogger<GameSessionService> _logger;
     private readonly IApiClient _apiClient;
     private readonly IAuthService _authService;
-    
+
     public event EventHandler<GameSession?>? GameSessionChanged;
-    
+
     private GameSession? _currentGameSession;
-    public GameSession? CurrentGameSession 
-    { 
+    public GameSession? CurrentGameSession
+    {
         get => _currentGameSession;
         private set
         {
@@ -36,20 +36,20 @@ public class GameSessionService : IGameSessionService
         try
         {
             _logger.LogInformation("Starting game session for scenario: {ScenarioName}", scenario.Title);
-            
+
             // Get account information from auth service
             var account = await _authService.GetCurrentAccountAsync();
             string accountId = account?.Id ?? "default-account";
             string profileId = "default-profile";
-            
+
             // If account has profiles, use the first one as default
             if (account?.UserProfileIds != null && account.UserProfileIds.Any())
             {
                 profileId = account.UserProfileIds.First();
             }
-            
+
             _logger.LogInformation("Starting session with AccountId: {AccountId}, ProfileId: {ProfileId}", accountId, profileId);
-            
+
             // Start session via API
             var apiGameSession = await _apiClient.StartGameSessionAsync(
                 scenario.Id,
@@ -75,21 +75,21 @@ public class GameSessionService : IGameSessionService
                     .Select(b => b.NextSceneId))
                 .Where(id => !string.IsNullOrEmpty(id))
                 .ToHashSet();
-            
+
             var startingScene = scenario.Scenes.FirstOrDefault(s => !allReferencedSceneIds.Contains(s.Id));
-            
+
             if (startingScene == null)
             {
                 // Fallback to first scene if we can't determine the starting scene
                 startingScene = scenario.Scenes.FirstOrDefault();
             }
-            
+
             if (startingScene == null)
             {
                 _logger.LogError("No starting scene found for scenario: {ScenarioName}", scenario.Title);
                 return false;
             }
-            
+
             startingScene.AudioUrl = !string.IsNullOrEmpty(startingScene.Media?.Audio) ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Audio) : null;
             startingScene.ImageUrl = !string.IsNullOrEmpty(startingScene.Media?.Image) ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Image) : null;
             startingScene.VideoUrl = !string.IsNullOrEmpty(startingScene.Media?.Video) ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Video) : null;
@@ -102,7 +102,7 @@ public class GameSessionService : IGameSessionService
                 ScenarioId = scenario.Id,
                 ScenarioName = scenario.Title,
                 CurrentScene = startingScene,
-                StartedAt = apiGameSession.StartedAt,
+                StartedAt = apiGameSession.StartTime,
                 CompletedScenes = new List<Scene>(),
                 IsCompleted = false
             };
@@ -144,7 +144,7 @@ public class GameSessionService : IGameSessionService
 
             // Try to get the scene from API
             var scene = CurrentGameSession.Scenario.Scenes.Find(x => x.Id == sceneId);
-            
+
             if (scene == null)
             {
                 _logger.LogError("Scene not found: {SceneId}", sceneId);
@@ -155,9 +155,16 @@ public class GameSessionService : IGameSessionService
             scene.AudioUrl = !string.IsNullOrEmpty(scene.Media?.Audio) ? await _apiClient.GetMediaUrlFromId(scene.Media.Audio) : null;
             scene.ImageUrl = !string.IsNullOrEmpty(scene.Media?.Image) ? await _apiClient.GetMediaUrlFromId(scene.Media.Image) : null;
             scene.VideoUrl = !string.IsNullOrEmpty(scene.Media?.Video) ? await _apiClient.GetMediaUrlFromId(scene.Media.Video) : null;
-            
+
             CurrentGameSession.CurrentScene = scene;
-            
+
+            // Progress the session on the server
+            var progressedSession = await _apiClient.ProgressSessionSceneAsync(CurrentGameSession.Id, sceneId);
+            if (progressedSession == null)
+            {
+                _logger.LogWarning("Failed to progress session on server, but continuing locally for scene: {SceneId}", sceneId);
+            }
+
             // Check if this is a final scene
             if (scene is { SceneType: SceneType.Special, NextSceneId: null })
             {
@@ -199,7 +206,7 @@ public class GameSessionService : IGameSessionService
             }
 
             CurrentGameSession.IsCompleted = true;
-            
+
             // Trigger the event to notify subscribers
             GameSessionChanged?.Invoke(this, CurrentGameSession);
 
@@ -224,7 +231,7 @@ public class GameSessionService : IGameSessionService
             }
 
             var currentScene = CurrentGameSession.CurrentScene;
-            
+
             if (currentScene.SceneType != SceneType.Roll)
             {
                 _logger.LogWarning("Current scene is not a roll scene");
@@ -234,43 +241,43 @@ public class GameSessionService : IGameSessionService
             // For roll scenes, use the branches collection to determine next scene
             // First branch = success path, second branch = failure path
             var branches = currentScene.Branches;
-            
+
             if (branches == null || !branches.Any())
             {
                 _logger.LogWarning("Roll scene has no branches defined");
-                
+
                 // Fallback to NextSceneId if available
                 if (!string.IsNullOrEmpty(currentScene.NextSceneId))
                 {
                     return await NavigateToSceneAsync(currentScene.NextSceneId);
                 }
-                
+
                 _logger.LogInformation("No navigation path available for roll scene. Completing game session.");
                 return await CompleteGameSessionAsync();
             }
-            
+
             // Select the appropriate branch based on success/failure
-            var selectedBranch = isSuccess 
+            var selectedBranch = isSuccess
                 ? branches.FirstOrDefault()                // First branch for success
                 : branches.Skip(1).FirstOrDefault();       // Second branch for failure
-                
+
             if (selectedBranch == null)
             {
                 _logger.LogWarning("Could not find appropriate branch for roll outcome (Success: {IsSuccess})", isSuccess);
                 return await CompleteGameSessionAsync();
             }
-            
+
             var nextSceneId = selectedBranch.NextSceneId;
-            
+
             if (string.IsNullOrEmpty(nextSceneId))
             {
                 _logger.LogInformation("Selected branch has no next scene specified (Success: {IsSuccess}). Completing game session.", isSuccess);
                 return await CompleteGameSessionAsync();
             }
 
-            _logger.LogInformation("Navigating from roll scene. Success: {IsSuccess}, Branch choice: '{BranchChoice}', Next scene: {NextSceneId}", 
+            _logger.LogInformation("Navigating from roll scene. Success: {IsSuccess}, Branch choice: '{BranchChoice}', Next scene: {NextSceneId}",
                 isSuccess, selectedBranch.Choice, nextSceneId);
-            
+
             return await NavigateToSceneAsync(nextSceneId);
         }
         catch (Exception ex)
@@ -292,7 +299,7 @@ public class GameSessionService : IGameSessionService
 
             var currentScene = CurrentGameSession.CurrentScene;
             var nextSceneId = currentScene.NextSceneId;
-            
+
             if (string.IsNullOrEmpty(nextSceneId))
             {
                 _logger.LogInformation("No next scene available, completing game session");
@@ -300,7 +307,7 @@ public class GameSessionService : IGameSessionService
             }
 
             _logger.LogInformation("Advancing to next scene: {NextSceneId}", nextSceneId);
-            
+
             return await NavigateToSceneAsync(nextSceneId);
         }
         catch (Exception ex)
@@ -338,7 +345,9 @@ public class GameSessionService : IGameSessionService
     public string ReplaceCharacterPlaceholders(string text)
     {
         if (string.IsNullOrEmpty(text) || !_characterAssignments.Any())
+        {
             return text;
+        }
 
         foreach (var assignment in _characterAssignments)
         {

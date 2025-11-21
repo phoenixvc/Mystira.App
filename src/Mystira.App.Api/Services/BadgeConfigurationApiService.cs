@@ -1,7 +1,7 @@
-using Mystira.App.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
+using Mystira.App.Domain.Models;
 using YamlDotNet.Serialization;
 
 namespace Mystira.App.Api.Services;

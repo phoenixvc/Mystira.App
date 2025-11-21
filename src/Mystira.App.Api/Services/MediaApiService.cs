@@ -1,9 +1,9 @@
-using Mystira.App.Infrastructure.Azure.Services;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
+using Mystira.App.Infrastructure.Azure.Services;
 
 namespace Mystira.App.Api.Services;
 
@@ -249,13 +249,19 @@ public class MediaApiService : IMediaApiService
 
         // Update properties
         if (updateData.Description != null)
+        {
             mediaAsset.Description = updateData.Description;
+        }
 
         if (updateData.Tags != null)
+        {
             mediaAsset.Tags = updateData.Tags;
+        }
 
         if (!string.IsNullOrEmpty(updateData.MediaType))
+        {
             mediaAsset.MediaType = updateData.MediaType;
+        }
 
         mediaAsset.UpdatedAt = DateTime.UtcNow;
         mediaAsset.Version = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
@@ -401,13 +407,19 @@ public class MediaApiService : IMediaApiService
         var extension = Path.GetExtension(fileName).ToLower();
 
         if (new[] { ".mp3", ".wav", ".ogg", ".aac", ".m4a", ".waptt" }.Contains(extension))
+        {
             return "audio";
+        }
 
         if (new[] { ".mp4", ".avi", ".mov", ".wmv", ".mkv" }.Contains(extension))
+        {
             return "video";
+        }
 
         if (new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" }.Contains(extension))
+        {
             return "image";
+        }
 
         return "unknown";
     }
@@ -425,11 +437,19 @@ public class MediaApiService : IMediaApiService
         const long gb = mb * 1024;
 
         if (bytes >= gb)
+        {
             return $"{bytes / (double)gb:F2} GB";
+        }
+
         if (bytes >= mb)
+        {
             return $"{bytes / (double)mb:F2} MB";
+        }
+
         if (bytes >= kb)
+        {
             return $"{bytes / (double)kb:F2} KB";
+        }
 
         return $"{bytes} bytes";
     }

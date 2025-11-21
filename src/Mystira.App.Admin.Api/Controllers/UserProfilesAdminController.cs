@@ -1,8 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Mystira.App.Domain.Models;
+using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
@@ -17,7 +17,7 @@ public class UserProfilesAdminController : ControllerBase
     private readonly ILogger<UserProfilesAdminController> _logger;
 
     public UserProfilesAdminController(
-        IUserProfileApiService profileService, 
+        IUserProfileApiService profileService,
         IAccountApiService accountService,
         ILogger<UserProfilesAdminController> logger)
     {
@@ -35,7 +35,7 @@ public class UserProfilesAdminController : ControllerBase
         try
         {
             _logger.LogInformation("Getting profiles for account {AccountId}", accountId);
-            
+
             var profiles = await _accountService.GetUserProfilesForAccountAsync(accountId);
             return Ok(profiles);
         }

@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Models;
 using YamlDotNet.Serialization;
@@ -45,7 +45,7 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
         try
         {
             metadataFile.UpdatedAt = DateTime.UtcNow;
-            
+
             var existingFile = await _context.CharacterMediaMetadataFiles.FirstOrDefaultAsync();
             if (existingFile != null)
             {
@@ -75,7 +75,7 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
         try
         {
             var metadataFile = await GetCharacterMediaMetadataFileAsync();
-            
+
             // Check if entry already exists
             var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entry.Id);
             if (existingEntry != null)
@@ -101,7 +101,7 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
         try
         {
             var metadataFile = await GetCharacterMediaMetadataFileAsync();
-            
+
             var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entryId);
             if (existingEntry == null)
             {
@@ -130,7 +130,7 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
         try
         {
             var metadataFile = await GetCharacterMediaMetadataFileAsync();
-            
+
             var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entryId);
             if (existingEntry == null)
             {
@@ -172,7 +172,7 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
         try
         {
             List<CharacterMediaMetadataEntry> importedEntries;
-            
+
             // Try to determine if data is JSON or YAML
             if (data.TrimStart().StartsWith('[') || data.TrimStart().StartsWith('{'))
             {
@@ -185,14 +185,14 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
                 var deserializer = new DeserializerBuilder().Build();
                 importedEntries = deserializer.Deserialize<List<CharacterMediaMetadataEntry>>(data);
             }
-            
+
             if (importedEntries == null || importedEntries.Count == 0)
             {
                 throw new ArgumentException("No valid character media metadata entries found in data");
             }
 
             var metadataFile = await GetCharacterMediaMetadataFileAsync();
-            
+
             foreach (var entry in importedEntries)
             {
                 var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entry.Id);

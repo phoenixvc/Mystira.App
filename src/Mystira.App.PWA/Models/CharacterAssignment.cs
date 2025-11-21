@@ -15,14 +15,22 @@ public class CharacterAssignment
     public string Archetype { get; set; } = string.Empty;
     public PlayerAssignment? PlayerAssignment { get; set; }
     public bool IsUnused { get; set; } = false;
-    
+
     public string DisplayInfo
     {
         get
         {
             var parts = new List<string>();
-            if (!string.IsNullOrEmpty(Role)) parts.Add(Role);
-            if (!string.IsNullOrEmpty(Archetype)) parts.Add(ToTitleCase(Archetype));
+            if (!string.IsNullOrEmpty(Role))
+            {
+                parts.Add(Role);
+            }
+
+            if (!string.IsNullOrEmpty(Archetype))
+            {
+                parts.Add(ToTitleCase(Archetype));
+            }
+
             return parts.Count > 0 ? string.Join(" • ", parts) : "Character";
         }
     }
@@ -30,8 +38,10 @@ public class CharacterAssignment
     private static string ToTitleCase(string input)
     {
         if (string.IsNullOrEmpty(input))
+        {
             return string.Empty;
-            
+        }
+
         return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(input.ToLower());
     }
 }
@@ -45,7 +55,7 @@ public class PlayerAssignment
     public string? ProfileId { get; set; }
     public string? ProfileName { get; set; }
     public string? ProfileImage { get; set; }
-    
+
     // Guest properties
     public string? GuestName { get; set; }
     public string? GuestAgeRange { get; set; }
@@ -63,7 +73,7 @@ public class StartGameSessionRequest
     public string ProfileId { get; set; } = string.Empty; // Primary profile (DM/facilitator)
     public List<CharacterAssignment> CharacterAssignments { get; set; } = new();
     public string TargetAgeGroup { get; set; } = string.Empty;
-    
+
     [JsonIgnore]
     public Scenario? Scenario { get; set; } // Full scenario for local game session setup
 }
@@ -96,7 +106,7 @@ public class CharacterAssignmentResponse
 public static class AgeRanges
 {
     public static readonly string[] All = ["1-2", "3-5", "6-9", "10-12", "13-18"];
-    
+
     public static string GetDisplayName(string ageRange)
     {
         return ageRange switch

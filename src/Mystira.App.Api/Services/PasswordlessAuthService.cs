@@ -1,6 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using Mystira.App.Api.Data;
 using Mystira.App.Domain.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace Mystira.App.Api.Services;
 
@@ -57,9 +57,9 @@ public class PasswordlessAuthService : IPasswordlessAuthService
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Signup requested for email: {Email} with display name: {DisplayName}", email, displayName);
-            
+
             var (emailSuccess, emailError) = await _emailService.SendSignupCodeAsync(email, displayName, code);
-            
+
             if (!emailSuccess)
             {
                 _logger.LogWarning("Failed to send verification email to {Email}: {Error}", email, emailError);
@@ -107,10 +107,10 @@ public class PasswordlessAuthService : IPasswordlessAuthService
             };
 
             _context.Accounts.Add(account);
-            
+
             pendingSignup.IsUsed = true;
             _context.PendingSignups.Update(pendingSignup);
-            
+
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Signup verified for email: {Email}", email);
@@ -186,9 +186,9 @@ public class PasswordlessAuthService : IPasswordlessAuthService
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Signin requested for email: {Email} with display name: {DisplayName}", email, existingAccount.DisplayName);
-            
+
             var (emailSuccess, emailError) = await _emailService.SendSigninCodeAsync(email, existingAccount.DisplayName, code);
-            
+
             if (!emailSuccess)
             {
                 _logger.LogWarning("Failed to send sign-in email to {Email}: {Error}", email, emailError);
@@ -236,10 +236,10 @@ public class PasswordlessAuthService : IPasswordlessAuthService
             // Update last login time
             account.LastLoginAt = DateTime.UtcNow;
             _context.Accounts.Update(account);
-            
+
             pendingSignin.IsUsed = true;
             _context.PendingSignups.Update(pendingSignin);
-            
+
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Signin verified for email: {Email}", email);

@@ -1,13 +1,13 @@
 using System.Text;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Mystira.App.Admin.Api.Adapters;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,9 +64,15 @@ builder.Services.AddSwaggerGen(c =>
     c.CustomSchemaIds(type =>
     {
         if (type == typeof(Mystira.App.Domain.Models.CharacterMetadata))
+        {
             return "DomainCharacterMetadata";
+        }
+
         if (type == typeof(Mystira.App.Admin.Api.Models.CharacterMetadata))
+        {
             return "ApiCharacterMetadata";
+        }
+
         return type.Name;
     });
 });
@@ -143,6 +149,8 @@ builder.Services.AddScoped<IBadgeConfigurationApiService, BadgeConfigurationApiS
 builder.Services.AddScoped<IMediaApiService, MediaApiService>();
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
 builder.Services.AddScoped<IEmailService, AzureEmailService>();
+builder.Services.AddScoped<IGameSessionApiService, GameSessionApiService>();
+builder.Services.AddScoped<IAccountApiService, AccountApiService>();
 
 // Configure Health Checks
 builder.Services.AddHealthChecks()

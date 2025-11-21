@@ -1,8 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Mystira.App.Domain.Models;
+using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Api.Models;
 using Mystira.App.Api.Services;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;
 
@@ -34,8 +34,8 @@ public class CharacterMapsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting all character maps");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching character maps",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -53,8 +53,8 @@ public class CharacterMapsController : ControllerBase
             var characterMap = await _characterMapService.GetCharacterMapAsync(id);
             if (characterMap == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Character map not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -65,8 +65,8 @@ public class CharacterMapsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting character map {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching character map",
                 TraceId = HttpContext.TraceIdentifier
             });

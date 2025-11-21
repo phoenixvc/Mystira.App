@@ -24,20 +24,20 @@ namespace Mystira.App.Api.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new PasswordlessSignupResponse 
-                { 
-                    Success = false, 
-                    Message = "Invalid email or display name" 
+                return BadRequest(new PasswordlessSignupResponse
+                {
+                    Success = false,
+                    Message = "Invalid email or display name"
                 });
             }
 
             var (success, message, code) = await _passwordlessAuthService.RequestSignupAsync(request.Email, request.DisplayName);
-            
+
             _logger.LogInformation("Passwordless signup request: email={Email}, success={Success}", request.Email, success);
-            
-            return Ok(new PasswordlessSignupResponse 
-            { 
-                Success = success, 
+
+            return Ok(new PasswordlessSignupResponse
+            {
+                Success = success,
                 Message = message,
                 Email = success ? request.Email : null
             });
@@ -48,29 +48,29 @@ namespace Mystira.App.Api.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new PasswordlessVerifyResponse 
-                { 
-                    Success = false, 
-                    Message = "Invalid email or code" 
+                return BadRequest(new PasswordlessVerifyResponse
+                {
+                    Success = false,
+                    Message = "Invalid email or code"
                 });
             }
 
             var (success, message, account) = await _passwordlessAuthService.VerifySignupAsync(request.Email, request.Code);
-            
+
             if (!success || account == null)
             {
-                return Ok(new PasswordlessVerifyResponse 
-                { 
-                    Success = false, 
-                    Message = message 
+                return Ok(new PasswordlessVerifyResponse
+                {
+                    Success = false,
+                    Message = message
                 });
             }
 
             _logger.LogInformation("Passwordless signup verified: email={Email}", request.Email);
 
-            return Ok(new PasswordlessVerifyResponse 
-            { 
-                Success = true, 
+            return Ok(new PasswordlessVerifyResponse
+            {
+                Success = true,
                 Message = "Account created successfully",
                 Account = account,
                 Token = GenerateDemoToken(account.Auth0UserId)
@@ -82,20 +82,20 @@ namespace Mystira.App.Api.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new PasswordlessSigninResponse 
-                { 
-                    Success = false, 
-                    Message = "Invalid email address" 
+                return BadRequest(new PasswordlessSigninResponse
+                {
+                    Success = false,
+                    Message = "Invalid email address"
                 });
             }
 
             var (success, message, code) = await _passwordlessAuthService.RequestSigninAsync(request.Email);
-            
+
             _logger.LogInformation("Passwordless signin request: email={Email}, success={Success}", request.Email, success);
-            
-            return Ok(new PasswordlessSigninResponse 
-            { 
-                Success = success, 
+
+            return Ok(new PasswordlessSigninResponse
+            {
+                Success = success,
                 Message = message,
                 Email = success ? request.Email : null
             });
@@ -106,29 +106,29 @@ namespace Mystira.App.Api.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new PasswordlessVerifyResponse 
-                { 
-                    Success = false, 
-                    Message = "Invalid email or code" 
+                return BadRequest(new PasswordlessVerifyResponse
+                {
+                    Success = false,
+                    Message = "Invalid email or code"
                 });
             }
 
             var (success, message, account) = await _passwordlessAuthService.VerifySigninAsync(request.Email, request.Code);
-            
+
             if (!success || account == null)
             {
-                return Ok(new PasswordlessVerifyResponse 
-                { 
-                    Success = false, 
-                    Message = message 
+                return Ok(new PasswordlessVerifyResponse
+                {
+                    Success = false,
+                    Message = message
                 });
             }
 
             _logger.LogInformation("Passwordless signin verified: email={Email}", request.Email);
 
-            return Ok(new PasswordlessVerifyResponse 
-            { 
-                Success = true, 
+            return Ok(new PasswordlessVerifyResponse
+            {
+                Success = true,
                 Message = "Sign-in successful",
                 Account = account,
                 Token = GenerateDemoToken(account.Auth0UserId)

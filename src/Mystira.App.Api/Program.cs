@@ -1,11 +1,11 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using Mystira.App.Api.Adapters;
 using Mystira.App.Api.Data;
 using Mystira.App.Api.Services;
 using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,9 +37,15 @@ builder.Services.AddSwaggerGen(c =>
     c.CustomSchemaIds(type =>
     {
         if (type == typeof(Mystira.App.Domain.Models.CharacterMetadata))
+        {
             return "DomainCharacterMetadata";
+        }
+
         if (type == typeof(Mystira.App.Api.Models.CharacterMetadata))
+        {
             return "ApiCharacterMetadata";
+        }
+
         return type.Name;
     });
 });

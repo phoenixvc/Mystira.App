@@ -1,19 +1,19 @@
+using System.Globalization;
+using CsvHelper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Mystira.App.Domain.Models;
-using Mystira.App.CosmosConsole.Services;
 using Mystira.App.CosmosConsole.Data;
-using CsvHelper;
-using System.Globalization;
 using Mystira.App.CosmosConsole.Extensions;
+using Mystira.App.CosmosConsole.Services;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.CosmosConsole;
 
-class Program
+internal class Program
 {
-    static async Task<int> Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
         // Build configuration
         var configuration = new ConfigurationBuilder()
@@ -38,7 +38,7 @@ class Program
         // Add DbContext
         var connectionString = configuration.GetConnectionString("CosmosDb");
         var databaseName = configuration["Database:Name"] ?? "MystiraAppDb";
-        
+
         if (string.IsNullOrEmpty(connectionString))
         {
             Console.WriteLine("Error: Cosmos DB connection string not found in configuration.");
@@ -112,7 +112,7 @@ class Program
         }
     }
 
-    static async Task ExportGameSessionsToCsv(IServiceProvider serviceProvider, string outputFile, ILogger logger)
+    private static async Task ExportGameSessionsToCsv(IServiceProvider serviceProvider, string outputFile, ILogger logger)
     {
         try
         {
@@ -132,7 +132,7 @@ class Program
         }
     }
 
-    static async Task ShowScenarioStatistics(IServiceProvider serviceProvider, ILogger logger)
+    private static async Task ShowScenarioStatistics(IServiceProvider serviceProvider, ILogger logger)
     {
         try
         {
@@ -152,8 +152,8 @@ class Program
 
             foreach (var stat in statistics.OrderByDescending(s => s.TotalSessions))
             {
-                var completionRate = stat.TotalSessions > 0 
-                    ? (stat.CompletedSessions / (double)stat.TotalSessions) * 100 
+                var completionRate = stat.TotalSessions > 0
+                    ? (stat.CompletedSessions / (double)stat.TotalSessions) * 100
                     : 0;
 
                 Console.WriteLine($"\nScenario: {stat.ScenarioName}");
@@ -161,13 +161,13 @@ class Program
                 Console.WriteLine($"  Completed Sessions: {stat.CompletedSessions}");
                 Console.WriteLine($"  Completion Rate: {completionRate:F1}%");
                 Console.WriteLine("  Account Breakdown:");
-                
+
                 foreach (var accountStat in stat.AccountStatistics.OrderByDescending(a => a.SessionCount))
                 {
                     var accountCompletionRate = accountStat.SessionCount > 0
                         ? (accountStat.CompletedSessions / (double)accountStat.SessionCount) * 100
                         : 0;
-                        
+
                     Console.WriteLine($"    {accountStat.AccountEmail} ({accountStat.AccountAlias}):");
                     Console.WriteLine($"      Sessions: {accountStat.SessionCount}");
                     Console.WriteLine($"      Completed: {accountStat.CompletedSessions}");
@@ -185,7 +185,7 @@ class Program
         }
     }
 
-    static string GetScenarioName(string scenarioId)
+    private static string GetScenarioName(string scenarioId)
     {
         // This is a placeholder - in a real implementation, 
         // you might want to fetch scenario data or cache scenario names
