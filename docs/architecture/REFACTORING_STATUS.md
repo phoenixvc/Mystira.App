@@ -53,11 +53,11 @@
 4. ✅ Implement `UnitOfWork` with DbContext
 5. ✅ Register repositories in DI container (Api and Admin.Api)
 6. ✅ Migrate `GameSessionApiService` to use `GameSessionRepository`
-7. 🔄 Migrate `UserProfileApiService` to use `UserProfileRepository`
-8. 🔄 Migrate `AccountApiService` to use `AccountRepository`
-9. Create repositories for other entities:
-   - `IScenarioRepository`
-   - `IMediaRepository`
+7. ✅ Migrate `UserProfileApiService` to use `UserProfileRepository`
+8. ✅ Migrate `AccountApiService` to use `AccountRepository`
+9. ✅ Create repositories for other entities:
+   - ✅ `IScenarioRepository` and migrated `ScenarioApiService`
+   - 🔄 `IMediaRepository` (for MediaAsset entity)
 
 #### Phase 2: DTOs Migration
 

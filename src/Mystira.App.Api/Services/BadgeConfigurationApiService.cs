@@ -1,31 +1,36 @@
-using Microsoft.EntityFrameworkCore;
-using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
 using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 using YamlDotNet.Serialization;
 
 namespace Mystira.App.Api.Services;
 
 public class BadgeConfigurationApiService : IBadgeConfigurationApiService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly IBadgeConfigurationRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<BadgeConfigurationApiService> _logger;
 
-    public BadgeConfigurationApiService(MystiraAppDbContext context, ILogger<BadgeConfigurationApiService> logger)
+    public BadgeConfigurationApiService(
+        IBadgeConfigurationRepository repository,
+        IUnitOfWork unitOfWork,
+        ILogger<BadgeConfigurationApiService> logger)
     {
-        _context = context;
+        _repository = repository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
     public async Task<List<BadgeConfiguration>> GetAllBadgeConfigurationsAsync()
     {
-        var badgeConfigs = await _context.BadgeConfigurations.ToListAsync();
+        var badgeConfigs = (await _repository.GetAllAsync()).ToList();
 
         // Initialize with default data if empty
         if (!badgeConfigs.Any())
         {
             await InitializeDefaultBadgeConfigurationsAsync();
-            badgeConfigs = await _context.BadgeConfigurations.ToListAsync();
+            badgeConfigs = (await _repository.GetAllAsync()).ToList();
         }
 
         return badgeConfigs;
@@ -86,23 +91,24 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
         {
             badge.CreatedAt = DateTime.UtcNow;
             badge.UpdatedAt = DateTime.UtcNow;
+            await _repository.AddAsync(badge);
         }
 
-        _context.BadgeConfigurations.AddRange(defaultBadges);
-        await _context.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task<BadgeConfiguration?> GetBadgeConfigurationAsync(string id)
     {
-        return await _context.BadgeConfigurations.FirstOrDefaultAsync(bc => bc.Id == id);
+        return await _repository.GetByIdAsync(id);
     }
 
     public async Task<List<BadgeConfiguration>> GetBadgeConfigurationsByAxisAsync(string axis)
     {
-        return await _context.BadgeConfigurations
+        var configs = await _repository.GetByAxisAsync(axis);
+        return configs
             .Where(bc => bc.Axis.Equals(axis, StringComparison.OrdinalIgnoreCase))
             .OrderBy(bc => bc.Threshold)
-            .ToListAsync();
+            .ToList();
     }
 
     public async Task<BadgeConfiguration> CreateBadgeConfigurationAsync(CreateBadgeConfigurationRequest request)

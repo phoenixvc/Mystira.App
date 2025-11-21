@@ -162,6 +162,11 @@ builder.Services.AddScoped<IRepository<Mystira.App.Domain.Models.UserProfile>, R
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 builder.Services.AddScoped<IRepository<Mystira.App.Domain.Models.Account>, Repository<Mystira.App.Domain.Models.Account>>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
+builder.Services.AddScoped<IScenarioRepository, ScenarioRepository>();
+builder.Services.AddScoped<ICharacterMapRepository, CharacterMapRepository>();
+builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
+builder.Services.AddScoped<IBadgeConfigurationRepository, BadgeConfigurationRepository>();
+builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddScoped<IGameSessionApiService, GameSessionApiService>();
