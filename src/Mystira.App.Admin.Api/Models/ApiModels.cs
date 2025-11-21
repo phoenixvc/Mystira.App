@@ -684,3 +684,15 @@ public class PasswordlessSigninResponse
     public string Message { get; set; } = string.Empty;
     public string? Email { get; set; }
 }
+
+// Avatar Response Models
+public class AvatarResponse
+{
+    public Dictionary<string, List<string>> AgeGroupAvatars { get; set; } = new();
+}
+
+public class AvatarConfigurationResponse
+{
+    public string AgeGroup { get; set; } = string.Empty;
+    public List<string> AvatarMediaIds { get; set; } = new();
+}

@@ -1,301 +1,129 @@
-
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Admin.Api.Data;
-using Mystira.App.Admin.Api.Models;
 using Mystira.App.Domain.Models;
+using Mystira.App.Admin.Api.Models;
+using Mystira.App.Admin.Api.Data;
+using Microsoft.Extensions.Logging;
+using Mystira.App.Admin.Api.Services;
 
 namespace Mystira.App.Admin.Api.Services;
 
 public class UserProfileApiService : IUserProfileApiService
 {
-    private readonly MystiraAppDbContext _context;
-    private readonly ILogger<UserProfileApiService> _logger;
+    private readonly UserProfileService _userProfileService;
 
-    public UserProfileApiService(MystiraAppDbContext context, ILogger<UserProfileApiService> logger)
+    public UserProfileApiService(MystiraAppDbContext context, ILogger<UserProfileService> logger)
     {
-        _context = context;
-        _logger = logger;
+        _userProfileService = new UserProfileService(context, logger);
     }
 
-    public async Task<UserProfile> CreateProfileAsync(CreateUserProfileRequest request)
+    private static Mystira.App.Shared.Models.CreateUserProfileRequest MapToShared(CreateUserProfileRequest req) => new()
     {
-        var existingProfile = await GetProfileAsync(request.Name);
-        if (existingProfile != null)
-        {
-            throw new ArgumentException($"Profile already exists for name: {request.Name}");
-        }
+        Name = req.Name,
+        PreferredFantasyThemes = req.PreferredFantasyThemes,
+        AgeGroup = req.AgeGroup,
+        DateOfBirth = req.DateOfBirth,
+        IsGuest = req.IsGuest,
+        IsNpc = req.IsNpc,
+        AccountId = req.AccountId,
+        HasCompletedOnboarding = req.HasCompletedOnboarding
+    };
 
-        var invalidThemes = request.PreferredFantasyThemes.Where(t => FantasyTheme.Parse(t) == null).ToList();
-        if (invalidThemes.Any())
-        {
-            throw new ArgumentException($"Invalid fantasy themes: {string.Join(", ", invalidThemes)}");
-        }
-
-        if (AgeGroup.Parse(request.AgeGroup) == null)
-        {
-            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", StringEnum<AgeGroup>.ValueMap.Keys)}");
-        }
-
-        var profile = new UserProfile
-        {
-            Name = request.Name,
-            PreferredFantasyThemes = request.PreferredFantasyThemes.Select(t => FantasyTheme.Parse(t)!).ToList(),
-            AgeGroupName = request.AgeGroup,
-            DateOfBirth = request.DateOfBirth,
-            IsGuest = request.IsGuest,
-            IsNpc = request.IsNpc,
-            HasCompletedOnboarding = request.HasCompletedOnboarding,
-            AccountId = request.AccountId,
-            Pronouns = request.Pronouns,
-            Bio = request.Bio,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-
-        if (profile.DateOfBirth.HasValue)
-        {
-            profile.UpdateAgeGroupFromBirthDate();
-        }
-
-        _context.UserProfiles.Add(profile);
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("Created new user profile: {Name} (Guest: {IsGuest}, NPC: {IsNPC})", profile.Name, profile.IsGuest, profile.IsNpc);
-        return profile;
-    }
-
-    public async Task<UserProfile> CreateGuestProfileAsync(CreateGuestProfileRequest request)
+    private static Mystira.App.Shared.Models.UpdateUserProfileRequest MapToShared(UpdateUserProfileRequest req) => new()
     {
-        var name = !string.IsNullOrEmpty(request.Name)
-            ? request.Name
-            : RandomNameGenerator.GenerateGuestName(request.UseAdjectiveNames);
+        PreferredFantasyThemes = req.PreferredFantasyThemes,
+        AgeGroup = req.AgeGroup,
+        DateOfBirth = req.DateOfBirth,
+        HasCompletedOnboarding = req.HasCompletedOnboarding,
+        IsGuest = req.IsGuest,
+        IsNpc = req.IsNpc,
+        AccountId = req.AccountId,
+        Pronouns = req.Pronouns,
+        Bio = req.Bio
+    };
 
-        var baseName = name;
-        var counter = 1;
-        while (await GetProfileAsync(name) != null)
-        {
-            name = $"{baseName} {counter}";
-            counter++;
-        }
-
-        if (AgeGroup.Parse(request.AgeGroup) == null)
-        {
-            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", StringEnum<AgeGroup>.ValueMap.Keys)}");
-        }
-
-        var profile = new UserProfile
-        {
-            Name = name,
-            PreferredFantasyThemes = new List<FantasyTheme>(),
-            AgeGroupName = request.AgeGroup,
-            IsGuest = true,
-            IsNpc = false,
-            HasCompletedOnboarding = true,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-
-        _context.UserProfiles.Add(profile);
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("Created guest profile: {Name}", profile.Name);
-        return profile;
-    }
-
-    public async Task<List<UserProfile>> CreateMultipleProfilesAsync(CreateMultipleProfilesRequest request)
+    private static Mystira.App.Shared.Models.CreateGuestProfileRequest MapToShared(CreateGuestProfileRequest req) => new()
     {
-        var createdProfiles = new List<UserProfile>();
+        Name = req.Name,
+        AgeGroup = req.AgeGroup,
+        UseAdjectiveNames = req.UseAdjectiveNames
+    };
 
-        foreach (var profileRequest in request.Profiles)
-        {
-            try
-            {
-                var profile = await CreateProfileAsync(profileRequest);
-                createdProfiles.Add(profile);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to create profile {Name} in batch", profileRequest.Name);
-            }
-        }
-
-        _logger.LogInformation("Created {Count} profiles in batch", createdProfiles.Count);
-        return createdProfiles;
-    }
-
-    public async Task<UserProfile?> GetProfileAsync(string name)
+    private static Mystira.App.Shared.Models.CreateMultipleProfilesRequest MapToShared(CreateMultipleProfilesRequest req) => new()
     {
-        return await _context.UserProfiles
-            .Include(p => p.EarnedBadges)
-            .FirstOrDefaultAsync(p => p.Name == name);
-    }
+        Profiles = req.Profiles.Select(MapToShared).ToList()
+    };
 
-    public async Task<UserProfile?> GetProfileByIdAsync(string id)
-    {
-        return await _context.UserProfiles
-            .Include(p => p.EarnedBadges)
-            .FirstOrDefaultAsync(p => p.Id == id);
-    }
-
-    public async Task<UserProfile?> UpdateProfileAsync(string name, UpdateUserProfileRequest request)
-    {
-        var profile = await GetProfileAsync(name);
-        if (profile == null)
-        {
-            return null;
-        }
-
-        if (request.PreferredFantasyThemes != null)
-        {
-            var invalidThemes = request.PreferredFantasyThemes.Where(t => FantasyTheme.Parse(t) == null).ToList();
-            if (invalidThemes.Any())
-            {
-                throw new ArgumentException($"Invalid fantasy themes: {string.Join(", ", invalidThemes)}");
-            }
-
-            profile.PreferredFantasyThemes = request.PreferredFantasyThemes.Select(t => FantasyTheme.Parse(t)!).ToList();
-        }
-
-        if (request.AgeGroup != null)
-        {
-            if (AgeGroup.Parse(request.AgeGroup) == null)
-            {
-                throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", StringEnum<AgeGroup>.ValueMap.Keys)}");
-            }
-
-            profile.AgeGroupName = request.AgeGroup;
-        }
-
-        if (request.DateOfBirth.HasValue)
-        {
-            profile.DateOfBirth = request.DateOfBirth;
-            profile.UpdateAgeGroupFromBirthDate();
-        }
-
-        if (request.HasCompletedOnboarding.HasValue)
-        {
-            profile.HasCompletedOnboarding = request.HasCompletedOnboarding.Value;
-        }
-
-        if (request.IsGuest.HasValue)
-        {
-            profile.IsGuest = request.IsGuest.Value;
-        }
-
-        if (request.IsNpc.HasValue)
-        {
-            profile.IsNpc = request.IsNpc.Value;
-        }
-
-        if (request.AccountId != null)
-        {
-            profile.AccountId = request.AccountId;
-        }
-
-        if (request.Pronouns != null)
-        {
-            profile.Pronouns = request.Pronouns;
-        }
-
-        if (request.Bio != null)
-        {
-            profile.Bio = request.Bio;
-        }
-
-        profile.UpdatedAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("Updated user profile: {Name}", profile.Name);
-        return profile;
-    }
-
-    public async Task<bool> DeleteProfileAsync(string name)
-    {
-        var profile = await GetProfileAsync(name);
-        if (profile == null)
-        {
-            return false;
-        }
-
-        var sessions = await _context.GameSessions
-            .Where(s => s.ProfileId == profile.Id)
-            .ToListAsync();
-
-        var badges = await _context.UserBadges
-            .Where(b => b.UserProfileId == profile.Id)
-            .ToListAsync();
-
-        _context.GameSessions.RemoveRange(sessions);
-        _context.UserBadges.RemoveRange(badges);
-        _context.UserProfiles.Remove(profile);
-
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("Deleted user profile and associated data: {Name} (badges: {BadgeCount})", name, badges.Count);
-        return true;
-    }
-
-    public async Task<bool> CompleteOnboardingAsync(string name)
-    {
-        var profile = await GetProfileAsync(name);
-        if (profile == null)
-        {
-            return false;
-        }
-
-        profile.HasCompletedOnboarding = true;
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("Completed onboarding for user: {Name}", name);
-        return true;
-    }
-
-    public async Task<List<UserProfile>> GetAllProfilesAsync()
-    {
-        return await _context.UserProfiles
-            .Include(p => p.EarnedBadges)
-            .OrderBy(p => p.Name)
-            .ToListAsync();
-    }
-
-    public async Task<List<UserProfile>> GetNonGuestProfilesAsync()
-    {
-        return await _context.UserProfiles
-            .Include(p => p.EarnedBadges)
-            .Where(p => !p.IsGuest)
-            .OrderBy(p => p.Name)
-            .ToListAsync();
-    }
-
-    public async Task<List<UserProfile>> GetGuestProfilesAsync()
-    {
-        return await _context.UserProfiles
-            .Include(p => p.EarnedBadges)
-            .Where(p => p.IsGuest)
-            .OrderBy(p => p.CreatedAt)
-            .ToListAsync();
-    }
-
-    public async Task<bool> AssignCharacterToProfileAsync(string profileId, string characterId, bool isNpc = false)
-    {
-        var profile = await _context.UserProfiles.FirstOrDefaultAsync(p => p.Id == profileId);
-        if (profile == null)
-        {
-            return false;
-        }
-
-        var character = await _context.CharacterMaps.FirstOrDefaultAsync(c => c.Id == characterId);
-        if (character == null)
-        {
-            return false;
-        }
-
-        profile.IsNpc = isNpc;
-        profile.UpdatedAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("Assigned character {CharacterId} to profile {ProfileId} (NPC: {IsNPC})", characterId, profileId, isNpc);
-        return true;
-    }
+    public async Task<UserProfile> CreateProfileAsync(CreateUserProfileRequest request) => await _userProfileService.CreateProfileAsync(MapToShared(request));
+    public async Task<UserProfile> CreateGuestProfileAsync(CreateGuestProfileRequest request) => await _userProfileService.CreateGuestProfileAsync(MapToShared(request));
+    public async Task<List<UserProfile>> CreateMultipleProfilesAsync(CreateMultipleProfilesRequest request) => await _userProfileService.CreateMultipleProfilesAsync(MapToShared(request));
+    public async Task<UserProfile?> GetProfileAsync(string name) => await _userProfileService.GetProfileAsync(name);
+    public async Task<UserProfile?> GetProfileByIdAsync(string id) => await _userProfileService.GetProfileByIdAsync(id);
+    public async Task<UserProfile?> UpdateProfileAsync(string name, UpdateUserProfileRequest request) => await _userProfileService.UpdateProfileAsync(name, MapToShared(request));
+    public async Task<UserProfile?> UpdateProfileByIdAsync(string id, UpdateUserProfileRequest request) => await _userProfileService.UpdateProfileByIdAsync(id, MapToShared(request));
+    public async Task<bool> DeleteProfileAsync(string name) => await _userProfileService.DeleteProfileAsync(name);
+    public async Task<bool> CompleteOnboardingAsync(string name) => await _userProfileService.CompleteOnboardingAsync(name);
+    public async Task<List<UserProfile>> GetAllProfilesAsync() => await _userProfileService.GetAllProfilesAsync();
+    public async Task<List<UserProfile>> GetNonGuestProfilesAsync() => await _userProfileService.GetNonGuestProfilesAsync();
+    public async Task<List<UserProfile>> GetGuestProfilesAsync() => await _userProfileService.GetGuestProfilesAsync();
+    public async Task<bool> AssignCharacterToProfileAsync(string profileId, string characterId, bool isNpc = false) => await _userProfileService.AssignCharacterToProfileAsync(profileId, characterId, isNpc);
 }
+    private readonly UserProfileService _userProfileService;
+
+    public UserProfileApiService(MystiraAppDbContext context, ILogger<UserProfileService> logger)
+    {
+        _userProfileService = new UserProfileService(context, logger);
+    }
+
+    private static Mystira.App.Shared.Models.CreateUserProfileRequest MapToShared(CreateUserProfileRequest req) => new()
+    {
+        Name = req.Name,
+        PreferredFantasyThemes = req.PreferredFantasyThemes,
+        AgeGroup = req.AgeGroup,
+        DateOfBirth = req.DateOfBirth,
+        IsGuest = req.IsGuest,
+        IsNpc = req.IsNpc,
+        AccountId = req.AccountId,
+        HasCompletedOnboarding = req.HasCompletedOnboarding
+    };
+
+    private static Mystira.App.Shared.Models.UpdateUserProfileRequest MapToShared(UpdateUserProfileRequest req) => new()
+    {
+        PreferredFantasyThemes = req.PreferredFantasyThemes,
+        AgeGroup = req.AgeGroup,
+        DateOfBirth = req.DateOfBirth,
+        HasCompletedOnboarding = req.HasCompletedOnboarding,
+        IsGuest = req.IsGuest,
+        IsNpc = req.IsNpc,
+        AccountId = req.AccountId,
+        Pronouns = req.Pronouns,
+        Bio = req.Bio
+    };
+
+    private static Mystira.App.Shared.Models.CreateGuestProfileRequest MapToShared(CreateGuestProfileRequest req) => new()
+    {
+        Name = req.Name,
+        AgeGroup = req.AgeGroup,
+        UseAdjectiveNames = req.UseAdjectiveNames
+    };
+
+    private static Mystira.App.Shared.Models.CreateMultipleProfilesRequest MapToShared(CreateMultipleProfilesRequest req) => new()
+    {
+        Profiles = req.Profiles.Select(MapToShared).ToList()
+    };
+
+    public async Task<UserProfile> CreateProfileAsync(CreateUserProfileRequest request) => await _userProfileService.CreateProfileAsync(MapToShared(request));
+    public async Task<UserProfile> CreateGuestProfileAsync(CreateGuestProfileRequest request) => await _userProfileService.CreateGuestProfileAsync(MapToShared(request));
+    public async Task<List<UserProfile>> CreateMultipleProfilesAsync(CreateMultipleProfilesRequest request) => await _userProfileService.CreateMultipleProfilesAsync(MapToShared(request));
+    public async Task<UserProfile?> GetProfileAsync(string name) => await _userProfileService.GetProfileAsync(name);
+    public async Task<UserProfile?> GetProfileByIdAsync(string id) => await _userProfileService.GetProfileByIdAsync(id);
+    public async Task<UserProfile?> UpdateProfileAsync(string name, UpdateUserProfileRequest request) => await _userProfileService.UpdateProfileAsync(name, MapToShared(request));
+    public async Task<UserProfile?> UpdateProfileByIdAsync(string id, UpdateUserProfileRequest request) => await _userProfileService.UpdateProfileByIdAsync(id, MapToShared(request));
+    public async Task<bool> DeleteProfileAsync(string name) => await _userProfileService.DeleteProfileAsync(name);
+    public async Task<bool> CompleteOnboardingAsync(string name) => await _userProfileService.CompleteOnboardingAsync(name);
+    public async Task<List<UserProfile>> GetAllProfilesAsync() => await _userProfileService.GetAllProfilesAsync();
+    public async Task<List<UserProfile>> GetNonGuestProfilesAsync() => await _userProfileService.GetNonGuestProfilesAsync();
+    public async Task<List<UserProfile>> GetGuestProfilesAsync() => await _userProfileService.GetGuestProfilesAsync();
+    public async Task<bool> AssignCharacterToProfileAsync(string profileId, string characterId, bool isNpc = false) => await _userProfileService.AssignCharacterToProfileAsync(profileId, characterId, isNpc);
+}
+>>>>>>> origin/dev

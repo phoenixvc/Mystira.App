@@ -88,7 +88,7 @@ public class ScenarioApiService : IScenarioApiService
         {
             foreach (var archetype in request.Archetypes)
             {
-                query = query.Where(s => s.Archetypes.Select(a => a.Value).Contains(archetype));
+                query = query.Where(s => s.Archetypes.Any(a => a.Value == archetype));
             }
         }
 
@@ -96,7 +96,7 @@ public class ScenarioApiService : IScenarioApiService
         {
             foreach (var axis in request.CoreAxes)
             {
-                query = query.Where(s => s.CoreAxes.Select(a => a.Value).Contains(axis));
+                query = query.Where(s => s.CoreAxes.Any(a => a.Value == axis));
             }
         }
 
@@ -150,10 +150,10 @@ public class ScenarioApiService : IScenarioApiService
             Tags = request.Tags,
             Difficulty = request.Difficulty,
             SessionLength = request.SessionLength,
-            Archetypes = request.Archetypes.Select(a => Archetype.Parse(a)!).ToList(),
+            Archetypes = request.Archetypes?.Select(a => Archetype.Parse(a)!).ToList() ?? new List<Archetype>(),
             AgeGroup = request.AgeGroup,
             MinimumAge = request.MinimumAge,
-            CoreAxes = request.CoreAxes.Select(a => CoreAxis.Parse(a)!).ToList(),
+            CoreAxes = request.CoreAxes?.Select(a => CoreAxis.Parse(a)!).ToList() ?? new List<CoreAxis>(),
             Characters = request.Characters,
             Scenes = request.Scenes,
             CreatedAt = DateTime.UtcNow
@@ -192,10 +192,10 @@ public class ScenarioApiService : IScenarioApiService
         scenario.Tags = request.Tags;
         scenario.Difficulty = request.Difficulty;
         scenario.SessionLength = request.SessionLength;
-        scenario.Archetypes = request.Archetypes.Select(a => Archetype.Parse(a)!).ToList();
+        scenario.Archetypes = request.Archetypes?.Select(a => Archetype.Parse(a)!).ToList() ?? new List<Archetype>();
         scenario.AgeGroup = request.AgeGroup;
         scenario.MinimumAge = request.MinimumAge;
-        scenario.CoreAxes = request.CoreAxes.Select(a => CoreAxis.Parse(a)!).ToList();
+        scenario.CoreAxes = request.CoreAxes?.Select(a => CoreAxis.Parse(a)!).ToList() ?? new List<CoreAxis>();
         scenario.Characters = request.Characters;
         scenario.Scenes = request.Scenes;
 

@@ -15,12 +15,29 @@ builder.Services.AddScoped(sp => new HttpClient
     BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
 });
 
-// Configure API HttpClient
+// Register AuthService first (no dependencies)
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Register the auth header handler
+builder.Services.AddScoped<AuthHeaderHandler>();
+
+// Configure API HttpClient with auth header handler
 builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
 {
-    client.BaseAddress = new Uri(builder.Configuration.GetValue<string>("ApiBaseUrl") ?? "https://mystira-app-dev-api.azurewebsites.net/");
-    client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
-});
+    var url = builder.Configuration.GetConnectionString("MystiraApiBaseUrl");
+    if (string.IsNullOrEmpty(url))
+    {
+        Console.WriteLine($"API url could not be retrieved from configuration");
+    }
+    else
+    {
+        Console.WriteLine($"Connecting to API: {url}");
+    
+        client.BaseAddress = new Uri(url);
+        client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
+    }
+})
+.AddHttpMessageHandler<AuthHeaderHandler>();
 
 // Configure JSON serialization with enum string conversion
 builder.Services.Configure<JsonSerializerOptions>(options =>
@@ -42,10 +59,13 @@ builder.Services.Configure<JsonSerializerOptions>(options =>
 // }
 
 // Register services
+builder.Services.AddScoped<ITokenProvider, LocalStorageTokenProvider>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<IGameSessionService, GameSessionService>();
 builder.Services.AddScoped<IIndexedDbService, IndexedDbService>();
 builder.Services.AddScoped<ICharacterAssignmentService, CharacterAssignmentService>();
+builder.Services.AddSingleton<IImageCacheService, ImageCacheService>();
 
 // Logging configuration
 builder.Logging.SetMinimumLevel(LogLevel.Information);
@@ -63,12 +83,14 @@ try
 
     // Verify service registration
     var authService = host.Services.GetService<IAuthService>();
+    var profileService = host.Services.GetService<IProfileService>();
     var apiClient = host.Services.GetService<IApiClient>();
     var gameSessionService = host.Services.GetService<IGameSessionService>();
     var indexedDbService = host.Services.GetService<IIndexedDbService>();
 
     logger.LogInformation("Services registered:");
     logger.LogInformation("- AuthService: {AuthService}", authService?.GetType().Name ?? "Not registered");
+    logger.LogInformation("- ProfileService: {ProfileService}", profileService?.GetType().Name ?? "Not registered");
     logger.LogInformation("- ApiClient: {ApiClient}", apiClient?.GetType().Name ?? "Not registered");
     logger.LogInformation("- GameSessionService: {GameSessionService}", gameSessionService?.GetType().Name ?? "Not registered");
     logger.LogInformation("- IndexedDbService: {IndexedDbService}", indexedDbService?.GetType().Name ?? "Not registered");

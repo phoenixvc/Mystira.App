@@ -140,8 +140,7 @@ public class ApiIntegrationTests : IClassFixture<TestWebApplicationFactory<Progr
         var request = new
         {
             ScenarioId = "test_scenario_id",
-            DmName = "test_dm",
-            PlayerNames = "test_name",
+            PlayerNames = new[] { "test_player" },
             TargetAgeGroup = "Ages9to12"
         };
         
@@ -150,7 +149,8 @@ public class ApiIntegrationTests : IClassFixture<TestWebApplicationFactory<Progr
         var response = await _client.PostAsJsonAsync("/api/gamesessions", JsonConvert.SerializeObject(request));
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        // Should return Unauthorized since auth is now required
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]

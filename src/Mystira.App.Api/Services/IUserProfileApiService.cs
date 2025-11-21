@@ -8,11 +8,10 @@ public interface IUserProfileApiService
     Task<UserProfile> CreateProfileAsync(CreateUserProfileRequest request);
     Task<UserProfile> CreateGuestProfileAsync(CreateGuestProfileRequest request);
     Task<List<UserProfile>> CreateMultipleProfilesAsync(CreateMultipleProfilesRequest request);
-    Task<UserProfile?> GetProfileAsync(string name);
     Task<UserProfile?> GetProfileByIdAsync(string id);
-    Task<UserProfile?> UpdateProfileAsync(string name, UpdateUserProfileRequest request);
-    Task<bool> DeleteProfileAsync(string name);
-    Task<bool> CompleteOnboardingAsync(string name);
+    Task<UserProfile?> UpdateProfileByIdAsync(string id, UpdateUserProfileRequest request);
+    Task<bool> DeleteProfileAsync(string id);
+    Task<bool> CompleteOnboardingAsync(string id);
     Task<List<UserProfile>> GetAllProfilesAsync();
     Task<List<UserProfile>> GetNonGuestProfilesAsync();
     Task<List<UserProfile>> GetGuestProfilesAsync();

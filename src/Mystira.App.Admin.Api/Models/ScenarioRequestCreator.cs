@@ -298,7 +298,7 @@ public static class ScenarioRequestCreator
         var metadata = new ScenarioCharacterMetadata
         {
             Role = ToStringList(roleObj),
-            Archetype = ToEnumList<Archetype>(archetypeObj),
+            Archetype = ToStringList(archetypeObj).Select(a => Archetype.Parse(a)!).ToList(),
             Traits = ToStringList(traitsObj)
         };
 
@@ -446,13 +446,10 @@ public static class ScenarioRequestCreator
         {
             if (echoTypeObj != null)
             {
-                var echoTypeStr = echoTypeObj.ToString();
-                var parsedEchoType = EchoType.Parse(echoTypeStr);
-                if (parsedEchoType == null)
-                {
-                    throw new ArgumentException($"Invalid echo type: '{echoTypeStr}'");
-                }
-                echoLog.EchoType = parsedEchoType;
+                var parsed = EchoType.Parse(echoTypeObj.ToString());
+                if (parsed == null)
+                    throw new ArgumentException($"Invalid EchoType: {echoTypeObj}");
+                echoLog.EchoType = parsed;
             }
             else
             {
@@ -590,6 +587,7 @@ public static class ScenarioRequestCreator
         {
             if (echoTypeObj != null)
             {
+<<<<<<< HEAD
                 var echoTypeStr = echoTypeObj.ToString();
                 var parsedEchoType = EchoType.Parse(echoTypeStr);
                 if (parsedEchoType == null)
@@ -597,6 +595,12 @@ public static class ScenarioRequestCreator
                     throw new ArgumentException($"Invalid echo type: '{echoTypeStr}'");
                 }
                 reveal.EchoType = parsedEchoType;
+=======
+                var parsed = EchoType.Parse(echoTypeObj.ToString());
+                if (parsed == null)
+                    throw new ArgumentException($"Invalid EchoType: {echoTypeObj}");
+                reveal.EchoType = parsed;
+>>>>>>> origin/dev
             }
             else
             {

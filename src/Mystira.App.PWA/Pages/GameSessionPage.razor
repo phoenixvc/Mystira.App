@@ -33,17 +33,22 @@ else
         <div class="row">
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <h2 class="text-primary-custom mb-1">
-                            <MarkdownRenderer Content="@gameSession.CurrentScene.Title" />
-                        </h2>
-                        <small class="text-muted">@gameSession.ScenarioName</small>
+                    <div class="d-flex align-items-center">
+                        <div class="me-4">
+                            <h2 class="text-primary-custom mb-1">
+                                @gameSession.Scenario.Title
+                            </h2>
+                        </div>
                     </div>
-                    <div>
-                        <a href="/" class="btn btn-outline-secondary">
-                            <i class="fas fa-home me-1"></i>
-                            Exit
-                        </a>
+                    <div class="d-flex align-items-center gap-3">
+                        <button class="btn btn-outline-danger" @onclick="ExitAdventure" disabled="@isProcessing">
+                            <i class="fas fa-door-open me-1"></i> Exit Adventure
+                        </button>                        
+                        <CachedMystiraImage 
+                            MediaId="image-final-logo-fe3f75db"
+                            Alt="Mystira Logo"
+                            Width="120"
+                            Height="120" />
                     </div>
                 </div>
             </div>
@@ -123,7 +128,10 @@ else
                                 @if (!rollResult.HasValue)
                                 {
                                     <h5 class="mb-4 text-muted">Time to test your luck!</h5>
-                                    <p class="mb-4">You need to roll @gameSession.CurrentScene.RollTarget or higher.</p>
+                                    if (gameSession.Scenario.AgeGroup != "1-2")
+                                    {
+                                        <p class="mb-4">You need to roll @gameSession.CurrentScene.RollTarget or higher.</p>
+                                    }
                                     <div class="dice-roller-container">
                                         <DiceRoller DiceCount="1" Faces="20" SoundOn="true" HapticsOn="true" DarkMode="false" 
                                                     RollDurationMs="1500" WaitAfterRollDuration="500" OnRollResult="HandleRollResult"/>
@@ -154,11 +162,6 @@ else
                                                 {
                                                     string[] youngExclamations = new[] { "Yipee!", "Hooray!", "Wow!" };
                                                     successMsg = youngExclamations[new Random().Next(youngExclamations.Length)];
-                                                }
-                                                else if (gameSession.Scenario.AgeGroup == "3-5")
-                                                {
-                                                    string[] olderExclamations = new[] { "Yipee!", "Hooray!", "Wow!", "Neat!", "Tada!", "Whoa!", "Good Job!", "Amazing!" };
-                                                    successMsg = olderExclamations[new Random().Next(olderExclamations.Length)];
                                                 }
                                                 else
                                                 {
@@ -258,11 +261,11 @@ else
         GameSessionService.GameSessionChanged += OnGameSessionChanged;
         
         // If no game session, redirect to home
-        if (gameSession == null)
-        {
-            Logger.LogWarning("No active game session found, redirecting to home");
-            Navigation.NavigateTo("/");
-        }
+        // if (gameSession == null)
+        // {
+        //     Logger.LogWarning("No active game session found, redirecting to home");
+        //     Navigation.NavigateTo("/");
+        // }
     }
 
     private void OnGameSessionChanged(object? sender, GameSession? session)
@@ -307,6 +310,21 @@ else
         {
             isProcessing = false;
             StateHasChanged();
+        }
+    }
+
+    private void ExitAdventure()
+    {
+        try
+        {
+            isProcessing = true;
+            // Clear the current game session and navigate back to Home
+            GameSessionService.ClearGameSession();
+            Navigation.NavigateTo("/");
+        }
+        finally
+        {
+            isProcessing = false;
         }
     }
 

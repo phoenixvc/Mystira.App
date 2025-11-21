@@ -317,4 +317,57 @@ public class MediaAdminController : ControllerBase
             });
         }
     }
+
+    /// <summary>
+    /// Upload media from a zip file containing media-metadata.json and media files
+    /// Processes metadata first, then uploads media files if metadata import succeeds
+    /// </summary>
+    [HttpPost("upload-zip")]
+    public async Task<ActionResult<ZipUploadResult>> UploadMediaZip(
+        [FromForm] IFormFile zipFile,
+        [FromForm] bool overwriteMetadata = false,
+        [FromForm] bool overwriteMedia = false)
+    {
+        try
+        {
+            if (zipFile == null || zipFile.Length == 0)
+            {
+                return BadRequest(new ErrorResponse
+                {
+                    Message = "No zip file provided",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            if (!zipFile.FileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new ErrorResponse
+                {
+                    Message = "File must be a zip file (.zip extension required)",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            var result = await _mediaService.UploadMediaFromZipAsync(zipFile, overwriteMetadata, overwriteMedia);
+
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+            else
+            {
+                return BadRequest(result);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error uploading media from zip file: {FileName}", zipFile?.FileName);
+            return StatusCode(500, new ZipUploadResult
+            {
+                Success = false,
+                Message = "Internal server error while uploading media from zip",
+                AllErrors = new List<string> { ex.Message }
+            });
+        }
+    }
 }

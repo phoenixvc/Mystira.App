@@ -15,4 +15,5 @@ public interface IScenarioApiService
     Task ValidateScenarioAsync(Scenario scenario);
     Task<ScenarioReferenceValidation> ValidateScenarioReferencesAsync(string scenarioId, bool includeMetadataValidation = true);
     Task<List<ScenarioReferenceValidation>> ValidateAllScenarioReferencesAsync(bool includeMetadataValidation = true);
+    Task<ScenarioGameStateResponse> GetScenariosWithGameStateAsync(string accountId);
 }

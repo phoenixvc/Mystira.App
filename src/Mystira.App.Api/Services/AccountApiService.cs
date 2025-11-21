@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Mystira.App.Api.Data;
 using Mystira.App.Domain.Models;
 
@@ -200,6 +199,43 @@ public class AccountApiService : IAccountApiService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error validating account {Email}", email);
+            return false;
+        }
+    }
+
+    public async Task<bool> AddCompletedScenarioAsync(string accountId, string scenarioId)
+    {
+        try
+        {
+            var account = await GetAccountByIdAsync(accountId);
+            if (account == null)
+            {
+                _logger.LogWarning("Account not found: {AccountId}", accountId);
+                return false;
+            }
+            
+            if (account.CompletedScenarioIds == null)
+                account.CompletedScenarioIds = new List<string>();
+            
+            if (!account.CompletedScenarioIds.Contains(scenarioId))
+            {
+                account.CompletedScenarioIds.Add(scenarioId);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Added completed scenario {ScenarioId} to account {AccountId}", 
+                    scenarioId, accountId);
+            }
+            else
+            {
+                _logger.LogInformation("Scenario {ScenarioId} already marked as completed for account {AccountId}", 
+                    scenarioId, accountId);
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding completed scenario {ScenarioId} for account {AccountId}", 
+                scenarioId, accountId);
             return false;
         }
     }

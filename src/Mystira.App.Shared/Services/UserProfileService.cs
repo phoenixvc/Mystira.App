@@ -1,4 +1,3 @@
-
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Domain.Models;
 using System.Linq;

@@ -280,3 +280,33 @@ public class BundleUploadResult
     public List<string> Errors { get; set; } = new();
     public List<string> Warnings { get; set; } = new();
 }
+
+/// <summary>
+/// Result for metadata import during zip upload
+/// </summary>
+public class MetadataImportResult
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public int ImportedCount { get; set; }
+    public List<string> Errors { get; set; } = new();
+    public List<string> Warnings { get; set; } = new();
+}
+
+/// <summary>
+/// Result model for zip file upload with metadata-first approach
+/// </summary>
+public class ZipUploadResult
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+
+    public MetadataImportResult? MetadataResult { get; set; }
+
+    public int UploadedMediaCount { get; set; }
+    public int FailedMediaCount { get; set; }
+    public List<string> SuccessfulMediaUploads { get; set; } = new();
+    public List<string> MediaErrors { get; set; } = new();
+
+    public List<string> AllErrors { get; set; } = new();
+}

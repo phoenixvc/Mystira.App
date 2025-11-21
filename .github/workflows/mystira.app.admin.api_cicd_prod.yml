@@ -1,0 +1,94 @@
+name: Mystira.App.Admin API CI/CD (prod only)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/Mystira.App.Admin.Api/**'
+      - 'src/Mystira.App.Domain/**'
+      - '.github/workflows/ci-cd-admin-prod.yml'
+  pull_request:
+    branches: [ main ]  # PRs targeting main (prod)
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/Mystira.App.Admin.Api/**'
+      - 'src/Mystira.App.Domain/**'
+      - '.github/workflows/ci-cd-admin-prod.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mystira-app-admin-api-prod-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  AZURE_WEBAPP_NAME: 'prod-wus-app-mystira-api-admin'
+  AZURE_WEBAPP_PACKAGE_PATH: './publish'
+  ARTIFACT_NAME: 'mystira-app-admin-api'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+
+  # Boolean: evaluates to "true"/"false"
+  HAS_PUBLISH_PROFILE_PROD_ADMIN: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN != '' }}
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test --no-build --configuration Release --verbosity normal
+
+      - name: Publish Admin API
+        run: dotnet publish src/Mystira.App.Admin.Api/Mystira.App.Admin.Api.csproj --configuration Release --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+  deploy-prod:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    # ✅ Only deploy when there is a push directly to main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    environment: production
+
+    steps:
+      - name: Validate required prod secrets
+        if: env.HAS_PUBLISH_PROFILE_PROD_ADMIN != 'true'
+        run: |
+          echo "ERROR: Secret AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN is not set."
+          exit 1
+
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+      - name: Deploy Admin API to Azure Web App (Production)
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN }}
+          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}

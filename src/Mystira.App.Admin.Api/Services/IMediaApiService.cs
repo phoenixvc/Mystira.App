@@ -89,4 +89,14 @@ public interface IMediaApiService
     /// <param name="fileName">The filename to resolve</param>
     /// <returns>The media URL or null if not found</returns>
     Task<string?> GetMediaUrlAsync(string fileName);
+
+    /// <summary>
+    /// Uploads media from a zip file containing media-metadata.json and media files
+    /// Processes metadata first, then uploads media files if metadata import succeeds
+    /// </summary>
+    /// <param name="zipFile">The zip file containing media-metadata.json and media files</param>
+    /// <param name="overwriteMetadata">Whether to overwrite existing metadata entries</param>
+    /// <param name="overwriteMedia">Whether to overwrite existing media files</param>
+    /// <returns>Zip upload result with metadata and media upload information</returns>
+    Task<ZipUploadResult> UploadMediaFromZipAsync(IFormFile zipFile, bool overwriteMetadata = false, bool overwriteMedia = false);
 }

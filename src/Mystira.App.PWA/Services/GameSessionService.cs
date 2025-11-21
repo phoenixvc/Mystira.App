@@ -151,12 +151,20 @@ public class GameSessionService : IGameSessionService
                 return false;
             }
 
+            // Call API to progress the session to the new scene
+            var updatedSession = await _apiClient.ProgressSessionSceneAsync(CurrentGameSession.Id, sceneId);
+            if (updatedSession == null)
+            {
+                _logger.LogWarning("Failed to progress session via API for scene: {SceneId}, continuing with local state", sceneId);
+            }
+
             // Resolve Media URLs
             scene.AudioUrl = !string.IsNullOrEmpty(scene.Media?.Audio) ? await _apiClient.GetMediaUrlFromId(scene.Media.Audio) : null;
             scene.ImageUrl = !string.IsNullOrEmpty(scene.Media?.Image) ? await _apiClient.GetMediaUrlFromId(scene.Media.Image) : null;
             scene.VideoUrl = !string.IsNullOrEmpty(scene.Media?.Video) ? await _apiClient.GetMediaUrlFromId(scene.Media.Video) : null;
 
             CurrentGameSession.CurrentScene = scene;
+            CurrentGameSession.CurrentSceneId = sceneId;
 
             // Progress the session on the server
             var progressedSession = await _apiClient.ProgressSessionSceneAsync(CurrentGameSession.Id, sceneId);
@@ -164,7 +172,7 @@ public class GameSessionService : IGameSessionService
             {
                 _logger.LogWarning("Failed to progress session on server, but continuing locally for scene: {SceneId}", sceneId);
             }
-
+            
             // Check if this is a final scene
             if (scene is { SceneType: SceneType.Special, NextSceneId: null })
             {
@@ -205,10 +213,36 @@ public class GameSessionService : IGameSessionService
                 // Still mark as completed locally for UI consistency
             }
 
+<<<<<<< HEAD
             CurrentGameSession.IsCompleted = true;
 
             // Trigger the event to notify subscribers
             GameSessionChanged?.Invoke(this, CurrentGameSession);
+=======
+            // Mark scenario as completed for the account
+            var account = await _authService.GetCurrentAccountAsync();
+            if (account != null && CurrentGameSession != null)
+            {
+                var success = await _apiClient.CompleteScenarioForAccountAsync(account.Id, CurrentGameSession.ScenarioId);
+                if (success)
+                {
+                    _logger.LogInformation("Marked scenario {ScenarioId} as completed for account {AccountId}", 
+                        CurrentGameSession.ScenarioId, account.Id);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to mark scenario as completed for account");
+                }
+            }
+
+            if (CurrentGameSession != null)
+            {
+                CurrentGameSession.IsCompleted = true;
+
+                // Trigger the event to notify subscribers
+                GameSessionChanged?.Invoke(this, CurrentGameSession);
+            }
+>>>>>>> origin/dev
 
             _logger.LogInformation("Game session completed successfully");
             return true;
@@ -360,7 +394,7 @@ public class GameSessionService : IGameSessionService
                     _ => "Player"
                 };
 
-                string placeholder = $"[c:{assignment.CharacterName}]";
+                string placeholder = $"[c:{assignment.CharacterName.ToLower()}]";
                 text = text.Replace(placeholder, playerName);
             }
         }

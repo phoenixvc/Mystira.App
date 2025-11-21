@@ -109,15 +109,25 @@ else
                             <div class="card-body">
                                 <!-- Profile Header -->
                                 <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <div>
-                                        <h6 class="card-title mb-1">@profile.Name</h6>
-                                        <small class="text-muted">
-                                            @GetAgeRangeDisplay(profile.AgeGroup)
-                                            @if (!string.IsNullOrEmpty(profile.Pronouns))
-                                            {
-                                                <text> • @profile.Pronouns</text>
-                                            }
-                                        </small>
+                                    <div class="d-flex align-items-start gap-2" style="flex: 1;">
+                                        @if (!string.IsNullOrEmpty(profile.SelectedAvatarMediaId))
+                                        {
+                                            <div style="flex-shrink: 0;">
+                                                @{ var altText = $"{profile.Name} avatar"; }
+                                                <CachedMystiraImage 
+                                                    MediaId="@profile.SelectedAvatarMediaId" 
+                                                    Alt="@altText" 
+                                                    ImageClass="thumbnail-image"
+                                                    Width="60"
+                                                    Height="60" />
+                                            </div>
+                                        }
+                                        <div>
+                                            <h6 class="card-title mb-1">@profile.Name</h6>
+                                            <small class="text-muted">
+                                                @GetAgeRangeDisplay(profile.AgeGroup)
+                                            </small>
+                                        </div>
                                     </div>
                                     @if (profile.IsGuest)
                                     {
@@ -127,11 +137,6 @@ else
 
                                 <!-- Profile Details -->
                                 <div class="mb-3">
-                                    @if (!string.IsNullOrEmpty(profile.Bio))
-                                    {
-                                        <p class="small text-muted mb-2">@profile.Bio</p>
-                                    }
-                                    
                                     <div class="small">
                                         <div class="mb-1">
                                             <strong>Created:</strong> @FormatDate(profile.CreatedAt)
@@ -195,34 +200,63 @@ else
 
                     <!-- Profile Name -->
                     <div class="mb-3">
-                        <label class="form-label">Profile Name *</label>
+                        <label class="form-label">Profile Name*</label>
                         <input type="text" class="form-control" @bind="formData.Name" placeholder="Enter profile name" />
                     </div>
 
                     <!-- Age Group -->
                     <div class="mb-3">
-                        <label class="form-label">Age Range</label>
-                        <select class="form-select" @bind="formData.AgeGroup">
+                        <label class="form-label">Age Range*</label>
+                        <select class="form-select" @bind="formData.AgeGroup" @bind:after="OnAgeGroupChanged">
                             <option value="">Select age range...</option>
-                            <option value="1-2">Toddlers (1-2 years)</option>
-                            <option value="3-5">Preschoolers (3-5 years)</option>
-                            <option value="6-9">School Age (6-9 years)</option>
-                            <option value="10-12">Pre-teens (10-12 years)</option>
-                            <option value="13-18">Teens (13-18 years)</option>
+                            @foreach (var ageRange in AgeRanges.All)
+                            {
+                                <option value="@ageRange">@AgeRanges.GetDisplayName(ageRange)</option>
+                            }
                         </select>
                     </div>
 
-                    <!-- Pronouns -->
-                    <div class="mb-3">
-                        <label class="form-label">Pronouns</label>
-                        <input type="text" class="form-control" @bind="formData.Pronouns" placeholder="e.g., they/them, she/her, he/him" />
-                    </div>
-
-                    <!-- Bio -->
-                    <div class="mb-3">
-                        <label class="form-label">Bio</label>
-                        <textarea class="form-control" rows="3" @bind="formData.Bio" placeholder="Tell us about this character..."></textarea>
-                    </div>
+                    <!-- Avatar Selection -->
+                    @if (!string.IsNullOrEmpty(formData.AgeGroup))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Choose Avatar</label>
+                            
+                            @if (isAvatarSelected && !string.IsNullOrEmpty(formData.SelectedAvatarMediaId))
+                            {
+                                <!-- Show selected avatar -->
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <div class="mb-3">
+                                            <CachedMystiraImage 
+                                                MediaId="@formData.SelectedAvatarMediaId" 
+                                                Alt="Selected Avatar" 
+                                                ImageClass="thumbnail-image"
+                                                Width="150"
+                                                Height="150" />
+                                        </div>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ChangeAvatar">
+                                            <i class="fas fa-sync-alt me-2"></i>Change Avatar
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <!-- Show avatar carousel -->
+                                <AvatarCarousel AgeGroup="@formData.AgeGroup" OnAvatarSelected="OnAvatarSelected" />
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Please select an age range first to see available avatars.
+                            </div>
+                        </div>
+                    }
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
@@ -288,6 +322,7 @@ else
     private bool isSaving = false;
     private UserProfile? editingProfile;
     private ProfileFormData formData = new();
+    private bool isAvatarSelected = false;
 
     // Delete confirmation
     private bool showDeleteConfirm = false;
@@ -298,6 +333,7 @@ else
     private string successMessage = string.Empty;
     private string errorMessage = string.Empty;
     private string modalValidationMessage = string.Empty;
+    private string selectedAvatar = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -358,6 +394,7 @@ else
         editingProfile = null;
         formData = new ProfileFormData();
         modalValidationMessage = string.Empty;
+        isAvatarSelected = false;
         showModal = true;
     }
 
@@ -369,10 +406,11 @@ else
         {
             Name = profile.Name,
             AgeGroup = profile.AgeGroup,
-            Pronouns = profile.Pronouns,
-            Bio = profile.Bio
+            AvatarMediaId = profile.SelectedAvatarMediaId,
+            SelectedAvatarMediaId = profile.SelectedAvatarMediaId
         };
         modalValidationMessage = string.Empty;
+        isAvatarSelected = !string.IsNullOrEmpty(profile.SelectedAvatarMediaId);
         showModal = true;
     }
 
@@ -382,6 +420,7 @@ else
         editingProfile = null;
         formData = new ProfileFormData();
         modalValidationMessage = string.Empty;
+        isAvatarSelected = false;
     }
 
     private async Task SaveProfile()
@@ -397,6 +436,13 @@ else
                 return;
             }
 
+            // Validate
+            if (string.IsNullOrWhiteSpace(formData.AgeGroup))
+            {
+                modalValidationMessage = "Age Range is required";
+                return;
+            }
+            
             isSaving = true;
             StateHasChanged();
 
@@ -405,9 +451,9 @@ else
                 // Update existing profile
                 var updateRequest = new UpdateUserProfileRequest
                 {
+                    Name = formData.Name,
                     AgeGroup = formData.AgeGroup,
-                    Pronouns = formData.Pronouns,
-                    Bio = formData.Bio
+                    SelectedAvatarMediaId = formData.SelectedAvatarMediaId
                 };
 
                 var updated = await ApiClient.UpdateProfileAsync(editingProfile.Id, updateRequest);
@@ -431,11 +477,11 @@ else
                 {
                     Name = formData.Name,
                     AgeGroup = formData.AgeGroup,
-                    Pronouns = formData.Pronouns,
-                    Bio = formData.Bio,
+                    AvatarMediaId = formData.AvatarMediaId,
                     AccountId = currentAccount.Id,
                     IsGuest = false,
-                    HasCompletedOnboarding = false
+                    HasCompletedOnboarding = false,
+                    SelectedAvatarMediaId = formData.SelectedAvatarMediaId
                 };
 
                 var created = await ApiClient.CreateProfileAsync(createRequest);
@@ -526,11 +572,34 @@ else
         return date?.ToString("MMM d, yyyy") ?? "Unknown";
     }
 
+    private void OnAgeGroupChanged()
+    {
+        formData.SelectedAvatarMediaId = null;
+        formData.AvatarMediaId = null;
+        isAvatarSelected = false;
+        StateHasChanged();
+    }
+
+    private async Task OnAvatarSelected(string mediaId)
+    {
+        formData.AvatarMediaId = mediaId;
+        formData.SelectedAvatarMediaId = mediaId;
+        isAvatarSelected = true;
+        Logger.LogInformation("Avatar selected for profile: {MediaId}", mediaId);
+        StateHasChanged();
+    }
+
+    private void ChangeAvatar()
+    {
+        isAvatarSelected = false;
+        StateHasChanged();
+    }
+
     private class ProfileFormData
     {
         public string Name { get; set; } = string.Empty;
         public string? AgeGroup { get; set; }
-        public string? Pronouns { get; set; }
-        public string? Bio { get; set; }
+        public string? AvatarMediaId { get; set; }
+        public string? SelectedAvatarMediaId { get; set; }
     }
 }
