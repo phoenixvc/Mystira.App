@@ -23,6 +23,8 @@
 - ✅ Implemented `Repository<T>` base class
 - ✅ Implemented `GameSessionRepository` with domain-specific queries
 - ✅ Implemented `UnitOfWork` for transaction management
+- ✅ Registered repositories and UnitOfWork in DI containers (Api and Admin.Api)
+- ✅ Migrated `GameSessionApiService` to use repository pattern instead of direct DbContext access
 
 ## 🔄 In Progress
 

@@ -65,7 +65,7 @@ public class UnitOfWork : IUnitOfWork
     public void Dispose()
     {
         _transaction?.Dispose();
-        _context.Dispose();
+        // Note: DbContext is managed by DI container, don't dispose it here
     }
 }
 
