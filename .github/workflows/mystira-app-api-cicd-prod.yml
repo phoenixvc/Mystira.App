@@ -2,18 +2,18 @@ name: API CI/CD - Production Environment
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - 'src/Mystira.App.Api/**'
-      - 'src/Mystira.App.Domain/**'
-      - '.github/workflows/ci-cd.yml'
+      - "src/Mystira.App.Api/**"
+      - "src/Mystira.App.Domain/**"
+      - ".github/workflows/mystira-app-api-cicd-prod.yml"
   pull_request:
-    branches: [ main ]  # PRs targeting main
+    branches: [main] # PRs targeting main
     types: [opened, synchronize, reopened, closed]
     paths:
-      - 'src/Mystira.App.Api/**'
-      - 'src/Mystira.App.Domain/**'
-      - '.github/workflows/ci-cd.yml'
+      - "src/Mystira.App.Api/**"
+      - "src/Mystira.App.Domain/**"
+      - ".github/workflows/mystira-app-api-cicd-prod.yml"
   workflow_dispatch:
 
 # Least-privilege defaults
@@ -26,10 +26,10 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DOTNET_VERSION: '9.0.x'
-  AZURE_WEBAPP_NAME: 'prod-wus-app-mystira-api'
-  AZURE_WEBAPP_PACKAGE_PATH: './publish'
-  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_VERSION: "9.0.x"
+  AZURE_WEBAPP_NAME: "prod-wus-app-mystira-api"
+  AZURE_WEBAPP_PACKAGE_PATH: "./publish"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
   # Evaluates to "true"/"false" at workflow parse time
   HAS_PUBLISH_PROFILE_PROD: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD != '' }}
 

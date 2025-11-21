@@ -2,18 +2,18 @@ name: Admin API CI/CD - Production Environment
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - 'src/Mystira.App.Admin.Api/**'
-      - 'src/Mystira.App.Domain/**'
-      - '.github/workflows/ci-cd-admin-prod.yml'
+      - "src/Mystira.App.Admin.Api/**"
+      - "src/Mystira.App.Domain/**"
+      - ".github/workflows/mystira-app-admin-api-cicd-prod.yml"
   pull_request:
-    branches: [ main ]  # PRs targeting main (prod)
+    branches: [main] # PRs targeting main (prod)
     types: [opened, synchronize, reopened, closed]
     paths:
-      - 'src/Mystira.App.Admin.Api/**'
-      - 'src/Mystira.App.Domain/**'
-      - '.github/workflows/ci-cd-admin-prod.yml'
+      - "src/Mystira.App.Admin.Api/**"
+      - "src/Mystira.App.Domain/**"
+      - ".github/workflows/mystira-app-admin-api-cicd-prod.yml"
   workflow_dispatch:
 
 permissions:
@@ -24,11 +24,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DOTNET_VERSION: '9.0.x'
-  AZURE_WEBAPP_NAME: 'prod-wus-app-mystira-api-admin'
-  AZURE_WEBAPP_PACKAGE_PATH: './publish'
-  ARTIFACT_NAME: 'mystira-app-admin-api'
-  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_VERSION: "9.0.x"
+  AZURE_WEBAPP_NAME: "prod-wus-app-mystira-api-admin"
+  AZURE_WEBAPP_PACKAGE_PATH: "./publish"
+  ARTIFACT_NAME: "mystira-app-admin-api"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
 
   # Boolean: evaluates to "true"/"false"
   HAS_PUBLISH_PROFILE_PROD_ADMIN: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN != '' }}

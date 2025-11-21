@@ -251,22 +251,25 @@ public class PaidPricingStrategy : IPricingStrategy { }
 
 **Implementation Approach**:
 
-- Use .NET events or IObservable<T>
+- Use .NET events or `IObservable<T>`
 - Consider event bus for distributed scenarios
 - Use domain events for domain-level notifications
 
 ## Migration Priority
 
 1. **High Priority**:
+
    - Command Handler Pattern (using MediatR) - Simplifies CQRS implementation and improves separation of concerns
    - Mediator Pattern (using MediatR) - Works hand-in-hand with Command Handler pattern
    - Specification Pattern - Improves query logic organization
 
 2. **Medium Priority**:
+
    - CQRS - When read/write separation becomes beneficial (Command Handler is a prerequisite)
    - Factory Pattern - For complex domain object creation
 
 3. **Low Priority**:
+
    - Event Sourcing - When audit requirements become critical
    - Observer Pattern - When event-driven architecture is needed
 
