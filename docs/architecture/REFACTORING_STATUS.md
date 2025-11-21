@@ -40,6 +40,10 @@
 - ✅ Migrated `CharacterMapApiService` to use repository pattern
 - ✅ Removed DbContext dependency from `UserProfileApiService` (CharacterMapRepository)
 - ✅ Migrated `ScenarioApiService` to use `IScenarioRepository`, `IAccountRepository`, `IGameSessionRepository`, and `IUnitOfWork`
+- ✅ Created `IBadgeConfigurationRepository` and `BadgeConfigurationRepository`
+- ✅ Created `IUserBadgeRepository` and `UserBadgeRepository`
+- ✅ Migrated `BadgeConfigurationApiService` to use repository pattern
+- ✅ Migrated `UserBadgeApiService` to use repository pattern
 
 ## 🔄 In Progress
 
@@ -57,7 +61,10 @@
 8. ✅ Migrate `AccountApiService` to use `AccountRepository`
 9. ✅ Create repositories for other entities:
    - ✅ `IScenarioRepository` and migrated `ScenarioApiService`
+   - ✅ `IBadgeConfigurationRepository` and migrated `BadgeConfigurationApiService`
+   - ✅ `IUserBadgeRepository` and migrated `UserBadgeApiService`
    - 🔄 `IMediaRepository` (for MediaAsset entity)
+   - 🔄 `IPendingSignupRepository` (for PendingSignup entity)
 
 #### Phase 2: DTOs Migration
 
