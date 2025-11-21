@@ -39,6 +39,7 @@
 - ✅ Migrated `ContentBundleService` to use repository pattern
 - ✅ Migrated `CharacterMapApiService` to use repository pattern
 - ✅ Removed DbContext dependency from `UserProfileApiService` (CharacterMapRepository)
+- ✅ Migrated `ScenarioApiService` to use `IScenarioRepository`, `IAccountRepository`, `IGameSessionRepository`, and `IUnitOfWork`
 
 ## 🔄 In Progress
 

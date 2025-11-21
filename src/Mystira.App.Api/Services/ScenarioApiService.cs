@@ -2,16 +2,20 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Validation;
-using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
 using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 using NJsonSchema;
 
 namespace Mystira.App.Api.Services;
 
 public class ScenarioApiService : IScenarioApiService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly IScenarioRepository _repository;
+    private readonly IAccountRepository _accountRepository;
+    private readonly IGameSessionRepository _gameSessionRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ScenarioApiService> _logger;
     private readonly IMediaApiService _mediaService;
     private readonly ICharacterMapFileService _characterService;
@@ -28,14 +32,20 @@ public class ScenarioApiService : IScenarioApiService
     };
 
     public ScenarioApiService(
-        MystiraAppDbContext context,
+        IScenarioRepository repository,
+        IAccountRepository accountRepository,
+        IGameSessionRepository gameSessionRepository,
+        IUnitOfWork unitOfWork,
         ILogger<ScenarioApiService> logger,
         IMediaApiService mediaService,
         ICharacterMapFileService characterService,
         IMediaMetadataService mediaMetadataService,
         ICharacterMediaMetadataService characterMetadataService)
     {
-        _context = context;
+        _repository = repository;
+        _accountRepository = accountRepository;
+        _gameSessionRepository = gameSessionRepository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
         _mediaService = mediaService;
         _characterService = characterService;
@@ -45,7 +55,7 @@ public class ScenarioApiService : IScenarioApiService
 
     public async Task<ScenarioListResponse> GetScenariosAsync(ScenarioQueryRequest request)
     {
-        var query = _context.Scenarios.AsQueryable();
+        var query = _repository.GetQueryable();
 
         if (request.Difficulty.HasValue)
         {
@@ -133,8 +143,7 @@ public class ScenarioApiService : IScenarioApiService
 
     public async Task<Scenario?> GetScenarioByIdAsync(string id)
     {
-        return await _context.Scenarios
-            .FirstOrDefaultAsync(s => s.Id == id);
+        return await _repository.GetByIdAsync(id);
     }
 
     public async Task<Scenario> CreateScenarioAsync(CreateScenarioRequest request)
@@ -160,11 +169,11 @@ public class ScenarioApiService : IScenarioApiService
 
         await ValidateScenarioAsync(scenario);
 
-        _context.Scenarios.Add(scenario);
+        await _repository.AddAsync(scenario);
 
         try
         {
-            await _context.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
         }
         catch (Exception e)
         {
@@ -178,7 +187,7 @@ public class ScenarioApiService : IScenarioApiService
 
     public async Task<Scenario?> UpdateScenarioAsync(string id, CreateScenarioRequest request)
     {
-        var scenario = await _context.Scenarios.FirstOrDefaultAsync(s => s.Id == id);
+        var scenario = await _repository.GetByIdAsync(id);
         if (scenario == null)
         {
             return null;
@@ -200,7 +209,8 @@ public class ScenarioApiService : IScenarioApiService
 
         await ValidateScenarioAsync(scenario);
 
-        await _context.SaveChangesAsync();
+        await _repository.UpdateAsync(scenario);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Updated scenario: {ScenarioId} - {Title}", scenario.Id, scenario.Title);
         return scenario;
@@ -208,14 +218,14 @@ public class ScenarioApiService : IScenarioApiService
 
     public async Task<bool> DeleteScenarioAsync(string id)
     {
-        var scenario = await _context.Scenarios.FirstOrDefaultAsync(s => s.Id == id);
+        var scenario = await _repository.GetByIdAsync(id);
         if (scenario == null)
         {
             return false;
         }
 
-        _context.Scenarios.Remove(scenario);
-        await _context.SaveChangesAsync();
+        await _repository.DeleteAsync(id);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Deleted scenario: {ScenarioId} - {Title}", scenario.Id, scenario.Title);
         return true;
@@ -223,7 +233,7 @@ public class ScenarioApiService : IScenarioApiService
 
     public async Task<List<Scenario>> GetScenariosByAgeGroupAsync(string ageGroup)
     {
-        var scenarios = await _context.Scenarios.ToListAsync();
+        var scenarios = (await _repository.GetAllAsync()).ToList();
 
         if (string.IsNullOrWhiteSpace(ageGroup))
         {
@@ -385,7 +395,7 @@ public class ScenarioApiService : IScenarioApiService
     public async Task<List<Scenario>> GetFeaturedScenariosAsync()
     {
         // Return a curated list of featured scenarios
-        return await _context.Scenarios
+        return await _repository.GetQueryable()
             .OrderBy(s => s.CreatedAt)
             .Take(6)
             .ToListAsync();
@@ -711,17 +721,15 @@ public class ScenarioApiService : IScenarioApiService
         {
             _logger.LogInformation("Getting scenarios with game state for account: {AccountId}", accountId);
 
-            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == accountId);
+            var account = await _accountRepository.GetByIdAsync(accountId);
             if (account == null)
             {
                 _logger.LogWarning("Account not found: {AccountId}", accountId);
                 return new ScenarioGameStateResponse { Scenarios = new(), TotalCount = 0 };
             }
 
-            var allScenarios = await _context.Scenarios.ToListAsync();
-            var sessions = await _context.GameSessions
-                .Where(s => s.AccountId == accountId)
-                .ToListAsync();
+            var allScenarios = (await _repository.GetAllAsync()).ToList();
+            var sessions = (await _gameSessionRepository.GetByAccountIdAsync(accountId)).ToList();
 
             var scenariosWithState = new List<ScenarioWithGameState>();
 

@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Domain.Models;
 
@@ -25,6 +26,20 @@ public class ScenarioRepository : Repository<Scenario>, IScenarioRepository
     public async Task<bool> ExistsByTitleAsync(string title)
     {
         return await _dbSet.AnyAsync(s => s.Title == title);
+    }
+
+    public IQueryable<Scenario> GetQueryable()
+    {
+        return _dbSet.AsQueryable();
+    }
+
+    public async Task<int> CountAsync(Expression<Func<Scenario, bool>>? predicate = null)
+    {
+        if (predicate == null)
+        {
+            return await _dbSet.CountAsync();
+        }
+        return await _dbSet.CountAsync(predicate);
     }
 }
 
