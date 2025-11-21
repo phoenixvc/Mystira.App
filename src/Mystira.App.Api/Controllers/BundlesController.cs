@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Api.Services;
 using Mystira.App.Domain.Models;
 

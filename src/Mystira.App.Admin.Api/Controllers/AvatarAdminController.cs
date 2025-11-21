@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Domain.Models;
@@ -61,7 +61,7 @@ public class AvatarAdminController : ControllerBase
             }
 
             var avatars = await _avatarService.GetAvatarsByAgeGroupAsync(ageGroup);
-            
+
             if (avatars == null)
             {
                 return NotFound(new ErrorResponse

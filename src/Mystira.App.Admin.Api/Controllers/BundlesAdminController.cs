@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Domain.Models;
@@ -42,7 +42,10 @@ public class BundlesAdminController : ControllerBase
         {
             var bundle = await _service.GetByIdAsync(id);
             if (bundle == null)
+            {
                 return NotFound(new { Message = $"Bundle not found: {id}", TraceId = HttpContext.TraceIdentifier });
+            }
+
             return Ok(bundle);
         }
         catch (Exception ex)
@@ -74,7 +77,10 @@ public class BundlesAdminController : ControllerBase
         {
             var updated = await _service.UpdateAsync(id, bundle);
             if (updated == null)
+            {
                 return NotFound(new { Message = $"Bundle not found: {id}", TraceId = HttpContext.TraceIdentifier });
+            }
+
             return Ok(updated);
         }
         catch (Exception ex)

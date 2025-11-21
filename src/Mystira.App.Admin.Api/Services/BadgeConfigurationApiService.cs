@@ -274,7 +274,11 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
     private static IEnumerable<string> GetAllCoreAxisNames()
     {
         var filePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "Mystira.App.Domain", "Data", "CoreAxes.json");
-        if (!File.Exists(filePath)) return Array.Empty<string>();
+        if (!File.Exists(filePath))
+        {
+            return Array.Empty<string>();
+        }
+
         var json = File.ReadAllText(filePath);
         return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
     }

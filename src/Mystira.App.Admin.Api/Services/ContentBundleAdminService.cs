@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Domain.Models;
 
@@ -39,7 +39,10 @@ public class ContentBundleAdminService : IContentBundleAdminService
     public async Task<ContentBundle?> UpdateAsync(string id, ContentBundle bundle)
     {
         var existing = await _context.ContentBundles.FindAsync(id);
-        if (existing == null) return null;
+        if (existing == null)
+        {
+            return null;
+        }
 
         existing.Title = bundle.Title;
         existing.Description = bundle.Description;

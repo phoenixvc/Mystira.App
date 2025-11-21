@@ -22,16 +22,24 @@ public class CharacterAssignment
         get
         {
             var parts = new List<string>();
-            if (!string.IsNullOrEmpty(Role)) parts.Add(Role);
-            if (!string.IsNullOrEmpty(Archetype)) parts.Add(ToTitleCaseAndUnderscoresReplaced(Archetype));
+            if (!string.IsNullOrEmpty(Role))
+            {
+                parts.Add(Role);
+            }
+
+            if (!string.IsNullOrEmpty(Archetype))
+            {
+                parts.Add(ToTitleCaseAndUnderscoresReplaced(Archetype));
+            }
+
             return parts.Count > 0 ? string.Join(" • ", parts) : "Character";
         }
     }
 
     private static string ToTitleCaseAndUnderscoresReplaced(string input)
     {
-        return string.IsNullOrEmpty(input) 
-            ? string.Empty 
+        return string.IsNullOrEmpty(input)
+            ? string.Empty
             : System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(input.ToLower()).Replace("_", " ");
     }
 }
@@ -46,7 +54,7 @@ public class PlayerAssignment
     public string? ProfileName { get; set; }
     public string? ProfileImage { get; set; }
     public string? SelectedAvatarMediaId { get; set; }
-    
+
     // Guest properties
     public string? GuestName { get; set; }
     public string? GuestAgeRange { get; set; }
@@ -97,7 +105,7 @@ public class CharacterAssignmentResponse
 public static class AgeRanges
 {
     public static readonly string[] All = AgeGroupConstants.AllAgeGroups;
-    
+
     public static string GetDisplayName(string ageRange)
     {
         return AgeGroupConstants.GetDisplayName(ageRange);

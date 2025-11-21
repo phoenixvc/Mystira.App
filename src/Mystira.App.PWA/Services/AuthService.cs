@@ -1,6 +1,6 @@
-using Mystira.App.PWA.Models;
 using System.Text.Json;
 using Microsoft.JSInterop;
+using Mystira.App.PWA.Models;
 
 namespace Mystira.App.PWA.Services;
 
@@ -53,7 +53,7 @@ public class AuthService : IAuthService
 
             // Try to load from storage
             await LoadStoredAuthData();
-            
+
             _isAuthenticated = !string.IsNullOrEmpty(_currentToken) && _currentAccount != null;
             return _isAuthenticated;
         }
@@ -94,7 +94,7 @@ public class AuthService : IAuthService
             return null;
         }
     }
-    
+
     public void SetRememberMe(bool rememberMe)
     {
         _rememberMe = rememberMe;
@@ -108,7 +108,7 @@ public class AuthService : IAuthService
 
             // Login not implemented - use passwordless authentication methods instead
             _logger.LogWarning("LoginAsync called with email: {Email}, but is not implemented. Use passwordless methods instead.", email);
-            
+
             return Task.FromResult(false);
         }
         catch (Exception ex)
@@ -178,7 +178,7 @@ public class AuthService : IAuthService
             {
                 await SetStoredToken(response.Token ?? $"{DemoTokenPrefix}{Guid.NewGuid():N}");
                 await SetStoredRefreshToken(response.RefreshToken, _rememberMe);
-                
+
                 // Fetch full account details from API
                 var fullAccount = await _apiClient.GetAccountByEmailAsync(email);
                 if (fullAccount != null)
@@ -217,7 +217,7 @@ public class AuthService : IAuthService
             _currentToken = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", TokenStorageKey);
             _currentRefreshToken = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", RefreshTokenStorageKey);
             var accountJson = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", AccountStorageKey);
-            
+
             if (!string.IsNullOrEmpty(accountJson))
             {
                 _currentAccount = JsonSerializer.Deserialize<Account>(accountJson);
@@ -304,7 +304,7 @@ public class AuthService : IAuthService
         {
             var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
             var jwtToken = handler.ReadJwtToken(token);
-            
+
             return jwtToken.ValidTo <= DateTime.UtcNow;
         }
         catch
@@ -324,7 +324,7 @@ public class AuthService : IAuthService
         try
         {
             var (success, message, newToken, newRefreshToken) = await RefreshTokenAsync(_currentToken, _currentRefreshToken);
-            
+
             if (success && !string.IsNullOrEmpty(newToken))
             {
                 await SetStoredToken(newToken);
@@ -332,7 +332,7 @@ public class AuthService : IAuthService
                 _logger.LogInformation("Token refreshed successfully");
                 return true;
             }
-            
+
             _logger.LogWarning("Token refresh failed: {Message}", message);
             return false;
         }
@@ -379,7 +379,7 @@ public class AuthService : IAuthService
             {
                 await SetStoredToken(response.Token ?? $"{DemoTokenPrefix}{Guid.NewGuid():N}");
                 await SetStoredRefreshToken(response.RefreshToken, _rememberMe);
-                
+
                 // Fetch full account details from API
                 var fullAccount = await _apiClient.GetAccountByEmailAsync(email);
                 if (fullAccount != null)
@@ -416,9 +416,9 @@ public class AuthService : IAuthService
         try
         {
             _logger.LogInformation("Requesting token refresh");
-            
+
             var response = await _apiClient.RefreshTokenAsync(token, refreshToken);
-            
+
             if (response?.Success == true)
             {
                 await SetStoredToken(response.Token);
@@ -426,7 +426,7 @@ public class AuthService : IAuthService
                 _logger.LogInformation("Token refreshed successfully");
                 return (true, response.Message, response.Token, response.RefreshToken);
             }
-            
+
             _logger.LogWarning("Token refresh failed: {Message}", response?.Message);
             return (false, response?.Message ?? "Token refresh failed", null, null);
         }

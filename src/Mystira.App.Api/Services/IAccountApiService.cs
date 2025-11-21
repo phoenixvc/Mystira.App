@@ -46,7 +46,7 @@ public interface IAccountApiService
     /// Validate that an account exists and is active
     /// </summary>
     Task<bool> ValidateAccountAsync(string email);
-    
+
     /// <summary>
     /// Add a completed scenario to an account
     /// </summary>

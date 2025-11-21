@@ -32,12 +32,12 @@ public interface IApiClient
     Task<List<UserProfile>?> CreateMultipleProfilesAsync(CreateMultipleProfilesRequest request);
     Task<UserProfile?> UpdateProfileAsync(string id, UpdateUserProfileRequest request);
     Task<bool> DeleteProfileAsync(string id);
-    
+
     // Game state endpoints
     Task<ScenarioGameStateResponse?> GetScenariosWithGameStateAsync(string accountId);
     Task<bool> CompleteScenarioForAccountAsync(string accountId, string scenarioId);
     Task<List<GameSession>?> GetInProgressSessionsAsync(string accountId);
-    
+
     // Avatar endpoints
     Task<Dictionary<string, List<string>>?> GetAvatarsAsync();
     Task<List<string>?> GetAvatarsByAgeGroupAsync(string ageGroup);
@@ -45,7 +45,7 @@ public interface IApiClient
     // Content bundles
     Task<List<ContentBundle>> GetBundlesAsync();
     Task<List<ContentBundle>> GetBundlesByAgeGroupAsync(string ageGroup);
-    
+
     string GetApiBaseAddress();
 
     string GetMediaResourceEndpointUrl(string mediaId);

@@ -710,7 +710,7 @@ public class ScenarioApiService : IScenarioApiService
         try
         {
             _logger.LogInformation("Getting scenarios with game state for account: {AccountId}", accountId);
-            
+
             var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == accountId);
             if (account == null)
             {
@@ -768,8 +768,8 @@ public class ScenarioApiService : IScenarioApiService
                 });
             }
 
-            return new ScenarioGameStateResponse 
-            { 
+            return new ScenarioGameStateResponse
+            {
                 Scenarios = scenariosWithState,
                 TotalCount = scenariosWithState.Count
             };

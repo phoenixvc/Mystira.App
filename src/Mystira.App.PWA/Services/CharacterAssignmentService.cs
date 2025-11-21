@@ -46,15 +46,22 @@ public class CharacterAssignmentService : ICharacterAssignmentService
             // Update character assignments with existing  data
             foreach (var assignment in existingAssignments)
             {
-                if (assignment.PlayerAssignment == null) continue; // Skip unused assignments
+                if (assignment.PlayerAssignment == null)
+                {
+                    continue; // Skip unused assignments
+                }
 
                 var existingAssignment = characterAssignments.FirstOrDefault(a => a.CharacterId == assignment.CharacterId);
-                if (existingAssignment == null) continue;
+                if (existingAssignment == null)
+                {
+                    continue;
+                }
+
                 existingAssignment.PlayerAssignment = assignment.PlayerAssignment;
                 existingAssignment.IsUnused = assignment.IsUnused;
             }
 
-            _logger.LogInformation("Created {Count} character assignments for scenario: {ScenarioId}", 
+            _logger.LogInformation("Created {Count} character assignments for scenario: {ScenarioId}",
                 characterAssignments.Count, scenarioId);
 
             return new CharacterAssignmentResponse
@@ -280,7 +287,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
                 Archetype = scenarioChar.Metadata?.Archetype?.FirstOrDefault() ?? "",
                 IsUnused = false
             };
-            
+
             assignments.Add(assignment);
         }
 

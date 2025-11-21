@@ -172,7 +172,7 @@ public class GameSessionService : IGameSessionService
             {
                 _logger.LogWarning("Failed to progress session on server, but continuing locally for scene: {SceneId}", sceneId);
             }
-            
+
             // Check if this is a final scene
             if (scene is { SceneType: SceneType.Special, NextSceneId: null })
             {
@@ -220,7 +220,7 @@ public class GameSessionService : IGameSessionService
                 var success = await _apiClient.CompleteScenarioForAccountAsync(account.Id, CurrentGameSession.ScenarioId);
                 if (success)
                 {
-                    _logger.LogInformation("Marked scenario {ScenarioId} as completed for account {AccountId}", 
+                    _logger.LogInformation("Marked scenario {ScenarioId} as completed for account {AccountId}",
                         CurrentGameSession.ScenarioId, account.Id);
                 }
                 else

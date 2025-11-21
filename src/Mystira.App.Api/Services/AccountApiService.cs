@@ -224,7 +224,9 @@ public class AccountApiService : IAccountApiService
             }
 
             if (account.CompletedScenarioIds == null)
+            {
                 account.CompletedScenarioIds = new List<string>();
+            }
 
             if (!account.CompletedScenarioIds.Contains(scenarioId))
             {

@@ -1,8 +1,8 @@
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Domain.Models;
 using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
+using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
 
@@ -12,21 +12,21 @@ public class UserProfileApiService : IUserProfileApiService
 {
     private readonly IUserProfileRepository _repository;
     private readonly IGameSessionRepository _gameSessionRepository;
+    private readonly ICharacterMapRepository _characterMapRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly MystiraAppDbContext _context; // TODO: Remove when CharacterMapRepository is created
     private readonly ILogger<UserProfileApiService> _logger;
 
     public UserProfileApiService(
         IUserProfileRepository repository,
         IGameSessionRepository gameSessionRepository,
+        ICharacterMapRepository characterMapRepository,
         IUnitOfWork unitOfWork,
-        MystiraAppDbContext context,
         ILogger<UserProfileApiService> logger)
     {
         _repository = repository;
         _gameSessionRepository = gameSessionRepository;
+        _characterMapRepository = characterMapRepository;
         _unitOfWork = unitOfWork;
-        _context = context;
         _logger = logger;
     }
 
@@ -48,7 +48,9 @@ public class UserProfileApiService : IUserProfileApiService
 
         // Validate age group
         if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
+        {
             throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
+        }
 
         var profile = new UserProfile
         {
@@ -98,7 +100,9 @@ public class UserProfileApiService : IUserProfileApiService
 
         // Validate age group
         if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
+        {
             throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
+        }
 
         var profile = new UserProfile
         {
@@ -171,7 +175,9 @@ public class UserProfileApiService : IUserProfileApiService
         {
             // Validate age group
             if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
+            {
                 throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
+            }
 
             profile.AgeGroupName = request.AgeGroup;
         }
@@ -248,7 +254,8 @@ public class UserProfileApiService : IUserProfileApiService
         }
 
         profile.HasCompletedOnboarding = true;
-        await _context.SaveChangesAsync();
+        await _repository.UpdateAsync(profile);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Completed onboarding for user: {Name}", profile.Name);
         return true;
@@ -281,8 +288,7 @@ public class UserProfileApiService : IUserProfileApiService
         }
 
         // Check if character exists
-        // TODO: Replace with CharacterMapRepository when created
-        var character = await _context.CharacterMaps.FirstOrDefaultAsync(c => c.Id == characterId);
+        var character = await _characterMapRepository.GetByIdAsync(characterId);
         if (character == null)
         {
             return false;

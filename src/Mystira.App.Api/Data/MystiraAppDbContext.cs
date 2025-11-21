@@ -1,9 +1,9 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Mystira.App.Api.Models;
 using Mystira.App.Domain.Models;
-using System.Text.Json;
 
 namespace Mystira.App.Api.Data;
 
@@ -501,7 +501,7 @@ public class MystiraAppDbContext : DbContext
         modelBuilder.Entity<AvatarConfigurationFile>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {

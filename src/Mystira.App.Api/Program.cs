@@ -1,8 +1,8 @@
 using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Mystira.App.Api.Adapters;
 using Mystira.App.Api.Data;
 using Mystira.App.Api.Services;
@@ -195,7 +195,7 @@ builder.Services.AddAuthentication(options =>
         }
 
         options.TokenValidationParameters = validationParameters;
-        
+
         options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
         {
             OnAuthenticationFailed = context =>
@@ -216,12 +216,13 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 // Register repositories
-builder.Services.AddScoped<IRepository<Mystira.App.Domain.Models.GameSession>, Repository<Mystira.App.Domain.Models.GameSession>>();
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>)); // Generic repository
 builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();
-builder.Services.AddScoped<IRepository<Mystira.App.Domain.Models.UserProfile>, Repository<Mystira.App.Domain.Models.UserProfile>>();
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
-builder.Services.AddScoped<IRepository<Mystira.App.Domain.Models.Account>, Repository<Mystira.App.Domain.Models.Account>>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
+builder.Services.AddScoped<IScenarioRepository, ScenarioRepository>();
+builder.Services.AddScoped<ICharacterMapRepository, CharacterMapRepository>();
+builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Register application services

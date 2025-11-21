@@ -8,7 +8,7 @@ public class CreateUserProfileRequest
 {
     [Required]
     public string Id { get; set; } = Guid.NewGuid().ToString();
-    
+
     [Required]
     [StringLength(100, MinimumLength = 2)]
     public string Name { get; set; } = string.Empty;
@@ -78,7 +78,7 @@ public class CreateGuestProfileRequest
 {
     [Required]
     public string Id { get; set; } = Guid.NewGuid().ToString();
-    
+
     /// <summary>
     /// Optional name for guest profile. If not provided, a random name will be generated.
     /// </summary>
@@ -736,7 +736,7 @@ public class CompleteScenarioRequest
 {
     [Required]
     public string AccountId { get; set; } = string.Empty;
-    
+
     [Required]
     public string ScenarioId { get; set; } = string.Empty;
 }
@@ -746,7 +746,7 @@ public class RefreshTokenRequest
 {
     [Required]
     public string Token { get; set; } = string.Empty;
-    
+
     [Required]
     public string RefreshToken { get; set; } = string.Empty;
 }

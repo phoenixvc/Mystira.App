@@ -125,15 +125,15 @@ public class ScenariosController : ControllerBase
         try
         {
             _logger.LogInformation("Fetching scenarios with game state for account: {AccountId}", accountId);
-            
+
             var result = await _scenarioService.GetScenariosWithGameStateAsync(accountId);
             return Ok(result);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting scenarios with game state for account {AccountId}", accountId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching scenarios with game state",
                 TraceId = HttpContext.TraceIdentifier
             });

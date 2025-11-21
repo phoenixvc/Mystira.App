@@ -183,7 +183,7 @@ builder.Services.AddCors(options =>
                 "https://admin.mystira.app",
                 "http://localhost:7000",
                 "https://localhost:7000",
-                "https://mystiraapp.azurewebsites.net", 
+                "https://mystiraapp.azurewebsites.net",
                 "https://mystira.app",
                 "https://mango-water-04fdb1c03.3.azurestaticapps.net")
               .AllowAnyHeader()

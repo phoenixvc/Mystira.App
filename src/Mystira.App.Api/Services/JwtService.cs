@@ -1,8 +1,8 @@
-using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Mystira.App.Api.Services;
 
@@ -20,22 +20,22 @@ public class JwtService : IJwtService
     {
         _configuration = configuration;
         _logger = logger;
-        
+
         // Fail fast if JWT configuration is missing - no hardcoded fallbacks
-        _issuer = _configuration["JwtSettings:Issuer"] 
+        _issuer = _configuration["JwtSettings:Issuer"]
             ?? _configuration["Jwt:Issuer"]
             ?? throw new InvalidOperationException("JWT Issuer not configured. Please provide JwtSettings:Issuer or Jwt:Issuer in configuration.");
-        
-        _audience = _configuration["JwtSettings:Audience"] 
+
+        _audience = _configuration["JwtSettings:Audience"]
             ?? _configuration["Jwt:Audience"]
             ?? throw new InvalidOperationException("JWT Audience not configured. Please provide JwtSettings:Audience or Jwt:Audience in configuration.");
-        
+
         _invalidatedRefreshTokens = new HashSet<string>();
-        
+
         // Check if asymmetric signing is configured
         var rsaPrivateKey = _configuration["JwtSettings:RsaPrivateKey"] ?? _configuration["Jwt:RsaPrivateKey"];
         _useAsymmetric = !string.IsNullOrEmpty(rsaPrivateKey);
-        
+
         if (_useAsymmetric)
         {
             // Use asymmetric RS256 signing
@@ -69,7 +69,7 @@ public class JwtService : IJwtService
                     "Keys must be loaded from secure stores (Azure Key Vault, AWS Secrets Manager, etc.). " +
                     "Never hardcode secrets in source code.");
             }
-            
+
             var key = Encoding.ASCII.GetBytes(secretKey);
             _signingCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature);
             _logger.LogWarning("JwtService initialized with HS256 symmetric signing. Consider migrating to RS256 asymmetric signing for better security. Issuer: {Issuer}, Audience: {Audience}", _issuer, _audience);
@@ -79,7 +79,7 @@ public class JwtService : IJwtService
     public string GenerateAccessToken(string userId, string email, string displayName, string? role = null)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
-        
+
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, userId),
@@ -113,7 +113,7 @@ public class JwtService : IJwtService
 
         var token = tokenHandler.CreateToken(tokenDescriptor);
         var tokenString = tokenHandler.WriteToken(token);
-        
+
         _logger.LogInformation("Generated access token for user: {UserId} using {Algorithm}", userId, _useAsymmetric ? "RS256" : "HS256");
         return tokenString;
     }
@@ -130,7 +130,7 @@ public class JwtService : IJwtService
         try
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            
+
             var validationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
@@ -142,7 +142,7 @@ public class JwtService : IJwtService
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
             };
-            
+
             tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
 
             return true;
@@ -180,7 +180,7 @@ public class JwtService : IJwtService
             var tokenHandler = new JwtSecurityTokenHandler();
             var jsonToken = tokenHandler.ReadJwtToken(token);
             var userId = jsonToken.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier || x.Type == "sub")?.Value;
-            
+
             return userId;
         }
         catch (Exception ex)

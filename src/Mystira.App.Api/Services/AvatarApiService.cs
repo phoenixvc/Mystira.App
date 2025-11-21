@@ -27,7 +27,7 @@ public class AvatarApiService : IAvatarApiService
         try
         {
             var configFile = await GetAvatarConfigurationFileAsync();
-            
+
             var response = new AvatarResponse
             {
                 AgeGroupAvatars = configFile?.AgeGroupAvatars ?? new Dictionary<string, List<string>>()
@@ -65,7 +65,7 @@ public class AvatarApiService : IAvatarApiService
             }
 
             var configFile = await GetAvatarConfigurationFileAsync();
-            
+
             if (configFile == null || !configFile.AgeGroupAvatars.TryGetValue(ageGroup, out var avatars))
             {
                 return new AvatarConfigurationResponse
@@ -112,7 +112,7 @@ public class AvatarApiService : IAvatarApiService
         try
         {
             file.UpdatedAt = DateTime.UtcNow;
-            
+
             var existingFile = await _context.AvatarConfigurationFiles.FirstOrDefaultAsync();
             if (existingFile != null)
             {
@@ -149,7 +149,7 @@ public class AvatarApiService : IAvatarApiService
             }
 
             var configFile = await GetAvatarConfigurationFileAsync() ?? new AvatarConfigurationFile();
-            
+
             if (configFile.AgeGroupAvatars == null)
             {
                 configFile.AgeGroupAvatars = new Dictionary<string, List<string>>();

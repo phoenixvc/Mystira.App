@@ -448,7 +448,10 @@ public static class ScenarioRequestCreator
             {
                 var parsed = EchoType.Parse(echoTypeObj.ToString());
                 if (parsed == null)
+                {
                     throw new ArgumentException($"Invalid EchoType: {echoTypeObj}");
+                }
+
                 echoLog.EchoType = parsed;
             }
             else
@@ -589,7 +592,10 @@ public static class ScenarioRequestCreator
             {
                 var parsed = EchoType.Parse(echoTypeObj.ToString());
                 if (parsed == null)
+                {
                     throw new ArgumentException($"Invalid EchoType: {echoTypeObj}");
+                }
+
                 reveal.EchoType = parsed;
             }
             else

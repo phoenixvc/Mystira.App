@@ -32,7 +32,7 @@ builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
     else
     {
         Console.WriteLine($"Connecting to API: {url}");
-    
+
         client.BaseAddress = new Uri(url);
         client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
     }

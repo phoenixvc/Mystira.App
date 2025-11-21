@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
+using Microsoft.EntityFrameworkCore;
 using Mystira.App.Api.Data;
 using Mystira.App.Domain.Models;
 
@@ -287,7 +287,7 @@ public class PasswordlessAuthService : IPasswordlessAuthService
         {
             var account = await _context.Accounts
                 .FirstOrDefaultAsync(a => a.Auth0UserId == userId);
-            
+
             return account;
         }
         catch (Exception ex)

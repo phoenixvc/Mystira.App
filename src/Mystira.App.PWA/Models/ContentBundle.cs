@@ -1,4 +1,4 @@
-﻿namespace Mystira.App.PWA.Models;
+namespace Mystira.App.PWA.Models;
 
 public class ContentBundle
 {

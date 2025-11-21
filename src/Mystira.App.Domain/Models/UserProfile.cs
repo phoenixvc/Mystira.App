@@ -77,7 +77,9 @@ public class UserProfile
     public AgeGroup? GetAgeGroupFromBirthDate()
     {
         if (!CurrentAge.HasValue)
+        {
             return null;
+        }
 
         var currentAge = CurrentAge.Value;
         var ageGroups = AgeGroup.ValueMap.Values;

@@ -126,10 +126,10 @@ public class CosmosConsoleDbContext : DbContext
 
         // Configure all List<string> properties on Scenario
         modelBuilder.Entity<Scenario>().Property(e => e.Archetypes).HasConversion(
-            v => SerializeList(v.Select(e => e.Value).ToList()), 
+            v => SerializeList(v.Select(e => e.Value).ToList()),
             v => DeserializeList(v).Select(s => Archetype.Parse(s)).Where(x => x != null).ToList()!);
         modelBuilder.Entity<Scenario>().Property(e => e.CoreAxes).HasConversion(
-            v => SerializeList(v.Select(e => e.Value).ToList()), 
+            v => SerializeList(v.Select(e => e.Value).ToList()),
             v => DeserializeList(v).Select(s => CoreAxis.Parse(s)).Where(x => x != null).ToList()!);
         ConfigureListStringProperty<Scenario>(modelBuilder, e => e.Tags);
 

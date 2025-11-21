@@ -358,18 +358,26 @@ public class GameSessionApiService : IGameSessionApiService
     {
         var session = await GetSessionAsync(request.SessionId);
         if (session == null)
+        {
             return null;
+        }
 
         if (session.Status != SessionStatus.InProgress && session.Status != SessionStatus.Paused)
+        {
             throw new InvalidOperationException("Can only progress scenes in active or paused sessions");
+        }
 
         var scenario = await _scenarioService.GetScenarioByIdAsync(session.ScenarioId);
         if (scenario == null)
+        {
             throw new InvalidOperationException("Scenario not found for session");
+        }
 
         var targetScene = scenario.Scenes.FirstOrDefault(s => s.Id == request.SceneId);
         if (targetScene == null)
+        {
             throw new ArgumentException("Scene not found in scenario");
+        }
 
         session.CurrentSceneId = request.SceneId;
         session.ElapsedTime = DateTime.UtcNow - session.StartTime;
