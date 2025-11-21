@@ -27,6 +27,8 @@
 - ✅ Implemented `UnitOfWork` for transaction management
 - ✅ Registered repositories and UnitOfWork in DI containers (Api and Admin.Api)
 - ✅ Migrated `GameSessionApiService` to use repository pattern instead of direct DbContext access
+- ✅ Migrated `UserProfileApiService` to use repository pattern (with TODO for CharacterMapRepository)
+- ✅ Migrated `AccountApiService` to use repository pattern
 
 ## 🔄 In Progress
 
