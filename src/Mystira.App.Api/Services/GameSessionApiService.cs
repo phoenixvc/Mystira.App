@@ -1,22 +1,25 @@
-using Microsoft.EntityFrameworkCore;
-using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
 using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 namespace Mystira.App.Api.Services;
 
 public class GameSessionApiService : IGameSessionApiService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly IGameSessionRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IScenarioApiService _scenarioService;
     private readonly ILogger<GameSessionApiService> _logger;
 
     public GameSessionApiService(
-        MystiraAppDbContext context,
+        IGameSessionRepository repository,
+        IUnitOfWork unitOfWork,
         IScenarioApiService scenarioService,
         ILogger<GameSessionApiService> logger)
     {
-        _context = context;
+        _repository = repository;
+        _unitOfWork = unitOfWork;
         _scenarioService = scenarioService;
         _logger = logger;
     }
@@ -37,11 +40,7 @@ public class GameSessionApiService : IGameSessionApiService
         }
 
         // Check for existing active sessions for this scenario and account
-        var existingActiveSessions = await _context.GameSessions
-            .Where(s => s.ScenarioId == request.ScenarioId &&
-                       s.AccountId == request.AccountId &&
-                       (s.Status == SessionStatus.InProgress || s.Status == SessionStatus.Paused))
-            .ToListAsync();
+        var existingActiveSessions = (await _repository.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId)).ToList();
 
         // Auto-complete any existing active sessions for this scenario
         if (existingActiveSessions.Any())
@@ -54,25 +53,24 @@ public class GameSessionApiService : IGameSessionApiService
                 existingSession.Status = SessionStatus.Completed;
                 existingSession.EndTime = DateTime.UtcNow;
                 existingSession.ElapsedTime = existingSession.EndTime.Value - existingSession.StartTime;
+                await _repository.UpdateAsync(existingSession);
             }
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
         }
 
         // Check for existing InProgress session for this scenario and account
-        var pausedSession = await _context.GameSessions
-            .FirstOrDefaultAsync(s => s.ScenarioId == request.ScenarioId 
-                && s.AccountId == request.AccountId 
-                && s.Status == SessionStatus.InProgress);
-        
+        var pausedSession = existingActiveSessions.FirstOrDefault(s => s.Status == SessionStatus.InProgress);
+
         if (pausedSession != null)
         {
-            _logger.LogInformation("Found existing InProgress session {ExistingSessionId} for scenario {ScenarioId}, pausing it", 
+            _logger.LogInformation("Found existing InProgress session {ExistingSessionId} for scenario {ScenarioId}, pausing it",
                 pausedSession.Id, request.ScenarioId);
-            
+
             pausedSession.Status = SessionStatus.Paused;
             pausedSession.IsPaused = true;
             pausedSession.PausedAt = DateTime.UtcNow;
+            await _repository.UpdateAsync(pausedSession);
         }
 
         var session = new GameSession
@@ -101,8 +99,8 @@ public class GameSessionApiService : IGameSessionApiService
             };
         }
 
-        _context.GameSessions.Add(session);
-        await _context.SaveChangesAsync();
+        await _repository.AddAsync(session);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Started new game session: {SessionId} for Account: {AccountId}, Profile: {ProfileId}",
             session.Id, session.AccountId, session.ProfileId);
@@ -111,8 +109,7 @@ public class GameSessionApiService : IGameSessionApiService
 
     public async Task<GameSession?> GetSessionAsync(string sessionId)
     {
-        return await _context.GameSessions
-            .FirstOrDefaultAsync(s => s.Id == sessionId);
+        return await _repository.GetByIdAsync(sessionId);
     }
 
     public async Task<List<GameSessionResponse>> GetSessionsByAccountAsync(string accountId)
@@ -537,10 +534,10 @@ public class GameSessionApiService : IGameSessionApiService
             // 1. By account ID (if the profile owner is the account holder)
             // 2. By player names (if the profile is a player)
             // 3. By a direct profile relationship (if we had such a field)
-            
+
             // For now, we'll search by matching the profile name with player names
             // This is a simplification - in practice, you might want to add a more direct relationship
-            
+
             var sessions = await _context.GameSessions
                 .Where(s => s.ProfileId == profileId || s.PlayerNames.Contains(profileId))
                 .OrderByDescending(s => s.StartTime)

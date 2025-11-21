@@ -31,7 +31,7 @@ public class GameSessionRepository : Repository<GameSession>, IGameSessionReposi
     public async Task<IEnumerable<GameSession>> GetInProgressSessionsAsync(string accountId)
     {
         return await _dbSet
-            .Where(s => s.AccountId == accountId && 
+            .Where(s => s.AccountId == accountId &&
                        (s.Status == SessionStatus.InProgress || s.Status == SessionStatus.Paused))
             .OrderByDescending(s => s.StartTime)
             .ToListAsync();
@@ -43,6 +43,15 @@ public class GameSessionRepository : Repository<GameSession>, IGameSessionReposi
             .FirstOrDefaultAsync(s => s.AccountId == accountId &&
                                       s.ScenarioId == scenarioId &&
                                       (s.Status == SessionStatus.InProgress || s.Status == SessionStatus.Paused));
+    }
+
+    public async Task<IEnumerable<GameSession>> GetActiveSessionsByScenarioAndAccountAsync(string scenarioId, string accountId)
+    {
+        return await _dbSet
+            .Where(s => s.ScenarioId == scenarioId &&
+                       s.AccountId == accountId &&
+                       (s.Status == SessionStatus.InProgress || s.Status == SessionStatus.Paused))
+            .ToListAsync();
     }
 
     public async Task<int> GetActiveSessionsCountAsync()

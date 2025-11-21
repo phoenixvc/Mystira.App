@@ -11,6 +11,7 @@ public interface IGameSessionRepository : IRepository<GameSession>
     Task<IEnumerable<GameSession>> GetByProfileIdAsync(string profileId);
     Task<IEnumerable<GameSession>> GetInProgressSessionsAsync(string accountId);
     Task<GameSession?> GetActiveSessionForScenarioAsync(string accountId, string scenarioId);
+    Task<IEnumerable<GameSession>> GetActiveSessionsByScenarioAndAccountAsync(string scenarioId, string accountId);
     Task<int> GetActiveSessionsCountAsync();
 }
 
