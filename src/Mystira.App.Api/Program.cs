@@ -9,6 +9,8 @@ using Mystira.App.Api.Services;
 using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
+using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -212,6 +214,11 @@ builder.Services.AddAuthentication(options =>
     });
 
 builder.Services.AddAuthorization();
+
+// Register repositories
+builder.Services.AddScoped<IRepository<Mystira.App.Domain.Models.GameSession>, Repository<Mystira.App.Domain.Models.GameSession>>();
+builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Register application services
 builder.Services.AddScoped<IScenarioApiService, ScenarioApiService>();

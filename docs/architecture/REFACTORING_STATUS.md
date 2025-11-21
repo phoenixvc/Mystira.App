@@ -19,19 +19,25 @@
 - ✅ Created `IUnitOfWork` interface
 - ✅ Created refactoring plan document
 
+### 4. Repository Layer Implementation
+- ✅ Implemented `Repository<T>` base class
+- ✅ Implemented `GameSessionRepository` with domain-specific queries
+- ✅ Implemented `UnitOfWork` for transaction management
+
 ## 🔄 In Progress
 
 ### Next Steps (Priority Order)
 
-#### Phase 1: Repository Implementation
-1. Implement `GameSessionRepository` in `Infrastructure.Data`
-2. Create repositories for other entities:
+#### Phase 1: Repository Implementation (In Progress)
+1. ✅ Implement `GameSessionRepository` in `Infrastructure.Data`
+2. ✅ Implement `UnitOfWork` with DbContext
+3. 🔄 Register repositories in DI container (Api and Admin.Api)
+4. 🔄 Migrate `GameSessionApiService` to use `GameSessionRepository`
+5. Create repositories for other entities:
    - `IScenarioRepository`
    - `IUserProfileRepository`
    - `IAccountRepository`
    - `IMediaRepository`
-3. Implement `UnitOfWork` with DbContext
-4. Update existing services to use repositories
 
 #### Phase 2: DTOs Migration
 1. Move request DTOs from `ApiModels.cs` to `Contracts/Requests/`

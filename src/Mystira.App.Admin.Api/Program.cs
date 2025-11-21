@@ -8,6 +8,8 @@ using Mystira.App.Admin.Api.Services;
 using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
+using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -153,6 +155,11 @@ builder.Services.AddScoped<IMediaApiService, MediaApiService>();
 builder.Services.AddScoped<IAvatarApiService, AvatarApiService>();
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
 builder.Services.AddScoped<IEmailService, AzureEmailService>();
+// Register repositories
+builder.Services.AddScoped<IRepository<Mystira.App.Domain.Models.GameSession>, Repository<Mystira.App.Domain.Models.GameSession>>();
+builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
 builder.Services.AddScoped<IGameSessionApiService, GameSessionApiService>();
 builder.Services.AddScoped<IAccountApiService, AccountApiService>();
 
