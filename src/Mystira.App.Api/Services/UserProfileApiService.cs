@@ -35,15 +35,8 @@ public class UserProfileApiService : IUserProfileApiService
         }
 
         // Validate age group
-<<<<<<< HEAD
-        if (AgeGroup.Parse(request.AgeGroup) == null)
-        {
-            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", StringEnum<AgeGroup>.ValueMap.Keys)}");
-        }
-=======
         if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
             throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
->>>>>>> origin/dev
 
         var profile = new UserProfile
         {
@@ -92,15 +85,8 @@ public class UserProfileApiService : IUserProfileApiService
         }
 
         // Validate age group
-<<<<<<< HEAD
-        if (AgeGroup.Parse(request.AgeGroup) == null)
-        {
-            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", StringEnum<AgeGroup>.ValueMap.Keys)}");
-        }
-=======
         if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
             throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
->>>>>>> origin/dev
 
         var profile = new UserProfile
         {
@@ -174,15 +160,8 @@ public class UserProfileApiService : IUserProfileApiService
         if (request.AgeGroup != null)
         {
             // Validate age group
-<<<<<<< HEAD
-            if (AgeGroup.Parse(request.AgeGroup) == null)
-            {
-                throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", StringEnum<AgeGroup>.ValueMap.Keys)}");
-            }
-=======
             if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
                 throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
->>>>>>> origin/dev
 
             profile.AgeGroupName = request.AgeGroup;
         }
@@ -245,12 +224,7 @@ public class UserProfileApiService : IUserProfileApiService
 
         await _context.SaveChangesAsync();
 
-<<<<<<< HEAD
-        _logger.LogInformation("Deleted user profile and associated data: {Name} (badges: {BadgeCount})",
-            name, badges.Count);
-=======
         _logger.LogInformation("Deleted user profile and associated data: {Name}", profile.Name);
->>>>>>> origin/dev
         return true;
     }
 

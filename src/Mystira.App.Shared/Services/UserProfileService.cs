@@ -1,17 +1,17 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Mystira.App.Domain.Models;
 using System.Linq;
-using Mystira.App.Shared.Data;
 using Mystira.App.Shared.Models;
 
 namespace Mystira.App.Shared.Services;
 
-public class UserProfileService : IUserProfileService
+public class UserProfileService<TContext> where TContext : DbContext
 {
-    private readonly MystiraAppDbContext _context;
-    private readonly ILogger<UserProfileService> _logger;
+    private readonly TContext _context;
+    private readonly ILogger<UserProfileService<TContext>> _logger;
 
-    public UserProfileService(MystiraAppDbContext context, ILogger<UserProfileService> logger)
+    public UserProfileService(TContext context, ILogger<UserProfileService<TContext>> logger)
     {
         _context = context;
         _logger = logger;
@@ -52,7 +52,7 @@ public class UserProfileService : IUserProfileService
             profile.UpdateAgeGroupFromBirthDate();
         }
 
-        _context.UserProfiles.Add(profile);
+        _context.Set<UserProfile>().Add(profile);
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Created new user profile: {Name} (Guest: {IsGuest}, NPC: {IsNPC})",
@@ -92,7 +92,7 @@ public class UserProfileService : IUserProfileService
             UpdatedAt = DateTime.UtcNow
         };
 
-        _context.UserProfiles.Add(profile);
+        _context.Set<UserProfile>().Add(profile);
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Created guest profile: {Name}", profile.Name);
@@ -123,14 +123,14 @@ public class UserProfileService : IUserProfileService
 
     public async Task<UserProfile?> GetProfileAsync(string name)
     {
-        return await _context.UserProfiles
+        return await _context.Set<UserProfile>()
             .Include(p => p.EarnedBadges)
             .FirstOrDefaultAsync(p => p.Name == name);
     }
 
     public async Task<UserProfile?> GetProfileByIdAsync(string id)
     {
-        return await _context.UserProfiles
+        return await _context.Set<UserProfile>()
             .Include(p => p.EarnedBadges)
             .FirstOrDefaultAsync(p => p.Id == id);
     }
@@ -187,6 +187,58 @@ public class UserProfileService : IUserProfileService
         return profile;
     }
 
+    public async Task<UserProfile?> UpdateProfileByIdAsync(string id, UpdateUserProfileRequest request)
+    {
+        var profile = await GetProfileByIdAsync(id);
+        if (profile == null)
+            return null;
+
+        // Apply updates
+        if (request.PreferredFantasyThemes != null)
+        {
+            // Validate fantasy themes
+            var invalidThemes = request.PreferredFantasyThemes.Where(t => FantasyTheme.Parse(t) == null).ToList();
+            if (invalidThemes.Any())
+                throw new ArgumentException($"Invalid fantasy themes: {string.Join(", ", invalidThemes)}");
+
+            profile.PreferredFantasyThemes = request.PreferredFantasyThemes.Select(t => FantasyTheme.Parse(t)!).ToList();
+        }
+
+        if (request.AgeGroup != null)
+        {
+            // Validate age group
+            if (AgeGroup.Parse(request.AgeGroup) == null)
+                throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", StringEnum<AgeGroup>.ValueMap.Keys)}");
+
+            profile.AgeGroupName = request.AgeGroup;
+        }
+
+        if (request.DateOfBirth.HasValue)
+        {
+            profile.DateOfBirth = request.DateOfBirth;
+            // Update age group automatically if date of birth is provided
+            profile.UpdateAgeGroupFromBirthDate();
+        }
+
+        if (request.HasCompletedOnboarding.HasValue)
+            profile.HasCompletedOnboarding = request.HasCompletedOnboarding.Value;
+
+        if (request.IsGuest.HasValue)
+            profile.IsGuest = request.IsGuest.Value;
+
+        if (request.IsNpc.HasValue)
+            profile.IsNpc = request.IsNpc.Value;
+
+        if (request.AccountId != null)
+            profile.AccountId = request.AccountId;
+
+        profile.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Updated user profile by ID: {Id}", id);
+        return profile;
+    }
+
     public async Task<bool> DeleteProfileAsync(string name)
     {
         var profile = await GetProfileAsync(name);
@@ -194,17 +246,17 @@ public class UserProfileService : IUserProfileService
             return false;
 
         // COPPA compliance: Also delete associated sessions, badges, and data
-        var sessions = await _context.GameSessions
+        var sessions = await _context.Set<GameSession>()
             .Where(s => s.ProfileId == profile.Id)
             .ToListAsync();
 
-        var badges = await _context.UserBadges
+        var badges = await _context.Set<UserBadge>()
             .Where(b => b.UserProfileId == profile.Id)
             .ToListAsync();
 
-        _context.GameSessions.RemoveRange(sessions);
-        _context.UserBadges.RemoveRange(badges);
-        _context.UserProfiles.Remove(profile);
+        _context.Set<GameSession>().RemoveRange(sessions);
+        _context.Set<UserBadge>().RemoveRange(badges);
+        _context.Set<UserProfile>().Remove(profile);
 
         await _context.SaveChangesAsync();
 
@@ -228,7 +280,7 @@ public class UserProfileService : IUserProfileService
 
     public async Task<List<UserProfile>> GetAllProfilesAsync()
     {
-        return await _context.UserProfiles
+        return await _context.Set<UserProfile>()
             .Include(p => p.EarnedBadges)
             .OrderBy(p => p.Name)
             .ToListAsync();
@@ -236,16 +288,16 @@ public class UserProfileService : IUserProfileService
 
     public async Task<List<UserProfile>> GetNonGuestProfilesAsync()
     {
-        return await _context.UserProfiles
+        return await _context.Set<UserProfile>()
             .Include(p => p.EarnedBadges)
             .Where(p => !p.IsGuest)
             .OrderBy(p => p.Name)
-            to.ToListAsync();
+            .ToListAsync();
     }
 
     public async Task<List<UserProfile>> GetGuestProfilesAsync()
     {
-        return await _context.UserProfiles
+        return await _context.Set<UserProfile>()
             .Include(p => p.EarnedBadges)
             .Where(p => p.IsGuest)
             .OrderBy(p => p.CreatedAt)
@@ -254,12 +306,12 @@ public class UserProfileService : IUserProfileService
 
     public async Task<bool> AssignCharacterToProfileAsync(string profileId, string characterId, bool isNpc = false)
     {
-        var profile = await _context.UserProfiles.FirstOrDefaultAsync(p => p.Id == profileId);
+        var profile = await _context.Set<UserProfile>().FirstOrDefaultAsync(p => p.Id == profileId);
         if (profile == null)
             return false;
 
         // Check if character exists
-        var character = await _context.CharacterMaps.FirstOrDefaultAsync(c => c.Id == characterId);
+        var character = await _context.Set<CharacterMap>().FirstOrDefaultAsync(c => c.Id == characterId);
         if (character == null)
             return false;
 

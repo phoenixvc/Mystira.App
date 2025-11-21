@@ -300,26 +300,15 @@ public class BundleService : IBundleService
             Tags = scenario.Tags,
             Difficulty = scenario.Difficulty,
             SessionLength = scenario.SessionLength,
-<<<<<<< HEAD
-            Archetypes = scenario.Archetypes.Select(a => a.Value).ToList(),
-            AgeGroup = scenario.AgeGroup,
-            MinimumAge = scenario.MinimumAge,
-            CoreAxes = scenario.CoreAxes.Select(a => a.Value).ToList(),
-=======
             Archetypes = scenario.Archetypes?.Select(a => a.Value).ToList() ?? new List<string>(),
             AgeGroup = scenario.AgeGroup,
             MinimumAge = scenario.MinimumAge,
             CoreAxes = scenario.CoreAxes?.Select(a => a.Value).ToList() ?? new List<string>(),
->>>>>>> origin/dev
             Characters = scenario.Characters,
             Scenes = scenario.Scenes
         };
 
-<<<<<<< HEAD
-        createRequest.CompassAxes = scenario.CoreAxes.Select(a => a.Value).ToList();
-=======
         createRequest.CompassAxes = createRequest.CoreAxes;
->>>>>>> origin/dev
 
         if (existingScenario != null)
         {

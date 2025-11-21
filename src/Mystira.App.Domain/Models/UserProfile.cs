@@ -140,7 +140,6 @@ public class UserProfile
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string? AccountId { get; set; } // Link to Account
-<<<<<<< HEAD
 
     /// <summary>
     /// Pronouns for the profile (e.g., they/them, she/her, he/him)

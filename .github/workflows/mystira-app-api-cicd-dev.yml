@@ -1,37 +1,37 @@
-name: Mystira.App.Admin API CI/CD (prod only)
+name: API CI/CD - Dev Environment
 
 on:
   push:
-    branches: [ main ]
+    branches: [ dev ]
     paths:
-      - 'src/Mystira.App.Admin.Api/**'
+      - 'src/Mystira.App.Api/**'
       - 'src/Mystira.App.Domain/**'
-      - '.github/workflows/ci-cd-admin-prod.yml'
+      - '.github/workflows/ci-cd.yml'
   pull_request:
-    branches: [ main ]  # PRs targeting main (prod)
-    types: [opened, synchronize, reopened]
+    branches: [ dev ]  # PRs targeting dev
+    types: [opened, synchronize, reopened, closed]
     paths:
-      - 'src/Mystira.App.Admin.Api/**'
+      - 'src/Mystira.App.Api/**'
       - 'src/Mystira.App.Domain/**'
-      - '.github/workflows/ci-cd-admin-prod.yml'
+      - '.github/workflows/ci-cd.yml'
   workflow_dispatch:
 
+# Least-privilege defaults
 permissions:
   contents: read
 
+# Avoid overlapping runs on same ref (branch/PR)
 concurrency:
-  group: mystira-app-admin-api-prod-${{ github.ref }}
+  group: mystira-app-api-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   DOTNET_VERSION: '9.0.x'
-  AZURE_WEBAPP_NAME: 'prod-wus-app-mystira-api-admin'
+  AZURE_WEBAPP_NAME: 'mystira-app-dev-api'
   AZURE_WEBAPP_PACKAGE_PATH: './publish'
-  ARTIFACT_NAME: 'mystira-app-admin-api'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
-
-  # Boolean: evaluates to "true"/"false"
-  HAS_PUBLISH_PROFILE_PROD_ADMIN: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN != '' }}
+  # Evaluates to "true"/"false" at workflow parse time
+  HAS_PUBLISH_PROFILE_DEV: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV != '' }}
 
 jobs:
   build-and-test:
@@ -55,40 +55,44 @@ jobs:
       - name: Test
         run: dotnet test --no-build --configuration Release --verbosity normal
 
-      - name: Publish Admin API
-        run: dotnet publish src/Mystira.App.Admin.Api/Mystira.App.Admin.Api.csproj --configuration Release --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+      - name: Publish
+        run: dotnet publish src/Mystira.App.Api/Mystira.App.Api.csproj --configuration Release --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.ARTIFACT_NAME }}
+          name: mystira-app-api
           path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
-  deploy-prod:
+  deploy-dev:
     runs-on: ubuntu-latest
     needs: build-and-test
 
-    # ✅ Only deploy when there is a push directly to main
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Only when a PR into dev is CLOSED *and* MERGED
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.base_ref == 'dev'
 
-    environment: production
+    environment: development
 
     steps:
-      - name: Validate required prod secrets
-        if: env.HAS_PUBLISH_PROFILE_PROD_ADMIN != 'true'
+      - name: Validate required secrets for dev deployment
+        if: env.HAS_PUBLISH_PROFILE_DEV != 'true'
         run: |
-          echo "ERROR: Secret AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN is not set."
+          echo "ERROR: Secret AZURE_WEBAPP_PUBLISH_PROFILE_DEV is not set."
           exit 1
 
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.ARTIFACT_NAME }}
+          name: mystira-app-api
           path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
-      - name: Deploy Admin API to Azure Web App (Production)
+      - name: Deploy to Azure Web App (Development)
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV }}
           package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}

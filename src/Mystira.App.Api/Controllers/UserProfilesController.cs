@@ -104,15 +104,9 @@ public class UserProfilesController : ControllerBase
             var profile = await _profileService.GetProfileByIdAsync(id);
             if (profile == null)
             {
-<<<<<<< HEAD
-                return NotFound(new ErrorResponse
-                {
-                    Message = $"Profile not found: {name}",
-=======
                 return NotFound(new ErrorResponse 
                 { 
                     Message = $"Profile not found: {id}",
->>>>>>> origin/dev
                     TraceId = HttpContext.TraceIdentifier
                 });
             }
@@ -121,15 +115,9 @@ public class UserProfilesController : ControllerBase
         }
         catch (Exception ex)
         {
-<<<<<<< HEAD
-            _logger.LogError(ex, "Error getting profile {Name}", name);
-            return StatusCode(500, new ErrorResponse
-            {
-=======
             _logger.LogError(ex, "Error getting profile {Id}", id);
             return StatusCode(500, new ErrorResponse 
             { 
->>>>>>> origin/dev
                 Message = "Internal server error while fetching profile",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -160,15 +148,9 @@ public class UserProfilesController : ControllerBase
             var updatedProfile = await _profileService.UpdateProfileByIdAsync(id, request);
             if (updatedProfile == null)
             {
-<<<<<<< HEAD
-                return NotFound(new ErrorResponse
-                {
-                    Message = $"Profile not found: {name}",
-=======
                 return NotFound(new ErrorResponse 
                 { 
                     Message = $"Profile not found: {id}",
->>>>>>> origin/dev
                     TraceId = HttpContext.TraceIdentifier
                 });
             }
@@ -177,30 +159,18 @@ public class UserProfilesController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-<<<<<<< HEAD
-            _logger.LogWarning(ex, "Validation error updating profile {Name}", name);
-            return BadRequest(new ErrorResponse
-            {
-=======
             _logger.LogWarning(ex, "Validation error updating profile {Id}", id);
             return BadRequest(new ErrorResponse 
             { 
->>>>>>> origin/dev
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
         }
         catch (Exception ex)
         {
-<<<<<<< HEAD
-            _logger.LogError(ex, "Error updating profile {Name}", name);
-            return StatusCode(500, new ErrorResponse
-            {
-=======
             _logger.LogError(ex, "Error updating profile {Id}", id);
             return StatusCode(500, new ErrorResponse 
             { 
->>>>>>> origin/dev
                 Message = "Internal server error while updating profile",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -228,21 +198,7 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-<<<<<<< HEAD
-            var profile = await _profileService.GetProfileByIdAsync(profileId);
-            if (profile == null)
-            {
-                return NotFound(new ErrorResponse
-                {
-                    Message = $"Profile not found: {profileId}",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            var updatedProfile = await _profileService.UpdateProfileAsync(profile.Name, request);
-=======
             var updatedProfile = await _profileService.UpdateProfileByIdAsync(profileId, request);
->>>>>>> origin/dev
             if (updatedProfile == null)
             {
                 return NotFound(new ErrorResponse
@@ -295,15 +251,9 @@ public class UserProfilesController : ControllerBase
             var deleted = await _profileService.DeleteProfileAsync(profile.Id);
             if (!deleted)
             {
-<<<<<<< HEAD
-                return NotFound(new ErrorResponse
-                {
-                    Message = $"Profile not found: {name}",
-=======
                 return NotFound(new ErrorResponse 
                 { 
                     Message = $"Profile not found: {id}",
->>>>>>> origin/dev
                     TraceId = HttpContext.TraceIdentifier
                 });
             }
@@ -312,15 +262,9 @@ public class UserProfilesController : ControllerBase
         }
         catch (Exception ex)
         {
-<<<<<<< HEAD
-            _logger.LogError(ex, "Error deleting profile {Name}", name);
-            return StatusCode(500, new ErrorResponse
-            {
-=======
             _logger.LogError(ex, "Error deleting profile {Id}", id);
             return StatusCode(500, new ErrorResponse 
             { 
->>>>>>> origin/dev
                 Message = "Internal server error while deleting profile",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -348,15 +292,9 @@ public class UserProfilesController : ControllerBase
             var success = await _profileService.CompleteOnboardingAsync(profile.Name);
             if (!success)
             {
-<<<<<<< HEAD
-                return NotFound(new ErrorResponse
-                {
-                    Message = $"Profile not found: {name}",
-=======
                 return NotFound(new ErrorResponse 
                 { 
                     Message = $"Profile not found: {id}",
->>>>>>> origin/dev
                     TraceId = HttpContext.TraceIdentifier
                 });
             }
@@ -365,15 +303,9 @@ public class UserProfilesController : ControllerBase
         }
         catch (Exception ex)
         {
-<<<<<<< HEAD
-            _logger.LogError(ex, "Error completing onboarding for {Name}", name);
-            return StatusCode(500, new ErrorResponse
-            {
-=======
             _logger.LogError(ex, "Error completing onboarding for {Id}", id);
             return StatusCode(500, new ErrorResponse 
             { 
->>>>>>> origin/dev
                 Message = "Internal server error while completing onboarding",
                 TraceId = HttpContext.TraceIdentifier
             });

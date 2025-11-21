@@ -240,11 +240,7 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
             // Validate axis
             if (CoreAxis.Parse(yamlEntry.Axis) == null)
             {
-<<<<<<< HEAD
-                throw new ArgumentException($"Invalid compass axis in YAML: {yamlEntry.Axis}. Must be one of: {string.Join(", ", StringEnum<CoreAxis>.ValueMap.Keys)}");
-=======
                 throw new ArgumentException($"Invalid compass axis in YAML: {yamlEntry.Axis}. Must be one of: {string.Join(", ", GetAllCoreAxisNames())}");
->>>>>>> origin/dev
             }
 
             var badgeConfig = new BadgeConfiguration

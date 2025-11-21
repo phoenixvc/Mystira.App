@@ -175,15 +175,10 @@ public class MakeChoiceRequest
 
 public class ProgressSceneRequest
 {
-    [Required]
-<<<<<<< HEAD
-    public string NewSceneId { get; set; } = string.Empty;
-=======
     public string SessionId { get; set; } = string.Empty;
 
     [Required]
     public string SceneId { get; set; } = string.Empty;
->>>>>>> origin/dev
 }
 
 public class ScenarioQueryRequest
@@ -706,8 +701,6 @@ public class PasswordlessSigninResponse
     public string Message { get; set; } = string.Empty;
     public string? Email { get; set; }
 }
-<<<<<<< HEAD
-=======
 
 // Scenario Game State Models
 public enum ScenarioGameState
@@ -779,4 +772,3 @@ public class AvatarConfigurationResponse
     public string AgeGroup { get; set; } = string.Empty;
     public List<string> AvatarMediaIds { get; set; } = new();
 }
->>>>>>> origin/dev

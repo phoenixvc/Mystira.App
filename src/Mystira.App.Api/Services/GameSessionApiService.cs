@@ -60,19 +60,19 @@ public class GameSessionApiService : IGameSessionApiService
         }
 
         // Check for existing InProgress session for this scenario and account
-        var existingSession = await _context.GameSessions
+        var pausedSession = await _context.GameSessions
             .FirstOrDefaultAsync(s => s.ScenarioId == request.ScenarioId 
                 && s.AccountId == request.AccountId 
                 && s.Status == SessionStatus.InProgress);
         
-        if (existingSession != null)
+        if (pausedSession != null)
         {
             _logger.LogInformation("Found existing InProgress session {ExistingSessionId} for scenario {ScenarioId}, pausing it", 
-                existingSession.Id, request.ScenarioId);
+                pausedSession.Id, request.ScenarioId);
             
-            existingSession.Status = SessionStatus.Paused;
-            existingSession.IsPaused = true;
-            existingSession.PausedAt = DateTime.UtcNow;
+            pausedSession.Status = SessionStatus.Paused;
+            pausedSession.IsPaused = true;
+            pausedSession.PausedAt = DateTime.UtcNow;
         }
 
         var session = new GameSession

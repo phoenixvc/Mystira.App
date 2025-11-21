@@ -102,7 +102,7 @@ public class GameSessionService : IGameSessionService
                 ScenarioId = scenario.Id,
                 ScenarioName = scenario.Title,
                 CurrentScene = startingScene,
-                StartedAt = apiGameSession.StartTime,
+                StartedAt = apiGameSession.StartedAt,
                 CompletedScenes = new List<Scene>(),
                 IsCompleted = false
             };
@@ -213,12 +213,6 @@ public class GameSessionService : IGameSessionService
                 // Still mark as completed locally for UI consistency
             }
 
-<<<<<<< HEAD
-            CurrentGameSession.IsCompleted = true;
-
-            // Trigger the event to notify subscribers
-            GameSessionChanged?.Invoke(this, CurrentGameSession);
-=======
             // Mark scenario as completed for the account
             var account = await _authService.GetCurrentAccountAsync();
             if (account != null && CurrentGameSession != null)
@@ -242,7 +236,6 @@ public class GameSessionService : IGameSessionService
                 // Trigger the event to notify subscribers
                 GameSessionChanged?.Invoke(this, CurrentGameSession);
             }
->>>>>>> origin/dev
 
             _logger.LogInformation("Game session completed successfully");
             return true;

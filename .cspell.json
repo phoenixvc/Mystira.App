@@ -1,0 +1,17 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [],
+  "flagWords": [],
+  "ignoreWords": [],
+  "ignorePaths": [
+    "node_modules/**",
+    "**/bin/**",
+    "**/obj/**",
+    "**/.git/**",
+    "**/packages/**"
+  ],
+  "dictionaries": [],
+  "dictionaryDefinitions": []
+}
+

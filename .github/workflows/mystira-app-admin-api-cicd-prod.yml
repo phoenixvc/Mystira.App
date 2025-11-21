@@ -1,37 +1,37 @@
-name: Mystira.App.Admin API CI/CD (dev only)
+name: Admin API CI/CD - Production Environment
 
 on:
   push:
-    branches: [ dev ]
+    branches: [ main ]
     paths:
       - 'src/Mystira.App.Admin.Api/**'
       - 'src/Mystira.App.Domain/**'
-      - '.github/workflows/ci-cd-admin.yml'
+      - '.github/workflows/ci-cd-admin-prod.yml'
   pull_request:
-    branches: [ dev ]  # PRs targeting dev
+    branches: [ main ]  # PRs targeting main (prod)
     types: [opened, synchronize, reopened]
     paths:
       - 'src/Mystira.App.Admin.Api/**'
       - 'src/Mystira.App.Domain/**'
-      - '.github/workflows/ci-cd-admin.yml'
+      - '.github/workflows/ci-cd-admin-prod.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: mystira-app-admin-api-${{ github.ref }}
+  group: mystira-app-admin-api-prod-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   DOTNET_VERSION: '9.0.x'
-  AZURE_WEBAPP_NAME: 'dev-euw-app-mystora-admin-api'   # ✅ UPDATED
+  AZURE_WEBAPP_NAME: 'prod-wus-app-mystira-api-admin'
   AZURE_WEBAPP_PACKAGE_PATH: './publish'
   ARTIFACT_NAME: 'mystira-app-admin-api'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
 
-  # Secret presence validation
-  HAS_PUBLISH_PROFILE_DEV_ADMIN: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN != '' }}
+  # Boolean: evaluates to "true"/"false"
+  HAS_PUBLISH_PROFILE_PROD_ADMIN: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN != '' }}
 
 jobs:
   build-and-test:
@@ -64,20 +64,20 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
-  deploy-dev:
+  deploy-prod:
     runs-on: ubuntu-latest
     needs: build-and-test
 
-    # ✅ Only deploy when there is a push directly to dev
-    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    # ✅ Only deploy when there is a push directly to main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
-    environment: development
+    environment: production
 
     steps:
-      - name: Validate required secrets for admin dev deployment
-        if: env.HAS_PUBLISH_PROFILE_DEV_ADMIN != 'true'
+      - name: Validate required prod secrets
+        if: env.HAS_PUBLISH_PROFILE_PROD_ADMIN != 'true'
         run: |
-          echo "ERROR: Secret AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN is not set."
+          echo "ERROR: Secret AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN is not set."
           exit 1
 
       - name: Download artifact from build job
@@ -86,9 +86,9 @@ jobs:
           name: ${{ env.ARTIFACT_NAME }}
           path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
-      - name: Deploy Admin API to Azure Web App (Development)
+      - name: Deploy Admin API to Azure Web App (Production)
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN }}
           package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}

@@ -587,20 +587,10 @@ public static class ScenarioRequestCreator
         {
             if (echoTypeObj != null)
             {
-<<<<<<< HEAD
-                var echoTypeStr = echoTypeObj.ToString();
-                var parsedEchoType = EchoType.Parse(echoTypeStr);
-                if (parsedEchoType == null)
-                {
-                    throw new ArgumentException($"Invalid echo type: '{echoTypeStr}'");
-                }
-                reveal.EchoType = parsedEchoType;
-=======
                 var parsed = EchoType.Parse(echoTypeObj.ToString());
                 if (parsed == null)
                     throw new ArgumentException($"Invalid EchoType: {echoTypeObj}");
                 reveal.EchoType = parsed;
->>>>>>> origin/dev
             }
             else
             {

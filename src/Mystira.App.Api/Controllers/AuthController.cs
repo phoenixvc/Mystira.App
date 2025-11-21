@@ -70,18 +70,12 @@ namespace Mystira.App.Api.Controllers
 
             _logger.LogInformation("Passwordless signup verified: email={Email}", request.Email);
 
-<<<<<<< HEAD
-            return Ok(new PasswordlessVerifyResponse
-            {
-                Success = true,
-=======
             var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName, account.Role);
             var refreshToken = _jwtService.GenerateRefreshToken();
 
             return Ok(new PasswordlessVerifyResponse 
             { 
                 Success = true, 
->>>>>>> origin/dev
                 Message = "Account created successfully",
                 Account = account,
                 Token = accessToken,
@@ -140,18 +134,12 @@ namespace Mystira.App.Api.Controllers
 
             _logger.LogInformation("Passwordless signin verified: email={Email}", request.Email);
 
-<<<<<<< HEAD
-            return Ok(new PasswordlessVerifyResponse
-            {
-                Success = true,
-=======
             var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName, account.Role);
             var refreshToken = _jwtService.GenerateRefreshToken();
 
             return Ok(new PasswordlessVerifyResponse 
             { 
                 Success = true, 
->>>>>>> origin/dev
                 Message = "Sign-in successful",
                 Account = account,
                 Token = accessToken,

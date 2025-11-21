@@ -56,7 +56,7 @@
                                                     </span>
                                                 </div>
                                                 <p class="card-text small text-muted mb-3">
-                                                    Started: @activeSession.StartTime.ToLocalTime().ToString("g")
+                                                    Started: @activeSession.StartedAt.ToLocalTime().ToString("g")
                                                 </p>
                                                 <button class="btn btn-info w-100" 
                                                         @onclick="() => ContinueAdventure(activeSession, scenario)">
@@ -142,7 +142,6 @@
                                                         Resume
                                                     </button>
                                                 </div>
->>>>>>> origin/dev
                                             </div>
                                         </div>
                                     </div>
@@ -516,7 +515,7 @@
     private bool isAuthenticated = false;
     private bool showCompletedStories = true;
     private HashSet<string> completedScenarioIds = new();
-    private List<Mystira.App.Domain.Models.GameSession> activeSessions = new();
+    private List<GameSession> activeSessions = new();
     private bool isLoadingGameState = false;
     private bool gameStateLoadingComplete = false;
     private bool hasProfiles = false;
@@ -724,8 +723,8 @@
                 {
                     // Filter active sessions (InProgress or Paused)
                     activeSessions = sessions
-                        .Where(s => s.Status == SessionStatus.InProgress || s.Status == SessionStatus.Paused)
-                        .OrderByDescending(s => s.StartTime)
+                        .Where(s => s.Status == SessionStatus.InProgress.ToString() || s.Status == SessionStatus.Paused.ToString())
+                        .OrderByDescending(s => s.StartedAt)
                         .ToList();
                     
                     Logger.LogInformation("Found {Count} active session(s) for account {AccountId}", 
@@ -733,7 +732,7 @@
                     
                     // Track completed scenarios
                     completedScenarioIds = sessions
-                        .Where(s => s.Status == SessionStatus.Completed)
+                        .Where(s => s.Status == SessionStatus.Completed.ToString())
                         .Select(s => s.ScenarioId)
                         .ToHashSet();
                     
@@ -986,8 +985,7 @@
             string.Join(", ", selectedAgeGroups), showCompletedStories, filteredScenarios.Count, scenarios.Count);
     }
 
-<<<<<<< HEAD
-    private async Task ContinueAdventure(Mystira.App.Domain.Models.GameSession activeSession, Scenario scenario)
+    private async Task ContinueAdventure(GameSession activeSession, Scenario scenario)
     {
         try
         {
@@ -1030,7 +1028,7 @@
                 ScenarioId = fullScenario.Id,
                 ScenarioName = fullScenario.Title,
                 CurrentScene = currentScene,
-                StartedAt = activeSession.StartTime,
+                StartedAt = activeSession.StartedAt,
                 CompletedScenes = new List<Scene>(),
                 IsCompleted = false
             };
@@ -1039,7 +1037,7 @@
             GameSessionService.SetCurrentGameSession(localGameSession);
             
             // Navigate to the game page
-            Navigation.NavigateTo("/game");
+            NavigationManager.NavigateTo("/game");
         }
         catch (Exception ex)
         {

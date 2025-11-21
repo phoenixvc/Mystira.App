@@ -110,6 +110,7 @@ public class GameSession
     public Scene? CurrentScene { get; set; }
     public List<Scene> CompletedScenes { get; set; } = new();
     public List<string> PlayerNames { get; set; } = new();
+    [JsonPropertyName("startTime")]
     public DateTime StartedAt { get; set; }
     public bool IsCompleted { get; set; }
     public Scenario Scenario { get; set; } = new();

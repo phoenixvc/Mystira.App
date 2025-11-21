@@ -1,14 +1,14 @@
-name: Mystira.App API CI/CD (dev only)
+name: API CI/CD - Production Environment
 
 on:
   push:
-    branches: [ dev ]
+    branches: [ main ]
     paths:
       - 'src/Mystira.App.Api/**'
       - 'src/Mystira.App.Domain/**'
       - '.github/workflows/ci-cd.yml'
   pull_request:
-    branches: [ dev ]  # PRs targeting dev
+    branches: [ main ]  # PRs targeting main
     types: [opened, synchronize, reopened, closed]
     paths:
       - 'src/Mystira.App.Api/**'
@@ -22,16 +22,16 @@ permissions:
 
 # Avoid overlapping runs on same ref (branch/PR)
 concurrency:
-  group: mystira-app-api-${{ github.ref }}
+  group: mystira-app-api-prod-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   DOTNET_VERSION: '9.0.x'
-  AZURE_WEBAPP_NAME: 'mystira-app-dev-api'
+  AZURE_WEBAPP_NAME: 'prod-wus-app-mystira-api'
   AZURE_WEBAPP_PACKAGE_PATH: './publish'
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
   # Evaluates to "true"/"false" at workflow parse time
-  HAS_PUBLISH_PROFILE_DEV: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV != '' }}
+  HAS_PUBLISH_PROFILE_PROD: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD != '' }}
 
 jobs:
   build-and-test:
@@ -64,24 +64,24 @@ jobs:
           name: mystira-app-api
           path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
-  deploy-dev:
+  deploy-prod:
     runs-on: ubuntu-latest
     needs: build-and-test
 
-    # Only when a PR into dev is CLOSED *and* MERGED
+    # Only when a PR into main is CLOSED *and* MERGED
     if: >
       github.event_name == 'pull_request' &&
       github.event.action == 'closed' &&
       github.event.pull_request.merged == true &&
-      github.base_ref == 'dev'
+      github.base_ref == 'main'
 
-    environment: development
+    environment: production
 
     steps:
-      - name: Validate required secrets for dev deployment
-        if: env.HAS_PUBLISH_PROFILE_DEV != 'true'
+      - name: Validate required secrets for prod deployment
+        if: env.HAS_PUBLISH_PROFILE_PROD != 'true'
         run: |
-          echo "ERROR: Secret AZURE_WEBAPP_PUBLISH_PROFILE_DEV is not set."
+          echo "ERROR: Secret AZURE_WEBAPP_PUBLISH_PROFILE_PROD is not set."
           exit 1
 
       - name: Download artifact from build job
@@ -90,9 +90,9 @@ jobs:
           name: mystira-app-api
           path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
-      - name: Deploy to Azure Web App (Development)
+      - name: Deploy to Azure Web App (Production)
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
           package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}

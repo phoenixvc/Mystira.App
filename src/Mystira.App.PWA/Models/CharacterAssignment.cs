@@ -96,13 +96,8 @@ public class CharacterAssignmentResponse
 /// </summary>
 public static class AgeRanges
 {
-<<<<<<< HEAD
-    public static readonly string[] All = ["1-2", "3-5", "6-9", "10-12", "13-18"];
-
-=======
     public static readonly string[] All = AgeGroupConstants.AllAgeGroups;
     
->>>>>>> origin/dev
     public static string GetDisplayName(string ageRange)
     {
         return AgeGroupConstants.GetDisplayName(ageRange);

@@ -73,6 +73,7 @@ public class GameSessionsController : ControllerBase
     /// Get a specific game session
     /// </summary>
     [HttpGet("{id}")]
+    [Authorize] // Requires DM authentication
     public async Task<ActionResult<GameSession>> GetSession(string id)
     {
         try
@@ -104,6 +105,7 @@ public class GameSessionsController : ControllerBase
     /// Get all sessions for a specific account
     /// </summary>
     [HttpGet("account/{accountId}")]
+    [Authorize] // Requires authentication
     public async Task<ActionResult<List<GameSessionResponse>>> GetSessionsByAccount(string accountId)
     {
         try
@@ -126,6 +128,7 @@ public class GameSessionsController : ControllerBase
     /// Get all sessions for a specific profile
     /// </summary>
     [HttpGet("profile/{profileId}")]
+    [Authorize] // Requires authentication
     public async Task<ActionResult<List<GameSessionResponse>>> GetSessionsByProfile(string profileId)
     {
         try
@@ -379,6 +382,7 @@ public class GameSessionsController : ControllerBase
     /// Progress a session to a new scene
     /// </summary>
     [HttpPost("{id}/progress-scene")]
+    [Authorize] // Requires DM authentication
     public async Task<ActionResult<GameSession>> ProgressSessionScene(string id, [FromBody] ProgressSceneRequest request)
     {
         try

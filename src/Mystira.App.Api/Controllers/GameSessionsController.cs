@@ -101,12 +101,6 @@ public class GameSessionsController : ControllerBase
         }
         catch (Exception ex)
         {
-<<<<<<< HEAD
-            _logger.LogError(ex, "Error ending session {SessionId}", id);
-            return StatusCode(500, new ErrorResponse
-            {
-                Message = "Internal server error while ending session",
-=======
             _logger.LogError(ex, "Error getting session {SessionId}", id);
             return StatusCode(500, new ErrorResponse 
             { 
@@ -215,7 +209,6 @@ public class GameSessionsController : ControllerBase
             return StatusCode(500, new ErrorResponse 
             { 
                 Message = "Internal server error while making choice",
->>>>>>> origin/dev
                 TraceId = HttpContext.TraceIdentifier
             });
         }
@@ -253,32 +246,6 @@ public class GameSessionsController : ControllerBase
     }
 
     /// <summary>
-<<<<<<< HEAD
-    /// Get all sessions for a specific account
-    /// </summary>
-    [HttpGet("account/{accountId}")]
-    [Authorize] // Requires authentication
-    public async Task<ActionResult<List<GameSessionResponse>>> GetSessionsByAccount(string accountId)
-    {
-        try
-        {
-            var sessions = await _sessionService.GetSessionsByAccountAsync(accountId);
-            return Ok(sessions);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting sessions for account {AccountId}", accountId);
-            return StatusCode(500, new ErrorResponse
-            {
-                Message = "Internal server error while fetching account sessions",
-                TraceId = HttpContext.TraceIdentifier
-            });
-        }
-    }
-
-    /// <summary>
-=======
->>>>>>> origin/dev
     /// Get all sessions for a specific profile
     /// </summary>
     [HttpGet("profile/{profileId}")]
@@ -396,42 +363,22 @@ public class GameSessionsController : ControllerBase
     }
 
     /// <summary>
-<<<<<<< HEAD
-    /// Progress a session to a new scene
-    /// </summary>
-    [HttpPost("{id}/progress-scene")]
-    public async Task<ActionResult<GameSession>> ProgressSessionScene(string id, [FromBody] ProgressSceneRequest request)
-=======
     /// Progress a game session to a new scene
     /// </summary>
     [HttpPost("{id}/progress-scene")]
     public async Task<ActionResult<GameSession>> ProgressScene(string id, [FromBody] ProgressSceneRequest request)
->>>>>>> origin/dev
     {
         try
         {
             if (!ModelState.IsValid)
             {
-<<<<<<< HEAD
-                return BadRequest(new ErrorResponse
-                {
-=======
                 return BadRequest(new ErrorResponse 
                 { 
->>>>>>> origin/dev
                     Message = "Validation failed",
                     TraceId = HttpContext.TraceIdentifier
                 });
             }
 
-<<<<<<< HEAD
-            var session = await _sessionService.ProgressSessionSceneAsync(id, request.NewSceneId);
-            if (session == null)
-            {
-                return NotFound(new ErrorResponse
-                {
-                    Message = $"Session not found or cannot be progressed: {id}",
-=======
             request.SessionId = id;
             var session = await _sessionService.ProgressToSceneAsync(request);
             if (session == null)
@@ -439,21 +386,12 @@ public class GameSessionsController : ControllerBase
                 return NotFound(new ErrorResponse 
                 { 
                     Message = $"Session not found: {id}",
->>>>>>> origin/dev
                     TraceId = HttpContext.TraceIdentifier
                 });
             }
 
             return Ok(session);
         }
-<<<<<<< HEAD
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error progressing session {SessionId} to scene {SceneId}", id, request.NewSceneId);
-            return StatusCode(500, new ErrorResponse
-            {
-                Message = "Internal server error while progressing session",
-=======
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning(ex, "Invalid operation progressing scene in session {SessionId}", id);
@@ -478,14 +416,10 @@ public class GameSessionsController : ControllerBase
             return StatusCode(500, new ErrorResponse 
             { 
                 Message = "Internal server error while progressing scene",
->>>>>>> origin/dev
                 TraceId = HttpContext.TraceIdentifier
             });
         }
     }
-<<<<<<< HEAD
-}
-=======
 
     /// <summary>
     /// Mark a scenario as completed for an account
@@ -528,4 +462,3 @@ public class GameSessionsController : ControllerBase
         }
     }
 }
->>>>>>> origin/dev

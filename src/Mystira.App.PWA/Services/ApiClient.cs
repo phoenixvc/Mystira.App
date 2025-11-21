@@ -50,6 +50,154 @@ public class ApiClient : IApiClient
         }
     }
 
+    private async Task<T?> SendGetAsync<T>(
+        string endpoint, 
+        string operationName, 
+        bool requireAuth = false,
+        Action<T?>? onSuccess = null) where T : class
+    {
+        try
+        {
+            if (requireAuth)
+                await SetAuthorizationHeaderAsync();
+            
+            var response = await _httpClient.GetAsync(endpoint);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<T>(_jsonOptions);
+                onSuccess?.Invoke(result);
+                return result;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("{OperationName} not found", operationName);
+                return null;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to fetch {OperationName} with status: {StatusCode}", 
+                    operationName, response.StatusCode);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching {OperationName}", operationName);
+            return null;
+        }
+    }
+
+    private async Task<TResponse?> SendPostAsync<TRequest, TResponse>(
+        string endpoint, 
+        TRequest requestData, 
+        string operationName,
+        bool requireAuth = false,
+        Action<TResponse?>? onSuccess = null) where TResponse : class
+    {
+        try
+        {
+            if (requireAuth)
+                await SetAuthorizationHeaderAsync();
+            
+            var response = await _httpClient.PostAsJsonAsync(endpoint, requestData, _jsonOptions);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<TResponse>(_jsonOptions);
+                onSuccess?.Invoke(result);
+                return result;
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed {OperationName} with status: {StatusCode}. Error: {Error}", 
+                    operationName, response.StatusCode, errorContent);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during {OperationName}", operationName);
+            return null;
+        }
+    }
+
+    private async Task<TResponse?> SendPutAsync<TRequest, TResponse>(
+        string endpoint, 
+        TRequest requestData, 
+        string operationName,
+        bool requireAuth = false,
+        Action<TResponse?>? onSuccess = null) where TResponse : class
+    {
+        try
+        {
+            if (requireAuth)
+                await SetAuthorizationHeaderAsync();
+            
+            var response = await _httpClient.PutAsJsonAsync(endpoint, requestData, _jsonOptions);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<TResponse>(_jsonOptions);
+                onSuccess?.Invoke(result);
+                return result;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("{OperationName} not found for update", operationName);
+                return null;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to update {OperationName} with status: {StatusCode}", 
+                    operationName, response.StatusCode);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating {OperationName}", operationName);
+            return null;
+        }
+    }
+
+    private async Task<bool> SendDeleteAsync(
+        string endpoint, 
+        string operationName,
+        bool requireAuth = false)
+    {
+        try
+        {
+            if (requireAuth)
+                await SetAuthorizationHeaderAsync();
+            
+            var response = await _httpClient.DeleteAsync(endpoint);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation("Successfully deleted {OperationName}", operationName);
+                return true;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("{OperationName} not found for deletion", operationName);
+                return false;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to delete {OperationName} with status: {StatusCode}", 
+                    operationName, response.StatusCode);
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting {OperationName}", operationName);
+            return false;
+        }
+    }
+
     public async Task<List<Scenario>> GetScenariosAsync()
     {
         try
@@ -91,29 +239,11 @@ public class ApiClient : IApiClient
 
     public async Task<Scenario?> GetScenarioAsync(string id)
     {
-        try
-        {
-            _logger.LogInformation("Fetching scenario {Id} from API...", id);
-
-            var response = await _httpClient.GetAsync($"api/scenarios/{id}");
-
-            if (response.IsSuccessStatusCode)
-            {
-                var scenario = await response.Content.ReadFromJsonAsync<Scenario>(_jsonOptions);
-                _logger.LogInformation("Successfully fetched scenario {Id}", id);
-                return scenario;
-            }
-            else
-            {
-                _logger.LogWarning("API request failed with status: {StatusCode}. Scenario {Id} not available.", response.StatusCode, id);
-                return null;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching scenario {Id} from API. Scenario not available.", id);
-            return null;
-        }
+        return await SendGetAsync<Scenario>(
+            $"api/scenarios/{id}",
+            $"scenario {id}",
+            requireAuth: false,
+            onSuccess: result => _logger.LogInformation("Successfully fetched scenario {Id}", id));
     }
 
     public async Task<List<ContentBundle>> GetBundlesAsync()
@@ -335,9 +465,6 @@ public class ApiClient : IApiClient
         }
     }
 
-<<<<<<< HEAD
-    public async Task<DomainGameSession?> StartGameSessionAsync(string scenarioId, string accountId, string profileId, List<string> playerNames, string targetAgeGroup)
-=======
     public async Task<RefreshTokenResponse?> RefreshTokenAsync(string token, string refreshToken)
     {
         try
@@ -367,26 +494,11 @@ public class ApiClient : IApiClient
     }
 
     public async Task<GameSession?> StartGameSessionAsync(string scenarioId, string accountId, string profileId, List<string> playerNames, string targetAgeGroup)
->>>>>>> origin/dev
     {
         try
         {
             _logger.LogInformation("Starting game session for scenario: {ScenarioId}, Account: {AccountId}, Profile: {ProfileId}",
                 scenarioId, accountId, profileId);
-<<<<<<< HEAD
-
-            var request = new
-            {
-                scenarioId,
-                accountId,
-                profileId,
-                playerNames,
-                targetAgeGroup
-            };
-
-            var response = await _httpClient.PostAsJsonAsync("api/gamesessions", request, _jsonOptions);
-
-=======
             
             var requestData = new 
             { 
@@ -399,23 +511,17 @@ public class ApiClient : IApiClient
             
             var response = await _httpClient.PostAsJsonAsync("api/gamesessions", requestData, _jsonOptions);
             
->>>>>>> origin/dev
             if (response.IsSuccessStatusCode)
             {
-                var gameSession = await response.Content.ReadFromJsonAsync<DomainGameSession>(_jsonOptions);
+                var gameSession = await response.Content.ReadFromJsonAsync<GameSession>(_jsonOptions);
                 _logger.LogInformation("Game session started successfully with ID: {SessionId}", gameSession?.Id);
                 return gameSession;
             }
             else
             {
-<<<<<<< HEAD
-                _logger.LogWarning("Failed to start game session with status: {StatusCode} for scenario: {ScenarioId}",
-                    response.StatusCode, scenarioId);
-=======
                 var errorContent = await response.Content.ReadAsStringAsync();
                 _logger.LogWarning("Failed to start game session with status: {StatusCode} for scenario: {ScenarioId}. Error: {Error}", 
                     response.StatusCode, scenarioId, errorContent);
->>>>>>> origin/dev
                 return null;
             }
         }
@@ -460,7 +566,7 @@ public class ApiClient : IApiClient
         }
     }
 
-    public async Task<DomainGameSession?> EndGameSessionAsync(string sessionId)
+    public async Task<GameSession?> EndGameSessionAsync(string sessionId)
     {
         try
         {
@@ -470,7 +576,7 @@ public class ApiClient : IApiClient
 
             if (response.IsSuccessStatusCode)
             {
-                var gameSession = await response.Content.ReadFromJsonAsync<DomainGameSession>(_jsonOptions);
+                var gameSession = await response.Content.ReadFromJsonAsync<GameSession>(_jsonOptions);
                 _logger.LogInformation("Game session ended successfully: {SessionId}", sessionId);
                 return gameSession;
             }
@@ -488,21 +594,6 @@ public class ApiClient : IApiClient
         }
     }
 
-<<<<<<< HEAD
-    public async Task<DomainGameSession?> ProgressSessionSceneAsync(string sessionId, string newSceneId)
-    {
-        try
-        {
-            _logger.LogInformation("Progressing game session {SessionId} to scene: {SceneId}", sessionId, newSceneId);
-
-            var request = new { NewSceneId = newSceneId };
-            var response = await _httpClient.PostAsJsonAsync($"api/gamesessions/{sessionId}/progress-scene", request, _jsonOptions);
-
-            if (response.IsSuccessStatusCode)
-            {
-                var gameSession = await response.Content.ReadFromJsonAsync<DomainGameSession>(_jsonOptions);
-                _logger.LogInformation("Game session progressed successfully: {SessionId} to scene {SceneId}", sessionId, newSceneId);
-=======
     public async Task<GameSession?> ProgressSessionSceneAsync(string sessionId, string sceneId)
     {
         try
@@ -516,37 +607,23 @@ public class ApiClient : IApiClient
             {
                 var gameSession = await response.Content.ReadFromJsonAsync<GameSession>(_jsonOptions);
                 _logger.LogInformation("Game session progressed successfully: {SessionId} to scene {SceneId}", sessionId, sceneId);
->>>>>>> origin/dev
                 return gameSession;
             }
             else
             {
-<<<<<<< HEAD
-                _logger.LogWarning("Failed to progress game session with status: {StatusCode} for session: {SessionId}",
-                    response.StatusCode, sessionId);
-=======
                 _logger.LogWarning("Failed to progress session with status: {StatusCode} for session: {SessionId}, scene: {SceneId}", 
                     response.StatusCode, sessionId, sceneId);
->>>>>>> origin/dev
                 return null;
             }
         }
         catch (Exception ex)
         {
-<<<<<<< HEAD
-            _logger.LogError(ex, "Error progressing game session {SessionId} to scene {SceneId}", sessionId, newSceneId);
-=======
             _logger.LogError(ex, "Error progressing session {SessionId} to scene {SceneId}", sessionId, sceneId);
->>>>>>> origin/dev
             return null;
         }
     }
 
-<<<<<<< HEAD
-    public async Task<List<DomainGameSession>?> GetSessionsByAccountAsync(string accountId)
-=======
     public async Task<List<GameSession>?> GetSessionsByAccountAsync(string accountId)
->>>>>>> origin/dev
     {
         try
         {
@@ -556,7 +633,7 @@ public class ApiClient : IApiClient
 
             if (response.IsSuccessStatusCode)
             {
-                var sessions = await response.Content.ReadFromJsonAsync<List<DomainGameSession>>(_jsonOptions);
+                var sessions = await response.Content.ReadFromJsonAsync<List<GameSession>>(_jsonOptions);
                 _logger.LogInformation("Successfully fetched {Count} sessions for account: {AccountId}",
                     sessions?.Count ?? 0, accountId);
                 return sessions;
@@ -575,8 +652,6 @@ public class ApiClient : IApiClient
         }
     }
 
-<<<<<<< HEAD
-=======
     public async Task<List<GameSession>?> GetInProgressSessionsAsync(string accountId)
     {
         try
@@ -607,21 +682,14 @@ public class ApiClient : IApiClient
         }
     }
     
->>>>>>> origin/dev
     public async Task<Character?> GetCharacterAsync(string id)
     {
         try
         {
             _logger.LogInformation("Fetching character {Id} from API...", id);
-<<<<<<< HEAD
-
-            var response = await _httpClient.GetAsync($"api/characters/{id}");
-
-=======
             
             var response = await _httpClient.GetAsync($"api/character/{id}");
             
->>>>>>> origin/dev
             if (response.IsSuccessStatusCode)
             {
                 var character = await response.Content.ReadFromJsonAsync<Character>(_jsonOptions);
@@ -670,42 +738,11 @@ public class ApiClient : IApiClient
 
     public async Task<UserProfile?> GetProfileAsync(string id)
     {
-        try
-        {
-<<<<<<< HEAD
-            _logger.LogInformation("Fetching profile {Name} from API...", name);
-
-            var encodedName = Uri.EscapeDataString(name);
-            var response = await _httpClient.GetAsync($"api/userprofiles/{encodedName}");
-
-=======
-            _logger.LogInformation("Fetching profile {Id} from API...", id);
-            
-            var response = await _httpClient.GetAsync($"api/userprofiles/{id}");
-            
->>>>>>> origin/dev
-            if (response.IsSuccessStatusCode)
-            {
-                var profile = await response.Content.ReadFromJsonAsync<UserProfile>(_jsonOptions);
-                _logger.LogInformation("Successfully fetched profile {Id}", id);
-                return profile;
-            }
-            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                _logger.LogWarning("Profile not found: {Id}", id);
-                return null;
-            }
-            else
-            {
-                _logger.LogWarning("API request failed with status: {StatusCode} for profile: {Id}", response.StatusCode, id);
-                return null;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching profile {Id} from API.", id);
-            return null;
-        }
+        return await SendGetAsync<UserProfile>(
+            $"api/userprofiles/{id}",
+            $"profile {id}",
+            requireAuth: false,
+            onSuccess: result => _logger.LogInformation("Successfully fetched profile {Id}", id));
     }
 
     public async Task<UserProfile?> GetProfileByIdAsync(string id)
@@ -745,17 +782,10 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Fetching profiles for account {AccountId} from API...", accountId);
-<<<<<<< HEAD
-
-            // First get the account to get profile IDs
-            var accountResponse = await _httpClient.GetAsync($"api/accounts/{accountId}");
-            if (!accountResponse.IsSuccessStatusCode)
-=======
             
             var response = await _httpClient.GetAsync($"api/userprofiles/account/{accountId}");
             
             if (response.IsSuccessStatusCode)
->>>>>>> origin/dev
             {
                 var profiles = await response.Content.ReadFromJsonAsync<List<UserProfile>>(_jsonOptions);
                 _logger.LogInformation("Successfully fetched {Count} profiles for account {AccountId}", profiles?.Count ?? 0, accountId);
@@ -833,15 +863,9 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Updating profile {Id} via API...", id);
-<<<<<<< HEAD
-
-            var response = await _httpClient.PutAsJsonAsync($"api/userprofiles/id/{id}", request, _jsonOptions);
-
-=======
             
             var response = await _httpClient.PutAsJsonAsync($"api/userprofiles/{id}", request, _jsonOptions);
             
->>>>>>> origin/dev
             if (response.IsSuccessStatusCode)
             {
                 var profile = await response.Content.ReadFromJsonAsync<UserProfile>(_jsonOptions);
@@ -868,33 +892,10 @@ public class ApiClient : IApiClient
 
     public async Task<bool> DeleteProfileAsync(string id)
     {
-        try
-        {
-            _logger.LogInformation("Deleting profile {Id} via API...", id);
-
-            var response = await _httpClient.DeleteAsync($"api/userprofiles/{id}");
-
-            if (response.IsSuccessStatusCode)
-            {
-                _logger.LogInformation("Successfully deleted profile {Id}", id);
-                return true;
-            }
-            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                _logger.LogWarning("Profile not found for deletion: {Id}", id);
-                return false;
-            }
-            else
-            {
-                _logger.LogWarning("Failed to delete profile with status: {StatusCode} for ID: {Id}", response.StatusCode, id);
-                return false;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deleting profile {Id} via API.", id);
-            return false;
-        }
+        return await SendDeleteAsync(
+            $"api/userprofiles/{id}",
+            $"profile {id}",
+            requireAuth: false);
     }
 
     public async Task<ScenarioGameStateResponse?> GetScenariosWithGameStateAsync(string accountId)

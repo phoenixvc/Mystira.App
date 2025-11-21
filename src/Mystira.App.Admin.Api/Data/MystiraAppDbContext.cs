@@ -60,7 +60,10 @@ public class MystiraAppDbContext : DbContext
             entity.Property(e => e.PreferredFantasyThemes)
                   .HasConversion(
                         v => string.Join(',', v.Select(e => e.Value)),
-                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => FantasyTheme.Parse(s)!).ToList())
+                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => FantasyTheme.Parse(s))
+                            .Where(x => x != null)
+                            .ToList()!)
                   .Metadata.SetValueComparer(new ValueComparer<List<FantasyTheme>>(
                       (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                       c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
@@ -71,20 +74,20 @@ public class MystiraAppDbContext : DbContext
             {
                 badges.WithOwner().HasForeignKey(b => b.UserProfileId);
                 badges.HasKey(b => b.Id);
-        
+
                 // Only apply Cosmos DB specific configurations when not using in-memory database
                 if (!isInMemoryDatabase)
                 {
                     // No need for ToContainer or HasPartitionKey for owned entities
                     // They'll be embedded in the UserProfile document
                 }
-        
+
                 badges.Property(b => b.UserProfileId).IsRequired();
                 badges.Property(b => b.BadgeConfigurationId).IsRequired();
                 badges.Property(b => b.BadgeName).IsRequired();
                 badges.Property(b => b.BadgeMessage).IsRequired();
                 badges.Property(b => b.Axis).IsRequired();
-        
+
                 // Indexes may not be applicable for owned entities in Cosmos DB
                 // If using SQL Server, you can still configure these:
                 if (isInMemoryDatabase)
@@ -224,7 +227,10 @@ public class MystiraAppDbContext : DbContext
             entity.Property(e => e.Archetypes)
                   .HasConversion(
                         v => string.Join(',', v.Select(e => e.Value)),
-                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => Archetype.Parse(s)!).ToList())
+                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => Archetype.Parse(s))
+                            .Where(x => x != null)
+                            .ToList()!)
                   .Metadata.SetValueComparer(new ValueComparer<List<Archetype>>(
                         (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
@@ -233,7 +239,10 @@ public class MystiraAppDbContext : DbContext
             entity.Property(e => e.CoreAxes)
                   .HasConversion(
                         v => string.Join(',', v.Select(e => e.Value)),
-                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => CoreAxis.Parse(s)!).ToList())
+                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => CoreAxis.Parse(s))
+                            .Where(x => x != null)
+                            .ToList()!)
                   .Metadata.SetValueComparer(new ValueComparer<List<CoreAxis>>(
                         (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
@@ -255,7 +264,10 @@ public class MystiraAppDbContext : DbContext
                     metadata.Property(m => m.Archetype)
                             .HasConversion(
                                 v => string.Join(',', v.Select(e => e.Value)),
-                                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => Archetype.Parse(s)!).ToList())
+                                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                    .Select(s => Archetype.Parse(s))
+                                    .Where(x => x != null)
+                                    .ToList()!)
                             .Metadata.SetValueComparer(new ValueComparer<List<Archetype>>(
                                 (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                                 c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
@@ -487,7 +499,7 @@ public class MystiraAppDbContext : DbContext
         modelBuilder.Entity<AvatarConfigurationFile>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {

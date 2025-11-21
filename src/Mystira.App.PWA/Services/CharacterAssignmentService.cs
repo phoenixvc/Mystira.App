@@ -145,7 +145,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
                         ScenarioId = scenario.Id,
                         ScenarioName = scenario.Title,
                         CurrentScene = startingScene,
-                        StartedAt = apiGameSession.StartTime,
+                        StartedAt = apiGameSession.StartedAt,
                         CompletedScenes = new List<Scene>(),
                         IsCompleted = false
                     };

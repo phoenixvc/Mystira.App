@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Domain.Models;
 
@@ -7,6 +8,7 @@ namespace Mystira.App.Admin.Api.Controllers;
 [ApiController]
 [Route("api/admin/[controller]")]
 [Produces("application/json")]
+[Authorize] // Requires authentication for admin operations
 public class BundlesAdminController : ControllerBase
 {
     private readonly IContentBundleAdminService _service;
