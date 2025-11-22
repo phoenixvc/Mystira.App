@@ -705,6 +705,10 @@
         }
     }
     
+    // Cache for performance optimization
+    private Dictionary<string, int> _ageGroupBundleCounts = new();
+    private ContentBundle? _cachedFeaturedBundle;
+    
     // Age group filter state
     private readonly HashSet<string> selectedAgeGroups = new();
     private readonly string[] availableAgeGroups = { "1-2", "3-5", "6-9", "10-12", "13-18", "19+" };
@@ -893,6 +897,9 @@
             Logger.LogInformation("Loading content bundles...");
             bundles = await ApiClient.GetBundlesAsync();
             Logger.LogInformation("Loaded {Count} bundles", bundles.Count);
+            
+            // Pre-compute age group counts for performance
+            UpdateAgeGroupCounts();
 
             Logger.LogInformation("Loading completed scenarios and active sessions...");
             
@@ -1146,6 +1153,9 @@
                 b.Description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
         }
         filteredBundles = bundleFiltered.ToList();
+        
+        // Invalidate featured bundle cache when filters change
+        _cachedFeaturedBundle = null;
 
         // Filter scenarios, optionally by selected bundle
         var filtered = scenarios.AsEnumerable();
@@ -1162,13 +1172,14 @@
             filtered = filtered.Where(s => selectedAgeGroups.Contains(s.AgeGroup));
         }
         
-        // Apply search filter
+        // Apply search filter (optimized)
         if (!string.IsNullOrEmpty(searchQuery))
         {
+            var query = searchQuery.ToLowerInvariant();
             filtered = filtered.Where(s => 
-                s.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                s.Description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                (s.Tags != null && s.Tags.Any(t => t.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))));
+                s.Name.ToLowerInvariant().Contains(query) ||
+                s.Description.ToLowerInvariant().Contains(query) ||
+                (s.Tags != null && s.Tags.Any(t => t.ToLowerInvariant().Contains(query))));
         }
         
         // Apply completed stories filter
@@ -1271,19 +1282,44 @@
 
     private int GetBundleCountForAgeGroup(string ageGroup)
     {
-        return bundles.Count(b => b.AgeGroup == ageGroup);
+        // Use cached counts for performance
+        if (_ageGroupBundleCounts.TryGetValue(ageGroup, out var count))
+        {
+            return count;
+        }
+        return 0;
+    }
+    
+    private void UpdateAgeGroupCounts()
+    {
+        // Pre-compute bundle counts for all age groups
+        _ageGroupBundleCounts = availableAgeGroups
+            .ToDictionary(
+                ageGroup => ageGroup,
+                ageGroup => bundles.Count(b => b.AgeGroup == ageGroup)
+            );
     }
 
     private ContentBundle? GetFeaturedBundle()
     {
-        // Return the first free bundle or the bundle with the most adventures
-        if (!filteredBundles.Any()) return null;
+        // Return cached value if available
+        if (_cachedFeaturedBundle != null || !filteredBundles.Any())
+        {
+            return _cachedFeaturedBundle;
+        }
         
+        // Compute and cache the featured bundle
         var freeBundle = filteredBundles.FirstOrDefault(b => b.IsFree);
-        if (freeBundle != null) return freeBundle;
+        if (freeBundle != null)
+        {
+            _cachedFeaturedBundle = freeBundle;
+            return _cachedFeaturedBundle;
+        }
         
-        return filteredBundles
+        _cachedFeaturedBundle = filteredBundles
             .OrderByDescending(b => b.ScenarioIds?.Count ?? 0)
             .FirstOrDefault();
+            
+        return _cachedFeaturedBundle;
     }
 }

@@ -869,8 +869,15 @@ h6 .markdown-content strong {
     transition: width 0.6s ease;
 }
 
-/* Smooth Transitions */
-* {
+/* Smooth Transitions for Interactive Elements */
+.btn,
+.card,
+.bundle-card,
+.filter-card,
+.form-control,
+.input-group,
+.badge,
+.progress-bar {
     transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
     transition-duration: 150ms;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
