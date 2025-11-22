@@ -1,11 +1,13 @@
 using DMfinity.Domain.Models;
 using FluentAssertions;
 using Xunit;
+using AutoFixture.Xunit2;
 
 namespace DMfinity.Domain.Tests.Models;
 
 public class GameSessionTests
 {
+    [Fact]
     public void GameSession_DefaultConstructor_SetsDefaultValues()
     {
         // Act
@@ -51,6 +53,9 @@ public class GameSessionTests
         gameSession.CurrentSceneId.Should().Be(currentSceneId);
         gameSession.Status.Should().Be(SessionStatus.InProgress);
     }
+
+    [Fact]
+    public void GetTotalElapsedTime_ReturnsCorrectTime_WhenInProgress()
     {
         // Arrange
         var session = new GameSession
@@ -60,25 +65,10 @@ public class GameSessionTests
         };
 
         // Act
-<<<<<<< HEAD
         var elapsedTime = session.GetTotalElapsedTime();
 
         // Assert
         elapsedTime.Should().BeCloseTo(TimeSpan.FromMinutes(10), TimeSpan.FromSeconds(1));
-=======
-        gameSession.ScenarioId = scenarioId;
-        gameSession.AccountId = accountId;
-        gameSession.PlayerNames = playerNames;
-        gameSession.CurrentSceneId = currentSceneId;
-        gameSession.Status = SessionStatus.InProgress;
-
-        // Assert
-        gameSession.ScenarioId.Should().Be(scenarioId);
-        gameSession.AccountId.Should().Be(accountId);
-        gameSession.PlayerNames.Should().BeEquivalentTo(playerNames);
-        gameSession.CurrentSceneId.Should().Be(currentSceneId);
-        gameSession.Status.Should().Be(SessionStatus.InProgress);
->>>>>>> origin/dev
     }
 
     [Fact]

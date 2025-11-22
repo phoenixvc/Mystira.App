@@ -118,6 +118,19 @@ public class AvatarApiService : IAvatarApiService
         {
             file.UpdatedAt = DateTime.UtcNow;
 
+            var existingFile = await _context.AvatarConfigurationFiles.FirstOrDefaultAsync();
+            if (existingFile != null)
+            {
+                _context.Entry(existingFile).CurrentValues.SetValues(file);
+                existingFile.AgeGroupAvatars = file.AgeGroupAvatars;
+                // Mark the complex property as modified so EF Core recognizes the change
+                _context.Entry(existingFile).Property(e => e.AgeGroupAvatars).IsModified = true;
+            }
+            else
+            {
+                await _context.AvatarConfigurationFiles.AddAsync(file);
+            }
+
             var result = await _repository.AddOrUpdateAsync(file);
             await _unitOfWork.SaveChangesAsync();
             return result;

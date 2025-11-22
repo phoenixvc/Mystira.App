@@ -50,6 +50,7 @@ public class MystiraAppDbContext : DbContext
         modelBuilder.Entity<UserProfile>(entity =>
         {
             entity.HasKey(e => e.Id);
+
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
@@ -97,6 +98,8 @@ public class MystiraAppDbContext : DbContext
                 }
             });
         });
+
+        modelBuilder.Entity<UserProfile>().OwnsMany(p => p.EarnedBadges);
 
         // Configure Account
         modelBuilder.Entity<Account>(entity =>
