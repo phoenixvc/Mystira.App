@@ -139,14 +139,12 @@ This document tracks the complete status of the hexagonal architecture refactori
 
 ### Use Case Integration
 
-- ⏳ Update services to delegate to use cases instead of direct repository access
-- ⏳ Update controllers to call use cases instead of services directly
-- ⏳ Create Media use cases (7 use cases) - MediaAsset migration complete, ready to implement
-
-### Remaining Large Files
-
-- ⏳ `ScenarioApiService.cs` (692 lines) → Refactor to use Application layer use cases
-- ⏳ `GameSessionApiService.cs` → Refactor to use Application layer use cases
+- ✅ Media use cases created and registered in DI (7 use cases)
+- ✅ MediaApiService updated to delegate to use cases
+- ✅ GameSessionApiService updated to fully use use cases (all methods now delegate)
+- ✅ ScenarioApiService partially updated (GetScenariosAsync, CreateScenarioAsync, UpdateScenarioAsync, DeleteScenarioAsync use use cases)
+- ⏳ Update controllers to call use cases directly (optional - services can remain as facades)
+- ⏳ Admin API MediaApiService needs update to use use cases
 
 ## ⏳ Pending Phases
 

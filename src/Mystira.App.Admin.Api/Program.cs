@@ -6,6 +6,7 @@ using Mystira.App.Admin.Api.Adapters;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Application.UseCases.GameSessions;
+using Mystira.App.Application.UseCases.Media;
 using Mystira.App.Application.UseCases.Scenarios;
 using Mystira.App.Application.UseCases.UserProfiles;
 using Mystira.App.Infrastructure.Azure;
@@ -171,7 +172,7 @@ builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
 builder.Services.AddScoped<IBadgeConfigurationRepository, BadgeConfigurationRepository>();
 builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
 builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
-builder.Services.AddScoped<Mystira.App.Infrastructure.Data.Repositories.IMediaAssetRepository, Mystira.App.Infrastructure.Data.Repositories.MediaAssetRepository>();
+builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
 builder.Services.AddScoped<Mystira.App.Admin.Api.Repositories.IMediaMetadataFileRepository, Mystira.App.Admin.Api.Repositories.MediaMetadataFileRepository>();
 builder.Services.AddScoped<Mystira.App.Admin.Api.Repositories.ICharacterMediaMetadataFileRepository, Mystira.App.Admin.Api.Repositories.CharacterMediaMetadataFileRepository>();
 builder.Services.AddScoped<Mystira.App.Admin.Api.Repositories.ICharacterMapFileRepository, Mystira.App.Admin.Api.Repositories.CharacterMapFileRepository>();
@@ -188,14 +189,34 @@ builder.Services.AddScoped<ValidateScenarioUseCase>();
 
 // GameSession Use Cases
 builder.Services.AddScoped<CreateGameSessionUseCase>();
+builder.Services.AddScoped<GetGameSessionUseCase>();
+builder.Services.AddScoped<GetGameSessionsByAccountUseCase>();
+builder.Services.AddScoped<GetGameSessionsByProfileUseCase>();
+builder.Services.AddScoped<GetInProgressSessionsUseCase>();
 builder.Services.AddScoped<MakeChoiceUseCase>();
 builder.Services.AddScoped<ProgressSceneUseCase>();
+builder.Services.AddScoped<PauseGameSessionUseCase>();
+builder.Services.AddScoped<ResumeGameSessionUseCase>();
+builder.Services.AddScoped<EndGameSessionUseCase>();
+builder.Services.AddScoped<SelectCharacterUseCase>();
+builder.Services.AddScoped<GetSessionStatsUseCase>();
+builder.Services.AddScoped<CheckAchievementsUseCase>();
+builder.Services.AddScoped<DeleteGameSessionUseCase>();
 
 // UserProfile Use Cases
 builder.Services.AddScoped<CreateUserProfileUseCase>();
 builder.Services.AddScoped<UpdateUserProfileUseCase>();
 builder.Services.AddScoped<GetUserProfileUseCase>();
 builder.Services.AddScoped<DeleteUserProfileUseCase>();
+
+// Media Use Cases
+builder.Services.AddScoped<GetMediaUseCase>();
+builder.Services.AddScoped<GetMediaByFilenameUseCase>();
+builder.Services.AddScoped<ListMediaUseCase>();
+builder.Services.AddScoped<UploadMediaUseCase>();
+builder.Services.AddScoped<UpdateMediaMetadataUseCase>();
+builder.Services.AddScoped<DeleteMediaUseCase>();
+builder.Services.AddScoped<DownloadMediaUseCase>();
 
 builder.Services.AddScoped<IGameSessionApiService, GameSessionApiService>();
 builder.Services.AddScoped<IAccountApiService, AccountApiService>();
