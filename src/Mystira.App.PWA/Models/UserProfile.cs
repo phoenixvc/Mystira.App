@@ -35,7 +35,7 @@ public class CreateUserProfileRequest
     public DateTime? DateOfBirth { get; set; }
     public bool IsGuest { get; set; } = false;
     public bool IsNpc { get; set; } = false;
-    public string AgeGroup { get; set; }
+    public string AgeGroup { get; set; } = string.Empty;
     public string? AvatarMediaId { get; set; }
     public bool HasCompletedOnboarding { get; set; } = false;
     public string? AccountId { get; set; }
