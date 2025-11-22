@@ -1,6 +1,7 @@
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Api.Data;
+using Mystira.App.Application.UseCases.UserProfiles;
 using Mystira.App.Contracts.Requests.UserProfiles;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data.Repositories;
@@ -15,71 +16,36 @@ public class UserProfileApiService : IUserProfileApiService
     private readonly ICharacterMapRepository _characterMapRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UserProfileApiService> _logger;
+    private readonly CreateUserProfileUseCase _createUserProfileUseCase;
+    private readonly UpdateUserProfileUseCase _updateUserProfileUseCase;
+    private readonly GetUserProfileUseCase _getUserProfileUseCase;
+    private readonly DeleteUserProfileUseCase _deleteUserProfileUseCase;
 
     public UserProfileApiService(
         IUserProfileRepository repository,
         IGameSessionRepository gameSessionRepository,
         ICharacterMapRepository characterMapRepository,
         IUnitOfWork unitOfWork,
-        ILogger<UserProfileApiService> logger)
+        ILogger<UserProfileApiService> logger,
+        CreateUserProfileUseCase createUserProfileUseCase,
+        UpdateUserProfileUseCase updateUserProfileUseCase,
+        GetUserProfileUseCase getUserProfileUseCase,
+        DeleteUserProfileUseCase deleteUserProfileUseCase)
     {
         _repository = repository;
         _gameSessionRepository = gameSessionRepository;
         _characterMapRepository = characterMapRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _createUserProfileUseCase = createUserProfileUseCase;
+        _updateUserProfileUseCase = updateUserProfileUseCase;
+        _getUserProfileUseCase = getUserProfileUseCase;
+        _deleteUserProfileUseCase = deleteUserProfileUseCase;
     }
 
     public async Task<UserProfile> CreateProfileAsync(CreateUserProfileRequest request)
     {
-        // Check if profile already exists
-        var existingProfile = await GetProfileByIdAsync(request.Id);
-        if (existingProfile != null)
-        {
-            throw new ArgumentException($"Profile already exists for name: {request.Name}");
-        }
-
-        // Validate fantasy themes
-        var invalidThemes = request.PreferredFantasyThemes.Where(t => FantasyTheme.Parse(t) == null).ToList();
-        if (invalidThemes.Any())
-        {
-            throw new ArgumentException($"Invalid fantasy themes: {string.Join(", ", invalidThemes)}");
-        }
-
-        // Validate age group
-        if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
-        {
-            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
-        }
-
-        var profile = new UserProfile
-        {
-            Name = request.Name,
-            AccountId = request.AccountId,
-            PreferredFantasyThemes = request.PreferredFantasyThemes?.Select(t => FantasyTheme.Parse(t)!).ToList() ?? new List<FantasyTheme>(),
-            AgeGroupName = request.AgeGroup,
-            DateOfBirth = request.DateOfBirth,
-            IsGuest = request.IsGuest,
-            IsNpc = request.IsNpc,
-            HasCompletedOnboarding = false,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            AvatarMediaId = request.SelectedAvatarMediaId,
-            SelectedAvatarMediaId = request.SelectedAvatarMediaId
-        };
-
-        // If date of birth is provided, update age group automatically
-        if (profile.DateOfBirth.HasValue)
-        {
-            profile.UpdateAgeGroupFromBirthDate();
-        }
-
-        await _repository.AddAsync(profile);
-        await _unitOfWork.SaveChangesAsync();
-
-        _logger.LogInformation("Created new user profile: {Name} (Guest: {IsGuest}, NPC: {IsNPC})",
-            profile.Name, profile.IsGuest, profile.IsNpc);
-        return profile;
+        return await _createUserProfileUseCase.ExecuteAsync(request);
     }
 
     public async Task<UserProfile> CreateGuestProfileAsync(CreateGuestProfileRequest request)
@@ -147,102 +113,25 @@ public class UserProfileApiService : IUserProfileApiService
 
     public async Task<UserProfile?> GetProfileByIdAsync(string id)
     {
-        return await _repository.GetByIdAsync(id);
+        return await _getUserProfileUseCase.ExecuteAsync(id);
     }
 
     public async Task<UserProfile?> UpdateProfileByIdAsync(string id, UpdateUserProfileRequest request)
     {
-        var profile = await GetProfileByIdAsync(id);
-        if (profile == null)
+        var profile = await _updateUserProfileUseCase.ExecuteAsync(id, request);
+        if (profile != null && request.SelectedAvatarMediaId != null)
         {
-            return null;
-        }
-
-        // Apply updates
-        if (request.PreferredFantasyThemes != null)
-        {
-            // Validate fantasy themes
-            var invalidThemes = request.PreferredFantasyThemes.Where(t => FantasyTheme.Parse(t) == null).ToList();
-            if (invalidThemes.Any())
-            {
-                throw new ArgumentException($"Invalid fantasy themes: {string.Join(", ", invalidThemes)}");
-            }
-
-            profile.PreferredFantasyThemes = request.PreferredFantasyThemes.Select(t => FantasyTheme.Parse(t)!).ToList();
-        }
-
-        if (request.AgeGroup != null)
-        {
-            // Validate age group
-            if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
-            {
-                throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
-            }
-
-            profile.AgeGroupName = request.AgeGroup;
-        }
-
-        if (request.DateOfBirth.HasValue)
-        {
-            profile.DateOfBirth = request.DateOfBirth;
-            // Update age group automatically if date of birth is provided
-            profile.UpdateAgeGroupFromBirthDate();
-        }
-
-        if (request.HasCompletedOnboarding.HasValue)
-        {
-            profile.HasCompletedOnboarding = request.HasCompletedOnboarding.Value;
-        }
-
-        if (request.IsGuest.HasValue)
-        {
-            profile.IsGuest = request.IsGuest.Value;
-        }
-
-        if (request.IsNpc.HasValue)
-        {
-            profile.IsNpc = request.IsNpc.Value;
-        }
-
-        if (request.AccountId != null)
-        {
-            profile.AccountId = request.AccountId;
-        }
-
-        if (request.SelectedAvatarMediaId != null)
-        {
-            profile.SelectedAvatarMediaId = request.SelectedAvatarMediaId;
+            // Keep AvatarMediaId in sync with SelectedAvatarMediaId (service-specific logic)
             profile.AvatarMediaId = request.SelectedAvatarMediaId;
+            await _repository.UpdateAsync(profile);
+            await _unitOfWork.SaveChangesAsync();
         }
-
-        profile.UpdatedAt = DateTime.UtcNow;
-        await _repository.UpdateAsync(profile);
-        await _unitOfWork.SaveChangesAsync();
-
-        _logger.LogInformation("Updated user profile by ID: {Id}", id);
         return profile;
     }
 
     public async Task<bool> DeleteProfileAsync(string id)
     {
-        var profile = await GetProfileByIdAsync(id);
-        if (profile == null)
-        {
-            return false;
-        }
-
-        // COPPA compliance: Also delete associated sessions, badges, and data
-        var sessions = await _gameSessionRepository.GetByProfileIdAsync(profile.Id);
-        foreach (var session in sessions)
-        {
-            await _gameSessionRepository.DeleteAsync(session.Id);
-        }
-
-        await _repository.DeleteAsync(profile.Id);
-        await _unitOfWork.SaveChangesAsync();
-
-        _logger.LogInformation("Deleted user profile and associated data: {Name}", profile.Name);
-        return true;
+        return await _deleteUserProfileUseCase.ExecuteAsync(id);
     }
 
     public async Task<bool> CompleteOnboardingAsync(string id)

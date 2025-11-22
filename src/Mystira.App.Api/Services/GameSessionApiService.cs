@@ -130,18 +130,15 @@ public class GameSessionApiService : IGameSessionApiService
         var newAchievements = await CheckAchievementsAsync(session.Id);
         if (newAchievements.Any())
         {
-            // Reload session to get latest state after use case execution
-            session = await _repository.GetByIdAsync(request.SessionId);
-            if (session != null)
+            // Add new achievements to the session returned by the use case
+            foreach (var achievement in newAchievements.Where(a => !session.Achievements.Any(sa => sa.Id == a.Id)))
             {
-                foreach (var achievement in newAchievements.Where(a => !session.Achievements.Any(sa => sa.Id == a.Id)))
-                {
-                    session.Achievements.Add(achievement);
-                }
-
-                await _repository.UpdateAsync(session);
-                await _unitOfWork.SaveChangesAsync();
+                session.Achievements.Add(achievement);
             }
+
+            // Save achievements if any were added
+            await _repository.UpdateAsync(session);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         return session;
