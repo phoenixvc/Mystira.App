@@ -113,12 +113,12 @@
    - ✅ `ProgressSceneUseCase` - Handles progressing to specific scenes
 4. ✅ Moved `ScenarioSchemaDefinitions` to `Application.Validation` (shared validation logic)
 5. ✅ Fixed circular dependencies and package versions
-6. ⏳ Remaining use cases to create:
-   - `CreateUserProfileUseCase`
-   - `UpdateUserProfileUseCase`
-   - `GetUserProfileUseCase`
-   - `DeleteUserProfileUseCase`
-7. ⏳ Register use cases in DI containers (`Program.cs` for both Api and Admin.Api)
+6. ✅ Created UserProfile use cases:
+   - ✅ `CreateUserProfileUseCase`
+   - ✅ `UpdateUserProfileUseCase`
+   - ✅ `GetUserProfileUseCase`
+   - ✅ `DeleteUserProfileUseCase`
+7. ✅ Registered all use cases in DI containers (`Program.cs` for both Api and Admin.Api)
 8. ⏳ Update services to use use cases instead of direct repository access:
    - `ScenarioApiService` → Use `GetScenariosUseCase`, `CreateScenarioUseCase`, `UpdateScenarioUseCase`, `DeleteScenarioUseCase`
    - `GameSessionApiService` → Use `CreateGameSessionUseCase`, `MakeChoiceUseCase`, `ProgressSceneUseCase`
