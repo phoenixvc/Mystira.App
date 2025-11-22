@@ -5,7 +5,7 @@
 ![Blazor PWA](https://img.shields.io/badge/Client-Blazor%20PWA-5C2D91?logo=blazor&logoColor=white)
 ![CI Ready](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)
 ![Repo Type](https://img.shields.io/badge/Repo-Monorepo-6f42c1?logo=github&logoColor=white)
-![Quality Gates](https://img.shields.io/badge/Tests-dotnet%20test,%20dotnet%20format,%20npm%20run%20lint-20C997?logo=github&logoColor=white)
+![Quality Gates](https://img.shields.io/badge/Tests-dotnet%20test,%20npm%20run%20lint-20C997?logo=github&logoColor=white)
 
 The Mystira repository hosts the full suite of services, libraries, and client applications that power the Mystira experience. It includes backend APIs, domain and infrastructure libraries, the Cosmos-analytical console tool, and the Blazor PWA front-end—all sharing a cohesive domain model and now standardised on .NET 9.
 
@@ -64,6 +64,20 @@ The Mystira repository hosts the full suite of services, libraries, and client a
 ```bash
 dotnet build Mystira.sln
 ```
+
+### Setup Pre-commit Hooks
+
+The repository uses Husky.Net to automatically format code before commits. After cloning, restore the dotnet tools and install the git hooks:
+
+```bash
+# Restore dotnet tools (includes Husky)
+dotnet tool restore
+
+# Install git hooks
+dotnet husky install
+```
+
+This will automatically run `dotnet format` before each commit to ensure code style consistency.
 
 ### Run Key Projects
 
@@ -130,11 +144,11 @@ Configure `appsettings.Development.json`, user secrets, or environment variables
 | Stage                    | Command                                                                                                         | Purpose                                                  |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | Unit / Integration Tests | `dotnet test Mystira.sln`                                                                                       | Runs cross-project tests (APIs, domain, infrastructure). |
-| Formatting               | `dotnet format Mystira.sln`                                                                                     | Keeps C# style consistent before pushing a PR.           |
+| Formatting               | `dotnet format Mystira.sln` (automated via pre-commit hook)                                                     | Keeps C# style consistent before pushing a PR.           |
 | PWA Lint / Build         | `npm install` (once), `npm run lint` / `npm run build` (inside `src/Mystira.App.PWA` if JS assets are modified) | Ensures JS/service-worker assets remain valid.           |
 | Console Smoke Test       | `dotnet run --project src/Mystira.App.CosmosConsole/... -- stats`                                               | Confirms Cosmos CLI still connects post-change.          |
 
-Wire these into CI (GitHub Actions/Azure DevOps) to block merges when quality gates fail.
+Wire these into CI (GitHub Actions/Azure DevOps) to block merges when quality gates fail. Note that formatting is automatically enforced via the Husky pre-commit hook, so manual `dotnet format` runs are typically unnecessary.
 
 ## Contributing / PR Checklist
 
