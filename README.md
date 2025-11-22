@@ -173,3 +173,12 @@ Wire these into CI (GitHub Actions/Azure DevOps) to block merges when quality ga
 - `docs/NEXT_ITERATION_PLAN.md` – roadmap context and future iteration ideas.
 - `src/*/Validation/ScenarioSchemaDefinitions.cs` – schema enforcement shared across services.
 - `src/Mystira.App.Infrastructure.Azure/HealthChecks` – Cosmos/Blob readiness probes used by the APIs.
+
+## AI Assistant Integration
+
+This repository includes configurations to enhance AI assistant capabilities:
+
+- **GitHub Copilot Instructions** (`.github/copilot-instructions.md`): Provides context-aware code suggestions aligned with project architecture and standards.
+- **Model Context Protocol (MCP)** (`.mcp/config.json`): Enables AI assistants to access repository tools, resources, and documentation.
+
+For setup instructions, see `.mcp/README.md`.
