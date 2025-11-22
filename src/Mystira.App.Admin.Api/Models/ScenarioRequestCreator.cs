@@ -16,7 +16,7 @@ public static class ScenarioRequestCreator
         return ScenarioParser.Create(scenarioData);
     }
 
-    public static Scene ParseSceneFromDictionary(IDictionary<object, object> sceneDict)
+    public static Domain.Models.Scene ParseSceneFromDictionary(IDictionary<object, object> sceneDict)
     {
         return SceneParser.Parse(sceneDict);
     }
