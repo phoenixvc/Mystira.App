@@ -215,6 +215,33 @@ src/
 5. **Type Safety**: TypeScript provides better type checking
 6. **Security**: Updated dependencies
 
+## Current State & Next Steps
+
+### ✅ Completed (Last PR)
+- **Phase 1**: Repository Implementation - All services now use repositories instead of direct DbContext
+- **Phase 2**: DTOs Migration - All DTOs moved to Contracts project, controllers and services updated
+- Fixed critical bugs (null reference in AdminController)
+- Migrated remaining Admin.Api services to use Contracts DTOs
+
+### 🔄 In Progress (Current Branch)
+- **Phase 3**: Application Layer - Created 8 use cases:
+  - ✅ Scenario use cases (5): Get, Create, Update, Delete, Validate
+  - ✅ GameSession use cases (3): Create, MakeChoice, ProgressScene
+  - ⏳ UserProfile use cases (pending): Create, Update, Get, Delete
+- Moved validation logic to Application layer
+- Fixed infrastructure issues (circular dependencies, package versions)
+
+### ⏳ Next Steps (After Current Branch)
+1. **Complete Phase 3**:
+   - Create remaining UserProfile use cases
+   - Register all use cases in DI containers
+   - Update services to delegate to use cases (instead of direct repository access)
+   - Add AutoMapper profiles for DTO ↔ Domain mapping
+2. **Phase 4**: Refactor large files (ApiClient.cs, ScenarioRequestCreator.cs)
+3. **Phase 5**: TypeScript migration
+4. **Phase 6**: Fix code warnings
+5. **Phase 7**: Integration testing and cleanup
+
 ## Migration Strategy
 
 - Incremental refactoring (not big bang)
