@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Api.Models;
-using Mystira.App.Api.Repositories;
-using Mystira.App.Infrastructure.Data.UnitOfWork;
+using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data.Repositories;
 
 namespace Mystira.App.Api.Services;
 
@@ -10,7 +10,7 @@ namespace Mystira.App.Api.Services;
 /// </summary>
 public class MediaQueryService : IMediaQueryService
 {
-    private readonly IMediaAssetRepository _repository;
+    private readonly Mystira.App.Infrastructure.Data.Repositories.IMediaAssetRepository _repository;
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ILogger<MediaQueryService> _logger;
 
@@ -77,7 +77,7 @@ public class MediaQueryService : IMediaQueryService
         };
     }
 
-    public async Task<MediaAsset?> GetMediaByIdAsync(string mediaId)
+    public async Task<Domain.Models.MediaAsset?> GetMediaByIdAsync(string mediaId)
     {
         return await _repository.GetByMediaIdAsync(mediaId);
     }
@@ -112,7 +112,7 @@ public class MediaQueryService : IMediaQueryService
         }
     }
 
-    public async Task<MediaAsset?> GetMediaByFileNameAsync(string fileName)
+    public async Task<Domain.Models.MediaAsset?> GetMediaByFileNameAsync(string fileName)
     {
         try
         {

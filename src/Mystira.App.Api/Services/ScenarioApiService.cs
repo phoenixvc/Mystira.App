@@ -3,24 +3,25 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Validation;
 using Mystira.App.Api.Models;
+using Mystira.App.Domain.Models;
+using Mystira.App.Application.UseCases.Scenarios;
 using Mystira.App.Contracts.Requests.Scenarios;
 using Mystira.App.Contracts.Responses.Scenarios;
 using Mystira.App.Domain.Models;
-using ScenarioQueryRequest = Mystira.App.Contracts.Requests.Scenarios.ScenarioQueryRequest;
-using ScenarioListResponse = Mystira.App.Contracts.Responses.Scenarios.ScenarioListResponse;
-using CreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;
-using ScenarioReferenceValidation = Mystira.App.Contracts.Responses.Scenarios.ScenarioReferenceValidation;
-using ScenarioGameStateResponse = Mystira.App.Contracts.Responses.Scenarios.ScenarioGameStateResponse;
-using ScenarioSummary = Mystira.App.Contracts.Responses.Scenarios.ScenarioSummary;
-using MediaReference = Mystira.App.Contracts.Responses.Scenarios.MediaReference;
-using CharacterReference = Mystira.App.Contracts.Responses.Scenarios.CharacterReference;
-using MissingReference = Mystira.App.Contracts.Responses.Scenarios.MissingReference;
-using ScenarioWithGameState = Mystira.App.Contracts.Responses.Scenarios.ScenarioWithGameState;
-using ScenarioGameState = Mystira.App.Contracts.Responses.Scenarios.ScenarioGameState;
-using Mystira.App.Application.UseCases.Scenarios;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
 using NJsonSchema;
+using CharacterReference = Mystira.App.Contracts.Responses.Scenarios.CharacterReference;
+using CreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;
+using MediaReference = Mystira.App.Contracts.Responses.Scenarios.MediaReference;
+using MissingReference = Mystira.App.Contracts.Responses.Scenarios.MissingReference;
+using ScenarioGameState = Mystira.App.Contracts.Responses.Scenarios.ScenarioGameState;
+using ScenarioGameStateResponse = Mystira.App.Contracts.Responses.Scenarios.ScenarioGameStateResponse;
+using ScenarioListResponse = Mystira.App.Contracts.Responses.Scenarios.ScenarioListResponse;
+using ScenarioQueryRequest = Mystira.App.Contracts.Requests.Scenarios.ScenarioQueryRequest;
+using ScenarioReferenceValidation = Mystira.App.Contracts.Responses.Scenarios.ScenarioReferenceValidation;
+using ScenarioSummary = Mystira.App.Contracts.Responses.Scenarios.ScenarioSummary;
+using ScenarioWithGameState = Mystira.App.Contracts.Responses.Scenarios.ScenarioWithGameState;
 
 namespace Mystira.App.Api.Services;
 
@@ -470,7 +471,7 @@ public class ScenarioApiService : IScenarioApiService
 
     private async Task ValidateSceneReferences(
         Scene scene,
-        Dictionary<string, MediaAsset> allMedia,
+        Dictionary<string, Domain.Models.MediaAsset> allMedia,
         Dictionary<string, Character> allCharacters,
         MediaMetadataFile? mediaMetadata,
         CharacterMediaMetadataFile? characterMetadata,
@@ -494,7 +495,7 @@ public class ScenarioApiService : IScenarioApiService
         Scene scene,
         string? mediaId,
         string mediaType,
-        Dictionary<string, MediaAsset> allMedia,
+        Dictionary<string, Domain.Models.MediaAsset> allMedia,
         MediaMetadataFile? mediaMetadata,
         ScenarioReferenceValidation validation,
         bool includeMetadataValidation)

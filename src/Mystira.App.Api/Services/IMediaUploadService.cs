@@ -1,4 +1,5 @@
 using Mystira.App.Api.Models;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Services;
 
@@ -10,7 +11,7 @@ public interface IMediaUploadService
     /// <summary>
     /// Uploads a single media file
     /// </summary>
-    Task<MediaAsset> UploadMediaAsync(IFormFile file, string mediaId, string mediaType, string? description = null, List<string>? tags = null);
+    Task<Domain.Models.MediaAsset> UploadMediaAsync(IFormFile file, string mediaId, string mediaType, string? description = null, List<string>? tags = null);
 
     /// <summary>
     /// Uploads multiple media files

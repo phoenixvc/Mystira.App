@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Api.Models;
-using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Api.Services;
+using Mystira.App.Contracts.Responses.Common;
+using Mystira.App.Domain.Models;
 using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
 
 namespace Mystira.App.Api.Controllers;
@@ -27,7 +28,7 @@ public class MediaController : ControllerBase
     /// Gets a specific media asset metadata by ID
     /// </summary>
     [HttpGet("{mediaId}/info")]
-    public async Task<ActionResult<MediaAsset>> GetMediaById(string mediaId)
+    public async Task<ActionResult<Domain.Models.MediaAsset>> GetMediaById(string mediaId)
     {
         try
         {

@@ -1,4 +1,5 @@
 using Mystira.App.Api.Models;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Services;
 
@@ -8,9 +9,9 @@ namespace Mystira.App.Api.Services;
 public interface IMediaQueryService
 {
     Task<MediaQueryResponse> GetMediaAsync(MediaQueryRequest request);
-    Task<MediaAsset?> GetMediaByIdAsync(string mediaId);
+    Task<Domain.Models.MediaAsset?> GetMediaByIdAsync(string mediaId);
     Task<(Stream stream, string contentType, string fileName)?> GetMediaFileAsync(string mediaId);
-    Task<MediaAsset?> GetMediaByFileNameAsync(string fileName);
+    Task<Domain.Models.MediaAsset?> GetMediaByFileNameAsync(string fileName);
     Task<string?> GetMediaUrlAsync(string fileName);
     Task<MediaValidationResult> ValidateMediaReferencesAsync(List<string> mediaReferences);
     Task<MediaUsageStats> GetMediaUsageStatsAsync();

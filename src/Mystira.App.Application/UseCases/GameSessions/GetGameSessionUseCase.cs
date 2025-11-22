@@ -28,7 +28,7 @@ public class GetGameSessionUseCase
         }
 
         var session = await _repository.GetByIdAsync(sessionId);
-        
+
         if (session == null)
         {
             _logger.LogWarning("Game session not found: {SessionId}", sessionId);

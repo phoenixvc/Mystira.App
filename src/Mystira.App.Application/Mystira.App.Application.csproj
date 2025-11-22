@@ -18,6 +18,7 @@
     <ProjectReference Include="..\Mystira.App.Domain\Mystira.App.Domain.csproj" />
     <ProjectReference Include="..\Mystira.App.Contracts\Mystira.App.Contracts.csproj" />
     <ProjectReference Include="..\Mystira.App.Infrastructure.Data\Mystira.App.Infrastructure.Data.csproj" />
+    <ProjectReference Include="..\Mystira.App.Infrastructure.Azure\Mystira.App.Infrastructure.Azure.csproj" />
   </ItemGroup>
 
 </Project>

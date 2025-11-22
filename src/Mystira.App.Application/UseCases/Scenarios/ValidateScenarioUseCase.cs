@@ -72,7 +72,7 @@ public class ValidateScenarioUseCase
         var unreachableScenes = sceneIds.Except(allReferencedScenes).Where(id => id != firstScene.Id).ToList();
         if (unreachableScenes.Count > 0)
         {
-            _logger.LogWarning("Scenario '{ScenarioId}' has unreachable scenes: {UnreachableScenes}", 
+            _logger.LogWarning("Scenario '{ScenarioId}' has unreachable scenes: {UnreachableScenes}",
                 scenario.Id, string.Join(", ", unreachableScenes));
         }
 

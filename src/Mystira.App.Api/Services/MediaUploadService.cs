@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
-using Mystira.App.Api.Models;
-using Mystira.App.Api.Repositories;
+using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Azure.Services;
+using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 namespace Mystira.App.Api.Services;
@@ -11,7 +11,7 @@ namespace Mystira.App.Api.Services;
 /// </summary>
 public class MediaUploadService : IMediaUploadService
 {
-    private readonly IMediaAssetRepository _repository;
+    private readonly Mystira.App.Infrastructure.Data.Repositories.IMediaAssetRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IAzureBlobService _blobStorageService;
     private readonly IMediaMetadataService _mediaMetadataService;
@@ -56,7 +56,7 @@ public class MediaUploadService : IMediaUploadService
         _logger = logger;
     }
 
-    public async Task<MediaAsset> UploadMediaAsync(IFormFile file, string mediaId, string mediaType, string? description = null, List<string>? tags = null)
+    public async Task<Domain.Models.MediaAsset> UploadMediaAsync(IFormFile file, string mediaId, string mediaType, string? description = null, List<string>? tags = null)
     {
         ValidateMediaFile(file, mediaType);
 
@@ -77,7 +77,7 @@ public class MediaUploadService : IMediaUploadService
         var url = await _blobStorageService.UploadMediaAsync(file.OpenReadStream(), file.FileName, file.ContentType ?? GetMimeType(file.FileName));
 
         // Create media asset record
-        var mediaAsset = new MediaAsset
+        var mediaAsset = new Domain.Models.MediaAsset
         {
             Id = Guid.NewGuid().ToString(),
             MediaId = resolvedMediaId,

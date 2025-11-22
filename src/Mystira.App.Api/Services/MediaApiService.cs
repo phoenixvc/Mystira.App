@@ -1,6 +1,7 @@
 using Mystira.App.Api.Models;
-using Mystira.App.Api.Repositories;
+using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Azure.Services;
+using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 namespace Mystira.App.Api.Services;
@@ -12,7 +13,7 @@ public class MediaApiService : IMediaApiService
 {
     private readonly IMediaUploadService _uploadService;
     private readonly IMediaQueryService _queryService;
-    private readonly IMediaAssetRepository _repository;
+    private readonly Mystira.App.Infrastructure.Data.Repositories.IMediaAssetRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IAzureBlobService _blobStorageService;
     private readonly ILogger<MediaApiService> _logger;
@@ -63,7 +64,7 @@ public class MediaApiService : IMediaApiService
         _uploadService.BulkUploadMediaAsync(files, autoDetectType, overwriteExisting);
 
     // Management methods - update and delete
-    public async Task<MediaAsset> UpdateMediaAsync(string mediaId, MediaUpdateRequest updateData)
+    public async Task<Domain.Models.MediaAsset> UpdateMediaAsync(string mediaId, MediaUpdateRequest updateData)
     {
         var mediaAsset = await GetMediaByIdAsync(mediaId);
         if (mediaAsset == null)
