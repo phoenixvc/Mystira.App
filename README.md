@@ -132,7 +132,7 @@ Configure `appsettings.Development.json`, user secrets, or environment variables
 | Unit / Integration Tests | `dotnet test Mystira.sln`                                                                                       | Runs cross-project tests (APIs, domain, infrastructure). |
 | Formatting               | `dotnet format Mystira.sln`                                                                                     | Keeps C# style consistent before pushing a PR.           |
 | PWA Lint / Build         | `npm install` (once), `npm run lint` / `npm run build` (inside `src/Mystira.App.PWA` if JS assets are modified) | Ensures JS/service-worker assets remain valid.           |
-| Console Smoke Test       | `dotnet run --project Mystira.App.CosmosConsole/... -- stats`                                                   | Confirms Cosmos CLI still connects post-change.          |
+| Console Smoke Test       | `dotnet run --project src/Mystira.App.CosmosConsole/... -- stats`                                               | Confirms Cosmos CLI still connects post-change.          |
 
 Wire these into CI (GitHub Actions/Azure DevOps) to block merges when quality gates fail.
 

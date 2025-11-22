@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Mystira.App.Api.Models;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Azure.Services;
 using Mystira.App.Infrastructure.Data.Repositories;

@@ -29,5 +29,10 @@ public class MediaAssetRepository : Repository<MediaAsset>, IMediaAssetRepositor
             .Select(m => m.MediaId)
             .ToListAsync();
     }
+
+    public IQueryable<MediaAsset> GetQueryable()
+    {
+        return _dbSet.AsQueryable();
+    }
 }
 

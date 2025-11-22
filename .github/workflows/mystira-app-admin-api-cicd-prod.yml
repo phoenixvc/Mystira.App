@@ -6,6 +6,9 @@ on:
     paths:
       - "src/Mystira.App.Admin.Api/**"
       - "src/Mystira.App.Domain/**"
+      - "src/Mystira.App.Contracts/**"
+      - "src/Mystira.App.Application/**"
+      - "src/Mystira.App.Infrastructure.Data/**"
       - ".github/workflows/mystira-app-admin-api-cicd-prod.yml"
   pull_request:
     branches: [main] # PRs targeting main (prod)
@@ -13,6 +16,9 @@ on:
     paths:
       - "src/Mystira.App.Admin.Api/**"
       - "src/Mystira.App.Domain/**"
+      - "src/Mystira.App.Contracts/**"
+      - "src/Mystira.App.Application/**"
+      - "src/Mystira.App.Infrastructure.Data/**"
       - ".github/workflows/mystira-app-admin-api-cicd-prod.yml"
   workflow_dispatch:
 

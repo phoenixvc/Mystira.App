@@ -3,7 +3,6 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Validation;
 using Mystira.App.Api.Models;
-using Mystira.App.Domain.Models;
 using Mystira.App.Application.UseCases.Scenarios;
 using Mystira.App.Contracts.Requests.Scenarios;
 using Mystira.App.Contracts.Responses.Scenarios;
