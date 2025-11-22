@@ -1,7 +1,7 @@
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
-using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
+using Mystira.App.Api.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 using YamlDotNet.Serialization;
 
 namespace Mystira.App.Api.Services;
@@ -11,12 +11,17 @@ namespace Mystira.App.Api.Services;
 /// </summary>
 public class MediaMetadataService : IMediaMetadataService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly IMediaMetadataFileRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<MediaMetadataService> _logger;
 
-    public MediaMetadataService(MystiraAppDbContext context, ILogger<MediaMetadataService> logger)
+    public MediaMetadataService(
+        IMediaMetadataFileRepository repository,
+        IUnitOfWork unitOfWork,
+        ILogger<MediaMetadataService> logger)
     {
-        _context = context;
+        _repository = repository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -30,7 +35,7 @@ public class MediaMetadataService : IMediaMetadataService
             // Attempt with normal EF Core approach first
             try
             {
-                var metadataFile = await _context.MediaMetadataFiles.FirstOrDefaultAsync();
+                var metadataFile = await _repository.GetAsync();
                 if (metadataFile != null)
                 {
                     // Ensure Entries is initialized
@@ -69,19 +74,9 @@ public class MediaMetadataService : IMediaMetadataService
         {
             metadataFile.UpdatedAt = DateTime.UtcNow;
 
-            var existingFile = await _context.MediaMetadataFiles.FirstOrDefaultAsync();
-            if (existingFile != null)
-            {
-                _context.Entry(existingFile).CurrentValues.SetValues(metadataFile);
-                existingFile.Entries = metadataFile.Entries;
-            }
-            else
-            {
-                await _context.MediaMetadataFiles.AddAsync(metadataFile);
-            }
-
-            await _context.SaveChangesAsync();
-            return metadataFile;
+            var result = await _repository.AddOrUpdateAsync(metadataFile);
+            await _unitOfWork.SaveChangesAsync();
+            return result;
         }
         catch (Exception ex)
         {

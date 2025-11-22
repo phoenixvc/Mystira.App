@@ -1,8 +1,9 @@
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
+using Mystira.App.Api.Repositories;
 using Mystira.App.Infrastructure.Azure.Services;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 namespace Mystira.App.Api.Services;
 
@@ -11,7 +12,8 @@ namespace Mystira.App.Api.Services;
 /// </summary>
 public class MediaApiService : IMediaApiService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly IMediaAssetRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IAzureBlobService _blobStorageService;
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ILogger<MediaApiService> _logger;
@@ -42,12 +44,14 @@ public class MediaApiService : IMediaApiService
     };
 
     public MediaApiService(
-        MystiraAppDbContext context,
+        IMediaAssetRepository repository,
+        IUnitOfWork unitOfWork,
         IAzureBlobService blobStorageService,
         IMediaMetadataService mediaMetadataService,
         ILogger<MediaApiService> logger)
     {
-        _context = context;
+        _repository = repository;
+        _unitOfWork = unitOfWork;
         _blobStorageService = blobStorageService;
         _mediaMetadataService = mediaMetadataService;
         _logger = logger;
@@ -56,7 +60,7 @@ public class MediaApiService : IMediaApiService
     /// <inheritdoc />
     public async Task<MediaQueryResponse> GetMediaAsync(MediaQueryRequest request)
     {
-        var query = _context.MediaAssets.AsQueryable();
+        var query = _repository.GetQueryable();
 
         // Apply filters
         if (!string.IsNullOrEmpty(request.Search))
@@ -110,8 +114,7 @@ public class MediaApiService : IMediaApiService
     /// <inheritdoc />
     public async Task<MediaAsset?> GetMediaByIdAsync(string mediaId)
     {
-        return await _context.MediaAssets
-            .FirstOrDefaultAsync(m => m.MediaId == mediaId);
+        return await _repository.GetByMediaIdAsync(mediaId);
     }
 
     /// <inheritdoc />
@@ -152,8 +155,8 @@ public class MediaApiService : IMediaApiService
             UpdatedAt = DateTime.UtcNow
         };
 
-        _context.MediaAssets.Add(mediaAsset);
-        await _context.SaveChangesAsync();
+        await _repository.AddAsync(mediaAsset);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Media uploaded successfully: {MediaId} at {Url}", resolvedMediaId, url);
 
@@ -258,7 +261,8 @@ public class MediaApiService : IMediaApiService
         mediaAsset.UpdatedAt = DateTime.UtcNow;
         mediaAsset.Version = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
 
-        await _context.SaveChangesAsync();
+        await _repository.UpdateAsync(mediaAsset);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Media updated successfully: {MediaId}", mediaId);
 
@@ -284,8 +288,8 @@ public class MediaApiService : IMediaApiService
             await _blobStorageService.DeleteMediaAsync(blobName);
 
             // Delete from database
-            _context.MediaAssets.Remove(mediaAsset);
-            await _context.SaveChangesAsync();
+            await _repository.DeleteAsync(mediaAsset.Id);
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Media deleted successfully: {MediaId}", mediaId);
             return true;
@@ -309,10 +313,7 @@ public class MediaApiService : IMediaApiService
             return result;
         }
 
-        var existingMediaIds = await _context.MediaAssets
-            .Where(m => mediaReferences.Contains(m.MediaId))
-            .Select(m => m.MediaId)
-            .ToListAsync();
+        var existingMediaIds = (await _repository.GetMediaIdsAsync(mediaReferences)).ToList();
 
         result.ValidMediaIds = existingMediaIds;
         result.MissingMediaIds = mediaReferences.Except(existingMediaIds).ToList();
@@ -335,7 +336,7 @@ public class MediaApiService : IMediaApiService
     {
         var stats = new MediaUsageStats();
 
-        var allMedia = await _context.MediaAssets.ToListAsync();
+        var allMedia = (await _repository.GetAllAsync()).ToList();
 
         stats.TotalMediaFiles = allMedia.Count;
         stats.AudioFiles = allMedia.Count(m => m.MediaType == "audio");

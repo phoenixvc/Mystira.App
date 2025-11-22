@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
-using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
 using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 namespace Mystira.App.Api.Services;
 
@@ -10,12 +10,17 @@ namespace Mystira.App.Api.Services;
 /// </summary>
 public class AvatarApiService : IAvatarApiService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly IAvatarConfigurationFileRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AvatarApiService> _logger;
 
-    public AvatarApiService(MystiraAppDbContext context, ILogger<AvatarApiService> logger)
+    public AvatarApiService(
+        IAvatarConfigurationFileRepository repository,
+        IUnitOfWork unitOfWork,
+        ILogger<AvatarApiService> logger)
     {
-        _context = context;
+        _repository = repository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -95,7 +100,7 @@ public class AvatarApiService : IAvatarApiService
     {
         try
         {
-            return await _context.AvatarConfigurationFiles.FirstOrDefaultAsync();
+            return await _repository.GetAsync();
         }
         catch (Exception ex)
         {
@@ -113,21 +118,9 @@ public class AvatarApiService : IAvatarApiService
         {
             file.UpdatedAt = DateTime.UtcNow;
 
-            var existingFile = await _context.AvatarConfigurationFiles.FirstOrDefaultAsync();
-            if (existingFile != null)
-            {
-                _context.Entry(existingFile).CurrentValues.SetValues(file);
-                existingFile.AgeGroupAvatars = file.AgeGroupAvatars;
-                // Mark the complex property as modified so EF Core recognizes the change
-                _context.Entry(existingFile).Property(e => e.AgeGroupAvatars).IsModified = true;
-            }
-            else
-            {
-                await _context.AvatarConfigurationFiles.AddAsync(file);
-            }
-
-            await _context.SaveChangesAsync();
-            return file;
+            var result = await _repository.AddOrUpdateAsync(file);
+            await _unitOfWork.SaveChangesAsync();
+            return result;
         }
         catch (Exception ex)
         {
