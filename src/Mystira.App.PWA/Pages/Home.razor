@@ -20,7 +20,8 @@
     <HeroSection 
         LogoMediaId="image-final-logo-fe3f75db" 
         ShowDescription="@(!isAuthenticated)"
-        ShowCallToActions="@(!isAuthenticated)" />
+        ShowCallToActions="@(!isAuthenticated)"
+        OnWatchDemoClick="@(() => { /* TODO: Implement demo video modal */ })" />
     
     <!-- Active Adventures Section -->
     @if (isAuthenticated && !isLoading && activeSessions.Any())
@@ -982,7 +983,7 @@
     {
         return currentSort switch
         {
-            "popular" => scenarios.OrderByDescending(s => s.MinimumAge), // Placeholder - would need play count from backend
+            "popular" => scenarios.OrderByDescending(s => s.CreatedAt), // TODO: Implement with actual play count from backend
             "difficulty-asc" => scenarios.OrderBy(s => GetDifficultyOrder(s.Difficulty)),
             "difficulty-desc" => scenarios.OrderByDescending(s => GetDifficultyOrder(s.Difficulty)),
             "duration-asc" => scenarios.OrderBy(s => GetDurationOrder(s.SessionLength)),
@@ -990,6 +991,8 @@
             "newest" or _ => scenarios.OrderByDescending(s => s.CreatedAt)
         };
     }
+    
+    private const int DefaultDurationOrder = 2;  // Medium duration default
     
     private int GetDifficultyOrder(string difficulty)
     {
@@ -1011,7 +1014,7 @@
             "medium" => 2,
             "long" => 3,
             "epic" => 4,
-            _ => 2
+            _ => DefaultDurationOrder
         };
     }
     
