@@ -90,6 +90,31 @@
                         }
                     </div>
                 </div>
+                
+                @* Sort Options *@
+                @if (ShowSortOptions && !string.IsNullOrEmpty(CurrentSort))
+                {
+                    <div class="mb-2 mt-3">
+                        <small class="text-muted d-block mb-2">
+                            <i class="fas fa-sort me-1"></i>Sort By:
+                        </small>
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach (var sortOption in SortOptions)
+                            {
+                                var isSelected = CurrentSort == sortOption.Value;
+                                <button class="btn btn-sm @(isSelected ? "btn-primary-custom" : "btn-outline-secondary")"
+                                        @onclick="() => OnSortChange(sortOption.Value)">
+                                    <i class="@sortOption.Icon me-1"></i>
+                                    @sortOption.Label
+                                    @if (isSelected)
+                                    {
+                                        <i class="fas fa-check ms-1"></i>
+                                    }
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
             </div>
         </div>
     </div>
@@ -141,6 +166,32 @@
     [Parameter]
     public EventCallback OnSearchCleared { get; set; }
     
+    [Parameter]
+    public bool ShowSortOptions { get; set; } = false;
+    
+    [Parameter]
+    public string CurrentSort { get; set; } = "newest";
+    
+    [Parameter]
+    public EventCallback<string> OnSortChanged { get; set; }
+    
+    private readonly List<SortOption> SortOptions = new()
+    {
+        new SortOption { Label = "Newest", Value = "newest", Icon = "fas fa-clock" },
+        new SortOption { Label = "Popular", Value = "popular", Icon = "fas fa-fire" },
+        new SortOption { Label = "Easy First", Value = "difficulty-asc", Icon = "fas fa-signal" },
+        new SortOption { Label = "Hard First", Value = "difficulty-desc", Icon = "fas fa-chart-line" },
+        new SortOption { Label = "Short First", Value = "duration-asc", Icon = "fas fa-hourglass-start" },
+        new SortOption { Label = "Long First", Value = "duration-desc", Icon = "fas fa-hourglass-end" }
+    };
+    
+    private class SortOption
+    {
+        public string Label { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+    }
+    
     private async Task OnAgeGroupToggle(string ageGroup)
     {
         if (OnAgeGroupToggled.HasDelegate)
@@ -176,6 +227,14 @@
         if (ShowCompletedChanged.HasDelegate)
         {
             await ShowCompletedChanged.InvokeAsync(value);
+        }
+    }
+    
+    private async Task OnSortChange(string sortValue)
+    {
+        if (OnSortChanged.HasDelegate)
+        {
+            await OnSortChanged.InvokeAsync(sortValue);
         }
     }
 }

@@ -17,7 +17,10 @@
 
 <div class="container-fluid py-4">
     <!-- Hero Section -->
-    <HeroSection LogoMediaId="image-final-logo-fe3f75db" ShowDescription="@(!isAuthenticated)" />
+    <HeroSection 
+        LogoMediaId="image-final-logo-fe3f75db" 
+        ShowDescription="@(!isAuthenticated)"
+        ShowCallToActions="@(!isAuthenticated)" />
     
     <!-- Active Adventures Section -->
     @if (isAuthenticated && !isLoading && activeSessions.Any())
@@ -157,6 +160,9 @@
             HiddenCount="@completedScenarioIds.Count"
             ResultCount="@GetResultCount()"
             ResultCountLabel="@GetResultCountLabel()"
+            ShowSortOptions="@(!string.IsNullOrEmpty(selectedBundleId))"
+            CurrentSort="@currentSort"
+            OnSortChanged="@OnSortChanged"
             OnAgeGroupToggled="@ToggleAgeGroupFilter"
             OnClearAllFilters="@ClearAllFilters"
             OnSearchCleared="@ClearSearch" />
@@ -478,6 +484,7 @@
             }
         }
     }
+    private string currentSort = "newest";
     
     // Cache for performance optimization
     private Dictionary<string, int> _ageGroupBundleCounts = new();
@@ -962,10 +969,57 @@
             filtered = filtered.Where(s => !completedScenarioIds.Contains(s.Id));
         }
         
+        // Apply sorting
+        filtered = ApplySorting(filtered);
+        
         filteredScenarios = filtered.ToList();
         
-        Logger.LogInformation("Applied filters. Age groups: [{SelectedFilters}], Search: '{SearchQuery}', Show completed: {ShowCompleted}, Showing {Count} of {Total} scenarios", 
-            string.Join(", ", selectedAgeGroups), searchQuery, showCompletedStories, filteredScenarios.Count, scenarios.Count);
+        Logger.LogInformation("Applied filters. Age groups: [{SelectedFilters}], Search: '{SearchQuery}', Sort: '{Sort}', Show completed: {ShowCompleted}, Showing {Count} of {Total} scenarios", 
+            string.Join(", ", selectedAgeGroups), searchQuery, currentSort, showCompletedStories, filteredScenarios.Count, scenarios.Count);
+    }
+    
+    private IEnumerable<Scenario> ApplySorting(IEnumerable<Scenario> scenarios)
+    {
+        return currentSort switch
+        {
+            "popular" => scenarios.OrderByDescending(s => s.MinimumAge), // Placeholder - would need play count from backend
+            "difficulty-asc" => scenarios.OrderBy(s => GetDifficultyOrder(s.Difficulty)),
+            "difficulty-desc" => scenarios.OrderByDescending(s => GetDifficultyOrder(s.Difficulty)),
+            "duration-asc" => scenarios.OrderBy(s => GetDurationOrder(s.SessionLength)),
+            "duration-desc" => scenarios.OrderByDescending(s => GetDurationOrder(s.SessionLength)),
+            "newest" or _ => scenarios.OrderByDescending(s => s.CreatedAt)
+        };
+    }
+    
+    private int GetDifficultyOrder(string difficulty)
+    {
+        return difficulty?.ToLower() switch
+        {
+            "easy" => 1,
+            "medium" => 2,
+            "hard" => 3,
+            "expert" => 4,
+            _ => 0
+        };
+    }
+    
+    private int GetDurationOrder(string duration)
+    {
+        return duration?.ToLower() switch
+        {
+            "short" or "quick" => 1,
+            "medium" => 2,
+            "long" => 3,
+            "epic" => 4,
+            _ => 2
+        };
+    }
+    
+    private void OnSortChanged(string sort)
+    {
+        currentSort = sort;
+        ApplyFilters();
+        StateHasChanged();
     }
 
     private async Task ContinueAdventure(GameSession activeSession, Scenario scenario)
