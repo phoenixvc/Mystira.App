@@ -121,6 +121,10 @@ public class MediaMetadataService : IMediaMetadataService
         try
         {
             var metadataFile = await GetMediaMetadataFileAsync();
+            if (metadataFile == null)
+            {
+                throw new InvalidOperationException("Media metadata file not found");
+            }
 
             var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entryId);
             if (existingEntry == null)
@@ -150,6 +154,10 @@ public class MediaMetadataService : IMediaMetadataService
         try
         {
             var metadataFile = await GetMediaMetadataFileAsync();
+            if (metadataFile == null)
+            {
+                throw new InvalidOperationException("Media metadata file not found");
+            }
 
             var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entryId);
             if (existingEntry == null)
@@ -175,7 +183,7 @@ public class MediaMetadataService : IMediaMetadataService
         try
         {
             var metadataFile = await GetMediaMetadataFileAsync();
-            return metadataFile.Entries.FirstOrDefault(e => e.Id == entryId);
+            return metadataFile?.Entries.FirstOrDefault(e => e.Id == entryId);
         }
         catch (Exception ex)
         {
@@ -197,13 +205,13 @@ public class MediaMetadataService : IMediaMetadataService
             if (data.TrimStart().StartsWith('[') || data.TrimStart().StartsWith('{'))
             {
                 // JSON format
-                importedEntries = JsonSerializer.Deserialize<List<MediaMetadataEntry>>(data);
+                importedEntries = JsonSerializer.Deserialize<List<MediaMetadataEntry>>(data) ?? new List<MediaMetadataEntry>();
             }
             else
             {
                 // YAML format
                 var deserializer = new DeserializerBuilder().Build();
-                importedEntries = deserializer.Deserialize<List<MediaMetadataEntry>>(data);
+                importedEntries = deserializer.Deserialize<List<MediaMetadataEntry>>(data) ?? new List<MediaMetadataEntry>();
             }
 
             if (importedEntries == null || importedEntries.Count == 0)

@@ -172,13 +172,13 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
             if (data.TrimStart().StartsWith('[') || data.TrimStart().StartsWith('{'))
             {
                 // JSON format
-                importedEntries = JsonSerializer.Deserialize<List<CharacterMediaMetadataEntry>>(data);
+                importedEntries = JsonSerializer.Deserialize<List<CharacterMediaMetadataEntry>>(data) ?? new List<CharacterMediaMetadataEntry>();
             }
             else
             {
                 // YAML format
                 var deserializer = new DeserializerBuilder().Build();
-                importedEntries = deserializer.Deserialize<List<CharacterMediaMetadataEntry>>(data);
+                importedEntries = deserializer.Deserialize<List<CharacterMediaMetadataEntry>>(data) ?? new List<CharacterMediaMetadataEntry>();
             }
 
             if (importedEntries == null || importedEntries.Count == 0)

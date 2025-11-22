@@ -171,6 +171,7 @@ public class AgeGroup : StringEnum<AgeGroup>
 
     public AgeGroup(string name, int minimumAge, int maximumAge) : base(name)
     {
+        Name = name;
         MinimumAge = minimumAge;
         MaximumAge = maximumAge;
     }

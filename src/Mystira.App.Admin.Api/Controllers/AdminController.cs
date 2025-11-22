@@ -630,7 +630,7 @@ public class AdminController : Controller
             var existingScenario = existingScenarios.Scenarios.FirstOrDefault(s =>
                 s.Title.Equals(createRequest.Title, StringComparison.OrdinalIgnoreCase));
 
-            Scenario scenario;
+            Scenario? scenario;
             if (existingScenario != null && !overwriteExisting)
             {
                 return BadRequest(new
