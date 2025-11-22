@@ -36,6 +36,7 @@ public class ScenarioApiService : IScenarioApiService
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ICharacterMediaMetadataService _characterMetadataService;
     private readonly GetScenariosUseCase _getScenariosUseCase;
+    private readonly GetScenarioUseCase _getScenarioUseCase;
     private readonly CreateScenarioUseCase _createScenarioUseCase;
     private readonly UpdateScenarioUseCase _updateScenarioUseCase;
     private readonly DeleteScenarioUseCase _deleteScenarioUseCase;

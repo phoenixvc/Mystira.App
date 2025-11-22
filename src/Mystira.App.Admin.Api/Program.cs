@@ -182,6 +182,7 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 // Register Application Layer Use Cases
 // Scenario Use Cases
 builder.Services.AddScoped<GetScenariosUseCase>();
+builder.Services.AddScoped<GetScenarioUseCase>();
 builder.Services.AddScoped<CreateScenarioUseCase>();
 builder.Services.AddScoped<UpdateScenarioUseCase>();
 builder.Services.AddScoped<DeleteScenarioUseCase>();
