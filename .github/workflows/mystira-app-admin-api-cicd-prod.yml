@@ -74,8 +74,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-test
 
-    # ✅ Only deploy when there is a push directly to main
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Deploy on direct push to main OR when a PR into main is CLOSED *and* MERGED
+    if: >
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' &&
+       github.event.action == 'closed' &&
+       github.event.pull_request.merged == true &&
+       github.base_ref == 'main')
 
     environment: production
 

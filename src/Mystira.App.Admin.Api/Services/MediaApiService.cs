@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Models;
+using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Azure.Services;
 
 namespace Mystira.App.Admin.Api.Services;
@@ -114,14 +115,14 @@ public class MediaApiService : IMediaApiService
     }
 
     /// <inheritdoc />
-    public async Task<MediaAsset?> GetMediaByIdAsync(string mediaId)
+    public async Task<Domain.Models.MediaAsset?> GetMediaByIdAsync(string mediaId)
     {
         return await _context.MediaAssets
             .FirstOrDefaultAsync(m => m.MediaId == mediaId);
     }
 
     /// <inheritdoc />
-    public async Task<MediaAsset> UploadMediaAsync(IFormFile file, string mediaId, string mediaType, string? description = null, List<string>? tags = null)
+    public async Task<Domain.Models.MediaAsset> UploadMediaAsync(IFormFile file, string mediaId, string mediaType, string? description = null, List<string>? tags = null)
     {
         ValidateMediaFile(file, mediaType);
 
@@ -145,7 +146,7 @@ public class MediaApiService : IMediaApiService
         var url = await _blobStorageService.UploadMediaAsync(processedStream.Stream, processedStream.FileName, processedStream.ContentType);
 
         // Create media asset record
-        var mediaAsset = new MediaAsset
+        var mediaAsset = new Domain.Models.MediaAsset
         {
             Id = Guid.NewGuid().ToString(),
             MediaId = resolvedMediaId,
@@ -240,7 +241,7 @@ public class MediaApiService : IMediaApiService
     }
 
     /// <inheritdoc />
-    public async Task<MediaAsset> UpdateMediaAsync(string mediaId, MediaUpdateRequest updateData)
+    public async Task<Domain.Models.MediaAsset> UpdateMediaAsync(string mediaId, MediaUpdateRequest updateData)
     {
         var mediaAsset = await GetMediaByIdAsync(mediaId);
         if (mediaAsset == null)
@@ -591,7 +592,7 @@ public class MediaApiService : IMediaApiService
     }
 
     /// <inheritdoc />
-    public async Task<MediaAsset?> GetMediaByFileNameAsync(string fileName)
+    public async Task<Domain.Models.MediaAsset?> GetMediaByFileNameAsync(string fileName)
     {
         try
         {
@@ -762,7 +763,7 @@ public class MediaApiService : IMediaApiService
                         var url = await _blobStorageService.UploadMediaAsync(memoryStream, fileName, mimeType);
 
                         // Create media asset record
-                        var mediaAsset = new MediaAsset
+                        var mediaAsset = new Domain.Models.MediaAsset
                         {
                             Id = Guid.NewGuid().ToString(),
                             MediaId = mediaId,
