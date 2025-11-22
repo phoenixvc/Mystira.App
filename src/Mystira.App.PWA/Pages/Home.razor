@@ -16,31 +16,8 @@
 <PageTitle>Mystira</PageTitle>
 
 <div class="container-fluid py-4">
-    <!-- Hero Section with Enhanced Styling -->
-    <div class="row">
-        <div class="col-12 text-center mb-5 hero-section">
-            <div class="hero-content">
-                <h1 class="mystira-title mb-2">
-                    Mystira <span class="alpha-badge">ALPHA</span>
-                </h1>
-                <p class="mystira-tagline mb-4">Where imagination meets growth</p>
-                <div class="hero-logo-container mb-4">
-                    <CachedMystiraImage 
-                        MediaId="image-final-logo-fe3f75db"
-                        Alt="Mystira - Where imagination meets growth"
-                        Width="600"
-                        Height="600"
-                        ImageClass="hero-logo" />
-                </div>
-                @if (!isAuthenticated)
-                {
-                    <p class="hero-description mb-4">
-                        Bring stories to life with Mystira — an interactive adventure platform that helps children, parents, and group leaders explore imagination, teamwork, and growth through guided storytelling and play.
-                    </p>
-                }
-            </div>
-        </div>
-    </div>
+    <!-- Hero Section -->
+    <HeroSection LogoMediaId="image-final-logo-fe3f75db" ShowDescription="@(!isAuthenticated)" />
     
     <!-- Active Adventures Section -->
     @if (isAuthenticated && !isLoading && activeSessions.Any())
@@ -166,107 +143,23 @@
         </div>
     }
     
-    <!-- Age Group Filters with Enhanced UI -->
+    <!-- Filter Section -->
     @if (isAuthenticated && !isLoading)
     {
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card shadow-sm filter-card">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="card-title mb-0">
-                                <i class="fas fa-filter me-2"></i>Filter Adventures
-                            </h6>
-                            @if (!string.IsNullOrEmpty(selectedBundleId))
-                            {
-                                <div class="filter-results-count">
-                                    <span class="badge bg-primary">
-                                        <i class="fas fa-list me-1"></i>
-                                        Showing @filteredScenarios.Count of @scenarios.Count adventures
-                                    </span>
-                                </div>
-                            }
-                            else if (selectedAgeGroups.Any())
-                            {
-                                <div class="filter-results-count">
-                                    <span class="badge bg-primary">
-                                        <i class="fas fa-boxes-stacked me-1"></i>
-                                        @filteredBundles.Count bundle@(filteredBundles.Count != 1 ? "s" : "") match your filters
-                                    </span>
-                                </div>
-                            }
-                        </div>
-                        
-                        <!-- Search Bar -->
-                        <div class="mb-3">
-                            <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="fas fa-search"></i>
-                                </span>
-                                <input type="text" 
-                                       class="form-control" 
-                                       placeholder="Search adventures by name or tag..."
-                                       @bind="searchQuery"
-                                       @bind:event="oninput" />
-                                @if (!string.IsNullOrEmpty(searchQuery))
-                                {
-                                    <button class="btn btn-outline-secondary" type="button" @onclick="ClearSearch">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                }
-                            </div>
-                        </div>
-                        
-                        <!-- Show Completed Stories Toggle -->
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="showCompletedToggle" 
-                                       checked="@showCompletedStories" @onchange="ToggleCompletedStories">
-                                <label class="form-check-label" for="showCompletedToggle">
-                                    <i class="fas fa-check-circle me-1"></i>
-                                    Show Completed Stories
-                                    @if (!showCompletedStories && completedScenarioIds.Count > 0)
-                                    {
-                                        <span class="badge bg-secondary ms-2">@completedScenarioIds.Count hidden</span>
-                                    }
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <!-- Age Group Filters -->
-                        <div class="mb-2">
-                            <small class="text-muted d-block mb-2">
-                                <i class="fas fa-users me-1"></i>Filter by Age Group:
-                            </small>
-                            <div class="age-filter-container d-flex flex-wrap gap-2">
-                                @foreach (var ageGroup in availableAgeGroups)
-                                {
-                                    var isSelected = selectedAgeGroups.Contains(ageGroup);
-                                    var count = GetBundleCountForAgeGroup(ageGroup);
-                                    <button class="btn btn-age-filter @(isSelected ? "btn-primary-custom" : "btn-outline-secondary")"
-                                            @onclick="() => ToggleAgeGroupFilter(ageGroup)"
-                                            title="@count bundle@(count != 1 ? "s" : "") available">
-                                        <i class="fas fa-users me-1"></i>
-                                        Ages @ageGroup
-                                        <span class="badge badge-count ms-1">@count</span>
-                                        @if (isSelected)
-                                        {
-                                            <i class="fas fa-check ms-1"></i>
-                                        }
-                                    </button>
-                                }
-                                @if (selectedAgeGroups.Any())
-                                {
-                                    <button class="btn btn-outline-danger" @onclick="ClearAllFilters">
-                                        <i class="fas fa-times me-1"></i>Clear All
-                                    </button>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <FilterSection 
+            AgeGroups="@availableAgeGroups"
+            SelectedAgeGroups="@selectedAgeGroups"
+            AgeGroupCounts="@_ageGroupBundleCounts"
+            SearchQuery="@searchQuery"
+            SearchQueryChanged="@((value) => { searchQuery = value; })"
+            ShowCompleted="@showCompletedStories"
+            ShowCompletedChanged="@((value) => { showCompletedStories = value; ToggleCompletedStories(); })"
+            HiddenCount="@completedScenarioIds.Count"
+            ResultCount="@GetResultCount()"
+            ResultCountLabel="@GetResultCountLabel()"
+            OnAgeGroupToggled="@ToggleAgeGroupFilter"
+            OnClearAllFilters="@ClearAllFilters"
+            OnSearchCleared="@ClearSearch" />
 
         <!-- Content Bundles Grid -->
         <div class="row mb-4">
@@ -293,24 +186,7 @@
 
                 @if (isLoadingBundles)
                 {
-                    <div class="row">
-                        @for (int i = 0; i < 6; i++)
-                        {
-                            <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
-                                <div class="card h-100 skeleton-card">
-                                    <div class="skeleton skeleton-image"></div>
-                                    <div class="card-body">
-                                        <div class="skeleton skeleton-text mb-2"></div>
-                                        <div class="skeleton skeleton-text skeleton-text-sm mb-3"></div>
-                                        <div class="d-flex gap-2">
-                                            <div class="skeleton skeleton-badge"></div>
-                                            <div class="skeleton skeleton-badge"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    </div>
+                    <SkeletonLoader Count="6" />
                 }
                 else if (!filteredBundles.Any())
                 {
@@ -318,131 +194,29 @@
                 }
                 else if (string.IsNullOrEmpty(selectedBundleId))
                 {
-                    <!-- Featured Bundle Highlight (if available) -->
+                    @* Featured Bundle *@
                     @if (filteredBundles.Any() && GetFeaturedBundle() != null)
                     {
                         var featured = GetFeaturedBundle();
                         if (featured != null)
                         {
-                            <div class="featured-bundle-card mb-4">
-                                <div class="card border-warning shadow">
-                                    <div class="card-header bg-warning text-dark">
-                                        <i class="fas fa-star me-2"></i><strong>Featured Adventure Bundle</strong>
-                                    </div>
-                                    <div class="row g-0">
-                                        <div class="col-md-4">
-                                            <CachedMystiraImage 
-                                                MediaId="@featured.ImageId"
-                                                Alt="@featured.Title"
-                                                Width="400"
-                                                Height="300"
-                                                ImageClass="featured-bundle-image" />
-                                        </div>
-                                        <div class="col-md-8">
-                                            <div class="card-body">
-                                                <h4 class="card-title">@featured.Title</h4>
-                                                <p class="card-text">@featured.Description</p>
-                                                @{
-                                                    var featuredTotal = featured.ScenarioIds?.Count ?? 0;
-                                                    var featuredCompleted = completedScenarioIds.Count == 0 
-                                                        ? 0 
-                                                        : (featured.ScenarioIds?.Count(id => completedScenarioIds.Contains(id)) ?? 0);
-                                                }
-                                                <div class="mb-3">
-                                                    <span class="badge bg-primary me-2">
-                                                        <i class="fas fa-book me-1"></i>@featuredTotal adventures
-                                                    </span>
-                                                    @if (gameStateLoadingComplete)
-                                                    {
-                                                        <span class="badge bg-success me-2">
-                                                            <i class="fas fa-check me-1"></i>@featuredCompleted completed
-                                                        </span>
-                                                    }
-                                                    <span class="badge bg-info me-2">
-                                                        <i class="fas fa-users me-1"></i>Ages @featured.AgeGroup
-                                                    </span>
-                                                    @if (featured.IsFree)
-                                                    {
-                                                        <span class="badge bg-success">
-                                                            <i class="fas fa-gift me-1"></i>Free
-                                                        </span>
-                                                    }
-                                                </div>
-                                                <button class="btn btn-warning btn-lg" @onclick="() => SelectBundle(featured)">
-                                                    <i class="fas fa-play me-2"></i>Explore Adventures
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <FeaturedBundleCard 
+                                Bundle="@featured" 
+                                CompletedScenarioIds="@completedScenarioIds"
+                                ShowGameState="@gameStateLoadingComplete"
+                                OnExplore="@((bundle) => SelectBundle(bundle))" />
                         }
                     }
                     
-                    <!-- Regular Bundle Grid -->
+                    @* Regular Bundle Grid *@
                     <div class="row">
                         @foreach (var bundle in filteredBundles.Where(b => b.Id != GetFeaturedBundle()?.Id))
                         {
-                            <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
-                                <div class="card h-100 bundle-card" style="cursor: pointer;" @onclick="() => SelectBundle(bundle)">
-                                    <div class="bundle-image-container">
-                                        <CachedMystiraImage 
-                                            MediaId="@bundle.ImageId"
-                                            Alt="@bundle.Title"
-                                            Width="400"
-                                            Height="250"
-                                            ImageClass="card-img-top bundle-card-image" />
-                                        @if (bundle.IsFree)
-                                        {
-                                            <div class="bundle-free-badge">
-                                                <span class="badge bg-success">
-                                                    <i class="fas fa-gift me-1"></i>Free
-                                                </span>
-                                            </div>
-                                        }
-                                    </div>
-                                    <div class="card-body">
-                                        <h6 class="card-title mb-1">@bundle.Title</h6>
-                                        <p class="card-text small text-muted">@bundle.Description</p>
-                                        @{
-                                            var totalInBundle = bundle.ScenarioIds?.Count ?? 0;
-                                            var completedInBundle = completedScenarioIds.Count == 0 
-                                                ? 0 
-                                                : (bundle.ScenarioIds?.Count(id => completedScenarioIds.Contains(id)) ?? 0);
-                                            var progressPercent = totalInBundle > 0 ? (completedInBundle * 100 / totalInBundle) : 0;
-                                        }
-                                        
-                                        <!-- Progress Bar -->
-                                        @if (gameStateLoadingComplete && completedInBundle > 0)
-                                        {
-                                            <div class="progress mb-2" style="height: 6px;">
-                                                <div class="progress-bar bg-success" 
-                                                     role="progressbar" 
-                                                     style="width: @progressPercent%"
-                                                     aria-valuenow="@progressPercent" 
-                                                     aria-valuemin="0" 
-                                                     aria-valuemax="100"></div>
-                                            </div>
-                                        }
-                                        
-                                        <div class="d-flex flex-wrap gap-1 mb-2">
-                                            <span class="badge bg-primary">
-                                                <i class="fas fa-book me-1"></i>@totalInBundle
-                                            </span>
-                                            @if (gameStateLoadingComplete)
-                                            {
-                                                <span class="badge @(completedInBundle > 0 ? "bg-success" : "bg-secondary")">
-                                                    <i class="fas fa-check me-1"></i>@completedInBundle
-                                                </span>
-                                            }
-                                        </div>
-                                    </div>
-                                    <div class="card-footer d-flex justify-content-between align-items-center small">
-                                        <span><i class="fas fa-users me-1"></i><strong>@bundle.AgeGroup</strong></span>
-                                        <span class="text-primary"><i class="fas fa-arrow-right"></i></span>
-                                    </div>
-                                </div>
-                            </div>
+                            <BundleCard 
+                                Bundle="@bundle"
+                                CompletedScenarioIds="@completedScenarioIds"
+                                ShowGameState="@gameStateLoadingComplete"
+                                OnClick="@((b) => SelectBundle(b))" />
                         }
                     </div>
                 }
@@ -1321,5 +1095,32 @@
             .FirstOrDefault();
             
         return _cachedFeaturedBundle;
+    }
+    
+    private int? GetResultCount()
+    {
+        if (!string.IsNullOrEmpty(selectedBundleId))
+        {
+            return filteredScenarios.Count;
+        }
+        else if (selectedAgeGroups.Any())
+        {
+            return filteredBundles.Count;
+        }
+        return null;
+    }
+    
+    private string GetResultCountLabel()
+    {
+        if (!string.IsNullOrEmpty(selectedBundleId))
+        {
+            return $"Showing {filteredScenarios.Count} of {scenarios.Count} adventures";
+        }
+        else if (selectedAgeGroups.Any())
+        {
+            var pluralSuffix = filteredBundles.Count != 1 ? "s" : "";
+            return $"{filteredBundles.Count} bundle{pluralSuffix} match your filters";
+        }
+        return string.Empty;
     }
 }

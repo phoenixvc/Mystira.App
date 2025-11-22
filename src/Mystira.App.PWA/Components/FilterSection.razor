@@ -1,0 +1,181 @@
+@* Filter Section Component *@
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm filter-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-filter me-2"></i>Filter Adventures
+                    </h6>
+                    @if (ResultCount.HasValue)
+                    {
+                        <div class="filter-results-count">
+                            <span class="badge bg-primary">
+                                @ResultCountLabel
+                            </span>
+                        </div>
+                    }
+                </div>
+                
+                @* Search Bar *@
+                @if (ShowSearch)
+                {
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" 
+                                   class="form-control" 
+                                   placeholder="Search adventures by name or tag..."
+                                   @bind="SearchQuery"
+                                   @bind:event="oninput" />
+                            @if (!string.IsNullOrEmpty(SearchQuery))
+                            {
+                                <button class="btn btn-outline-secondary" type="button" @onclick="OnClearSearch">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+                
+                @* Show Completed Toggle *@
+                @if (ShowCompletedToggle)
+                {
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="showCompletedToggle" 
+                                   checked="@ShowCompleted" @onchange="OnShowCompletedChanged">
+                            <label class="form-check-label" for="showCompletedToggle">
+                                <i class="fas fa-check-circle me-1"></i>
+                                Show Completed Stories
+                                @if (!ShowCompleted && HiddenCount > 0)
+                                {
+                                    <span class="badge bg-secondary ms-2">@HiddenCount hidden</span>
+                                }
+                            </label>
+                        </div>
+                    </div>
+                }
+                
+                @* Age Group Filters *@
+                <div class="mb-2">
+                    <small class="text-muted d-block mb-2">
+                        <i class="fas fa-users me-1"></i>Filter by Age Group:
+                    </small>
+                    <div class="age-filter-container d-flex flex-wrap gap-2">
+                        @foreach (var ageGroup in AgeGroups)
+                        {
+                            var isSelected = SelectedAgeGroups.Contains(ageGroup);
+                            var count = AgeGroupCounts.TryGetValue(ageGroup, out var c) ? c : 0;
+                            <button class="btn btn-age-filter @(isSelected ? "btn-primary-custom" : "btn-outline-secondary")"
+                                    @onclick="() => OnAgeGroupToggle(ageGroup)"
+                                    title="@count bundle@(count != 1 ? "s" : "") available">
+                                <i class="fas fa-users me-1"></i>
+                                Ages @ageGroup
+                                <span class="badge badge-count ms-1">@count</span>
+                                @if (isSelected)
+                                {
+                                    <i class="fas fa-check ms-1"></i>
+                                }
+                            </button>
+                        }
+                        @if (SelectedAgeGroups.Any())
+                        {
+                            <button class="btn btn-outline-danger" @onclick="OnClearAll">
+                                <i class="fas fa-times me-1"></i>Clear All
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string[] AgeGroups { get; set; } = Array.Empty<string>();
+    
+    [Parameter]
+    public HashSet<string> SelectedAgeGroups { get; set; } = new();
+    
+    [Parameter]
+    public Dictionary<string, int> AgeGroupCounts { get; set; } = new();
+    
+    [Parameter]
+    public string SearchQuery { get; set; } = string.Empty;
+    
+    [Parameter]
+    public EventCallback<string> SearchQueryChanged { get; set; }
+    
+    [Parameter]
+    public bool ShowSearch { get; set; } = true;
+    
+    [Parameter]
+    public bool ShowCompletedToggle { get; set; } = true;
+    
+    [Parameter]
+    public bool ShowCompleted { get; set; } = true;
+    
+    [Parameter]
+    public EventCallback<bool> ShowCompletedChanged { get; set; }
+    
+    [Parameter]
+    public int HiddenCount { get; set; } = 0;
+    
+    [Parameter]
+    public int? ResultCount { get; set; }
+    
+    [Parameter]
+    public string ResultCountLabel { get; set; } = string.Empty;
+    
+    [Parameter]
+    public EventCallback<string> OnAgeGroupToggled { get; set; }
+    
+    [Parameter]
+    public EventCallback OnClearAllFilters { get; set; }
+    
+    [Parameter]
+    public EventCallback OnSearchCleared { get; set; }
+    
+    private async Task OnAgeGroupToggle(string ageGroup)
+    {
+        if (OnAgeGroupToggled.HasDelegate)
+        {
+            await OnAgeGroupToggled.InvokeAsync(ageGroup);
+        }
+    }
+    
+    private async Task OnClearAll()
+    {
+        if (OnClearAllFilters.HasDelegate)
+        {
+            await OnClearAllFilters.InvokeAsync();
+        }
+    }
+    
+    private async Task OnClearSearch()
+    {
+        SearchQuery = string.Empty;
+        if (OnSearchCleared.HasDelegate)
+        {
+            await OnSearchCleared.InvokeAsync();
+        }
+        if (SearchQueryChanged.HasDelegate)
+        {
+            await SearchQueryChanged.InvokeAsync(SearchQuery);
+        }
+    }
+    
+    private async Task OnShowCompletedChanged(ChangeEventArgs e)
+    {
+        var value = (bool)(e.Value ?? false);
+        if (ShowCompletedChanged.HasDelegate)
+        {
+            await ShowCompletedChanged.InvokeAsync(value);
+        }
+    }
+}
