@@ -73,12 +73,14 @@
    - ✅ `IMediaAssetRepository` (in Api project) and migrated `MediaApiService`
    - ✅ File-based repositories for singleton entities
 
-#### Phase 2: DTOs Migration
+#### Phase 2: DTOs Migration ✅ COMPLETED
 
-1. Move request DTOs from `ApiModels.cs` to `Contracts/Requests/`
-2. Move response DTOs to `Contracts/Responses/`
-3. Update API controllers to use Contracts
-4. Remove duplicate models from PWA
+1. ✅ Move request DTOs from `ApiModels.cs` to `Contracts/Requests/`
+2. ✅ Move response DTOs to `Contracts/Responses/`
+3. ✅ Update API controllers to use Contracts
+4. ✅ Update Admin.Api controllers and services to use Contracts (with aliases for ambiguous types)
+5. ✅ Delete Api.Api's `ApiModels.cs` (all DTOs migrated to Contracts)
+6. ⚠️ Admin.Api's `ApiModels.cs` kept temporarily (has Admin-specific differences: ProgressSceneRequest with NewSceneId, CreateUserProfileRequest without Id/SelectedAvatarMediaId, PasswordlessVerifyResponse without token expiration fields)
 
 #### Phase 3: Application Layer
 

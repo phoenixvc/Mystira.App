@@ -1,4 +1,5 @@
-using Mystira.App.Api.Models;
+using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.App.Contracts.Responses.Scenarios;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Services;

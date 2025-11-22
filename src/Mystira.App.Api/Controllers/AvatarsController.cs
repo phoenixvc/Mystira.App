@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Api.Models;
+using Mystira.App.Contracts.Responses.Media;
+using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Api.Services;
 
 namespace Mystira.App.Api.Controllers;

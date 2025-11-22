@@ -1,10 +1,13 @@
 using System.IO.Compression;
 using System.Text.Json;
 using Mystira.App.Api.Models;
+using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.App.Contracts.Responses.Media;
 using Mystira.App.Api.Services;
 using Mystira.App.Domain.Models;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+using CreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;
 
 namespace Mystira.App.Api.Services;
 

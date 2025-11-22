@@ -4,8 +4,10 @@ using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Contracts.Requests.Scenarios;
 using Mystira.App.Domain.Models;
 using CharacterMetadata = Mystira.App.Admin.Api.Models.CharacterMetadata;
+using ScenarioQueryRequest = Mystira.App.Contracts.Requests.Scenarios.ScenarioQueryRequest;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
@@ -653,6 +655,10 @@ public class AdminController : Controller
             {
                 // Create new scenario
                 scenario = await _scenarioService.CreateScenarioAsync(createRequest);
+                if (scenario == null)
+                {
+                    return BadRequest(new { success = false, message = "Failed to create new scenario" });
+                }
             }
 
             return Ok(new

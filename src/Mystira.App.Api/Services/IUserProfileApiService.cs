@@ -1,4 +1,4 @@
-using Mystira.App.Api.Models;
+using Mystira.App.Contracts.Requests.UserProfiles;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Services;

@@ -1,13 +1,15 @@
 using System.Collections;
 using System.Data;
 using System.Linq;
+using Mystira.App.Contracts.Requests.Scenarios;
 using Mystira.App.Domain.Models;
+using CreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;
 
 namespace Mystira.App.Admin.Api.Models;
 
 public static class ScenarioRequestCreator
 {
-    public static CreateScenarioRequest Create(Dictionary<object, object> scenarioData)
+    public static Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest Create(Dictionary<object, object> scenarioData)
     {
         if (!scenarioData.TryGetValue("title", out var title))
         {
@@ -75,7 +77,7 @@ public static class ScenarioRequestCreator
         var coreAxesList = ToStringList(coreAxesRaw);
 
         // Convert to CreateScenarioRequest format
-        var createRequest = new CreateScenarioRequest
+        var createRequest = new Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest
         {
             Title = (string)title,
             Description = (string)description,

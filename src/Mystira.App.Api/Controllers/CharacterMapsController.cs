@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Api.Models;
+using Mystira.App.Contracts.Requests.CharacterMaps;
+using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Api.Services;
 using Mystira.App.Domain.Models;
 

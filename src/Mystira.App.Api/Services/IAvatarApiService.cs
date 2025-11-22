@@ -1,4 +1,4 @@
-using Mystira.App.Api.Models;
+using Mystira.App.Contracts.Responses.Media;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Services;
