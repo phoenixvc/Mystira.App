@@ -44,12 +44,18 @@
 - ✅ Created `IUserBadgeRepository` and `UserBadgeRepository`
 - ✅ Migrated `BadgeConfigurationApiService` to use repository pattern
 - ✅ Migrated `UserBadgeApiService` to use repository pattern
+- ✅ Created `IPendingSignupRepository` and `PendingSignupRepository`
+- ✅ Migrated `PasswordlessAuthService` to use repository pattern
+- ✅ Created `IMediaAssetRepository` and `MediaAssetRepository` (in Api project)
+- ✅ Migrated `MediaApiService` to use repository pattern
+- ✅ Created file-based repositories (`IMediaMetadataFileRepository`, `ICharacterMediaMetadataFileRepository`, `ICharacterMapFileRepository`, `IAvatarConfigurationFileRepository`)
+- ✅ Migrated `AvatarApiService`, `MediaMetadataService`, `CharacterMediaMetadataService`, and `CharacterMapFileService` to use repository pattern
 
 ## 🔄 In Progress
 
 ### Next Steps (Priority Order)
 
-#### Phase 1: Repository Implementation (In Progress)
+#### Phase 1: Repository Implementation ✅ COMPLETED
 
 1. ✅ Implement `GameSessionRepository` in `Infrastructure.Data`
 2. ✅ Implement `UserProfileRepository` in `Infrastructure.Data`
@@ -63,8 +69,9 @@
    - ✅ `IScenarioRepository` and migrated `ScenarioApiService`
    - ✅ `IBadgeConfigurationRepository` and migrated `BadgeConfigurationApiService`
    - ✅ `IUserBadgeRepository` and migrated `UserBadgeApiService`
-   - 🔄 `IMediaRepository` (for MediaAsset entity)
-   - 🔄 `IPendingSignupRepository` (for PendingSignup entity)
+   - ✅ `IPendingSignupRepository` and migrated `PasswordlessAuthService`
+   - ✅ `IMediaAssetRepository` (in Api project) and migrated `MediaApiService`
+   - ✅ File-based repositories for singleton entities
 
 #### Phase 2: DTOs Migration
 
