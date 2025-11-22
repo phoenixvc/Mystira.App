@@ -255,6 +255,10 @@ builder.Services.AddScoped<UpdateUserProfileUseCase>();
 builder.Services.AddScoped<GetUserProfileUseCase>();
 builder.Services.AddScoped<DeleteUserProfileUseCase>();
 
+// Register Media services (split from MediaApiService)
+builder.Services.AddScoped<IMediaUploadService, MediaUploadService>();
+builder.Services.AddScoped<IMediaQueryService, MediaQueryService>();
+
 // Register application services
 builder.Services.AddScoped<IScenarioApiService, ScenarioApiService>();
 builder.Services.AddScoped<IGameSessionApiService, GameSessionApiService>();
