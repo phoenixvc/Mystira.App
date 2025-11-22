@@ -3,12 +3,14 @@
 ## 📝 Recent Changes Summary
 
 ### Last PR (Merged to dev)
+
 - ✅ Phase 1: Repository Implementation - All services migrated to use repositories
 - ✅ Phase 2: DTOs Migration - All DTOs moved to Contracts project
 - ✅ Fixed null reference bug in `AdminController.cs`
 - ✅ Migrated Admin.Api services (`UserBadgeApiService`, `ClientApiService`, `AvatarApiService`) to use Contracts DTOs
 
 ### Current Branch (In Progress)
+
 - ✅ Phase 3: Application Layer - Created 8 use cases:
   - Scenario use cases: `GetScenariosUseCase`, `CreateScenarioUseCase`, `UpdateScenarioUseCase`, `DeleteScenarioUseCase`, `ValidateScenarioUseCase`
   - GameSession use cases: `CreateGameSessionUseCase`, `MakeChoiceUseCase`, `ProgressSceneUseCase`
