@@ -172,7 +172,8 @@ public class CharacterAssignmentService : ICharacterAssignmentService
                 _logger.LogWarning("No scenario provided in request, local game session will not be populated");
             }
 
-            // TODO: Save character assignments to the game session
+            // TODO: Feature - Persist character assignments to the game session
+            // This should update the game session's SelectedCharacterId and player assignments
             // This would require a new API endpoint to update the game session with character assignments
 
             _logger.LogInformation("Game session started successfully with ID: {SessionId}", apiGameSession.Id);

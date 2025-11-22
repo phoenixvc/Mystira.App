@@ -62,6 +62,7 @@ public class ScenarioApiService : IScenarioApiService
         IMediaMetadataService mediaMetadataService,
         ICharacterMediaMetadataService characterMetadataService,
         GetScenariosUseCase getScenariosUseCase,
+        GetScenarioUseCase getScenarioUseCase,
         CreateScenarioUseCase createScenarioUseCase,
         UpdateScenarioUseCase updateScenarioUseCase,
         DeleteScenarioUseCase deleteScenarioUseCase,
@@ -77,6 +78,7 @@ public class ScenarioApiService : IScenarioApiService
         _mediaMetadataService = mediaMetadataService;
         _characterMetadataService = characterMetadataService;
         _getScenariosUseCase = getScenariosUseCase;
+        _getScenarioUseCase = getScenarioUseCase;
         _createScenarioUseCase = createScenarioUseCase;
         _updateScenarioUseCase = updateScenarioUseCase;
         _deleteScenarioUseCase = deleteScenarioUseCase;
@@ -88,13 +90,8 @@ public class ScenarioApiService : IScenarioApiService
         return await _getScenariosUseCase.ExecuteAsync(request);
     }
 
-    public async Task<Scenario?> GetScenarioByIdAsync(string id)
-    {
-        // TODO: Create GetScenarioUseCase for single scenario retrieval
-        // For now, using repository directly - this violates architectural rules
-        // but is acceptable temporarily as it's a simple query
-        return await _repository.GetByIdAsync(id);
-    }
+    public Task<Scenario?> GetScenarioByIdAsync(string id) =>
+        _getScenarioUseCase.ExecuteAsync(id);
 
     public async Task<Scenario> CreateScenarioAsync(CreateScenarioRequest request)
     {
@@ -125,8 +122,8 @@ public class ScenarioApiService : IScenarioApiService
 
         // Convert ScenarioSummary back to Scenario domain models
         // Note: This is a limitation - use case returns summaries, not full scenarios
-        // TODO: Create GetScenariosByAgeGroupUseCase that returns full Scenario objects
-        // For now, we need to fetch full scenarios from repository
+        // Note: GetScenariosUseCase returns ScenarioSummary, not full Scenario objects
+        // This is a limitation - full scenarios are fetched from repository for now
         var scenarioIds = response.Scenarios.Select(s => s.Id).ToList();
         var scenarios = new List<Scenario>();
 
@@ -365,7 +362,8 @@ public class ScenarioApiService : IScenarioApiService
 
                     if (!scenario.CoreAxes.Select(a => a.Value).Contains(change.Axis))
                     {
-                        // TODO: re-enable strict validation when master axis list is finalized.
+                        // TODO: Enhancement - Re-enable strict validation when master axis list is finalized
+                        // This will ensure all compass axes referenced in scenarios are valid according to the domain model
                         //throw new ScenarioValidationException($"Invalid compass axis '{change.Axis}' not defined in scenario (Scene ID: {scene.Id}, Choice: {branch.Choice})");
                     }
                 }

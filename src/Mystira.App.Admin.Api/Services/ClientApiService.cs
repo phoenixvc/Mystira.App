@@ -333,7 +333,8 @@ public class ClientApiService : IClientApiService
         {
             // In a real implementation, you would query a media database table
             // For now, we'll return empty changes since we don't have a media service yet
-            // TODO: Implement once media management is added
+            // TODO: Feature - Implement media management status check
+            // This should verify media files are accessible and metadata is synchronized
 
             _logger.LogDebug("Media changes query not yet implemented - returning empty changes");
         }

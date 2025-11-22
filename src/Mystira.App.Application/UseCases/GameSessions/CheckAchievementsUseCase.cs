@@ -40,8 +40,9 @@ public class CheckAchievementsUseCase
 
         var achievements = new List<SessionAchievement>();
 
-        // TODO: Replace with BadgeConfigurationApiService to get dynamic badge thresholds
-        // For now, using simple threshold logic as placeholder
+        // TODO: Enhancement - Replace hardcoded threshold with BadgeConfigurationApiService to get dynamic badge thresholds
+        // This will allow badge thresholds to be configured per axis and updated without code changes
+        // For now, using simple threshold logic (3.0f) as placeholder
         var defaultThreshold = 3.0f;
 
         // Check compass threshold achievements

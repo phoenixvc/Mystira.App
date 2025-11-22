@@ -137,14 +137,15 @@ This document tracks the complete status of the hexagonal architecture refactori
 
 ## 🔄 In Progress
 
-### Use Case Integration
+### Use Case Integration ✅ COMPLETED
 
 - ✅ Media use cases created and registered in DI (7 use cases)
-- ✅ MediaApiService updated to delegate to use cases
+- ✅ MediaApiService (Public API) updated to delegate to use cases
+- ✅ MediaApiService (Admin API) updated to delegate to use cases
 - ✅ GameSessionApiService updated to fully use use cases (all methods now delegate)
-- ✅ ScenarioApiService partially updated (GetScenariosAsync, CreateScenarioAsync, UpdateScenarioAsync, DeleteScenarioAsync use use cases)
-- ⏳ Update controllers to call use cases directly (optional - services can remain as facades)
-- ⏳ Admin API MediaApiService needs update to use use cases
+- ✅ ScenarioApiService updated to use use cases (GetScenariosAsync, GetScenarioByIdAsync, CreateScenarioAsync, UpdateScenarioAsync, DeleteScenarioAsync)
+- ✅ GetScenarioUseCase created and registered in DI
+- ⏳ Update controllers to call use cases directly (optional - services can remain as facades per architectural rules)
 
 ## ⏳ Pending Phases
 

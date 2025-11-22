@@ -4,16 +4,28 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Models;
+using Mystira.App.Application.UseCases.Media;
+using Mystira.App.Contracts.Requests.Media;
+using Mystira.App.Contracts.Responses.Media;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Azure.Services;
 
 namespace Mystira.App.Admin.Api.Services;
 
 /// <summary>
-/// Service for managing media assets
+/// Service for managing media assets - delegates to use cases
+/// NOTE: This service violates architectural rules (services should not exist in API layer).
+/// Controllers should call use cases directly. This is kept temporarily for backward compatibility.
 /// </summary>
 public class MediaApiService : IMediaApiService
 {
+    private readonly GetMediaUseCase _getMediaUseCase;
+    private readonly GetMediaByFilenameUseCase _getMediaByFilenameUseCase;
+    private readonly ListMediaUseCase _listMediaUseCase;
+    private readonly UploadMediaUseCase _uploadMediaUseCase;
+    private readonly UpdateMediaMetadataUseCase _updateMediaMetadataUseCase;
+    private readonly DeleteMediaUseCase _deleteMediaUseCase;
+    private readonly DownloadMediaUseCase _downloadMediaUseCase;
     private readonly MystiraAppDbContext _context;
     private readonly IAzureBlobService _blobStorageService;
     private readonly IMediaMetadataService _mediaMetadataService;
@@ -47,12 +59,26 @@ public class MediaApiService : IMediaApiService
     };
 
     public MediaApiService(
+        GetMediaUseCase getMediaUseCase,
+        GetMediaByFilenameUseCase getMediaByFilenameUseCase,
+        ListMediaUseCase listMediaUseCase,
+        UploadMediaUseCase uploadMediaUseCase,
+        UpdateMediaMetadataUseCase updateMediaMetadataUseCase,
+        DeleteMediaUseCase deleteMediaUseCase,
+        DownloadMediaUseCase downloadMediaUseCase,
         MystiraAppDbContext context,
         IAzureBlobService blobStorageService,
         IMediaMetadataService mediaMetadataService,
         ILogger<MediaApiService> logger,
         IAudioTranscodingService audioTranscodingService)
     {
+        _getMediaUseCase = getMediaUseCase;
+        _getMediaByFilenameUseCase = getMediaByFilenameUseCase;
+        _listMediaUseCase = listMediaUseCase;
+        _uploadMediaUseCase = uploadMediaUseCase;
+        _updateMediaMetadataUseCase = updateMediaMetadataUseCase;
+        _deleteMediaUseCase = deleteMediaUseCase;
+        _downloadMediaUseCase = downloadMediaUseCase;
         _context = context;
         _blobStorageService = blobStorageService;
         _mediaMetadataService = mediaMetadataService;
@@ -61,65 +87,36 @@ public class MediaApiService : IMediaApiService
     }
 
     /// <inheritdoc />
-    public async Task<MediaQueryResponse> GetMediaAsync(MediaQueryRequest request)
+    public async Task<Mystira.App.Admin.Api.Models.MediaQueryResponse> GetMediaAsync(Mystira.App.Admin.Api.Models.MediaQueryRequest request)
     {
-        var query = _context.MediaAssets.AsQueryable();
-
-        // Apply filters
-        if (!string.IsNullOrEmpty(request.Search))
+        // Convert Admin.Api.Models.MediaQueryRequest to Contracts.MediaQueryRequest
+        var contractsRequest = new Mystira.App.Contracts.Requests.Media.MediaQueryRequest
         {
-            query = query.Where(m => m.MediaId.Contains(request.Search) ||
-                                    m.Url.Contains(request.Search) ||
-                                    (m.Description != null && m.Description.Contains(request.Search)));
-        }
-
-        if (!string.IsNullOrEmpty(request.MediaType))
-        {
-            query = query.Where(m => m.MediaType == request.MediaType);
-        }
-
-        if (request.Tags != null && request.Tags.Count > 0)
-        {
-            foreach (var tag in request.Tags)
-            {
-                query = query.Where(m => m.Tags.Contains(tag));
-            }
-        }
-
-        // Apply sorting
-        query = request.SortBy?.ToLower() switch
-        {
-            "filename" => request.SortDescending ? query.OrderByDescending(m => m.Url) : query.OrderBy(m => m.Url),
-            "mediatype" => request.SortDescending ? query.OrderByDescending(m => m.MediaType) : query.OrderBy(m => m.MediaType),
-            "filesize" => request.SortDescending ? query.OrderByDescending(m => m.FileSizeBytes) : query.OrderBy(m => m.FileSizeBytes),
-            "updatedat" => request.SortDescending ? query.OrderByDescending(m => m.UpdatedAt) : query.OrderBy(m => m.UpdatedAt),
-            _ => request.SortDescending ? query.OrderByDescending(m => m.CreatedAt) : query.OrderBy(m => m.CreatedAt)
-        };
-
-        var totalCount = await query.CountAsync();
-        var totalPages = (int)Math.Ceiling((double)totalCount / request.PageSize);
-
-        var media = await query
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
-            .ToListAsync();
-
-        return new MediaQueryResponse
-        {
-            Media = media,
-            TotalCount = totalCount,
             Page = request.Page,
             PageSize = request.PageSize,
-            TotalPages = totalPages
+            Search = request.Search,
+            MediaType = request.MediaType,
+            Tags = request.Tags,
+            SortBy = request.SortBy,
+            SortDescending = request.SortDescending
+        };
+
+        var contractsResponse = await _listMediaUseCase.ExecuteAsync(contractsRequest);
+
+        // Convert Contracts.MediaQueryResponse back to Admin.Api.Models.MediaQueryResponse
+        return new Mystira.App.Admin.Api.Models.MediaQueryResponse
+        {
+            Media = contractsResponse.Media,
+            TotalCount = contractsResponse.TotalCount,
+            Page = contractsResponse.Page,
+            PageSize = contractsResponse.PageSize,
+            TotalPages = contractsResponse.TotalPages
         };
     }
 
     /// <inheritdoc />
-    public async Task<Domain.Models.MediaAsset?> GetMediaByIdAsync(string mediaId)
-    {
-        return await _context.MediaAssets
-            .FirstOrDefaultAsync(m => m.MediaId == mediaId);
-    }
+    public Task<Domain.Models.MediaAsset?> GetMediaByIdAsync(string mediaId) =>
+        _getMediaUseCase.ExecuteAsync(mediaId);
 
     /// <inheritdoc />
     public async Task<Domain.Models.MediaAsset> UploadMediaAsync(IFormFile file, string mediaId, string mediaType, string? description = null, List<string>? tags = null)
@@ -241,71 +238,22 @@ public class MediaApiService : IMediaApiService
     }
 
     /// <inheritdoc />
-    public async Task<Domain.Models.MediaAsset> UpdateMediaAsync(string mediaId, MediaUpdateRequest updateData)
+    public async Task<Domain.Models.MediaAsset> UpdateMediaAsync(string mediaId, Mystira.App.Admin.Api.Models.MediaUpdateRequest updateData)
     {
-        var mediaAsset = await GetMediaByIdAsync(mediaId);
-        if (mediaAsset == null)
+        // Convert Admin.Api.Models.MediaUpdateRequest to Contracts.MediaUpdateRequest
+        var contractsRequest = new Mystira.App.Contracts.Requests.Media.MediaUpdateRequest
         {
-            throw new KeyNotFoundException($"Media with ID '{mediaId}' not found");
-        }
+            Description = updateData.Description,
+            Tags = updateData.Tags,
+            MediaType = updateData.MediaType
+        };
 
-        // Update properties
-        if (updateData.Description != null)
-        {
-            mediaAsset.Description = updateData.Description;
-        }
-
-        if (updateData.Tags != null)
-        {
-            mediaAsset.Tags = updateData.Tags;
-        }
-
-        if (!string.IsNullOrEmpty(updateData.MediaType))
-        {
-            mediaAsset.MediaType = updateData.MediaType;
-        }
-
-        mediaAsset.UpdatedAt = DateTime.UtcNow;
-        mediaAsset.Version = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
-
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("Media updated successfully: {MediaId}", mediaId);
-
-        return mediaAsset;
+        return await _updateMediaMetadataUseCase.ExecuteAsync(mediaId, contractsRequest);
     }
 
     /// <inheritdoc />
-    public async Task<bool> DeleteMediaAsync(string mediaId)
-    {
-        var mediaAsset = await GetMediaByIdAsync(mediaId);
-        if (mediaAsset == null)
-        {
-            return false;
-        }
-
-        try
-        {
-            // Extract blob name from URL for deletion
-            var uri = new Uri(mediaAsset.Url);
-            var blobName = Path.GetFileName(uri.LocalPath);
-
-            // Delete from blob storage
-            await _blobStorageService.DeleteMediaAsync(blobName);
-
-            // Delete from database
-            _context.MediaAssets.Remove(mediaAsset);
-            await _context.SaveChangesAsync();
-
-            _logger.LogInformation("Media deleted successfully: {MediaId}", mediaId);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete media: {MediaId}", mediaId);
-            throw;
-        }
-    }
+    public Task<bool> DeleteMediaAsync(string mediaId) =>
+        _deleteMediaUseCase.ExecuteAsync(mediaId);
 
     /// <inheritdoc />
     public async Task<MediaValidationResult> ValidateMediaReferencesAsync(List<string> mediaReferences)
@@ -561,77 +509,17 @@ public class MediaApiService : IMediaApiService
         return mediaId;
     }
 
-    public async Task<(Stream stream, string contentType, string fileName)?> GetMediaFileAsync(string mediaId)
-    {
-        try
-        {
-            var mediaAsset = await GetMediaByIdAsync(mediaId);
-            if (mediaAsset == null)
-            {
-                return null;
-            }
-
-            // Download the file from the URL
-            using var httpClient = new HttpClient();
-            var response = await httpClient.GetAsync(mediaAsset.Url);
-            if (!response.IsSuccessStatusCode)
-            {
-                return null;
-            }
-
-            var stream = await response.Content.ReadAsStreamAsync();
-            var fileName = Path.GetFileName(new Uri(mediaAsset.Url).LocalPath);
-
-            return (stream, mediaAsset.MimeType, fileName);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting media file: {MediaId}", mediaId);
-            return null;
-        }
-    }
+    public Task<(Stream stream, string contentType, string fileName)?> GetMediaFileAsync(string mediaId) =>
+        _downloadMediaUseCase.ExecuteAsync(mediaId);
 
     /// <inheritdoc />
-    public async Task<Domain.Models.MediaAsset?> GetMediaByFileNameAsync(string fileName)
-    {
-        try
-        {
-            // Get metadata file to resolve filename to media ID
-            var metadataFile = await _mediaMetadataService.GetMediaMetadataFileAsync();
-            if (metadataFile == null)
-            {
-                return null;
-            }
-
-            // Find metadata entry by filename
-            var metadataEntry = metadataFile.Entries.FirstOrDefault(e =>
-                string.Equals(e.FileName, fileName, StringComparison.OrdinalIgnoreCase));
-
-            if (metadataEntry == null)
-            {
-                var fileNameStem = Path.GetFileNameWithoutExtension(fileName);
-                metadataEntry = metadataFile.Entries.FirstOrDefault(e =>
-                    string.Equals(Path.GetFileNameWithoutExtension(e.FileName), fileNameStem, StringComparison.OrdinalIgnoreCase));
-            }
-            if (metadataEntry == null)
-            {
-                return null;
-            }
-
-            // Get the media asset by the resolved media ID
-            return await GetMediaByIdAsync(metadataEntry.Id);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting media by filename: {FileName}", fileName);
-            return null;
-        }
-    }
+    public Task<Domain.Models.MediaAsset?> GetMediaByFileNameAsync(string fileName) =>
+        _getMediaByFilenameUseCase.ExecuteAsync(fileName);
 
     /// <inheritdoc />
     public async Task<string?> GetMediaUrlAsync(string fileName)
     {
-        var mediaAsset = await GetMediaByFileNameAsync(fileName);
+        var mediaAsset = await _getMediaByFilenameUseCase.ExecuteAsync(fileName);
         return mediaAsset?.Url;
     }
 

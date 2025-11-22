@@ -477,7 +477,8 @@ public class ScenarioApiService : IScenarioApiService
 
                     if (!scenario.CoreAxes.Select(a => a.Value).Contains(change.Axis))
                     {
-                        // TODO: re-enable strict validation when master axis list is finalized.
+                        // TODO: Enhancement - Re-enable strict validation when master axis list is finalized
+                        // This will ensure all compass axes referenced in scenarios are valid according to the domain model
                         //throw new ScenarioValidationException($"Invalid compass axis '{change.Axis}' not defined in scenario (Scene ID: {scene.Id}, Choice: {branch.Choice})");
                     }
                 }
