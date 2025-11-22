@@ -8,6 +8,7 @@ namespace Mystira.App.Infrastructure.Data.Repositories;
 public interface IAccountRepository : IRepository<Account>
 {
     Task<Account?> GetByEmailAsync(string email);
+    Task<Account?> GetByAuth0UserIdAsync(string auth0UserId);
     Task<bool> ExistsByEmailAsync(string email);
 }
 

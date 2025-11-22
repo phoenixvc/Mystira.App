@@ -1,28 +1,29 @@
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Api.Models;
+using Mystira.App.Admin.Api.Data;
+using Mystira.App.Admin.Api.Models;
 
-namespace Mystira.App.Infrastructure.Data.Repositories;
+namespace Mystira.App.Admin.Api.Repositories;
 
 /// <summary>
-/// Repository implementation for MediaMetadataFile singleton entity
+/// Repository implementation for CharacterMediaMetadataFile singleton entity
 /// </summary>
-public class MediaMetadataFileRepository : IMediaMetadataFileRepository
+public class CharacterMediaMetadataFileRepository : ICharacterMediaMetadataFileRepository
 {
-    private readonly DbContext _context;
-    private readonly DbSet<MediaMetadataFile> _dbSet;
+    private readonly MystiraAppDbContext _context;
+    private readonly DbSet<CharacterMediaMetadataFile> _dbSet;
 
-    public MediaMetadataFileRepository(DbContext context)
+    public CharacterMediaMetadataFileRepository(MystiraAppDbContext context)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
-        _dbSet = context.Set<MediaMetadataFile>();
+        _dbSet = context.Set<CharacterMediaMetadataFile>();
     }
 
-    public async Task<MediaMetadataFile?> GetAsync()
+    public async Task<CharacterMediaMetadataFile?> GetAsync()
     {
         return await _dbSet.FirstOrDefaultAsync();
     }
 
-    public async Task<MediaMetadataFile> AddOrUpdateAsync(MediaMetadataFile entity)
+    public async Task<CharacterMediaMetadataFile> AddOrUpdateAsync(CharacterMediaMetadataFile entity)
     {
         var existing = await GetAsync();
         if (existing != null)

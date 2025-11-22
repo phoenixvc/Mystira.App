@@ -1,6 +1,6 @@
 using Mystira.App.Api.Models;
 
-namespace Mystira.App.Infrastructure.Data.Repositories;
+namespace Mystira.App.Api.Repositories;
 
 /// <summary>
 /// Repository interface for CharacterMapFile singleton entity

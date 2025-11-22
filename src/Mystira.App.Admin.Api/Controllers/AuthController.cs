@@ -7,6 +7,12 @@ using Mystira.App.Admin.Api.Services;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
+public class LoginRequest
+{
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+}
+
 [Route("api/auth")]
 [ApiController]
 public class AuthController : ControllerBase
@@ -65,10 +71,4 @@ public class AuthController : ControllerBase
         await HttpContext.SignOutAsync("Cookies");
         return Ok(new { Message = "Logged out successfully" });
     }
-}
-
-public class LoginRequest
-{
-    public string Username { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
 }

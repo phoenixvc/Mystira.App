@@ -1,17 +1,18 @@
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Api.Models;
+using Mystira.App.Admin.Api.Data;
+using Mystira.App.Admin.Api.Models;
 
-namespace Mystira.App.Infrastructure.Data.Repositories;
+namespace Mystira.App.Admin.Api.Repositories;
 
 /// <summary>
 /// Repository implementation for CharacterMapFile singleton entity
 /// </summary>
 public class CharacterMapFileRepository : ICharacterMapFileRepository
 {
-    private readonly DbContext _context;
+    private readonly MystiraAppDbContext _context;
     private readonly DbSet<CharacterMapFile> _dbSet;
 
-    public CharacterMapFileRepository(DbContext context)
+    public CharacterMapFileRepository(MystiraAppDbContext context)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _dbSet = context.Set<CharacterMapFile>();

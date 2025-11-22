@@ -1,18 +1,19 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
 
-namespace Mystira.App.Infrastructure.Data.Repositories;
+namespace Mystira.App.Api.Repositories;
 
 /// <summary>
 /// Repository implementation for MediaAsset entity
 /// </summary>
 public class MediaAssetRepository : IMediaAssetRepository
 {
-    private readonly DbContext _context;
+    private readonly MystiraAppDbContext _context;
     private readonly DbSet<MediaAsset> _dbSet;
 
-    public MediaAssetRepository(DbContext context)
+    public MediaAssetRepository(MystiraAppDbContext context)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _dbSet = context.Set<MediaAsset>();

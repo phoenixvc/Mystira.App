@@ -1,33 +1,34 @@
 using Microsoft.EntityFrameworkCore;
+using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
 
-namespace Mystira.App.Infrastructure.Data.Repositories;
+namespace Mystira.App.Api.Repositories;
 
 /// <summary>
-/// Repository implementation for CharacterMediaMetadataFile singleton entity
+/// Repository implementation for CharacterMapFile singleton entity
 /// </summary>
-public class CharacterMediaMetadataFileRepository : ICharacterMediaMetadataFileRepository
+public class CharacterMapFileRepository : ICharacterMapFileRepository
 {
-    private readonly DbContext _context;
-    private readonly DbSet<CharacterMediaMetadataFile> _dbSet;
+    private readonly MystiraAppDbContext _context;
+    private readonly DbSet<CharacterMapFile> _dbSet;
 
-    public CharacterMediaMetadataFileRepository(DbContext context)
+    public CharacterMapFileRepository(MystiraAppDbContext context)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
-        _dbSet = context.Set<CharacterMediaMetadataFile>();
+        _dbSet = context.Set<CharacterMapFile>();
     }
 
-    public async Task<CharacterMediaMetadataFile?> GetAsync()
+    public async Task<CharacterMapFile?> GetAsync()
     {
         return await _dbSet.FirstOrDefaultAsync();
     }
 
-    public async Task<CharacterMediaMetadataFile> AddOrUpdateAsync(CharacterMediaMetadataFile entity)
+    public async Task<CharacterMapFile> AddOrUpdateAsync(CharacterMapFile entity)
     {
         var existing = await GetAsync();
         if (existing != null)
         {
-            existing.Entries = entity.Entries;
+            existing.Characters = entity.Characters;
             existing.UpdatedAt = DateTime.UtcNow;
             existing.Version = entity.Version;
             _dbSet.Update(existing);

@@ -167,6 +167,12 @@ builder.Services.AddScoped<ICharacterMapRepository, CharacterMapRepository>();
 builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
 builder.Services.AddScoped<IBadgeConfigurationRepository, BadgeConfigurationRepository>();
 builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
+builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
+builder.Services.AddScoped<Mystira.App.Admin.Api.Repositories.IMediaAssetRepository, Mystira.App.Admin.Api.Repositories.MediaAssetRepository>();
+builder.Services.AddScoped<Mystira.App.Admin.Api.Repositories.IMediaMetadataFileRepository, Mystira.App.Admin.Api.Repositories.MediaMetadataFileRepository>();
+builder.Services.AddScoped<Mystira.App.Admin.Api.Repositories.ICharacterMediaMetadataFileRepository, Mystira.App.Admin.Api.Repositories.CharacterMediaMetadataFileRepository>();
+builder.Services.AddScoped<Mystira.App.Admin.Api.Repositories.ICharacterMapFileRepository, Mystira.App.Admin.Api.Repositories.CharacterMapFileRepository>();
+builder.Services.AddScoped<IAvatarConfigurationFileRepository, AvatarConfigurationFileRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddScoped<IGameSessionApiService, GameSessionApiService>();
