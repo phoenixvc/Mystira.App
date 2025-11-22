@@ -1,0 +1,86 @@
+@* Bundle Card Component *@
+@using Mystira.App.PWA.Models
+
+<div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
+    <div class="card h-100 bundle-card" style="cursor: pointer;" @onclick="OnCardClick">
+        <div class="bundle-image-container">
+            <CachedMystiraImage 
+                MediaId="@Bundle.ImageId"
+                Alt="@Bundle.Title"
+                Width="400"
+                Height="250"
+                ImageClass="card-img-top bundle-card-image" />
+            @if (Bundle.IsFree)
+            {
+                <div class="bundle-free-badge">
+                    <span class="badge bg-success">
+                        <i class="fas fa-gift me-1"></i>Free
+                    </span>
+                </div>
+            }
+        </div>
+        <div class="card-body">
+            <h6 class="card-title mb-1">@Bundle.Title</h6>
+            <p class="card-text small text-muted">@Bundle.Description</p>
+            
+            @{
+                var totalInBundle = Bundle.ScenarioIds?.Count ?? 0;
+                var completedInBundle = CompletedScenarioIds.Count == 0 
+                    ? 0 
+                    : (Bundle.ScenarioIds?.Count(id => CompletedScenarioIds.Contains(id)) ?? 0);
+                var progressPercent = totalInBundle > 0 ? (completedInBundle * 100 / totalInBundle) : 0;
+            }
+            
+            @* Progress Bar *@
+            @if (ShowGameState && completedInBundle > 0)
+            {
+                <div class="progress mb-2" style="height: 6px;">
+                    <div class="progress-bar bg-success" 
+                         role="progressbar" 
+                         style="width: @progressPercent%"
+                         aria-valuenow="@progressPercent" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100"></div>
+                </div>
+            }
+            
+            <div class="d-flex flex-wrap gap-1 mb-2">
+                <span class="badge bg-primary">
+                    <i class="fas fa-book me-1"></i>@totalInBundle
+                </span>
+                @if (ShowGameState)
+                {
+                    <span class="badge @(completedInBundle > 0 ? "bg-success" : "bg-secondary")">
+                        <i class="fas fa-check me-1"></i>@completedInBundle
+                    </span>
+                }
+            </div>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center small">
+            <span><i class="fas fa-users me-1"></i><strong>@Bundle.AgeGroup</strong></span>
+            <span class="text-primary"><i class="fas fa-arrow-right"></i></span>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ContentBundle Bundle { get; set; } = null!;
+    
+    [Parameter]
+    public HashSet<string> CompletedScenarioIds { get; set; } = new();
+    
+    [Parameter]
+    public bool ShowGameState { get; set; } = false;
+    
+    [Parameter]
+    public EventCallback<ContentBundle> OnClick { get; set; }
+    
+    private async Task OnCardClick()
+    {
+        if (OnClick.HasDelegate)
+        {
+            await OnClick.InvokeAsync(Bundle);
+        }
+    }
+}

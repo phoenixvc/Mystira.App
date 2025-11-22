@@ -1,0 +1,80 @@
+@* Featured Bundle Card Component *@
+@using Mystira.App.PWA.Models
+
+<div class="featured-bundle-card mb-4">
+    <div class="card border-warning shadow">
+        <div class="card-header bg-warning text-dark">
+            <i class="fas fa-star me-2"></i><strong>Featured Adventure Bundle</strong>
+        </div>
+        <div class="row g-0">
+            <div class="col-md-4">
+                <CachedMystiraImage 
+                    MediaId="@Bundle.ImageId"
+                    Alt="@Bundle.Title"
+                    Width="400"
+                    Height="300"
+                    ImageClass="featured-bundle-image" />
+            </div>
+            <div class="col-md-8">
+                <div class="card-body">
+                    <h4 class="card-title">@Bundle.Title</h4>
+                    <p class="card-text">@Bundle.Description</p>
+                    
+                    @{
+                        var totalInBundle = Bundle.ScenarioIds?.Count ?? 0;
+                        var completedInBundle = CompletedScenarioIds.Count == 0 
+                            ? 0 
+                            : (Bundle.ScenarioIds?.Count(id => CompletedScenarioIds.Contains(id)) ?? 0);
+                    }
+                    
+                    <div class="mb-3">
+                        <span class="badge bg-primary me-2">
+                            <i class="fas fa-book me-1"></i>@totalInBundle adventures
+                        </span>
+                        @if (ShowGameState)
+                        {
+                            <span class="badge bg-success me-2">
+                                <i class="fas fa-check me-1"></i>@completedInBundle completed
+                            </span>
+                        }
+                        <span class="badge bg-info me-2">
+                            <i class="fas fa-users me-1"></i>Ages @Bundle.AgeGroup
+                        </span>
+                        @if (Bundle.IsFree)
+                        {
+                            <span class="badge bg-success">
+                                <i class="fas fa-gift me-1"></i>Free
+                            </span>
+                        }
+                    </div>
+                    
+                    <button class="btn btn-warning btn-lg" @onclick="OnExploreClick">
+                        <i class="fas fa-play me-2"></i>Explore Adventures
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ContentBundle Bundle { get; set; } = null!;
+    
+    [Parameter]
+    public HashSet<string> CompletedScenarioIds { get; set; } = new();
+    
+    [Parameter]
+    public bool ShowGameState { get; set; } = false;
+    
+    [Parameter]
+    public EventCallback<ContentBundle> OnExplore { get; set; }
+    
+    private async Task OnExploreClick()
+    {
+        if (OnExplore.HasDelegate)
+        {
+            await OnExplore.InvokeAsync(Bundle);
+        }
+    }
+}

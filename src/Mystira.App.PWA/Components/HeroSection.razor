@@ -1,0 +1,60 @@
+@* Hero Section Component *@
+
+<div class="row">
+    <div class="col-12 text-center mb-5 hero-section">
+        <div class="hero-content">
+            <h1 class="mystira-title mb-2">
+                Mystira <span class="alpha-badge">ALPHA</span>
+            </h1>
+            <p class="mystira-tagline mb-4">Where imagination meets growth</p>
+            <div class="hero-logo-container mb-4">
+                <CachedMystiraImage 
+                    MediaId="@LogoMediaId"
+                    Alt="Mystira - Where imagination meets growth"
+                    Width="600"
+                    Height="600"
+                    ImageClass="hero-logo" />
+            </div>
+            @if (ShowDescription)
+            {
+                <p class="hero-description mb-4">
+                    Bring stories to life with Mystira — an interactive adventure platform that helps children, parents, and group leaders explore imagination, teamwork, and growth through guided storytelling and play.
+                </p>
+                
+                @if (ShowCallToActions)
+                {
+                    <div class="hero-cta-buttons d-flex gap-3 justify-content-center flex-wrap">
+                        <a href="/signup" class="btn btn-primary-custom btn-lg px-5 py-3">
+                            <i class="fas fa-rocket me-2"></i>Get Started
+                        </a>
+                        <button class="btn btn-outline-primary btn-lg px-5 py-3" @onclick="OnWatchDemo">
+                            <i class="fas fa-play-circle me-2"></i>Watch Demo
+                        </button>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string LogoMediaId { get; set; } = "image-final-logo-fe3f75db";
+    
+    [Parameter]
+    public bool ShowDescription { get; set; } = false;
+    
+    [Parameter]
+    public bool ShowCallToActions { get; set; } = false;
+    
+    [Parameter]
+    public EventCallback OnWatchDemoClick { get; set; }
+    
+    private async Task OnWatchDemo()
+    {
+        if (OnWatchDemoClick.HasDelegate)
+        {
+            await OnWatchDemoClick.InvokeAsync();
+        }
+    }
+}

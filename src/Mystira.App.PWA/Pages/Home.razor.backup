@@ -16,12 +16,19 @@
 <PageTitle>Mystira</PageTitle>
 
 <div class="container-fluid py-4">
-    <!-- Hero Section -->
-    <HeroSection 
-        LogoMediaId="image-final-logo-fe3f75db" 
-        ShowDescription="@(!isAuthenticated)"
-        ShowCallToActions="@(!isAuthenticated)"
-        OnWatchDemoClick="@(() => { /* TODO: Implement demo video modal */ })" />
+    <div class="row">
+        <div class="col-12 text-center mb-4">
+            <div class="row">
+                <div class="col-12 text-center mb-4">
+                    <CachedMystiraImage 
+                        MediaId="image-final-logo-fe3f75db"
+                        Alt="This is a magical picture, but it seems to be having a difficult time loading!"
+                        Width="600"
+                        Height="600" />
+                </div>
+            </div>
+        </div>
+    </div>
     
     <!-- Active Adventures Section -->
     @if (isAuthenticated && !isLoading && activeSessions.Any())
@@ -147,26 +154,73 @@
         </div>
     }
     
-    <!-- Filter Section -->
+    <!-- Age Group Filters -->
     @if (isAuthenticated && !isLoading)
     {
-        <FilterSection 
-            AgeGroups="@availableAgeGroups"
-            SelectedAgeGroups="@selectedAgeGroups"
-            AgeGroupCounts="@_ageGroupBundleCounts"
-            SearchQuery="@searchQuery"
-            SearchQueryChanged="@((value) => { searchQuery = value; })"
-            ShowCompleted="@showCompletedStories"
-            ShowCompletedChanged="@((value) => { showCompletedStories = value; ToggleCompletedStories(); })"
-            HiddenCount="@completedScenarioIds.Count"
-            ResultCount="@GetResultCount()"
-            ResultCountLabel="@GetResultCountLabel()"
-            ShowSortOptions="@(!string.IsNullOrEmpty(selectedBundleId))"
-            CurrentSort="@currentSort"
-            OnSortChanged="@OnSortChanged"
-            OnAgeGroupToggled="@ToggleAgeGroupFilter"
-            OnClearAllFilters="@ClearAllFilters"
-            OnSearchCleared="@ClearSearch" />
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-title mb-3">
+                            <i class="fas fa-filter me-2"></i>Filter Adventures
+                        </h6>
+                        
+                        <!-- Show Completed Stories Toggle -->
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="showCompletedToggle" 
+                                       checked="@showCompletedStories" @onchange="ToggleCompletedStories">
+                                <label class="form-check-label" for="showCompletedToggle">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    Show Completed Stories
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Age Group Filters -->
+                        <div class="mb-2">
+                            <small class="text-muted d-block mb-2">Filter by Age Group:</small>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var ageGroup in availableAgeGroups)
+                                {
+                                    var isSelected = selectedAgeGroups.Contains(ageGroup);
+                                    <button class="btn @(isSelected ? "btn-primary-custom" : "btn-outline-secondary")"
+                                            @onclick="() => ToggleAgeGroupFilter(ageGroup)">
+                                        <i class="fas fa-users me-1"></i>
+                                        Ages @ageGroup
+                                        @if (isSelected)
+                                        {
+                                            <i class="fas fa-check ms-1"></i>
+                                        }
+                                    </button>
+                                }
+                                @if (selectedAgeGroups.Any())
+                                {
+                                    <button class="btn btn-outline-danger" @onclick="ClearAllFilters">
+                                        <i class="fas fa-times me-1"></i>Clear All
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                        
+                        @if (selectedAgeGroups.Any() && !string.IsNullOrEmpty(selectedBundleId))
+                        {
+                            <div class="mt-2 text-muted small">
+                                Showing @filteredScenarios.Count of @scenarios.Count adventures
+                                @if (isLoadingGameState)
+                                {
+                                    <text> (<i class="fas fa-spinner fa-spin"></i> Loading game state...)</text>
+                                }
+                                else if (!showCompletedStories)
+                                {
+                                    <text> (@completedScenarioIds.Count completed hidden)</text>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Content Bundles Grid -->
         <div class="row mb-4">
@@ -193,7 +247,9 @@
 
                 @if (isLoadingBundles)
                 {
-                    <SkeletonLoader Count="6" />
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-spinner fa-spin me-2"></i> Loading bundles...
+                    </div>
                 }
                 else if (!filteredBundles.Any())
                 {
@@ -201,29 +257,42 @@
                 }
                 else if (string.IsNullOrEmpty(selectedBundleId))
                 {
-                    @* Featured Bundle *@
-                    @if (filteredBundles.Any() && GetFeaturedBundle() != null)
-                    {
-                        var featured = GetFeaturedBundle();
-                        if (featured != null)
-                        {
-                            <FeaturedBundleCard 
-                                Bundle="@featured" 
-                                CompletedScenarioIds="@completedScenarioIds"
-                                ShowGameState="@gameStateLoadingComplete"
-                                OnExplore="@((bundle) => SelectBundle(bundle))" />
-                        }
-                    }
-                    
-                    @* Regular Bundle Grid *@
                     <div class="row">
-                        @foreach (var bundle in filteredBundles.Where(b => b.Id != GetFeaturedBundle()?.Id))
+                        @foreach (var bundle in filteredBundles)
                         {
-                            <BundleCard 
-                                Bundle="@bundle"
-                                CompletedScenarioIds="@completedScenarioIds"
-                                ShowGameState="@gameStateLoadingComplete"
-                                OnClick="@((b) => SelectBundle(b))" />
+                            <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
+                                <div class="card h-100" style="cursor: pointer;" @onclick="() => SelectBundle(bundle)">
+                                    <CachedMystiraImage 
+                                        MediaId="@bundle.ImageId"
+                                        Alt="@bundle.Title"
+                                        Width="400"
+                                        Height="250"
+                                        ImageClass="card-img-top" />
+                                    <div class="card-body">
+                                        <h6 class="card-title mb-1">@bundle.Title</h6>
+                                        <p class="card-text small text-muted">@bundle.Description</p>
+                                        @{
+                                            var totalInBundle = bundle.ScenarioIds?.Count ?? 0;
+                                            var completedInBundle = completedScenarioIds.Count == 0 
+                                                ? 0 
+                                                : (bundle.ScenarioIds?.Count(id => completedScenarioIds.Contains(id)) ?? 0);
+                                        }
+                                        <span class="badge bg-primary">@totalInBundle adventures</span>
+                                        @if (gameStateLoadingComplete)
+                                        {
+                                            <span class="badge bg-secondary ms-2">@completedInBundle completed</span>
+                                        }
+                                        @if (bundle.IsFree)
+                                        {
+                                            <span class="badge bg-success ms-2">Free</span>
+                                        }
+                                    </div>
+                                    <div class="card-footer d-flex justify-content-between small">
+                                        <span><strong>Age Group: @bundle.AgeGroup</strong></span>
+                                        <span class="text-muted">Open</span>
+                                    </div>
+                                </div>
+                            </div>
                         }
                     </div>
                 }
@@ -472,24 +541,6 @@
     private bool hasProfiles = false;
     private bool isLoadingProfiles = false;
     private GameSession? gameSession;
-    private string _searchQuery = string.Empty;
-    private string searchQuery 
-    { 
-        get => _searchQuery;
-        set 
-        {
-            if (_searchQuery != value)
-            {
-                _searchQuery = value;
-                ApplyFilters();
-            }
-        }
-    }
-    private string currentSort = "newest";
-    
-    // Cache for performance optimization
-    private Dictionary<string, int> _ageGroupBundleCounts = new();
-    private ContentBundle? _cachedFeaturedBundle;
     
     // Age group filter state
     private readonly HashSet<string> selectedAgeGroups = new();
@@ -679,9 +730,6 @@
             Logger.LogInformation("Loading content bundles...");
             bundles = await ApiClient.GetBundlesAsync();
             Logger.LogInformation("Loaded {Count} bundles", bundles.Count);
-            
-            // Pre-compute age group counts for performance
-            UpdateAgeGroupCounts();
 
             Logger.LogInformation("Loading completed scenarios and active sessions...");
             
@@ -922,22 +970,13 @@
 
     private void ApplyFilters()
     {
-        // Filter bundles by selected age groups and search
+        // Filter bundles by selected age groups
         var bundleFiltered = bundles.AsEnumerable();
         if (selectedAgeGroups.Any())
         {
             bundleFiltered = bundleFiltered.Where(b => selectedAgeGroups.Contains(b.AgeGroup));
         }
-        if (!string.IsNullOrEmpty(searchQuery))
-        {
-            bundleFiltered = bundleFiltered.Where(b => 
-                b.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                b.Description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
-        }
         filteredBundles = bundleFiltered.ToList();
-        
-        // Invalidate featured bundle cache when filters change
-        _cachedFeaturedBundle = null;
 
         // Filter scenarios, optionally by selected bundle
         var filtered = scenarios.AsEnumerable();
@@ -954,75 +993,16 @@
             filtered = filtered.Where(s => selectedAgeGroups.Contains(s.AgeGroup));
         }
         
-        // Apply search filter (optimized)
-        if (!string.IsNullOrEmpty(searchQuery))
-        {
-            var query = searchQuery.ToLowerInvariant();
-            filtered = filtered.Where(s => 
-                s.Name.ToLowerInvariant().Contains(query) ||
-                s.Description.ToLowerInvariant().Contains(query) ||
-                (s.Tags != null && s.Tags.Any(t => t.ToLowerInvariant().Contains(query))));
-        }
-        
         // Apply completed stories filter
         if (!showCompletedStories)
         {
             filtered = filtered.Where(s => !completedScenarioIds.Contains(s.Id));
         }
         
-        // Apply sorting
-        filtered = ApplySorting(filtered);
-        
         filteredScenarios = filtered.ToList();
         
-        Logger.LogInformation("Applied filters. Age groups: [{SelectedFilters}], Search: '{SearchQuery}', Sort: '{Sort}', Show completed: {ShowCompleted}, Showing {Count} of {Total} scenarios", 
-            string.Join(", ", selectedAgeGroups), searchQuery, currentSort, showCompletedStories, filteredScenarios.Count, scenarios.Count);
-    }
-    
-    private IEnumerable<Scenario> ApplySorting(IEnumerable<Scenario> scenarios)
-    {
-        return currentSort switch
-        {
-            "popular" => scenarios.OrderByDescending(s => s.CreatedAt), // TODO: Implement with actual play count from backend
-            "difficulty-asc" => scenarios.OrderBy(s => GetDifficultyOrder(s.Difficulty)),
-            "difficulty-desc" => scenarios.OrderByDescending(s => GetDifficultyOrder(s.Difficulty)),
-            "duration-asc" => scenarios.OrderBy(s => GetDurationOrder(s.SessionLength)),
-            "duration-desc" => scenarios.OrderByDescending(s => GetDurationOrder(s.SessionLength)),
-            "newest" or _ => scenarios.OrderByDescending(s => s.CreatedAt)
-        };
-    }
-    
-    private const int DefaultDurationOrder = 2;  // Medium duration default
-    
-    private int GetDifficultyOrder(string difficulty)
-    {
-        return difficulty?.ToLower() switch
-        {
-            "easy" => 1,
-            "medium" => 2,
-            "hard" => 3,
-            "expert" => 4,
-            _ => 0
-        };
-    }
-    
-    private int GetDurationOrder(string duration)
-    {
-        return duration?.ToLower() switch
-        {
-            "short" or "quick" => 1,
-            "medium" => 2,
-            "long" => 3,
-            "epic" => 4,
-            _ => DefaultDurationOrder
-        };
-    }
-    
-    private void OnSortChanged(string sort)
-    {
-        currentSort = sort;
-        ApplyFilters();
-        StateHasChanged();
+        Logger.LogInformation("Applied filters. Age groups: [{SelectedFilters}], Show completed: {ShowCompleted}, Showing {Count} of {Total} scenarios", 
+            string.Join(", ", selectedAgeGroups), showCompletedStories, filteredScenarios.Count, scenarios.Count);
     }
 
     private async Task ContinueAdventure(GameSession activeSession, Scenario scenario)
@@ -1102,82 +1082,5 @@
         selectedBundleId = null;
         ApplyFilters();
         StateHasChanged();
-    }
-
-    private void ClearSearch()
-    {
-        searchQuery = string.Empty;
-        ApplyFilters();
-        StateHasChanged();
-    }
-
-    private int GetBundleCountForAgeGroup(string ageGroup)
-    {
-        // Use cached counts for performance
-        if (_ageGroupBundleCounts.TryGetValue(ageGroup, out var count))
-        {
-            return count;
-        }
-        return 0;
-    }
-    
-    private void UpdateAgeGroupCounts()
-    {
-        // Pre-compute bundle counts for all age groups
-        _ageGroupBundleCounts = availableAgeGroups
-            .ToDictionary(
-                ageGroup => ageGroup,
-                ageGroup => bundles.Count(b => b.AgeGroup == ageGroup)
-            );
-    }
-
-    private ContentBundle? GetFeaturedBundle()
-    {
-        // Return cached value if available
-        if (_cachedFeaturedBundle != null || !filteredBundles.Any())
-        {
-            return _cachedFeaturedBundle;
-        }
-        
-        // Compute and cache the featured bundle
-        var freeBundle = filteredBundles.FirstOrDefault(b => b.IsFree);
-        if (freeBundle != null)
-        {
-            _cachedFeaturedBundle = freeBundle;
-            return _cachedFeaturedBundle;
-        }
-        
-        _cachedFeaturedBundle = filteredBundles
-            .OrderByDescending(b => b.ScenarioIds?.Count ?? 0)
-            .FirstOrDefault();
-            
-        return _cachedFeaturedBundle;
-    }
-    
-    private int? GetResultCount()
-    {
-        if (!string.IsNullOrEmpty(selectedBundleId))
-        {
-            return filteredScenarios.Count;
-        }
-        else if (selectedAgeGroups.Any())
-        {
-            return filteredBundles.Count;
-        }
-        return null;
-    }
-    
-    private string GetResultCountLabel()
-    {
-        if (!string.IsNullOrEmpty(selectedBundleId))
-        {
-            return $"Showing {filteredScenarios.Count} of {scenarios.Count} adventures";
-        }
-        else if (selectedAgeGroups.Any())
-        {
-            var pluralSuffix = filteredBundles.Count != 1 ? "s" : "";
-            return $"{filteredBundles.Count} bundle{pluralSuffix} match your filters";
-        }
-        return string.Empty;
     }
 }

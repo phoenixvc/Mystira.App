@@ -1,0 +1,25 @@
+@* Skeleton Loader Component for Bundle Cards *@
+
+<div class="row">
+    @for (int i = 0; i < Count; i++)
+    {
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
+            <div class="card h-100 skeleton-card">
+                <div class="skeleton skeleton-image"></div>
+                <div class="card-body">
+                    <div class="skeleton skeleton-text mb-2"></div>
+                    <div class="skeleton skeleton-text skeleton-text-sm mb-3"></div>
+                    <div class="d-flex gap-2">
+                        <div class="skeleton skeleton-badge"></div>
+                        <div class="skeleton skeleton-badge"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int Count { get; set; } = 6;
+}
