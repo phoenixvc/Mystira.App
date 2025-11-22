@@ -21,15 +21,15 @@ public class GameSession
     public int SceneCount { get; set; }
     // Store as string for database compatibility, but provide AgeGroup access
     private string _targetAgeGroup = "school";
-    public string TargetAgeGroupName 
-    { 
-        get => _targetAgeGroup; 
-        set => _targetAgeGroup = value; 
+    public string TargetAgeGroupName
+    {
+        get => _targetAgeGroup;
+        set => _targetAgeGroup = value;
     }
-    
+
     // Convenience property to get AgeGroup object
-    public AgeGroup TargetAgeGroup 
-    { 
+    public AgeGroup TargetAgeGroup
+    {
         get => AgeGroup.Parse(_targetAgeGroup) ?? new AgeGroup("school", 6, 9);
         set => _targetAgeGroup = value?.Value ?? "school";
     }

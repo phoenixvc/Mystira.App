@@ -9,7 +9,7 @@ namespace Mystira.App.CosmosConsole.Data;
 
 public class CosmosConsoleDbContext : DbContext
 {
-    private readonly JsonSerializerOptions? _jsonOptions = 
+    private readonly JsonSerializerOptions? _jsonOptions =
         new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -42,7 +42,7 @@ public class CosmosConsoleDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        
+
         // Ignore complex type, CompassValues, on GameSession
         modelBuilder
             .Entity<GameSession>()
@@ -83,11 +83,11 @@ public class CosmosConsoleDbContext : DbContext
             entity.HasPartitionKey(e => e.Name);
         });
         modelBuilder.Entity<UserProfile>().ToContainer("UserProfiles");
-        
+
         // Configure CompassTracking
         modelBuilder.Entity<CompassTracking>().HasNoKey();
         modelBuilder.Entity<CompassTracking>().ToContainer("CompassTrackings");
-        
+
         // Configure BadgeConfiguration
         modelBuilder.Entity<BadgeConfiguration>(entity =>
         {
@@ -114,21 +114,21 @@ public class CosmosConsoleDbContext : DbContext
         {
             entity.HasPartitionKey(e => e.Id);
         });
-        
+
         // Configure ScenarioCharacter
         modelBuilder.Entity<ScenarioCharacter>(entity =>
         {
             entity.HasPartitionKey(e => e.Id);
         });
-        
+
         // Configure List<string> properties that may come from comma-separated strings
         ConfigureListStringProperty<GameSession>(modelBuilder, e => e.PlayerNames);
-    
+
         // Configure all List<string> properties on Scenario
         modelBuilder.Entity<Scenario>().Property(e => e.Archetypes).HasConversion(v => SerializeList(v.Select(e => e.Value).ToList()), v => DeserializeList(v).Select(s => Archetype.Parse(s)!).ToList());
         modelBuilder.Entity<Scenario>().Property(e => e.CoreAxes).HasConversion(v => SerializeList(v.Select(e => e.Value).ToList()), v => DeserializeList(v).Select(s => CoreAxis.Parse(s)!).ToList());
         ConfigureListStringProperty<Scenario>(modelBuilder, e => e.Tags);
-        
+
         // Add configuration for the Character class
         modelBuilder.Entity<ScenarioCharacter>().OwnsOne(c => c.Metadata, metadata =>
         {
@@ -168,7 +168,7 @@ public class CosmosConsoleDbContext : DbContext
                 ));
         });
     }
-    
+
     private string DeserializeListRaw(string value)
     {
         // If it's a single value (not in JSON array format), we'll wrap it in an array
@@ -184,7 +184,7 @@ public class CosmosConsoleDbContext : DbContext
     }
 
     // Helper method for List<string> property configuration
-    private void ConfigureListStringProperty<TEntity>(ModelBuilder modelBuilder, 
+    private void ConfigureListStringProperty<TEntity>(ModelBuilder modelBuilder,
         Expression<Func<TEntity, List<string>>> propertyExpression) where TEntity : class
     {
         modelBuilder.Entity<TEntity>()
@@ -199,7 +199,7 @@ public class CosmosConsoleDbContext : DbContext
                 c => c.ToList()
             ));
     }
-    
+
     // Helpers for serialization/deserialization
     private string SerializeList(List<string> list)
     {
@@ -223,7 +223,7 @@ public class CosmosConsoleDbContext : DbContext
             // Handle legacy format (comma-separated string)
             if (json.Contains(","))
                 return json.Split(',').Where(s => s.Length > 0).ToList();
-        
+
             return json.Length > 0 ? new List<string> { json } : new List<string>();
         }
     }

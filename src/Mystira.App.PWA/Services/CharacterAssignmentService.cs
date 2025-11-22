@@ -54,7 +54,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
                 existingAssignment.IsUnused = assignment.IsUnused;
             }
 
-            _logger.LogInformation("Created {Count} character assignments for scenario: {ScenarioId}", 
+            _logger.LogInformation("Created {Count} character assignments for scenario: {ScenarioId}",
                 characterAssignments.Count, scenarioId);
 
             return new CharacterAssignmentResponse
@@ -75,7 +75,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
     {
         try
         {
-            _logger.LogInformation("Starting game session with {Count} character assignments for scenario: {ScenarioId}", 
+            _logger.LogInformation("Starting game session with {Count} character assignments for scenario: {ScenarioId}",
                 request.CharacterAssignments.Count, request.ScenarioId);
 
             // Convert character assignments to player names list for backward compatibility
@@ -103,7 +103,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
             if (request.Scenario != null)
             {
                 _logger.LogInformation("Populating local game session with scenario data");
-                
+
                 // Find the starting scene - look for a scene that's not referenced by any other scene
                 var scenario = request.Scenario;
                 var allReferencedSceneIds = scenario.Scenes
@@ -115,26 +115,26 @@ public class CharacterAssignmentService : ICharacterAssignmentService
                         .Select(b => b.NextSceneId))
                     .Where(id => !string.IsNullOrEmpty(id))
                     .ToHashSet();
-                
+
                 var startingScene = scenario.Scenes.FirstOrDefault(s => !allReferencedSceneIds.Contains(s.Id));
-                
+
                 if (startingScene == null)
                 {
                     // Fallback to first scene if we can't determine the starting scene
                     startingScene = scenario.Scenes.FirstOrDefault();
                 }
-                
+
                 if (startingScene != null)
                 {
                     // Resolve media URLs for the starting scene
-                    startingScene.AudioUrl = !string.IsNullOrEmpty(startingScene.Media?.Audio) 
-                        ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Audio) 
+                    startingScene.AudioUrl = !string.IsNullOrEmpty(startingScene.Media?.Audio)
+                        ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Audio)
                         : null;
-                    startingScene.ImageUrl = !string.IsNullOrEmpty(startingScene.Media?.Image) 
-                        ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Image) 
+                    startingScene.ImageUrl = !string.IsNullOrEmpty(startingScene.Media?.Image)
+                        ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Image)
                         : null;
-                    startingScene.VideoUrl = !string.IsNullOrEmpty(startingScene.Media?.Video) 
-                        ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Video) 
+                    startingScene.VideoUrl = !string.IsNullOrEmpty(startingScene.Media?.Video)
+                        ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Video)
                         : null;
 
                     // Create local game session
@@ -152,7 +152,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
 
                     // Set the current game session in GameSessionService
                     _gameSessionService.SetCurrentGameSession(localGameSession);
-                    
+
                     _logger.LogInformation("Local game session populated with starting scene: {SceneTitle}", startingScene.Title);
                 }
                 else
@@ -173,7 +173,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error starting game session with character assignments for scenario: {ScenarioId}", 
+            _logger.LogError(ex, "Error starting game session with character assignments for scenario: {ScenarioId}",
                 request.ScenarioId);
             return false;
         }
@@ -195,7 +195,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
             };
 
             var profile = await _apiClient.CreateProfileAsync(createRequest);
-            
+
             if (profile != null)
             {
                 _logger.LogInformation("Successfully created guest profile: {Name} with ID: {Id}", request.Name, profile.Id);
@@ -224,7 +224,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
             }
 
             var profiles = await _apiClient.GetProfilesByAccountAsync(account.Id);
-            
+
             if (profiles != null)
             {
                 _logger.LogInformation("Found {Count} profiles for account: {AccountId}", profiles.Count, account.Id);
@@ -244,9 +244,9 @@ public class CharacterAssignmentService : ICharacterAssignmentService
         try
         {
             _logger.LogInformation("Getting character details: {CharacterId}", characterId);
-            
+
             var character = await _apiClient.GetCharacterAsync(characterId);
-            
+
             if (character != null)
             {
                 _logger.LogInformation("Successfully retrieved character: {CharacterName}", character.Name);
@@ -280,7 +280,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
                 Archetype = scenarioChar.Metadata?.Archetype?.FirstOrDefault() ?? "",
                 IsUnused = false
             };
-            
+
             assignments.Add(assignment);
         }
 

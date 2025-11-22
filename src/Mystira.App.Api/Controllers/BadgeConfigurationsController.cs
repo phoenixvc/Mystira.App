@@ -33,8 +33,8 @@ public class BadgeConfigurationsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting all badge configurations");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching badge configurations",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -52,8 +52,8 @@ public class BadgeConfigurationsController : ControllerBase
             var badgeConfig = await _badgeConfigService.GetBadgeConfigurationAsync(id);
             if (badgeConfig == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Badge configuration not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -64,8 +64,8 @@ public class BadgeConfigurationsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting badge configuration {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching badge configuration",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -86,8 +86,8 @@ public class BadgeConfigurationsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting badge configurations for axis {Axis}", axis);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching badge configurations",
                 TraceId = HttpContext.TraceIdentifier
             });

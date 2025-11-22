@@ -61,7 +61,7 @@ public class GameSessionApiService : IGameSessionApiService
         _context.GameSessions.Add(session);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Started new game session: {SessionId} for Account: {AccountId}, Profile: {ProfileId}", 
+        _logger.LogInformation("Started new game session: {SessionId} for Account: {AccountId}, Profile: {ProfileId}",
             session.Id, session.AccountId, session.ProfileId);
         return session;
     }
@@ -180,7 +180,7 @@ public class GameSessionApiService : IGameSessionApiService
             var tracking = session.CompassValues[branch.CompassChange.Axis];
             tracking.CurrentValue += branch.CompassChange.Delta;
             tracking.CurrentValue = Math.Max(-2.0f, Math.Min(2.0f, tracking.CurrentValue)); // Clamp to [-2, 2]
-            
+
             var compassChange = new CompassChange
             {
                 Axis = branch.CompassChange.Axis,
@@ -211,7 +211,7 @@ public class GameSessionApiService : IGameSessionApiService
 
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Choice made in session {SessionId}: {ChoiceText} -> {NextScene}", 
+        _logger.LogInformation("Choice made in session {SessionId}: {ChoiceText} -> {NextScene}",
             session.Id, request.ChoiceText, request.NextSceneId);
 
         return session;
@@ -404,7 +404,7 @@ public class GameSessionApiService : IGameSessionApiService
             // Game sessions can be linked to profiles in multiple ways:
             // 1. By profile ID (if the profile owns the session)
             // 2. By player names (if the profile is a player)
-            
+
             var sessions = await _context.GameSessions
                 .Where(s => s.ProfileId == profileId || s.PlayerNames.Contains(profileId))
                 .OrderByDescending(s => s.StartTime)

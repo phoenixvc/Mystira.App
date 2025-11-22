@@ -61,7 +61,7 @@ public class AvatarAdminController : ControllerBase
             }
 
             var avatars = await _avatarService.GetAvatarsByAgeGroupAsync(ageGroup);
-            
+
             if (avatars == null)
             {
                 return NotFound(new ErrorResponse

@@ -14,7 +14,7 @@ public class Character
     public CharacterMetadata Metadata { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    
+
     // Convenience properties
     public string? Role => Metadata.Roles?.FirstOrDefault();
     public string? Archetype => Metadata.Archetypes?.FirstOrDefault();

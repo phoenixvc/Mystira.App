@@ -99,7 +99,7 @@ public class UserProfileService : IUserProfileService
         _context.UserProfiles.Add(profile);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Created new user profile: {Name} (Guest: {IsGuest}, NPC: {IsNPC})", 
+        _logger.LogInformation("Created new user profile: {Name} (Guest: {IsGuest}, NPC: {IsNPC})",
             profile.Name, profile.IsGuest, profile.IsNpc);
         return profile;
     }
@@ -107,8 +107,8 @@ public class UserProfileService : IUserProfileService
     public async Task<UserProfile> CreateGuestProfileAsync(CreateGuestProfileRequest request)
     {
         // Generate random name if not provided
-        var name = !string.IsNullOrEmpty(request.Name) 
-            ? request.Name 
+        var name = !string.IsNullOrEmpty(request.Name)
+            ? request.Name
             : RandomNameGenerator.GenerateGuestName(request.UseAdjectiveNames);
 
         // Ensure name is unique for guest profiles
@@ -146,7 +146,7 @@ public class UserProfileService : IUserProfileService
     public async Task<List<UserProfile>> CreateMultipleProfilesAsync(CreateMultipleProfilesRequest request)
     {
         var createdProfiles = new List<UserProfile>();
-        
+
         foreach (var profileRequest in request.Profiles)
         {
             try
@@ -160,7 +160,7 @@ public class UserProfileService : IUserProfileService
                 // Continue with other profiles
             }
         }
-        
+
         _logger.LogInformation("Created {Count} profiles in batch", createdProfiles.Count);
         return createdProfiles;
     }
@@ -201,7 +201,7 @@ public class UserProfileService : IUserProfileService
             // Validate age group
             if (AgeGroup.Parse(request.AgeGroup) == null)
                 throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All.Select(a => a.Name))}");
-            
+
             profile.AgeGroupName = request.AgeGroup;
         }
 
@@ -249,10 +249,10 @@ public class UserProfileService : IUserProfileService
         _context.GameSessions.RemoveRange(sessions);
         _context.UserBadges.RemoveRange(badges);
         _context.UserProfiles.Remove(profile);
-        
+
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Deleted user profile and associated data: {Name} (badges: {BadgeCount})", 
+        _logger.LogInformation("Deleted user profile and associated data: {Name} (badges: {BadgeCount})",
             name, badges.Count);
         return true;
     }
@@ -313,7 +313,7 @@ public class UserProfileService : IUserProfileService
         profile.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Assigned character {CharacterId} to profile {ProfileId} (NPC: {IsNPC})", 
+        _logger.LogInformation("Assigned character {CharacterId} to profile {ProfileId} (NPC: {IsNPC})",
             characterId, profileId, isNpc);
 
         return true;

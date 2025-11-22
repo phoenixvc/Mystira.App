@@ -15,17 +15,17 @@ public class CreateUserProfileRequest
 
     [Required]
     public string AgeGroup { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// Date of birth for age calculation (optional for guest profiles)
     /// </summary>
     public DateTime? DateOfBirth { get; set; }
-    
+
     /// <summary>
     /// Indicates if this is a guest profile
     /// </summary>
     public bool IsGuest { get; set; } = false;
-    
+
     /// <summary>
     /// Indicates if this profile represents an NPC
     /// </summary>
@@ -35,7 +35,7 @@ public class CreateUserProfileRequest
     /// Identifier representing the associated account.
     /// </summary>
     public string? AccountId { get; set; }
-    
+
     /// <summary>
     /// Indicates if the user has completed onboarding
     /// </summary>
@@ -61,13 +61,13 @@ public class CreateGuestProfileRequest
     /// Optional name for guest profile. If not provided, a random name will be generated.
     /// </summary>
     public string? Name { get; set; }
-    
+
     /// <summary>
     /// Age group for the guest profile
     /// </summary>
     [Required]
     public string AgeGroup { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// Whether to use adjectives in random name generation
     /// </summary>
@@ -250,32 +250,32 @@ public class ClientStatusResponse
     /// Whether the client should force a content refresh regardless of other conditions
     /// </summary>
     public bool ForceRefresh { get; set; }
-    
+
     /// <summary>
     /// The minimum supported client version
     /// </summary>
     public string MinSupportedVersion { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// The latest available client version
     /// </summary>
     public string LatestVersion { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// A user-friendly message about the status
     /// </summary>
     public string Message { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// The content manifest containing changes to scenarios and media
     /// </summary>
     public ContentManifest ContentManifest { get; set; } = new();
-    
+
     /// <summary>
     /// The current content bundle version
     /// </summary>
     public string BundleVersion { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// Whether an update is required (client version below minimum supported)
     /// </summary>
@@ -300,12 +300,12 @@ public class ContentManifest
     /// Changes to scenarios (added, updated, removed)
     /// </summary>
     public ScenarioChanges Scenarios { get; set; } = new();
-    
+
     /// <summary>
     /// Changes to media files (added, updated, removed)
     /// </summary>
     public MediaChanges Media { get; set; } = new();
-    
+
     /// <summary>
     /// The current content bundle version
     /// </summary>
@@ -321,12 +321,12 @@ public class ScenarioChanges
     /// List of scenario IDs that have been added
     /// </summary>
     public List<string> Added { get; set; } = new();
-    
+
     /// <summary>
     /// List of scenario IDs that have been updated
     /// </summary>
     public List<string> Updated { get; set; } = new();
-    
+
     /// <summary>
     /// List of scenario IDs that have been removed
     /// </summary>
@@ -342,12 +342,12 @@ public class MediaChanges
     /// List of media items that have been added
     /// </summary>
     public List<MediaItem> Added { get; set; } = new();
-    
+
     /// <summary>
     /// List of media items that have been updated
     /// </summary>
     public List<MediaItem> Updated { get; set; } = new();
-    
+
     /// <summary>
     /// List of media IDs that have been removed
     /// </summary>
@@ -363,17 +363,17 @@ public class MediaItem
     /// The unique identifier for the media
     /// </summary>
     public string MediaId { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// The file path for the media
     /// </summary>
     public string FilePath { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// The version of the media (typically a timestamp)
     /// </summary>
     public string Version { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// A hash of the media content for integrity verification
     /// </summary>
@@ -386,11 +386,11 @@ public class CreateAccountRequest
     [Required]
     [StringLength(200)]
     public string Auth0UserId { get; set; } = string.Empty;
-    
+
     [Required]
     [EmailAddress]
     public string Email { get; set; } = string.Empty;
-    
+
     [Required]
     [StringLength(100, MinimumLength = 2)]
     public string DisplayName { get; set; } = string.Empty;
@@ -406,7 +406,7 @@ public class UpdateSubscriptionRequest
 {
     [Required]
     public SubscriptionType Type { get; set; }
-    
+
     public string? ProductId { get; set; }
     public DateTime? ValidUntil { get; set; }
     public string? PurchaseToken { get; set; }
@@ -419,16 +419,16 @@ public class CreateCharacterMapRequest
     [Required]
     [StringLength(100, MinimumLength = 2)]
     public string Id { get; set; } = string.Empty;
-    
+
     [Required]
     [StringLength(200, MinimumLength = 2)]
     public string Name { get; set; } = string.Empty;
-    
+
     [Required]
     public string Image { get; set; } = string.Empty;
-    
+
     public string? Audio { get; set; }
-    
+
     [Required]
     public App.Domain.Models.CharacterMetadata Metadata { get; set; } = new();
 }
@@ -447,22 +447,22 @@ public class CreateBadgeConfigurationRequest
     [Required]
     [StringLength(100, MinimumLength = 2)]
     public string Id { get; set; } = string.Empty;
-    
+
     [Required]
     [StringLength(100, MinimumLength = 2)]
     public string Name { get; set; } = string.Empty;
-    
+
     [Required]
     [StringLength(500, MinimumLength = 10)]
     public string Message { get; set; } = string.Empty;
-    
+
     [Required]
     public string Axis { get; set; } = string.Empty;
-    
+
     [Required]
     [Range(0.1, 100.0)]
     public float Threshold { get; set; } = 0.0f;
-    
+
     [Required]
     public string ImageId { get; set; } = string.Empty;
 }
@@ -490,15 +490,15 @@ public class AwardBadgeRequest
     [Required]
     [StringLength(100, MinimumLength = 1)]
     public string UserProfileId { get; set; } = string.Empty;
-    
+
     [Required]
     [StringLength(100, MinimumLength = 1)]
     public string BadgeConfigurationId { get; set; } = string.Empty;
-    
+
     [Required]
     [Range(0.1, 100.0)]
     public float TriggerValue { get; set; }
-    
+
     public string? GameSessionId { get; set; }
     public string? ScenarioId { get; set; }
 }
@@ -533,11 +533,11 @@ public class ProfileAssignmentRequest
     [Required]
     [StringLength(100, MinimumLength = 1)]
     public string ProfileId { get; set; } = string.Empty;
-    
+
     [Required]
     [StringLength(100, MinimumLength = 1)]
     public string CharacterId { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// Whether this profile should be treated as an NPC for this assignment
     /// </summary>

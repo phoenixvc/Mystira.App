@@ -31,8 +31,8 @@ public class MediaController : ControllerBase
             var media = await _mediaService.GetMediaByIdAsync(mediaId);
             if (media == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Media not found: {mediaId}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -42,8 +42,8 @@ public class MediaController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting media: {MediaId}", mediaId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while getting media",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -61,8 +61,8 @@ public class MediaController : ControllerBase
             var result = await _mediaService.GetMediaFileAsync(mediaId);
             if (result == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Media file not found: {mediaId}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -74,8 +74,8 @@ public class MediaController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error serving media file: {MediaId}", mediaId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while serving media file",
                 TraceId = HttpContext.TraceIdentifier
             });

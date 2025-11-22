@@ -129,7 +129,7 @@ public class AccountApiService : IAccountApiService
             _context.Accounts.Remove(account);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Deleted account {AccountId} and unlinked {ProfileCount} profiles", 
+            _logger.LogInformation("Deleted account {AccountId} and unlinked {ProfileCount} profiles",
                 accountId, userProfiles.Count);
             return true;
         }
@@ -163,7 +163,7 @@ public class AccountApiService : IAccountApiService
             account.UserProfileIds = userProfileIds;
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Linked {ProfileCount} profiles to account {AccountId}", 
+            _logger.LogInformation("Linked {ProfileCount} profiles to account {AccountId}",
                 profiles.Count, accountId);
             return true;
         }
@@ -213,20 +213,20 @@ public class AccountApiService : IAccountApiService
                 _logger.LogWarning("Account not found: {AccountId}", accountId);
                 return false;
             }
-            
+
             if (account.CompletedScenarioIds == null)
                 account.CompletedScenarioIds = new List<string>();
-            
+
             if (!account.CompletedScenarioIds.Contains(scenarioId))
             {
                 account.CompletedScenarioIds.Add(scenarioId);
                 await _context.SaveChangesAsync();
-                _logger.LogInformation("Added completed scenario {ScenarioId} to account {AccountId}", 
+                _logger.LogInformation("Added completed scenario {ScenarioId} to account {AccountId}",
                     scenarioId, accountId);
             }
             else
             {
-                _logger.LogInformation("Scenario {ScenarioId} already marked as completed for account {AccountId}", 
+                _logger.LogInformation("Scenario {ScenarioId} already marked as completed for account {AccountId}",
                     scenarioId, accountId);
             }
 
@@ -234,7 +234,7 @@ public class AccountApiService : IAccountApiService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error adding completed scenario {ScenarioId} for account {AccountId}", 
+            _logger.LogError(ex, "Error adding completed scenario {ScenarioId} for account {AccountId}",
                 scenarioId, accountId);
             return false;
         }

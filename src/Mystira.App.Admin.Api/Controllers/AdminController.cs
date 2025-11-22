@@ -58,7 +58,7 @@ public class AdminController : Controller
         {
             return RedirectToAction("Dashboard");
         }
-        
+
         return View("Login");
     }
 
@@ -252,7 +252,7 @@ public class AdminController : Controller
             // Ensure nullable strings are never null
             config.MaintenanceMessage ??= string.Empty;
             config.UpdateMessage ??= string.Empty;
-            
+
             await _appStatusService.UpdateAppStatusAsync(config);
             TempData["SuccessMessage"] = "App status configuration updated successfully.";
             return RedirectToAction("AppStatus");
@@ -286,7 +286,7 @@ public class AdminController : Controller
             // For now, return success - implement YAML parsing in the character map service
             using var stream = yamlFile.OpenReadStream();
             var characterMaps = await _characterMapService.ImportCharacterMapsFromYamlAsync(stream);
-            
+
             return Ok(new { success = true, message = $"Successfully imported {characterMaps.Count} character map(s)", count = characterMaps.Count });
         }
         catch (Exception ex)
@@ -358,13 +358,13 @@ public class AdminController : Controller
         {
             // Initialize sample characters
             await InitializeSampleCharacters();
-            
+
             // Initialize sample media metadata
             await InitializeSampleMediaMetadata();
-            
+
             // Initialize sample character media metadata
             await InitializeSampleCharacterMediaMetadata();
-            
+
             return Ok(new { success = true, message = "Sample data initialized successfully" });
         }
         catch (Exception ex)
@@ -622,19 +622,20 @@ public class AdminController : Controller
                 .WithNamingConvention(YamlDotNet.Serialization.NamingConventions.CamelCaseNamingConvention.Instance)
                 .Build();
 
-            var scenarioData = (Dictionary<object, object>) deserializer.Deserialize<dynamic>(yamlContent);
+            var scenarioData = (Dictionary<object, object>)deserializer.Deserialize<dynamic>(yamlContent);
             var createRequest = ScenarioRequestCreator.Create(scenarioData);
 
             // Check for existing scenario with same title
             var existingScenarios = await _scenarioService.GetScenariosAsync(new ScenarioQueryRequest { PageSize = 1000 });
-            var existingScenario = existingScenarios.Scenarios.FirstOrDefault(s => 
+            var existingScenario = existingScenarios.Scenarios.FirstOrDefault(s =>
                 s.Title.Equals(createRequest.Title, StringComparison.OrdinalIgnoreCase));
 
             Scenario scenario;
             if (existingScenario != null && !overwriteExisting)
             {
-                return BadRequest(new { 
-                    success = false, 
+                return BadRequest(new
+                {
+                    success = false,
                     message = $"Scenario with title '{createRequest.Title}' already exists. Set overwriteExisting=true to update it.",
                     existingScenarioId = existingScenario.Id
                 });
@@ -654,11 +655,12 @@ public class AdminController : Controller
                 scenario = await _scenarioService.CreateScenarioAsync(createRequest);
             }
 
-            return Ok(new { 
-                success = true, 
-                message = "Scenario uploaded successfully", 
+            return Ok(new
+            {
+                success = true,
+                message = "Scenario uploaded successfully",
                 scenarioId = scenario.Id,
-                scenarioTitle = scenario.Title 
+                scenarioTitle = scenario.Title
             });
         }
         catch (Exception ex)

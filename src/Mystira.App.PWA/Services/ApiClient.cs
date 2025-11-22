@@ -54,15 +54,15 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Fetching scenarios from API...");
-            
+
             await SetAuthorizationHeaderAsync();
-            
+
             var request = new HttpRequestMessage(HttpMethod.Get, "api/scenarios");
             // This is the key line for CORS
             request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
-        
+
             var response = await _httpClient.SendAsync(request);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var scenariosResponse = await response.Content.ReadFromJsonAsync<ScenariosResponse>(_jsonOptions);
@@ -93,9 +93,9 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Fetching scenario {Id} from API...", id);
-            
+
             var response = await _httpClient.GetAsync($"api/scenarios/{id}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var scenario = await response.Content.ReadFromJsonAsync<Scenario>(_jsonOptions);
@@ -158,10 +158,10 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Fetching scene '{SceneId}' for scenario {ScenarioId} from API...", sceneId, scenarioId);
-            
+
             var encodedSceneId = Uri.EscapeDataString(sceneId);
             var response = await _httpClient.GetAsync($"api/scenarios/{scenarioId}/scenes/{encodedSceneId}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var scene = await response.Content.ReadFromJsonAsync<Scene>(_jsonOptions);
@@ -186,16 +186,16 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Fetching media id '{MediaId}' from API...", mediaId);
-            
+
             var encodedMediaId = Uri.EscapeDataString(mediaId);
             var response = await _httpClient.GetAsync($"api/Media/{encodedMediaId}/info");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var jsonString = await response.Content.ReadAsStringAsync();
                 using var document = JsonDocument.Parse(jsonString);
-    
-                if (document.RootElement.TryGetProperty("url", out var urlElement) && 
+
+                if (document.RootElement.TryGetProperty("url", out var urlElement) &&
                     urlElement.ValueKind == JsonValueKind.String)
                 {
                     var url = urlElement.GetString()!;
@@ -207,7 +207,7 @@ public class ApiClient : IApiClient
                 return null;
             }
 
-            _logger.LogWarning("API request failed with status: {StatusCode}. Media '{MediaId}' not available.", 
+            _logger.LogWarning("API request failed with status: {StatusCode}. Media '{MediaId}' not available.",
                 response.StatusCode, encodedMediaId);
             return null;
         }
@@ -223,10 +223,10 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Requesting passwordless signup for email: {Email}", email);
-            
+
             var request = new { email, displayName };
             var response = await _httpClient.PostAsJsonAsync("api/auth/passwordless/signup", request, _jsonOptions);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<PasswordlessSignupResponse>(_jsonOptions);
@@ -235,7 +235,7 @@ public class ApiClient : IApiClient
             }
             else
             {
-                _logger.LogWarning("Passwordless signup request failed with status: {StatusCode} for email: {Email}", 
+                _logger.LogWarning("Passwordless signup request failed with status: {StatusCode} for email: {Email}",
                     response.StatusCode, email);
                 return null;
             }
@@ -252,10 +252,10 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Verifying passwordless signup for email: {Email}", email);
-            
+
             var request = new { email, code };
             var response = await _httpClient.PostAsJsonAsync("api/auth/passwordless/verify", request, _jsonOptions);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<PasswordlessVerifyResponse>(_jsonOptions);
@@ -264,7 +264,7 @@ public class ApiClient : IApiClient
             }
             else
             {
-                _logger.LogWarning("Passwordless signup verification failed with status: {StatusCode} for email: {Email}", 
+                _logger.LogWarning("Passwordless signup verification failed with status: {StatusCode} for email: {Email}",
                     response.StatusCode, email);
                 return null;
             }
@@ -281,10 +281,10 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Requesting passwordless signin for email: {Email}", email);
-            
+
             var request = new { email };
             var response = await _httpClient.PostAsJsonAsync("api/auth/passwordless/signin", request, _jsonOptions);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<PasswordlessSigninResponse>(_jsonOptions);
@@ -293,7 +293,7 @@ public class ApiClient : IApiClient
             }
             else
             {
-                _logger.LogWarning("Passwordless signin request failed with status: {StatusCode} for email: {Email}", 
+                _logger.LogWarning("Passwordless signin request failed with status: {StatusCode} for email: {Email}",
                     response.StatusCode, email);
                 return null;
             }
@@ -310,10 +310,10 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Verifying passwordless signin for email: {Email}", email);
-            
+
             var request = new { email, code };
             var response = await _httpClient.PostAsJsonAsync("api/auth/passwordless/signin/verify", request, _jsonOptions);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<PasswordlessVerifyResponse>(_jsonOptions);
@@ -322,7 +322,7 @@ public class ApiClient : IApiClient
             }
             else
             {
-                _logger.LogWarning("Passwordless signin verification failed with status: {StatusCode} for email: {Email}", 
+                _logger.LogWarning("Passwordless signin verification failed with status: {StatusCode} for email: {Email}",
                     response.StatusCode, email);
                 return null;
             }
@@ -339,10 +339,10 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Refreshing token");
-            
+
             var request = new { token, refreshToken };
             var response = await _httpClient.PostAsJsonAsync("api/auth/refresh", request, _jsonOptions);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<RefreshTokenResponse>(_jsonOptions);
@@ -366,20 +366,20 @@ public class ApiClient : IApiClient
     {
         try
         {
-            _logger.LogInformation("Starting game session for scenario: {ScenarioId}, Account: {AccountId}, Profile: {ProfileId}", 
+            _logger.LogInformation("Starting game session for scenario: {ScenarioId}, Account: {AccountId}, Profile: {ProfileId}",
                 scenarioId, accountId, profileId);
-            
-            var requestData = new 
-            { 
-                scenarioId, 
-                accountId, 
-                profileId, 
-                playerNames, 
-                targetAgeGroup 
+
+            var requestData = new
+            {
+                scenarioId,
+                accountId,
+                profileId,
+                playerNames,
+                targetAgeGroup
             };
-            
+
             var response = await _httpClient.PostAsJsonAsync("api/gamesessions", requestData, _jsonOptions);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var gameSession = await response.Content.ReadFromJsonAsync<GameSession>(_jsonOptions);
@@ -389,7 +389,7 @@ public class ApiClient : IApiClient
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to start game session with status: {StatusCode} for scenario: {ScenarioId}. Error: {Error}", 
+                _logger.LogWarning("Failed to start game session with status: {StatusCode} for scenario: {ScenarioId}. Error: {Error}",
                     response.StatusCode, scenarioId, errorContent);
                 return null;
             }
@@ -406,10 +406,10 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Fetching account for email: {Email}", email);
-            
+
             var encodedEmail = Uri.EscapeDataString(email);
             var response = await _httpClient.GetAsync($"api/accounts/email/{encodedEmail}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var account = await response.Content.ReadFromJsonAsync<Account>(_jsonOptions);
@@ -423,7 +423,7 @@ public class ApiClient : IApiClient
             }
             else
             {
-                _logger.LogWarning("API request failed with status: {StatusCode} for email: {Email}", 
+                _logger.LogWarning("API request failed with status: {StatusCode} for email: {Email}",
                     response.StatusCode, email);
                 return null;
             }
@@ -440,9 +440,9 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Ending game session: {SessionId}", sessionId);
-            
+
             var response = await _httpClient.PostAsync($"api/gamesessions/{sessionId}/end", null);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var gameSession = await response.Content.ReadFromJsonAsync<GameSession>(_jsonOptions);
@@ -451,7 +451,7 @@ public class ApiClient : IApiClient
             }
             else
             {
-                _logger.LogWarning("Failed to end game session with status: {StatusCode} for session: {SessionId}", 
+                _logger.LogWarning("Failed to end game session with status: {StatusCode} for session: {SessionId}",
                     response.StatusCode, sessionId);
                 return null;
             }
@@ -468,10 +468,10 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Progressing session {SessionId} to scene {SceneId}", sessionId, sceneId);
-            
+
             var requestData = new { sceneId };
             var response = await _httpClient.PostAsJsonAsync($"api/gamesessions/{sessionId}/progress-scene", requestData, _jsonOptions);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var gameSession = await response.Content.ReadFromJsonAsync<GameSession>(_jsonOptions);
@@ -480,7 +480,7 @@ public class ApiClient : IApiClient
             }
             else
             {
-                _logger.LogWarning("Failed to progress session with status: {StatusCode} for session: {SessionId}, scene: {SceneId}", 
+                _logger.LogWarning("Failed to progress session with status: {StatusCode} for session: {SessionId}, scene: {SceneId}",
                     response.StatusCode, sessionId, sceneId);
                 return null;
             }
@@ -497,19 +497,19 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Fetching sessions for account: {AccountId}", accountId);
-            
+
             var response = await _httpClient.GetAsync($"api/gamesessions/account/{accountId}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var sessions = await response.Content.ReadFromJsonAsync<List<GameSession>>(_jsonOptions);
-                _logger.LogInformation("Successfully fetched {Count} sessions for account: {AccountId}", 
+                _logger.LogInformation("Successfully fetched {Count} sessions for account: {AccountId}",
                     sessions?.Count ?? 0, accountId);
                 return sessions;
             }
             else
             {
-                _logger.LogWarning("Failed to fetch sessions with status: {StatusCode} for account: {AccountId}", 
+                _logger.LogWarning("Failed to fetch sessions with status: {StatusCode} for account: {AccountId}",
                     response.StatusCode, accountId);
                 return null;
             }
@@ -526,20 +526,20 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Fetching in-progress sessions for account: {AccountId}", accountId);
-            
+
             await SetAuthorizationHeaderAsync();
             var response = await _httpClient.GetAsync($"api/gamesessions/account/{accountId}/in-progress");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var sessions = await response.Content.ReadFromJsonAsync<List<GameSession>>(_jsonOptions);
-                _logger.LogInformation("Successfully fetched {Count} in-progress sessions for account: {AccountId}", 
+                _logger.LogInformation("Successfully fetched {Count} in-progress sessions for account: {AccountId}",
                     sessions?.Count ?? 0, accountId);
                 return sessions;
             }
             else
             {
-                _logger.LogWarning("Failed to fetch in-progress sessions with status: {StatusCode} for account: {AccountId}", 
+                _logger.LogWarning("Failed to fetch in-progress sessions with status: {StatusCode} for account: {AccountId}",
                     response.StatusCode, accountId);
                 return null;
             }
@@ -550,15 +550,15 @@ public class ApiClient : IApiClient
             return null;
         }
     }
-    
+
     public async Task<Character?> GetCharacterAsync(string id)
     {
         try
         {
             _logger.LogInformation("Fetching character {Id} from API...", id);
-            
+
             var response = await _httpClient.GetAsync($"api/character/{id}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var character = await response.Content.ReadFromJsonAsync<Character>(_jsonOptions);
@@ -583,9 +583,9 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Fetching characters from API...");
-            
+
             var response = await _httpClient.GetAsync("api/charactermaps");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var characters = await response.Content.ReadFromJsonAsync<List<Character>>(_jsonOptions);
@@ -610,9 +610,9 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Fetching profile {Id} from API...", id);
-            
+
             var response = await _httpClient.GetAsync($"api/userprofiles/{id}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var profile = await response.Content.ReadFromJsonAsync<UserProfile>(_jsonOptions);
@@ -642,9 +642,9 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Fetching profile by ID {Id} from API...", id);
-            
+
             var response = await _httpClient.GetAsync($"api/userprofiles/id/{id}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var profile = await response.Content.ReadFromJsonAsync<UserProfile>(_jsonOptions);
@@ -674,9 +674,9 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Fetching profiles for account {AccountId} from API...", accountId);
-            
+
             var response = await _httpClient.GetAsync($"api/userprofiles/account/{accountId}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var profiles = await response.Content.ReadFromJsonAsync<List<UserProfile>>(_jsonOptions);
@@ -701,9 +701,9 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Creating profile {Name} via API...", request.Name);
-            
+
             var response = await _httpClient.PostAsJsonAsync("api/userprofiles", request, _jsonOptions);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var profile = await response.Content.ReadFromJsonAsync<UserProfile>(_jsonOptions);
@@ -728,9 +728,9 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Creating {Count} profiles via API...", request.Profiles.Count);
-            
+
             var response = await _httpClient.PostAsJsonAsync("api/userprofiles/batch", request, _jsonOptions);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var profiles = await response.Content.ReadFromJsonAsync<List<UserProfile>>(_jsonOptions);
@@ -755,9 +755,9 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Updating profile {Id} via API...", id);
-            
+
             var response = await _httpClient.PutAsJsonAsync($"api/userprofiles/{id}", request, _jsonOptions);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var profile = await response.Content.ReadFromJsonAsync<UserProfile>(_jsonOptions);
@@ -787,9 +787,9 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Deleting profile {Id} via API...", id);
-            
+
             var response = await _httpClient.DeleteAsync($"api/userprofiles/{id}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 _logger.LogInformation("Successfully deleted profile {Id}", id);
@@ -818,9 +818,9 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Fetching scenarios with game state for account: {AccountId}", accountId);
-            
+
             var response = await _httpClient.GetAsync($"api/scenarios/with-game-state/{accountId}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var gameStateResponse = await response.Content.ReadFromJsonAsync<ScenarioGameStateResponse>(_jsonOptions);
@@ -829,7 +829,7 @@ public class ApiClient : IApiClient
             }
             else
             {
-                _logger.LogWarning("Failed to fetch scenarios with game state with status: {StatusCode} for account: {AccountId}", 
+                _logger.LogWarning("Failed to fetch scenarios with game state with status: {StatusCode} for account: {AccountId}",
                     response.StatusCode, accountId);
                 return null;
             }
@@ -846,18 +846,18 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Marking scenario {ScenarioId} as complete for account {AccountId}", scenarioId, accountId);
-            
-            var request = new CompleteScenarioRequest 
-            { 
-                AccountId = accountId, 
-                ScenarioId = scenarioId 
+
+            var request = new CompleteScenarioRequest
+            {
+                AccountId = accountId,
+                ScenarioId = scenarioId
             };
-            
+
             var response = await _httpClient.PostAsJsonAsync("api/gamesessions/complete-scenario", request);
-            
+
             if (response.IsSuccessStatusCode)
             {
-                _logger.LogInformation("Successfully marked scenario {ScenarioId} as complete for account {AccountId}", 
+                _logger.LogInformation("Successfully marked scenario {ScenarioId} as complete for account {AccountId}",
                     scenarioId, accountId);
                 return true;
             }
@@ -889,9 +889,9 @@ public class ApiClient : IApiClient
         try
         {
             _logger.LogInformation("Fetching avatars from API...");
-            
+
             var response = await _httpClient.GetAsync("api/avatars");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var avatarResponse = await response.Content.ReadFromJsonAsync<AvatarResponse>(_jsonOptions);
@@ -921,9 +921,9 @@ public class ApiClient : IApiClient
             }
 
             _logger.LogInformation("Fetching avatars for age group {AgeGroup} from API...", ageGroup);
-            
+
             var response = await _httpClient.GetAsync($"api/avatars/{ageGroup}");
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var configResponse = await response.Content.ReadFromJsonAsync<AvatarConfigurationResponse>(_jsonOptions);

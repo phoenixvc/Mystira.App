@@ -32,8 +32,8 @@ public class CharacterMediaMetadataController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting character media metadata file");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while getting character media metadata file",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -51,8 +51,8 @@ public class CharacterMediaMetadataController : ControllerBase
             var entry = await _characterMediaMetadataService.GetCharacterMediaMetadataEntryAsync(entryId);
             if (entry == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Character media metadata entry not found: {entryId}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -62,8 +62,8 @@ public class CharacterMediaMetadataController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting character media metadata entry: {EntryId}", entryId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while getting character media metadata entry",
                 TraceId = HttpContext.TraceIdentifier
             });

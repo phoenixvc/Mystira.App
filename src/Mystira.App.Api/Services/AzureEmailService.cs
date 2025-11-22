@@ -13,13 +13,13 @@ public class AzureEmailService : IEmailService
     public AzureEmailService(IConfiguration configuration, ILogger<AzureEmailService> logger)
     {
         _logger = logger;
-        
+
         var connectionString = configuration["AzureCommunicationServices:ConnectionString"];
         var senderEmail = configuration["AzureCommunicationServices:SenderEmail"];
-        
+
         _isEnabled = !string.IsNullOrEmpty(connectionString) && !string.IsNullOrEmpty(senderEmail);
         _senderEmail = senderEmail ?? string.Empty;
-        
+
         if (_isEnabled)
         {
             try
@@ -50,7 +50,7 @@ public class AzureEmailService : IEmailService
             }
 
             var emailContent = GenerateSignupEmailContent(displayName, code);
-            
+
             var emailMessage = new EmailMessage(
                 senderAddress: _senderEmail,
                 content: new EmailContent("Your Mystira Verification Code") { Html = emailContent },
@@ -58,15 +58,15 @@ public class AzureEmailService : IEmailService
             );
 
             _logger.LogInformation("Sending verification email to: {Email}", toEmail);
-            
+
             var operation = await _emailClient.SendAsync(WaitUntil.Completed, emailMessage);
-            
+
             if (operation.HasCompleted)
             {
                 _logger.LogInformation("Verification email sent successfully to: {Email}", toEmail);
                 return (true, null);
             }
-            
+
             _logger.LogWarning("Verification email operation did not complete for: {Email}", toEmail);
             return (false, "Email sending did not complete");
         }
@@ -93,7 +93,7 @@ public class AzureEmailService : IEmailService
             }
 
             var emailContent = GenerateSigninEmailContent(displayName, code);
-            
+
             var emailMessage = new EmailMessage(
                 senderAddress: _senderEmail,
                 content: new EmailContent("Your Mystira Sign-In Code") { Html = emailContent },
@@ -101,15 +101,15 @@ public class AzureEmailService : IEmailService
             );
 
             _logger.LogInformation("Sending sign-in email to: {Email}", toEmail);
-            
+
             var operation = await _emailClient.SendAsync(WaitUntil.Completed, emailMessage);
-            
+
             if (operation.HasCompleted)
             {
                 _logger.LogInformation("Sign-in email sent successfully to: {Email}", toEmail);
                 return (true, null);
             }
-            
+
             _logger.LogWarning("Sign-in email operation did not complete for: {Email}", toEmail);
             return (false, "Email sending did not complete");
         }

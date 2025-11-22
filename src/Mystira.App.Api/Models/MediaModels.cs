@@ -118,31 +118,31 @@ public class MediaMetadataEntry
 {
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
-    
+
     [JsonPropertyName("title")]
     public string Title { get; set; } = string.Empty;
-    
+
     [JsonPropertyName("fileName")]
     public string FileName { get; set; } = string.Empty;
-    
+
     [JsonPropertyName("type")]
     public string Type { get; set; } = string.Empty; // image, audio, video
-    
+
     [JsonPropertyName("description")]
     public string Description { get; set; } = string.Empty;
-    
+
     [JsonPropertyName("age_rating")]
     public int AgeRating { get; set; }
-    
+
     [JsonPropertyName("subjectReferenceId")]
     public string SubjectReferenceId { get; set; } = string.Empty;
-    
+
     [JsonPropertyName("classificationTags")]
     public List<ClassificationTag> ClassificationTags { get; set; } = new();
-    
+
     [JsonPropertyName("modifiers")]
     public List<Modifier> Modifiers { get; set; } = new();
-    
+
     [JsonPropertyName("loopable")]
     public bool Loopable { get; set; } = false;
 }

@@ -7,9 +7,9 @@ public static class DataTableExtensions
     {
         if (table == null || table.Columns.Count == 0)
             return string.Empty;
-            
+
         var sb = new System.Text.StringBuilder();
-        
+
         // Add headers
         for (int i = 0; i < table.Columns.Count; i++)
         {
@@ -18,7 +18,7 @@ public static class DataTableExtensions
                 sb.Append(delimiter);
         }
         sb.AppendLine();
-        
+
         // Add rows
         foreach (DataRow row in table.Rows)
         {
@@ -35,13 +35,13 @@ public static class DataTableExtensions
                     }
                     sb.Append(value);
                 }
-                
+
                 if (i < table.Columns.Count - 1)
                     sb.Append(delimiter);
             }
             sb.AppendLine();
         }
-        
+
         return sb.ToString();
     }
 }

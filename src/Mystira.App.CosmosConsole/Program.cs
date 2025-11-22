@@ -38,7 +38,7 @@ class Program
         // Add DbContext
         var connectionString = configuration.GetConnectionString("CosmosDb");
         var databaseName = configuration["Database:Name"] ?? "MystiraAppDb";
-        
+
         if (string.IsNullOrEmpty(connectionString))
         {
             Console.WriteLine("Error: Cosmos DB connection string not found in configuration.");
@@ -152,8 +152,8 @@ class Program
 
             foreach (var stat in statistics.OrderByDescending(s => s.TotalSessions))
             {
-                var completionRate = stat.TotalSessions > 0 
-                    ? (stat.CompletedSessions / (double)stat.TotalSessions) * 100 
+                var completionRate = stat.TotalSessions > 0
+                    ? (stat.CompletedSessions / (double)stat.TotalSessions) * 100
                     : 0;
 
                 Console.WriteLine($"\nScenario: {stat.ScenarioName}");
@@ -161,13 +161,13 @@ class Program
                 Console.WriteLine($"  Completed Sessions: {stat.CompletedSessions}");
                 Console.WriteLine($"  Completion Rate: {completionRate:F1}%");
                 Console.WriteLine("  Account Breakdown:");
-                
+
                 foreach (var accountStat in stat.AccountStatistics.OrderByDescending(a => a.SessionCount))
                 {
                     var accountCompletionRate = accountStat.SessionCount > 0
                         ? (accountStat.CompletedSessions / (double)accountStat.SessionCount) * 100
                         : 0;
-                        
+
                     Console.WriteLine($"    {accountStat.AccountEmail} ({accountStat.AccountAlias}):");
                     Console.WriteLine($"      Sessions: {accountStat.SessionCount}");
                     Console.WriteLine($"      Completed: {accountStat.CompletedSessions}");

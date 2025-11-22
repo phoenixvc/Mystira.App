@@ -15,7 +15,7 @@ public class MediaApiService : IMediaApiService
     private readonly IAzureBlobService _blobStorageService;
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ILogger<MediaApiService> _logger;
-    
+
     private readonly Dictionary<string, string> _mimeTypeMap = new()
     {
         // Audio
@@ -121,7 +121,7 @@ public class MediaApiService : IMediaApiService
 
         // Validate that media metadata entry exists and resolve the media ID
         var resolvedMediaId = await ValidateAndResolveMediaId(mediaId, file.FileName);
-        
+
         // Check if media with this ID already exists
         var existingMedia = await GetMediaByIdAsync(resolvedMediaId);
         if (existingMedia != null)
@@ -131,7 +131,7 @@ public class MediaApiService : IMediaApiService
 
         // Calculate file hash
         var hash = await CalculateFileHashAsync(file);
-        
+
         // Upload to blob storage and get URL
         var url = await _blobStorageService.UploadMediaAsync(file.OpenReadStream(), file.FileName, file.ContentType ?? GetMimeType(file.FileName));
 
@@ -273,7 +273,7 @@ public class MediaApiService : IMediaApiService
             // Extract blob name from URL for deletion
             var uri = new Uri(mediaAsset.Url);
             var blobName = Path.GetFileName(uri.LocalPath);
-            
+
             // Delete from blob storage
             await _blobStorageService.DeleteMediaAsync(blobName);
 
@@ -391,16 +391,16 @@ public class MediaApiService : IMediaApiService
     private string DetectMediaTypeFromExtension(string fileName)
     {
         var extension = Path.GetExtension(fileName).ToLower();
-        
+
         if (new[] { ".mp3", ".wav", ".ogg", ".aac", ".m4a" }.Contains(extension))
             return "audio";
-        
+
         if (new[] { ".mp4", ".avi", ".mov", ".wmv", ".mkv" }.Contains(extension))
             return "video";
-        
+
         if (new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" }.Contains(extension))
             return "image";
-        
+
         return "unknown";
     }
 
@@ -430,7 +430,7 @@ public class MediaApiService : IMediaApiService
             return $"{bytes / (double)mb:F2} MB";
         if (bytes >= kb)
             return $"{bytes / (double)kb:F2} KB";
-        
+
         return $"{bytes} bytes";
     }
 
@@ -455,7 +455,7 @@ public class MediaApiService : IMediaApiService
             {
                 throw new InvalidOperationException($"No media metadata entry found for media ID '{mediaId}' or filename '{fileName}'. Please ensure the media metadata file contains an entry for this media before uploading.");
             }
-            
+
             // Return the resolved media ID from metadata
             mediaId = metadataEntry.Id;
         }
@@ -484,7 +484,7 @@ public class MediaApiService : IMediaApiService
 
             var stream = await response.Content.ReadAsStreamAsync();
             var fileName = Path.GetFileName(new Uri(mediaAsset.Url).LocalPath);
-            
+
             return (stream, mediaAsset.MimeType, fileName);
         }
         catch (Exception ex)

@@ -184,7 +184,7 @@ builder.Services.AddAuthentication(options =>
         }
 
         options.TokenValidationParameters = validationParameters;
-        
+
         options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
         {
             OnAuthenticationFailed = context =>

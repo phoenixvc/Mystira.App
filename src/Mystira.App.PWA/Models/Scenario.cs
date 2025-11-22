@@ -27,7 +27,7 @@ public class Scenario
     public DateTime CreatedAt { get; set; }
     public List<string> CoreAxes { get; set; } = new();
     public List<ScenarioCharacter> Characters { get; set; } = new();
-    
+
     // Backward compatibility properties
     public string Name => Title;
     public bool IsActive => true;
@@ -44,7 +44,7 @@ public class Scene
     public SceneMedia? Media { get; set; }
     public List<SceneBranch> Branches { get; set; } = new();
     public int? Difficulty { get; set; }
-    
+
     // Backward compatibility properties
     public string Content => Description;
     public SceneType SceneType => Type.ToLower() switch
@@ -58,11 +58,11 @@ public class Scene
             Type,
             "Expected one of 'roll', 'choice', 'narrative', or 'special' for scene type.")
     };
-    
+
     public string? ImageUrl { get; set; }
     public string? VideoUrl { get; set; }
     public string? AudioUrl { get; set; }
-    
+
     public List<Choice> Choices => Branches.Select((b, i) => new Choice
     {
         Id = i + 1,
@@ -72,7 +72,7 @@ public class Scene
     }).Where(c => !string.IsNullOrEmpty(c.Text) && c.Text != "Continue").ToList();
     public bool IsStartingScene { get; set; } = false;
     public int Order { get; set; }
-    
+
     // Roll scene specific properties
     public int? RollTarget => Difficulty > 0 ? Difficulty : null;
     public string? SuccessBranch { get; set; }

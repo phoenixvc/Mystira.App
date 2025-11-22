@@ -54,9 +54,9 @@ public class ClientStatusService : IClientStatusService
             var contentManifest = await GenerateContentManifestAsync(request.ContentVersion, currentContentVersion);
 
             // Check if content updates are available
-            if (contentManifest.Scenarios.Added.Any() || 
-                contentManifest.Scenarios.Updated.Any() || 
-                contentManifest.Media.Added.Any() || 
+            if (contentManifest.Scenarios.Added.Any() ||
+                contentManifest.Scenarios.Updated.Any() ||
+                contentManifest.Media.Added.Any() ||
                 contentManifest.Media.Updated.Any())
             {
                 updateRequired = true;
@@ -94,9 +94,9 @@ public class ClientStatusService : IClientStatusService
         {
             // For demo purposes, simulate some content changes
             // In a real implementation, this would check Azure storage for actual changes
-            
+
             // Check if client has an older content version
-            if (string.IsNullOrEmpty(clientContentVersion) || 
+            if (string.IsNullOrEmpty(clientContentVersion) ||
                 ParseDateTime(clientContentVersion) < ParseDateTime(currentContentVersion))
             {
                 // Get all scenarios to check for updates

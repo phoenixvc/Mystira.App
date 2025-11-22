@@ -57,7 +57,7 @@ public class UserProfileApiService : IUserProfileApiService
         _context.UserProfiles.Add(profile);
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Created new user profile: {Name} (Guest: {IsGuest}, NPC: {IsNPC})", 
+        _logger.LogInformation("Created new user profile: {Name} (Guest: {IsGuest}, NPC: {IsNPC})",
             profile.Name, profile.IsGuest, profile.IsNpc);
         return profile;
     }
@@ -65,8 +65,8 @@ public class UserProfileApiService : IUserProfileApiService
     public async Task<UserProfile> CreateGuestProfileAsync(CreateGuestProfileRequest request)
     {
         // Generate random name if not provided
-        var name = !string.IsNullOrEmpty(request.Name) 
-            ? request.Name 
+        var name = !string.IsNullOrEmpty(request.Name)
+            ? request.Name
             : RandomNameGenerator.GenerateGuestName(request.UseAdjectiveNames);
 
         // Ensure name is unique for guest profiles
@@ -104,7 +104,7 @@ public class UserProfileApiService : IUserProfileApiService
     public async Task<List<UserProfile>> CreateMultipleProfilesAsync(CreateMultipleProfilesRequest request)
     {
         var createdProfiles = new List<UserProfile>();
-        
+
         foreach (var profileRequest in request.Profiles)
         {
             try
@@ -118,7 +118,7 @@ public class UserProfileApiService : IUserProfileApiService
                 // Continue with other profiles
             }
         }
-        
+
         _logger.LogInformation("Created {Count} profiles in batch", createdProfiles.Count);
         return createdProfiles;
     }
@@ -128,7 +128,7 @@ public class UserProfileApiService : IUserProfileApiService
         return await _context.UserProfiles
             .Include(p => p.EarnedBadges)
             .FirstOrDefaultAsync(p => p.Id == id);
-     }
+    }
 
     public async Task<UserProfile?> UpdateProfileByIdAsync(string id, UpdateUserProfileRequest request)
     {
@@ -180,7 +180,7 @@ public class UserProfileApiService : IUserProfileApiService
             profile.SelectedAvatarMediaId = request.SelectedAvatarMediaId;
             profile.AvatarMediaId = request.SelectedAvatarMediaId;
         }
-        
+
         profile.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
@@ -201,7 +201,7 @@ public class UserProfileApiService : IUserProfileApiService
 
         _context.GameSessions.RemoveRange(sessions);
         _context.UserProfiles.Remove(profile);
-        
+
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Deleted user profile and associated data: {Name}", profile.Name);
@@ -264,7 +264,7 @@ public class UserProfileApiService : IUserProfileApiService
         profile.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Assigned character {CharacterId} to profile {ProfileId} (NPC: {IsNPC})", 
+        _logger.LogInformation("Assigned character {CharacterId} to profile {ProfileId} (NPC: {IsNPC})",
             characterId, profileId, isNpc);
 
         return true;

@@ -59,8 +59,8 @@ public class BundleService : IBundleService
 
             foreach (var entry in archive.Entries)
             {
-                if (entry.FullName.StartsWith("scenarios/", StringComparison.OrdinalIgnoreCase) && 
-                    (entry.FullName.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) || 
+                if (entry.FullName.StartsWith("scenarios/", StringComparison.OrdinalIgnoreCase) &&
+                    (entry.FullName.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) ||
                      entry.FullName.EndsWith(".yml", StringComparison.OrdinalIgnoreCase)))
                 {
                     scenarioFiles.Add(entry);
@@ -86,7 +86,7 @@ public class BundleService : IBundleService
                     using var scenarioStream = scenarioFile.Open();
                     using var reader = new StreamReader(scenarioStream);
                     var yamlContent = await reader.ReadToEndAsync();
-                    
+
                     var scenario = deserializer.Deserialize<Scenario>(yamlContent);
                     if (scenario == null)
                     {
@@ -173,8 +173,8 @@ public class BundleService : IBundleService
             using var archive = new ZipArchive(stream, ZipArchiveMode.Read);
 
             var scenarioFiles = archive.Entries
-                .Where(e => e.FullName.StartsWith("scenarios/", StringComparison.OrdinalIgnoreCase) && 
-                           (e.FullName.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) || 
+                .Where(e => e.FullName.StartsWith("scenarios/", StringComparison.OrdinalIgnoreCase) &&
+                           (e.FullName.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) ||
                             e.FullName.EndsWith(".yml", StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
@@ -208,7 +208,7 @@ public class BundleService : IBundleService
                     using var scenarioStream = scenarioFile.Open();
                     using var reader = new StreamReader(scenarioStream);
                     var yamlContent = await reader.ReadToEndAsync();
-                    
+
                     var scenario = deserializer.Deserialize<Scenario>(yamlContent);
                     if (scenario != null)
                     {
@@ -224,7 +224,7 @@ public class BundleService : IBundleService
 
             result.Success = true;
             result.Message = $"Bundle imported successfully. {result.ScenariosImported} scenarios and {result.MediaImported} media files imported.";
-            
+
             return result;
         }
         catch (Exception ex)
@@ -254,12 +254,12 @@ public class BundleService : IBundleService
         using var entryStream = mediaFile.Open();
         var tempPath = Path.GetTempFileName();
         var tempFileWithExtension = Path.ChangeExtension(tempPath, Path.GetExtension(fileName));
-        
+
         try
         {
             using var tempFileStream = File.Create(tempFileWithExtension);
             await entryStream.CopyToAsync(tempFileStream);
-            
+
             // Create IFormFile from temporary file
             using var fileStream = new FileStream(tempFileWithExtension, FileMode.Open, FileAccess.Read);
             var formFile = new FormFile(fileStream, 0, fileStream.Length, "file", fileName)

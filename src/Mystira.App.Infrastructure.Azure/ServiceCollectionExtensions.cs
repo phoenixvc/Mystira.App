@@ -41,7 +41,7 @@ public static class ServiceCollectionExtensions
         where TContext : DbContext
     {
         var cosmosConnectionString = configuration.GetConnectionString("CosmosDb");
-        
+
         if (!string.IsNullOrEmpty(cosmosConnectionString))
         {
             services.AddDbContext<TContext>(options =>
@@ -63,7 +63,7 @@ public static class ServiceCollectionExtensions
     private static IServiceCollection AddCosmosDb(this IServiceCollection services, IConfiguration configuration, CosmosDbOptions options)
     {
         var cosmosConnectionString = configuration.GetConnectionString("CosmosDb");
-        
+
         if (!string.IsNullOrEmpty(cosmosConnectionString) && !options.UseInMemoryDatabase)
         {
             // Cosmos DB will be configured by the specific DbContext in the API project
@@ -79,7 +79,7 @@ public static class ServiceCollectionExtensions
     private static IServiceCollection AddBlobStorage(this IServiceCollection services, IConfiguration configuration, BlobStorageOptions options)
     {
         var blobConnectionString = configuration.GetConnectionString("AzureStorage");
-        
+
         if (!string.IsNullOrEmpty(blobConnectionString))
         {
             services.AddSingleton(new BlobServiceClient(blobConnectionString));
@@ -119,7 +119,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAzureBlobStorage(this IServiceCollection services, IConfiguration configuration)
     {
         var blobConnectionString = configuration.GetConnectionString("AzureStorage");
-        
+
         if (!string.IsNullOrEmpty(blobConnectionString))
         {
             services.AddSingleton(new BlobServiceClient(blobConnectionString));
