@@ -3,7 +3,21 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Validation;
 using Mystira.App.Api.Models;
+using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.App.Contracts.Responses.Scenarios;
 using Mystira.App.Domain.Models;
+using ScenarioQueryRequest = Mystira.App.Contracts.Requests.Scenarios.ScenarioQueryRequest;
+using ScenarioListResponse = Mystira.App.Contracts.Responses.Scenarios.ScenarioListResponse;
+using CreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;
+using ScenarioReferenceValidation = Mystira.App.Contracts.Responses.Scenarios.ScenarioReferenceValidation;
+using ScenarioGameStateResponse = Mystira.App.Contracts.Responses.Scenarios.ScenarioGameStateResponse;
+using ScenarioSummary = Mystira.App.Contracts.Responses.Scenarios.ScenarioSummary;
+using MediaReference = Mystira.App.Contracts.Responses.Scenarios.MediaReference;
+using CharacterReference = Mystira.App.Contracts.Responses.Scenarios.CharacterReference;
+using MissingReference = Mystira.App.Contracts.Responses.Scenarios.MissingReference;
+using ScenarioWithGameState = Mystira.App.Contracts.Responses.Scenarios.ScenarioWithGameState;
+using ScenarioGameState = Mystira.App.Contracts.Responses.Scenarios.ScenarioGameState;
+using Mystira.App.Application.UseCases.Scenarios;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
 using NJsonSchema;
@@ -21,6 +35,11 @@ public class ScenarioApiService : IScenarioApiService
     private readonly ICharacterMapFileService _characterService;
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ICharacterMediaMetadataService _characterMetadataService;
+    private readonly GetScenariosUseCase _getScenariosUseCase;
+    private readonly CreateScenarioUseCase _createScenarioUseCase;
+    private readonly UpdateScenarioUseCase _updateScenarioUseCase;
+    private readonly DeleteScenarioUseCase _deleteScenarioUseCase;
+    private readonly ValidateScenarioUseCase _validateScenarioUseCase;
 
     private static readonly JsonSchema ScenarioJsonSchema = JsonSchema.FromJsonAsync(ScenarioSchemaDefinitions.StorySchema).GetAwaiter().GetResult();
 
@@ -40,7 +59,12 @@ public class ScenarioApiService : IScenarioApiService
         IMediaApiService mediaService,
         ICharacterMapFileService characterService,
         IMediaMetadataService mediaMetadataService,
-        ICharacterMediaMetadataService characterMetadataService)
+        ICharacterMediaMetadataService characterMetadataService,
+        GetScenariosUseCase getScenariosUseCase,
+        CreateScenarioUseCase createScenarioUseCase,
+        UpdateScenarioUseCase updateScenarioUseCase,
+        DeleteScenarioUseCase deleteScenarioUseCase,
+        ValidateScenarioUseCase validateScenarioUseCase)
     {
         _repository = repository;
         _accountRepository = accountRepository;
@@ -51,94 +75,16 @@ public class ScenarioApiService : IScenarioApiService
         _characterService = characterService;
         _mediaMetadataService = mediaMetadataService;
         _characterMetadataService = characterMetadataService;
+        _getScenariosUseCase = getScenariosUseCase;
+        _createScenarioUseCase = createScenarioUseCase;
+        _updateScenarioUseCase = updateScenarioUseCase;
+        _deleteScenarioUseCase = deleteScenarioUseCase;
+        _validateScenarioUseCase = validateScenarioUseCase;
     }
 
     public async Task<ScenarioListResponse> GetScenariosAsync(ScenarioQueryRequest request)
     {
-        var query = _repository.GetQueryable();
-
-        if (request.Difficulty.HasValue)
-        {
-            query = query.Where(s => s.Difficulty == request.Difficulty.Value);
-        }
-
-        if (request.SessionLength.HasValue)
-        {
-            query = query.Where(s => s.SessionLength == request.SessionLength.Value);
-        }
-
-        if (request.MinimumAge.HasValue)
-        {
-            query = query.Where(s => s.MinimumAge <= request.MinimumAge.Value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.AgeGroup))
-        {
-            var targetMinimumAge = GetMinimumAgeForGroup(request.AgeGroup);
-            if (targetMinimumAge.HasValue)
-            {
-                query = query.Where(s => s.MinimumAge <= targetMinimumAge.Value);
-            }
-            else
-            {
-                query = query.Where(s => s.AgeGroup == request.AgeGroup);
-            }
-        }
-
-        if (request.Tags?.Any() == true)
-        {
-            foreach (var tag in request.Tags)
-            {
-                query = query.Where(s => s.Tags.Contains(tag));
-            }
-        }
-
-        if (request.Archetypes?.Any() == true)
-        {
-            foreach (var archetype in request.Archetypes)
-            {
-                query = query.Where(s => s.Archetypes.Any(a => a.Value == archetype));
-            }
-        }
-
-        if (request.CoreAxes?.Any() == true)
-        {
-            foreach (var axis in request.CoreAxes)
-            {
-                query = query.Where(s => s.CoreAxes.Any(a => a.Value == axis));
-            }
-        }
-
-        var totalCount = await query.CountAsync();
-
-        var scenarios = await query
-            .OrderBy(s => s.CreatedAt)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
-            .Select(s => new ScenarioSummary
-            {
-                Id = s.Id,
-                Title = s.Title,
-                Description = s.Description,
-                Tags = s.Tags,
-                Difficulty = s.Difficulty,
-                SessionLength = s.SessionLength,
-                Archetypes = s.Archetypes.Select(a => a.Value).ToList(),
-                MinimumAge = s.MinimumAge,
-                AgeGroup = s.AgeGroup,
-                CoreAxes = s.CoreAxes.Select(a => a.Value).ToList(),
-                CreatedAt = s.CreatedAt
-            })
-            .ToListAsync();
-
-        return new ScenarioListResponse
-        {
-            Scenarios = scenarios,
-            TotalCount = totalCount,
-            Page = request.Page,
-            PageSize = request.PageSize,
-            HasNextPage = (request.Page * request.PageSize) < totalCount
-        };
+        return await _getScenariosUseCase.ExecuteAsync(request);
     }
 
     public async Task<Scenario?> GetScenarioByIdAsync(string id)
@@ -148,87 +94,17 @@ public class ScenarioApiService : IScenarioApiService
 
     public async Task<Scenario> CreateScenarioAsync(CreateScenarioRequest request)
     {
-        ValidateAgainstSchema(request);
-
-        var scenario = new Scenario
-        {
-            Id = Guid.NewGuid().ToString(),
-            Title = request.Title,
-            Description = request.Description,
-            Tags = request.Tags,
-            Difficulty = request.Difficulty,
-            SessionLength = request.SessionLength,
-            Archetypes = request.Archetypes?.Select(a => Archetype.Parse(a)!).ToList() ?? new List<Archetype>(),
-            AgeGroup = request.AgeGroup,
-            MinimumAge = request.MinimumAge,
-            CoreAxes = request.CoreAxes?.Select(a => CoreAxis.Parse(a)!).ToList() ?? new List<CoreAxis>(),
-            Characters = request.Characters,
-            Scenes = request.Scenes,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        await ValidateScenarioAsync(scenario);
-
-        await _repository.AddAsync(scenario);
-
-        try
-        {
-            await _unitOfWork.SaveChangesAsync();
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Error saving scenario: {ScenarioId}", scenario.Id);
-            throw;
-        }
-
-        _logger.LogInformation("Created new scenario: {ScenarioId} - {Title}", scenario.Id, scenario.Title);
-        return scenario;
+        return await _createScenarioUseCase.ExecuteAsync(request);
     }
 
     public async Task<Scenario?> UpdateScenarioAsync(string id, CreateScenarioRequest request)
     {
-        var scenario = await _repository.GetByIdAsync(id);
-        if (scenario == null)
-        {
-            return null;
-        }
-
-        ValidateAgainstSchema(request);
-
-        scenario.Title = request.Title;
-        scenario.Description = request.Description;
-        scenario.Tags = request.Tags;
-        scenario.Difficulty = request.Difficulty;
-        scenario.SessionLength = request.SessionLength;
-        scenario.Archetypes = request.Archetypes?.Select(a => Archetype.Parse(a)!).ToList() ?? new List<Archetype>();
-        scenario.AgeGroup = request.AgeGroup;
-        scenario.MinimumAge = request.MinimumAge;
-        scenario.CoreAxes = request.CoreAxes?.Select(a => CoreAxis.Parse(a)!).ToList() ?? new List<CoreAxis>();
-        scenario.Characters = request.Characters;
-        scenario.Scenes = request.Scenes;
-
-        await ValidateScenarioAsync(scenario);
-
-        await _repository.UpdateAsync(scenario);
-        await _unitOfWork.SaveChangesAsync();
-
-        _logger.LogInformation("Updated scenario: {ScenarioId} - {Title}", scenario.Id, scenario.Title);
-        return scenario;
+        return await _updateScenarioUseCase.ExecuteAsync(id, request);
     }
 
     public async Task<bool> DeleteScenarioAsync(string id)
     {
-        var scenario = await _repository.GetByIdAsync(id);
-        if (scenario == null)
-        {
-            return false;
-        }
-
-        await _repository.DeleteAsync(id);
-        await _unitOfWork.SaveChangesAsync();
-
-        _logger.LogInformation("Deleted scenario: {ScenarioId} - {Title}", scenario.Id, scenario.Title);
-        return true;
+        return await _deleteScenarioUseCase.ExecuteAsync(id);
     }
 
     public async Task<List<Scenario>> GetScenariosByAgeGroupAsync(string ageGroup)
@@ -403,6 +279,10 @@ public class ScenarioApiService : IScenarioApiService
 
     public async Task ValidateScenarioAsync(Scenario scenario)
     {
+        // Delegate to use case for business rule validation
+        await _validateScenarioUseCase.ExecuteAsync(scenario);
+
+        // Additional validation that's specific to the service layer
         try
         {
             // Validate basic scenario structure

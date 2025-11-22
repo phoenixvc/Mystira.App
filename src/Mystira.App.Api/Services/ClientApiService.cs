@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
-using Mystira.App.Api.Models;
+using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.App.Contracts.Responses.Media;
 
 namespace Mystira.App.Api.Services;
 

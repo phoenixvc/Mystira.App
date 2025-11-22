@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Models;
+using Mystira.App.Contracts.Responses.Media;
 using Mystira.App.Domain.Models;
+using ContractsAvatarResponse = Mystira.App.Contracts.Responses.Media.AvatarResponse;
+using ContractsAvatarConfigurationResponse = Mystira.App.Contracts.Responses.Media.AvatarConfigurationResponse;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -22,13 +25,13 @@ public class AvatarApiService : IAvatarApiService
     /// <summary>
     /// Gets all avatar configurations
     /// </summary>
-    public async Task<AvatarResponse> GetAvatarsAsync()
+    public async Task<ContractsAvatarResponse> GetAvatarsAsync()
     {
         try
         {
             var configFile = await GetAvatarConfigurationFileAsync();
 
-            var response = new AvatarResponse
+            var response = new ContractsAvatarResponse
             {
                 AgeGroupAvatars = configFile?.AgeGroupAvatars ?? new Dictionary<string, List<string>>()
             };
@@ -54,7 +57,7 @@ public class AvatarApiService : IAvatarApiService
     /// <summary>
     /// Gets avatars for a specific age group
     /// </summary>
-    public async Task<AvatarConfigurationResponse?> GetAvatarsByAgeGroupAsync(string ageGroup)
+    public async Task<ContractsAvatarConfigurationResponse?> GetAvatarsByAgeGroupAsync(string ageGroup)
     {
         try
         {
@@ -68,14 +71,14 @@ public class AvatarApiService : IAvatarApiService
 
             if (configFile == null || !configFile.AgeGroupAvatars.TryGetValue(ageGroup, out var avatars))
             {
-                return new AvatarConfigurationResponse
+                return new ContractsAvatarConfigurationResponse
                 {
                     AgeGroup = ageGroup,
                     AvatarMediaIds = new List<string>()
                 };
             }
 
-            return new AvatarConfigurationResponse
+            return new ContractsAvatarConfigurationResponse
             {
                 AgeGroup = ageGroup,
                 AvatarMediaIds = avatars

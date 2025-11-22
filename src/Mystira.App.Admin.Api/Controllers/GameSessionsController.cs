@@ -2,7 +2,19 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Contracts.Requests.GameSessions;
+using Mystira.App.Contracts.Requests.CharacterMaps;
+using Mystira.App.Contracts.Responses.GameSessions;
+using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Domain.Models;
+using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
+using ValidationErrorResponse = Mystira.App.Contracts.Responses.Common.ValidationErrorResponse;
+using ContractsStartGameSessionRequest = Mystira.App.Contracts.Requests.GameSessions.StartGameSessionRequest;
+using ContractsGameSessionResponse = Mystira.App.Contracts.Responses.GameSessions.GameSessionResponse;
+using ContractsMakeChoiceRequest = Mystira.App.Contracts.Requests.GameSessions.MakeChoiceRequest;
+using ContractsSessionStatsResponse = Mystira.App.Contracts.Responses.GameSessions.SessionStatsResponse;
+using ContractsSelectCharacterRequest = Mystira.App.Contracts.Requests.CharacterMaps.SelectCharacterRequest;
+using AdminProgressSceneRequest = Mystira.App.Admin.Api.Models.ProgressSceneRequest;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
@@ -29,7 +41,7 @@ public class GameSessionsController : ControllerBase
     /// Start a new game session
     /// </summary>
     [HttpPost]
-    public async Task<ActionResult<GameSession>> StartSession([FromBody] StartGameSessionRequest request)
+    public async Task<ActionResult<GameSession>> StartSession([FromBody] ContractsStartGameSessionRequest request)
     {
         try
         {
@@ -106,7 +118,7 @@ public class GameSessionsController : ControllerBase
     /// </summary>
     [HttpGet("account/{accountId}")]
     [Authorize] // Requires authentication
-    public async Task<ActionResult<List<GameSessionResponse>>> GetSessionsByAccount(string accountId)
+    public async Task<ActionResult<List<ContractsGameSessionResponse>>> GetSessionsByAccount(string accountId)
     {
         try
         {
@@ -129,7 +141,7 @@ public class GameSessionsController : ControllerBase
     /// </summary>
     [HttpGet("profile/{profileId}")]
     [Authorize] // Requires authentication
-    public async Task<ActionResult<List<GameSessionResponse>>> GetSessionsByProfile(string profileId)
+    public async Task<ActionResult<List<ContractsGameSessionResponse>>> GetSessionsByProfile(string profileId)
     {
         try
         {
@@ -152,7 +164,7 @@ public class GameSessionsController : ControllerBase
     /// </summary>
     [HttpPost("choice")]
     [Authorize] // Requires DM authentication
-    public async Task<ActionResult<GameSession>> MakeChoice([FromBody] MakeChoiceRequest request)
+    public async Task<ActionResult<GameSession>> MakeChoice([FromBody] ContractsMakeChoiceRequest request)
     {
         try
         {
@@ -329,7 +341,7 @@ public class GameSessionsController : ControllerBase
     /// </summary>
     [HttpGet("{id}/stats")]
     [Authorize] // Requires DM authentication
-    public async Task<ActionResult<SessionStatsResponse>> GetSessionStats(string id)
+    public async Task<ActionResult<ContractsSessionStatsResponse>> GetSessionStats(string id)
     {
         try
         {
@@ -383,7 +395,7 @@ public class GameSessionsController : ControllerBase
     /// </summary>
     [HttpPost("{id}/progress-scene")]
     [Authorize] // Requires DM authentication
-    public async Task<ActionResult<GameSession>> ProgressSessionScene(string id, [FromBody] ProgressSceneRequest request)
+    public async Task<ActionResult<GameSession>> ProgressSessionScene(string id, [FromBody] AdminProgressSceneRequest request)
     {
         try
         {
@@ -424,7 +436,7 @@ public class GameSessionsController : ControllerBase
     /// </summary>
     [HttpPost("{id}/select-character")]
     [Authorize] // Requires DM authentication
-    public async Task<ActionResult<GameSession>> SelectCharacter(string id, [FromBody] SelectCharacterRequest request)
+    public async Task<ActionResult<GameSession>> SelectCharacter(string id, [FromBody] ContractsSelectCharacterRequest request)
     {
         try
         {

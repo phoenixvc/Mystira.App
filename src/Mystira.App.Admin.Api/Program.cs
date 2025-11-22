@@ -8,6 +8,9 @@ using Mystira.App.Admin.Api.Services;
 using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
+using Mystira.App.Application.UseCases.GameSessions;
+using Mystira.App.Application.UseCases.Scenarios;
+using Mystira.App.Application.UseCases.UserProfiles;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
 
@@ -174,6 +177,25 @@ builder.Services.AddScoped<Mystira.App.Admin.Api.Repositories.ICharacterMediaMet
 builder.Services.AddScoped<Mystira.App.Admin.Api.Repositories.ICharacterMapFileRepository, Mystira.App.Admin.Api.Repositories.CharacterMapFileRepository>();
 builder.Services.AddScoped<IAvatarConfigurationFileRepository, AvatarConfigurationFileRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+// Register Application Layer Use Cases
+// Scenario Use Cases
+builder.Services.AddScoped<GetScenariosUseCase>();
+builder.Services.AddScoped<CreateScenarioUseCase>();
+builder.Services.AddScoped<UpdateScenarioUseCase>();
+builder.Services.AddScoped<DeleteScenarioUseCase>();
+builder.Services.AddScoped<ValidateScenarioUseCase>();
+
+// GameSession Use Cases
+builder.Services.AddScoped<CreateGameSessionUseCase>();
+builder.Services.AddScoped<MakeChoiceUseCase>();
+builder.Services.AddScoped<ProgressSceneUseCase>();
+
+// UserProfile Use Cases
+builder.Services.AddScoped<CreateUserProfileUseCase>();
+builder.Services.AddScoped<UpdateUserProfileUseCase>();
+builder.Services.AddScoped<GetUserProfileUseCase>();
+builder.Services.AddScoped<DeleteUserProfileUseCase>();
 
 builder.Services.AddScoped<IGameSessionApiService, GameSessionApiService>();
 builder.Services.AddScoped<IAccountApiService, AccountApiService>();

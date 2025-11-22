@@ -1,4 +1,4 @@
-using Mystira.App.Api.Models;
+using Mystira.App.Contracts.Requests.CharacterMaps;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.UnitOfWork;

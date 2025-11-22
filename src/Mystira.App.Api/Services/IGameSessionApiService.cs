@@ -1,4 +1,5 @@
-using Mystira.App.Api.Models;
+using Mystira.App.Contracts.Requests.GameSessions;
+using Mystira.App.Contracts.Responses.GameSessions;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Services;

@@ -5,8 +5,18 @@ using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Validation;
+using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.App.Contracts.Responses.Scenarios;
 using Mystira.App.Domain.Models;
 using NJsonSchema;
+using ScenarioQueryRequest = Mystira.App.Contracts.Requests.Scenarios.ScenarioQueryRequest;
+using ScenarioListResponse = Mystira.App.Contracts.Responses.Scenarios.ScenarioListResponse;
+using CreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;
+using ScenarioReferenceValidation = Mystira.App.Contracts.Responses.Scenarios.ScenarioReferenceValidation;
+using ScenarioSummary = Mystira.App.Contracts.Responses.Scenarios.ScenarioSummary;
+using MediaReference = Mystira.App.Contracts.Responses.Scenarios.MediaReference;
+using CharacterReference = Mystira.App.Contracts.Responses.Scenarios.CharacterReference;
+using MissingReference = Mystira.App.Contracts.Responses.Scenarios.MissingReference;
 
 namespace Mystira.App.Admin.Api.Services;
 

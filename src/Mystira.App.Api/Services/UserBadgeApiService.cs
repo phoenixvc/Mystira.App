@@ -1,4 +1,4 @@
-using Mystira.App.Api.Models;
+using Mystira.App.Contracts.Requests.Badges;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
