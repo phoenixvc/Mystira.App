@@ -2,6 +2,12 @@
 
 This directory contains the Model Context Protocol (MCP) configuration for the Mystira.App repository. MCP is a standard that allows AI assistants to access tools, resources, and context about the repository.
 
+## Important: Configuration Required
+
+**The `config.json` file uses placeholder paths that you MUST replace with your local repository path before use.**
+
+Replace all instances of `/path/to/Mystira.App` with the absolute path to your local Mystira.App repository clone.
+
 ## What is MCP?
 
 Model Context Protocol (MCP) is an open protocol that enables AI assistants to:

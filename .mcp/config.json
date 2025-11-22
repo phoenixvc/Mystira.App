@@ -1,12 +1,13 @@
 {
   "$schema": "https://modelcontextprotocol.io/schema/config.json",
+  "_comment": "Replace '/path/to/Mystira.App' with the absolute path to your local Mystira.App repository",
   "mcpServers": {
     "filesystem": {
       "command": "npx",
       "args": [
         "-y",
         "@modelcontextprotocol/server-filesystem",
-        "/home/runner/work/Mystira.App/Mystira.App"
+        "/path/to/Mystira.App"
       ],
       "description": "Access to repository files and directories"
     },
@@ -26,32 +27,32 @@
   },
   "resources": {
     "documentation": {
-      "uri": "file:///home/runner/work/Mystira.App/Mystira.App/docs",
+      "uri": "file:///path/to/Mystira.App/docs",
       "name": "Project Documentation",
       "description": "Comprehensive project documentation including architecture, features, setup guides, and use cases"
     },
     "readme": {
-      "uri": "file:///home/runner/work/Mystira.App/Mystira.App/README.md",
+      "uri": "file:///path/to/Mystira.App/README.md",
       "name": "Main README",
       "description": "Primary project overview and getting started guide"
     },
     "architecture-rules": {
-      "uri": "file:///home/runner/work/Mystira.App/Mystira.App/docs/architecture/ARCHITECTURAL_RULES.md",
+      "uri": "file:///path/to/Mystira.App/docs/architecture/ARCHITECTURAL_RULES.md",
       "name": "Architectural Rules",
       "description": "Strict architectural rules enforcing Hexagonal/Clean Architecture"
     },
     "best-practices": {
-      "uri": "file:///home/runner/work/Mystira.App/Mystira.App/docs/best-practices.md",
+      "uri": "file:///path/to/Mystira.App/docs/best-practices.md",
       "name": "Development Best Practices",
       "description": "Coding standards, security requirements, and development guidelines"
     },
     "contributing": {
-      "uri": "file:///home/runner/work/Mystira.App/Mystira.App/CONTRIBUTING.md",
+      "uri": "file:///path/to/Mystira.App/CONTRIBUTING.md",
       "name": "Contributing Guidelines",
       "description": "How to contribute to the project"
     },
     "solution": {
-      "uri": "file:///home/runner/work/Mystira.App/Mystira.App/Mystira.App.sln",
+      "uri": "file:///path/to/Mystira.App/Mystira.App.sln",
       "name": "Solution File",
       "description": "Visual Studio solution containing all projects"
     }
@@ -110,37 +111,37 @@
     "build": {
       "command": "dotnet",
       "args": ["build", "Mystira.App.sln"],
-      "workingDirectory": "/home/runner/work/Mystira.App/Mystira.App",
+      "workingDirectory": "/path/to/Mystira.App",
       "description": "Build the entire solution"
     },
     "test": {
       "command": "dotnet",
       "args": ["test", "Mystira.App.sln"],
-      "workingDirectory": "/home/runner/work/Mystira.App/Mystira.App",
+      "workingDirectory": "/path/to/Mystira.App",
       "description": "Run all tests in the solution"
     },
     "format": {
       "command": "dotnet",
       "args": ["format", "Mystira.App.sln"],
-      "workingDirectory": "/home/runner/work/Mystira.App/Mystira.App",
+      "workingDirectory": "/path/to/Mystira.App",
       "description": "Format code according to project standards"
     },
     "run-api": {
       "command": "dotnet",
       "args": ["run", "--project", "src/Mystira.App.Api/Mystira.App.Api.csproj"],
-      "workingDirectory": "/home/runner/work/Mystira.App/Mystira.App",
+      "workingDirectory": "/path/to/Mystira.App",
       "description": "Run the public API"
     },
     "run-admin-api": {
       "command": "dotnet",
       "args": ["run", "--project", "src/Mystira.App.Admin.Api/Mystira.App.Admin.Api.csproj"],
-      "workingDirectory": "/home/runner/work/Mystira.App/Mystira.App",
+      "workingDirectory": "/path/to/Mystira.App",
       "description": "Run the admin API"
     },
     "run-pwa": {
       "command": "dotnet",
       "args": ["run", "--project", "src/Mystira.App.PWA/Mystira.App.PWA.csproj"],
-      "workingDirectory": "/home/runner/work/Mystira.App/Mystira.App",
+      "workingDirectory": "/path/to/Mystira.App",
       "description": "Run the Blazor PWA"
     }
   },
