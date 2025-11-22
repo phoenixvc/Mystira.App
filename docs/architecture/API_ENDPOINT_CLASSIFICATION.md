@@ -10,9 +10,11 @@
 ## Classification Principles
 
 ### `/api` (Public API - Port 7000)
+
 **Purpose**: User-facing operations where users act on their own resources
 
 **Characteristics**:
+
 - User acts on their own data (profiles, sessions, badges)
 - Read-only access to shared content (scenarios, media, characters)
 - User authentication and account management
@@ -20,9 +22,11 @@
 - Safe operations that don't affect other users or system integrity
 
 ### `/adminapi` (Admin API - Port 7001)
+
 **Purpose**: Administrative operations that can affect system-wide data or other users
 
 **Characteristics**:
+
 - Content creation and management (scenarios, media, characters)
 - System configuration (badge configurations, avatar configurations)
 - User management (viewing/managing other users' data)
@@ -35,6 +39,7 @@
 ### Public API (`/api`) Endpoints
 
 #### Authentication (`/api/auth`)
+
 - ✅ `POST /api/auth/passwordless/signup` - User signs up
 - ✅ `POST /api/auth/passwordless/verify` - User verifies their signup
 - ✅ `POST /api/auth/passwordless/signin` - User signs in
@@ -42,6 +47,7 @@
 - ✅ `POST /api/auth/refresh` - User refreshes their token
 
 #### Accounts (`/api/accounts`)
+
 - ✅ `GET /api/accounts/email/{email}` - Get own account by email
 - ✅ `GET /api/accounts/{accountId}` - Get own account
 - ✅ `PUT /api/accounts/{accountId}` - Update own account
@@ -51,6 +57,7 @@
 - ✅ `GET /api/accounts/validate/{email}` - Validate own email
 
 #### User Profiles (`/api/userprofiles`)
+
 - ✅ `POST /api/userprofiles` - Create own profile
 - ✅ `GET /api/userprofiles/{id}` - Get own profile
 - ✅ `PUT /api/userprofiles/{id}` - Update own profile
@@ -62,6 +69,7 @@
 - ✅ `GET /api/userprofiles/account/{accountId}` - Get profiles for own account
 
 #### User Badges (`/api/userbadges`)
+
 - ✅ `POST /api/userbadges/award` - Award badge to own profile
 - ✅ `GET /api/userbadges/user/{userProfileId}` - Get badges for own profile
 - ✅ `GET /api/userbadges/user/{userProfileId}/axis/{axis}` - Get badges by axis for own profile
@@ -71,6 +79,7 @@
 - ✅ `GET /api/userbadges/account/{email}/statistics` - Get badge statistics for own account
 
 #### Game Sessions (`/api/gamesessions`)
+
 - ✅ `POST /api/gamesessions` - Create own game session
 - ✅ `GET /api/gamesessions/{id}` - Get own game session
 - ✅ `GET /api/gamesessions/account/{accountId}` - Get own account's sessions
@@ -84,6 +93,7 @@
 - ✅ `POST /api/gamesessions/complete-scenario` - Complete scenario in own session
 
 #### Scenarios (`/api/scenarios`)
+
 - ✅ `GET /api/scenarios` - List scenarios (read-only)
 - ✅ `GET /api/scenarios/{id}` - Get scenario (read-only)
 - ✅ `GET /api/scenarios/age-group/{ageGroup}` - Get scenarios by age group (read-only)
@@ -91,37 +101,45 @@
 - ✅ `GET /api/scenarios/with-game-state/{accountId}` - Get scenarios with own game state
 
 #### Media (`/api/media`)
+
 - ✅ `GET /api/media` - List media (read-only)
 - ✅ `GET /api/media/{mediaId}/info` - Get media info (read-only)
 - ✅ `GET /api/media/{mediaId}` - Get media (read-only)
 
 #### Characters (`/api/characters`)
+
 - ✅ `GET /api/characters/{id}` - Get character (read-only)
 
 #### Character Maps (`/api/charactermaps`)
+
 - ✅ `GET /api/charactermaps` - List character maps (read-only)
 - ✅ `GET /api/charactermaps/{id}` - Get character map (read-only)
 
 #### Badge Configurations (`/api/badgeconfigurations`)
+
 - ✅ `GET /api/badgeconfigurations` - List badge configurations (read-only)
 - ✅ `GET /api/badgeconfigurations/{id}` - Get badge configuration (read-only)
 - ✅ `GET /api/badgeconfigurations/axis/{axis}` - Get badge configurations by axis (read-only)
 
 #### Avatars (`/api/avatars`)
+
 - ✅ `GET /api/avatars` - Get avatar configurations (read-only)
 - ✅ `GET /api/avatars/{ageGroup}` - Get avatars by age group (read-only)
 
 #### Content Bundles (`/api/bundles`)
+
 - ✅ `GET /api/bundles` - List content bundles (read-only)
 - ✅ `GET /api/bundles/age-group/{ageGroup}` - Get bundles by age group (read-only)
 
 #### Health (`/api/health`)
+
 - ✅ `GET /api/health/ready` - Health check
 - ✅ `GET /api/health/live` - Liveness check
 
 ### Admin API (`/adminapi`) Endpoints
 
 #### Admin Dashboard (`/admin`)
+
 - 🔒 `GET /admin` - Admin dashboard
 - 🔒 `GET /admin/login` - Admin login page
 - 🔒 `GET /admin/scenarios` - Scenarios management UI
@@ -140,11 +158,13 @@
 - 🔒 `POST /admin/initialize-sample-data` - Initialize sample data (system-wide)
 - 🔒 `POST /admin/fix-metadata-format` - Fix metadata format (system-wide)
 
-#### Authentication (`/api/auth`)
+#### Authentication - Admin (`/api/auth`)
+
 - 🔒 `POST /api/auth/login` - Admin login
 - 🔒 `POST /api/auth/logout` - Admin logout
 
 #### Scenarios (`/api/admin/scenariosadmin`)
+
 - 🔒 `POST /api/admin/scenariosadmin` - Create scenario (affects all users)
 - 🔒 `PUT /api/admin/scenariosadmin/{id}` - Update scenario (affects all users)
 - 🔒 `DELETE /api/admin/scenariosadmin/{id}` - Delete scenario (affects all users)
@@ -154,11 +174,13 @@
 - 🔒 `GET /api/admin/scenariosadmin/validate-all-references` - Validate all scenarios (system-wide)
 
 #### Scenarios Read (`/api/scenarios`)
+
 - 🔒 `GET /api/scenarios/{id}` - Get scenario (admin view)
 - 🔒 `GET /api/scenarios/age-group/{ageGroup}` - Get scenarios by age group (admin view)
 - 🔒 `GET /api/scenarios/featured` - Get featured scenarios (admin view)
 
 #### Media (`/api/admin/mediaadmin`)
+
 - 🔒 `GET /api/admin/mediaadmin/{mediaId}` - Get media (admin view)
 - 🔒 `POST /api/admin/mediaadmin/upload` - Upload media (affects all users)
 - 🔒 `POST /api/admin/mediaadmin/bulk-upload` - Bulk upload media (affects all users)
@@ -169,6 +191,7 @@
 - 🔒 `GET /api/admin/mediaadmin/statistics` - Get media statistics (system-wide)
 
 #### Media Metadata (`/api/admin/mediametadataadmin`)
+
 - 🔒 `GET /api/admin/mediametadataadmin/entries/{entryId}` - Get metadata entry
 - 🔒 `POST /api/admin/mediametadataadmin/entries` - Create metadata entry (affects all users)
 - 🔒 `PUT /api/admin/mediametadataadmin/entries/{entryId}` - Update metadata entry (affects all users)
@@ -176,6 +199,7 @@
 - 🔒 `POST /api/admin/mediametadataadmin/import` - Import metadata (bulk operation)
 
 #### Character Media Metadata (`/api/admin/charactermediametadataadmin`)
+
 - 🔒 `GET /api/admin/charactermediametadataadmin/entries/{entryId}` - Get character metadata entry
 - 🔒 `POST /api/admin/charactermediametadataadmin/entries` - Create character metadata entry (affects all users)
 - 🔒 `PUT /api/admin/charactermediametadataadmin/entries/{entryId}` - Update character metadata entry (affects all users)
@@ -183,10 +207,12 @@
 - 🔒 `POST /api/admin/charactermediametadataadmin/import` - Import character metadata (bulk operation)
 
 #### Characters (`/api/admin/characteradmin`)
+
 - 🔒 `PUT /api/admin/characteradmin/{id}` - Update character (affects all users)
 - 🔒 `DELETE /api/admin/characteradmin/{id}` - Delete character (affects all users)
 
 #### Character Maps (`/api/admin/charactermapsadmin`)
+
 - 🔒 `GET /api/admin/charactermapsadmin/{id}` - Get character map (admin view)
 - 🔒 `POST /api/admin/charactermapsadmin` - Create character map (affects all users)
 - 🔒 `PUT /api/admin/charactermapsadmin/{id}` - Update character map (affects all users)
@@ -195,6 +221,7 @@
 - 🔒 `POST /api/admin/charactermapsadmin/import` - Import character map (bulk operation)
 
 #### Badge Configurations (`/api/badgeconfigurationsadmin`)
+
 - 🔒 `GET /api/badgeconfigurationsadmin/{id}` - Get badge configuration (admin view)
 - 🔒 `GET /api/badgeconfigurationsadmin/axis/{axis}` - Get badge configurations by axis (admin view)
 - 🔒 `POST /api/badgeconfigurationsadmin` - Create badge configuration (affects all users)
@@ -204,17 +231,20 @@
 - 🔒 `POST /api/badgeconfigurationsadmin/import` - Import badge configurations (bulk operation)
 
 #### Avatars (`/api/admin/avataradmin`)
+
 - 🔒 `GET /api/admin/avataradmin/{ageGroup}` - Get avatars by age group (admin view)
 - 🔒 `POST /api/admin/avataradmin/{ageGroup}` - Update avatar configuration (affects all users)
 - 🔒 `POST /api/admin/avataradmin/{ageGroup}/add` - Add avatar to age group (affects all users)
 - 🔒 `DELETE /api/admin/avataradmin/{ageGroup}/remove/{mediaId}` - Remove avatar from age group (affects all users)
 
 #### Content Bundles (`/api/admin/bundlesadmin`)
+
 - 🔒 `GET /api/admin/bundlesadmin/{id}` - Get content bundle (admin view)
 - 🔒 `POST /api/admin/bundlesadmin` - Create content bundle (affects all users)
 - 🔒 `PUT /api/admin/bundlesadmin/{id}` - Update content bundle (affects all users)
 
 #### User Profiles (`/api/userprofilesadmin`)
+
 - 🔒 `GET /api/userprofilesadmin/account/{accountId}` - Get profiles for any account (user management)
 - 🔒 `GET /api/userprofilesadmin/{id}` - Get any profile (user management)
 - 🔒 `PUT /api/userprofilesadmin/{name}` - Update any profile (user management)
@@ -224,6 +254,7 @@
 - 🔒 `GET /api/userprofilesadmin/guest` - Get all guest profiles (user management)
 
 #### Game Sessions (`/api/gamesessionsadmin`)
+
 - 🔒 `GET /api/gamesessionsadmin/{id}` - Get any game session (admin view)
 - 🔒 `GET /api/gamesessionsadmin/account/{accountId}` - Get sessions for any account (user management)
 - 🔒 `GET /api/gamesessionsadmin/profile/{profileId}` - Get sessions for any profile (user management)

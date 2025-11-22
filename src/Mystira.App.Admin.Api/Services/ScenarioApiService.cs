@@ -591,7 +591,7 @@ public class ScenarioApiService : IScenarioApiService
 
     private async Task ValidateSceneReferences(
         Scene scene,
-        Dictionary<string, MediaAsset> allMedia,
+        Dictionary<string, Domain.Models.MediaAsset> allMedia,
         Dictionary<string, Character> allCharacters,
         MediaMetadataFile? mediaMetadata,
         CharacterMediaMetadataFile? characterMetadata,
@@ -615,7 +615,7 @@ public class ScenarioApiService : IScenarioApiService
         Scene scene,
         string? mediaId,
         string mediaType,
-        Dictionary<string, MediaAsset> allMedia,
+        Dictionary<string, Domain.Models.MediaAsset> allMedia,
         MediaMetadataFile? mediaMetadata,
         ScenarioReferenceValidation validation,
         bool includeMetadataValidation)
