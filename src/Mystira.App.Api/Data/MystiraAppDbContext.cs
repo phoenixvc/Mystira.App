@@ -663,3 +663,4 @@ public class ModifierComparer : IEqualityComparer<Modifier>
         return HashCode.Combine(obj.Key, obj.Value);
     }
 }
+
