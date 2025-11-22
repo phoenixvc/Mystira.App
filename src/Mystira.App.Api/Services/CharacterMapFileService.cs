@@ -31,7 +31,7 @@ public class CharacterMapFileService : ICharacterMapFileService
     {
         try
         {
-            var characterMapFile = await _context.CharacterMapFiles.FirstOrDefaultAsync();
+            var characterMapFile = await _repository.GetAsync();
             return characterMapFile ?? new CharacterMapFile();
         }
         catch (Exception ex)
@@ -50,19 +50,9 @@ public class CharacterMapFileService : ICharacterMapFileService
         {
             characterMapFile.UpdatedAt = DateTime.UtcNow;
 
-            var existingFile = await _context.CharacterMapFiles.FirstOrDefaultAsync();
-            if (existingFile != null)
-            {
-                _context.Entry(existingFile).CurrentValues.SetValues(characterMapFile);
-                existingFile.Characters = characterMapFile.Characters;
-            }
-            else
-            {
-                await _context.CharacterMapFiles.AddAsync(characterMapFile);
-            }
-
-            await _context.SaveChangesAsync();
-            return characterMapFile;
+            var result = await _repository.AddOrUpdateAsync(characterMapFile);
+            await _unitOfWork.SaveChangesAsync();
+            return result;
         }
         catch (Exception ex)
         {
