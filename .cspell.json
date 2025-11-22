@@ -81,6 +81,7 @@
     "IAuthService",
     "IJwtService",
     "IPasswordlessAuthService",
+    "passwordless",
     "IScenarioApiService",
     "IGameSessionApiService",
     "IUserProfileApiService",
