@@ -1,10 +1,10 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Domain.Models;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Domain.Models;
 using CharacterMetadata = Mystira.App.Admin.Api.Models.CharacterMetadata;
 
 namespace Mystira.App.Admin.Api.Controllers;

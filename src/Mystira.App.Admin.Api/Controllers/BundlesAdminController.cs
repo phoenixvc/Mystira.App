@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Domain.Models;
 
@@ -7,6 +8,7 @@ namespace Mystira.App.Admin.Api.Controllers;
 [ApiController]
 [Route("api/admin/[controller]")]
 [Produces("application/json")]
+[Authorize] // Requires authentication for admin operations
 public class BundlesAdminController : ControllerBase
 {
     private readonly IContentBundleAdminService _service;
@@ -39,7 +41,11 @@ public class BundlesAdminController : ControllerBase
         try
         {
             var bundle = await _service.GetByIdAsync(id);
-            if (bundle == null) return NotFound(new { Message = $"Bundle not found: {id}", TraceId = HttpContext.TraceIdentifier });
+            if (bundle == null)
+            {
+                return NotFound(new { Message = $"Bundle not found: {id}", TraceId = HttpContext.TraceIdentifier });
+            }
+
             return Ok(bundle);
         }
         catch (Exception ex)
@@ -70,7 +76,11 @@ public class BundlesAdminController : ControllerBase
         try
         {
             var updated = await _service.UpdateAsync(id, bundle);
-            if (updated == null) return NotFound(new { Message = $"Bundle not found: {id}", TraceId = HttpContext.TraceIdentifier });
+            if (updated == null)
+            {
+                return NotFound(new { Message = $"Bundle not found: {id}", TraceId = HttpContext.TraceIdentifier });
+            }
+
             return Ok(updated);
         }
         catch (Exception ex)

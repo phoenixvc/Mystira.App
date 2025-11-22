@@ -22,8 +22,16 @@ public class CharacterAssignment
         get
         {
             var parts = new List<string>();
-            if (!string.IsNullOrEmpty(Role)) parts.Add(Role);
-            if (!string.IsNullOrEmpty(Archetype)) parts.Add(ToTitleCaseAndUnderscoresReplaced(Archetype));
+            if (!string.IsNullOrEmpty(Role))
+            {
+                parts.Add(Role);
+            }
+
+            if (!string.IsNullOrEmpty(Archetype))
+            {
+                parts.Add(ToTitleCaseAndUnderscoresReplaced(Archetype));
+            }
+
             return parts.Count > 0 ? string.Join(" • ", parts) : "Character";
         }
     }

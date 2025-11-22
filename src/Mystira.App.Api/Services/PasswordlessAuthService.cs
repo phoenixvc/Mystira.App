@@ -1,21 +1,30 @@
 using System.Security.Cryptography;
-using Mystira.App.Api.Data;
 using Mystira.App.Domain.Models;
-using Microsoft.EntityFrameworkCore;
+using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 namespace Mystira.App.Api.Services;
 
 public class PasswordlessAuthService : IPasswordlessAuthService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly IAccountRepository _accountRepository;
+    private readonly IPendingSignupRepository _pendingSignupRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<PasswordlessAuthService> _logger;
     private readonly IEmailService _emailService;
     private const int CodeExpiryMinutes = 15;
     private const int MaxFailedAttempts = 5;
 
-    public PasswordlessAuthService(MystiraAppDbContext context, ILogger<PasswordlessAuthService> logger, IEmailService emailService)
+    public PasswordlessAuthService(
+        IAccountRepository accountRepository,
+        IPendingSignupRepository pendingSignupRepository,
+        IUnitOfWork unitOfWork,
+        ILogger<PasswordlessAuthService> logger,
+        IEmailService emailService)
     {
-        _context = context;
+        _accountRepository = accountRepository;
+        _pendingSignupRepository = pendingSignupRepository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
         _emailService = emailService;
     }
@@ -26,15 +35,14 @@ public class PasswordlessAuthService : IPasswordlessAuthService
         {
             email = email.ToLowerInvariant().Trim();
 
-            var existingAccount = await _context.Accounts.FirstOrDefaultAsync(a => a.Email == email);
+            var existingAccount = await _accountRepository.GetByEmailAsync(email);
             if (existingAccount != null)
             {
                 _logger.LogWarning("Signup requested for existing email: {Email}", email);
                 return (false, "An account with this email already exists", null);
             }
 
-            var existingPending = await _context.PendingSignups
-                .FirstOrDefaultAsync(p => p.Email == email && !p.IsUsed && p.ExpiresAt > DateTime.UtcNow);
+            var existingPending = await _pendingSignupRepository.GetActiveByEmailAsync(email);
 
             if (existingPending != null)
             {
@@ -54,8 +62,8 @@ public class PasswordlessAuthService : IPasswordlessAuthService
                 IsSignin = false
             };
 
-            _context.PendingSignups.Add(pendingSignup);
-            await _context.SaveChangesAsync();
+            await _pendingSignupRepository.AddAsync(pendingSignup);
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Signup requested for email: {Email} with display name: {DisplayName}", email, displayName);
 
@@ -83,11 +91,32 @@ public class PasswordlessAuthService : IPasswordlessAuthService
             email = email.ToLowerInvariant().Trim();
             code = code.Trim();
 
-            var pendingSignup = await _context.PendingSignups
-                .FirstOrDefaultAsync(p => p.Email == email && !p.IsUsed);
-
+            var pendingSignup = await _pendingSignupRepository.GetByEmailAndCodeAsync(email, code);
             if (pendingSignup == null)
             {
+                // Try to get by email only to check if it exists but code is wrong
+                var pendingByEmail = await _pendingSignupRepository.GetActiveByEmailAsync(email);
+                if (pendingByEmail != null && !pendingByEmail.IsUsed)
+                {
+                    if (pendingByEmail.FailedAttempts >= MaxFailedAttempts)
+                    {
+                        _logger.LogWarning("Too many failed attempts for email: {Email}", email);
+                        return (false, "Too many failed attempts. Please request a new code.", null);
+                    }
+
+                    if (pendingByEmail.ExpiresAt < DateTime.UtcNow)
+                    {
+                        _logger.LogWarning("Expired code for email: {Email}", email);
+                        return (false, "Your verification code has expired. Please request a new one", null);
+                    }
+
+                    pendingByEmail.FailedAttempts++;
+                    await _pendingSignupRepository.UpdateAsync(pendingByEmail);
+                    await _unitOfWork.SaveChangesAsync();
+                    _logger.LogWarning("Invalid code for email: {Email}", email);
+                    return (false, "Invalid verification code", null);
+                }
+
                 _logger.LogWarning("No pending signup found for email: {Email}", email);
                 return (false, "Invalid or expired verification code", null);
             }
@@ -104,14 +133,6 @@ public class PasswordlessAuthService : IPasswordlessAuthService
                 return (false, "Your verification code has expired. Please request a new one", null);
             }
 
-            if (pendingSignup.Code != code)
-            {
-                pendingSignup.FailedAttempts++;
-                await _context.SaveChangesAsync();
-                _logger.LogWarning("Invalid code for email: {Email}", email);
-                return (false, "Invalid verification code", null);
-            }
-
             var account = new Account
             {
                 Auth0UserId = $"auth0|{Guid.NewGuid():N}",
@@ -121,12 +142,12 @@ public class PasswordlessAuthService : IPasswordlessAuthService
                 LastLoginAt = DateTime.UtcNow
             };
 
-            _context.Accounts.Add(account);
+            await _accountRepository.AddAsync(account);
 
             pendingSignup.IsUsed = true;
-            _context.PendingSignups.Update(pendingSignup);
+            await _pendingSignupRepository.UpdateAsync(pendingSignup);
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Signup verified for email: {Email}", email);
 
@@ -143,14 +164,15 @@ public class PasswordlessAuthService : IPasswordlessAuthService
     {
         try
         {
-            var expiredSignups = await _context.PendingSignups
-                .Where(p => p.ExpiresAt < DateTime.UtcNow && !p.IsUsed)
-                .ToListAsync();
+            var expiredSignups = (await _pendingSignupRepository.GetExpiredAsync()).ToList();
 
             if (expiredSignups.Any())
             {
-                _context.PendingSignups.RemoveRange(expiredSignups);
-                await _context.SaveChangesAsync();
+                foreach (var signup in expiredSignups)
+                {
+                    await _pendingSignupRepository.DeleteAsync(signup.Id);
+                }
+                await _unitOfWork.SaveChangesAsync();
                 _logger.LogInformation("Cleaned up {Count} expired pending signups", expiredSignups.Count);
             }
 
@@ -169,17 +191,15 @@ public class PasswordlessAuthService : IPasswordlessAuthService
         {
             email = email.ToLowerInvariant().Trim();
 
-            var existingAccount = await _context.Accounts.FirstOrDefaultAsync(a => a.Email == email);
+            var existingAccount = await _accountRepository.GetByEmailAsync(email);
             if (existingAccount == null)
             {
                 _logger.LogWarning("Signin requested for non-existent email: {Email}", email);
                 return (false, "No account found with this email. Please sign up first.", null);
             }
 
-            var existingPending = await _context.PendingSignups
-                .FirstOrDefaultAsync(p => p.Email == email && !p.IsUsed && p.ExpiresAt > DateTime.UtcNow && p.IsSignin);
-
-            if (existingPending != null)
+            var existingPending = await _pendingSignupRepository.GetActiveByEmailAsync(email);
+            if (existingPending != null && existingPending.IsSignin)
             {
                 _logger.LogInformation("Signin already pending for email: {Email}, reusing existing code", email);
                 return (true, "Check your email for the sign-in code", existingPending.Code);
@@ -197,8 +217,8 @@ public class PasswordlessAuthService : IPasswordlessAuthService
                 IsSignin = true
             };
 
-            _context.PendingSignups.Add(pendingSignin);
-            await _context.SaveChangesAsync();
+            await _pendingSignupRepository.AddAsync(pendingSignin);
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Signin requested for email: {Email} with display name: {DisplayName}", email, existingAccount.DisplayName);
 
@@ -226,11 +246,32 @@ public class PasswordlessAuthService : IPasswordlessAuthService
             email = email.ToLowerInvariant().Trim();
             code = code.Trim();
 
-            var pendingSignin = await _context.PendingSignups
-                .FirstOrDefaultAsync(p => p.Email == email && !p.IsUsed && p.IsSignin);
-
-            if (pendingSignin == null)
+            var pendingSignin = await _pendingSignupRepository.GetByEmailAndCodeAsync(email, code);
+            if (pendingSignin == null || !pendingSignin.IsSignin)
             {
+                // Try to get by email only to check if it exists but code is wrong
+                var pendingByEmail = await _pendingSignupRepository.GetActiveByEmailAsync(email);
+                if (pendingByEmail != null && pendingByEmail.IsSignin && !pendingByEmail.IsUsed)
+                {
+                    if (pendingByEmail.FailedAttempts >= MaxFailedAttempts)
+                    {
+                        _logger.LogWarning("Too many failed attempts for email: {Email}", email);
+                        return (false, "Too many failed attempts. Please request a new code.", null);
+                    }
+
+                    if (pendingByEmail.ExpiresAt < DateTime.UtcNow)
+                    {
+                        _logger.LogWarning("Expired signin code for email: {Email}", email);
+                        return (false, "Your sign-in code has expired. Please request a new one", null);
+                    }
+
+                    pendingByEmail.FailedAttempts++;
+                    await _pendingSignupRepository.UpdateAsync(pendingByEmail);
+                    await _unitOfWork.SaveChangesAsync();
+                    _logger.LogWarning("Invalid code for email: {Email}", email);
+                    return (false, "Invalid sign-in code", null);
+                }
+
                 _logger.LogWarning("Invalid or expired signin code for email: {Email}", email);
                 return (false, "Invalid or expired sign-in code", null);
             }
@@ -247,15 +288,7 @@ public class PasswordlessAuthService : IPasswordlessAuthService
                 return (false, "Your sign-in code has expired. Please request a new one", null);
             }
 
-            if (pendingSignin.Code != code)
-            {
-                pendingSignin.FailedAttempts++;
-                await _context.SaveChangesAsync();
-                _logger.LogWarning("Invalid code for email: {Email}", email);
-                return (false, "Invalid sign-in code", null);
-            }
-
-            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Email == email);
+            var account = await _accountRepository.GetByEmailAsync(email);
             if (account == null)
             {
                 _logger.LogError("Account not found for email: {Email}", email);
@@ -263,12 +296,12 @@ public class PasswordlessAuthService : IPasswordlessAuthService
             }
 
             account.LastLoginAt = DateTime.UtcNow;
-            _context.Accounts.Update(account);
+            await _accountRepository.UpdateAsync(account);
 
             pendingSignin.IsUsed = true;
-            _context.PendingSignups.Update(pendingSignin);
+            await _pendingSignupRepository.UpdateAsync(pendingSignin);
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Signin verified for email: {Email}", email);
 
@@ -285,10 +318,7 @@ public class PasswordlessAuthService : IPasswordlessAuthService
     {
         try
         {
-            var account = await _context.Accounts
-                .FirstOrDefaultAsync(a => a.Auth0UserId == userId);
-
-            return account;
+            return await _accountRepository.GetByAuth0UserIdAsync(userId);
         }
         catch (Exception ex)
         {

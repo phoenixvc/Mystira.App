@@ -379,6 +379,47 @@ public class GameSessionsController : ControllerBase
     }
 
     /// <summary>
+    /// Progress a session to a new scene
+    /// </summary>
+    [HttpPost("{id}/progress-scene")]
+    [Authorize] // Requires DM authentication
+    public async Task<ActionResult<GameSession>> ProgressSessionScene(string id, [FromBody] ProgressSceneRequest request)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new ErrorResponse
+                {
+                    Message = "Validation failed",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            var session = await _sessionService.ProgressSessionSceneAsync(id, request.NewSceneId);
+            if (session == null)
+            {
+                return NotFound(new ErrorResponse
+                {
+                    Message = $"Session not found or cannot be progressed: {id}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            return Ok(session);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error progressing session {SessionId} to scene {SceneId}", id, request.NewSceneId);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = "Internal server error while progressing session",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
     /// Select a character for the game session
     /// </summary>
     [HttpPost("{id}/select-character")]

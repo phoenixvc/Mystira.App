@@ -1,5 +1,5 @@
-using Mystira.App.Domain.Models;
 using System.ComponentModel.DataAnnotations;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Admin.Api.Models;
 
@@ -40,6 +40,16 @@ public class CreateUserProfileRequest
     /// Indicates if the user has completed onboarding
     /// </summary>
     public bool HasCompletedOnboarding { get; set; }
+
+    /// <summary>
+    /// Pronouns for the profile (e.g., they/them, she/her, he/him)
+    /// </summary>
+    public string? Pronouns { get; set; }
+
+    /// <summary>
+    /// Bio or description for the profile
+    /// </summary>
+    public string? Bio { get; set; }
 }
 
 public class UpdateUserProfileRequest
@@ -149,6 +159,12 @@ public class MakeChoiceRequest
 
     [Required]
     public string NextSceneId { get; set; } = string.Empty;
+}
+
+public class ProgressSceneRequest
+{
+    [Required]
+    public string NewSceneId { get; set; } = string.Empty;
 }
 
 public class ScenarioQueryRequest

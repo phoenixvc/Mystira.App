@@ -1,9 +1,9 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Domain.Models;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Mystira.App.Admin.Api.Models;
-using System.Text.Json;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Admin.Api.Data;
 
@@ -61,7 +61,10 @@ public class MystiraAppDbContext : DbContext
             entity.Property(e => e.PreferredFantasyThemes)
                   .HasConversion(
                         v => string.Join(',', v.Select(e => e.Value)),
-                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => FantasyTheme.Parse(s)!).ToList())
+                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => FantasyTheme.Parse(s))
+                            .Where(x => x != null)
+                            .ToList()!)
                   .Metadata.SetValueComparer(new ValueComparer<List<FantasyTheme>>(
                       (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                       c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
@@ -227,7 +230,10 @@ public class MystiraAppDbContext : DbContext
             entity.Property(e => e.Archetypes)
                   .HasConversion(
                         v => string.Join(',', v.Select(e => e.Value)),
-                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => Archetype.Parse(s)!).ToList())
+                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => Archetype.Parse(s))
+                            .Where(x => x != null)
+                            .ToList()!)
                   .Metadata.SetValueComparer(new ValueComparer<List<Archetype>>(
                         (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
@@ -236,7 +242,10 @@ public class MystiraAppDbContext : DbContext
             entity.Property(e => e.CoreAxes)
                   .HasConversion(
                         v => string.Join(',', v.Select(e => e.Value)),
-                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => CoreAxis.Parse(s)!).ToList())
+                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => CoreAxis.Parse(s))
+                            .Where(x => x != null)
+                            .ToList()!)
                   .Metadata.SetValueComparer(new ValueComparer<List<CoreAxis>>(
                         (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
@@ -258,7 +267,10 @@ public class MystiraAppDbContext : DbContext
                     metadata.Property(m => m.Archetype)
                             .HasConversion(
                                 v => string.Join(',', v.Select(e => e.Value)),
-                                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => Archetype.Parse(s)!).ToList())
+                                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                    .Select(s => Archetype.Parse(s))
+                                    .Where(x => x != null)
+                                    .ToList()!)
                             .Metadata.SetValueComparer(new ValueComparer<List<Archetype>>(
                                 (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                                 c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
@@ -369,7 +381,7 @@ public class MystiraAppDbContext : DbContext
                 v => string.Join(',', v),
                 v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
                 new ValueComparer<List<string>>(
-                    (c1, c2) => c1.SequenceEqual(c2),
+                    (c1, c2) => (c1 ?? new List<string>()).SequenceEqual(c2 ?? new List<string>()),
                     c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                     c => c.ToList()
                 )
@@ -537,7 +549,9 @@ public class ClassificationTagListConverter : ValueConverter<List<Classification
     private static string ConvertToString(List<ClassificationTag> tags)
     {
         if (tags == null || !tags.Any())
+        {
             return string.Empty;
+        }
 
         return string.Join("|", tags.Select(tag => $"{tag.Key}:{tag.Value}"));
     }
@@ -545,7 +559,9 @@ public class ClassificationTagListConverter : ValueConverter<List<Classification
     private static List<ClassificationTag> ConvertFromString(string dbString)
     {
         if (string.IsNullOrEmpty(dbString))
+        {
             return new List<ClassificationTag>();
+        }
 
         return dbString.Split('|', StringSplitOptions.RemoveEmptyEntries)
             .Select(s =>
@@ -566,9 +582,14 @@ public class ClassificationTagComparer : IEqualityComparer<ClassificationTag>
     public bool Equals(ClassificationTag? x, ClassificationTag? y)
     {
         if (x == null && y == null)
+        {
             return true;
+        }
+
         if (x == null || y == null)
+        {
             return false;
+        }
 
         return x.Key == y.Key && x.Value == y.Value;
     }
@@ -593,7 +614,9 @@ public class ModifierListConverter : ValueConverter<List<Modifier>, string>
     private static string ConvertToString(List<Modifier> modifiers)
     {
         if (modifiers == null || !modifiers.Any())
+        {
             return string.Empty;
+        }
 
         return string.Join("|", modifiers.Select(mod => $"{mod.Key}:{mod.Value}"));
     }
@@ -601,7 +624,9 @@ public class ModifierListConverter : ValueConverter<List<Modifier>, string>
     private static List<Modifier> ConvertFromString(string dbString)
     {
         if (string.IsNullOrEmpty(dbString))
+        {
             return new List<Modifier>();
+        }
 
         return dbString.Split('|', StringSplitOptions.RemoveEmptyEntries)
             .Select(s =>
@@ -622,9 +647,14 @@ public class ModifierComparer : IEqualityComparer<Modifier>
     public bool Equals(Modifier? x, Modifier? y)
     {
         if (x == null && y == null)
+        {
             return true;
+        }
+
         if (x == null || y == null)
+        {
             return false;
+        }
 
         return x.Key == y.Key && x.Value == y.Value;
     }

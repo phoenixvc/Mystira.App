@@ -1,8 +1,8 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Mystira.App.Domain.Models;
 using Mystira.App.CosmosConsole.Data;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.CosmosConsole.Services;
 

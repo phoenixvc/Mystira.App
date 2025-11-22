@@ -125,8 +125,12 @@ public class CosmosConsoleDbContext : DbContext
         ConfigureListStringProperty<GameSession>(modelBuilder, e => e.PlayerNames);
 
         // Configure all List<string> properties on Scenario
-        modelBuilder.Entity<Scenario>().Property(e => e.Archetypes).HasConversion(v => SerializeList(v.Select(e => e.Value).ToList()), v => DeserializeList(v).Select(s => Archetype.Parse(s)!).ToList());
-        modelBuilder.Entity<Scenario>().Property(e => e.CoreAxes).HasConversion(v => SerializeList(v.Select(e => e.Value).ToList()), v => DeserializeList(v).Select(s => CoreAxis.Parse(s)!).ToList());
+        modelBuilder.Entity<Scenario>().Property(e => e.Archetypes).HasConversion(
+            v => SerializeList(v.Select(e => e.Value).ToList()),
+            v => DeserializeList(v).Select(s => Archetype.Parse(s)).Where(x => x != null).ToList()!);
+        modelBuilder.Entity<Scenario>().Property(e => e.CoreAxes).HasConversion(
+            v => SerializeList(v.Select(e => e.Value).ToList()),
+            v => DeserializeList(v).Select(s => CoreAxis.Parse(s)).Where(x => x != null).ToList()!);
         ConfigureListStringProperty<Scenario>(modelBuilder, e => e.Tags);
 
         // Add configuration for the Character class
@@ -136,7 +140,7 @@ public class CosmosConsoleDbContext : DbContext
             metadata.Property(m => m.Archetype)
                 .HasConversion(
                     v => SerializeList(v.Select(e => e.Value).ToList()),
-                    v => DeserializeList(v).Select(s => Archetype.Parse(s)!).ToList()
+                    v => DeserializeList(v).Select(s => Archetype.Parse(s)).Where(x => x != null).ToList()!
                 )
                 .Metadata.SetValueComparer(new ValueComparer<List<Archetype>>(
                     (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
@@ -176,9 +180,13 @@ public class CosmosConsoleDbContext : DbContext
         {
             // If it contains commas, it's likely already a comma-separated list
             if (value.Contains(","))
+            {
                 return $"[{string.Join(",", value.Split(',').Select(s => $"\"{s.Trim()}\""))}]";
+            }
             else
+            {
                 return $"[\"{value}\"]";
+            }
         }
         return value;
     }
@@ -204,7 +212,9 @@ public class CosmosConsoleDbContext : DbContext
     private string SerializeList(List<string> list)
     {
         if (list == null || list.Count == 0)
+        {
             return "[]";
+        }
 
         return JsonSerializer.Serialize(list, _jsonOptions);
     }
@@ -212,7 +222,9 @@ public class CosmosConsoleDbContext : DbContext
     private List<string> DeserializeList(string json)
     {
         if (string.IsNullOrEmpty(json))
+        {
             return new List<string>();
+        }
 
         try
         {
@@ -222,10 +234,11 @@ public class CosmosConsoleDbContext : DbContext
         {
             // Handle legacy format (comma-separated string)
             if (json.Contains(","))
+            {
                 return json.Split(',').Where(s => s.Length > 0).ToList();
+            }
 
             return json.Length > 0 ? new List<string> { json } : new List<string>();
         }
     }
-
 }

@@ -1,17 +1,25 @@
 using Mystira.App.Domain.Models;
-using Microsoft.EntityFrameworkCore;
-using Mystira.App.Api.Data;
+using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 namespace Mystira.App.Api.Services;
 
 public class AccountApiService : IAccountApiService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly IAccountRepository _repository;
+    private readonly IUserProfileRepository _userProfileRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AccountApiService> _logger;
 
-    public AccountApiService(MystiraAppDbContext context, ILogger<AccountApiService> logger)
+    public AccountApiService(
+        IAccountRepository repository,
+        IUserProfileRepository userProfileRepository,
+        IUnitOfWork unitOfWork,
+        ILogger<AccountApiService> logger)
     {
-        _context = context;
+        _repository = repository;
+        _userProfileRepository = userProfileRepository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -19,8 +27,7 @@ public class AccountApiService : IAccountApiService
     {
         try
         {
-            return await _context.Accounts
-                .FirstOrDefaultAsync(a => a.Email.ToLower() == email.ToLower());
+            return await _repository.GetByEmailAsync(email);
         }
         catch (Exception ex)
         {
@@ -33,8 +40,7 @@ public class AccountApiService : IAccountApiService
     {
         try
         {
-            return await _context.Accounts
-                .FirstOrDefaultAsync(a => a.Id == accountId);
+            return await _repository.GetByIdAsync(accountId);
         }
         catch (Exception ex)
         {
@@ -63,8 +69,8 @@ public class AccountApiService : IAccountApiService
             account.CreatedAt = DateTime.UtcNow;
             account.LastLoginAt = DateTime.UtcNow;
 
-            _context.Accounts.Add(account);
-            await _context.SaveChangesAsync();
+            await _repository.AddAsync(account);
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Created new account for {Email}", account.Email);
             return account;
@@ -93,7 +99,8 @@ public class AccountApiService : IAccountApiService
             existingAccount.Settings = account.Settings;
             existingAccount.LastLoginAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            await _repository.UpdateAsync(existingAccount);
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Updated account {AccountId}", account.Id);
             return existingAccount;
@@ -116,21 +123,20 @@ public class AccountApiService : IAccountApiService
             }
 
             // Unlink all user profiles from this account
-            var userProfiles = await _context.UserProfiles
-                .Where(up => up.AccountId == accountId)
-                .ToListAsync();
-
+            var userProfiles = await _userProfileRepository.GetByAccountIdAsync(accountId);
             foreach (var profile in userProfiles)
             {
                 profile.AccountId = null;
+                await _userProfileRepository.UpdateAsync(profile);
             }
 
             // Remove the account
-            _context.Accounts.Remove(account);
-            await _context.SaveChangesAsync();
+            await _repository.DeleteAsync(accountId);
+            await _unitOfWork.SaveChangesAsync();
 
+            var profileList = userProfiles.ToList();
             _logger.LogInformation("Deleted account {AccountId} and unlinked {ProfileCount} profiles",
-                accountId, userProfiles.Count);
+                accountId, profileList.Count);
             return true;
         }
         catch (Exception ex)
@@ -150,18 +156,22 @@ public class AccountApiService : IAccountApiService
                 return false;
             }
 
-            var profiles = await _context.UserProfiles
-                .Where(up => userProfileIds.Contains(up.Id))
-                .ToListAsync();
-
-            foreach (var profile in profiles)
+            var profiles = new List<UserProfile>();
+            foreach (var profileId in userProfileIds)
             {
-                profile.AccountId = accountId;
+                var profile = await _userProfileRepository.GetByIdAsync(profileId);
+                if (profile != null)
+                {
+                    profile.AccountId = accountId;
+                    await _userProfileRepository.UpdateAsync(profile);
+                    profiles.Add(profile);
+                }
             }
 
             // Update account's profile list
             account.UserProfileIds = userProfileIds;
-            await _context.SaveChangesAsync();
+            await _repository.UpdateAsync(account);
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Linked {ProfileCount} profiles to account {AccountId}",
                 profiles.Count, accountId);
@@ -178,9 +188,8 @@ public class AccountApiService : IAccountApiService
     {
         try
         {
-            return await _context.UserProfiles
-                .Where(up => up.AccountId == accountId)
-                .ToListAsync();
+            var profiles = await _userProfileRepository.GetByAccountIdAsync(accountId);
+            return profiles.ToList();
         }
         catch (Exception ex)
         {
@@ -215,12 +224,15 @@ public class AccountApiService : IAccountApiService
             }
 
             if (account.CompletedScenarioIds == null)
+            {
                 account.CompletedScenarioIds = new List<string>();
+            }
 
             if (!account.CompletedScenarioIds.Contains(scenarioId))
             {
                 account.CompletedScenarioIds.Add(scenarioId);
-                await _context.SaveChangesAsync();
+                await _repository.UpdateAsync(account);
+                await _unitOfWork.SaveChangesAsync();
                 _logger.LogInformation("Added completed scenario {ScenarioId} to account {AccountId}",
                     scenarioId, accountId);
             }

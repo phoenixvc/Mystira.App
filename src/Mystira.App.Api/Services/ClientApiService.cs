@@ -183,9 +183,14 @@ public class ClientApiService : IClientApiService
             for (int i = 0; i < Math.Min(versionParts.Length, minVersionParts.Length); i++)
             {
                 if (versionParts[i] < minVersionParts[i])
+                {
                     return true;
+                }
+
                 if (versionParts[i] > minVersionParts[i])
+                {
                     return false;
+                }
             }
 
             return versionParts.Length < minVersionParts.Length;
@@ -244,10 +249,14 @@ public class ClientApiService : IClientApiService
     private DateTime? ParseContentVersion(string contentVersion)
     {
         if (string.IsNullOrEmpty(contentVersion))
+        {
             return null;
+        }
 
         if (DateTime.TryParse(contentVersion, out DateTime result))
+        {
             return result;
+        }
 
         return null;
     }

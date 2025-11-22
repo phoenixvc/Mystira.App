@@ -1,6 +1,6 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using System.Diagnostics;
 using Mystira.App.Api.Models;
 using Mystira.App.Api.Services;
 

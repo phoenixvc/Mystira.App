@@ -166,6 +166,13 @@ public class GameSessionService : IGameSessionService
             CurrentGameSession.CurrentScene = scene;
             CurrentGameSession.CurrentSceneId = sceneId;
 
+            // Progress the session on the server
+            var progressedSession = await _apiClient.ProgressSessionSceneAsync(CurrentGameSession.Id, sceneId);
+            if (progressedSession == null)
+            {
+                _logger.LogWarning("Failed to progress session on server, but continuing locally for scene: {SceneId}", sceneId);
+            }
+
             // Check if this is a final scene
             if (scene is { SceneType: SceneType.Special, NextSceneId: null })
             {
@@ -365,7 +372,9 @@ public class GameSessionService : IGameSessionService
     public string ReplaceCharacterPlaceholders(string text)
     {
         if (string.IsNullOrEmpty(text) || !_characterAssignments.Any())
+        {
             return text;
+        }
 
         foreach (var assignment in _characterAssignments)
         {

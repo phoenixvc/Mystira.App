@@ -1,4 +1,4 @@
-﻿namespace Mystira.App.Admin.Api.Services;
+namespace Mystira.App.Admin.Api.Services;
 
 public class AuthService : IAuthService
 {

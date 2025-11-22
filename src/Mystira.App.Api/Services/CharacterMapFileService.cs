@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
-using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
+using Mystira.App.Api.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 namespace Mystira.App.Api.Services;
 
@@ -10,12 +10,17 @@ namespace Mystira.App.Api.Services;
 /// </summary>
 public class CharacterMapFileService : ICharacterMapFileService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly ICharacterMapFileRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<CharacterMapFileService> _logger;
 
-    public CharacterMapFileService(MystiraAppDbContext context, ILogger<CharacterMapFileService> logger)
+    public CharacterMapFileService(
+        ICharacterMapFileRepository repository,
+        IUnitOfWork unitOfWork,
+        ILogger<CharacterMapFileService> logger)
     {
-        _context = context;
+        _repository = repository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -26,7 +31,7 @@ public class CharacterMapFileService : ICharacterMapFileService
     {
         try
         {
-            var characterMapFile = await _context.CharacterMapFiles.FirstOrDefaultAsync();
+            var characterMapFile = await _repository.GetAsync();
             return characterMapFile ?? new CharacterMapFile();
         }
         catch (Exception ex)
@@ -45,19 +50,9 @@ public class CharacterMapFileService : ICharacterMapFileService
         {
             characterMapFile.UpdatedAt = DateTime.UtcNow;
 
-            var existingFile = await _context.CharacterMapFiles.FirstOrDefaultAsync();
-            if (existingFile != null)
-            {
-                _context.Entry(existingFile).CurrentValues.SetValues(characterMapFile);
-                existingFile.Characters = characterMapFile.Characters;
-            }
-            else
-            {
-                await _context.CharacterMapFiles.AddAsync(characterMapFile);
-            }
-
-            await _context.SaveChangesAsync();
-            return characterMapFile;
+            var result = await _repository.AddOrUpdateAsync(characterMapFile);
+            await _unitOfWork.SaveChangesAsync();
+            return result;
         }
         catch (Exception ex)
         {

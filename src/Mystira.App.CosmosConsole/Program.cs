@@ -1,19 +1,19 @@
+using System.Globalization;
+using CsvHelper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Mystira.App.Domain.Models;
-using Mystira.App.CosmosConsole.Services;
 using Mystira.App.CosmosConsole.Data;
-using CsvHelper;
-using System.Globalization;
 using Mystira.App.CosmosConsole.Extensions;
+using Mystira.App.CosmosConsole.Services;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.CosmosConsole;
 
-class Program
+internal class Program
 {
-    static async Task<int> Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
         // Build configuration
         var configuration = new ConfigurationBuilder()
@@ -112,7 +112,7 @@ class Program
         }
     }
 
-    static async Task ExportGameSessionsToCsv(IServiceProvider serviceProvider, string outputFile, ILogger logger)
+    private static async Task ExportGameSessionsToCsv(IServiceProvider serviceProvider, string outputFile, ILogger logger)
     {
         try
         {
@@ -132,7 +132,7 @@ class Program
         }
     }
 
-    static async Task ShowScenarioStatistics(IServiceProvider serviceProvider, ILogger logger)
+    private static async Task ShowScenarioStatistics(IServiceProvider serviceProvider, ILogger logger)
     {
         try
         {
@@ -185,7 +185,7 @@ class Program
         }
     }
 
-    static string GetScenarioName(string scenarioId)
+    private static string GetScenarioName(string scenarioId)
     {
         // This is a placeholder - in a real implementation, 
         // you might want to fetch scenario data or cache scenario names

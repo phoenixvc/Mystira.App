@@ -18,6 +18,8 @@ public class UserProfile
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public string? AccountId { get; set; }
+    public string? Pronouns { get; set; }
+    public string? Bio { get; set; }
     public string? SelectedAvatarMediaId { get; set; }
     public string DisplayAgeRange => AgeRanges.GetDisplayName(AgeGroup);
 }

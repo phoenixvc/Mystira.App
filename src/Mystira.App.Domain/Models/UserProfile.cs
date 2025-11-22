@@ -28,12 +28,14 @@ public class UserProfile
         get => _ageGroup;
         set => _ageGroup = value;
     }
-    // Compatibility: expose AgeGroup as string for DB, but also as object for code
+
+    // Convenience property to get AgeGroup object
     public AgeGroup AgeGroup
     {
         get => AgeGroup.Parse(_ageGroup) ?? new AgeGroup("school", 6, 9);
         set => _ageGroup = value?.Value ?? "school";
     }
+
     // New properties from dev branch
     public string? AvatarMediaId { get; set; }
     public string? SelectedAvatarMediaId { get; set; }
@@ -45,12 +47,16 @@ public class UserProfile
         get
         {
             if (!DateOfBirth.HasValue)
+            {
                 return null;
+            }
 
             var today = DateTime.Today;
             var age = today.Year - DateOfBirth.Value.Year;
             if (DateOfBirth.Value.Date > today.AddYears(-age))
+            {
                 age--;
+            }
 
             return age;
         }
@@ -71,7 +77,9 @@ public class UserProfile
     public AgeGroup? GetAgeGroupFromBirthDate()
     {
         if (!CurrentAge.HasValue)
+        {
             return null;
+        }
 
         var currentAge = CurrentAge.Value;
         var ageGroups = AgeGroup.ValueMap.Values;
@@ -125,7 +133,7 @@ public class UserProfile
     {
         if (!HasEarnedBadge(badge.BadgeConfigurationId))
         {
-            badge.UserProfileId = this.Id;
+            badge.UserProfileId = Id;
             EarnedBadges.Add(badge);
         }
     }
@@ -134,6 +142,16 @@ public class UserProfile
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string? AccountId { get; set; } // Link to Account
+
+    /// <summary>
+    /// Pronouns for the profile (e.g., they/them, she/her, he/him)
+    /// </summary>
+    public string? Pronouns { get; set; }
+
+    /// <summary>
+    /// Bio or description for the profile
+    /// </summary>
+    public string? Bio { get; set; }
 }
 
 public class AgeGroup : StringEnum<AgeGroup>
@@ -183,7 +201,9 @@ public class AgeGroup : StringEnum<AgeGroup>
         var targetAge = Parse(targetAgeGroup);
 
         if (contentAge == null || targetAge == null)
+        {
             return true;
+        }
 
         return targetAge.MinimumAge >= contentAge.MinimumAge;
     }

@@ -1,5 +1,5 @@
-using Mystira.App.Domain.Models;
 using System.ComponentModel.DataAnnotations;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Models;
 
@@ -48,6 +48,16 @@ public class CreateUserProfileRequest
     /// Media ID for the user's selected avatar
     /// </summary>
     public string? SelectedAvatarMediaId { get; set; }
+
+    /// <summary>
+    /// Pronouns for the profile (e.g., they/them, she/her, he/him)
+    /// </summary>
+    public string? Pronouns { get; set; }
+
+    /// <summary>
+    /// Bio or description for the profile
+    /// </summary>
+    public string? Bio { get; set; }
 }
 
 public class UpdateUserProfileRequest
@@ -165,7 +175,6 @@ public class MakeChoiceRequest
 
 public class ProgressSceneRequest
 {
-    [Required]
     public string SessionId { get; set; } = string.Empty;
 
     [Required]

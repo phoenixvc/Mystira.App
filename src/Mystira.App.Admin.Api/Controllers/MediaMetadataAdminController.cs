@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
 
-namespace Mystira.App.Api.Controllers;
+namespace Mystira.App.Admin.Api.Controllers;
 
 [ApiController]
 [Route("api/admin/[controller]")]

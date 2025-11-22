@@ -9,34 +9,67 @@ public static class ScenarioRequestCreator
     public static CreateScenarioRequest Create(Dictionary<object, object> scenarioData)
     {
         if (!scenarioData.TryGetValue("title", out var title))
+        {
             throw new DataException("Scenario does not contain a title.");
+        }
+
         if (!scenarioData.TryGetValue("description", out var description))
+        {
             throw new DataException("Scenario does not contain a description.");
+        }
+
         if (!scenarioData.TryGetValue("tags", out var tags))
+        {
             throw new DataException("Scenario does not contain tags.");
+        }
+
         if (!scenarioData.TryGetValue("difficulty", out var d))
+        {
             throw new DataException("Scenario does not contain a difficulty.");
+        }
+
         if (!Enum.TryParse<DifficultyLevel>((string)d, true, out var difficulty))
+        {
             throw new DataException("Scenario does not contain a valid difficulty level.");
+        }
+
         if (!scenarioData.TryGetValue("session_length", out var s))
+        {
             throw new DataException("Scenario does not contain session_length.");
+        }
+
         if (!Enum.TryParse<SessionLength>((string)s, true, out var sessionLength))
+        {
             throw new DataException("Scenario does not contain a valid session_length.");
+        }
+
         if (!scenarioData.TryGetValue("archetypes", out var archetypes))
+        {
             throw new DataException("Scenario does not contain archetypes.");
+        }
+
         if (!scenarioData.TryGetValue("age_group", out var ageGroup))
+        {
             throw new DataException("Scenario does not contain age_group.");
+        }
+
         if (!scenarioData.TryGetValue("minimum_age", out var minimumAge))
+        {
             throw new DataException("Scenario does not contain minimum_age.");
+        }
 
         var coreAxesRaw = scenarioData.GetValueOrDefault("core_axes")
                           ?? scenarioData.GetValueOrDefault("compass_axes", new List<object>());
         if (!scenarioData.TryGetValue("characters", out var charactersObj) || charactersObj is not IList<object>)
+        {
             throw new DataException("Scenario does not contain characters.");
+        }
 
         var scenes = (List<object>)scenarioData.GetValueOrDefault("scenes", new List<object>());
         if (scenes.Count == 0)
+        {
             throw new Exception("Scenario does not contain any scenes.");
+        }
 
         var coreAxesList = ToStringList(coreAxesRaw);
 
@@ -220,9 +253,14 @@ public static class ScenarioRequestCreator
     private static ScenarioCharacter ParseCharacter(IDictionary<object, object> characterDict)
     {
         if (!characterDict.TryGetValue("id", out var idObj) || idObj == null)
+        {
             throw new ArgumentException("Required field 'id' is missing or null in character data");
+        }
+
         if (!characterDict.TryGetValue("name", out var nameObj) || nameObj == null)
+        {
             throw new ArgumentException("Required field 'name' is missing or null in character data");
+        }
 
         var character = new ScenarioCharacter
         {
@@ -241,7 +279,9 @@ public static class ScenarioRequestCreator
         }
 
         if (!characterDict.TryGetValue("metadata", out var metadataObj) || metadataObj is not IDictionary<object, object> metadataDict)
+        {
             throw new ArgumentException("Required field 'metadata' is missing or invalid in character data");
+        }
 
         character.Metadata = ParseCharacterMetadata(metadataDict);
 
@@ -262,15 +302,24 @@ public static class ScenarioRequestCreator
         };
 
         if (!metadataDict.TryGetValue("species", out var speciesObj) || speciesObj == null)
+        {
             throw new ArgumentException("Required field 'species' is missing or null in character metadata");
+        }
+
         metadata.Species = speciesObj.ToString() ?? string.Empty;
 
         if (!metadataDict.TryGetValue("age", out var ageObj) || ageObj == null || !int.TryParse(ageObj.ToString(), out var age))
+        {
             throw new ArgumentException("Required field 'age' is missing or invalid in character metadata");
+        }
+
         metadata.Age = age;
 
         if (!metadataDict.TryGetValue("backstory", out var backstoryObj) || backstoryObj == null)
+        {
             throw new ArgumentException("Required field 'backstory' is missing or null in character metadata");
+        }
+
         metadata.Backstory = backstoryObj.ToString() ?? string.Empty;
 
         return metadata;
@@ -298,6 +347,21 @@ public static class ScenarioRequestCreator
         }
 
         return new List<string>();
+    }
+
+    private static List<T> ToEnumList<T>(object? value) where T : StringEnum<T>
+    {
+        var results = new List<T>();
+        foreach (var entry in ToStringList(value))
+        {
+            var parsed = StringEnum<T>.Parse(entry);
+            if (parsed != null)
+            {
+                results.Add(parsed);
+            }
+        }
+
+        return results;
     }
 
     private static Branch ParseBranch(IDictionary<object, object> branchDict)
@@ -383,7 +447,10 @@ public static class ScenarioRequestCreator
             {
                 var parsed = EchoType.Parse(echoTypeObj.ToString());
                 if (parsed == null)
+                {
                     throw new ArgumentException($"Invalid EchoType: {echoTypeObj}");
+                }
+
                 echoLog.EchoType = parsed;
             }
             else
@@ -524,7 +591,10 @@ public static class ScenarioRequestCreator
             {
                 var parsed = EchoType.Parse(echoTypeObj.ToString());
                 if (parsed == null)
+                {
                     throw new ArgumentException($"Invalid EchoType: {echoTypeObj}");
+                }
+
                 reveal.EchoType = parsed;
             }
             else

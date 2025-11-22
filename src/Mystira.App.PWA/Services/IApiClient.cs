@@ -1,4 +1,5 @@
 using Mystira.App.PWA.Models;
+using DomainGameSession = Mystira.App.Domain.Models.GameSession;
 
 namespace Mystira.App.PWA.Services;
 

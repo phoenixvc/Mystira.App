@@ -46,10 +46,17 @@ public class CharacterAssignmentService : ICharacterAssignmentService
             // Update character assignments with existing  data
             foreach (var assignment in existingAssignments)
             {
-                if (assignment.PlayerAssignment == null) continue; // Skip unused assignments
+                if (assignment.PlayerAssignment == null)
+                {
+                    continue; // Skip unused assignments
+                }
 
                 var existingAssignment = characterAssignments.FirstOrDefault(a => a.CharacterId == assignment.CharacterId);
-                if (existingAssignment == null) continue;
+                if (existingAssignment == null)
+                {
+                    continue;
+                }
+
                 existingAssignment.PlayerAssignment = assignment.PlayerAssignment;
                 existingAssignment.IsUnused = assignment.IsUnused;
             }

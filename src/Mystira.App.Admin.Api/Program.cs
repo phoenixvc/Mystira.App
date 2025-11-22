@@ -1,12 +1,15 @@
 using System.Text;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Mystira.App.Admin.Api.Adapters;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
+using Mystira.App.Infrastructure.Azure.Services;
+using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,9 +66,15 @@ builder.Services.AddSwaggerGen(c =>
     c.CustomSchemaIds(type =>
     {
         if (type == typeof(Mystira.App.Domain.Models.CharacterMetadata))
+        {
             return "DomainCharacterMetadata";
+        }
+
         if (type == typeof(Mystira.App.Admin.Api.Models.CharacterMetadata))
+        {
             return "ApiCharacterMetadata";
+        }
+
         return type.Name;
     });
 });
@@ -88,6 +97,8 @@ else
 
 // Add Azure Infrastructure Services
 builder.Services.AddAzureBlobStorage(builder.Configuration);
+builder.Services.Configure<AudioTranscodingOptions>(builder.Configuration.GetSection(AudioTranscodingOptions.SectionName));
+builder.Services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingService>();
 
 // Register Content Bundle admin service
 builder.Services.AddScoped<IContentBundleAdminService, ContentBundleAdminService>();
@@ -144,6 +155,28 @@ builder.Services.AddScoped<IMediaApiService, MediaApiService>();
 builder.Services.AddScoped<IAvatarApiService, AvatarApiService>();
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
 builder.Services.AddScoped<IEmailService, AzureEmailService>();
+// Register repositories
+builder.Services.AddScoped<IRepository<Mystira.App.Domain.Models.GameSession>, Repository<Mystira.App.Domain.Models.GameSession>>();
+builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();
+builder.Services.AddScoped<IRepository<Mystira.App.Domain.Models.UserProfile>, Repository<Mystira.App.Domain.Models.UserProfile>>();
+builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
+builder.Services.AddScoped<IRepository<Mystira.App.Domain.Models.Account>, Repository<Mystira.App.Domain.Models.Account>>();
+builder.Services.AddScoped<IAccountRepository, AccountRepository>();
+builder.Services.AddScoped<IScenarioRepository, ScenarioRepository>();
+builder.Services.AddScoped<ICharacterMapRepository, CharacterMapRepository>();
+builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
+builder.Services.AddScoped<IBadgeConfigurationRepository, BadgeConfigurationRepository>();
+builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
+builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
+builder.Services.AddScoped<Mystira.App.Admin.Api.Repositories.IMediaAssetRepository, Mystira.App.Admin.Api.Repositories.MediaAssetRepository>();
+builder.Services.AddScoped<Mystira.App.Admin.Api.Repositories.IMediaMetadataFileRepository, Mystira.App.Admin.Api.Repositories.MediaMetadataFileRepository>();
+builder.Services.AddScoped<Mystira.App.Admin.Api.Repositories.ICharacterMediaMetadataFileRepository, Mystira.App.Admin.Api.Repositories.CharacterMediaMetadataFileRepository>();
+builder.Services.AddScoped<Mystira.App.Admin.Api.Repositories.ICharacterMapFileRepository, Mystira.App.Admin.Api.Repositories.CharacterMapFileRepository>();
+builder.Services.AddScoped<IAvatarConfigurationFileRepository, AvatarConfigurationFileRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+builder.Services.AddScoped<IGameSessionApiService, GameSessionApiService>();
+builder.Services.AddScoped<IAccountApiService, AccountApiService>();
 
 // Configure Health Checks
 builder.Services.AddHealthChecks()
@@ -155,6 +188,10 @@ builder.Services.AddCors(options =>
     options.AddPolicy("MystiraAdminPolicy", policy =>
     {
         policy.WithOrigins(
+                "http://localhost:7001",
+                "https://localhost:7001",
+                "https://admin.mystiraapp.azurewebsites.net",
+                "https://admin.mystira.app",
                 "http://localhost:7000",
                 "https://localhost:7000",
                 "https://mystiraapp.azurewebsites.net",

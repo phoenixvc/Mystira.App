@@ -35,8 +35,11 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     
+    - name: Check code formatting
+      run: dotnet format --verify-no-changes --verbosity diagnostic
+    
     - name: Build
-      run: dotnet build --no-restore --configuration Release
+      run: dotnet build --no-restore --configuration Release /p:EnforceCodeStyleInBuild=true
     
     - name: Test
       run: dotnet test --no-build --configuration Release --verbosity normal

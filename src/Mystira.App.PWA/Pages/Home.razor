@@ -10,6 +10,7 @@
 @using Mystira.App.PWA.Models
 @using Mystira.App.PWA.Services
 @using Mystira.App.PWA.Components
+@using SessionStatus = Mystira.App.Domain.Models.SessionStatus
 @implements IDisposable
 
 <PageTitle>Mystira</PageTitle>
@@ -29,6 +30,51 @@
         </div>
     </div>
     
+    <!-- Active Adventures Section -->
+    @if (isAuthenticated && !isLoading && activeSessions.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-info">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">
+                            <i class="fas fa-gamepad me-2 text-info"></i>Continue Your Adventures
+                        </h5>
+                        <div class="row">
+                            @foreach (var activeSession in activeSessions)
+                            {
+                                var scenario = scenarios.FirstOrDefault(s => s.Id == activeSession.ScenarioId);
+                                if (scenario != null)
+                                {
+                                    <div class="col-md-6 col-lg-4 mb-3">
+                                        <div class="card h-100 border-info">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <h6 class="card-title mb-0">@scenario.Name</h6>
+                                                    <span class="badge bg-info">
+                                                        <i class="fas fa-play-circle me-1"></i>In Progress
+                                                    </span>
+                                                </div>
+                                                <p class="card-text small text-muted mb-3">
+                                                    Started: @activeSession.StartedAt.ToLocalTime().ToString("g")
+                                                </p>
+                                                <button class="btn btn-info w-100" 
+                                                        @onclick="() => ContinueAdventure(activeSession, scenario)">
+                                                    <i class="fas fa-play me-2"></i>
+                                                    Continue
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
     <!-- Game Session Content (shown when user has profiles and active game) -->
     @if (isAuthenticated && hasProfiles && gameSession != null)
     {
@@ -469,6 +515,7 @@
     private bool isAuthenticated = false;
     private bool showCompletedStories = true;
     private HashSet<string> completedScenarioIds = new();
+    private List<GameSession> activeSessions = new();
     private bool isLoadingGameState = false;
     private bool gameStateLoadingComplete = false;
     private bool hasProfiles = false;
@@ -546,6 +593,7 @@
                 inProgressSessions.Clear();
                 selectedAgeGroups.Clear();
                 completedScenarioIds.Clear();
+                activeSessions.Clear();
                 gameStateLoadingComplete = false;
                 hasProfiles = false;
                 gameSession = null;
@@ -663,11 +711,42 @@
             bundles = await ApiClient.GetBundlesAsync();
             Logger.LogInformation("Loaded {Count} bundles", bundles.Count);
 
+            Logger.LogInformation("Loading completed scenarios and active sessions...");
+            
+            // Get current account
+            var account = await AuthService.GetCurrentAccountAsync();
+            if (account != null)
+            {
+                // Get sessions for this account
+                var sessions = await ApiClient.GetSessionsByAccountAsync(account.Id);
+                if (sessions != null)
+                {
+                    // Filter active sessions (InProgress or Paused)
+                    activeSessions = sessions
+                        .Where(s => s.Status == SessionStatus.InProgress.ToString() || s.Status == SessionStatus.Paused.ToString())
+                        .OrderByDescending(s => s.StartedAt)
+                        .ToList();
+                    
+                    Logger.LogInformation("Found {Count} active session(s) for account {AccountId}", 
+                        activeSessions.Count, account.Id);
+                    
+                    // Track completed scenarios
+                    completedScenarioIds = sessions
+                        .Where(s => s.Status == SessionStatus.Completed.ToString())
+                        .Select(s => s.ScenarioId)
+                        .ToHashSet();
+                    
+                    Logger.LogInformation("Loaded {Count} completed scenarios for account {AccountId}", 
+                        completedScenarioIds.Count, account.Id);
+                }
+            }
+            
+            // Apply filters to show/hide completed scenarios
             ApplyFilters();
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error loading bundles");
+            Logger.LogError(ex, "Error loading bundles and game state");
         }
         finally
         {
@@ -904,6 +983,71 @@
         
         Logger.LogInformation("Applied filters. Age groups: [{SelectedFilters}], Show completed: {ShowCompleted}, Showing {Count} of {Total} scenarios", 
             string.Join(", ", selectedAgeGroups), showCompletedStories, filteredScenarios.Count, scenarios.Count);
+    }
+
+    private async Task ContinueAdventure(GameSession activeSession, Scenario scenario)
+    {
+        try
+        {
+            isStartingAdventure = true;
+            StateHasChanged();
+            
+            Logger.LogInformation("Continuing adventure for session: {SessionId}, Scenario: {ScenarioName}", 
+                activeSession.Id, scenario.Name);
+            
+            // Get the full scenario with scenes
+            var fullScenario = await ApiClient.GetScenarioAsync(scenario.Id);
+            if (fullScenario == null)
+            {
+                Logger.LogError("Failed to load full scenario details for: {ScenarioName}", scenario.Name);
+                return;
+            }
+            
+            // Find the current scene from the session
+            var currentScene = fullScenario.Scenes.FirstOrDefault(s => s.Id == activeSession.CurrentSceneId);
+            if (currentScene == null)
+            {
+                Logger.LogError("Could not find current scene {SceneId} in scenario {ScenarioId}", 
+                    activeSession.CurrentSceneId, scenario.Id);
+                return;
+            }
+            
+            // Load media URLs for the current scene
+            currentScene.AudioUrl = !string.IsNullOrEmpty(currentScene.Media?.Audio) 
+                ? await ApiClient.GetMediaUrlFromId(currentScene.Media.Audio) : null;
+            currentScene.ImageUrl = !string.IsNullOrEmpty(currentScene.Media?.Image) 
+                ? await ApiClient.GetMediaUrlFromId(currentScene.Media.Image) : null;
+            currentScene.VideoUrl = !string.IsNullOrEmpty(currentScene.Media?.Video) 
+                ? await ApiClient.GetMediaUrlFromId(currentScene.Media.Video) : null;
+            
+            // Create a local game session to resume from
+            var localGameSession = new Models.GameSession
+            {
+                Id = activeSession.Id,
+                Scenario = fullScenario,
+                ScenarioId = fullScenario.Id,
+                ScenarioName = fullScenario.Title,
+                CurrentScene = currentScene,
+                StartedAt = activeSession.StartedAt,
+                CompletedScenes = new List<Scene>(),
+                IsCompleted = false
+            };
+            
+            // Set the game session
+            GameSessionService.SetCurrentGameSession(localGameSession);
+            
+            // Navigate to the game page
+            NavigationManager.NavigateTo("/game");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error continuing adventure for session: {SessionId}", activeSession.Id);
+        }
+        finally
+        {
+            isStartingAdventure = false;
+            StateHasChanged();
+        }
     }
 
     private void SelectBundle(ContentBundle bundle)

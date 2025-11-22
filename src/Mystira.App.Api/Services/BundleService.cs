@@ -1,8 +1,10 @@
 using System.IO.Compression;
+using System.Text.Json;
+using Mystira.App.Api.Models;
+using Mystira.App.Api.Services;
+using Mystira.App.Domain.Models;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
-using Mystira.App.Domain.Models;
-using Mystira.App.Api.Models;
 
 namespace Mystira.App.Api.Services;
 
@@ -272,9 +274,14 @@ public class BundleService : IBundleService
         {
             // Clean up temporary files
             if (File.Exists(tempPath))
+            {
                 File.Delete(tempPath);
+            }
+
             if (File.Exists(tempFileWithExtension))
+            {
                 File.Delete(tempFileWithExtension);
+            }
         }
     }
 

@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 namespace Mystira.App.CosmosConsole.Extensions;
 
 public static class DataTableExtensions
@@ -6,7 +6,9 @@ public static class DataTableExtensions
     public static string ToCsv(this DataTable table, string delimiter = ",")
     {
         if (table == null || table.Columns.Count == 0)
+        {
             return string.Empty;
+        }
 
         var sb = new System.Text.StringBuilder();
 
@@ -15,7 +17,9 @@ public static class DataTableExtensions
         {
             sb.Append(table.Columns[i].ColumnName);
             if (i < table.Columns.Count - 1)
+            {
                 sb.Append(delimiter);
+            }
         }
         sb.AppendLine();
 
@@ -37,7 +41,9 @@ public static class DataTableExtensions
                 }
 
                 if (i < table.Columns.Count - 1)
+                {
                     sb.Append(delimiter);
+                }
             }
             sb.AppendLine();
         }

@@ -1,7 +1,7 @@
-using Mystira.App.Shared.Models;
-using Mystira.App.Domain.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Mystira.App.Domain.Models;
+using Mystira.App.Shared.Models;
 
 namespace Mystira.App.Admin.Api.Services;
 

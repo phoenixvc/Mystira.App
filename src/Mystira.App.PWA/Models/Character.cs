@@ -23,9 +23,21 @@ public class Character
         get
         {
             var parts = new List<string>();
-            if (!string.IsNullOrEmpty(Role)) parts.Add(Role);
-            if (!string.IsNullOrEmpty(Archetype)) parts.Add(Archetype);
-            if (!string.IsNullOrEmpty(Metadata.Species)) parts.Add(Metadata.Species);
+            if (!string.IsNullOrEmpty(Role))
+            {
+                parts.Add(Role);
+            }
+
+            if (!string.IsNullOrEmpty(Archetype))
+            {
+                parts.Add(Archetype);
+            }
+
+            if (!string.IsNullOrEmpty(Metadata.Species))
+            {
+                parts.Add(Metadata.Species);
+            }
+
             return parts.Count > 0 ? string.Join(" • ", parts) : "Character";
         }
     }

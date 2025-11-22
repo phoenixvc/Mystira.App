@@ -43,6 +43,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Mystira.App.Domain\Mystira.App.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\js\" />
     <Folder Include="wwwroot\sounds\" />
   </ItemGroup>
 

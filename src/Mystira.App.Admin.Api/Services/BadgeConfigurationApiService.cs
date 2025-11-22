@@ -1,7 +1,7 @@
-using Mystira.App.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Models;
+using Mystira.App.Domain.Models;
 using YamlDotNet.Serialization;
 
 namespace Mystira.App.Admin.Api.Services;
@@ -274,7 +274,11 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
     private static IEnumerable<string> GetAllCoreAxisNames()
     {
         var filePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "Mystira.App.Domain", "Data", "CoreAxes.json");
-        if (!File.Exists(filePath)) return Array.Empty<string>();
+        if (!File.Exists(filePath))
+        {
+            return Array.Empty<string>();
+        }
+
         var json = File.ReadAllText(filePath);
         return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
     }

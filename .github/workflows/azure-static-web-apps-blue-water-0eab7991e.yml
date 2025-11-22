@@ -1,4 +1,4 @@
-name: Azure Static Web Apps CI/CD (prod only)
+name: PWA CI/CD - Production Environment
 
 on:
   push:
@@ -10,10 +10,10 @@ on:
       - main
 
 jobs:
-  build_and_deploy_job:
+  build-and-deploy:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
-    name: Build and Deploy Job
+    name: Build and Deploy
     steps:
       - uses: actions/checkout@v3
         with:
@@ -33,10 +33,10 @@ jobs:
           output_location: "wwwroot" # Built app content directory - optional
           ###### End of Repository/Build Configurations ######
 
-  close_pull_request_job:
+  close-pull-request:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
-    name: Close Pull Request Job
+    name: Close Pull Request
     steps:
       - name: Close Pull Request
         id: closepullrequest

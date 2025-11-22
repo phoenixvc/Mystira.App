@@ -1,29 +1,28 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Mystira.App.Api.Data;
 using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data.Repositories;
 
 namespace Mystira.App.Api.Services;
 
 public class ContentBundleService : IContentBundleService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly IContentBundleRepository _repository;
     private readonly ILogger<ContentBundleService> _logger;
 
-    public ContentBundleService(MystiraAppDbContext context, ILogger<ContentBundleService> logger)
+    public ContentBundleService(IContentBundleRepository repository, ILogger<ContentBundleService> logger)
     {
-        _context = context;
+        _repository = repository;
         _logger = logger;
     }
 
     public async Task<List<ContentBundle>> GetAllAsync()
     {
-        return await _context.ContentBundles.AsNoTracking().ToListAsync();
+        var bundles = await _repository.GetAllAsync();
+        return bundles.ToList();
     }
 
     public async Task<List<ContentBundle>> GetByAgeGroupAsync(string ageGroup)
     {
-        return await _context.ContentBundles.AsNoTracking()
-            .Where(b => b.AgeGroup == ageGroup)
-            .ToListAsync();
+        var bundles = await _repository.GetByAgeGroupAsync(ageGroup);
+        return bundles.ToList();
     }
 }
