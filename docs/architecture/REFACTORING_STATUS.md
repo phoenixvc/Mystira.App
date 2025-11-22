@@ -119,10 +119,10 @@
    - ✅ `GetUserProfileUseCase`
    - ✅ `DeleteUserProfileUseCase`
 7. ✅ Registered all use cases in DI containers (`Program.cs` for both Api and Admin.Api)
-8. ⏳ Update services to use use cases instead of direct repository access:
-   - `ScenarioApiService` → Use `GetScenariosUseCase`, `CreateScenarioUseCase`, `UpdateScenarioUseCase`, `DeleteScenarioUseCase`
-   - `GameSessionApiService` → Use `CreateGameSessionUseCase`, `MakeChoiceUseCase`, `ProgressSceneUseCase`
-   - `UserProfileApiService` → Use UserProfile use cases (once created)
+8. 🔄 Update services to use use cases instead of direct repository access:
+   - ✅ `ScenarioApiService` → Delegates to `GetScenariosUseCase`, `CreateScenarioUseCase`, `UpdateScenarioUseCase`, `DeleteScenarioUseCase`, `ValidateScenarioUseCase`
+   - ⏳ `GameSessionApiService` → Use `CreateGameSessionUseCase`, `MakeChoiceUseCase`, `ProgressSceneUseCase`
+   - ⏳ `UserProfileApiService` → Use `CreateUserProfileUseCase`, `UpdateUserProfileUseCase`, `GetUserProfileUseCase`, `DeleteUserProfileUseCase`
 9. ⏳ Create application services (coordinate multiple use cases if needed)
 10. ⏳ Add AutoMapper profiles for DTO ↔ Domain mapping
 11. ⏳ Update API controllers to use use cases (via services or directly)

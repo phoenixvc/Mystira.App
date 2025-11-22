@@ -1,3 +1,4 @@
+using Mystira.App.Application.UseCases.GameSessions;
 using Mystira.App.Contracts.Requests.GameSessions;
 using Mystira.App.Contracts.Responses.GameSessions;
 using Mystira.App.Domain.Models;
@@ -12,100 +13,31 @@ public class GameSessionApiService : IGameSessionApiService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IScenarioApiService _scenarioService;
     private readonly ILogger<GameSessionApiService> _logger;
+    private readonly CreateGameSessionUseCase _createGameSessionUseCase;
+    private readonly MakeChoiceUseCase _makeChoiceUseCase;
+    private readonly ProgressSceneUseCase _progressSceneUseCase;
 
     public GameSessionApiService(
         IGameSessionRepository repository,
         IUnitOfWork unitOfWork,
         IScenarioApiService scenarioService,
-        ILogger<GameSessionApiService> logger)
+        ILogger<GameSessionApiService> logger,
+        CreateGameSessionUseCase createGameSessionUseCase,
+        MakeChoiceUseCase makeChoiceUseCase,
+        ProgressSceneUseCase progressSceneUseCase)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
         _scenarioService = scenarioService;
         _logger = logger;
+        _createGameSessionUseCase = createGameSessionUseCase;
+        _makeChoiceUseCase = makeChoiceUseCase;
+        _progressSceneUseCase = progressSceneUseCase;
     }
 
     public async Task<GameSession> StartSessionAsync(StartGameSessionRequest request)
     {
-        // Validate scenario exists
-        var scenario = await _scenarioService.GetScenarioByIdAsync(request.ScenarioId);
-        if (scenario == null)
-        {
-            throw new ArgumentException($"Scenario not found: {request.ScenarioId}");
-        }
-
-        // Validate age appropriateness
-        if (!IsAgeGroupCompatible(scenario.MinimumAge, request.TargetAgeGroup))
-        {
-            throw new ArgumentException($"Scenario minimum age ({scenario.MinimumAge}) exceeds target age group ({request.TargetAgeGroup})");
-        }
-
-        // Check for existing active sessions for this scenario and account
-        var existingActiveSessions = (await _repository.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId)).ToList();
-
-        // Auto-complete any existing active sessions for this scenario
-        if (existingActiveSessions.Any())
-        {
-            _logger.LogInformation("Found {Count} existing active session(s) for scenario {ScenarioId} and account {AccountId}. Completing them.",
-                existingActiveSessions.Count, request.ScenarioId, request.AccountId);
-
-            foreach (var existingSession in existingActiveSessions)
-            {
-                existingSession.Status = SessionStatus.Completed;
-                existingSession.EndTime = DateTime.UtcNow;
-                existingSession.ElapsedTime = existingSession.EndTime.Value - existingSession.StartTime;
-                await _repository.UpdateAsync(existingSession);
-            }
-
-            await _unitOfWork.SaveChangesAsync();
-        }
-
-        // Check for existing InProgress session for this scenario and account
-        var pausedSession = existingActiveSessions.FirstOrDefault(s => s.Status == SessionStatus.InProgress);
-
-        if (pausedSession != null)
-        {
-            _logger.LogInformation("Found existing InProgress session {ExistingSessionId} for scenario {ScenarioId}, pausing it",
-                pausedSession.Id, request.ScenarioId);
-
-            pausedSession.Status = SessionStatus.Paused;
-            pausedSession.IsPaused = true;
-            pausedSession.PausedAt = DateTime.UtcNow;
-            await _repository.UpdateAsync(pausedSession);
-        }
-
-        var session = new GameSession
-        {
-            Id = Guid.NewGuid().ToString(),
-            ScenarioId = request.ScenarioId,
-            AccountId = request.AccountId,
-            ProfileId = request.ProfileId,
-            PlayerNames = request.PlayerNames,
-            Status = SessionStatus.InProgress,
-            CurrentSceneId = scenario.Scenes.First().Id,
-            StartTime = DateTime.UtcNow,
-            TargetAgeGroupName = request.TargetAgeGroup,
-            SceneCount = scenario.Scenes.Count
-        };
-
-        // Initialize compass tracking for scenario axes
-        foreach (var axis in scenario.CoreAxes)
-        {
-            session.CompassValues[axis.Value] = new CompassTracking
-            {
-                Axis = axis.Value,
-                CurrentValue = 0.0f,
-                History = new List<CompassChange>(),
-                LastUpdated = DateTime.UtcNow
-            };
-        }
-
-        await _repository.AddAsync(session);
-        await _unitOfWork.SaveChangesAsync();
-
-        _logger.LogInformation("Started new game session: {SessionId} for Account: {AccountId}, Profile: {ProfileId}",
-            session.Id, session.AccountId, session.ProfileId);
-        return session;
+        return await _createGameSessionUseCase.ExecuteAsync(request);
     }
 
     public async Task<GameSession?> GetSessionAsync(string sessionId)
@@ -187,102 +119,30 @@ public class GameSessionApiService : IGameSessionApiService
 
     public async Task<GameSession?> MakeChoiceAsync(MakeChoiceRequest request)
     {
-        var session = await GetSessionAsync(request.SessionId);
+        // Delegate core business logic to use case
+        var session = await _makeChoiceUseCase.ExecuteAsync(request);
         if (session == null)
         {
             return null;
         }
 
-        if (session.Status != SessionStatus.InProgress)
-        {
-            throw new InvalidOperationException("Cannot make choice in non-active session");
-        }
-
-        var scenario = await _scenarioService.GetScenarioByIdAsync(session.ScenarioId);
-        if (scenario == null)
-        {
-            throw new InvalidOperationException("Scenario not found for session");
-        }
-
-        var currentScene = scenario.Scenes.FirstOrDefault(s => s.Id == request.SceneId);
-        if (currentScene == null)
-        {
-            throw new ArgumentException("Scene not found in scenario");
-        }
-
-        var branch = currentScene.Branches.FirstOrDefault(b => b.Choice == request.ChoiceText);
-        if (branch == null)
-        {
-            throw new ArgumentException("Choice not found in scene");
-        }
-
-        // Record the choice
-        var sessionChoice = new SessionChoice
-        {
-            SceneId = request.SceneId,
-            SceneTitle = currentScene.Title,
-            ChoiceText = request.ChoiceText,
-            NextScene = request.NextSceneId,
-            ChosenAt = DateTime.UtcNow,
-            EchoGenerated = branch.EchoLog,
-            CompassChange = branch.CompassChange
-        };
-
-        session.ChoiceHistory.Add(sessionChoice);
-
-        // Process echo log if present
-        if (branch.EchoLog != null)
-        {
-            var echo = new EchoLog
-            {
-                EchoType = branch.EchoLog.EchoType,
-                Description = branch.EchoLog.Description,
-                Strength = branch.EchoLog.Strength,
-                Timestamp = DateTime.UtcNow
-            };
-            session.EchoHistory.Add(echo);
-        }
-
-        // Process compass change if present
-        if (branch.CompassChange != null && session.CompassValues.ContainsKey(branch.CompassChange.Axis))
-        {
-            var tracking = session.CompassValues[branch.CompassChange.Axis];
-            tracking.CurrentValue += branch.CompassChange.Delta;
-            tracking.CurrentValue = Math.Max(-2.0f, Math.Min(2.0f, tracking.CurrentValue)); // Clamp to [-2, 2]
-
-            var compassChange = new CompassChange
-            {
-                Axis = branch.CompassChange.Axis,
-                Delta = branch.CompassChange.Delta
-            };
-            tracking.History.Add(compassChange);
-            tracking.LastUpdated = DateTime.UtcNow;
-        }
-
-        // Update session state
-        session.CurrentSceneId = request.NextSceneId;
-        session.ElapsedTime = DateTime.UtcNow - session.StartTime;
-
-        // Check for achievements
+        // Service-specific logic: Check for achievements
         var newAchievements = await CheckAchievementsAsync(session.Id);
-        foreach (var achievement in newAchievements.Where(a => !session.Achievements.Any(sa => sa.Id == a.Id)))
+        if (newAchievements.Any())
         {
-            session.Achievements.Add(achievement);
+            // Reload session to get latest state after use case execution
+            session = await _repository.GetByIdAsync(request.SessionId);
+            if (session != null)
+            {
+                foreach (var achievement in newAchievements.Where(a => !session.Achievements.Any(sa => sa.Id == a.Id)))
+                {
+                    session.Achievements.Add(achievement);
+                }
+
+                await _repository.UpdateAsync(session);
+                await _unitOfWork.SaveChangesAsync();
+            }
         }
-
-        // Check if session is complete (reached end scene or no more branches)
-        var nextScene = scenario.Scenes.FirstOrDefault(s => s.Id == request.NextSceneId);
-        if (nextScene == null || !nextScene.Branches.Any())
-        {
-            session.Status = SessionStatus.Completed;
-            session.EndTime = DateTime.UtcNow;
-        }
-
-        await _repository.UpdateAsync(session);
-        await _unitOfWork.SaveChangesAsync();
-
-        _logger.LogInformation("Choice made in session {SessionId}: {ChoiceText} -> {NextScene}",
-            session.Id, request.ChoiceText, request.NextSceneId);
 
         return session;
     }
@@ -357,45 +217,7 @@ public class GameSessionApiService : IGameSessionApiService
 
     public async Task<GameSession?> ProgressToSceneAsync(ProgressSceneRequest request)
     {
-        var session = await GetSessionAsync(request.SessionId);
-        if (session == null)
-        {
-            return null;
-        }
-
-        if (session.Status != SessionStatus.InProgress && session.Status != SessionStatus.Paused)
-        {
-            throw new InvalidOperationException("Can only progress scenes in active or paused sessions");
-        }
-
-        var scenario = await _scenarioService.GetScenarioByIdAsync(session.ScenarioId);
-        if (scenario == null)
-        {
-            throw new InvalidOperationException("Scenario not found for session");
-        }
-
-        var targetScene = scenario.Scenes.FirstOrDefault(s => s.Id == request.SceneId);
-        if (targetScene == null)
-        {
-            throw new ArgumentException("Scene not found in scenario");
-        }
-
-        session.CurrentSceneId = request.SceneId;
-        session.ElapsedTime = DateTime.UtcNow - session.StartTime;
-
-        // Resume session if it was paused
-        if (session.Status == SessionStatus.Paused)
-        {
-            session.Status = SessionStatus.InProgress;
-            session.IsPaused = false;
-            session.PausedAt = null;
-        }
-
-        await _repository.UpdateAsync(session);
-        await _unitOfWork.SaveChangesAsync();
-
-        _logger.LogInformation("Progressed session {SessionId} to scene {SceneId}", request.SessionId, request.SceneId);
-        return session;
+        return await _progressSceneUseCase.ExecuteAsync(request);
     }
 
     public async Task<SessionStatsResponse?> GetSessionStatsAsync(string sessionId)
@@ -556,44 +378,6 @@ public class GameSessionApiService : IGameSessionApiService
         }
     }
 
-    private bool IsAgeGroupCompatible(int scenarioMinimumAge, string targetAgeGroup)
-    {
-        if (scenarioMinimumAge <= 0)
-        {
-            return true;
-        }
-
-        if (string.IsNullOrWhiteSpace(targetAgeGroup))
-        {
-            return true;
-        }
-
-        var target = AgeGroup.Parse(targetAgeGroup);
-        if (target != null)
-        {
-            return target.MinimumAge >= scenarioMinimumAge;
-        }
-
-        if (TryParseAgeRangeMinimum(targetAgeGroup, out var parsedMinimum))
-        {
-            return parsedMinimum >= scenarioMinimumAge;
-        }
-
-        return true;
-    }
-
-    private static bool TryParseAgeRangeMinimum(string value, out int minimumAge)
-    {
-        minimumAge = 0;
-        var parts = value.Split('-', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (parts.Length > 0 && int.TryParse(parts[0], out var min))
-        {
-            minimumAge = min;
-            return true;
-        }
-
-        return false;
-    }
 
     public async Task<int> GetActiveSessionsCountAsync()
     {
