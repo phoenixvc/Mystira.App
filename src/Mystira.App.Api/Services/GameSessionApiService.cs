@@ -336,20 +336,11 @@ public class GameSessionApiService : IGameSessionApiService
 
     public async Task<int> GetActiveSessionsCountAsync()
     {
-        // TODO: Create GetActiveSessionsCountUseCase
-        // For now, using GetInProgressSessionsUseCase with empty accountId
-        // This is a workaround - should be replaced with dedicated use case
-        try
-        {
-            // This method needs a repository - keeping for now but should be refactored
-            // Note: This violates architectural rules - service should not access repository directly
-            throw new NotImplementedException("GetActiveSessionsCountAsync needs a dedicated use case");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting active sessions count");
-            return 0;
-        }
+        // Note: GetActiveSessionsCountAsync needs a dedicated use case
+        // For now, this method is not implemented as it requires repository access
+        // TODO: Create GetActiveSessionsCountUseCase when this functionality is needed
+        _logger.LogWarning("GetActiveSessionsCountAsync is not implemented. Use GetInProgressSessionsUseCase for account-specific queries.");
+        throw new NotImplementedException("GetActiveSessionsCountAsync requires a dedicated use case. Use GetInProgressSessionsUseCase for account-specific queries.");
     }
 
     public async Task<GameSession?> ProgressSessionSceneAsync(string sessionId, string newSceneId)
