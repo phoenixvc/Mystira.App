@@ -127,20 +127,25 @@
 10. ⏳ Add AutoMapper profiles for DTO ↔ Domain mapping
 11. ⏳ Update API controllers to use use cases (via services or directly)
 
-#### Phase 4: Large File Refactoring ⏳ PENDING
+#### Phase 4: Large File Refactoring 🔄 IN PROGRESS
 
-1. **ApiClient.cs (957 lines)** → Split into:
-   - `BaseApiClient` (common HTTP logic)
-   - `ScenarioApiClient`
-   - `GameSessionApiClient`
-   - `UserProfileApiClient`
-   - `MediaApiClient`
-   - `AuthApiClient`
+1. **ApiClient.cs (957 lines)** → ✅ COMPLETED:
+   - ✅ Split into `BaseApiClient` (common HTTP logic) and domain-specific clients:
+     - `ScenarioApiClient`
+     - `GameSessionApiClient`
+     - `UserProfileApiClient`
+     - `MediaApiClient`
+     - `AuthApiClient`
+     - `AvatarApiClient`
+     - `ContentBundleApiClient`
+     - `CharacterApiClient`
+   - ✅ Original `ApiClient` now acts as composite facade
 
-2. **MediaApiService.cs (555 lines)** → Split by responsibility:
-   - `MediaUploadService` (upload logic)
-   - `MediaMetadataService` (metadata management)
-   - `MediaTranscodingService` (transcoding logic)
+2. **MediaApiService.cs (555 lines)** → ✅ COMPLETED:
+   - ✅ Split by responsibility:
+     - `MediaUploadService` (upload logic)
+     - `MediaQueryService` (query, update, delete, stats logic)
+   - ✅ Original `MediaApiService` now acts as composite facade
 
 3. **ScenarioApiService.cs (692 lines)** → Refactor to use Application layer:
    - ✅ Use cases created: `CreateScenarioUseCase`, `UpdateScenarioUseCase`, `GetScenariosUseCase`, `DeleteScenarioUseCase`, `ValidateScenarioUseCase`
@@ -151,10 +156,19 @@
    - ✅ Use cases created: `CreateGameSessionUseCase`, `MakeChoiceUseCase`, `ProgressSceneUseCase`
    - ⏳ Update `GameSessionApiService` to delegate to use cases instead of direct repository access
 
-5. **ScenarioRequestCreator.cs (727 lines)** → Consider refactoring:
-   - Extract validation logic to use cases
-   - Simplify mapping logic
-   - Consider AutoMapper for complex mappings
+5. **ScenarioRequestCreator.cs (727 lines)** → ✅ COMPLETED:
+   - ✅ Refactored into shared parsers in `Application.Parsers`:
+     - `ScenarioParser` - main scenario parsing and validation
+     - `SceneParser` - scene parsing
+     - `CharacterParser` - character parsing
+     - `CharacterMetadataParser` - character metadata parsing
+     - `BranchParser` - branch/choice parsing
+     - `EchoLogParser` - echo log parsing
+     - `CompassChangeParser` - compass change parsing
+     - `EchoRevealParser` - echo reveal parsing
+     - `MediaReferencesParser` - media references parsing
+   - ✅ Refactored `ScenarioRequestCreator` (~20 lines) - facade delegating to parsers
+   - ✅ Parsers shared between Api and Admin.Api via Application layer
 
 6. **ApiModels.cs** → ✅ COMPLETED (moved to Contracts project)
 
@@ -210,7 +224,7 @@
 
 ## 🎯 Success Criteria
 
-1. ⏳ No files > 500 lines (in progress - ApiClient.cs, ScenarioRequestCreator.cs still large)
+1. 🔄 No files > 500 lines (in progress - ApiClient.cs ✅, MediaApiService.cs ✅, ScenarioRequestCreator.cs ✅ completed)
 2. ✅ All DTOs in Contracts project (Api.Api completed, Admin.Api has Admin-specific differences)
 3. 🔄 All business logic in Application layer (use cases created, services not yet migrated)
 4. ✅ All data access through repositories (all services migrated)

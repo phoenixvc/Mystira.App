@@ -1,6 +1,6 @@
 using Mystira.App.Domain.Models;
 
-namespace Mystira.App.Api.Models.Parsers;
+namespace Mystira.App.Application.Parsers;
 
 /// <summary>
 /// Parser for converting compass change dictionary data to CompassChange domain object

@@ -1,6 +1,6 @@
 using Mystira.App.Domain.Models;
 
-namespace Mystira.App.Api.Models.Parsers;
+namespace Mystira.App.Application.Parsers;
 
 /// <summary>
 /// Parser for converting media references dictionary data to MediaReferences domain object
