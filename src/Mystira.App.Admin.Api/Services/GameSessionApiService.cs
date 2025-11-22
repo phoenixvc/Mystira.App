@@ -1,7 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Data;
-using Mystira.App.Admin.Api.Models;
+using Mystira.App.Contracts.Requests.GameSessions;
+using Mystira.App.Contracts.Responses.GameSessions;
 using Mystira.App.Domain.Models;
+using ContractsStartGameSessionRequest = Mystira.App.Contracts.Requests.GameSessions.StartGameSessionRequest;
+using ContractsMakeChoiceRequest = Mystira.App.Contracts.Requests.GameSessions.MakeChoiceRequest;
+using ContractsGameSessionResponse = Mystira.App.Contracts.Responses.GameSessions.GameSessionResponse;
+using ContractsSessionStatsResponse = Mystira.App.Contracts.Responses.GameSessions.SessionStatsResponse;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -21,7 +26,7 @@ public class GameSessionApiService : IGameSessionApiService
         _logger = logger;
     }
 
-    public async Task<GameSession> StartSessionAsync(StartGameSessionRequest request)
+    public async Task<GameSession> StartSessionAsync(ContractsStartGameSessionRequest request)
     {
         // Validate scenario exists
         var scenario = await _scenarioService.GetScenarioByIdAsync(request.ScenarioId);
@@ -99,12 +104,12 @@ public class GameSessionApiService : IGameSessionApiService
             .FirstOrDefaultAsync(s => s.Id == sessionId);
     }
 
-    public async Task<List<GameSessionResponse>> GetSessionsByAccountAsync(string accountId)
+    public async Task<List<ContractsGameSessionResponse>> GetSessionsByAccountAsync(string accountId)
     {
         return await _context.GameSessions
             .Where(s => s.AccountId == accountId)
             .OrderByDescending(s => s.StartTime)
-            .Select(s => new GameSessionResponse
+            .Select(s => new ContractsGameSessionResponse
             {
                 Id = s.Id,
                 ScenarioId = s.ScenarioId,
@@ -126,12 +131,12 @@ public class GameSessionApiService : IGameSessionApiService
             .ToListAsync();
     }
 
-    public async Task<List<GameSessionResponse>> GetSessionsByProfileAsync(string profileId)
+    public async Task<List<ContractsGameSessionResponse>> GetSessionsByProfileAsync(string profileId)
     {
         return await _context.GameSessions
             .Where(s => s.ProfileId == profileId)
             .OrderByDescending(s => s.StartTime)
-            .Select(s => new GameSessionResponse
+            .Select(s => new ContractsGameSessionResponse
             {
                 Id = s.Id,
                 ScenarioId = s.ScenarioId,
@@ -153,7 +158,7 @@ public class GameSessionApiService : IGameSessionApiService
             .ToListAsync();
     }
 
-    public async Task<GameSession?> MakeChoiceAsync(MakeChoiceRequest request)
+    public async Task<GameSession?> MakeChoiceAsync(ContractsMakeChoiceRequest request)
     {
         var session = await GetSessionAsync(request.SessionId);
         if (session == null)
@@ -319,7 +324,7 @@ public class GameSessionApiService : IGameSessionApiService
         return session;
     }
 
-    public async Task<SessionStatsResponse?> GetSessionStatsAsync(string sessionId)
+    public async Task<ContractsSessionStatsResponse?> GetSessionStatsAsync(string sessionId)
     {
         var session = await GetSessionAsync(sessionId);
         if (session == null)
@@ -337,7 +342,7 @@ public class GameSessionApiService : IGameSessionApiService
             .Take(5)
             .ToList();
 
-        return new SessionStatsResponse
+        return new ContractsSessionStatsResponse
         {
             CompassValues = compassValues,
             RecentEchoes = recentEchoes,

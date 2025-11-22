@@ -1,19 +1,24 @@
-using Mystira.App.Admin.Api.Models;
+using Mystira.App.Contracts.Requests.GameSessions;
+using Mystira.App.Contracts.Responses.GameSessions;
 using Mystira.App.Domain.Models;
+using ContractsStartGameSessionRequest = Mystira.App.Contracts.Requests.GameSessions.StartGameSessionRequest;
+using ContractsMakeChoiceRequest = Mystira.App.Contracts.Requests.GameSessions.MakeChoiceRequest;
+using ContractsGameSessionResponse = Mystira.App.Contracts.Responses.GameSessions.GameSessionResponse;
+using ContractsSessionStatsResponse = Mystira.App.Contracts.Responses.GameSessions.SessionStatsResponse;
 
 namespace Mystira.App.Admin.Api.Services;
 
 public interface IGameSessionApiService
 {
-    Task<GameSession> StartSessionAsync(StartGameSessionRequest request);
+    Task<GameSession> StartSessionAsync(ContractsStartGameSessionRequest request);
     Task<GameSession?> GetSessionAsync(string sessionId);
-    Task<List<GameSessionResponse>> GetSessionsByAccountAsync(string accountId);
-    Task<List<GameSessionResponse>> GetSessionsByProfileAsync(string profileId);
-    Task<GameSession?> MakeChoiceAsync(MakeChoiceRequest request);
+    Task<List<ContractsGameSessionResponse>> GetSessionsByAccountAsync(string accountId);
+    Task<List<ContractsGameSessionResponse>> GetSessionsByProfileAsync(string profileId);
+    Task<GameSession?> MakeChoiceAsync(ContractsMakeChoiceRequest request);
     Task<GameSession?> PauseSessionAsync(string sessionId);
     Task<GameSession?> ResumeSessionAsync(string sessionId);
     Task<GameSession?> EndSessionAsync(string sessionId);
-    Task<SessionStatsResponse?> GetSessionStatsAsync(string sessionId);
+    Task<ContractsSessionStatsResponse?> GetSessionStatsAsync(string sessionId);
     Task<List<SessionAchievement>> CheckAchievementsAsync(string sessionId);
     Task<GameSession?> SelectCharacterAsync(string sessionId, string characterId);
     Task<bool> DeleteSessionAsync(string sessionId);

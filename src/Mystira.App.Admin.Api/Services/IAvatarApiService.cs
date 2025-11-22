@@ -1,5 +1,8 @@
 using Mystira.App.Admin.Api.Models;
+using Mystira.App.Contracts.Responses.Media;
 using Mystira.App.Domain.Models;
+using ContractsAvatarResponse = Mystira.App.Contracts.Responses.Media.AvatarResponse;
+using ContractsAvatarConfigurationResponse = Mystira.App.Contracts.Responses.Media.AvatarConfigurationResponse;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -11,12 +14,12 @@ public interface IAvatarApiService
     /// <summary>
     /// Gets all avatar configurations
     /// </summary>
-    Task<AvatarResponse> GetAvatarsAsync();
+    Task<ContractsAvatarResponse> GetAvatarsAsync();
 
     /// <summary>
     /// Gets avatars for a specific age group
     /// </summary>
-    Task<AvatarConfigurationResponse?> GetAvatarsByAgeGroupAsync(string ageGroup);
+    Task<ContractsAvatarConfigurationResponse?> GetAvatarsByAgeGroupAsync(string ageGroup);
 
     /// <summary>
     /// Gets the avatar configuration file

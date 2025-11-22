@@ -5,9 +5,14 @@ using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.App.Contracts.Responses.Scenarios;
+using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Domain.Models;
 using CharacterMetadata = Mystira.App.Admin.Api.Models.CharacterMetadata;
 using ScenarioQueryRequest = Mystira.App.Contracts.Requests.Scenarios.ScenarioQueryRequest;
+using CreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;
+using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
+using ValidationErrorResponse = Mystira.App.Contracts.Responses.Common.ValidationErrorResponse;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
@@ -659,6 +664,12 @@ public class AdminController : Controller
                 {
                     return BadRequest(new { success = false, message = "Failed to create new scenario" });
                 }
+            }
+
+            // Null check to satisfy compiler's nullable reference type analysis
+            if (scenario == null)
+            {
+                return BadRequest(new { success = false, message = "Failed to process scenario" });
             }
 
             return Ok(new

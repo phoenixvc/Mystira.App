@@ -103,42 +103,91 @@ src/
 
 ## Implementation Plan
 
-### Phase 1: Foundation (Critical Fixes)
+### Phase 1: Foundation (Critical Fixes) ✅ COMPLETED
 1. ✅ Fix security warnings
-   - Update System.Text.Json to latest secure version
-   - Fix Configuration.Binder version mismatch
+   - ✅ Updated System.Text.Json from 8.0.4 → 9.0.0 (fixes NU1903)
+   - ✅ Fixed Microsoft.Extensions.Configuration.Binder version mismatch (NU1603)
 2. ✅ Create Contracts project
-   - Move DTOs from ApiModels.cs
-   - Create request/response models
-3. ✅ Fix code warnings
+   - ✅ Created `Mystira.App.Contracts` project
+   - ✅ Moved all DTOs from `ApiModels.cs` to `Contracts/Requests/` and `Contracts/Responses/`
+   - ✅ Organized DTOs by domain (Scenarios, GameSessions, UserProfiles, Auth, Badges, etc.)
+   - ✅ Updated all API controllers and services to use Contracts DTOs
+   - ✅ Deleted `Api.Api/Models/ApiModels.cs` (fully migrated)
+   - ⚠️ Kept `Admin.Api/Models/ApiModels.cs` temporarily (Admin-specific differences)
+3. ⏳ Fix code warnings (partially completed)
    - CS0109: Remove duplicate member declarations
    - CS8618: Add nullable annotations
    - CS8601: Add null checks
    - CS4014: Fix async warnings
    - CS0169: Remove unused fields
 
-### Phase 2: Repository Layer
-1. Create Infrastructure.Data project
-2. Define repository interfaces
-3. Implement repositories
-4. Replace direct DbContext usage
+### Phase 2: Repository Layer ✅ COMPLETED
+1. ✅ Created Infrastructure.Data project
+2. ✅ Defined repository interfaces (`IRepository<T>`, domain-specific interfaces)
+3. ✅ Implemented repositories for all entities:
+   - ✅ `GameSessionRepository`, `UserProfileRepository`, `AccountRepository`
+   - ✅ `ScenarioRepository`, `CharacterMapRepository`, `ContentBundleRepository`
+   - ✅ `BadgeConfigurationRepository`, `UserBadgeRepository`
+   - ✅ `PendingSignupRepository`
+   - ✅ File-based repositories (`MediaMetadataFileRepository`, `CharacterMediaMetadataFileRepository`, `CharacterMapFileRepository`, `AvatarConfigurationFileRepository`)
+   - ✅ `MediaAssetRepository` (in Api project to avoid circular dependencies)
+4. ✅ Implemented `UnitOfWork` pattern for transaction management
+5. ✅ Replaced direct DbContext usage in all services:
+   - ✅ `GameSessionApiService`, `UserProfileApiService`, `AccountApiService`
+   - ✅ `ScenarioApiService`, `CharacterMapApiService`, `ContentBundleService`
+   - ✅ `BadgeConfigurationApiService`, `UserBadgeApiService`
+   - ✅ `PasswordlessAuthService`, `MediaApiService`
+   - ✅ `AvatarApiService`, `MediaMetadataService`, `CharacterMediaMetadataService`, `CharacterMapFileService`
+6. ✅ Registered all repositories and UnitOfWork in DI containers (Api and Admin.Api)
 
-### Phase 3: Application Layer
-1. Create Application project
-2. Extract use cases from services
-3. Create application services
-4. Add mapping profiles
+### Phase 3: Application Layer 🔄 IN PROGRESS
+1. ✅ Created Application project (`Mystira.App.Application`)
+2. ✅ Created use cases for Scenarios:
+   - ✅ `GetScenariosUseCase` - Query scenarios with filtering and pagination
+   - ✅ `CreateScenarioUseCase` - Create scenarios with schema validation
+   - ✅ `UpdateScenarioUseCase` - Update scenarios with validation
+   - ✅ `DeleteScenarioUseCase` - Delete scenarios
+   - ✅ `ValidateScenarioUseCase` - Validate scenario business rules
+3. ✅ Created use cases for GameSessions:
+   - ✅ `CreateGameSessionUseCase` - Start new game sessions
+   - ✅ `MakeChoiceUseCase` - Handle choices in game sessions
+   - ✅ `ProgressSceneUseCase` - Progress to specific scenes
+4. ✅ Moved `ScenarioSchemaDefinitions` to `Application.Validation` (shared validation logic)
+5. ✅ Fixed circular dependencies (removed Application reference from Infrastructure.Data)
+6. ✅ Updated package versions (Microsoft.Extensions.Logging.Abstractions to 9.0.0)
+7. ⏳ Remaining use cases to create:
+   - `CreateUserProfileUseCase`
+   - `UpdateUserProfileUseCase`
+   - `GetUserProfileUseCase`
+   - `DeleteUserProfileUseCase`
+8. ⏳ Create application services (coordinate multiple use cases)
+9. ⏳ Add AutoMapper profiles for DTO ↔ Domain mapping
+10. ⏳ Update services to use use cases instead of direct repository access
+11. ⏳ Register use cases in DI containers
 
-### Phase 4: Refactor Large Files
-1. ApiClient.cs → Split into:
-   - BaseApiClient (common HTTP logic)
-   - ScenarioApiClient
-   - GameSessionApiClient
-   - UserProfileApiClient
-   - etc.
-2. MediaApiService.cs → Split by responsibility
-3. ScenarioApiService.cs → Move to Application layer
-4. ApiModels.cs → Move to Contracts project
+### Phase 4: Refactor Large Files ⏳ PENDING
+1. **ApiClient.cs (957 lines)** → Split into:
+   - `BaseApiClient` (common HTTP logic)
+   - `ScenarioApiClient`
+   - `GameSessionApiClient`
+   - `UserProfileApiClient`
+   - `MediaApiClient`
+   - `AuthApiClient`
+2. **MediaApiService.cs (555 lines)** → Split by responsibility:
+   - `MediaUploadService` (upload logic)
+   - `MediaMetadataService` (metadata management)
+   - `MediaTranscodingService` (transcoding logic)
+3. **ScenarioApiService.cs (692 lines)** → Refactor to use Application layer use cases:
+   - ✅ Use cases created: `CreateScenarioUseCase`, `UpdateScenarioUseCase`, `GetScenariosUseCase`, `DeleteScenarioUseCase`
+   - ⏳ Update `ScenarioApiService` to delegate to use cases
+   - ⏳ Remove business logic from service (move to use cases)
+4. **ScenarioRequestCreator.cs (727 lines)** → Consider:
+   - Extract validation logic to use cases
+   - Simplify mapping logic
+   - Consider AutoMapper for complex mappings
+5. **GameSessionApiService.cs** → Refactor to use Application layer use cases:
+   - ✅ Use cases created: `CreateGameSessionUseCase`, `MakeChoiceUseCase`, `ProgressSceneUseCase`
+   - ⏳ Update `GameSessionApiService` to delegate to use cases
 
 ### Phase 5: TypeScript Migration
 1. Set up TypeScript configuration
