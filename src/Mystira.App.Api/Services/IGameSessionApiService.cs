@@ -1,5 +1,5 @@
-using Mystira.App.Domain.Models;
 using Mystira.App.Api.Models;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Services;
 
@@ -21,4 +21,5 @@ public interface IGameSessionApiService
     Task<bool> DeleteSessionAsync(string sessionId);
     Task<List<GameSession>> GetSessionsForProfileAsync(string profileId);
     Task<int> GetActiveSessionsCountAsync();
+    Task<GameSession?> ProgressSessionSceneAsync(string sessionId, string newSceneId);
 }

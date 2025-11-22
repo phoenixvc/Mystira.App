@@ -1,17 +1,21 @@
-using Microsoft.EntityFrameworkCore;
-using Mystira.App.Domain.Models;
-using Mystira.App.Api.Data;
-using Mystira.App.Api.Models;
-using Mystira.App.Admin.Api.Validation;
-using NJsonSchema;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
+using Mystira.App.Admin.Api.Validation;
+using Mystira.App.Api.Models;
+using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
+using NJsonSchema;
 
 namespace Mystira.App.Api.Services;
 
 public class ScenarioApiService : IScenarioApiService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly IScenarioRepository _repository;
+    private readonly IAccountRepository _accountRepository;
+    private readonly IGameSessionRepository _gameSessionRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ScenarioApiService> _logger;
     private readonly IMediaApiService _mediaService;
     private readonly ICharacterMapFileService _characterService;
@@ -28,14 +32,20 @@ public class ScenarioApiService : IScenarioApiService
     };
 
     public ScenarioApiService(
-        MystiraAppDbContext context, 
+        IScenarioRepository repository,
+        IAccountRepository accountRepository,
+        IGameSessionRepository gameSessionRepository,
+        IUnitOfWork unitOfWork,
         ILogger<ScenarioApiService> logger,
         IMediaApiService mediaService,
         ICharacterMapFileService characterService,
         IMediaMetadataService mediaMetadataService,
         ICharacterMediaMetadataService characterMetadataService)
     {
-        _context = context;
+        _repository = repository;
+        _accountRepository = accountRepository;
+        _gameSessionRepository = gameSessionRepository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
         _mediaService = mediaService;
         _characterService = characterService;
@@ -45,7 +55,7 @@ public class ScenarioApiService : IScenarioApiService
 
     public async Task<ScenarioListResponse> GetScenariosAsync(ScenarioQueryRequest request)
     {
-        var query = _context.Scenarios.AsQueryable();
+        var query = _repository.GetQueryable();
 
         if (request.Difficulty.HasValue)
         {
@@ -133,8 +143,7 @@ public class ScenarioApiService : IScenarioApiService
 
     public async Task<Scenario?> GetScenarioByIdAsync(string id)
     {
-        return await _context.Scenarios
-            .FirstOrDefaultAsync(s => s.Id == id);
+        return await _repository.GetByIdAsync(id);
     }
 
     public async Task<Scenario> CreateScenarioAsync(CreateScenarioRequest request)
@@ -160,11 +169,11 @@ public class ScenarioApiService : IScenarioApiService
 
         await ValidateScenarioAsync(scenario);
 
-        _context.Scenarios.Add(scenario);
+        await _repository.AddAsync(scenario);
 
         try
         {
-            await _context.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
         }
         catch (Exception e)
         {
@@ -178,9 +187,11 @@ public class ScenarioApiService : IScenarioApiService
 
     public async Task<Scenario?> UpdateScenarioAsync(string id, CreateScenarioRequest request)
     {
-        var scenario = await _context.Scenarios.FirstOrDefaultAsync(s => s.Id == id);
+        var scenario = await _repository.GetByIdAsync(id);
         if (scenario == null)
+        {
             return null;
+        }
 
         ValidateAgainstSchema(request);
 
@@ -198,7 +209,8 @@ public class ScenarioApiService : IScenarioApiService
 
         await ValidateScenarioAsync(scenario);
 
-        await _context.SaveChangesAsync();
+        await _repository.UpdateAsync(scenario);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Updated scenario: {ScenarioId} - {Title}", scenario.Id, scenario.Title);
         return scenario;
@@ -206,12 +218,14 @@ public class ScenarioApiService : IScenarioApiService
 
     public async Task<bool> DeleteScenarioAsync(string id)
     {
-        var scenario = await _context.Scenarios.FirstOrDefaultAsync(s => s.Id == id);
+        var scenario = await _repository.GetByIdAsync(id);
         if (scenario == null)
+        {
             return false;
+        }
 
-        _context.Scenarios.Remove(scenario);
-        await _context.SaveChangesAsync();
+        await _repository.DeleteAsync(id);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Deleted scenario: {ScenarioId} - {Title}", scenario.Id, scenario.Title);
         return true;
@@ -219,7 +233,7 @@ public class ScenarioApiService : IScenarioApiService
 
     public async Task<List<Scenario>> GetScenariosByAgeGroupAsync(string ageGroup)
     {
-        var scenarios = await _context.Scenarios.ToListAsync();
+        var scenarios = (await _repository.GetAllAsync()).ToList();
 
         if (string.IsNullOrWhiteSpace(ageGroup))
         {
@@ -381,7 +395,7 @@ public class ScenarioApiService : IScenarioApiService
     public async Task<List<Scenario>> GetFeaturedScenariosAsync()
     {
         // Return a curated list of featured scenarios
-        return await _context.Scenarios
+        return await _repository.GetQueryable()
             .OrderBy(s => s.CreatedAt)
             .Take(6)
             .ToListAsync();
@@ -393,39 +407,57 @@ public class ScenarioApiService : IScenarioApiService
         {
             // Validate basic scenario structure
             if (string.IsNullOrWhiteSpace(scenario.Title))
+            {
                 throw new ScenarioValidationException("Scenario title cannot be empty");
-                
+            }
+
             if (string.IsNullOrWhiteSpace(scenario.Description))
+            {
                 throw new ScenarioValidationException("Scenario description cannot be empty");
+            }
 
             if (!scenario.Scenes.Any())
+            {
                 throw new ScenarioValidationException("Scenario must contain at least one scene");
+            }
 
             // Validate scene structure
             foreach (var scene in scenario.Scenes)
             {
                 if (string.IsNullOrWhiteSpace(scene.Id))
+                {
                     throw new ScenarioValidationException($"Scene is missing an ID (Title: {scene.Title})");
-                    
+                }
+
                 if (string.IsNullOrWhiteSpace(scene.Title))
+                {
                     throw new ScenarioValidationException($"Scene is missing a title (ID: {scene.Id})");
+                }
 
                 // Only choice scenes can have echo logs
                 if (scene.Type != SceneType.Choice && scene.Branches.Any(b => b.EchoLog != null))
+                {
                     throw new ScenarioValidationException($"Only choice scenes can have echo logs (Scene ID: {scene.Id})");
+                }
 
                 // Validate echo log values
                 foreach (var branch in scene.Branches.Where(b => b.EchoLog != null))
                 {
                     var echo = branch.EchoLog!;
                     if (echo.Strength < 0.1 || echo.Strength > 1.0)
+                    {
                         throw new ScenarioValidationException($"Echo log strength must be between 0.1 and 1.0 (Scene ID: {scene.Id}, Choice: {branch.Choice})");
+                    }
 
                     if (EchoType.Parse(echo.EchoType.Value) == null)
+                    {
                         throw new ScenarioValidationException($"Invalid echo type '{echo.EchoType}' (Scene ID: {scene.Id}, Choice: {branch.Choice})");
-                        
+                    }
+
                     if (string.IsNullOrWhiteSpace(echo.Description))
+                    {
                         throw new ScenarioValidationException($"Echo log description cannot be empty (Scene ID: {scene.Id}, Choice: {branch.Choice})");
+                    }
                 }
 
                 // Validate compass changes
@@ -433,10 +465,14 @@ public class ScenarioApiService : IScenarioApiService
                 {
                     var change = branch.CompassChange!;
                     if (change.Delta < -1.0 || change.Delta > 1.0)
+                    {
                         throw new ScenarioValidationException($"Compass change delta must be between -1.0 and 1.0 (Scene ID: {scene.Id}, Choice: {branch.Choice})");
+                    }
 
                     if (string.IsNullOrWhiteSpace(change.Axis))
+                    {
                         throw new ScenarioValidationException($"Compass axis cannot be empty (Scene ID: {scene.Id}, Choice: {branch.Choice})");
+                    }
 
                     if (!scenario.CoreAxes.Select(a => a.Value).Contains(change.Axis))
                     {
@@ -444,16 +480,18 @@ public class ScenarioApiService : IScenarioApiService
                         //throw new ScenarioValidationException($"Invalid compass axis '{change.Axis}' not defined in scenario (Scene ID: {scene.Id}, Choice: {branch.Choice})");
                     }
                 }
-                
+
                 // Validate branches have valid next scene IDs
                 foreach (var branch in scene.Branches)
                 {
                     // todo consider enforcing next scene ID is not END
                     // if (string.IsNullOrWhiteSpace(branch.NextSceneId))
                     //     throw new ScenarioValidationException($"Branch is missing next scene ID (Scene ID: {scene.Id}, Choice: {branch.Choice})");
-                        
+
                     if (branch.NextSceneId != "" && branch.NextSceneId != "END" && !scenario.Scenes.Any(s => s.Id == branch.NextSceneId))
+                    {
                         throw new ScenarioValidationException($"Branch references non-existent next scene ID '{branch.NextSceneId}' (Scene ID: {scene.Id}, Choice: {branch.Choice})");
+                    }
                 }
             }
 
@@ -581,7 +619,10 @@ public class ScenarioApiService : IScenarioApiService
         ScenarioReferenceValidation validation,
         bool includeMetadataValidation)
     {
-        if (string.IsNullOrEmpty(mediaId)) return;
+        if (string.IsNullOrEmpty(mediaId))
+        {
+            return;
+        }
 
         var mediaExists = allMedia.ContainsKey(mediaId);
         var hasMetadata = includeMetadataValidation && mediaMetadata?.Entries.Any(e => e.Id == mediaId) == true;
@@ -639,7 +680,7 @@ public class ScenarioApiService : IScenarioApiService
         foreach (var character in allCharacters.Values)
         {
             var characterNameLower = character.Name.ToLower();
-            
+
             // Check if character name appears in scene content
             if (sceneContent.Contains(characterNameLower))
             {
@@ -679,18 +720,16 @@ public class ScenarioApiService : IScenarioApiService
         try
         {
             _logger.LogInformation("Getting scenarios with game state for account: {AccountId}", accountId);
-            
-            var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == accountId);
+
+            var account = await _accountRepository.GetByIdAsync(accountId);
             if (account == null)
             {
                 _logger.LogWarning("Account not found: {AccountId}", accountId);
                 return new ScenarioGameStateResponse { Scenarios = new(), TotalCount = 0 };
             }
 
-            var allScenarios = await _context.Scenarios.ToListAsync();
-            var sessions = await _context.GameSessions
-                .Where(s => s.AccountId == accountId)
-                .ToListAsync();
+            var allScenarios = (await _repository.GetAllAsync()).ToList();
+            var sessions = (await _gameSessionRepository.GetByAccountIdAsync(accountId)).ToList();
 
             var scenariosWithState = new List<ScenarioWithGameState>();
 
@@ -737,8 +776,8 @@ public class ScenarioApiService : IScenarioApiService
                 });
             }
 
-            return new ScenarioGameStateResponse 
-            { 
+            return new ScenarioGameStateResponse
+            {
                 Scenarios = scenariosWithState,
                 TotalCount = scenariosWithState.Count
             };
@@ -756,5 +795,4 @@ public class ScenarioApiService : IScenarioApiService
         public ScenarioValidationException(string message) : base(message) { }
         public ScenarioValidationException(string message, Exception innerException) : base(message, innerException) { }
     }
-
 }

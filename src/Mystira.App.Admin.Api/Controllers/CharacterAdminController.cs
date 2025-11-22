@@ -1,8 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Mystira.App.Domain.Models;
+using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
@@ -34,8 +34,8 @@ public class CharacterAdminController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(new ErrorResponse 
-            { 
+            return NotFound(new ErrorResponse
+            {
                 Message = $"Character not found: {id}",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -43,8 +43,8 @@ public class CharacterAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating character: {CharacterId}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while updating character",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -64,8 +64,8 @@ public class CharacterAdminController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(new ErrorResponse 
-            { 
+            return NotFound(new ErrorResponse
+            {
                 Message = $"Character not found: {id}",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -73,8 +73,8 @@ public class CharacterAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting character: {CharacterId}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while deleting character",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -94,8 +94,8 @@ public class CharacterAdminController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -103,8 +103,8 @@ public class CharacterAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error adding character: {CharacterId}", character.Id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while adding character",
                 TraceId = HttpContext.TraceIdentifier
             });

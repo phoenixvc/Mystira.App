@@ -1,8 +1,9 @@
-using Mystira.App.Infrastructure.Azure.Services;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
-using Mystira.App.Api.Data;
+using Microsoft.EntityFrameworkCore;
 using Mystira.App.Api.Models;
+using Mystira.App.Api.Repositories;
+using Mystira.App.Infrastructure.Azure.Services;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 namespace Mystira.App.Api.Services;
 
@@ -11,11 +12,12 @@ namespace Mystira.App.Api.Services;
 /// </summary>
 public class MediaApiService : IMediaApiService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly IMediaAssetRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IAzureBlobService _blobStorageService;
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ILogger<MediaApiService> _logger;
-    
+
     private readonly Dictionary<string, string> _mimeTypeMap = new()
     {
         // Audio
@@ -42,12 +44,14 @@ public class MediaApiService : IMediaApiService
     };
 
     public MediaApiService(
-        MystiraAppDbContext context,
+        IMediaAssetRepository repository,
+        IUnitOfWork unitOfWork,
         IAzureBlobService blobStorageService,
         IMediaMetadataService mediaMetadataService,
         ILogger<MediaApiService> logger)
     {
-        _context = context;
+        _repository = repository;
+        _unitOfWork = unitOfWork;
         _blobStorageService = blobStorageService;
         _mediaMetadataService = mediaMetadataService;
         _logger = logger;
@@ -56,7 +60,7 @@ public class MediaApiService : IMediaApiService
     /// <inheritdoc />
     public async Task<MediaQueryResponse> GetMediaAsync(MediaQueryRequest request)
     {
-        var query = _context.MediaAssets.AsQueryable();
+        var query = _repository.GetQueryable();
 
         // Apply filters
         if (!string.IsNullOrEmpty(request.Search))
@@ -110,8 +114,7 @@ public class MediaApiService : IMediaApiService
     /// <inheritdoc />
     public async Task<MediaAsset?> GetMediaByIdAsync(string mediaId)
     {
-        return await _context.MediaAssets
-            .FirstOrDefaultAsync(m => m.MediaId == mediaId);
+        return await _repository.GetByMediaIdAsync(mediaId);
     }
 
     /// <inheritdoc />
@@ -121,7 +124,7 @@ public class MediaApiService : IMediaApiService
 
         // Validate that media metadata entry exists and resolve the media ID
         var resolvedMediaId = await ValidateAndResolveMediaId(mediaId, file.FileName);
-        
+
         // Check if media with this ID already exists
         var existingMedia = await GetMediaByIdAsync(resolvedMediaId);
         if (existingMedia != null)
@@ -131,7 +134,7 @@ public class MediaApiService : IMediaApiService
 
         // Calculate file hash
         var hash = await CalculateFileHashAsync(file);
-        
+
         // Upload to blob storage and get URL
         var url = await _blobStorageService.UploadMediaAsync(file.OpenReadStream(), file.FileName, file.ContentType ?? GetMimeType(file.FileName));
 
@@ -152,8 +155,8 @@ public class MediaApiService : IMediaApiService
             UpdatedAt = DateTime.UtcNow
         };
 
-        _context.MediaAssets.Add(mediaAsset);
-        await _context.SaveChangesAsync();
+        await _repository.AddAsync(mediaAsset);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Media uploaded successfully: {MediaId} at {Url}", resolvedMediaId, url);
 
@@ -241,18 +244,25 @@ public class MediaApiService : IMediaApiService
 
         // Update properties
         if (updateData.Description != null)
+        {
             mediaAsset.Description = updateData.Description;
+        }
 
         if (updateData.Tags != null)
+        {
             mediaAsset.Tags = updateData.Tags;
+        }
 
         if (!string.IsNullOrEmpty(updateData.MediaType))
+        {
             mediaAsset.MediaType = updateData.MediaType;
+        }
 
         mediaAsset.UpdatedAt = DateTime.UtcNow;
         mediaAsset.Version = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
 
-        await _context.SaveChangesAsync();
+        await _repository.UpdateAsync(mediaAsset);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Media updated successfully: {MediaId}", mediaId);
 
@@ -273,13 +283,13 @@ public class MediaApiService : IMediaApiService
             // Extract blob name from URL for deletion
             var uri = new Uri(mediaAsset.Url);
             var blobName = Path.GetFileName(uri.LocalPath);
-            
+
             // Delete from blob storage
             await _blobStorageService.DeleteMediaAsync(blobName);
 
             // Delete from database
-            _context.MediaAssets.Remove(mediaAsset);
-            await _context.SaveChangesAsync();
+            await _repository.DeleteAsync(mediaAsset.Id);
+            await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Media deleted successfully: {MediaId}", mediaId);
             return true;
@@ -303,10 +313,7 @@ public class MediaApiService : IMediaApiService
             return result;
         }
 
-        var existingMediaIds = await _context.MediaAssets
-            .Where(m => mediaReferences.Contains(m.MediaId))
-            .Select(m => m.MediaId)
-            .ToListAsync();
+        var existingMediaIds = (await _repository.GetMediaIdsAsync(mediaReferences)).ToList();
 
         result.ValidMediaIds = existingMediaIds;
         result.MissingMediaIds = mediaReferences.Except(existingMediaIds).ToList();
@@ -329,7 +336,7 @@ public class MediaApiService : IMediaApiService
     {
         var stats = new MediaUsageStats();
 
-        var allMedia = await _context.MediaAssets.ToListAsync();
+        var allMedia = (await _repository.GetAllAsync()).ToList();
 
         stats.TotalMediaFiles = allMedia.Count;
         stats.AudioFiles = allMedia.Count(m => m.MediaType == "audio");
@@ -391,16 +398,22 @@ public class MediaApiService : IMediaApiService
     private string DetectMediaTypeFromExtension(string fileName)
     {
         var extension = Path.GetExtension(fileName).ToLower();
-        
+
         if (new[] { ".mp3", ".wav", ".ogg", ".aac", ".m4a" }.Contains(extension))
+        {
             return "audio";
-        
+        }
+
         if (new[] { ".mp4", ".avi", ".mov", ".wmv", ".mkv" }.Contains(extension))
+        {
             return "video";
-        
+        }
+
         if (new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" }.Contains(extension))
+        {
             return "image";
-        
+        }
+
         return "unknown";
     }
 
@@ -425,12 +438,20 @@ public class MediaApiService : IMediaApiService
         const long gb = mb * 1024;
 
         if (bytes >= gb)
+        {
             return $"{bytes / (double)gb:F2} GB";
+        }
+
         if (bytes >= mb)
+        {
             return $"{bytes / (double)mb:F2} MB";
+        }
+
         if (bytes >= kb)
+        {
             return $"{bytes / (double)kb:F2} KB";
-        
+        }
+
         return $"{bytes} bytes";
     }
 
@@ -455,7 +476,7 @@ public class MediaApiService : IMediaApiService
             {
                 throw new InvalidOperationException($"No media metadata entry found for media ID '{mediaId}' or filename '{fileName}'. Please ensure the media metadata file contains an entry for this media before uploading.");
             }
-            
+
             // Return the resolved media ID from metadata
             mediaId = metadataEntry.Id;
         }
@@ -484,7 +505,7 @@ public class MediaApiService : IMediaApiService
 
             var stream = await response.Content.ReadAsStreamAsync();
             var fileName = Path.GetFileName(new Uri(mediaAsset.Url).LocalPath);
-            
+
             return (stream, mediaAsset.MimeType, fileName);
         }
         catch (Exception ex)

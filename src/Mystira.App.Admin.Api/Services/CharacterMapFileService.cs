@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Models;
 
@@ -44,7 +44,7 @@ public class CharacterMapFileService : ICharacterMapFileService
         try
         {
             characterMapFile.UpdatedAt = DateTime.UtcNow;
-            
+
             var existingFile = await _context.CharacterMapFiles.FirstOrDefaultAsync();
             if (existingFile != null)
             {
@@ -91,7 +91,7 @@ public class CharacterMapFileService : ICharacterMapFileService
         try
         {
             var characterMapFile = await GetCharacterMapFileAsync();
-            
+
             // Check if character already exists
             var existingCharacter = characterMapFile.Characters.FirstOrDefault(c => c.Id == character.Id);
             if (existingCharacter != null)
@@ -117,7 +117,7 @@ public class CharacterMapFileService : ICharacterMapFileService
         try
         {
             var characterMapFile = await GetCharacterMapFileAsync();
-            
+
             var existingCharacter = characterMapFile.Characters.FirstOrDefault(c => c.Id == characterId);
             if (existingCharacter == null)
             {
@@ -146,7 +146,7 @@ public class CharacterMapFileService : ICharacterMapFileService
         try
         {
             var characterMapFile = await GetCharacterMapFileAsync();
-            
+
             var existingCharacter = characterMapFile.Characters.FirstOrDefault(c => c.Id == characterId);
             if (existingCharacter == null)
             {
@@ -171,7 +171,7 @@ public class CharacterMapFileService : ICharacterMapFileService
         try
         {
             var characterMapFile = await GetCharacterMapFileAsync();
-            
+
             var exportData = new
             {
                 characters = characterMapFile.Characters
@@ -214,7 +214,7 @@ public class CharacterMapFileService : ICharacterMapFileService
             }
 
             var characterMapFile = await GetCharacterMapFileAsync();
-            
+
             foreach (var character in importedCharacters)
             {
                 var existingCharacter = characterMapFile.Characters.FirstOrDefault(c => c.Id == character.Id);

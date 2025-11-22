@@ -1,6 +1,6 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using System.Diagnostics;
 using Mystira.App.Api.Models;
 using Mystira.App.Api.Services;
 
@@ -28,7 +28,7 @@ public class HealthController : ControllerBase
     public async Task<ActionResult<HealthCheckResponse>> GetHealth()
     {
         var stopwatch = Stopwatch.StartNew();
-        
+
         try
         {
             var report = await _healthCheckService.CheckHealthAsync();
@@ -65,7 +65,7 @@ public class HealthController : ControllerBase
         {
             stopwatch.Stop();
             _logger.LogError(ex, "Error checking health status");
-            
+
             return StatusCode(503, new HealthCheckResponse
             {
                 Status = "Unhealthy",

@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
-using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
+using Mystira.App.Api.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 using YamlDotNet.Serialization;
 
 namespace Mystira.App.Api.Services;
@@ -11,12 +11,17 @@ namespace Mystira.App.Api.Services;
 /// </summary>
 public class CharacterMediaMetadataService : ICharacterMediaMetadataService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly ICharacterMediaMetadataFileRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<CharacterMediaMetadataService> _logger;
 
-    public CharacterMediaMetadataService(MystiraAppDbContext context, ILogger<CharacterMediaMetadataService> logger)
+    public CharacterMediaMetadataService(
+        ICharacterMediaMetadataFileRepository repository,
+        IUnitOfWork unitOfWork,
+        ILogger<CharacterMediaMetadataService> logger)
     {
-        _context = context;
+        _repository = repository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -27,7 +32,7 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
     {
         try
         {
-            var metadataFile = await _context.CharacterMediaMetadataFiles.FirstOrDefaultAsync();
+            var metadataFile = await _repository.GetAsync();
             return metadataFile ?? new CharacterMediaMetadataFile();
         }
         catch (Exception ex)
@@ -45,20 +50,10 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
         try
         {
             metadataFile.UpdatedAt = DateTime.UtcNow;
-            
-            var existingFile = await _context.CharacterMediaMetadataFiles.FirstOrDefaultAsync();
-            if (existingFile != null)
-            {
-                _context.Entry(existingFile).CurrentValues.SetValues(metadataFile);
-                existingFile.Entries = metadataFile.Entries;
-            }
-            else
-            {
-                await _context.CharacterMediaMetadataFiles.AddAsync(metadataFile);
-            }
 
-            await _context.SaveChangesAsync();
-            return metadataFile;
+            var result = await _repository.AddOrUpdateAsync(metadataFile);
+            await _unitOfWork.SaveChangesAsync();
+            return result;
         }
         catch (Exception ex)
         {
@@ -75,7 +70,7 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
         try
         {
             var metadataFile = await GetCharacterMediaMetadataFileAsync();
-            
+
             // Check if entry already exists
             var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entry.Id);
             if (existingEntry != null)
@@ -101,7 +96,7 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
         try
         {
             var metadataFile = await GetCharacterMediaMetadataFileAsync();
-            
+
             var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entryId);
             if (existingEntry == null)
             {
@@ -130,7 +125,7 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
         try
         {
             var metadataFile = await GetCharacterMediaMetadataFileAsync();
-            
+
             var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entryId);
             if (existingEntry == null)
             {
@@ -172,27 +167,27 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
         try
         {
             List<CharacterMediaMetadataEntry> importedEntries;
-            
+
             // Try to determine if data is JSON or YAML
             if (data.TrimStart().StartsWith('[') || data.TrimStart().StartsWith('{'))
             {
                 // JSON format
-                importedEntries = JsonSerializer.Deserialize<List<CharacterMediaMetadataEntry>>(data);
+                importedEntries = JsonSerializer.Deserialize<List<CharacterMediaMetadataEntry>>(data) ?? new List<CharacterMediaMetadataEntry>();
             }
             else
             {
                 // YAML format
                 var deserializer = new DeserializerBuilder().Build();
-                importedEntries = deserializer.Deserialize<List<CharacterMediaMetadataEntry>>(data);
+                importedEntries = deserializer.Deserialize<List<CharacterMediaMetadataEntry>>(data) ?? new List<CharacterMediaMetadataEntry>();
             }
-            
+
             if (importedEntries == null || importedEntries.Count == 0)
             {
                 throw new ArgumentException("No valid character media metadata entries found in data");
             }
 
             var metadataFile = await GetCharacterMediaMetadataFileAsync();
-            
+
             foreach (var entry in importedEntries)
             {
                 var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entry.Id);

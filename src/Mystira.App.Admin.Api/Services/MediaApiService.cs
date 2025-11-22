@@ -1,10 +1,10 @@
-using Mystira.App.Infrastructure.Azure.Services;
-using Microsoft.EntityFrameworkCore;
+using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
-using System.IO.Compression;
+using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Models;
+using Mystira.App.Infrastructure.Azure.Services;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -17,6 +17,7 @@ public class MediaApiService : IMediaApiService
     private readonly IAzureBlobService _blobStorageService;
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ILogger<MediaApiService> _logger;
+    private readonly IAudioTranscodingService _audioTranscodingService;
 
     private readonly Dictionary<string, string> _mimeTypeMap = new()
     {
@@ -26,6 +27,7 @@ public class MediaApiService : IMediaApiService
         { ".ogg", "audio/ogg" },
         { ".aac", "audio/aac" },
         { ".m4a", "audio/mp4" },
+        { ".waptt", "audio/ogg" },
         
         // Video
         { ".mp4", "video/mp4" },
@@ -47,12 +49,14 @@ public class MediaApiService : IMediaApiService
         MystiraAppDbContext context,
         IAzureBlobService blobStorageService,
         IMediaMetadataService mediaMetadataService,
-        ILogger<MediaApiService> logger)
+        ILogger<MediaApiService> logger,
+        IAudioTranscodingService audioTranscodingService)
     {
         _context = context;
         _blobStorageService = blobStorageService;
         _mediaMetadataService = mediaMetadataService;
         _logger = logger;
+        _audioTranscodingService = audioTranscodingService;
     }
 
     /// <inheritdoc />
@@ -131,11 +135,14 @@ public class MediaApiService : IMediaApiService
             throw new InvalidOperationException($"Media with ID '{resolvedMediaId}' already exists");
         }
 
-        // Calculate file hash
-        var hash = await CalculateFileHashAsync(file);
+        await using var processedStream = await PrepareMediaStreamAsync(file);
+
+        var fileSizeBytes = processedStream.Stream.Length;
+        var hash = await CalculateStreamHashAsync(processedStream.Stream);
+        processedStream.Stream.Position = 0;
 
         // Upload to blob storage and get URL
-        var url = await _blobStorageService.UploadMediaAsync(file.OpenReadStream(), file.FileName, file.ContentType ?? GetMimeType(file.FileName));
+        var url = await _blobStorageService.UploadMediaAsync(processedStream.Stream, processedStream.FileName, processedStream.ContentType);
 
         // Create media asset record
         var mediaAsset = new MediaAsset
@@ -144,8 +151,8 @@ public class MediaApiService : IMediaApiService
             MediaId = resolvedMediaId,
             Url = url,
             MediaType = mediaType,
-            MimeType = file.ContentType ?? GetMimeType(file.FileName),
-            FileSizeBytes = file.Length,
+            MimeType = processedStream.ContentType,
+            FileSizeBytes = fileSizeBytes,
             Description = description,
             Tags = tags ?? new List<string>(),
             Hash = hash,
@@ -243,13 +250,19 @@ public class MediaApiService : IMediaApiService
 
         // Update properties
         if (updateData.Description != null)
+        {
             mediaAsset.Description = updateData.Description;
+        }
 
         if (updateData.Tags != null)
+        {
             mediaAsset.Tags = updateData.Tags;
+        }
 
         if (!string.IsNullOrEmpty(updateData.MediaType))
+        {
             mediaAsset.MediaType = updateData.MediaType;
+        }
 
         mediaAsset.UpdatedAt = DateTime.UtcNow;
         mediaAsset.Version = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
@@ -372,7 +385,7 @@ public class MediaApiService : IMediaApiService
         var extension = Path.GetExtension(file.FileName).ToLower();
         var allowedExtensions = mediaType switch
         {
-            "audio" => new[] { ".mp3", ".wav", ".ogg", ".aac", ".m4a" },
+            "audio" => new[] { ".mp3", ".wav", ".ogg", ".aac", ".m4a", ".waptt" },
             "video" => new[] { ".mp4", ".avi", ".mov", ".wmv", ".mkv" },
             "image" => new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" },
             _ => new string[0]
@@ -394,14 +407,20 @@ public class MediaApiService : IMediaApiService
     {
         var extension = Path.GetExtension(fileName).ToLower();
 
-        if (new[] { ".mp3", ".wav", ".ogg", ".aac", ".m4a" }.Contains(extension))
+        if (new[] { ".mp3", ".wav", ".ogg", ".aac", ".m4a", ".waptt" }.Contains(extension))
+        {
             return "audio";
+        }
 
         if (new[] { ".mp4", ".avi", ".mov", ".wmv", ".mkv" }.Contains(extension))
+        {
             return "video";
+        }
 
         if (new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" }.Contains(extension))
+        {
             return "image";
+        }
 
         return "unknown";
     }
@@ -412,14 +431,6 @@ public class MediaApiService : IMediaApiService
         return _mimeTypeMap.TryGetValue(extension, out var mimeType) ? mimeType : "application/octet-stream";
     }
 
-    private async Task<string> CalculateFileHashAsync(IFormFile file)
-    {
-        using var stream = file.OpenReadStream();
-        using var sha256 = SHA256.Create();
-        var hashBytes = await Task.Run(() => sha256.ComputeHash(stream));
-        return Convert.ToBase64String(hashBytes);
-    }
-
     private string FormatBytes(long bytes)
     {
         const long kb = 1024;
@@ -427,13 +438,87 @@ public class MediaApiService : IMediaApiService
         const long gb = mb * 1024;
 
         if (bytes >= gb)
+        {
             return $"{bytes / (double)gb:F2} GB";
+        }
+
         if (bytes >= mb)
+        {
             return $"{bytes / (double)mb:F2} MB";
+        }
+
         if (bytes >= kb)
+        {
             return $"{bytes / (double)kb:F2} KB";
+        }
 
         return $"{bytes} bytes";
+    }
+
+    private async Task<ProcessedMediaStream> PrepareMediaStreamAsync(IFormFile file, CancellationToken cancellationToken = default)
+    {
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+
+        if (extension == ".waptt")
+        {
+            await using var sourceStream = file.OpenReadStream();
+            var conversion = await _audioTranscodingService.ConvertWhatsAppVoiceNoteAsync(sourceStream, file.FileName, cancellationToken);
+
+            if (conversion == null)
+            {
+                throw new InvalidOperationException($"Failed to convert WhatsApp audio file '{file.FileName}'. Ensure ffmpeg is available on the host.");
+            }
+
+            return new ProcessedMediaStream(conversion.Stream, conversion.FileName, conversion.ContentType, conversion);
+        }
+
+        var memoryStream = new MemoryStream();
+        await using (var sourceStream = file.OpenReadStream())
+        {
+            await sourceStream.CopyToAsync(memoryStream, cancellationToken);
+        }
+
+        memoryStream.Position = 0;
+        var contentType = !string.IsNullOrWhiteSpace(file.ContentType) ? file.ContentType : GetMimeType(file.FileName);
+        return new ProcessedMediaStream(memoryStream, file.FileName, contentType);
+    }
+
+    private static Task<string> CalculateStreamHashAsync(Stream stream)
+    {
+        if (!stream.CanSeek)
+        {
+            throw new InvalidOperationException("Stream must support seeking for hash calculation.");
+        }
+
+        stream.Position = 0;
+        using var sha256 = SHA256.Create();
+        var hashBytes = sha256.ComputeHash(stream);
+        stream.Position = 0;
+        return Task.FromResult(Convert.ToBase64String(hashBytes));
+    }
+
+    private sealed class ProcessedMediaStream : IAsyncDisposable
+    {
+        private readonly IDisposable? _additionalDisposable;
+
+        public ProcessedMediaStream(Stream stream, string fileName, string contentType, IDisposable? additionalDisposable = null)
+        {
+            Stream = stream;
+            FileName = fileName;
+            ContentType = contentType;
+            _additionalDisposable = additionalDisposable;
+        }
+
+        public Stream Stream { get; }
+        public string FileName { get; }
+        public string ContentType { get; }
+
+        public ValueTask DisposeAsync()
+        {
+            Stream.Dispose();
+            _additionalDisposable?.Dispose();
+            return ValueTask.CompletedTask;
+        }
     }
 
     /// <summary>
@@ -452,7 +537,16 @@ public class MediaApiService : IMediaApiService
         var metadataEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == mediaId);
         if (metadataEntry == null)
         {
-            metadataEntry = metadataFile.Entries.FirstOrDefault(e => e.FileName == fileName);
+            metadataEntry = metadataFile.Entries.FirstOrDefault(e =>
+                string.Equals(e.FileName, fileName, StringComparison.OrdinalIgnoreCase));
+
+            if (metadataEntry == null)
+            {
+                var fileNameStem = Path.GetFileNameWithoutExtension(fileName);
+                metadataEntry = metadataFile.Entries.FirstOrDefault(e =>
+                    string.Equals(Path.GetFileNameWithoutExtension(e.FileName), fileNameStem, StringComparison.OrdinalIgnoreCase));
+            }
+
             if (metadataEntry == null)
             {
                 throw new InvalidOperationException($"No media metadata entry found for media ID '{mediaId}' or filename '{fileName}'. Please ensure the media metadata file contains an entry for this media before uploading.");
@@ -509,7 +603,15 @@ public class MediaApiService : IMediaApiService
             }
 
             // Find metadata entry by filename
-            var metadataEntry = metadataFile.Entries.FirstOrDefault(e => e.FileName == fileName);
+            var metadataEntry = metadataFile.Entries.FirstOrDefault(e =>
+                string.Equals(e.FileName, fileName, StringComparison.OrdinalIgnoreCase));
+
+            if (metadataEntry == null)
+            {
+                var fileNameStem = Path.GetFileNameWithoutExtension(fileName);
+                metadataEntry = metadataFile.Entries.FirstOrDefault(e =>
+                    string.Equals(Path.GetFileNameWithoutExtension(e.FileName), fileNameStem, StringComparison.OrdinalIgnoreCase));
+            }
             if (metadataEntry == null)
             {
                 return null;

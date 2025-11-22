@@ -1,7 +1,7 @@
-using Mystira.App.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Models;
+using Mystira.App.Domain.Models;
 using YamlDotNet.Serialization;
 
 namespace Mystira.App.Admin.Api.Services;
@@ -20,14 +20,14 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
     public async Task<List<BadgeConfiguration>> GetAllBadgeConfigurationsAsync()
     {
         var badgeConfigs = await _context.BadgeConfigurations.ToListAsync();
-        
+
         // Initialize with default data if empty
         if (!badgeConfigs.Any())
         {
             await InitializeDefaultBadgeConfigurationsAsync();
             badgeConfigs = await _context.BadgeConfigurations.ToListAsync();
         }
-        
+
         return badgeConfigs;
     }
 
@@ -232,7 +232,7 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
         var yamlContent = await reader.ReadToEndAsync();
 
         var badgeConfigYaml = deserializer.Deserialize<BadgeConfigurationYaml>(yamlContent);
-        
+
         var importedBadgeConfigs = new List<BadgeConfiguration>();
 
         foreach (var yamlEntry in badgeConfigYaml.Badges)
@@ -261,7 +261,7 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
             {
                 _context.BadgeConfigurations.Remove(existing);
             }
-            
+
             _context.BadgeConfigurations.Add(badgeConfig);
             importedBadgeConfigs.Add(badgeConfig);
         }
@@ -274,7 +274,11 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
     private static IEnumerable<string> GetAllCoreAxisNames()
     {
         var filePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "Mystira.App.Domain", "Data", "CoreAxes.json");
-        if (!File.Exists(filePath)) return Array.Empty<string>();
+        if (!File.Exists(filePath))
+        {
+            return Array.Empty<string>();
+        }
+
         var json = File.ReadAllText(filePath);
         return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
     }

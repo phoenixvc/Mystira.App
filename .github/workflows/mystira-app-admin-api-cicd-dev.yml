@@ -1,19 +1,19 @@
-name: Mystira.App.Admin API CI/CD (dev only)
+name: Admin API CI/CD - Dev Environment
 
 on:
   push:
-    branches: [ dev ]
+    branches: [dev]
     paths:
-      - 'src/Mystira.App.Admin.Api/**'
-      - 'src/Mystira.App.Domain/**'
-      - '.github/workflows/ci-cd-admin.yml'
+      - "src/Mystira.App.Admin.Api/**"
+      - "src/Mystira.App.Domain/**"
+      - ".github/workflows/mystira-app-admin-api-cicd-dev.yml"
   pull_request:
-    branches: [ dev ]  # PRs targeting dev
-    types: [opened, synchronize, reopened]
+    branches: [dev] # PRs targeting dev
+    types: [opened, synchronize, reopened, closed]
     paths:
-      - 'src/Mystira.App.Admin.Api/**'
-      - 'src/Mystira.App.Domain/**'
-      - '.github/workflows/ci-cd-admin.yml'
+      - "src/Mystira.App.Admin.Api/**"
+      - "src/Mystira.App.Domain/**"
+      - ".github/workflows/mystira-app-admin-api-cicd-dev.yml"
   workflow_dispatch:
 
 permissions:
@@ -24,11 +24,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DOTNET_VERSION: '9.0.x'
-  AZURE_WEBAPP_NAME: 'dev-euw-app-mystora-admin-api'   # ✅ UPDATED
-  AZURE_WEBAPP_PACKAGE_PATH: './publish'
-  ARTIFACT_NAME: 'mystira-app-admin-api'
-  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_VERSION: "9.0.x"
+  AZURE_WEBAPP_NAME: "dev-euw-app-mystora-admin-api" # ✅ UPDATED
+  AZURE_WEBAPP_PACKAGE_PATH: "./publish"
+  ARTIFACT_NAME: "mystira-app-admin-api"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
 
   # Secret presence validation
   HAS_PUBLISH_PROFILE_DEV_ADMIN: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN != '' }}

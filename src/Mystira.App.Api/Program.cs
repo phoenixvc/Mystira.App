@@ -1,13 +1,16 @@
 using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Mystira.App.Api.Adapters;
 using Mystira.App.Api.Data;
 using Mystira.App.Api.Services;
 using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Mystira.App.Infrastructure.Azure.Services;
+using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,9 +67,15 @@ builder.Services.AddSwaggerGen(c =>
     c.CustomSchemaIds(type =>
     {
         if (type == typeof(Mystira.App.Domain.Models.CharacterMetadata))
+        {
             return "DomainCharacterMetadata";
+        }
+
         if (type == typeof(Mystira.App.Api.Models.CharacterMetadata))
+        {
             return "ApiCharacterMetadata";
+        }
+
         return type.Name;
     });
 });
@@ -89,6 +98,8 @@ else
 
 // Add Azure Infrastructure Services
 builder.Services.AddAzureBlobStorage(builder.Configuration);
+builder.Services.Configure<AudioTranscodingOptions>(builder.Configuration.GetSection(AudioTranscodingOptions.SectionName));
+builder.Services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingService>();
 
 // Register Content Bundle services
 builder.Services.AddScoped<IContentBundleService, ContentBundleService>();
@@ -184,7 +195,7 @@ builder.Services.AddAuthentication(options =>
         }
 
         options.TokenValidationParameters = validationParameters;
-        
+
         options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
         {
             OnAuthenticationFailed = context =>
@@ -203,6 +214,24 @@ builder.Services.AddAuthentication(options =>
     });
 
 builder.Services.AddAuthorization();
+
+// Register repositories
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>)); // Generic repository
+builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();
+builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
+builder.Services.AddScoped<IAccountRepository, AccountRepository>();
+builder.Services.AddScoped<IScenarioRepository, ScenarioRepository>();
+builder.Services.AddScoped<ICharacterMapRepository, CharacterMapRepository>();
+builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
+builder.Services.AddScoped<IBadgeConfigurationRepository, BadgeConfigurationRepository>();
+builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
+builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
+builder.Services.AddScoped<Mystira.App.Api.Repositories.IMediaAssetRepository, Mystira.App.Api.Repositories.MediaAssetRepository>();
+builder.Services.AddScoped<Mystira.App.Api.Repositories.IMediaMetadataFileRepository, Mystira.App.Api.Repositories.MediaMetadataFileRepository>();
+builder.Services.AddScoped<Mystira.App.Api.Repositories.ICharacterMediaMetadataFileRepository, Mystira.App.Api.Repositories.CharacterMediaMetadataFileRepository>();
+builder.Services.AddScoped<Mystira.App.Api.Repositories.ICharacterMapFileRepository, Mystira.App.Api.Repositories.CharacterMapFileRepository>();
+builder.Services.AddScoped<IAvatarConfigurationFileRepository, AvatarConfigurationFileRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Register application services
 builder.Services.AddScoped<IScenarioApiService, ScenarioApiService>();
@@ -236,8 +265,20 @@ builder.Services.AddCors(options =>
     options.AddPolicy(policyName, policy =>
     {
         var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string>()?.Split(',') ?? Array.Empty<string>();
-        policy.WithOrigins(allowedOrigins)
-              .AllowAnyHeader()
+        if (allowedOrigins.Length == 0)
+        {
+            // Fallback to default origins if configuration is not set
+            policy.WithOrigins(
+                "http://localhost:7000",
+                "https://localhost:7000",
+                "https://mystiraapp.azurewebsites.net",
+                "https://mystira.app");
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins);
+        }
+        policy.AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
     });

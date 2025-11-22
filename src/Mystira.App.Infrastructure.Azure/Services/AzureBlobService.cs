@@ -77,7 +77,7 @@ public class AzureBlobService : IAzureBlobService
             var blobClient = containerClient.GetBlobClient(blobName);
 
             var response = await blobClient.DeleteIfExistsAsync();
-            
+
             if (response.Value)
             {
                 _logger.LogInformation("Deleted media file: {BlobName}", blobName);

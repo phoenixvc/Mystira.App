@@ -1,4 +1,4 @@
-﻿
+
 using Microsoft.JSInterop;
 
 namespace Mystira.App.PWA.Services
@@ -23,7 +23,9 @@ namespace Mystira.App.PWA.Services
         public async ValueTask<string> GetOrCacheImageAsync(string mediaId, string imageUrl)
         {
             if (string.IsNullOrEmpty(mediaId) || string.IsNullOrEmpty(imageUrl))
+            {
                 return string.Empty;
+            }
 
             try
             {

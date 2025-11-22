@@ -8,36 +8,69 @@ public static class ScenarioRequestCreator
 {
     public static CreateScenarioRequest Create(Dictionary<object, object> scenarioData)
     {
-        if (!scenarioData.TryGetValue("title", out var title) )
+        if (!scenarioData.TryGetValue("title", out var title))
+        {
             throw new DataException("Scenario does not contain a title.");
-        if (!scenarioData.TryGetValue("description", out var description)) 
-            throw new DataException("Scenario does not contain a description.");
-        if (!scenarioData.TryGetValue("tags", out var tags)) 
-            throw new DataException("Scenario does not contain tags.");
-        if (!scenarioData.TryGetValue("difficulty", out var d)) 
-            throw new DataException("Scenario does not contain a difficulty.");
-        if(!Enum.TryParse<DifficultyLevel>((string)d, true, out var difficulty))
-            throw new DataException("Scenario does not contain a valid difficulty level.");
-        if (!scenarioData.TryGetValue("session_length", out var s)) 
-            throw new DataException("Scenario does not contain session_length.");
-        if (!Enum.TryParse<SessionLength>((string)s, true, out var sessionLength))
-            throw new DataException("Scenario does not contain a valid session_length.");
-        if (!scenarioData.TryGetValue("archetypes", out var archetypes)) 
-            throw new DataException("Scenario does not contain archetypes.");
-        if (!scenarioData.TryGetValue("age_group", out var ageGroup))
-            throw new DataException("Scenario does not contain age_group.");
-        if (!scenarioData.TryGetValue("minimum_age", out var minimumAge)) 
-            throw new DataException("Scenario does not contain minimum_age.");
+        }
 
-        var coreAxesRaw = scenarioData.GetValueOrDefault("core_axes") 
+        if (!scenarioData.TryGetValue("description", out var description))
+        {
+            throw new DataException("Scenario does not contain a description.");
+        }
+
+        if (!scenarioData.TryGetValue("tags", out var tags))
+        {
+            throw new DataException("Scenario does not contain tags.");
+        }
+
+        if (!scenarioData.TryGetValue("difficulty", out var d))
+        {
+            throw new DataException("Scenario does not contain a difficulty.");
+        }
+
+        if (!Enum.TryParse<DifficultyLevel>((string)d, true, out var difficulty))
+        {
+            throw new DataException("Scenario does not contain a valid difficulty level.");
+        }
+
+        if (!scenarioData.TryGetValue("session_length", out var s))
+        {
+            throw new DataException("Scenario does not contain session_length.");
+        }
+
+        if (!Enum.TryParse<SessionLength>((string)s, true, out var sessionLength))
+        {
+            throw new DataException("Scenario does not contain a valid session_length.");
+        }
+
+        if (!scenarioData.TryGetValue("archetypes", out var archetypes))
+        {
+            throw new DataException("Scenario does not contain archetypes.");
+        }
+
+        if (!scenarioData.TryGetValue("age_group", out var ageGroup))
+        {
+            throw new DataException("Scenario does not contain age_group.");
+        }
+
+        if (!scenarioData.TryGetValue("minimum_age", out var minimumAge))
+        {
+            throw new DataException("Scenario does not contain minimum_age.");
+        }
+
+        var coreAxesRaw = scenarioData.GetValueOrDefault("core_axes")
                           ?? scenarioData.GetValueOrDefault("compass_axes", new List<object>());
         if (!scenarioData.TryGetValue("characters", out var charactersObj) || charactersObj is not IList<object>)
+        {
             throw new DataException("Scenario does not contain characters.");
+        }
 
         var scenes = (List<object>)scenarioData.GetValueOrDefault("scenes", new List<object>());
         if (scenes.Count == 0)
+        {
             throw new Exception("Scenario does not contain any scenes.");
-            
+        }
+
         var coreAxesList = ToStringList(coreAxesRaw);
 
         // Convert to CreateScenarioRequest format
@@ -64,7 +97,7 @@ public static class ScenarioRequestCreator
     public static Scene ParseSceneFromDictionary(IDictionary<object, object> sceneDict)
     {
         var scene = new Scene();
-        
+
         // Parse required string properties (non-nullable)
         if (sceneDict.TryGetValue("id", out var idObj) && idObj != null)
         {
@@ -74,7 +107,7 @@ public static class ScenarioRequestCreator
         {
             throw new ArgumentException("Required field 'id' is missing or null in scene data");
         }
-        
+
         if (sceneDict.TryGetValue("title", out var titleObj) && titleObj != null)
         {
             scene.Title = titleObj.ToString() ?? string.Empty;
@@ -83,7 +116,7 @@ public static class ScenarioRequestCreator
         {
             throw new ArgumentException("Required field 'title' is missing or null in scene data");
         }
-        
+
         if (sceneDict.TryGetValue("description", out var descObj) && descObj != null)
         {
             scene.Description = descObj.ToString() ?? string.Empty;
@@ -92,16 +125,16 @@ public static class ScenarioRequestCreator
         {
             throw new ArgumentException("Required field 'description' is missing or null in scene data");
         }
-        
+
         // Parse next scene ID (nullable)
-        if (sceneDict.TryGetValue("nextSceneId", out var nextSceneObj) || 
+        if (sceneDict.TryGetValue("nextSceneId", out var nextSceneObj) ||
             sceneDict.TryGetValue("next_scene_id", out nextSceneObj) ||
             sceneDict.TryGetValue("next_scene", out nextSceneObj))
         {
             var nextSceneValue = nextSceneObj?.ToString();
             scene.NextSceneId = string.IsNullOrWhiteSpace(nextSceneValue) ? null : nextSceneValue;
         }
-        
+
         // Parse SceneType enum (non-nullable)
         if (sceneDict.TryGetValue("type", out var typeObj) && typeObj != null)
         {
@@ -115,9 +148,9 @@ public static class ScenarioRequestCreator
                 throw new ArgumentException($"Invalid scene type: '{typeStr}'");
             }
         }
-        
+
         // Parse difficulty (non-nullable, but has default value)
-        if (sceneDict.TryGetValue("difficulty", out var difficultyObj) && 
+        if (sceneDict.TryGetValue("difficulty", out var difficultyObj) &&
             difficultyObj != null && int.TryParse(difficultyObj.ToString(), out var difficulty))
         {
             scene.Difficulty = difficulty;
@@ -126,7 +159,7 @@ public static class ScenarioRequestCreator
         {
             scene.Difficulty = null;
         }
-        
+
         // Parse media references (nullable)
         if (sceneDict.TryGetValue("media", out var mediaObj) && mediaObj is Dictionary<object, object> mediaDict)
         {
@@ -140,7 +173,7 @@ public static class ScenarioRequestCreator
                 scene.Media = null;
             }
         }
-        
+
         // Parse branches (choices) - defaults to empty list if not found
         if (sceneDict.TryGetValue("branches", out var branchesObj) && branchesObj is IList<object> branchesList)
         {
@@ -162,7 +195,7 @@ public static class ScenarioRequestCreator
                 }
             }
         }
-        
+
         // Parse Echo Reveal References - defaults to empty list if not found
         if (sceneDict.TryGetValue("echo_reveals", out var schemaEchoRevealsObj) && schemaEchoRevealsObj is IList<object> schemaEchoReveals)
         {
@@ -174,7 +207,7 @@ public static class ScenarioRequestCreator
                 }
             }
         }
-        else if (sceneDict.TryGetValue("echoRevealReferences", out var legacyEchoRevealsObj) && 
+        else if (sceneDict.TryGetValue("echoRevealReferences", out var legacyEchoRevealsObj) &&
                  legacyEchoRevealsObj is IList<object> legacyEchoRevealsList)
         {
             foreach (var echoObj in legacyEchoRevealsList)
@@ -185,44 +218,49 @@ public static class ScenarioRequestCreator
                 }
             }
         }
-        
+
         return scene;
     }
 
     private static MediaReferences ParseMediaReferences(IDictionary<object, object> mediaDict)
     {
         var media = new MediaReferences();
-    
+
         // Check for Image field with various naming conventions
-        if (mediaDict.TryGetValue("image", out var imageObj) || 
+        if (mediaDict.TryGetValue("image", out var imageObj) ||
             mediaDict.TryGetValue("Image", out imageObj))
         {
             media.Image = imageObj?.ToString();
         }
-    
+
         // Check for Audio field with various naming conventions
         if (mediaDict.TryGetValue("audio", out var audioObj) ||
             mediaDict.TryGetValue("Audio", out audioObj))
         {
             media.Audio = audioObj?.ToString();
         }
-    
+
         // Check for Video field with various naming conventions
         if (mediaDict.TryGetValue("video", out var videoObj) ||
             mediaDict.TryGetValue("Video", out videoObj))
         {
             media.Video = videoObj?.ToString();
         }
-    
+
         return media;
     }
 
     private static ScenarioCharacter ParseCharacter(IDictionary<object, object> characterDict)
     {
         if (!characterDict.TryGetValue("id", out var idObj) || idObj == null)
+        {
             throw new ArgumentException("Required field 'id' is missing or null in character data");
+        }
+
         if (!characterDict.TryGetValue("name", out var nameObj) || nameObj == null)
+        {
             throw new ArgumentException("Required field 'name' is missing or null in character data");
+        }
 
         var character = new ScenarioCharacter
         {
@@ -241,7 +279,9 @@ public static class ScenarioRequestCreator
         }
 
         if (!characterDict.TryGetValue("metadata", out var metadataObj) || metadataObj is not IDictionary<object, object> metadataDict)
+        {
             throw new ArgumentException("Required field 'metadata' is missing or invalid in character data");
+        }
 
         character.Metadata = ParseCharacterMetadata(metadataDict);
 
@@ -262,15 +302,24 @@ public static class ScenarioRequestCreator
         };
 
         if (!metadataDict.TryGetValue("species", out var speciesObj) || speciesObj == null)
+        {
             throw new ArgumentException("Required field 'species' is missing or null in character metadata");
+        }
+
         metadata.Species = speciesObj.ToString() ?? string.Empty;
 
         if (!metadataDict.TryGetValue("age", out var ageObj) || ageObj == null || !int.TryParse(ageObj.ToString(), out var age))
+        {
             throw new ArgumentException("Required field 'age' is missing or invalid in character metadata");
+        }
+
         metadata.Age = age;
 
         if (!metadataDict.TryGetValue("backstory", out var backstoryObj) || backstoryObj == null)
+        {
             throw new ArgumentException("Required field 'backstory' is missing or null in character metadata");
+        }
+
         metadata.Backstory = backstoryObj.ToString() ?? string.Empty;
 
         return metadata;
@@ -300,13 +349,28 @@ public static class ScenarioRequestCreator
         return new List<string>();
     }
 
+    private static List<T> ToEnumList<T>(object? value) where T : StringEnum<T>
+    {
+        var results = new List<T>();
+        foreach (var entry in ToStringList(value))
+        {
+            var parsed = StringEnum<T>.Parse(entry);
+            if (parsed != null)
+            {
+                results.Add(parsed);
+            }
+        }
+
+        return results;
+    }
+
     private static Branch ParseBranch(IDictionary<object, object> branchDict)
     {
         var branch = new Branch();
-        
+
         // Parse required Choice field (replaces Text field)
-        if (branchDict.TryGetValue("choice", out var choiceObj) || 
-            branchDict.TryGetValue("text", out choiceObj) || 
+        if (branchDict.TryGetValue("choice", out var choiceObj) ||
+            branchDict.TryGetValue("text", out choiceObj) ||
             branchDict.TryGetValue("option", out choiceObj))
         {
             if (choiceObj != null)
@@ -322,9 +386,9 @@ public static class ScenarioRequestCreator
         {
             throw new ArgumentException("Required field 'choice'/'text' is missing in branch data");
         }
-        
+
         // Parse required NextSceneId field
-        if (branchDict.TryGetValue("nextSceneId", out var nextSceneObj) || 
+        if (branchDict.TryGetValue("nextSceneId", out var nextSceneObj) ||
             branchDict.TryGetValue("next_scene_id", out nextSceneObj) ||
             branchDict.TryGetValue("next_scene", out nextSceneObj))
         {
@@ -342,9 +406,9 @@ public static class ScenarioRequestCreator
         {
             throw new ArgumentException("Required field 'nextSceneId'/'next_scene' is missing in branch data");
         }
-        
+
         // Parse EchoLog if available
-        if (branchDict.TryGetValue("echoLog", out var echoLogObj) || 
+        if (branchDict.TryGetValue("echoLog", out var echoLogObj) ||
             branchDict.TryGetValue("echo_log", out echoLogObj))
         {
             if (echoLogObj is IDictionary<object, object> echoLogDict)
@@ -352,9 +416,9 @@ public static class ScenarioRequestCreator
                 branch.EchoLog = ParseEchoLog(echoLogDict);
             }
         }
-        
+
         // Parse CompassChange if available
-        if (branchDict.TryGetValue("compassChange", out var compassChangeObj) || 
+        if (branchDict.TryGetValue("compassChange", out var compassChangeObj) ||
             branchDict.TryGetValue("compass_change", out compassChangeObj) ||
             branchDict.TryGetValue("compass_impact", out compassChangeObj))
         {
@@ -363,7 +427,7 @@ public static class ScenarioRequestCreator
                 branch.CompassChange = ParseCompassChange(compassChangeDict);
             }
         }
-        
+
         return branch;
     }
 
@@ -373,9 +437,9 @@ public static class ScenarioRequestCreator
         {
             Timestamp = DateTime.UtcNow // Default to current UTC time
         };
-        
+
         // Parse EchoType (required)
-        if (echoLogDict.TryGetValue("echoType", out var echoTypeObj) || 
+        if (echoLogDict.TryGetValue("echoType", out var echoTypeObj) ||
             echoLogDict.TryGetValue("echo_type", out echoTypeObj) ||
             echoLogDict.TryGetValue("type", out echoTypeObj))
         {
@@ -383,7 +447,10 @@ public static class ScenarioRequestCreator
             {
                 var parsed = EchoType.Parse(echoTypeObj.ToString());
                 if (parsed == null)
+                {
                     throw new ArgumentException($"Invalid EchoType: {echoTypeObj}");
+                }
+
                 echoLog.EchoType = parsed;
             }
             else
@@ -395,9 +462,9 @@ public static class ScenarioRequestCreator
         {
             throw new ArgumentException("Required field 'echoType'/'type' is missing in echo log data");
         }
-        
+
         // Parse Description (required)
-        if (echoLogDict.TryGetValue("description", out var descObj) || 
+        if (echoLogDict.TryGetValue("description", out var descObj) ||
             echoLogDict.TryGetValue("message", out descObj) ||
             echoLogDict.TryGetValue("text", out descObj))
         {
@@ -414,13 +481,13 @@ public static class ScenarioRequestCreator
         {
             throw new ArgumentException("Required field 'description'/'message' is missing in echo log data");
         }
-        
+
         // Parse Strength (with validation)
-        if (echoLogDict.TryGetValue("strength", out var strengthObj) || 
+        if (echoLogDict.TryGetValue("strength", out var strengthObj) ||
             echoLogDict.TryGetValue("power", out strengthObj) ||
             echoLogDict.TryGetValue("intensity", out strengthObj))
         {
-            if (strengthObj != null && 
+            if (strengthObj != null &&
                 double.TryParse(strengthObj.ToString(), out double strength))
             {
                 // Validate strength is between 0.1 and 1.0
@@ -437,32 +504,32 @@ public static class ScenarioRequestCreator
             // Default to mid-range if not specified
             echoLog.Strength = 0.5;
         }
-        
+
         // Parse Timestamp if provided (otherwise use default UTC now)
-        if (echoLogDict.TryGetValue("timestamp", out var timestampObj) || 
+        if (echoLogDict.TryGetValue("timestamp", out var timestampObj) ||
             echoLogDict.TryGetValue("time", out timestampObj) ||
             echoLogDict.TryGetValue("date", out timestampObj))
         {
             if (timestampObj != null)
             {
                 var timestampStr = timestampObj.ToString();
-                if (!string.IsNullOrEmpty(timestampStr) && 
+                if (!string.IsNullOrEmpty(timestampStr) &&
                     DateTime.TryParse(timestampStr, out DateTime timestamp))
                 {
                     echoLog.Timestamp = timestamp;
                 }
             }
         }
-        
+
         return echoLog;
     }
 
     private static CompassChange ParseCompassChange(IDictionary<object, object> compassChangeDict)
     {
         var compassChange = new CompassChange();
-    
+
         // Parse Axis (required)
-        if (compassChangeDict.TryGetValue("axis", out var axisObj) || 
+        if (compassChangeDict.TryGetValue("axis", out var axisObj) ||
             compassChangeDict.TryGetValue("compass_axis", out axisObj) ||
             compassChangeDict.TryGetValue("value", out axisObj))
         {
@@ -479,14 +546,14 @@ public static class ScenarioRequestCreator
         {
             throw new ArgumentException("Required field 'axis' is missing in compass change data");
         }
-    
+
         // Parse Delta (required) with validation
-        if (compassChangeDict.TryGetValue("delta", out var deltaObj) || 
+        if (compassChangeDict.TryGetValue("delta", out var deltaObj) ||
             compassChangeDict.TryGetValue("change", out deltaObj) ||
             compassChangeDict.TryGetValue("impact", out deltaObj) ||
             compassChangeDict.TryGetValue("value", out deltaObj))
         {
-            if (deltaObj != null && 
+            if (deltaObj != null &&
                 double.TryParse(deltaObj.ToString(), out double delta))
             {
                 // Validate delta is between -1.0 and 1.0
@@ -507,16 +574,16 @@ public static class ScenarioRequestCreator
         {
             compassChange.DevelopmentalLink = devLinkObj?.ToString();
         }
-    
+
         return compassChange;
     }
 
     private static EchoReveal ParseEchoRevealReference(IDictionary<object, object> revealDict)
     {
         var reveal = new EchoReveal();
-    
+
         // Parse EchoType (required)
-        if (revealDict.TryGetValue("echoType", out var echoTypeObj) || 
+        if (revealDict.TryGetValue("echoType", out var echoTypeObj) ||
             revealDict.TryGetValue("echo_type", out echoTypeObj) ||
             revealDict.TryGetValue("type", out echoTypeObj))
         {
@@ -524,7 +591,10 @@ public static class ScenarioRequestCreator
             {
                 var parsed = EchoType.Parse(echoTypeObj.ToString());
                 if (parsed == null)
+                {
                     throw new ArgumentException($"Invalid EchoType: {echoTypeObj}");
+                }
+
                 reveal.EchoType = parsed;
             }
             else
@@ -536,13 +606,13 @@ public static class ScenarioRequestCreator
         {
             throw new ArgumentException("Required field 'echoType'/'type' is missing in echo reveal reference");
         }
-    
+
         // Parse MinStrength (required)
-        if (revealDict.TryGetValue("minStrength", out var minStrengthObj) || 
+        if (revealDict.TryGetValue("minStrength", out var minStrengthObj) ||
             revealDict.TryGetValue("min_strength", out minStrengthObj) ||
             revealDict.TryGetValue("threshold", out minStrengthObj))
         {
-            if (minStrengthObj != null && 
+            if (minStrengthObj != null &&
                 float.TryParse(minStrengthObj.ToString(), out float minStrength))
             {
                 reveal.MinStrength = Math.Clamp(minStrength, 0.1f, 1.0f);
@@ -558,9 +628,9 @@ public static class ScenarioRequestCreator
             // Default to 0.5 if not provided
             reveal.MinStrength = 0.5f;
         }
-    
+
         // Parse TriggerSceneId (required)
-        if (revealDict.TryGetValue("triggerSceneId", out var triggerSceneIdObj) || 
+        if (revealDict.TryGetValue("triggerSceneId", out var triggerSceneIdObj) ||
             revealDict.TryGetValue("trigger_scene_id", out triggerSceneIdObj) ||
             revealDict.TryGetValue("scene_id", out triggerSceneIdObj))
         {
@@ -577,9 +647,9 @@ public static class ScenarioRequestCreator
         {
             throw new ArgumentException("Required field 'triggerSceneId'/'scene_id' is missing in echo reveal reference");
         }
-    
+
         // Parse RevealMechanic (optional, default "none")
-        if (revealDict.TryGetValue("revealMechanic", out var revealMechanicObj) || 
+        if (revealDict.TryGetValue("revealMechanic", out var revealMechanicObj) ||
             revealDict.TryGetValue("reveal_mechanic", out revealMechanicObj) ||
             revealDict.TryGetValue("mechanic", out revealMechanicObj))
         {
@@ -593,22 +663,22 @@ public static class ScenarioRequestCreator
                 }
             }
         }
-    
+
         // Parse MaxAgeScenes (optional, default 10)
-        if (revealDict.TryGetValue("maxAgeScenes", out var maxAgeScenesObj) || 
+        if (revealDict.TryGetValue("maxAgeScenes", out var maxAgeScenesObj) ||
             revealDict.TryGetValue("max_age_scenes", out maxAgeScenesObj) ||
             revealDict.TryGetValue("max_age", out maxAgeScenesObj))
         {
-            if (maxAgeScenesObj != null && 
+            if (maxAgeScenesObj != null &&
                 int.TryParse(maxAgeScenesObj.ToString(), out int maxAgeScenes))
             {
                 // Ensure positive value
                 reveal.MaxAgeScenes = Math.Max(1, maxAgeScenes);
             }
         }
-    
+
         // Parse Required (optional, default false)
-        if (revealDict.TryGetValue("required", out var requiredObj) || 
+        if (revealDict.TryGetValue("required", out var requiredObj) ||
             revealDict.TryGetValue("is_required", out requiredObj) ||
             revealDict.TryGetValue("mandatory", out requiredObj))
         {
@@ -624,13 +694,13 @@ public static class ScenarioRequestCreator
                 }
             }
         }
-    
+
         return reveal;
     }
     private static SessionAchievement ParseSessionAchievement(IDictionary<object, object> achievementDict)
     {
         var achievement = new SessionAchievement();
-        
+
         // Parse required string properties
         if (achievementDict.TryGetValue("id", out var idObj) && idObj != null)
         {
@@ -640,7 +710,7 @@ public static class ScenarioRequestCreator
         {
             throw new ArgumentException("Required field 'id' is missing or null in session achievement data");
         }
-        
+
         if (achievementDict.TryGetValue("description", out var descObj) && descObj != null)
         {
             achievement.Description = descObj.ToString() ?? string.Empty;
@@ -649,7 +719,7 @@ public static class ScenarioRequestCreator
         {
             throw new ArgumentException("Required field 'description' is missing or null in session achievement data");
         }
-        
+
         return achievement;
     }
 }

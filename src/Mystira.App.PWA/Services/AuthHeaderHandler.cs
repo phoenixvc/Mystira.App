@@ -19,11 +19,11 @@ public class AuthHeaderHandler : DelegatingHandler
         {
             // Resolve IAuthService lazily to avoid circular dependency
             var authService = _serviceProvider.GetService<IAuthService>();
-            
+
             if (authService != null)
             {
                 var token = await authService.GetTokenAsync();
-                
+
                 if (!string.IsNullOrEmpty(token))
                 {
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);

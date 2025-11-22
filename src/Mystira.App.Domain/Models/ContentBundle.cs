@@ -1,4 +1,4 @@
-﻿namespace Mystira.App.Domain.Models;
+namespace Mystira.App.Domain.Models;
 
 public class ContentBundle
 {

@@ -1,22 +1,25 @@
-using Microsoft.EntityFrameworkCore;
-using Mystira.App.Domain.Models;
-using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
+using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 namespace Mystira.App.Api.Services;
 
 public class GameSessionApiService : IGameSessionApiService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly IGameSessionRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IScenarioApiService _scenarioService;
     private readonly ILogger<GameSessionApiService> _logger;
 
     public GameSessionApiService(
-        MystiraAppDbContext context,
+        IGameSessionRepository repository,
+        IUnitOfWork unitOfWork,
         IScenarioApiService scenarioService,
         ILogger<GameSessionApiService> logger)
     {
-        _context = context;
+        _repository = repository;
+        _unitOfWork = unitOfWork;
         _scenarioService = scenarioService;
         _logger = logger;
     }
@@ -26,26 +29,48 @@ public class GameSessionApiService : IGameSessionApiService
         // Validate scenario exists
         var scenario = await _scenarioService.GetScenarioByIdAsync(request.ScenarioId);
         if (scenario == null)
+        {
             throw new ArgumentException($"Scenario not found: {request.ScenarioId}");
+        }
 
         // Validate age appropriateness
         if (!IsAgeGroupCompatible(scenario.MinimumAge, request.TargetAgeGroup))
+        {
             throw new ArgumentException($"Scenario minimum age ({scenario.MinimumAge}) exceeds target age group ({request.TargetAgeGroup})");
+        }
+
+        // Check for existing active sessions for this scenario and account
+        var existingActiveSessions = (await _repository.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId)).ToList();
+
+        // Auto-complete any existing active sessions for this scenario
+        if (existingActiveSessions.Any())
+        {
+            _logger.LogInformation("Found {Count} existing active session(s) for scenario {ScenarioId} and account {AccountId}. Completing them.",
+                existingActiveSessions.Count, request.ScenarioId, request.AccountId);
+
+            foreach (var existingSession in existingActiveSessions)
+            {
+                existingSession.Status = SessionStatus.Completed;
+                existingSession.EndTime = DateTime.UtcNow;
+                existingSession.ElapsedTime = existingSession.EndTime.Value - existingSession.StartTime;
+                await _repository.UpdateAsync(existingSession);
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+        }
 
         // Check for existing InProgress session for this scenario and account
-        var existingSession = await _context.GameSessions
-            .FirstOrDefaultAsync(s => s.ScenarioId == request.ScenarioId 
-                && s.AccountId == request.AccountId 
-                && s.Status == SessionStatus.InProgress);
-        
-        if (existingSession != null)
+        var pausedSession = existingActiveSessions.FirstOrDefault(s => s.Status == SessionStatus.InProgress);
+
+        if (pausedSession != null)
         {
-            _logger.LogInformation("Found existing InProgress session {ExistingSessionId} for scenario {ScenarioId}, pausing it", 
-                existingSession.Id, request.ScenarioId);
-            
-            existingSession.Status = SessionStatus.Paused;
-            existingSession.IsPaused = true;
-            existingSession.PausedAt = DateTime.UtcNow;
+            _logger.LogInformation("Found existing InProgress session {ExistingSessionId} for scenario {ScenarioId}, pausing it",
+                pausedSession.Id, request.ScenarioId);
+
+            pausedSession.Status = SessionStatus.Paused;
+            pausedSession.IsPaused = true;
+            pausedSession.PausedAt = DateTime.UtcNow;
+            await _repository.UpdateAsync(pausedSession);
         }
 
         var session = new GameSession
@@ -74,121 +99,121 @@ public class GameSessionApiService : IGameSessionApiService
             };
         }
 
-        _context.GameSessions.Add(session);
-        await _context.SaveChangesAsync();
+        await _repository.AddAsync(session);
+        await _unitOfWork.SaveChangesAsync();
 
-        _logger.LogInformation("Started new game session: {SessionId} for Account: {AccountId}, Profile: {ProfileId}", 
+        _logger.LogInformation("Started new game session: {SessionId} for Account: {AccountId}, Profile: {ProfileId}",
             session.Id, session.AccountId, session.ProfileId);
         return session;
     }
 
     public async Task<GameSession?> GetSessionAsync(string sessionId)
     {
-        return await _context.GameSessions
-            .FirstOrDefaultAsync(s => s.Id == sessionId);
+        return await _repository.GetByIdAsync(sessionId);
     }
 
     public async Task<List<GameSessionResponse>> GetSessionsByAccountAsync(string accountId)
     {
-        return await _context.GameSessions
-            .Where(s => s.AccountId == accountId)
-            .OrderByDescending(s => s.StartTime)
-            .Select(s => new GameSessionResponse
-            {
-                Id = s.Id,
-                ScenarioId = s.ScenarioId,
-                AccountId = s.AccountId,
-                ProfileId = s.ProfileId,
-                PlayerNames = s.PlayerNames,
-                Status = s.Status,
-                CurrentSceneId = s.CurrentSceneId,
-                ChoiceCount = s.ChoiceHistory.Count,
-                EchoCount = s.EchoHistory.Count,
-                AchievementCount = s.Achievements.Count,
-                StartTime = s.StartTime,
-                EndTime = s.EndTime,
-                ElapsedTime = s.ElapsedTime,
-                IsPaused = s.IsPaused,
-                SceneCount = s.SceneCount,
-                TargetAgeGroup = s.TargetAgeGroupName
-            })
-            .ToListAsync();
+        var sessions = await _repository.GetByAccountIdAsync(accountId);
+        return sessions.Select(s => new GameSessionResponse
+        {
+            Id = s.Id,
+            ScenarioId = s.ScenarioId,
+            AccountId = s.AccountId,
+            ProfileId = s.ProfileId,
+            PlayerNames = s.PlayerNames,
+            Status = s.Status,
+            CurrentSceneId = s.CurrentSceneId,
+            ChoiceCount = s.ChoiceHistory.Count,
+            EchoCount = s.EchoHistory.Count,
+            AchievementCount = s.Achievements.Count,
+            StartTime = s.StartTime,
+            EndTime = s.EndTime,
+            ElapsedTime = s.ElapsedTime,
+            IsPaused = s.IsPaused,
+            SceneCount = s.SceneCount,
+            TargetAgeGroup = s.TargetAgeGroupName
+        }).ToList();
     }
 
     public async Task<List<GameSessionResponse>> GetSessionsByProfileAsync(string profileId)
     {
-        return await _context.GameSessions
-            .Where(s => s.ProfileId == profileId)
-            .OrderByDescending(s => s.StartTime)
-            .Select(s => new GameSessionResponse
-            {
-                Id = s.Id,
-                ScenarioId = s.ScenarioId,
-                AccountId = s.AccountId,
-                ProfileId = s.ProfileId,
-                PlayerNames = s.PlayerNames,
-                Status = s.Status,
-                CurrentSceneId = s.CurrentSceneId,
-                ChoiceCount = s.ChoiceHistory.Count,
-                EchoCount = s.EchoHistory.Count,
-                AchievementCount = s.Achievements.Count,
-                StartTime = s.StartTime,
-                EndTime = s.EndTime,
-                ElapsedTime = s.ElapsedTime,
-                IsPaused = s.IsPaused,
-                SceneCount = s.SceneCount,
-                TargetAgeGroup = s.TargetAgeGroupName
-            })
-            .ToListAsync();
+        var sessions = await _repository.GetByProfileIdAsync(profileId);
+        return sessions.Select(s => new GameSessionResponse
+        {
+            Id = s.Id,
+            ScenarioId = s.ScenarioId,
+            AccountId = s.AccountId,
+            ProfileId = s.ProfileId,
+            PlayerNames = s.PlayerNames,
+            Status = s.Status,
+            CurrentSceneId = s.CurrentSceneId,
+            ChoiceCount = s.ChoiceHistory.Count,
+            EchoCount = s.EchoHistory.Count,
+            AchievementCount = s.Achievements.Count,
+            StartTime = s.StartTime,
+            EndTime = s.EndTime,
+            ElapsedTime = s.ElapsedTime,
+            IsPaused = s.IsPaused,
+            SceneCount = s.SceneCount,
+            TargetAgeGroup = s.TargetAgeGroupName
+        }).ToList();
     }
 
     public async Task<List<GameSessionResponse>> GetInProgressSessionsAsync(string accountId)
     {
-        return await _context.GameSessions
-            .Where(s => s.AccountId == accountId && (s.Status == SessionStatus.InProgress || s.Status == SessionStatus.Paused))
-            .OrderByDescending(s => s.StartTime)
-            .Select(s => new GameSessionResponse
-            {
-                Id = s.Id,
-                ScenarioId = s.ScenarioId,
-                AccountId = s.AccountId,
-                ProfileId = s.ProfileId,
-                PlayerNames = s.PlayerNames,
-                Status = s.Status,
-                CurrentSceneId = s.CurrentSceneId,
-                ChoiceCount = s.ChoiceHistory.Count,
-                EchoCount = s.EchoHistory.Count,
-                AchievementCount = s.Achievements.Count,
-                StartTime = s.StartTime,
-                EndTime = s.EndTime,
-                ElapsedTime = s.ElapsedTime,
-                IsPaused = s.IsPaused,
-                SceneCount = s.SceneCount,
-                TargetAgeGroup = s.TargetAgeGroupName
-            })
-            .ToListAsync();
+        var sessions = await _repository.GetInProgressSessionsAsync(accountId);
+        return sessions.Select(s => new GameSessionResponse
+        {
+            Id = s.Id,
+            ScenarioId = s.ScenarioId,
+            AccountId = s.AccountId,
+            ProfileId = s.ProfileId,
+            PlayerNames = s.PlayerNames,
+            Status = s.Status,
+            CurrentSceneId = s.CurrentSceneId,
+            ChoiceCount = s.ChoiceHistory.Count,
+            EchoCount = s.EchoHistory.Count,
+            AchievementCount = s.Achievements.Count,
+            StartTime = s.StartTime,
+            EndTime = s.EndTime,
+            ElapsedTime = s.ElapsedTime,
+            IsPaused = s.IsPaused,
+            SceneCount = s.SceneCount,
+            TargetAgeGroup = s.TargetAgeGroupName
+        }).ToList();
     }
 
     public async Task<GameSession?> MakeChoiceAsync(MakeChoiceRequest request)
     {
         var session = await GetSessionAsync(request.SessionId);
         if (session == null)
+        {
             return null;
+        }
 
         if (session.Status != SessionStatus.InProgress)
+        {
             throw new InvalidOperationException("Cannot make choice in non-active session");
+        }
 
         var scenario = await _scenarioService.GetScenarioByIdAsync(session.ScenarioId);
         if (scenario == null)
+        {
             throw new InvalidOperationException("Scenario not found for session");
+        }
 
         var currentScene = scenario.Scenes.FirstOrDefault(s => s.Id == request.SceneId);
         if (currentScene == null)
+        {
             throw new ArgumentException("Scene not found in scenario");
+        }
 
         var branch = currentScene.Branches.FirstOrDefault(b => b.Choice == request.ChoiceText);
         if (branch == null)
+        {
             throw new ArgumentException("Choice not found in scene");
+        }
 
         // Record the choice
         var sessionChoice = new SessionChoice
@@ -223,7 +248,7 @@ public class GameSessionApiService : IGameSessionApiService
             var tracking = session.CompassValues[branch.CompassChange.Axis];
             tracking.CurrentValue += branch.CompassChange.Delta;
             tracking.CurrentValue = Math.Max(-2.0f, Math.Min(2.0f, tracking.CurrentValue)); // Clamp to [-2, 2]
-            
+
             var compassChange = new CompassChange
             {
                 Axis = branch.CompassChange.Axis,
@@ -252,9 +277,10 @@ public class GameSessionApiService : IGameSessionApiService
             session.EndTime = DateTime.UtcNow;
         }
 
-        await _context.SaveChangesAsync();
+        await _repository.UpdateAsync(session);
+        await _unitOfWork.SaveChangesAsync();
 
-        _logger.LogInformation("Choice made in session {SessionId}: {ChoiceText} -> {NextScene}", 
+        _logger.LogInformation("Choice made in session {SessionId}: {ChoiceText} -> {NextScene}",
             session.Id, request.ChoiceText, request.NextSceneId);
 
         return session;
@@ -264,16 +290,21 @@ public class GameSessionApiService : IGameSessionApiService
     {
         var session = await GetSessionAsync(sessionId);
         if (session == null)
+        {
             return null;
+        }
 
         if (session.Status != SessionStatus.InProgress)
+        {
             throw new InvalidOperationException("Can only pause sessions in progress");
+        }
 
         session.Status = SessionStatus.Paused;
         session.IsPaused = true;
         session.PausedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await _repository.UpdateAsync(session);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Paused session: {SessionId}", sessionId);
         return session;
@@ -283,16 +314,21 @@ public class GameSessionApiService : IGameSessionApiService
     {
         var session = await GetSessionAsync(sessionId);
         if (session == null)
+        {
             return null;
+        }
 
         if (session.Status != SessionStatus.Paused)
+        {
             throw new InvalidOperationException("Can only resume paused sessions");
+        }
 
         session.Status = SessionStatus.InProgress;
         session.IsPaused = false;
         session.PausedAt = null;
 
-        await _context.SaveChangesAsync();
+        await _repository.UpdateAsync(session);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Resumed session: {SessionId}", sessionId);
         return session;
@@ -302,14 +338,17 @@ public class GameSessionApiService : IGameSessionApiService
     {
         var session = await GetSessionAsync(sessionId);
         if (session == null)
+        {
             return null;
+        }
 
         session.Status = SessionStatus.Completed;
         session.EndTime = DateTime.UtcNow;
         session.ElapsedTime = session.EndTime.Value - session.StartTime;
         session.IsPaused = false;
 
-        await _context.SaveChangesAsync();
+        await _repository.UpdateAsync(session);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Ended session: {SessionId}", sessionId);
         return session;
@@ -319,18 +358,26 @@ public class GameSessionApiService : IGameSessionApiService
     {
         var session = await GetSessionAsync(request.SessionId);
         if (session == null)
+        {
             return null;
+        }
 
         if (session.Status != SessionStatus.InProgress && session.Status != SessionStatus.Paused)
+        {
             throw new InvalidOperationException("Can only progress scenes in active or paused sessions");
+        }
 
         var scenario = await _scenarioService.GetScenarioByIdAsync(session.ScenarioId);
         if (scenario == null)
+        {
             throw new InvalidOperationException("Scenario not found for session");
+        }
 
         var targetScene = scenario.Scenes.FirstOrDefault(s => s.Id == request.SceneId);
         if (targetScene == null)
+        {
             throw new ArgumentException("Scene not found in scenario");
+        }
 
         session.CurrentSceneId = request.SceneId;
         session.ElapsedTime = DateTime.UtcNow - session.StartTime;
@@ -343,7 +390,8 @@ public class GameSessionApiService : IGameSessionApiService
             session.PausedAt = null;
         }
 
-        await _context.SaveChangesAsync();
+        await _repository.UpdateAsync(session);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Progressed session {SessionId} to scene {SceneId}", request.SessionId, request.SceneId);
         return session;
@@ -353,7 +401,9 @@ public class GameSessionApiService : IGameSessionApiService
     {
         var session = await GetSessionAsync(sessionId);
         if (session == null)
+        {
             return null;
+        }
 
         var compassValues = session.CompassValues.ToDictionary(
             kvp => kvp.Key,
@@ -379,7 +429,9 @@ public class GameSessionApiService : IGameSessionApiService
     {
         var session = await GetSessionAsync(sessionId);
         if (session == null)
+        {
             return new List<SessionAchievement>();
+        }
 
         var achievements = new List<SessionAchievement>();
         // TODO: Replace with BadgeConfigurationApiService to get dynamic badge thresholds
@@ -452,10 +504,13 @@ public class GameSessionApiService : IGameSessionApiService
     {
         var session = await GetSessionAsync(sessionId);
         if (session == null)
+        {
             return false;
+        }
 
-        _context.GameSessions.Remove(session);
-        await _context.SaveChangesAsync();
+        await _repository.DeleteAsync(sessionId);
+        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Deleted session: {SessionId}", sessionId);
         return true;
@@ -463,12 +518,15 @@ public class GameSessionApiService : IGameSessionApiService
 
     public async Task<GameSession?> SelectCharacterAsync(string sessionId, string characterId)
     {
-        var session = await _context.GameSessions.FirstOrDefaultAsync(s => s.Id == sessionId);
+        var session = await _repository.GetByIdAsync(sessionId);
         if (session == null)
+        {
             return null;
+        }
 
         session.SelectedCharacterId = characterId;
-        await _context.SaveChangesAsync();
+        await _repository.UpdateAsync(session);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Selected character {CharacterId} for session {SessionId}", characterId, sessionId);
         return session;
@@ -482,16 +540,13 @@ public class GameSessionApiService : IGameSessionApiService
             // 1. By account ID (if the profile owner is the account holder)
             // 2. By player names (if the profile is a player)
             // 3. By a direct profile relationship (if we had such a field)
-            
+
             // For now, we'll search by matching the profile name with player names
             // This is a simplification - in practice, you might want to add a more direct relationship
-            
-            var sessions = await _context.GameSessions
-                .Where(s => s.ProfileId == profileId || s.PlayerNames.Contains(profileId))
-                .OrderByDescending(s => s.StartTime)
-                .ToListAsync();
 
-            return sessions;
+            var sessions = await _repository.GetByProfileIdAsync(profileId);
+
+            return sessions.ToList();
         }
         catch (Exception ex)
         {
@@ -543,13 +598,47 @@ public class GameSessionApiService : IGameSessionApiService
     {
         try
         {
-            return await _context.GameSessions
-                .CountAsync(s => s.Status == SessionStatus.InProgress || s.Status == SessionStatus.Paused);
+            return await _repository.GetActiveSessionsCountAsync();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting active sessions count");
             return 0;
+        }
+    }
+
+    public async Task<GameSession?> ProgressSessionSceneAsync(string sessionId, string newSceneId)
+    {
+        try
+        {
+            var session = await GetSessionAsync(sessionId);
+            if (session == null)
+            {
+                _logger.LogWarning("Session not found: {SessionId}", sessionId);
+                return null;
+            }
+
+            if (session.Status != SessionStatus.InProgress)
+            {
+                _logger.LogWarning("Cannot progress scene for session {SessionId} with status {Status}",
+                    sessionId, session.Status);
+                return null;
+            }
+
+            // Update the current scene
+            session.CurrentSceneId = newSceneId;
+            session.ElapsedTime = DateTime.UtcNow - session.StartTime;
+
+            await _repository.UpdateAsync(session);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Progressed session {SessionId} to scene {SceneId}", sessionId, newSceneId);
+            return session;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error progressing session {SessionId} to scene {SceneId}", sessionId, newSceneId);
+            return null;
         }
     }
 }
@@ -560,7 +649,9 @@ public static class StringExtensions
     public static string ToTitleCase(this string input)
     {
         if (string.IsNullOrEmpty(input))
+        {
             return input;
+        }
 
         var words = input.Split(' ', '_', '-');
         for (int i = 0; i < words.Length; i++)

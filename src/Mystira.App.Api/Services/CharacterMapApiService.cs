@@ -1,33 +1,38 @@
-using Mystira.App.Domain.Models;
-using Microsoft.EntityFrameworkCore;
-using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
+using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 using YamlDotNet.Serialization;
 
 namespace Mystira.App.Api.Services;
 
 public class CharacterMapApiService : ICharacterMapApiService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly ICharacterMapRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<CharacterMapApiService> _logger;
 
-    public CharacterMapApiService(MystiraAppDbContext context, ILogger<CharacterMapApiService> logger)
+    public CharacterMapApiService(
+        ICharacterMapRepository repository,
+        IUnitOfWork unitOfWork,
+        ILogger<CharacterMapApiService> logger)
     {
-        _context = context;
+        _repository = repository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
     public async Task<List<CharacterMap>> GetAllCharacterMapsAsync()
     {
-        var characterMaps = await _context.CharacterMaps.ToListAsync();
-        
+        var characterMaps = (await _repository.GetAllAsync()).ToList();
+
         // Initialize with default data if empty
         if (!characterMaps.Any())
         {
             await InitializeDefaultCharacterMapsAsync();
-            characterMaps = await _context.CharacterMaps.ToListAsync();
+            characterMaps = (await _repository.GetAllAsync()).ToList();
         }
-        
+
         return characterMaps;
     }
 
@@ -67,18 +72,19 @@ public class CharacterMapApiService : ICharacterMapApiService
             }
         };
 
-        _context.CharacterMaps.AddRange(elarion, grubb);
-        await _context.SaveChangesAsync();
+        await _repository.AddAsync(elarion);
+        await _repository.AddAsync(grubb);
+        await _unitOfWork.SaveChangesAsync();
     }
 
     public async Task<CharacterMap?> GetCharacterMapAsync(string id)
     {
-        return await _context.CharacterMaps.FirstOrDefaultAsync(cm => cm.Id == id);
+        return await _repository.GetByIdAsync(id);
     }
 
     public async Task<CharacterMap> CreateCharacterMapAsync(CreateCharacterMapRequest request)
     {
-        var existingCharacterMap = await _context.CharacterMaps.FirstOrDefaultAsync(cm => cm.Id == request.Id);
+        var existingCharacterMap = await _repository.GetByIdAsync(request.Id);
         if (existingCharacterMap != null)
         {
             throw new ArgumentException($"Character map with ID {request.Id} already exists");
@@ -95,8 +101,8 @@ public class CharacterMapApiService : ICharacterMapApiService
             UpdatedAt = DateTime.UtcNow
         };
 
-        _context.CharacterMaps.Add(characterMap);
-        await _context.SaveChangesAsync();
+        await _repository.AddAsync(characterMap);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Created character map {CharacterMapId}", characterMap.Id);
         return characterMap;
@@ -104,7 +110,7 @@ public class CharacterMapApiService : ICharacterMapApiService
 
     public async Task<CharacterMap?> UpdateCharacterMapAsync(string id, UpdateCharacterMapRequest request)
     {
-        var characterMap = await _context.CharacterMaps.FirstOrDefaultAsync(cm => cm.Id == id);
+        var characterMap = await _repository.GetByIdAsync(id);
         if (characterMap == null)
         {
             return null;
@@ -131,7 +137,8 @@ public class CharacterMapApiService : ICharacterMapApiService
         }
 
         characterMap.UpdatedAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
+        await _repository.UpdateAsync(characterMap);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Updated character map {CharacterMapId}", id);
         return characterMap;
@@ -139,14 +146,14 @@ public class CharacterMapApiService : ICharacterMapApiService
 
     public async Task<bool> DeleteCharacterMapAsync(string id)
     {
-        var characterMap = await _context.CharacterMaps.FirstOrDefaultAsync(cm => cm.Id == id);
+        var characterMap = await _repository.GetByIdAsync(id);
         if (characterMap == null)
         {
             return false;
         }
 
-        _context.CharacterMaps.Remove(characterMap);
-        await _context.SaveChangesAsync();
+        await _repository.DeleteAsync(id);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Deleted character map {CharacterMapId}", id);
         return true;
@@ -154,8 +161,8 @@ public class CharacterMapApiService : ICharacterMapApiService
 
     public async Task<string> ExportCharacterMapsAsYamlAsync()
     {
-        var characterMaps = await _context.CharacterMaps.ToListAsync();
-        
+        var characterMaps = (await _repository.GetAllAsync()).ToList();
+
         var characterMapYaml = new CharacterMapYaml
         {
             Characters = characterMaps.Select(cm => new CharacterMapYamlEntry
@@ -186,7 +193,7 @@ public class CharacterMapApiService : ICharacterMapApiService
         var yamlContent = await reader.ReadToEndAsync();
 
         var characterMapYaml = deserializer.Deserialize<CharacterMapYaml>(yamlContent);
-        
+
         var importedCharacterMaps = new List<CharacterMap>();
 
         foreach (var yamlEntry in characterMapYaml.Characters)
@@ -203,17 +210,17 @@ public class CharacterMapApiService : ICharacterMapApiService
             };
 
             // Check if it exists and update or add
-            var existing = await _context.CharacterMaps.FirstOrDefaultAsync(cm => cm.Id == characterMap.Id);
+            var existing = await _repository.GetByIdAsync(characterMap.Id);
             if (existing != null)
             {
-                _context.CharacterMaps.Remove(existing);
+                await _repository.DeleteAsync(characterMap.Id);
             }
-            
-            _context.CharacterMaps.Add(characterMap);
+
+            await _repository.AddAsync(characterMap);
             importedCharacterMaps.Add(characterMap);
         }
 
-        await _context.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync();
         _logger.LogInformation("Imported {Count} character maps from YAML", importedCharacterMaps.Count);
         return importedCharacterMaps;
     }
