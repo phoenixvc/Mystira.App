@@ -22,6 +22,7 @@
     "git": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-git"],
+      "cwd": "/path/to/Mystira.App",
       "description": "Git operations for version control"
     }
   },
