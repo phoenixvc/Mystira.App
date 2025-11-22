@@ -47,7 +47,7 @@ dotnet run
 
 #### Cosmos Console (Database Reporting)
 ```powershell
-cd Mystira.App.CosmosConsole
+cd src/Mystira.App.CosmosConsole
 dotnet run
 ```
 

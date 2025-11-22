@@ -27,7 +27,7 @@ public class MystiraAppDbContext : DbContext
     public DbSet<BadgeConfiguration> BadgeConfigurations { get; set; }
 
     // Media Management
-    public DbSet<MediaAsset> MediaAssets { get; set; }
+    public DbSet<Domain.Models.MediaAsset> MediaAssets { get; set; }
     public DbSet<MediaMetadataFile> MediaMetadataFiles { get; set; }
     public DbSet<CharacterMediaMetadataFile> CharacterMediaMetadataFiles { get; set; }
     public DbSet<CharacterMapFile> CharacterMapFiles { get; set; }
@@ -343,7 +343,7 @@ public class MystiraAppDbContext : DbContext
         });
 
         // Configure MediaAsset
-        modelBuilder.Entity<MediaAsset>(entity =>
+        modelBuilder.Entity<Domain.Models.MediaAsset>(entity =>
         {
             entity.HasKey(e => e.Id);
 
@@ -375,7 +375,7 @@ public class MystiraAppDbContext : DbContext
         });
 
         // Configure MediaAsset.Tags
-        modelBuilder.Entity<MediaAsset>()
+        modelBuilder.Entity<Domain.Models.MediaAsset>()
             .Property(m => m.Tags)
             .HasConversion(
                 v => string.Join(',', v),

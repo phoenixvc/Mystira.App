@@ -3,8 +3,8 @@ using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Contracts.Responses.Media;
 using Mystira.App.Domain.Models;
-using ContractsAvatarResponse = Mystira.App.Contracts.Responses.Media.AvatarResponse;
 using ContractsAvatarConfigurationResponse = Mystira.App.Contracts.Responses.Media.AvatarConfigurationResponse;
+using ContractsAvatarResponse = Mystira.App.Contracts.Responses.Media.AvatarResponse;
 
 namespace Mystira.App.Admin.Api.Services;
 

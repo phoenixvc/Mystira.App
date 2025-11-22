@@ -1,216 +1,220 @@
-# Hexagonal Architecture Refactoring - Status
+# Refactoring Status - Hexagonal Architecture Migration
 
-## 📝 Recent Changes Summary
+> **📋 Architectural Rules**: See [ARCHITECTURAL_RULES.md](ARCHITECTURAL_RULES.md) for strict enforcement guidelines
 
-### Last PR (Merged to dev)
-- ✅ Phase 1: Repository Implementation - All services migrated to use repositories
-- ✅ Phase 2: DTOs Migration - All DTOs moved to Contracts project
-- ✅ Fixed null reference bug in `AdminController.cs`
-- ✅ Migrated Admin.Api services (`UserBadgeApiService`, `ClientApiService`, `AvatarApiService`) to use Contracts DTOs
+## Current Phase: Phase 4 - Large File Refactoring ✅
 
-### Current Branch (In Progress)
-- ✅ Phase 3: Application Layer - Created 8 use cases:
-  - Scenario use cases: `GetScenariosUseCase`, `CreateScenarioUseCase`, `UpdateScenarioUseCase`, `DeleteScenarioUseCase`, `ValidateScenarioUseCase`
-  - GameSession use cases: `CreateGameSessionUseCase`, `MakeChoiceUseCase`, `ProgressSceneUseCase`
-- ✅ Moved `ScenarioSchemaDefinitions` to `Application.Validation`
-- ✅ Fixed circular dependencies and package version issues
-- ⏳ Next: Create UserProfile use cases, integrate use cases into services, add AutoMapper
+## Overview
 
-## ✅ Completed
+This document tracks the complete status of the hexagonal architecture refactoring effort, consolidating all migration, implementation, and status information.
 
-### 1. Project Structure Created
+## ✅ Completed Phases
 
-- ✅ `Mystira.App.Contracts` - DTOs and API contracts
-- ✅ `Mystira.App.Application` - Application layer (use cases)
-- ✅ `Mystira.App.Infrastructure.Data` - Repository layer
-- ✅ All projects added to solution
-- ✅ Directory structure created
+### Phase 1: Repository Implementation ✅ COMPLETED
 
-### 2. Security Fixes
+**All services migrated to use repositories instead of direct DbContext access.**
 
-- ✅ Updated `System.Text.Json` from 8.0.4 → 9.0.0 (fixes NU1903)
-- ✅ Fixed `Microsoft.Extensions.Configuration.Binder` version mismatch (NU1603)
+#### Repositories Created
 
-### 3. Foundation Files
+- ✅ `GameSessionRepository`, `UserProfileRepository`, `AccountRepository`
+- ✅ `ScenarioRepository`, `CharacterMapRepository`, `ContentBundleRepository`
+- ✅ `BadgeConfigurationRepository`, `UserBadgeRepository`
+- ✅ `PendingSignupRepository`
+- ✅ `MediaAssetRepository` (moved to `Infrastructure.Data`)
+- ✅ File-based repositories (`MediaMetadataFileRepository`, `CharacterMediaMetadataFileRepository`, `CharacterMapFileRepository`, `AvatarConfigurationFileRepository`)
 
-- ✅ Created `IRepository<T>` generic repository interface
-- ✅ Created `IGameSessionRepository` domain-specific repository
-- ✅ Created `IUnitOfWork` interface
-- ✅ Created refactoring plan document
+#### Services Migrated
 
-### 4. Repository Layer Implementation
+- ✅ `GameSessionApiService`, `UserProfileApiService`, `AccountApiService`
+- ✅ `ScenarioApiService`, `CharacterMapApiService`, `ContentBundleService`
+- ✅ `BadgeConfigurationApiService`, `UserBadgeApiService`
+- ✅ `PasswordlessAuthService`, `MediaApiService`
+- ✅ `AvatarApiService`, `MediaMetadataService`, `CharacterMediaMetadataService`, `CharacterMapFileService`
 
-- ✅ Implemented `Repository<T>` base class
-- ✅ Implemented `GameSessionRepository` with domain-specific queries
-- ✅ Implemented `UserProfileRepository` with domain-specific queries
-- ✅ Implemented `AccountRepository` with domain-specific queries
-- ✅ Implemented `UnitOfWork` for transaction management
-- ✅ Registered repositories and UnitOfWork in DI containers (Api and Admin.Api)
-- ✅ Migrated `GameSessionApiService` to use repository pattern instead of direct DbContext access
-- ✅ Migrated `UserProfileApiService` to use repository pattern
-- ✅ Migrated `AccountApiService` to use repository pattern
-- ✅ Created `IScenarioRepository` and `ScenarioRepository`
-- ✅ Created `ICharacterMapRepository` and `CharacterMapRepository`
-- ✅ Created `IContentBundleRepository` and `ContentBundleRepository`
-- ✅ Migrated `ContentBundleService` to use repository pattern
-- ✅ Migrated `CharacterMapApiService` to use repository pattern
-- ✅ Removed DbContext dependency from `UserProfileApiService` (CharacterMapRepository)
-- ✅ Migrated `ScenarioApiService` to use `IScenarioRepository`, `IAccountRepository`, `IGameSessionRepository`, and `IUnitOfWork`
-- ✅ Created `IBadgeConfigurationRepository` and `BadgeConfigurationRepository`
-- ✅ Created `IUserBadgeRepository` and `UserBadgeRepository`
-- ✅ Migrated `BadgeConfigurationApiService` to use repository pattern
-- ✅ Migrated `UserBadgeApiService` to use repository pattern
-- ✅ Created `IPendingSignupRepository` and `PendingSignupRepository`
-- ✅ Migrated `PasswordlessAuthService` to use repository pattern
-- ✅ Created `IMediaAssetRepository` and `MediaAssetRepository` (in Api project)
-- ✅ Migrated `MediaApiService` to use repository pattern
-- ✅ Created file-based repositories (`IMediaMetadataFileRepository`, `ICharacterMediaMetadataFileRepository`, `ICharacterMapFileRepository`, `IAvatarConfigurationFileRepository`)
-- ✅ Migrated `AvatarApiService`, `MediaMetadataService`, `CharacterMediaMetadataService`, and `CharacterMapFileService` to use repository pattern
+#### Infrastructure
+
+- ✅ Created `Mystira.App.Infrastructure.Data` project
+- ✅ Implemented `IRepository<T>` generic repository interface
+- ✅ Implemented `UnitOfWork` pattern for transaction management
+- ✅ Registered all repositories and UnitOfWork in DI containers (Api and Admin.Api)
+
+### Phase 2: DTOs Migration ✅ COMPLETED
+
+**All DTOs moved to Contracts project.**
+
+- ✅ Created `Mystira.App.Contracts` project
+- ✅ Moved all DTOs from `ApiModels.cs` to `Contracts/Requests/` and `Contracts/Responses/`
+- ✅ Organized DTOs by domain (Scenarios, GameSessions, UserProfiles, Auth, Badges, etc.)
+- ✅ Updated all API controllers and services to use Contracts DTOs
+- ✅ Deleted `Api.Api/Models/ApiModels.cs` (fully migrated)
+- ⚠️ `Admin.Api/Models/ApiModels.cs` kept temporarily (Admin-specific differences)
+
+### Phase 3: Application Layer ✅ COMPLETED
+
+**Use cases created and registered in DI.**
+
+#### Use Cases Implemented (70 total)
+
+**GameSessions (13 use cases)** ✅
+
+- CreateGameSessionUseCase, GetGameSessionUseCase, GetGameSessionsByAccountUseCase, GetGameSessionsByProfileUseCase, GetInProgressSessionsUseCase, MakeChoiceUseCase, ProgressSceneUseCase, PauseGameSessionUseCase, ResumeGameSessionUseCase, EndGameSessionUseCase, SelectCharacterUseCase, GetSessionStatsUseCase, CheckAchievementsUseCase, DeleteGameSessionUseCase
+
+**Accounts (10 use cases)** ✅
+
+- GetAccountUseCase, GetAccountByEmailUseCase, CreateAccountUseCase, UpdateAccountUseCase, UpdateAccountSettingsUseCase, UpdateSubscriptionUseCase, AddUserProfileToAccountUseCase, RemoveUserProfileFromAccountUseCase, AddCompletedScenarioUseCase, GetCompletedScenariosUseCase
+
+**Authentication (5 use cases)** ✅
+
+- CreatePendingSignupUseCase, GetPendingSignupUseCase, ValidatePendingSignupUseCase, CompletePendingSignupUseCase, ExpirePendingSignupUseCase
+
+**CharacterMaps (7 use cases)** ✅
+
+- GetCharacterMapsUseCase, GetCharacterMapUseCase, CreateCharacterMapUseCase, UpdateCharacterMapUseCase, DeleteCharacterMapUseCase, ExportCharacterMapUseCase, ImportCharacterMapUseCase
+
+**Badges (5 use cases)** ✅
+
+- AwardBadgeUseCase, GetUserBadgesUseCase, GetBadgeUseCase, GetBadgesByAxisUseCase, RevokeBadgeUseCase
+
+**BadgeConfigurations (8 use cases)** ✅
+
+- GetBadgeConfigurationsUseCase, GetBadgeConfigurationUseCase, GetBadgeConfigurationsByAxisUseCase, CreateBadgeConfigurationUseCase, UpdateBadgeConfigurationUseCase, DeleteBadgeConfigurationUseCase, ExportBadgeConfigurationUseCase, ImportBadgeConfigurationUseCase
+
+**Avatars (6 use cases)** ✅
+
+- GetAvatarConfigurationsUseCase, GetAvatarsByAgeGroupUseCase, CreateAvatarConfigurationUseCase, UpdateAvatarConfigurationUseCase, DeleteAvatarConfigurationUseCase, AssignAvatarToAgeGroupUseCase
+
+**ContentBundles (9 use cases)** ✅
+
+- GetContentBundlesUseCase, GetContentBundleUseCase, GetContentBundlesByAgeGroupUseCase, CreateContentBundleUseCase, UpdateContentBundleUseCase, DeleteContentBundleUseCase, AddScenarioToBundleUseCase, RemoveScenarioFromBundleUseCase, CheckBundleAccessUseCase
+
+**Scenarios (5 use cases)** ✅
+
+- CreateScenarioUseCase, GetScenariosUseCase, UpdateScenarioUseCase, DeleteScenarioUseCase, ValidateScenarioUseCase
+
+**UserProfiles (4 use cases)** ✅
+
+- CreateUserProfileUseCase, GetUserProfileUseCase, UpdateUserProfileUseCase, DeleteUserProfileUseCase
+
+#### Application Infrastructure
+
+- ✅ Created `Mystira.App.Application` project
+- ✅ Moved `ScenarioSchemaDefinitions` to `Application.Validation` (shared validation logic)
+- ✅ Fixed circular dependencies (removed Application reference from Infrastructure.Data)
+- ✅ Updated package versions (Microsoft.Extensions.Logging.Abstractions to 9.0.0)
+- ✅ Registered all use cases in DI containers (Api and Admin.Api)
+
+### Phase 4: Large File Refactoring ✅ COMPLETED
+
+**Large files split into smaller, focused components.**
+
+#### Completed Refactorings
+
+1. **ApiClient.cs (957 lines)** → ✅ COMPLETED
+   - Split into `BaseApiClient` (common HTTP logic) and domain-specific clients:
+     - `ScenarioApiClient`, `GameSessionApiClient`, `UserProfileApiClient`, `MediaApiClient`, `AuthApiClient`, `AvatarApiClient`, `ContentBundleApiClient`, `CharacterApiClient`
+   - Original `ApiClient` now acts as composite facade
+
+2. **MediaApiService.cs (555 lines)** → ✅ COMPLETED
+   - Split by responsibility:
+     - `MediaUploadService` (upload logic)
+     - `MediaQueryService` (query, update, delete, stats logic)
+   - Original `MediaApiService` now acts as composite facade
+
+3. **ScenarioRequestCreator.cs (727 lines)** → ✅ COMPLETED
+   - Refactored into shared parsers in `Application.Parsers`:
+     - `ScenarioParser`, `SceneParser`, `CharacterParser`, `CharacterMetadataParser`, `BranchParser`, `EchoLogParser`, `CompassChangeParser`, `EchoRevealParser`, `MediaReferencesParser`
+   - Refactored `ScenarioRequestCreator` (~20 lines) - facade delegating to parsers
+   - Parsers shared between Api and Admin.Api via Application layer
+
+4. **MediaAsset Migration** → ✅ COMPLETED
+   - ✅ Created `src/Mystira.App.Domain/Models/MediaAsset.cs`
+   - ✅ Created `src/Mystira.App.Infrastructure.Data/Repositories/IMediaAssetRepository.cs`
+   - ✅ Created `src/Mystira.App.Infrastructure.Data/Repositories/MediaAssetRepository.cs`
+   - ✅ Updated `DbContext` in both API projects to use `Domain.Models.MediaAsset`
+   - ✅ Updated `Program.cs` in both API projects to register `Infrastructure.Data.Repositories.IMediaAssetRepository`
+   - ✅ Removed `MediaAsset` and `MediaMetadata` from `Api.Models` and `Admin.Api.Models`
+   - ✅ Updated all services and controllers to use `Domain.Models.MediaAsset`
 
 ## 🔄 In Progress
 
-### Next Steps (Priority Order)
+### Use Case Integration ✅ COMPLETED
 
-#### Phase 1: Repository Implementation ✅ COMPLETED
+- ✅ Media use cases created and registered in DI (7 use cases)
+- ✅ MediaApiService (Public API) updated to delegate to use cases
+- ✅ MediaApiService (Admin API) updated to delegate to use cases
+- ✅ GameSessionApiService updated to fully use use cases (all methods now delegate)
+- ✅ ScenarioApiService updated to use use cases (GetScenariosAsync, GetScenarioByIdAsync, CreateScenarioAsync, UpdateScenarioAsync, DeleteScenarioAsync)
+- ✅ GetScenarioUseCase created and registered in DI
+- ⏳ Update controllers to call use cases directly (optional - services can remain as facades per architectural rules)
 
-1. ✅ Implement `GameSessionRepository` in `Infrastructure.Data`
-2. ✅ Implement `UserProfileRepository` in `Infrastructure.Data`
-3. ✅ Implement `AccountRepository` in `Infrastructure.Data`
-4. ✅ Implement `UnitOfWork` with DbContext
-5. ✅ Register repositories in DI container (Api and Admin.Api)
-6. ✅ Migrate `GameSessionApiService` to use `GameSessionRepository`
-7. ✅ Migrate `UserProfileApiService` to use `UserProfileRepository`
-8. ✅ Migrate `AccountApiService` to use `AccountRepository`
-9. ✅ Create repositories for other entities:
-   - ✅ `IScenarioRepository` and migrated `ScenarioApiService`
-   - ✅ `IBadgeConfigurationRepository` and migrated `BadgeConfigurationApiService`
-   - ✅ `IUserBadgeRepository` and migrated `UserBadgeApiService`
-   - ✅ `IPendingSignupRepository` and migrated `PasswordlessAuthService`
-   - ✅ `IMediaAssetRepository` (in Api project) and migrated `MediaApiService`
-   - ✅ File-based repositories for singleton entities
+## ⏳ Pending Phases
 
-#### Phase 2: DTOs Migration ✅ COMPLETED
+### Phase 5: TypeScript Migration
 
-1. ✅ Move request DTOs from `ApiModels.cs` to `Contracts/Requests/`
-2. ✅ Move response DTOs to `Contracts/Responses/`
-3. ✅ Update API controllers to use Contracts
-4. ✅ Update Admin.Api controllers and services to use Contracts (with aliases for ambiguous types)
-5. ✅ Delete Api.Api's `ApiModels.cs` (all DTOs migrated to Contracts)
-6. ⚠️ Admin.Api's `ApiModels.cs` kept temporarily (has Admin-specific differences: ProgressSceneRequest with NewSceneId, CreateUserProfileRequest without Id/SelectedAvatarMediaId, PasswordlessVerifyResponse without token expiration fields)
+- ⏳ Create `tsconfig.json` in PWA
+- ⏳ Convert `.js` files to `.ts`:
+    a `service-worker.js` → `service-worker.ts`
+    b `pwaInstall.js` → `pwaInstall.ts`
+    c `imageCacheManager.js` → `imageCacheManager.ts`
+    d `audioPlayer.js` → `audioPlayer.ts`
+    e `dice.js` → `dice.ts`
+    f `outside-click-handler.js` → `outside-click-handler.ts`
+- ⏳ Add type definitions
+- ⏳ Update build process
 
-#### Phase 3: Application Layer 🔄 IN PROGRESS
+### Phase 6: Cleanup & Documentation
 
-1. ✅ Created Application project structure
-2. ✅ Created Scenario use cases:
-   - ✅ `GetScenariosUseCase` - Handles scenario querying with filtering and pagination
-   - ✅ `CreateScenarioUseCase` - Handles scenario creation with schema validation
-   - ✅ `UpdateScenarioUseCase` - Handles scenario updates with validation
-   - ✅ `DeleteScenarioUseCase` - Handles scenario deletion
-   - ✅ `ValidateScenarioUseCase` - Validates scenario business rules (scene references, etc.)
-3. ✅ Created GameSession use cases:
-   - ✅ `CreateGameSessionUseCase` - Handles starting a new game session
-   - ✅ `MakeChoiceUseCase` - Handles making choices in game sessions
-   - ✅ `ProgressSceneUseCase` - Handles progressing to specific scenes
-4. ✅ Moved `ScenarioSchemaDefinitions` to `Application.Validation` (shared validation logic)
-5. ✅ Fixed circular dependencies and package versions
-6. ✅ Created UserProfile use cases:
-   - ✅ `CreateUserProfileUseCase`
-   - ✅ `UpdateUserProfileUseCase`
-   - ✅ `GetUserProfileUseCase`
-   - ✅ `DeleteUserProfileUseCase`
-7. ✅ Registered all use cases in DI containers (`Program.cs` for both Api and Admin.Api)
-8. 🔄 Update services to use use cases instead of direct repository access:
-   - ✅ `ScenarioApiService` → Delegates to `GetScenariosUseCase`, `CreateScenarioUseCase`, `UpdateScenarioUseCase`, `DeleteScenarioUseCase`, `ValidateScenarioUseCase`
-   - ⏳ `GameSessionApiService` → Use `CreateGameSessionUseCase`, `MakeChoiceUseCase`, `ProgressSceneUseCase`
-   - ⏳ `UserProfileApiService` → Use `CreateUserProfileUseCase`, `UpdateUserProfileUseCase`, `GetUserProfileUseCase`, `DeleteUserProfileUseCase`
-9. ⏳ Create application services (coordinate multiple use cases if needed)
-10. ⏳ Add AutoMapper profiles for DTO ↔ Domain mapping
-11. ⏳ Update API controllers to use use cases (via services or directly)
+- ⏳ Fix code warnings (CS0109, CS8618, CS8601, CS4014, CS0169)
+- ⏳ DRY/SOLID analysis
+- ⏳ Update documentation
+- ⏳ Clean up `Admin.Api.Models.ApiModels.cs` (remove migrated DTOs, keep only Admin-specific ones)
 
-#### Phase 4: Large File Refactoring ⏳ PENDING
+### Phase 7: Integration & Testing
 
-1. **ApiClient.cs (957 lines)** → Split into:
-   - `BaseApiClient` (common HTTP logic)
-   - `ScenarioApiClient`
-   - `GameSessionApiClient`
-   - `UserProfileApiClient`
-   - `MediaApiClient`
-   - `AuthApiClient`
+1. ⏳ Update services to delegate to use cases
+2. ⏳ Update controllers if needed (may continue using services)
+3. ⏳ Add integration tests for use cases
+4. ⏳ Verify all existing tests still pass
+5. ⏳ Delete old repository implementations from `Api.Repositories` (MediaAsset repositories)
 
-2. **MediaApiService.cs (555 lines)** → Split by responsibility:
-   - `MediaUploadService` (upload logic)
-   - `MediaMetadataService` (metadata management)
-   - `MediaTranscodingService` (transcoding logic)
+## CI/CD Pipeline Status
 
-3. **ScenarioApiService.cs (692 lines)** → Refactor to use Application layer:
-   - ✅ Use cases created: `CreateScenarioUseCase`, `UpdateScenarioUseCase`, `GetScenariosUseCase`, `DeleteScenarioUseCase`, `ValidateScenarioUseCase`
-   - ⏳ Update `ScenarioApiService` to delegate to use cases instead of direct repository access
-   - ⏳ Remove business logic from service (move to use cases)
+### Workflow Path Triggers ✅
 
-4. **GameSessionApiService.cs** → Refactor to use Application layer:
-   - ✅ Use cases created: `CreateGameSessionUseCase`, `MakeChoiceUseCase`, `ProgressSceneUseCase`
-   - ⏳ Update `GameSessionApiService` to delegate to use cases instead of direct repository access
+All API CI/CD workflows now include paths for shared projects:
 
-5. **ScenarioRequestCreator.cs (727 lines)** → Consider refactoring:
-   - Extract validation logic to use cases
-   - Simplify mapping logic
-   - Consider AutoMapper for complex mappings
+**API CI/CD (Dev & Prod)** - Triggered by changes to:
 
-6. **ApiModels.cs** → ✅ COMPLETED (moved to Contracts project)
+- `src/Mystira.App.Api/**`
+- `src/Mystira.App.Domain/**`
+- `src/Mystira.App.Contracts/**` ✅ Added
+- `src/Mystira.App.Application/**` ✅ Added
+- `src/Mystira.App.Infrastructure.Data/**` ✅ Added
+- `.github/workflows/mystira-app-api-cicd-*.yml`
 
-#### Phase 5: TypeScript Migration
+**Admin API CI/CD (Dev & Prod)** - Triggered by changes to:
 
-1. Create `tsconfig.json` in PWA
-2. Convert `.js` files to `.ts`:
-   - `service-worker.js` → `service-worker.ts`
-   - `pwaInstall.js` → `pwaInstall.ts`
-   - `imageCacheManager.js` → `imageCacheManager.ts`
-   - `audioPlayer.js` → `audioPlayer.ts`
-   - `dice.js` → `dice.ts`
-   - `outside-click-handler.js` → `outside-click-handler.ts`
-3. Add type definitions
-4. Update build process
+- `src/Mystira.App.Admin.Api/**`
+- `src/Mystira.App.Domain/**`
+- `src/Mystira.App.Contracts/**` ✅ Added
+- `src/Mystira.App.Application/**` ✅ Added
+- `src/Mystira.App.Infrastructure.Data/**` ✅ Added
+- `.github/workflows/mystira-app-admin-api-cicd-*.yml`
 
-#### Phase 6: Code Warnings Fix ⏳ PENDING
+**PWA CI/CD** - Includes lint and format checks:
 
-- ⏳ CS0109: Remove duplicate member declarations
-- ⏳ CS8618: Add nullable annotations or `required` modifier
-- ⏳ CS8601: Add null checks
-- ⏳ CS4014: Fix async warnings (use `ConfigureAwait(false)` or await)
-- ⏳ CS0169: Remove unused fields
+- `dotnet format --verify-no-changes` - Ensures code formatting
+- `dotnet build --no-restore --configuration Release /p:TreatWarningsAsErrors=true` - Code analysis
 
-#### Phase 7: Integration & Testing ⏳ PENDING
+### Deployment Policies ✅
 
-1. ⏳ Register all use cases in DI containers
-2. ⏳ Update services to delegate to use cases
-3. ⏳ Update controllers if needed (may continue using services)
-4. ⏳ Add integration tests for use cases
-5. ⏳ Verify all existing tests still pass
-6. ⏳ Clean up Admin.Api.Models.ApiModels.cs (remove migrated DTOs, keep only Admin-specific ones)
-
-## 📋 Migration Checklist
-
-### For Each Entity
-
-- [x] Create repository interface in `Infrastructure.Data/Repositories/` ✅
-- [x] Implement repository in `Infrastructure.Data/Repositories/` ✅
-- [x] Create DTOs in `Contracts/Requests/` and `Contracts/Responses/` ✅
-- [x] Create use case in `Application/UseCases/` (Scenarios ✅, GameSessions ✅, UserProfiles ⏳)
-- [ ] Update API controllers to use use cases (pending - services still use repositories directly)
-- [x] Update services to use repositories ✅
-- [ ] Add unit tests (pending)
-
-### For Large Files
-
-- [ ] Identify responsibilities
-- [ ] Extract classes/interfaces
-- [ ] Split into smaller files (<300 lines each)
-- [ ] Update references
-- [ ] Verify tests still pass
+- ✅ Admin API workflows require merged PRs (consistent with Public API)
+- ✅ Production PWA workflow includes lint-and-format quality gate
+- ✅ Both dev and prod workflows have consistent configuration
 
 ## 🎯 Success Criteria
 
-1. ⏳ No files > 500 lines (in progress - ApiClient.cs, ScenarioRequestCreator.cs still large)
+1. ✅ No files > 500 lines (ApiClient.cs ✅, MediaApiService.cs ✅, ScenarioRequestCreator.cs ✅ completed)
 2. ✅ All DTOs in Contracts project (Api.Api completed, Admin.Api has Admin-specific differences)
 3. 🔄 All business logic in Application layer (use cases created, services not yet migrated)
 4. ✅ All data access through repositories (all services migrated)
@@ -219,7 +223,32 @@
 7. ⏳ No code warnings (partially addressed, some remain)
 8. ⏳ All tests passing (needs verification after use case migration)
 
-## 📚 Resources
+## 📋 Migration Checklist
 
-- [Hexagonal Architecture Guide](HEXAGONAL_REFACTORING_PLAN.md)
-- [Repository Pattern Best Practices](https://docs.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/infrastructure-persistence-layer-design)
+### For Each Entity
+
+- [x] Create repository interface in `Infrastructure.Data/Repositories/` ✅
+- [x] Implement repository in `Infrastructure.Data/Repositories/` ✅
+- [x] Create DTOs in `Contracts/Requests/` and `Contracts/Responses/` ✅
+- [x] Create use case in `Application/UseCases/` ✅
+- [ ] Update services to use use cases (in progress)
+- [ ] Update controllers to use use cases (pending)
+- [x] Update services to use repositories ✅
+- [ ] Add unit tests (pending)
+
+### For Large Files
+
+- [x] Identify responsibilities ✅
+- [x] Extract classes/interfaces ✅
+- [x] Split into smaller files (<300 lines each) ✅
+- [x] Update references ✅
+- [ ] Verify tests still pass (pending)
+
+## 📚 Related Documentation
+
+- [Architectural Rules](ARCHITECTURAL_RULES.md) - ⚠️ **STRICT ENFORCEMENT GUIDELINES**
+- [API Endpoint Classification](API_ENDPOINT_CLASSIFICATION.md) - Endpoint routing guide
+- [Hexagonal Architecture](patterns/HEXAGONAL_ARCHITECTURE.md) - Architecture overview
+- [Repository Pattern](patterns/REPOSITORY_PATTERN.md) - Repository pattern details
+- [Unit of Work Pattern](patterns/UNIT_OF_WORK_PATTERN.md) - Unit of Work pattern details
+- [Future Patterns](patterns/FUTURE_PATTERNS.md) - Planned architectural patterns

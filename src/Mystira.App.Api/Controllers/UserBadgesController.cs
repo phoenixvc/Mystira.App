@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Mystira.App.Api.Services;
 using Mystira.App.Contracts.Requests.Badges;
 using Mystira.App.Contracts.Responses.Badges;
 using Mystira.App.Contracts.Responses.Common;
-using Mystira.App.Api.Services;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;

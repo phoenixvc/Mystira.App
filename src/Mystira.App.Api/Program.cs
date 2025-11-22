@@ -6,12 +6,13 @@ using Microsoft.OpenApi.Models;
 using Mystira.App.Api.Adapters;
 using Mystira.App.Api.Data;
 using Mystira.App.Api.Services;
+using Mystira.App.Application.UseCases.GameSessions;
+using Mystira.App.Application.UseCases.Media;
+using Mystira.App.Application.UseCases.Scenarios;
+using Mystira.App.Application.UseCases.UserProfiles;
 using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
-using Mystira.App.Application.UseCases.GameSessions;
-using Mystira.App.Application.UseCases.Scenarios;
-using Mystira.App.Application.UseCases.UserProfiles;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
 
@@ -229,7 +230,7 @@ builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
 builder.Services.AddScoped<IBadgeConfigurationRepository, BadgeConfigurationRepository>();
 builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
 builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
-builder.Services.AddScoped<Mystira.App.Api.Repositories.IMediaAssetRepository, Mystira.App.Api.Repositories.MediaAssetRepository>();
+builder.Services.AddScoped<Mystira.App.Infrastructure.Data.Repositories.IMediaAssetRepository, Mystira.App.Infrastructure.Data.Repositories.MediaAssetRepository>();
 builder.Services.AddScoped<Mystira.App.Api.Repositories.IMediaMetadataFileRepository, Mystira.App.Api.Repositories.MediaMetadataFileRepository>();
 builder.Services.AddScoped<Mystira.App.Api.Repositories.ICharacterMediaMetadataFileRepository, Mystira.App.Api.Repositories.CharacterMediaMetadataFileRepository>();
 builder.Services.AddScoped<Mystira.App.Api.Repositories.ICharacterMapFileRepository, Mystira.App.Api.Repositories.CharacterMapFileRepository>();
@@ -239,6 +240,7 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 // Register Application Layer Use Cases
 // Scenario Use Cases
 builder.Services.AddScoped<GetScenariosUseCase>();
+builder.Services.AddScoped<GetScenarioUseCase>();
 builder.Services.AddScoped<CreateScenarioUseCase>();
 builder.Services.AddScoped<UpdateScenarioUseCase>();
 builder.Services.AddScoped<DeleteScenarioUseCase>();
@@ -246,14 +248,38 @@ builder.Services.AddScoped<ValidateScenarioUseCase>();
 
 // GameSession Use Cases
 builder.Services.AddScoped<CreateGameSessionUseCase>();
+builder.Services.AddScoped<GetGameSessionUseCase>();
+builder.Services.AddScoped<GetGameSessionsByAccountUseCase>();
+builder.Services.AddScoped<GetGameSessionsByProfileUseCase>();
+builder.Services.AddScoped<GetInProgressSessionsUseCase>();
 builder.Services.AddScoped<MakeChoiceUseCase>();
 builder.Services.AddScoped<ProgressSceneUseCase>();
+builder.Services.AddScoped<PauseGameSessionUseCase>();
+builder.Services.AddScoped<ResumeGameSessionUseCase>();
+builder.Services.AddScoped<EndGameSessionUseCase>();
+builder.Services.AddScoped<SelectCharacterUseCase>();
+builder.Services.AddScoped<GetSessionStatsUseCase>();
+builder.Services.AddScoped<CheckAchievementsUseCase>();
+builder.Services.AddScoped<DeleteGameSessionUseCase>();
 
 // UserProfile Use Cases
 builder.Services.AddScoped<CreateUserProfileUseCase>();
 builder.Services.AddScoped<UpdateUserProfileUseCase>();
 builder.Services.AddScoped<GetUserProfileUseCase>();
 builder.Services.AddScoped<DeleteUserProfileUseCase>();
+
+// Media Use Cases
+builder.Services.AddScoped<GetMediaUseCase>();
+builder.Services.AddScoped<GetMediaByFilenameUseCase>();
+builder.Services.AddScoped<ListMediaUseCase>();
+builder.Services.AddScoped<UploadMediaUseCase>();
+builder.Services.AddScoped<UpdateMediaMetadataUseCase>();
+builder.Services.AddScoped<DeleteMediaUseCase>();
+builder.Services.AddScoped<DownloadMediaUseCase>();
+
+// Register Media services (split from MediaApiService)
+builder.Services.AddScoped<IMediaUploadService, MediaUploadService>();
+builder.Services.AddScoped<IMediaQueryService, MediaQueryService>();
 
 // Register application services
 builder.Services.AddScoped<IScenarioApiService, ScenarioApiService>();

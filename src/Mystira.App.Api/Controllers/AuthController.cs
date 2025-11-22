@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Mystira.App.Api.Services;
 using Mystira.App.Contracts.Requests.Auth;
 using Mystira.App.Contracts.Responses.Auth;
-using Mystira.App.Api.Services;
 
 namespace Mystira.App.Api.Controllers
 {

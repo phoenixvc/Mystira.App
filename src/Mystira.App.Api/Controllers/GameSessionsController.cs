@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Mystira.App.Api.Services;
 using Mystira.App.Contracts.Requests.GameSessions;
 using Mystira.App.Contracts.Requests.Scenarios;
-using Mystira.App.Contracts.Responses.GameSessions;
 using Mystira.App.Contracts.Responses.Common;
-using Mystira.App.Api.Services;
+using Mystira.App.Contracts.Responses.GameSessions;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;

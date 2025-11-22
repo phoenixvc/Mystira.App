@@ -22,22 +22,91 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<AuthHeaderHandler>();
 
 // Configure API HttpClient with auth header handler
-builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
+var apiBaseUrl = builder.Configuration.GetConnectionString("MystiraApiBaseUrl");
+if (string.IsNullOrEmpty(apiBaseUrl))
 {
-    var url = builder.Configuration.GetConnectionString("MystiraApiBaseUrl");
-    if (string.IsNullOrEmpty(url))
-    {
-        Console.WriteLine($"API url could not be retrieved from configuration");
-    }
-    else
-    {
-        Console.WriteLine($"Connecting to API: {url}");
+    Console.WriteLine($"API url could not be retrieved from configuration");
+}
+else
+{
+    Console.WriteLine($"Connecting to API: {apiBaseUrl}");
+}
 
-        client.BaseAddress = new Uri(url);
+// Register domain-specific API clients
+builder.Services.AddHttpClient<IScenarioApiClient, ScenarioApiClient>(client =>
+{
+    if (!string.IsNullOrEmpty(apiBaseUrl))
+    {
+        client.BaseAddress = new Uri(apiBaseUrl);
         client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
     }
-})
-.AddHttpMessageHandler<AuthHeaderHandler>();
+}).AddHttpMessageHandler<AuthHeaderHandler>();
+
+builder.Services.AddHttpClient<IGameSessionApiClient, GameSessionApiClient>(client =>
+{
+    if (!string.IsNullOrEmpty(apiBaseUrl))
+    {
+        client.BaseAddress = new Uri(apiBaseUrl);
+        client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
+    }
+}).AddHttpMessageHandler<AuthHeaderHandler>();
+
+builder.Services.AddHttpClient<IUserProfileApiClient, UserProfileApiClient>(client =>
+{
+    if (!string.IsNullOrEmpty(apiBaseUrl))
+    {
+        client.BaseAddress = new Uri(apiBaseUrl);
+        client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
+    }
+}).AddHttpMessageHandler<AuthHeaderHandler>();
+
+builder.Services.AddHttpClient<IAuthApiClient, AuthApiClient>(client =>
+{
+    if (!string.IsNullOrEmpty(apiBaseUrl))
+    {
+        client.BaseAddress = new Uri(apiBaseUrl);
+        client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
+    }
+}).AddHttpMessageHandler<AuthHeaderHandler>();
+
+builder.Services.AddHttpClient<IMediaApiClient, MediaApiClient>(client =>
+{
+    if (!string.IsNullOrEmpty(apiBaseUrl))
+    {
+        client.BaseAddress = new Uri(apiBaseUrl);
+        client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
+    }
+}).AddHttpMessageHandler<AuthHeaderHandler>();
+
+builder.Services.AddHttpClient<IAvatarApiClient, AvatarApiClient>(client =>
+{
+    if (!string.IsNullOrEmpty(apiBaseUrl))
+    {
+        client.BaseAddress = new Uri(apiBaseUrl);
+        client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
+    }
+}).AddHttpMessageHandler<AuthHeaderHandler>();
+
+builder.Services.AddHttpClient<IContentBundleApiClient, ContentBundleApiClient>(client =>
+{
+    if (!string.IsNullOrEmpty(apiBaseUrl))
+    {
+        client.BaseAddress = new Uri(apiBaseUrl);
+        client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
+    }
+}).AddHttpMessageHandler<AuthHeaderHandler>();
+
+builder.Services.AddHttpClient<ICharacterApiClient, CharacterApiClient>(client =>
+{
+    if (!string.IsNullOrEmpty(apiBaseUrl))
+    {
+        client.BaseAddress = new Uri(apiBaseUrl);
+        client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
+    }
+}).AddHttpMessageHandler<AuthHeaderHandler>();
+
+// Register main ApiClient that composes all domain clients
+builder.Services.AddScoped<IApiClient, ApiClient>();
 
 // Configure JSON serialization with enum string conversion
 builder.Services.Configure<JsonSerializerOptions>(options =>

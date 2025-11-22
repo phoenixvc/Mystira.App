@@ -2,7 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Mystira.App.Api.Models;
+using Mystira.App.Api.Models; // For MediaMetadataFile, CharacterMediaMetadataFile, etc. (API DTOs)
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Data;
@@ -342,7 +342,7 @@ public class MystiraAppDbContext : DbContext
         });
 
         // Configure MediaAsset
-        modelBuilder.Entity<MediaAsset>(entity =>
+        modelBuilder.Entity<Domain.Models.MediaAsset>(entity =>
         {
             entity.HasKey(e => e.Id);
 
@@ -374,7 +374,7 @@ public class MystiraAppDbContext : DbContext
         });
 
         // Configure MediaAsset.Tags
-        modelBuilder.Entity<MediaAsset>()
+        modelBuilder.Entity<Domain.Models.MediaAsset>()
             .Property(m => m.Tags)
             .HasConversion(
                 v => string.Join(',', v),

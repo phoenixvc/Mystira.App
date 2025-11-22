@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Contracts.Responses.Common;
+using Mystira.App.Domain.Models;
 using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
 
 namespace Mystira.App.Admin.Api.Controllers;
@@ -83,7 +84,7 @@ public class MediaAdminController : ControllerBase
     /// Media ID must match an existing entry in the media metadata file
     /// </summary>
     [HttpPost("upload")]
-    public async Task<ActionResult<MediaAsset>> UploadMedia([FromForm] IFormFile file, [FromForm] string? mediaId = null, [FromForm] string? mediaType = null, [FromForm] string? description = null, [FromForm] string? tags = null)
+    public async Task<ActionResult<Domain.Models.MediaAsset>> UploadMedia([FromForm] IFormFile file, [FromForm] string? mediaId = null, [FromForm] string? mediaType = null, [FromForm] string? description = null, [FromForm] string? tags = null)
     {
         try
         {
@@ -219,7 +220,7 @@ public class MediaAdminController : ControllerBase
     /// Update a media asset
     /// </summary>
     [HttpPut("{mediaId}")]
-    public async Task<ActionResult<MediaAsset>> UpdateMedia(string mediaId, [FromBody] MediaUpdateRequest updateData)
+    public async Task<ActionResult<Domain.Models.MediaAsset>> UpdateMedia(string mediaId, [FromBody] MediaUpdateRequest updateData)
     {
         try
         {

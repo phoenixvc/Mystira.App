@@ -3,24 +3,24 @@ using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Validation;
 using Mystira.App.Api.Models;
+using Mystira.App.Application.UseCases.Scenarios;
 using Mystira.App.Contracts.Requests.Scenarios;
 using Mystira.App.Contracts.Responses.Scenarios;
 using Mystira.App.Domain.Models;
-using ScenarioQueryRequest = Mystira.App.Contracts.Requests.Scenarios.ScenarioQueryRequest;
-using ScenarioListResponse = Mystira.App.Contracts.Responses.Scenarios.ScenarioListResponse;
-using CreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;
-using ScenarioReferenceValidation = Mystira.App.Contracts.Responses.Scenarios.ScenarioReferenceValidation;
-using ScenarioGameStateResponse = Mystira.App.Contracts.Responses.Scenarios.ScenarioGameStateResponse;
-using ScenarioSummary = Mystira.App.Contracts.Responses.Scenarios.ScenarioSummary;
-using MediaReference = Mystira.App.Contracts.Responses.Scenarios.MediaReference;
-using CharacterReference = Mystira.App.Contracts.Responses.Scenarios.CharacterReference;
-using MissingReference = Mystira.App.Contracts.Responses.Scenarios.MissingReference;
-using ScenarioWithGameState = Mystira.App.Contracts.Responses.Scenarios.ScenarioWithGameState;
-using ScenarioGameState = Mystira.App.Contracts.Responses.Scenarios.ScenarioGameState;
-using Mystira.App.Application.UseCases.Scenarios;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
 using NJsonSchema;
+using CharacterReference = Mystira.App.Contracts.Responses.Scenarios.CharacterReference;
+using CreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;
+using MediaReference = Mystira.App.Contracts.Responses.Scenarios.MediaReference;
+using MissingReference = Mystira.App.Contracts.Responses.Scenarios.MissingReference;
+using ScenarioGameState = Mystira.App.Contracts.Responses.Scenarios.ScenarioGameState;
+using ScenarioGameStateResponse = Mystira.App.Contracts.Responses.Scenarios.ScenarioGameStateResponse;
+using ScenarioListResponse = Mystira.App.Contracts.Responses.Scenarios.ScenarioListResponse;
+using ScenarioQueryRequest = Mystira.App.Contracts.Requests.Scenarios.ScenarioQueryRequest;
+using ScenarioReferenceValidation = Mystira.App.Contracts.Responses.Scenarios.ScenarioReferenceValidation;
+using ScenarioSummary = Mystira.App.Contracts.Responses.Scenarios.ScenarioSummary;
+using ScenarioWithGameState = Mystira.App.Contracts.Responses.Scenarios.ScenarioWithGameState;
 
 namespace Mystira.App.Api.Services;
 
@@ -36,6 +36,7 @@ public class ScenarioApiService : IScenarioApiService
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ICharacterMediaMetadataService _characterMetadataService;
     private readonly GetScenariosUseCase _getScenariosUseCase;
+    private readonly GetScenarioUseCase _getScenarioUseCase;
     private readonly CreateScenarioUseCase _createScenarioUseCase;
     private readonly UpdateScenarioUseCase _updateScenarioUseCase;
     private readonly DeleteScenarioUseCase _deleteScenarioUseCase;
@@ -61,6 +62,7 @@ public class ScenarioApiService : IScenarioApiService
         IMediaMetadataService mediaMetadataService,
         ICharacterMediaMetadataService characterMetadataService,
         GetScenariosUseCase getScenariosUseCase,
+        GetScenarioUseCase getScenarioUseCase,
         CreateScenarioUseCase createScenarioUseCase,
         UpdateScenarioUseCase updateScenarioUseCase,
         DeleteScenarioUseCase deleteScenarioUseCase,
@@ -76,6 +78,7 @@ public class ScenarioApiService : IScenarioApiService
         _mediaMetadataService = mediaMetadataService;
         _characterMetadataService = characterMetadataService;
         _getScenariosUseCase = getScenariosUseCase;
+        _getScenarioUseCase = getScenarioUseCase;
         _createScenarioUseCase = createScenarioUseCase;
         _updateScenarioUseCase = updateScenarioUseCase;
         _deleteScenarioUseCase = deleteScenarioUseCase;
@@ -87,10 +90,8 @@ public class ScenarioApiService : IScenarioApiService
         return await _getScenariosUseCase.ExecuteAsync(request);
     }
 
-    public async Task<Scenario?> GetScenarioByIdAsync(string id)
-    {
-        return await _repository.GetByIdAsync(id);
-    }
+    public Task<Scenario?> GetScenarioByIdAsync(string id) =>
+        _getScenarioUseCase.ExecuteAsync(id);
 
     public async Task<Scenario> CreateScenarioAsync(CreateScenarioRequest request)
     {
@@ -109,28 +110,33 @@ public class ScenarioApiService : IScenarioApiService
 
     public async Task<List<Scenario>> GetScenariosByAgeGroupAsync(string ageGroup)
     {
-        var scenarios = (await _repository.GetAllAsync()).ToList();
-
-        if (string.IsNullOrWhiteSpace(ageGroup))
+        // Use GetScenariosUseCase with age group filtering
+        var request = new ScenarioQueryRequest
         {
-            return scenarios
-                .OrderBy(s => s.Title)
-                .ToList();
+            Page = 1,
+            PageSize = int.MaxValue, // Get all scenarios
+            AgeGroup = ageGroup
+        };
+
+        var response = await _getScenariosUseCase.ExecuteAsync(request);
+
+        // Convert ScenarioSummary back to Scenario domain models
+        // Note: This is a limitation - use case returns summaries, not full scenarios
+        // Note: GetScenariosUseCase returns ScenarioSummary, not full Scenario objects
+        // This is a limitation - full scenarios are fetched from repository for now
+        var scenarioIds = response.Scenarios.Select(s => s.Id).ToList();
+        var scenarios = new List<Scenario>();
+
+        foreach (var scenarioId in scenarioIds)
+        {
+            var scenario = await _repository.GetByIdAsync(scenarioId);
+            if (scenario != null)
+            {
+                scenarios.Add(scenario);
+            }
         }
 
-        var targetMinimumAge = GetMinimumAgeForGroup(ageGroup);
-        if (targetMinimumAge.HasValue)
-        {
-            return scenarios
-                .Where(s => s.MinimumAge <= targetMinimumAge.Value)
-                .OrderBy(s => s.Title)
-                .ToList();
-        }
-
-        return scenarios
-            .Where(s => string.Equals(s.AgeGroup, ageGroup, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(s => s.Title)
-            .ToList();
+        return scenarios.OrderBy(s => s.Title).ToList();
     }
 
     private static int? GetMinimumAgeForGroup(string ageGroup)
@@ -356,7 +362,8 @@ public class ScenarioApiService : IScenarioApiService
 
                     if (!scenario.CoreAxes.Select(a => a.Value).Contains(change.Axis))
                     {
-                        // TODO: re-enable strict validation when master axis list is finalized.
+                        // TODO: Enhancement - Re-enable strict validation when master axis list is finalized
+                        // This will ensure all compass axes referenced in scenarios are valid according to the domain model
                         //throw new ScenarioValidationException($"Invalid compass axis '{change.Axis}' not defined in scenario (Scene ID: {scene.Id}, Choice: {branch.Choice})");
                     }
                 }
@@ -470,7 +477,7 @@ public class ScenarioApiService : IScenarioApiService
 
     private async Task ValidateSceneReferences(
         Scene scene,
-        Dictionary<string, MediaAsset> allMedia,
+        Dictionary<string, Domain.Models.MediaAsset> allMedia,
         Dictionary<string, Character> allCharacters,
         MediaMetadataFile? mediaMetadata,
         CharacterMediaMetadataFile? characterMetadata,
@@ -494,7 +501,7 @@ public class ScenarioApiService : IScenarioApiService
         Scene scene,
         string? mediaId,
         string mediaType,
-        Dictionary<string, MediaAsset> allMedia,
+        Dictionary<string, Domain.Models.MediaAsset> allMedia,
         MediaMetadataFile? mediaMetadata,
         ScenarioReferenceValidation validation,
         bool includeMetadataValidation)

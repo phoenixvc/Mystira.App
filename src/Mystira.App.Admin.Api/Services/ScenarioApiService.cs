@@ -9,14 +9,14 @@ using Mystira.App.Contracts.Requests.Scenarios;
 using Mystira.App.Contracts.Responses.Scenarios;
 using Mystira.App.Domain.Models;
 using NJsonSchema;
-using ScenarioQueryRequest = Mystira.App.Contracts.Requests.Scenarios.ScenarioQueryRequest;
-using ScenarioListResponse = Mystira.App.Contracts.Responses.Scenarios.ScenarioListResponse;
+using CharacterReference = Mystira.App.Contracts.Responses.Scenarios.CharacterReference;
 using CreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;
+using MediaReference = Mystira.App.Contracts.Responses.Scenarios.MediaReference;
+using MissingReference = Mystira.App.Contracts.Responses.Scenarios.MissingReference;
+using ScenarioListResponse = Mystira.App.Contracts.Responses.Scenarios.ScenarioListResponse;
+using ScenarioQueryRequest = Mystira.App.Contracts.Requests.Scenarios.ScenarioQueryRequest;
 using ScenarioReferenceValidation = Mystira.App.Contracts.Responses.Scenarios.ScenarioReferenceValidation;
 using ScenarioSummary = Mystira.App.Contracts.Responses.Scenarios.ScenarioSummary;
-using MediaReference = Mystira.App.Contracts.Responses.Scenarios.MediaReference;
-using CharacterReference = Mystira.App.Contracts.Responses.Scenarios.CharacterReference;
-using MissingReference = Mystira.App.Contracts.Responses.Scenarios.MissingReference;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -477,7 +477,8 @@ public class ScenarioApiService : IScenarioApiService
 
                     if (!scenario.CoreAxes.Select(a => a.Value).Contains(change.Axis))
                     {
-                        // TODO: re-enable strict validation when master axis list is finalized.
+                        // TODO: Enhancement - Re-enable strict validation when master axis list is finalized
+                        // This will ensure all compass axes referenced in scenarios are valid according to the domain model
                         //throw new ScenarioValidationException($"Invalid compass axis '{change.Axis}' not defined in scenario (Scene ID: {scene.Id}, Choice: {branch.Choice})");
                     }
                 }
@@ -591,7 +592,7 @@ public class ScenarioApiService : IScenarioApiService
 
     private async Task ValidateSceneReferences(
         Scene scene,
-        Dictionary<string, MediaAsset> allMedia,
+        Dictionary<string, Domain.Models.MediaAsset> allMedia,
         Dictionary<string, Character> allCharacters,
         MediaMetadataFile? mediaMetadata,
         CharacterMediaMetadataFile? characterMetadata,
@@ -615,7 +616,7 @@ public class ScenarioApiService : IScenarioApiService
         Scene scene,
         string? mediaId,
         string mediaType,
-        Dictionary<string, MediaAsset> allMedia,
+        Dictionary<string, Domain.Models.MediaAsset> allMedia,
         MediaMetadataFile? mediaMetadata,
         ScenarioReferenceValidation validation,
         bool includeMetadataValidation)
