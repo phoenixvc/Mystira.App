@@ -1,0 +1,138 @@
+/* COPPA Compliance Pillbox with Tooltip */
+
+.coppa-pill-container {
+    position: relative;
+    display: inline-block;
+}
+
+.coppa-pill {
+    cursor: help;
+    transition: all 0.2s ease;
+}
+
+.coppa-pill:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(147, 51, 234, 0.2);
+}
+
+.coppa-tooltip {
+    position: absolute;
+    bottom: calc(100% + 12px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 360px;
+    max-width: 90vw;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+    animation: tooltipFadeIn 0.2s ease-out;
+    pointer-events: auto;
+}
+
+.coppa-tooltip::before {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid white;
+}
+
+@keyframes tooltipFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.coppa-tooltip-header {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #E5E7EB;
+    background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+    border-radius: 12px 12px 0 0;
+    color: #1F2937;
+    font-size: 0.95rem;
+}
+
+.coppa-tooltip-header i {
+    color: #9333ea;
+    font-size: 1.1rem;
+}
+
+.coppa-tooltip-content {
+    padding: 16px 20px;
+}
+
+.coppa-tooltip-message {
+    margin: 0 0 12px 0;
+    color: #4B5563;
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+.coppa-tooltip-warning {
+    margin: 0 0 16px 0;
+    padding: 12px;
+    background: #FEF3C7;
+    border-left: 3px solid #F59E0B;
+    border-radius: 6px;
+    color: #92400E;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.coppa-tooltip-warning strong {
+    color: #78350F;
+}
+
+.coppa-tooltip-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.coppa-tooltip-link {
+    display: inline-flex;
+    align-items: center;
+    color: #9333ea;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: color 0.2s ease;
+    padding: 6px 0;
+}
+
+.coppa-tooltip-link:hover {
+    color: #7c3aed;
+    text-decoration: underline;
+}
+
+.coppa-tooltip-link i {
+    font-size: 0.8rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .coppa-tooltip {
+        width: calc(100vw - 40px);
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    
+    .coppa-tooltip::before {
+        left: 50%;
+    }
+}
+
