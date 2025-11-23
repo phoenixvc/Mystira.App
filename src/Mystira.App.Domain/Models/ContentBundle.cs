@@ -10,6 +10,7 @@ public class ContentBundle
     public List<BundlePrice> Prices { get; set; } = new();
     public bool IsFree { get; set; }
     public string AgeGroup { get; set; } = string.Empty;
+    public StoryProtocolMetadata? StoryProtocol { get; set; }
 }
 
 public class BundlePrice

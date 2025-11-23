@@ -15,6 +15,7 @@ public class Scenario
     public List<ScenarioCharacter> Characters { get; set; } = new();
     public List<Scene> Scenes { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public StoryProtocolMetadata? StoryProtocol { get; set; }
 
     public bool Validate(out List<string> errors)
     {
