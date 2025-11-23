@@ -1,0 +1,17 @@
+/* Main Layout Styles */
+
+.page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.offline-indicator {
+    display: none;
+}
+
+.profile-menu-dropdown {
+    position: absolute;
+    right: 0;
+}
+

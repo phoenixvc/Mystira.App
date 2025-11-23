@@ -26,97 +26,93 @@
                     }
                 </div>
                 
-                @* Search Bar *@
-                @if (ShowSearch)
-                {
-                    <div class="mb-3">
-                        <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="fas fa-search"></i>
-                            </span>
-                            <input type="text" 
-                                   class="form-control" 
-                                   placeholder="Search by story, character, or skill..."
-                                   aria-label="Search adventures"
-                                   @bind="SearchQuery"
-                                   @bind:event="oninput" />
-                            @if (!string.IsNullOrEmpty(SearchQuery))
+                @* Compact Filter Row *@
+                <div class="filter-row">
+                    @* Search Bar *@
+                    @if (ShowSearch)
+                    {
+                        <div class="filter-search">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" 
+                                       class="form-control" 
+                                       placeholder="Search by story, character, or skill..."
+                                       aria-label="Search adventures"
+                                       @bind="SearchQuery"
+                                       @bind:event="oninput" />
+                                @if (!string.IsNullOrEmpty(SearchQuery))
+                                {
+                                    <button class="btn btn-outline-secondary" 
+                                            type="button" 
+                                            @onclick="OnClearSearch"
+                                            aria-label="Clear search">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                    
+                    @* Age Group Filters *@
+                    <div class="filter-age-groups">
+                        <div class="age-filter-container d-flex flex-wrap gap-2" role="group" aria-label="Age group filters">
+                            @foreach (var ageGroup in AgeGroups)
                             {
-                                <button class="btn btn-outline-secondary" 
-                                        type="button" 
-                                        @onclick="OnClearSearch"
-                                        aria-label="Clear search">
-                                    <i class="fas fa-times"></i>
+                                var isSelected = SelectedAgeGroups.Contains(ageGroup);
+                                var count = AgeGroupCounts.TryGetValue(ageGroup, out var c) ? c : 0;
+                                <button class="btn btn-age-filter @(isSelected ? "btn-primary-custom" : "btn-outline-secondary")"
+                                        @onclick="() => OnAgeGroupToggle(ageGroup)"
+                                        aria-pressed="@isSelected.ToString().ToLower()"
+                                        aria-label="Filter by age group @ageGroup, @count bundle@(count != 1 ? "s" : "") available"
+                                        title="@count bundle@(count != 1 ? "s" : "") available">
+                                    Ages @ageGroup
+                                    <span class="badge badge-count ms-1">@count</span>
+                                    @if (isSelected)
+                                    {
+                                        <i class="fas fa-check ms-1"></i>
+                                    }
+                                </button>
+                            }
+                            @if (SelectedAgeGroups.Any())
+                            {
+                                <button class="btn btn-outline-danger btn-sm" 
+                                        @onclick="OnClearAll"
+                                        aria-label="Clear all age group filters">
+                                    <i class="fas fa-times me-1"></i>Clear
                                 </button>
                             }
                         </div>
                     </div>
-                }
-                
-                @* Show Completed Toggle *@
-                @if (ShowCompletedToggle)
-                {
-                    <div class="mb-3 completed-toggle-container">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" 
-                                   type="checkbox" 
-                                   id="showCompletedToggle" 
-                                   role="switch"
-                                   aria-label="Toggle completed stories visibility"
-                                   checked="@ShowCompleted" 
-                                   @onchange="OnShowCompletedChanged">
-                            <label class="form-check-label toggle-label" for="showCompletedToggle">
-                                <span class="toggle-text">
+                    
+                    @* Show Completed Toggle - Compact *@
+                    @if (ShowCompletedToggle)
+                    {
+                        <div class="filter-toggle">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       id="showCompletedToggle" 
+                                       role="switch"
+                                       aria-label="Toggle completed stories visibility"
+                                       checked="@ShowCompleted" 
+                                       @onchange="OnShowCompletedChanged">
+                                <label class="form-check-label toggle-label" for="showCompletedToggle">
                                     <i class="fas fa-check-circle me-1"></i>
-                                    Show Completed Stories
+                                    Show Completed
                                     @if (!ShowCompleted && HiddenCount > 0)
                                     {
-                                        <span class="badge bg-secondary ms-2 completed-count">@HiddenCount hidden</span>
+                                        <span class="badge bg-secondary ms-1 completed-count">@HiddenCount</span>
                                     }
                                     else if (ShowCompleted && HiddenCount > 0)
                                     {
-                                        <span class="badge bg-success ms-2 completed-count">@HiddenCount completed</span>
+                                        <span class="badge bg-success ms-1 completed-count">@HiddenCount</span>
                                     }
-                                </span>
-                            </label>
+                                </label>
+                            </div>
                         </div>
-                        <small class="text-muted d-block mt-1 toggle-helper">Include stories you've finished</small>
-                    </div>
-                }
-                
-                @* Age Group Filters *@
-                <div class="mb-2">
-                    <small class="text-muted d-block mb-2">
-                        <i class="fas fa-users me-1"></i>Filter by Age Group:
-                    </small>
-                    <div class="age-filter-container d-flex flex-wrap gap-2" role="group" aria-label="Age group filters">
-                        @foreach (var ageGroup in AgeGroups)
-                        {
-                            var isSelected = SelectedAgeGroups.Contains(ageGroup);
-                            var count = AgeGroupCounts.TryGetValue(ageGroup, out var c) ? c : 0;
-                            <button class="btn btn-age-filter @(isSelected ? "btn-primary-custom" : "btn-outline-secondary")"
-                                    @onclick="() => OnAgeGroupToggle(ageGroup)"
-                                    aria-pressed="@isSelected.ToString().ToLower()"
-                                    aria-label="Filter by age group @ageGroup, @count bundle@(count != 1 ? "s" : "") available"
-                                    title="@count bundle@(count != 1 ? "s" : "") available">
-                                <i class="fas fa-users me-1"></i>
-                                Ages @ageGroup
-                                <span class="badge badge-count ms-1">@count</span>
-                                @if (isSelected)
-                                {
-                                    <i class="fas fa-check ms-1"></i>
-                                }
-                            </button>
-                        }
-                        @if (SelectedAgeGroups.Any())
-                        {
-                            <button class="btn btn-outline-danger" 
-                                    @onclick="OnClearAll"
-                                    aria-label="Clear all age group filters">
-                                <i class="fas fa-times me-1"></i>Clear All
-                            </button>
-                        }
-                    </div>
+                    }
                 </div>
                 
                 @* Sort Options *@

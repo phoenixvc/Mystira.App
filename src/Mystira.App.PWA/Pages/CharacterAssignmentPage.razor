@@ -12,7 +12,7 @@
 
 @if (isLoading)
 {
-    <div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="d-flex justify-content-center align-items-center loading-container">
         <div class="text-center">
             <div class="spinner-border text-primary-custom mb-3" role="status">
                 <span class="visually-hidden">Loading...</span>
@@ -23,7 +23,7 @@
 }
 else if (assignmentData?.Scenario == null)
 {
-    <div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="d-flex justify-content-center align-items-center loading-container">
         <div class="text-center">
             <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
             <h3>Scenario Not Found</h3>
@@ -55,15 +55,17 @@ else
             {
                 var assignment = characterAssignments[i];
                 var cardIndex = i;
-                
+
                 <div class="col-md-6 col-lg-3">
-                    <div class="card h-100 character-card @(assignment.IsUnused ? "border-secondary bg-light" : "border-primary")">
+                    <div
+                        class="card h-100 character-card @(assignment.IsUnused ? "border-secondary bg-light" : "border-primary")">
                         <div class="card-body d-flex flex-column">
                             <!-- Character Info -->
                             <div class="text-center mb-3">
                                 @if (!string.IsNullOrEmpty(assignment.Image))
                                 {
-                                    <img src="@(ApiClient.GetMediaResourceEndpointUrl(assignment.Image))" class="character-avatar mb-2" alt="@assignment.CharacterName" />
+                                    <img src="@(ApiClient.GetMediaResourceEndpointUrl(assignment.Image))"
+                                        class="character-avatar mb-2" alt="@assignment.CharacterName" />
                                 }
                                 else
                                 {
@@ -79,13 +81,17 @@ else
                             <div class="d-flex justify-content-center gap-2 mb-3">
                                 @if (!string.IsNullOrEmpty(assignment.Image))
                                 {
-                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => PreviewImage(ApiClient.GetMediaResourceEndpointUrl(assignment.Image))" title="View Image">
+                                    <button class="btn btn-sm btn-outline-primary"
+                                        @onclick="() => PreviewImage(ApiClient.GetMediaResourceEndpointUrl(assignment.Image))"
+                                        title="View Image">
                                         &#128444;
                                     </button>
                                 }
                                 @if (!string.IsNullOrEmpty(assignment.Audio))
                                 {
-                                    <button class="btn btn-sm btn-outline-success" @onclick="() => PlayAudio(ApiClient.GetMediaResourceEndpointUrl(assignment.Audio))" title="Play Audio">
+                                    <button class="btn btn-sm btn-outline-success"
+                                        @onclick="() => PlayAudio(ApiClient.GetMediaResourceEndpointUrl(assignment.Audio))"
+                                        title="Play Audio">
                                         @((MarkupString)(isPlayingAudio == assignment.Audio ? "&#x23F8;" : "&#128266;"))
                                     </button>
                                 }
@@ -103,24 +109,22 @@ else
                                 else
                                 {
                                     <div class="player-assignment">
-                                         @if (assignment.PlayerAssignment == null)
-                                         {
-                                             <button class="btn btn-outline-primary btn-sm w-100" @onclick="async () => await OpenPlayerAssignment(cardIndex)">
-                                                 <i class="fas fa-user-plus me-1"></i>Assign Player
-                                             </button>
-                                         }
+                                        @if (assignment.PlayerAssignment == null)
+                                        {
+                                            <button class="btn btn-outline-primary btn-sm w-100"
+                                                @onclick="async () => await OpenPlayerAssignment(cardIndex)">
+                                                <i class="fas fa-user-plus me-1"></i>Assign Player
+                                            </button>
+                                        }
                                         else
                                         {
                                             <div class="assigned-player p-2 bg-light rounded">
                                                 <div class="d-flex align-items-center">
                                                     @if (!string.IsNullOrEmpty(assignment.PlayerAssignment.SelectedAvatarMediaId))
                                                     {
-                                                        <div class="player-avatar me-2" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
-                                                            <CachedMystiraImage 
-                                                                MediaId="@assignment.PlayerAssignment.SelectedAvatarMediaId" 
-                                                                Alt="Player Avatar" 
-                                                                Width="80"
-                                                                Height="80" />
+                                                        <div class="player-avatar me-2 player-avatar-large">
+                                                            <CachedMystiraImage MediaId="@assignment.PlayerAssignment.SelectedAvatarMediaId"
+                                                                Alt="Player Avatar" Width="80" Height="80" />
                                                         </div>
                                                     }
                                                     else
@@ -133,17 +137,19 @@ else
                                                         <div class="fw-bold">@GetPlayerDisplayName(assignment.PlayerAssignment)</div>
                                                         <small class="text-muted">@assignment.PlayerAssignment.Type</small>
                                                     </div>
-                                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => RemovePlayerAssignment(cardIndex)" title="Remove">
+                                                    <button class="btn btn-sm btn-outline-danger"
+                                                        @onclick="() => RemovePlayerAssignment(cardIndex)" title="Remove">
                                                         &#10060;
                                                     </button>
                                                     <!-- hiding plus button to add as profile for now
-                                                    @if (assignment.PlayerAssignment?.Type == "Guest")
-                                                    {
-                                                       <button class="btn btn-sm btn-outline-primary ms-1" @onclick="() => CreateProfileFromGuest(assignment.PlayerAssignment)" title="Create Profile">
-                                                           <i class="fas fa-user-plus"></i>
-                                                       </button>
-                                                    }-->
-                                                    </div>
+                                                                    @if (assignment.PlayerAssignment?.Type == "Guest")
+                                                                    {
+                                                                           <button class="btn btn-sm btn-outline-primary ms-1" @onclick="() => CreateProfileFromGuest(assignment.PlayerAssignment)" title="Create Profile">
+                                                                               <i class="fas fa-user-plus"></i>
+                                                                           </button>
+                                                                    }
+                -->
+                                                </div>
                                             </div>
                                         }
                                     </div>
@@ -162,13 +168,14 @@ else
                     <button class="btn btn-outline-secondary" @onclick="GoBack">
                         <i class="fas fa-arrow-left me-2"></i>Back
                     </button>
-                    
+
                     <div class="d-flex gap-2">
                         <button class="btn btn-outline-primary" @onclick="ManageProfiles">
                             <i class="fas fa-users me-2"></i>Manage Profiles
                         </button>
-                        
-                        <button class="btn btn-primary-custom btn-lg" @onclick="BeginSession" disabled="@(!CanBeginSession)">
+
+                        <button class="btn btn-primary-custom btn-lg" @onclick="BeginSession"
+                            disabled="@(!CanBeginSession)">
                             @if (isStartingSession)
                             {
                                 <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -176,12 +183,14 @@ else
                             }
                             else
                             {
-                                <i class="fas fa-play me-2"></i><span>Begin Session</span>
+                                <i class="fas fa-play me-2"></i>
+                        
+                                <span>Begin Session</span>
                             }
                         </button>
                     </div>
                 </div>
-                
+
                 @if (!CanBeginSession)
                 {
                     <div class="alert alert-warning mt-3">
@@ -197,7 +206,7 @@ else
 <!-- Player Assignment Modal -->
 @if (showPlayerAssignmentModal)
 {
-    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal fade show d-block modal-backdrop">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
@@ -213,24 +222,24 @@ else
                             @validationMessage
                         </div>
                     }
-                    
+
                     <!-- Tab Navigation -->
                     <ul class="nav nav-tabs mb-3">
                         <li class="nav-item">
-                            <button class="nav-link @(assignmentTab == "profiles" ? "active" : "")" 
-                                    @onclick="@(() => SetAssignmentTab("profiles"))">
+                            <button class="nav-link @(assignmentTab == "profiles" ? "active" : "")"
+                                @onclick="@(() => SetAssignmentTab("profiles"))">
                                 <i class="fas fa-users me-1"></i>Profiles
                             </button>
                         </li>
                         <li class="nav-item">
-                            <button class="nav-link @(assignmentTab == "new-profile" ? "active" : "")" 
-                                    @onclick="@(() => SetAssignmentTab("new-profile"))">
+                            <button class="nav-link @(assignmentTab == "new-profile" ? "active" : "")"
+                                @onclick="@(() => SetAssignmentTab("new-profile"))">
                                 <i class="fas fa-user-plus me-1"></i>New Profile
                             </button>
                         </li>
                         <li class="nav-item">
-                            <button class="nav-link @(assignmentTab == "guest" ? "active" : "")" 
-                                    @onclick="@(() => SetAssignmentTab("guest"))">
+                            <button class="nav-link @(assignmentTab == "guest" ? "active" : "")"
+                                @onclick="@(() => SetAssignmentTab("guest"))">
                                 <i class="fas fa-user-circle me-1"></i>Guest
                             </button>
                         </li>
@@ -256,67 +265,64 @@ else
                     }
                     else if (assignmentTab == "new-profile")
                     {
-                         <!-- New Profile Tab -->
-                         <div class="mb-3">
-                             <label class="form-label">Profile Name *</label>
-                             <input type="text" class="form-control" @bind="newProfileName" placeholder="Enter profile name" />
-                         </div>
+                        <!-- New Profile Tab -->
+                        <div class="mb-3">
+                            <label class="form-label">Profile Name *</label>
+                            <input type="text" class="form-control" @bind="newProfileName" placeholder="Enter profile name" />
+                        </div>
 
-                         <div class="mb-3">
-                             <label class="form-label">Age Group *</label>
-                             <select class="form-select" @bind="newProfileAgeRange" @bind:after="OnAgeGroupChanged">
-                                 <option value="">Select age range...</option>
-                                 @foreach (var ageRange in AgeRanges.All)
-                                 {
-                                     <option value="@ageRange">@AgeRanges.GetDisplayName(ageRange)</option>
-                                 }
-                             </select>
-                         </div>
+                        <div class="mb-3">
+                            <label class="form-label">Age Group *</label>
+                            <select class="form-select" @bind="newProfileAgeRange" @bind:after="OnAgeGroupChanged">
+                                <option value="">Select age range...</option>
+                                @foreach (var ageRange in AgeRanges.All)
+                                {
+                                    <option value="@ageRange">@AgeRanges.GetDisplayName(ageRange)</option>
+                                }
+                            </select>
+                        </div>
 
-                         @if (!string.IsNullOrEmpty(newProfileAgeRange))
-                         {
-                             <div class="mb-3">
-                                 <label class="form-label">Choose Avatar</label>
-                                 
-                                 @if (isAvatarSelected && !string.IsNullOrEmpty(selectedAvatarMediaId))
-                                 {
-                                     <!-- Show selected avatar -->
-                                     <div class="card">
-                                         <div class="card-body text-center">
-                                             <div class="mb-3">
-                                                 <CachedMystiraImage 
-                                                     MediaId="@selectedAvatarMediaId" 
-                                                     Alt="Selected Avatar" 
-                                                     ImageClass="thumbnail-image"
-                                                     Width="150"
-                                                     Height="150" />
-                                             </div>
-                                             <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ChangeAvatar">
-                                                 <i class="fas fa-sync-alt me-2"></i>Change Avatar
-                                             </button>
-                                         </div>
-                                     </div>
-                                 }
-                                 else
-                                 {
-                                     <!-- Show avatar carousel -->
-                                     <AvatarCarousel AgeGroup="@newProfileAgeRange" OnAvatarSelected="OnAvatarSelected" />
-                                 }
-                             </div>
-                         }
+                        @if (!string.IsNullOrEmpty(newProfileAgeRange))
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Choose Avatar</label>
+
+                                @if (isAvatarSelected && !string.IsNullOrEmpty(selectedAvatarMediaId))
+                                {
+                                    <!-- Show selected avatar -->
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <div class="mb-3">
+                                                <CachedMystiraImage MediaId="@selectedAvatarMediaId" Alt="Selected Avatar"
+                                                    ImageClass="thumbnail-image" Width="150" Height="150" />
+                                            </div>
+                                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ChangeAvatar">
+                                                <i class="fas fa-sync-alt me-2"></i>Change Avatar
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <!-- Show avatar carousel -->
+                                    <AvatarCarousel AgeGroup="@newProfileAgeRange" OnAvatarSelected="OnAvatarSelected" />
+                                }
+                            </div>
+                        }
                     }
                     else
                     {
-                         <!-- Guest Tab -->
-                         <div class="mb-3">
-                             <label class="form-label">Display Name *</label>
-                             <input type="text" class="form-control" @bind="guestName" placeholder="Enter guest name" />
-                         </div>
+                        <!-- Guest Tab -->
+                        <div class="mb-3">
+                            <label class="form-label">Display Name *</label>
+                            <input type="text" class="form-control" @bind="guestName" placeholder="Enter guest name" />
+                        </div>
                     }
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="ClosePlayerAssignment">Cancel</button>
-                    <button type="button" class="btn btn-primary" @onclick="ConfirmPlayerAssignment" disabled="@(!CanConfirmAssignment)">
+                    <button type="button" class="btn btn-primary" @onclick="ConfirmPlayerAssignment"
+                        disabled="@(!CanConfirmAssignment)">
                         Assign Player
                     </button>
                 </div>
@@ -328,12 +334,13 @@ else
 <!-- Image Preview Modal -->
 @if (showImagePreview)
 {
-    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.8);">
+    <div class="modal fade show d-block modal-backdrop-dark">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content bg-transparent border-0">
                 <div class="modal-body p-0 text-center">
                     <img src="@previewImage" class="img-fluid" alt="Character Preview" />
-                    <button type="button" class="btn btn-light btn-lg position-absolute top-0 end-0 m-3" @onclick="CloseImagePreview">
+                    <button type="button" class="btn btn-light btn-lg position-absolute top-0 end-0 m-3"
+                        @onclick="CloseImagePreview">
                         &#10060;
                     </button>
                 </div>
@@ -372,17 +379,17 @@ else
     // Audio
     private string? isPlayingAudio = null;
     private IJSObjectReference? audioModule;
-    
+
     protected override async Task OnInitializedAsync()
     {
         try
         {
             Logger.LogInformation("Initializing character assignment for scenario: {ScenarioId}", ScenarioId);
             await LoadCharacterAssignmentData();
-            
+
             // Load the audio module when component initializes
             audioModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-                "import", "./js/audioPlayer.js");
+            "import", "./js/audioPlayer.js");
 
         }
         catch (Exception ex)
@@ -399,7 +406,7 @@ else
     private async Task LoadCharacterAssignmentData()
     {
         assignmentData = await CharacterAssignmentService.GetCharacterAssignmentDataAsync(ScenarioId, characterAssignments);
-        
+
         if (assignmentData != null)
         {
             characterAssignments = assignmentData.CharacterAssignments;
@@ -438,12 +445,12 @@ else
                 guest.ProfileId = createdProfile.Id;
                 guest.ProfileName = createdProfile.Name;
                 guest.Type = "Profile"; // Change from Guest to Profile
-                
+
                 Logger.LogInformation("Successfully created profile from guest: {ProfileName}", createdProfile.Name);
-                
+
                 // Refresh available profiles
                 await LoadCharacterAssignmentData();
-                
+
                 // Update UI
                 await InvokeAsync(StateHasChanged);
             }
@@ -461,7 +468,7 @@ else
             currentAssignmentIndex = index;
             currentAssignment = characterAssignments[index];
             showPlayerAssignmentModal = true;
-            
+
             // Reset form state
             selectedProfileId = string.Empty;
             guestName = string.Empty;
@@ -472,7 +479,7 @@ else
             isAvatarSelected = false;
             assignmentTab = "profiles";
             validationMessage = string.Empty;
-            
+
             // Pre-load profiles when modal opens
             if (!availableProfiles.Any())
             {
@@ -506,12 +513,13 @@ else
         StateHasChanged();
     }
 
-    private async Task OnAvatarSelected(string mediaId)
+    private Task OnAvatarSelected(string mediaId)
     {
         selectedAvatarMediaId = mediaId;
         isAvatarSelected = true;
         Logger.LogInformation("Avatar selected: {MediaId}", mediaId);
         StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private void ChangeAvatar()
@@ -541,7 +549,8 @@ else
                 playerAssignment.SelectedAvatarMediaId = profile.SelectedAvatarMediaId;
             }
         }
-        else if (assignmentTab == "new-profile" && !string.IsNullOrEmpty(newProfileName) && !string.IsNullOrEmpty(newProfileAgeRange))
+        else if (assignmentTab == "new-profile" && !string.IsNullOrEmpty(newProfileName) &&
+        !string.IsNullOrEmpty(newProfileAgeRange))
         {
             // Create the new profile immediately
             var account = await AuthService.GetCurrentAccountAsync();
@@ -570,12 +579,12 @@ else
                 playerAssignment.ProfileName = createdProfile.Name;
                 playerAssignment.ProfileImage = null;
                 playerAssignment.SelectedAvatarMediaId = createdProfile.SelectedAvatarMediaId;
-                
+
                 // Add the newly created profile to available profiles list
                 availableProfiles.Add(createdProfile);
-                
-                Logger.LogInformation("Added new profile to available profiles: {ProfileName} with avatar: {AvatarId}", 
-                    createdProfile.Name, createdProfile.SelectedAvatarMediaId);
+
+                Logger.LogInformation("Added new profile to available profiles: {ProfileName} with avatar: {AvatarId}",
+                createdProfile.Name, createdProfile.SelectedAvatarMediaId);
             }
             else
             {
@@ -627,9 +636,10 @@ else
 
             // Create guest profiles if needed (for any remaining guests that weren't created immediately)
             var guestProfilesToCreate = characterAssignments
-                .Where(ca => ca.PlayerAssignment?.Type == "Guest" && ca.PlayerAssignment.SaveAsProfile == true && string.IsNullOrEmpty(ca.PlayerAssignment.ProfileId))
-                .Select(ca => ca.PlayerAssignment!)
-                .ToList();
+            .Where(ca => ca.PlayerAssignment?.Type == "Guest" && ca.PlayerAssignment.SaveAsProfile == true &&
+            string.IsNullOrEmpty(ca.PlayerAssignment.ProfileId))
+            .Select(ca => ca.PlayerAssignment!)
+            .ToList();
 
             if (guestProfilesToCreate.Any())
             {
@@ -670,7 +680,8 @@ else
 
             if (success)
             {
-                Logger.LogInformation("Session started successfully, navigating to {NavigationManagerBaseUri}game", NavigationManager.BaseUri);
+                Logger.LogInformation("Session started successfully, navigating to {NavigationManagerBaseUri}game",
+                NavigationManager.BaseUri);
                 NavigationManager.NavigateTo("/game");
             }
             else
@@ -715,7 +726,7 @@ else
             {
                 return;
             }
-        
+
             if (isPlayingAudio == audioUrl)
             {
                 // Stop the currently playing audio
@@ -729,7 +740,7 @@ else
                 {
                     await audioModule.InvokeVoidAsync("stopAudio");
                 }
-            
+
                 // Start playing the new audio
                 await audioModule.InvokeVoidAsync("playAudio", audioUrl);
                 isPlayingAudio = audioUrl;
@@ -773,10 +784,10 @@ else
                 guest.ProfileId = createdProfile.Id;
                 guest.ProfileName = createdProfile.Name;
                 guest.Type = "Profile"; // Change from Guest to Profile
-                
+
                 // Refresh available profiles
                 await LoadCharacterAssignmentData();
-                
+
                 StateHasChanged();
             }
         }
@@ -803,7 +814,7 @@ else
     {
         if (string.IsNullOrEmpty(input))
             return string.Empty;
-            
+
         return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(input.ToLower());
     }
 
@@ -834,8 +845,8 @@ else
     {
         get
         {
-            return characterAssignments.All(ca => 
-                ca.IsUnused || (ca.PlayerAssignment != null && !string.IsNullOrEmpty(ca.PlayerAssignment.Type)));
+            return characterAssignments.All(ca =>
+            ca.IsUnused || (ca.PlayerAssignment != null && !string.IsNullOrEmpty(ca.PlayerAssignment.Type)));
         }
     }
 }

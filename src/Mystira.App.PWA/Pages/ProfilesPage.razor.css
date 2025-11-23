@@ -1,0 +1,28 @@
+/* Profiles Page Styles */
+
+.loading-container {
+    min-height: 80vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.profile-card-content {
+    flex: 1;
+    display: flex;
+    align-items: start;
+    gap: 0.5rem;
+}
+
+.profile-avatar-container {
+    flex-shrink: 0;
+}
+
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-backdrop-dark {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+

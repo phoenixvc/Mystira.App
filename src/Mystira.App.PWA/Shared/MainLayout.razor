@@ -8,7 +8,7 @@
 
 <div class="page">
     <!-- Offline Indicator -->
-    <div id="offline-indicator" class="offline-indicator" style="display: none;">
+    <div id="offline-indicator" class="offline-indicator">
         <i class="fas fa-wifi me-2"></i>
         You are currently offline. Some features may be limited.
     </div>
@@ -82,7 +82,7 @@
                             </button>
                             @if (isProfileMenuOpen)
                             {
-                                <div class="dropdown-menu show dropdown-menu-end" style="position: absolute; right: 0;">
+                                <div class="dropdown-menu show dropdown-menu-end profile-menu-dropdown">
                                     <h6 class="dropdown-header">
                                         <i class="fas fa-user me-2"></i>
                                         @(CurrentAccount?.DisplayName ?? "Account")

@@ -1,0 +1,45 @@
+/* Skeleton Loader Component Styles */
+
+.skeleton-card {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: 0.5rem;
+}
+
+.skeleton-image {
+    height: 200px;
+    width: 100%;
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.skeleton-text {
+    height: 1.25rem;
+    width: 80%;
+}
+
+.skeleton-text-sm {
+    height: 1rem;
+    width: 60%;
+}
+
+.skeleton-badge {
+    height: 1.5rem;
+    width: 60px;
+    border-radius: 999px;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+

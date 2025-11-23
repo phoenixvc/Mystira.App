@@ -1,0 +1,28 @@
+/* Featured Bundle Card Component Styles */
+
+.featured-bundle-card {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.featured-bundle-image {
+    height: 100%;
+    object-fit: cover;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+    .featured-bundle-card .row {
+        flex-direction: column;
+    }
+    
+    .featured-bundle-card .col-md-4,
+    .featured-bundle-card .col-md-8 {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+

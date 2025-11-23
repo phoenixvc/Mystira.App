@@ -269,7 +269,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
         }
     }
 
-    private async Task<List<CharacterAssignment>> CreateCharacterAssignmentsAsync(Scenario scenario)
+    private Task<List<CharacterAssignment>> CreateCharacterAssignmentsAsync(Scenario scenario)
     {
         var assignments = new List<CharacterAssignment>();
 
@@ -305,6 +305,6 @@ public class CharacterAssignmentService : ICharacterAssignmentService
             });
         }
 
-        return assignments;
+        return Task.FromResult(assignments);
     }
 }

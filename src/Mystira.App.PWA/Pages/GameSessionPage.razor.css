@@ -1,0 +1,82 @@
+/* Game Session Page Styles */
+
+.game-content {
+    padding: 2rem 0;
+}
+
+.scene-content {
+    background: white;
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+/* Choice button styles */
+.choice-button {
+    min-width: 250px;
+    text-align: left;
+    white-space: normal;
+    word-wrap: break-word;
+    hyphens: auto;
+}
+
+.choice-button .markdown-content {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.choice-button .markdown-content p {
+    margin: 0;
+}
+
+.choice-button .markdown-content strong,
+.choice-button .markdown-content b {
+    color: white;
+}
+
+.media-container {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin: 1rem 0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.media-container img,
+.media-container video {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.media-container audio {
+    width: 100%;
+    background: var(--secondary-color);
+    border-radius: 0.5rem;
+}
+
+.dice-roller-container {
+    max-width: 200px;
+    margin: 0 auto;
+    padding: 15px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .scene-content {
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .choice-button {
+        min-width: 100%;
+        margin: 0.25rem 0;
+    }
+    
+    .game-content {
+        padding: 1rem 0;
+    }
+}

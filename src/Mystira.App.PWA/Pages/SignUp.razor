@@ -82,11 +82,10 @@
                         <form @onsubmit="HandleVerifyCode">
                             <div class="mb-3">
                                 <label for="code" class="form-label">Verification Code</label>
-                                <input type="text" class="form-control form-control-lg text-center" 
+                                <input type="text" class="form-control form-control-lg text-center verification-code-input" 
                                        id="code" @bind="verificationCode" 
                                        placeholder="000000" maxlength="6"
-                                       disabled="@isVerifying" required 
-                                       style="font-size: 1.5rem; letter-spacing: 0.5rem;" />
+                                       disabled="@isVerifying" required />
                                 <small class="form-text text-muted">Enter the 6-digit code from your email</small>
                                 @if (!string.IsNullOrEmpty(codeError))
                                 {
