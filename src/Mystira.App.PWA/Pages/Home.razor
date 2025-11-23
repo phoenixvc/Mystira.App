@@ -359,7 +359,6 @@
     private bool showCompletedStories = true;
     private HashSet<string> completedScenarioIds = new();
     private List<GameSession> activeSessions = new();
-    private bool isLoadingGameState = false;
     private bool gameStateLoadingComplete = false;
     private bool hasProfiles = false;
     private bool isLoadingProfiles = false;
@@ -627,7 +626,6 @@
     {
         try
         {
-            isLoadingGameState = true;
             StateHasChanged();
             
             var currentAccount = await AuthService.GetCurrentAccountAsync();
@@ -662,7 +660,6 @@
         }
         finally
         {
-            isLoadingGameState = false;
             StateHasChanged();
         }
     }
