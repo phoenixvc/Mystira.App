@@ -180,33 +180,45 @@ function Dashboard({ onNavigate }: DashboardProps) {
   };
 
   return (
-    <div className="p-8">
+    <main className="p-8" id="main-content">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <header className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
             Welcome to Mystira DevHub
           </h1>
           <p className="text-gray-600 text-lg">
             Your central hub for development operations and data management
           </p>
-        </div>
+        </header>
 
         {/* Connection Status */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Connection Status</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <section className="mb-8" aria-labelledby="connection-status-heading">
+          <h2 id="connection-status-heading" className="text-xl font-semibold text-gray-900 mb-4">
+            Connection Status
+          </h2>
+          <div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+            role="list"
+            aria-label="Service connection statuses"
+          >
             {connections.map((connection) => (
               <div
                 key={connection.name}
+                role="listitem"
                 className={`border rounded-lg p-4 ${getStatusColor(connection.status)}`}
+                aria-label={`${connection.name}: ${connection.status}`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center">
-                    <span className="text-2xl mr-2">{connection.icon}</span>
+                    <span className="text-2xl mr-2" aria-hidden="true">{connection.icon}</span>
                     <span className="font-medium">{connection.name}</span>
                   </div>
-                  <span className="text-lg font-bold">
+                  <span
+                    className="text-lg font-bold"
+                    aria-label={connection.status}
+                    role="status"
+                  >
                     {getStatusIcon(connection.status)}
                   </span>
                 </div>
@@ -216,46 +228,57 @@ function Dashboard({ onNavigate }: DashboardProps) {
                   </div>
                 )}
                 {connection.error && (
-                  <div className="text-xs opacity-75 truncate mt-1">
+                  <div className="text-xs opacity-75 truncate mt-1" role="alert">
                     {connection.error}
                   </div>
                 )}
               </div>
             ))}
           </div>
-        </div>
+        </section>
 
         {/* Quick Actions */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <section className="mb-8" aria-labelledby="quick-actions-heading">
+          <h2 id="quick-actions-heading" className="text-xl font-semibold text-gray-900 mb-4">
+            Quick Actions
+          </h2>
+          <nav
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+            aria-label="Quick action buttons"
+          >
             {quickActions.map((action) => (
               <button
                 key={action.id}
                 onClick={action.action}
                 className={`relative overflow-hidden rounded-lg p-6 text-left transition-all transform hover:scale-105 hover:shadow-lg bg-gradient-to-br ${action.color} text-white group`}
+                aria-label={`${action.title}: ${action.description}`}
               >
-                <div className="absolute top-0 right-0 opacity-10 text-9xl transform translate-x-8 -translate-y-4">
+                <div className="absolute top-0 right-0 opacity-10 text-9xl transform translate-x-8 -translate-y-4" aria-hidden="true">
                   {action.icon}
                 </div>
                 <div className="relative z-10">
-                  <div className="text-4xl mb-3">{action.icon}</div>
+                  <div className="text-4xl mb-3" aria-hidden="true">{action.icon}</div>
                   <div className="text-xl font-bold mb-2">{action.title}</div>
                   <div className="text-sm opacity-90">{action.description}</div>
                 </div>
-                <div className="absolute bottom-0 right-0 transform translate-y-1 translate-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute bottom-0 right-0 transform translate-y-1 translate-x-1 opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true">
                   <span className="text-white text-2xl">→</span>
                 </div>
               </button>
             ))}
-          </div>
-        </div>
+          </nav>
+        </section>
 
         {/* Recent Operations */}
-        <div className="mb-8">
+        <section className="mb-8" aria-labelledby="recent-operations-heading">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">Recent Operations</h2>
-            <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            <h2 id="recent-operations-heading" className="text-xl font-semibold text-gray-900">
+              Recent Operations
+            </h2>
+            <button
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              aria-label="View all recent operations"
+            >
               View All →
             </button>
           </div>
