@@ -10,7 +10,6 @@ namespace Mystira.App.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin")]
 public class DiscordController : ControllerBase
 {
     private readonly IDiscordBotService? _discordBotService;
@@ -31,6 +30,7 @@ public class DiscordController : ControllerBase
     /// Get Discord bot status
     /// </summary>
     [HttpGet("status")]
+    [AllowAnonymous]
     public IActionResult GetStatus()
     {
         var enabled = _configuration.GetValue<bool>("Discord:Enabled", false);
@@ -58,6 +58,7 @@ public class DiscordController : ControllerBase
     /// Send a message to a Discord channel
     /// </summary>
     [HttpPost("send")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> SendMessage([FromBody] SendMessageRequest request)
     {
         if (_discordBotService == null)
@@ -92,6 +93,7 @@ public class DiscordController : ControllerBase
     /// Send a rich embed to a Discord channel
     /// </summary>
     [HttpPost("send-embed")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> SendEmbed([FromBody] SendEmbedRequest request)
     {
         if (_discordBotService == null)

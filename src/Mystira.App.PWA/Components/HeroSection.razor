@@ -8,12 +8,11 @@
             </h1>
             <p class="mystira-tagline mb-4">Where imagination meets growth</p>
             <div class="hero-logo-container mb-4">
-                <CachedMystiraImage 
-                    MediaId="@LogoMediaId"
-                    Alt="Mystira - Where imagination meets growth"
-                    Width="600"
-                    Height="600"
-                    ImageClass="hero-logo" />
+                <img src="icons/icon-512.png"
+                     alt="Mystira - Where imagination meets growth"
+                     width="600"
+                     height="600"
+                     class="hero-logo" />
             </div>
             @if (ShowDescription)
             {
@@ -51,9 +50,6 @@
 </div>
 
 @code {
-    [Parameter]
-    public string LogoMediaId { get; set; } = "image-final-logo-fe3f75db";
-    
     [Parameter]
     public bool ShowDescription { get; set; } = false;
     
