@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/tauri';
+import { useConnectionStore } from '../stores/connectionStore';
 
 interface QuickAction {
   id: string;
@@ -8,15 +8,6 @@ interface QuickAction {
   icon: string;
   action: () => void;
   color: string;
-}
-
-interface ConnectionStatus {
-  name: string;
-  type: 'cosmos' | 'storage' | 'azurecli' | 'githubcli';
-  status: 'connected' | 'disconnected' | 'checking';
-  icon: string;
-  details?: string;
-  error?: string;
 }
 
 interface RecentOperation {
@@ -33,32 +24,8 @@ interface DashboardProps {
 }
 
 function Dashboard({ onNavigate }: DashboardProps) {
-  const [connections, setConnections] = useState<ConnectionStatus[]>([
-    {
-      name: 'Cosmos DB',
-      type: 'cosmos',
-      status: 'checking',
-      icon: '🗄️',
-    },
-    {
-      name: 'Azure CLI',
-      type: 'azurecli',
-      status: 'checking',
-      icon: '☁️',
-    },
-    {
-      name: 'GitHub CLI',
-      type: 'githubcli',
-      status: 'checking',
-      icon: '🐙',
-    },
-    {
-      name: 'Blob Storage',
-      type: 'storage',
-      status: 'checking',
-      icon: '📦',
-    },
-  ]);
+  // Use connection store instead of local state
+  const { connections, testConnections } = useConnectionStore();
 
   const [recentOperations] = useState<RecentOperation[]>([
     {
@@ -103,86 +70,10 @@ function Dashboard({ onNavigate }: DashboardProps) {
     },
   ]);
 
-  // Test connections on mount
+  // Test connections on mount using the store
   useEffect(() => {
-    const abortController = new AbortController();
-
-    const testConnections = async () => {
-      // Test each connection type
-      for (const conn of connections) {
-        if (abortController.signal.aborted) break;
-
-        try {
-          const response: any = await invoke('test_connection', {
-            connectionType: conn.type,
-            connectionString: conn.type === 'cosmos' || conn.type === 'storage'
-              ? process.env[`${conn.type.toUpperCase()}_CONNECTION_STRING`]
-              : null,
-          });
-
-          if (response.success && response.result) {
-            setConnections((prev) =>
-              prev.map((c) =>
-                c.type === conn.type
-                  ? {
-                      ...c,
-                      status: 'connected' as const,
-                      details: getConnectionDetails(conn.type, response.result),
-                    }
-                  : c
-              )
-            );
-          } else {
-            setConnections((prev) =>
-              prev.map((c) =>
-                c.type === conn.type
-                  ? {
-                      ...c,
-                      status: 'disconnected' as const,
-                      error: response.error || 'Connection failed',
-                    }
-                  : c
-              )
-            );
-          }
-        } catch (error) {
-          setConnections((prev) =>
-            prev.map((c) =>
-              c.type === conn.type
-                ? {
-                    ...c,
-                    status: 'disconnected' as const,
-                    error: String(error),
-                  }
-                : c
-            )
-          );
-        }
-      }
-    };
-
     testConnections();
-
-    // Cleanup on unmount
-    return () => {
-      abortController.abort();
-    };
   }, []); // Only run on mount
-
-  const getConnectionDetails = (type: string, result: any): string => {
-    switch (type) {
-      case 'cosmos':
-        return result.accountName || 'Connected';
-      case 'storage':
-        return result.accountName || 'Connected';
-      case 'azurecli':
-        return result.user || 'Authenticated';
-      case 'githubcli':
-        return result.status === 'authenticated' ? 'Authenticated' : 'Connected';
-      default:
-        return 'Connected';
-    }
-  };
 
   const quickActions: QuickAction[] = [
     {

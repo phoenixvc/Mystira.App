@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
+import { useResourcesStore } from '../stores/resourcesStore';
+import { useDeploymentsStore } from '../stores/deploymentsStore';
 import BicepViewer from './BicepViewer';
 import WhatIfViewer from './WhatIfViewer';
 import ResourceGrid from './ResourceGrid';
@@ -21,161 +23,37 @@ function InfrastructurePanel() {
   const [workflowStatus, setWorkflowStatus] = useState<any>(null);
   const [whatIfChanges, setWhatIfChanges] = useState<any[]>([]);
 
-  // Azure resources state
-  const [resources, setResources] = useState<any[]>([]);
-  const [resourcesLoading, setResourcesLoading] = useState(false);
-  const [resourcesError, setResourcesError] = useState<string | null>(null);
-
-  // Deployment history state
-  const [deployments, setDeployments] = useState<any[]>([]);
-  const [deploymentsLoading, setDeploymentsLoading] = useState(false);
-  const [deploymentsError, setDeploymentsError] = useState<string | null>(null);
-
   const workflowFile = 'infrastructure-deploy-dev.yml';
   const repository = 'phoenixvc/Mystira.App';
 
-  // Fetch Azure resources
-  const fetchAzureResources = async (signal?: AbortSignal) => {
-    setResourcesLoading(true);
-    setResourcesError(null);
+  // Use stores instead of local state
+  const {
+    resources,
+    isLoading: resourcesLoading,
+    error: resourcesError,
+    fetchResources,
+  } = useResourcesStore();
 
-    try {
-      const response: CommandResponse = await invoke('get_azure_resources', {
-        subscriptionId: null, // Use default/current subscription
-        resourceGroup: null, // Get all resources
-      });
-
-      // Don't update state if aborted
-      if (signal?.aborted) return;
-
-      if (response.success && response.result) {
-        // Map Azure resources to ResourceGrid format
-        const mappedResources = response.result.map((resource: any) => ({
-          id: resource.id,
-          name: resource.name,
-          type: resource.type,
-          status: 'running' as const, // Azure doesn't provide a simple status, assume running if listed
-          region: resource.location || 'Unknown',
-          costToday: 0, // Cost data requires separate Azure Cost Management API
-          lastUpdated: new Date().toISOString(),
-          properties: {
-            'Resource Group': resource.resourceGroup || 'N/A',
-            'SKU': resource.sku?.name || 'N/A',
-            'Kind': resource.kind || 'N/A',
-          },
-        }));
-
-        setResources(mappedResources);
-      } else {
-        setResourcesError(response.error || 'Failed to fetch Azure resources');
-      }
-    } catch (error) {
-      if (!signal?.aborted) {
-        setResourcesError(String(error));
-      }
-    } finally {
-      if (!signal?.aborted) {
-        setResourcesLoading(false);
-      }
-    }
-  };
-
-  // Fetch GitHub deployment history
-  const fetchGitHubDeployments = async (signal?: AbortSignal) => {
-    setDeploymentsLoading(true);
-    setDeploymentsError(null);
-
-    try {
-      const response: CommandResponse = await invoke('get_github_deployments', {
-        repository,
-        limit: 20,
-      });
-
-      // Don't update state if aborted
-      if (signal?.aborted) return;
-
-      if (response.success && response.result) {
-        // Map GitHub workflow runs to DeploymentHistory format
-        const mappedDeployments = response.result.map((run: any, index: number) => {
-          const isInfrastructure = run.name?.toLowerCase().includes('infrastructure') ||
-                                   run.path?.toLowerCase().includes('infrastructure');
-
-          // Determine action type from workflow name
-          let action: 'deploy' | 'validate' | 'preview' | 'destroy' = 'deploy';
-          if (run.name?.toLowerCase().includes('validate')) action = 'validate';
-          else if (run.name?.toLowerCase().includes('preview') || run.name?.toLowerCase().includes('what-if')) action = 'preview';
-          else if (run.name?.toLowerCase().includes('destroy')) action = 'destroy';
-
-          // Map GitHub conclusion to our status
-          let status: 'success' | 'failed' | 'in_progress' = 'in_progress';
-          if (run.conclusion === 'success') status = 'success';
-          else if (run.conclusion === 'failure' || run.conclusion === 'cancelled') status = 'failed';
-          else if (run.status === 'completed') status = 'success';
-
-          // Calculate duration
-          let duration = 'N/A';
-          if (run.created_at && run.updated_at) {
-            const start = new Date(run.created_at).getTime();
-            const end = new Date(run.updated_at).getTime();
-            const diffSeconds = Math.floor((end - start) / 1000);
-            const minutes = Math.floor(diffSeconds / 60);
-            const seconds = diffSeconds % 60;
-            duration = `${minutes}m ${seconds}s`;
-          }
-
-          return {
-            id: run.id?.toString() || index.toString(),
-            timestamp: run.created_at || new Date().toISOString(),
-            action,
-            status,
-            duration,
-            resourcesAffected: 0, // GitHub doesn't provide this info easily
-            user: run.actor?.login || 'GitHub Actions',
-            message: run.display_title || run.name || 'Workflow run',
-            githubUrl: run.html_url,
-          };
-        });
-
-        setDeployments(mappedDeployments);
-      } else {
-        setDeploymentsError(response.error || 'Failed to fetch GitHub deployments');
-      }
-    } catch (error) {
-      if (!signal?.aborted) {
-        setDeploymentsError(String(error));
-      }
-    } finally {
-      if (!signal?.aborted) {
-        setDeploymentsLoading(false);
-      }
-    }
-  };
+  const {
+    deployments,
+    isLoading: deploymentsLoading,
+    error: deploymentsError,
+    fetchDeployments,
+  } = useDeploymentsStore();
 
   // Fetch resources when switching to resources tab
   useEffect(() => {
-    const abortController = new AbortController();
-
-    if (activeTab === 'resources' && resources.length === 0 && !resourcesLoading) {
-      fetchAzureResources(abortController.signal);
+    if (activeTab === 'resources') {
+      fetchResources();
     }
-
-    return () => {
-      abortController.abort();
-    };
-  }, [activeTab]);
+  }, [activeTab, fetchResources]);
 
   // Fetch deployments when switching to history tab
   useEffect(() => {
-    const abortController = new AbortController();
-
-    if (activeTab === 'history' && deployments.length === 0 && !deploymentsLoading) {
-      fetchGitHubDeployments(abortController.signal);
+    if (activeTab === 'history') {
+      fetchDeployments();
     }
-
-    return () => {
-      abortController.abort();
-    };
-  }, [activeTab]);
+  }, [activeTab, fetchDeployments]);
 
   const handleAction = async (action: 'validate' | 'preview' | 'deploy' | 'destroy') => {
     setLoading(true);
@@ -555,7 +433,7 @@ function InfrastructurePanel() {
                 <h3 className="text-lg font-semibold text-red-900 mb-2">❌ Failed to Load Resources</h3>
                 <p className="text-red-800 mb-3">{resourcesError}</p>
                 <button
-                  onClick={fetchAzureResources}
+                  onClick={() => fetchResources(true)}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                 >
                   Retry
@@ -564,7 +442,7 @@ function InfrastructurePanel() {
             )}
 
             {!resourcesLoading && !resourcesError && (
-              <ResourceGrid resources={resources} onRefresh={fetchAzureResources} />
+              <ResourceGrid resources={resources} onRefresh={() => fetchResources(true)} />
             )}
           </div>
         )}
@@ -584,7 +462,7 @@ function InfrastructurePanel() {
                 <h3 className="text-lg font-semibold text-red-900 mb-2">❌ Failed to Load Deployments</h3>
                 <p className="text-red-800 mb-3">{deploymentsError}</p>
                 <button
-                  onClick={fetchGitHubDeployments}
+                  onClick={() => fetchDeployments(true)}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                 >
                   Retry
