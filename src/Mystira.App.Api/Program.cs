@@ -16,6 +16,9 @@ using Mystira.App.Infrastructure.Azure.Services;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
 using Mystira.App.Infrastructure.Discord;
+using Mystira.App.Shared.Middleware;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -349,6 +352,42 @@ builder.Services.AddCors(options =>
 builder.Logging.AddConsole();
 builder.Logging.AddAzureWebAppDiagnostics();
 
+// Configure Rate Limiting (BUG-5: Prevent brute-force attacks)
+builder.Services.AddRateLimiter(options =>
+{
+    // Global rate limit: 100 requests per minute per IP
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    {
+        var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(ipAddress, _ =>
+            new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 100,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            });
+    });
+
+    // Strict rate limit for authentication endpoints: 5 attempts per 15 minutes per IP
+    options.AddFixedWindowLimiter("auth", options =>
+    {
+        options.PermitLimit = 5;
+        options.Window = TimeSpan.FromMinutes(15);
+        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        options.QueueLimit = 0;
+    });
+
+    // Rejection response
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await context.HttpContext.Response.WriteAsync(
+            "Too many requests. Please try again later.",
+            cancellationToken);
+    };
+});
+
 var app = builder.Build();
 
 var logger = app.Logger;
@@ -364,6 +403,12 @@ app.UseSwaggerUI(c =>
 });
 
 app.UseHttpsRedirection();
+
+// Add OWASP security headers (BUG-6)
+app.UseSecurityHeaders();
+
+// Add rate limiting (BUG-5)
+app.UseRateLimiter();
 
 app.UseRouting();
 
