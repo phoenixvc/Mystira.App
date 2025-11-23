@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
+using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Ports.Storage;
 using Mystira.App.Domain.Models;
-using Mystira.App.Infrastructure.Azure.Services;
-using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 namespace Mystira.App.Application.UseCases.Media;
@@ -11,15 +11,15 @@ namespace Mystira.App.Application.UseCases.Media;
 /// </summary>
 public class DeleteMediaUseCase
 {
-    private readonly Mystira.App.Infrastructure.Data.Repositories.IMediaAssetRepository _repository;
+    private readonly IMediaAssetRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IAzureBlobService _blobStorageService;
+    private readonly IBlobService _blobStorageService;
     private readonly ILogger<DeleteMediaUseCase> _logger;
 
     public DeleteMediaUseCase(
-        Mystira.App.Infrastructure.Data.Repositories.IMediaAssetRepository repository,
+        IMediaAssetRepository repository,
         IUnitOfWork unitOfWork,
-        IAzureBlobService blobStorageService,
+        IBlobService blobStorageService,
         ILogger<DeleteMediaUseCase> logger)
     {
         _repository = repository;

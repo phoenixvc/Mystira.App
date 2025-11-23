@@ -2,6 +2,7 @@ using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Mystira.App.Application.Ports.Messaging;
 using Mystira.App.Infrastructure.Discord.Configuration;
 
 namespace Mystira.App.Infrastructure.Discord.Services;
@@ -9,7 +10,7 @@ namespace Mystira.App.Infrastructure.Discord.Services;
 /// <summary>
 /// Implementation of Discord bot service using Discord.NET
 /// </summary>
-public class DiscordBotService : IDiscordBotService, IDisposable
+public class DiscordBotService : IMessagingService, IDiscordBotService, IDisposable
 {
     private readonly DiscordSocketClient _client;
     private readonly ILogger<DiscordBotService> _logger;

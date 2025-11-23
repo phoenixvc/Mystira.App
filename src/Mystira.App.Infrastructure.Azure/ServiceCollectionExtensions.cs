@@ -4,6 +4,8 @@ using Azure.Storage.Blobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Mystira.App.Application.Ports.Media;
+using Mystira.App.Application.Ports.Storage;
 using Mystira.App.Infrastructure.Azure.Configuration;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
@@ -99,7 +101,7 @@ public static class ServiceCollectionExtensions
             });
         }
 
-        services.AddScoped<IAzureBlobService, AzureBlobService>();
+        services.AddScoped<IBlobService, AzureBlobService>();
 
         return services;
     }
@@ -139,7 +141,7 @@ public static class ServiceCollectionExtensions
             });
         }
 
-        services.AddScoped<IAzureBlobService, AzureBlobService>();
+        services.AddScoped<IBlobService, AzureBlobService>();
 
         return services;
     }
