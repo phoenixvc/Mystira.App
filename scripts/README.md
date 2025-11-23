@@ -77,8 +77,10 @@ Or use the full path:
 | Service | HTTP Port | HTTPS Port | UI/Swagger |
 |---------|-----------|------------|------------|
 | API | 5260 | 7096 | /swagger |
-| Admin API | 5260 | 7096 | /admin |
+| Admin API | 5260 | 7096 | /admin, /swagger |
 | PWA | 7000 | 7000 | / |
+
+**Note:** API and Admin API use the same ports and cannot run simultaneously. Run only one at a time, or configure different ports in their respective `launchSettings.json` files.
 
 ## Notes
 
