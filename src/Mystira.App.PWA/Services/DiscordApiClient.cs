@@ -47,8 +47,8 @@ public class DiscordApiClient : BaseApiClient, IDiscordApiClient
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
-            Logger.LogError(ex, "Failed to send Discord message.");
         {
+            Logger.LogError(ex, "Failed to send Discord message.");
             return false;
         }
     }
@@ -62,8 +62,8 @@ public class DiscordApiClient : BaseApiClient, IDiscordApiClient
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
-            Logger.LogError(ex, "Failed to send Discord embed.");
         {
+            Logger.LogError(ex, "Failed to send Discord embed.");
             return false;
         }
     }
