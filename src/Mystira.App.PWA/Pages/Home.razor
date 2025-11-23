@@ -197,7 +197,12 @@
                 }
                 else if (!filteredBundles.Any())
                 {
-                    <div class="alert alert-info">No bundles found for the selected filters.</div>
+                    <EmptyState 
+                        IconClass="fas fa-box-open fa-4x"
+                        Title="No Bundles Found"
+                        Message="Try adjusting your age group filters to see available adventure bundles."
+                        ShowClearButton="true"
+                        OnClearFilters="@ClearAllFilters" />
                 }
                 else if (string.IsNullOrEmpty(selectedBundleId))
                 {
@@ -253,104 +258,38 @@
     }
     else if (ShouldShowCatalog && !string.IsNullOrEmpty(selectedBundleId) && filteredScenarios.Any())
     {
-        <div class="row">
+        <div class="adventures-grid row">
             @foreach (var scenario in filteredScenarios)
             {
                 var isCompleted = completedScenarioIds.Contains(scenario.Id);
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card scenario-card h-100 @(isCompleted ? "border-success" : "")">
-                        <div class="card-body d-flex flex-column">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h5 class="card-title">@scenario.Name</h5>
-                                @if (isCompleted)
-                                {
-                                    <span class="badge bg-success">
-                                        <i class="fas fa-check me-1"></i>Completed
-                                    </span>
-                                }
-                            </div>
-                            <p class="card-text flex-grow-1">@scenario.Description</p>
-                            
-                            <div class="mt-auto">
-                                <!-- Scenario Metadata -->
-                                <div class="scenario-metadata mb-3">
-                                    <!-- Group AgeGroup, Difficulty, and Session Length badges in one row -->
-                                    <div class="d-flex flex-wrap mb-2">
-                                        <span class="badge bg-info text-dark me-1 mb-1">
-                                            <i class="fas fa-users me-1"></i>Ages @scenario.AgeGroup
-                                        </span>
-                                        <span class="badge bg-warning me-1 mb-1">
-                                            <i class="fas fa-signal me-1"></i>@scenario.Difficulty
-                                        </span>
-                                        <span class="badge bg-success me-1 mb-1">
-                                            <i class="fas fa-clock me-1"></i>@scenario.SessionLength
-                                        </span>
-                                    </div>
-                                </div>
-                                
-                                <!-- Action Buttons -->
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-primary-custom flex-fill" 
-                                            @onclick="() => StartAdventure(scenario)"
-                                            disabled="@isStartingAdventure">
-                                        @if (isStartingAdventure)
-                                        {
-                                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                            <span>Loading...</span>
-                                        }
-                                        else
-                                        {
-                                            <i class="fas fa-play me-2"></i>
-                                            <span>Start Adventure</span>
-                                        }
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
+                    <AdventureCard 
+                        Adventure="@scenario"
+                        IsCompleted="@isCompleted"
+                        Themes="@(scenario.Tags?.Take(2).ToList())"
+                        OnStartAdventure="@StartAdventure" />
                 </div>
             }
         </div>
     }
     else if (ShouldShowCatalog && !string.IsNullOrEmpty(selectedBundleId) && !filteredScenarios.Any() && scenarios.Any())
     {
-        <div class="row justify-content-center">
-            <div class="col-md-6 text-center">
-                <div class="card border-0 shadow">
-                    <div class="card-body p-5">
-                        <i class="fas fa-search fa-3x text-info mb-3"></i>
-                        <h3>No Adventures Match Your Filters</h3>
-                        <p class="text-muted mb-4">
-                            Try adjusting your age group filters to see more adventures.
-                        </p>
-                        <button class="btn btn-primary-custom" @onclick="ClearAllFilters">
-                            <i class="fas fa-times me-2"></i>
-                            Clear Filters
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <EmptyState 
+            IconClass="fas fa-search-minus fa-4x"
+            Title="No Adventures Match Your Filters"
+            Message="Try adjusting your age group filters or search terms to discover more adventures."
+            ShowClearButton="true"
+            OnClearFilters="@ClearAllFilters" />
     }
     else if (ShouldShowCatalog && !string.IsNullOrEmpty(selectedBundleId) && !scenarios.Any())
     {
-        <div class="row justify-content-center">
-            <div class="col-md-6 text-center">
-                <div class="card border-0 shadow">
-                    <div class="card-body p-5">
-                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-                        <h3>No Adventures Available</h3>
-                        <p class="text-muted mb-4">
-                            We couldn't load any adventures right now. This might be due to a connection issue.
-                        </p>
-                        <button class="btn btn-primary-custom" @onclick="LoadScenarios">
-                            <i class="fas fa-refresh me-2"></i>
-                            Try Again
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <EmptyState 
+            IconClass="fas fa-wifi-slash fa-4x"
+            Title="Connection Issue"
+            Message="We couldn't load adventures right now. Please check your internet connection and try again."
+            ShowClearButton="false"
+            ShowRetryButton="true"
+            OnRetry="@LoadScenarios" />
     }
     else if (isAuthenticated && isLoadingProfiles)
     {
