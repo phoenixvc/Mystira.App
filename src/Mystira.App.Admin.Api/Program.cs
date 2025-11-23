@@ -251,7 +251,8 @@ builder.Services.AddCors(options =>
                 "https://localhost:7000",
                 "https://mystiraapp.azurewebsites.net",
                 "https://mystira.app",
-                "https://mango-water-04fdb1c03.3.azurestaticapps.net")
+                "https://mango-water-04fdb1c03.3.azurestaticapps.net",
+                "https://blue-water-0eab7991e.3.azurestaticapps.net")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .SetIsOriginAllowedToAllowWildcardSubdomains()
