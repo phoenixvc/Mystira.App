@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Infrastructure.Data;
 using Mystira.App.Contracts.Requests.GameSessions;
 using Mystira.App.Contracts.Responses.GameSessions;
 using Mystira.App.Domain.Models;

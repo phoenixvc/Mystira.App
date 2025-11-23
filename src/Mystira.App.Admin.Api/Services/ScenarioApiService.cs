@@ -2,7 +2,6 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Infrastructure.Data;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Validation;
 using Mystira.App.Contracts.Requests.Scenarios;
