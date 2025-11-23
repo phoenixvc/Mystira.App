@@ -322,7 +322,7 @@ function Dashboard({ onNavigate }: DashboardProps) {
               </div>
             )}
           </div>
-        </div>
+        </section>
 
         {/* System Info */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -351,7 +351,7 @@ function Dashboard({ onNavigate }: DashboardProps) {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 

@@ -15,7 +15,7 @@ export function renderWithProviders(
 /**
  * Mock Tauri invoke function
  */
-export function mockTauriInvoke(command: string, response: any) {
+export async function mockTauriInvoke(command: string, response: any) {
   const { invoke } = vi.mocked(await import('@tauri-apps/api/tauri'));
   invoke.mockImplementation((cmd: string) => {
     if (cmd === command) {
