@@ -196,7 +196,17 @@ public class ClientApiService : IClientApiService
 
             return versionParts.Length < minVersionParts.Length;
         }
-        catch
+        catch (FormatException)
+        {
+            // If parsing fails, assume version is lower
+            return true;
+        }
+        catch (ArgumentNullException)
+        {
+            // If parsing fails, assume version is lower
+            return true;
+        }
+        catch (OverflowException)
         {
             // If parsing fails, assume version is lower
             return true;
