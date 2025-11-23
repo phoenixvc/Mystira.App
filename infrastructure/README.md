@@ -225,14 +225,15 @@ The development environment includes:
   - Sender: `DoNotReply@mystira.app`
 
 ### Storage & Database
-- **Storage Account**: `mystiraappdevstorage`
+- **Storage Account**: `deveuwstmystira`
   - Container: `mystira-app-media`
+  - SKU: Standard_LRS (Locally Redundant - dev optimized)
   - Public blob access enabled
   - CORS configured for PWA origins
 
-- **Cosmos DB**: `mystiraappdevcosmos`
+- **Cosmos DB**: `dev-euw-cosmos-mystira`
   - Database: `MystiraAppDb`
-  - Serverless mode
+  - Serverless mode (pay-per-request - dev optimized)
   - Containers:
     - UserProfiles
     - Accounts
@@ -242,14 +243,14 @@ The development environment includes:
     - PendingSignups
 
 ### Application Hosting
-- **Main API App Service**: `mystira-app-dev-api`
-  - SKU: B1 (Basic)
+- **Main API App Service**: `dev-euw-app-mystira-api`
+  - SKU: F1 (Free - dev optimized)
   - Runtime: .NET 9.0 on Linux
   - Health check: `/health`
   - Integrated with App Insights
 
-- **Admin API App Service**: `dev-euw-app-mystora-admin-api`
-  - SKU: B1 (Basic)
+- **Admin API App Service**: `dev-euw-app-mystira-admin-api`
+  - SKU: F1 (Free - dev optimized)
   - Runtime: .NET 9.0 on Linux
   - Health check: `/health`
   - Integrated with App Insights
@@ -365,18 +366,31 @@ All App Services have health check endpoints configured at `/health`.
 
 ## Cost Optimization
 
-### Development Environment
-- **Cosmos DB**: Serverless mode (pay per request)
-- **App Services**: B1 tier (Basic, can be scaled down to F1 Free tier if needed)
-- **Storage**: Standard LRS (Locally Redundant Storage)
-- **Log Analytics**: 1GB daily cap
-- **Application Insights**: Standard pricing
+### Development Environment (Optimized for Low Cost)
+- **Cosmos DB**: Serverless mode (pay per request - $0.25/million RUs)
+- **App Services**: F1 tier (Free tier - $0/month)
+  - ⚠️ Note: Free tier has limitations (60 CPU minutes/day, 1GB RAM, 1GB storage)
+  - Can upgrade to B1 ($13.14/month) if more resources needed
+- **Storage**: Standard_LRS (Locally Redundant Storage - cheapest option)
+- **Log Analytics**: 1GB daily cap (first 5GB/month free)
+- **Application Insights**: Included with Log Analytics (first 5GB/month free)
+- **Communication Services**: Pay per use (emails/SMS)
 
-### Estimated Monthly Cost (Development)
-- Cosmos DB: ~$5-20 (serverless, depends on usage)
-- App Services (2x B1): ~$27.74
-- Storage Account: ~$1-5
-- Log Analytics + App Insights: ~$5-10
+### Estimated Monthly Cost (Development - Optimized)
+- Cosmos DB: ~$1-5 (serverless, low dev usage)
+- App Services (2x F1): **$0** (Free tier)
+- Storage Account: ~$1-3 (LRS, low usage)
+- Log Analytics + App Insights: **$0-5** (within free tier)
+- Communication Services: ~$0-2 (pay per use)
+
+**Total: ~$2-15/month** (vs ~$40-70 with B1 App Services)
+
+### Upgrading for Production
+When moving to production, consider:
+- **Cosmos DB**: Switch to provisioned throughput for predictable performance
+- **App Services**: Upgrade to P1v3 or higher for production workloads
+- **Storage**: Change to GRS (Geo-Redundant) for high availability
+- **Log Analytics**: Remove daily cap, increase retention
 - Communication Services: Pay per use
 
 **Total: ~$40-70/month**

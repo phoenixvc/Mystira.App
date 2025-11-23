@@ -61,7 +61,7 @@ resource appService 'Microsoft.Web/sites@2023-01-01' = {
     serverFarmId: appServicePlan.id
     siteConfig: {
       linuxFxVersion: 'DOTNETCORE|9.0'
-      alwaysOn: sku != 'F1' && sku != 'D1'
+      alwaysOn: sku != 'F1' && sku != 'D1' // AlwaysOn not available for Free/Shared tiers
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       http20Enabled: true

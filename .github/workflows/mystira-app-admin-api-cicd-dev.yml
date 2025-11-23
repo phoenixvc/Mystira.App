@@ -31,7 +31,7 @@ concurrency:
 
 env:
   DOTNET_VERSION: "9.0.x"
-  AZURE_WEBAPP_NAME: "dev-euw-app-mystora-admin-api" # ✅ UPDATED
+  AZURE_WEBAPP_NAME: "dev-euw-app-mystira-admin-api"
   AZURE_WEBAPP_PACKAGE_PATH: "./publish"
   ARTIFACT_NAME: "mystira-app-admin-api"
   DOTNET_CLI_TELEMETRY_OPTOUT: "1"

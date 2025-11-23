@@ -61,8 +61,9 @@ module communicationServices 'modules/communication-services.bicep' = {
 module storage 'modules/storage.bicep' = {
   name: 'storage-deployment'
   params: {
-    storageAccountName: 'mystiraappdevstorage'
+    storageAccountName: 'deveuwstmystira' // max 24 chars, lowercase, no hyphens for storage
     location: location
+    sku: 'Standard_LRS' // Dev: Locally redundant (cheapest)
     corsAllowedOrigins: split(corsAllowedOrigins, ',')
   }
 }
@@ -71,9 +72,10 @@ module storage 'modules/storage.bicep' = {
 module cosmosDb 'modules/cosmos-db.bicep' = {
   name: 'cosmosdb-deployment'
   params: {
-    cosmosDbAccountName: 'mystiraappdevcosmos'
+    cosmosDbAccountName: 'dev-euw-cosmos-mystira'
     location: location
     databaseName: 'MystiraAppDb'
+    serverless: true // Dev: Serverless for cost optimization
   }
 }
 
@@ -81,10 +83,10 @@ module cosmosDb 'modules/cosmos-db.bicep' = {
 module apiAppService 'modules/app-service.bicep' = {
   name: 'api-appservice-deployment'
   params: {
-    appServiceName: 'mystira-app-dev-api'
+    appServiceName: 'dev-euw-app-mystira-api'
     appServicePlanName: '${resourcePrefix}-asp-mystira-api'
     location: location
-    sku: 'B1'
+    sku: 'F1' // Dev: Free tier for cost optimization
     cosmosDbConnectionString: cosmosDb.outputs.cosmosDbConnectionString
     storageConnectionString: storage.outputs.storageConnectionString
     jwtSecretKey: jwtSecretKey
@@ -100,10 +102,10 @@ module apiAppService 'modules/app-service.bicep' = {
 module adminApiAppService 'modules/app-service.bicep' = {
   name: 'admin-api-appservice-deployment'
   params: {
-    appServiceName: 'dev-euw-app-mystora-admin-api'
+    appServiceName: 'dev-euw-app-mystira-admin-api'
     appServicePlanName: '${resourcePrefix}-asp-mystira-admin-api'
     location: location
-    sku: 'B1'
+    sku: 'F1' // Dev: Free tier for cost optimization
     cosmosDbConnectionString: cosmosDb.outputs.cosmosDbConnectionString
     storageConnectionString: storage.outputs.storageConnectionString
     jwtSecretKey: jwtSecretKey

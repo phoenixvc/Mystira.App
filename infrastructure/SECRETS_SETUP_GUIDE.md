@@ -107,14 +107,14 @@ These are needed for the API deployment workflows to work.
 **Option A: Via Azure CLI**
 ```bash
 az webapp deployment list-publishing-profiles \
-  --name mystira-app-dev-api \
+  --name dev-euw-app-mystira-api \
   --resource-group dev-euw-rg-mystira \
   --xml
 ```
 
 **Option B: Via Azure Portal**
 1. Go to: https://portal.azure.com
-2. Navigate to: App Services → `mystira-app-dev-api`
+2. Navigate to: App Services → `dev-euw-app-mystira-api`
 3. Click: **Get publish profile** (top toolbar)
 4. Save the downloaded file and copy its content
 
@@ -127,7 +127,7 @@ az webapp deployment list-publishing-profiles \
 #### `AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN`
 
 Repeat the above steps for the Admin API:
-- App Service name: `dev-euw-app-mystora-admin-api`
+- App Service name: `dev-euw-app-mystira-admin-api`
 - Secret name: `AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN`
 
 #### `AZURE_WEBAPP_PUBLISH_PROFILE_PROD`
@@ -254,5 +254,5 @@ openssl rand -base64 32
 az communication list-key --name dev-euw-acs-mystira --resource-group dev-euw-rg-mystira --query primaryConnectionString --output tsv
 
 # Get App Service publish profile
-az webapp deployment list-publishing-profiles --name mystira-app-dev-api --resource-group dev-euw-rg-mystira --xml
+az webapp deployment list-publishing-profiles --name dev-euw-app-mystira-api --resource-group dev-euw-rg-mystira --xml
 ```
