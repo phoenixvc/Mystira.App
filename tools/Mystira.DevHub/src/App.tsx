@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import InfrastructurePanel from './components/InfrastructurePanel';
+import CosmosExplorer from './components/CosmosExplorer';
 import './App.css';
 
 type View = 'dashboard' | 'cosmos' | 'migration' | 'infrastructure';
 
 function App() {
-  const [currentView, setCurrentView] = useState<View>('infrastructure');
+  const [currentView, setCurrentView] = useState<View>('cosmos');
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -72,12 +73,7 @@ function App() {
           </div>
         )}
 
-        {currentView === 'cosmos' && (
-          <div className="p-8">
-            <h2 className="text-3xl font-bold mb-4">Cosmos Explorer</h2>
-            <p className="text-gray-600">Coming soon...</p>
-          </div>
-        )}
+        {currentView === 'cosmos' && <CosmosExplorer />}
 
         {currentView === 'migration' && (
           <div className="p-8">
