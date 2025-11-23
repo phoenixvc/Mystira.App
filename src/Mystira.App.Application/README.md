@@ -450,6 +450,218 @@ All dependencies injected via constructor (testability).
 - **[API](../Mystira.App.Api/README.md)** - REST API endpoints that call use cases
 - **[Contracts](../Mystira.App.Contracts/README.md)** - DTOs for use case inputs/outputs
 
+## 🔍 Architectural Analysis
+
+### Current State Assessment
+
+**File Count**: 97 C# files
+**Dependencies**:
+- Domain (correct ✅)
+- Contracts (correct ✅)
+- Infrastructure.Data (⚠️ VIOLATION)
+- Infrastructure.Azure (⚠️ VIOLATION)
+- Entity Framework Core (questionable ⚠️)
+- AutoMapper, NJsonSchema
+
+**Target Framework**: net9.0
+
+### ⚠️ Architectural Issues Found
+
+#### 1. **Direct Infrastructure Dependencies** (CRITICAL)
+**Location**: `Mystira.App.Application.csproj` lines 20-21
+
+**Issue**: Application layer directly references concrete infrastructure projects:
+```xml
+<ProjectReference Include="..\Mystira.App.Infrastructure.Data\Mystira.App.Infrastructure.Data.csproj" />
+<ProjectReference Include="..\Mystira.App.Infrastructure.Azure\Mystira.App.Infrastructure.Azure.csproj" />
+```
+
+**Impact**:
+- ❌ **138 namespace imports** of `Mystira.App.Infrastructure` across use cases
+- ❌ Violates **Dependency Inversion Principle**
+- ❌ Application couples to specific implementations
+- ❌ Can't swap implementations without changing use cases
+- ❌ Hard to test (requires real infrastructure)
+
+**Recommendation**:
+- **REMOVE** project references to Infrastructure.*
+- Define **Port Interfaces** in `Application/Ports/`
+- Use cases depend ONLY on interfaces
+- Infrastructure implements interfaces
+- Dependency injection wires concrete implementations
+
+**Example Refactoring**:
+```csharp
+// BEFORE (current - WRONG):
+using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
+
+public class CreateScenarioUseCase
+{
+    private readonly ScenarioRepository _repository;  // Concrete!
+    private readonly UnitOfWork _unitOfWork;          // Concrete!
+}
+
+// AFTER (correct):
+using Mystira.App.Application.Ports;
+
+public class CreateScenarioUseCase
+{
+    private readonly IScenarioRepository _repository;  // Interface!
+    private readonly IUnitOfWork _unitOfWork;          // Interface!
+}
+```
+
+#### 2. **Insufficient Port Interfaces** (HIGH)
+**Location**: `Application/Ports/` folder
+
+**Issue**: Only 2 port interfaces defined:
+- `IStoryProtocolService`
+- `IMediaMetadataService`
+
+Missing ports for:
+- All repositories (IScenarioRepository, IGameSessionRepository, etc.)
+- IUnitOfWork
+- IBlobStorageService
+- IDiscordBotService
+- And many more...
+
+**Recommendation**:
+- Move ALL repository interfaces from Infrastructure.Data to Application/Ports
+- Move IUnitOfWork to Application/Ports
+- Define ports for ALL external dependencies
+
+#### 3. **Entity Framework Core Reference** (MEDIUM)
+**Location**: Application.csproj line 11
+
+**Issue**: Application references EF Core directly:
+```xml
+<PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
+```
+
+**Impact**:
+- ⚠️ Couples application to specific ORM
+- ⚠️ Not necessary if using repository pattern correctly
+
+**Recommendation**:
+- Remove EF Core reference from Application
+- Keep ONLY in Infrastructure.Data
+- Use cases should never see `DbContext`, `DbSet`, or EF Core types
+
+### ✅ What's Working Well
+
+1. **Use Case Organization** - Clear folder structure by feature
+2. **Parsers** - Good separation of YAML parsing logic
+3. **Validation** - Schema-based validation with NJsonSchema
+4. **Port Definition Started** - Beginning to define ports (need more)
+
+## 📋 Refactoring TODO
+
+### 🔴 Critical Priority (MUST FIX)
+- [ ] **Remove Infrastructure project references**
+  - Remove `Infrastructure.Data` reference from Application.csproj
+  - Remove `Infrastructure.Azure` reference from Application.csproj
+  - Location: `Mystira.App.Application.csproj` lines 20-21
+
+- [ ] **Define all repository port interfaces**
+  - Create `Ports/Data/IScenarioRepository.cs`
+  - Create `Ports/Data/IGameSessionRepository.cs`
+  - Create `Ports/Data/IMediaAssetRepository.cs`
+  - Create `Ports/Data/IBadgeConfigurationRepository.cs`
+  - Create `Ports/Data/ICharacterMapRepository.cs`
+  - Create `Ports/Data/IUserBadgeRepository.cs`
+  - Create `Ports/Data/IAccountRepository.cs`
+  - Create `Ports/Data/IUnitOfWork.cs`
+  - Move from Infrastructure.Data/Repositories
+
+- [ ] **Update all 138 infrastructure usages**
+  - Replace `using Mystira.App.Infrastructure.Data.Repositories;`
+  - With: `using Mystira.App.Application.Ports.Data;`
+  - Update constructor parameters to use interfaces
+  - Tool: Find and replace across UseCases folder
+
+### 🟡 High Priority
+- [ ] **Define infrastructure port interfaces**
+  - Create `Ports/Storage/IBlobStorageService.cs`
+  - Create `Ports/Messaging/IDiscordBotService.cs`
+  - Create `Ports/Blockchain/IStoryProtocolService.cs` (already exists ✅)
+  - Create `Ports/Email/IEmailService.cs`
+
+- [ ] **Remove EF Core dependency**
+  - Remove `Microsoft.EntityFrameworkCore` package from Application
+  - Verify no EF Core types in use cases
+  - Location: `Mystira.App.Application.csproj` line 11
+
+### 🟢 Medium Priority
+- [ ] **Implement CQRS preparation**
+  - Separate read and write use cases
+  - Create `Commands/` and `Queries/` folders
+  - Use MediatR for command/query dispatching
+
+- [ ] **Add use case interfaces**
+  - Define `IUseCase<TRequest, TResponse>` interface
+  - All use cases implement standard interface
+  - Enables generic handling, validation, logging
+
+## 💡 Recommendations
+
+### Immediate Actions (This Sprint)
+1. **Stop adding infrastructure usages** - No more direct infrastructure imports
+2. **Define port interfaces** - Create Application/Ports structure
+3. **Refactor one use case as example** - Show correct pattern to team
+
+### Short-term (Next Sprint)
+1. **Systematic refactoring** - Update all 138 infrastructure usages
+2. **Remove project references** - Break infrastructure coupling
+3. **Update dependency injection** - Wire interfaces to implementations
+
+### Long-term (Future)
+1. **CQRS pattern** - Separate commands and queries (Contracts project ready!)
+2. **MediatR integration** - Pipeline behaviors for logging, validation
+3. **Domain events** - React to domain changes in use cases
+
+## 📊 SWOT Analysis
+
+### Strengths 💪
+- ✅ **Use Case Organization**: Clear feature-based folder structure
+- ✅ **Parser Separation**: YAML parsing isolated from business logic
+- ✅ **Schema Validation**: JSON Schema for structural validation
+- ✅ **Port Abstraction Started**: Beginning to define infrastructure ports
+- ✅ **AutoMapper**: Clean DTO mapping
+- ✅ **Rich Use Cases**: Business workflows well-encapsulated
+
+### Weaknesses ⚠️
+- ❌ **Infrastructure Coupling**: 138 direct infrastructure usages
+- ❌ **Project Reference Violations**: Direct references to Infrastructure.*
+- ❌ **Incomplete Ports**: Only 2 of ~15 needed port interfaces defined
+- ⚠️ **EF Core Dependency**: ORM framework leaked into application layer
+- ⚠️ **Testability**: Hard to unit test with concrete infrastructure
+- ⚠️ **No CQRS**: Commands and queries mixed together
+
+### Opportunities 🚀
+- 📈 **Dependency Inversion**: Apply DIP, achieve true hexagonal architecture
+- 📈 **Test Coverage**: Easy unit testing with port interfaces
+- 📈 **Swap Implementations**: Replace Cosmos with SQL, Azure with AWS
+- 📈 **CQRS Pattern**: Leverage Contracts project for command/query separation
+- 📈 **MediatR Integration**: Pipeline behaviors for cross-cutting concerns
+- 📈 **Domain Events**: React to business events in use cases
+- 📈 **API Versioning**: Evolve use cases independently of API
+
+### Threats 🔒
+- ⚡ **Tight Coupling**: Infrastructure changes ripple through application
+- ⚡ **Testing Difficulty**: Can't unit test without infrastructure
+- ⚡ **Vendor Lock-in**: Coupled to EF Core, Azure, Cosmos DB
+- ⚡ **Refactoring Scope**: 97 files, 138 usages to fix
+- ⚡ **Team Knowledge**: Developers may not understand ports & adapters
+- ⚡ **Merge Conflicts**: Large refactoring across many files
+
+### Risk Mitigation
+1. **Phased Refactoring**: One use case category at a time
+2. **Automated Tests**: Write tests BEFORE refactoring
+3. **Code Reviews**: Ensure team understands new pattern
+4. **Documentation**: Update team docs with correct patterns
+5. **Pair Programming**: Spread knowledge across team
+
 ## License
 
 Copyright (c) 2025 Mystira. All rights reserved.

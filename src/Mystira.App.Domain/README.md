@@ -310,6 +310,163 @@ public void CompassTracking_ApplyChange_ShouldClampValues()
 - **[Infrastructure.Data](../Mystira.App.Infrastructure.Data/README.md)** - Repository implementations
 - **[Contracts](../Mystira.App.Contracts/README.md)** - DTOs that expose domain to APIs
 
+## 🔍 Architectural Analysis
+
+### Current State Assessment
+
+**File Count**: 25 C# files
+**Dependencies**: System.Text.Json (9.0.0), YamlDotNet (16.3.0)
+**Target Framework**: netstandard2.1
+
+### ⚠️ Architectural Issues Found
+
+#### 1. **File I/O in Domain Layer** (CRITICAL)
+**Location**: `RandomNameGenerator.cs` (lines 18-28), `StringEnum.cs`
+
+**Issue**: Domain layer contains direct file system operations:
+```csharp
+var json = File.ReadAllText(path);  // Infrastructure concern in domain!
+```
+
+**Impact**:
+- ❌ Violates pure domain principle
+- ❌ Creates infrastructure dependency
+- ❌ Makes unit testing difficult
+- ❌ Breaks portability (file paths, disk access)
+
+**Recommendation**:
+- Move `RandomNameGenerator` to **Mystira.App.Shared** or create `Mystira.App.Infrastructure.Data.Seed`
+- Load name data at startup via dependency injection
+- Pass data through constructor or factory
+
+#### 2. **Persistence Models Mixed with Domain Models** (MEDIUM)
+**Location**: `MediaMetadataModels.cs`
+
+**Issue**: Contains file-based persistence models (`MediaMetadataFile`, `CharacterMapFile`) that include:
+- Persistence concerns (`Id`, `CreatedAt`, `UpdatedAt`, `Version`)
+- Document structure for file storage
+- These are infrastructure/data transfer concerns
+
+**Impact**:
+- ⚠️ Domain polluted with persistence details
+- ⚠️ Harder to evolve domain independently
+- ⚠️ Confuses domain models with data models
+
+**Recommendation**:
+- Keep pure domain models: `MediaMetadata`, `CharacterMap` (without file structure)
+- Move file models (`*File` classes) to **Infrastructure.Data** or **Contracts**
+- Use DTOs for persistence/serialization
+
+#### 3. **Missing Repository Interfaces** (LOW)
+**Issue**: Repository interfaces (`IRepository<T>`, `IUnitOfWork`) are not defined in Domain
+
+**Impact**:
+- ⚠️ Domain doesn't define its data access contracts
+- ⚠️ Infrastructure defines the interfaces (inverted dependency)
+
+**Recommendation** (Optional for Clean Architecture purists):
+- Add `Domain/Interfaces/` folder
+- Define `IRepository<T>`, `IUnitOfWork` in Domain
+- Infrastructure.Data implements these contracts
+
+### ✅ What's Working Well
+
+1. **netstandard2.1 Target** - Maximum portability
+2. **Minimal Dependencies** - Only JSON and YAML serialization
+3. **StringEnum Pattern** - Type-safe enumerations
+4. **Rich Domain Models** - Business logic in entities (e.g., `CompassTracking.ApplyCompassChange`)
+5. **Value Objects** - Immutable domain concepts (CoreAxis, EchoType)
+
+## 📋 Refactoring TODO
+
+### High Priority
+- [ ] **Extract file I/O from RandomNameGenerator**
+  - Create `INameGeneratorDataProvider` interface
+  - Implement provider in Infrastructure.Data or Shared
+  - Inject data via constructor
+  - Location: `Domain/Models/RandomNameGenerator.cs`
+
+- [ ] **Extract file I/O from StringEnum**
+  - Load enum data at startup, not on-demand
+  - Cache in memory after first load
+  - Location: `Domain/Models/StringEnum.cs`
+
+### Medium Priority
+- [ ] **Separate domain models from persistence models**
+  - Keep `MediaMetadataEntry`, `CharacterMediaMetadataEntry` in Domain (pure data)
+  - Move `MediaMetadataFile`, `CharacterMapFile` to Infrastructure.Data
+  - Move `CharacterMapFileCharacter` to Infrastructure.Data
+  - Location: `Domain/Models/MediaMetadataModels.cs`
+
+- [ ] **Add domain interfaces folder (optional)**
+  - Create `Domain/Interfaces/` folder
+  - Define `IRepository<T>` interface
+  - Define `IUnitOfWork` interface
+
+### Low Priority
+- [ ] **Add domain events infrastructure**
+  - Create `IDomainEvent` interface
+  - Add `DomainEventBase` abstract class
+  - Implement event dispatcher pattern
+
+- [ ] **Add specification pattern**
+  - Create `ISpecification<T>` interface
+  - Implement common specifications
+
+## 💡 Recommendations
+
+### Immediate Actions
+1. **Create Infrastructure.Data.Seed project** for data loading
+2. **Refactor RandomNameGenerator** to accept pre-loaded data
+3. **Move file-based models** out of Domain
+
+### Future Improvements
+1. **Domain Events**: Publish events when entities change state
+2. **Aggregate Boundaries**: Strengthen scenario aggregate root
+3. **Value Object Library**: More value objects for type safety (EmailAddress, ScenarioId)
+4. **Domain Services**: Extract multi-entity logic from use cases
+
+## 📊 SWOT Analysis
+
+### Strengths 💪
+- ✅ **Framework Independence**: Pure C# with minimal dependencies
+- ✅ **netstandard2.1**: Compatible with .NET Core, .NET 5+, Unity, Xamarin
+- ✅ **Rich Domain Models**: Business logic in entities, not anemic models
+- ✅ **Type Safety**: StringEnum pattern prevents magic strings
+- ✅ **Value Objects**: Immutable domain concepts (CoreAxis, FantasyTheme)
+- ✅ **Clear Boundaries**: 25 files, well-organized, single responsibility
+- ✅ **Business Rules**: Validation logic in domain (max 4 archetypes, compass ranges)
+
+### Weaknesses ⚠️
+- ❌ **File I/O in Domain**: Breaks infrastructure independence
+- ❌ **Persistence Models Mixed In**: File models pollute domain
+- ⚠️ **No Domain Events**: Can't react to domain state changes
+- ⚠️ **No Specifications**: Query logic scattered in repositories
+- ⚠️ **Limited Value Objects**: Could benefit from more (EmailAddress, UserId)
+- ⚠️ **Thread-Local Random**: `RandomNameGenerator` uses ThreadLocal (okay, but could be better)
+
+### Opportunities 🚀
+- 📈 **Domain Events**: Enable event-driven architecture, CQRS
+- 📈 **Richer Type System**: More value objects for compile-time safety
+- 📈 **Domain Services**: Extract complex business workflows
+- 📈 **Specification Pattern**: Reusable query logic
+- 📈 **Aggregate Patterns**: Stricter entity relationships
+- 📈 **Multi-Tenancy Support**: Add tenant context to entities
+- 📈 **Audit Trail**: Track entity changes at domain level
+
+### Threats 🔒
+- ⚡ **File I/O Coupling**: Hard to test, platform-dependent
+- ⚡ **Persistence Leakage**: File models creep into domain logic
+- ⚡ **Serialization Dependency**: YamlDotNet couples to YAML format
+- ⚡ **Framework Migration**: If .NET Standard becomes obsolete
+- ⚡ **Performance**: File.ReadAllText on every enum load (mitigated by Lazy<T>)
+
+### Risk Mitigation
+1. **Extract File I/O**: High priority refactoring
+2. **Separate Models**: Keep domain pure
+3. **Add Tests**: Unit tests for all domain logic
+4. **Document Invariants**: Clearly document business rules
+
 ## License
 
 Copyright (c) 2025 Mystira. All rights reserved.
