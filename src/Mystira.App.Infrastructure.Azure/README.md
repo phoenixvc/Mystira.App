@@ -261,3 +261,222 @@ For issues related to Azure infrastructure:
 2. Review health check endpoints
 3. Examine Application Insights telemetry
 4. Contact the development team with specific error messages
+
+## 🔍 Architectural Analysis
+
+### Current State Assessment
+
+**File Count**: ~9 C# files (small, focused)
+**Project References**: 1 (Domain only)
+- Domain ✅ (correct - infrastructure can reference domain)
+- Application ❌ (missing - should reference for port interfaces)
+
+**Dependencies**:
+- Azure.Storage.Blobs ✅ (cloud storage SDK)
+- Azure.Identity ✅ (authentication)
+- Microsoft.EntityFrameworkCore.Cosmos ✅ (database)
+- FFMpegCore ✅ (audio transcoding)
+
+**Folders**:
+- Services/ ✅ (Azure service implementations)
+- HealthChecks/ ✅ (Azure health monitoring)
+- Configuration/ ✅ (Azure options)
+- ServiceCollectionExtensions ✅ (DI registration)
+
+### ⚠️ Architectural Issues Found
+
+#### 1. **Port Interfaces in Infrastructure Layer** (MEDIUM)
+**Location**: `Services/IAzureBlobService.cs`, `Services/IAudioTranscodingService.cs`
+
+**Issue**: Port interfaces (abstractions) are defined in Infrastructure project:
+```csharp
+// Currently in Infrastructure.Azure/Services/
+public interface IAzureBlobService  // This is a PORT!
+{
+    Task<string> UploadMediaAsync(...);
+    Task<string> GetMediaUrlAsync(string blobName);
+    // ...
+}
+```
+
+**Impact**:
+- ⚠️ Violates Dependency Inversion Principle
+- ⚠️ Application layer would need to reference Infrastructure to use the interface
+- ⚠️ Port (abstraction) and Adapter (implementation) in same project
+- ⚠️ Can't easily swap implementations (e.g., local file storage for testing)
+
+**Recommendation**:
+- **MOVE** `IAzureBlobService` → `Application/Ports/Storage/IBlobService.cs`
+- **MOVE** `IAudioTranscodingService` → `Application/Ports/Media/IAudioTranscodingService.cs`
+- **KEEP** implementations (`AzureBlobService`, `FfmpegAudioTranscodingService`) in Infrastructure.Azure
+- **ADD** Application project reference to Infrastructure.Azure
+- Infrastructure implements ports defined in Application
+
+**Correct Structure**:
+```
+Application/Ports/Storage/
+├── IBlobService.cs                    # Port interface
+
+Infrastructure.Azure/Services/
+├── AzureBlobService.cs                # Adapter (implements IBlobService)
+```
+
+#### 2. **Missing Application Reference** (MEDIUM)
+**Location**: `Mystira.App.Infrastructure.Azure.csproj`
+
+**Issue**: Infrastructure.Azure does not reference Application layer:
+```xml
+<ItemGroup>
+  <ProjectReference Include="..\Mystira.App.Domain\Mystira.App.Domain.csproj" />
+  <!-- Missing: Application reference -->
+</ItemGroup>
+```
+
+**Impact**:
+- ⚠️ Can't implement ports defined in Application
+- ⚠️ Forces port interfaces to live in Infrastructure (wrong layer)
+- ⚠️ Breaks hexagonal architecture dependency flow
+
+**Recommendation**:
+- **ADD** reference to Application project
+- After moving interfaces to Application/Ports
+- Correct dependency flow: Infrastructure → Application → Domain
+
+**Example**:
+```diff
+  <ItemGroup>
+    <ProjectReference Include="..\Mystira.App.Domain\Mystira.App.Domain.csproj" />
++   <ProjectReference Include="..\Mystira.App.Application\Mystira.App.Application.csproj" />
+  </ItemGroup>
+```
+
+#### 3. **Dual EF Core Providers** (INFO)
+**Location**: Package references
+
+**Issue**: Both Cosmos DB and InMemory EF Core providers:
+```xml
+<PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" Version="9.0.0" />
+<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
+```
+
+**Impact**:
+- ⚠️ Unclear why both providers are needed in Azure infrastructure
+- ⚠️ InMemory provider typically for testing, shouldn't be in production infra
+
+**Recommendation**:
+- **CLARIFY** why InMemory provider is needed
+- Consider moving InMemory to test projects only
+- Or document if needed for specific dev/test scenarios
+
+### ✅ What's Working Well
+
+1. **Focused Scope** - Only Azure-specific infrastructure
+2. **Clean Services** - Blob storage and transcoding well-separated
+3. **Health Checks** - Proper monitoring infrastructure
+4. **Deployment Automation** - Bicep templates and scripts
+5. **Security** - HTTPS enforcement, TLS 1.2, managed identity support
+6. **Cost Optimization** - Serverless Cosmos DB, appropriate tiers
+7. **Clear Documentation** - Deployment guides and troubleshooting
+
+## 📋 Refactoring TODO
+
+### 🟡 High Priority
+
+- [ ] **Move port interfaces to Application layer**
+  - Move `Services/IAzureBlobService.cs` → `Application/Ports/Storage/IBlobService.cs`
+  - Move `Services/IAudioTranscodingService.cs` → `Application/Ports/Media/IAudioTranscodingService.cs`
+  - Rename to remove "Azure" prefix from interface names (implementation-agnostic)
+  - Location: `Infrastructure.Azure/Services/I*.cs`
+
+- [ ] **Add Application project reference**
+  - Add `<ProjectReference Include="..\Mystira.App.Application\..." />`
+  - Update implementations to reference Application ports
+  - Location: `Mystira.App.Infrastructure.Azure.csproj`
+
+- [ ] **Update implementations to use Application ports**
+  - `AzureBlobService : IBlobService` (from Application)
+  - `FfmpegAudioTranscodingService : IAudioTranscodingService` (from Application)
+  - Remove local interface definitions
+
+### 🟢 Medium Priority
+
+- [ ] **Clarify EF Core InMemory usage**
+  - Document why InMemory provider is needed
+  - Consider removing if only for testing
+  - Move to test projects if appropriate
+
+- [ ] **Add local file storage adapter**
+  - Create `LocalFileStorageService : IBlobService`
+  - For local development without Azure
+  - Location: New `Infrastructure.Local` project or similar
+
+### 🔵 Low Priority
+
+- [ ] **Add integration tests**
+  - Test Azure Blob Service with Azurite emulator
+  - Test health checks
+  - Verify Cosmos DB connectivity
+
+## 💡 Recommendations
+
+### Immediate Actions
+1. **Move port interfaces to Application/Ports** - Correct dependency inversion
+2. **Add Application reference** - Enable proper layering
+3. **Document InMemory provider usage** - Clarify purpose
+
+### Short-term
+1. **Create local storage adapter** - Development without Azure
+2. **Add port documentation** - Explain storage abstraction
+3. **Integration tests** - Use Azurite for blob storage tests
+
+### Long-term
+1. **Consider multiple storage backends** - AWS S3, Google Cloud Storage adapters
+2. **Enhanced monitoring** - Application Insights integration
+3. **Performance optimization** - CDN for media delivery
+
+## 📊 SWOT Analysis
+
+### Strengths 💪
+- ✅ **Focused Scope** - Only Azure infrastructure, well-bounded
+- ✅ **Modern Azure SDKs** - Latest Azure packages
+- ✅ **IaC with Bicep** - Deployment automation
+- ✅ **Health Checks** - Proper monitoring
+- ✅ **Security Best Practices** - HTTPS, TLS, managed identity
+- ✅ **Cost-Optimized** - Serverless options
+- ✅ **Small and Maintainable** - Only 9 files
+
+### Weaknesses ⚠️
+- ⚠️ **Port Interfaces Misplaced** - Should be in Application layer
+- ⚠️ **Missing Application Reference** - Can't implement Application ports
+- ⚠️ **Dual EF Core Providers** - Unclear purpose of InMemory
+- ⚠️ **No Local Development Alternative** - Requires Azure for dev
+
+### Opportunities 🚀
+- 📈 **Multi-Cloud Support** - Add AWS, GCP adapters
+- 📈 **Local Development** - File system adapter for dev
+- 📈 **Enhanced Media Pipeline** - Image optimization, CDN
+- 📈 **Managed Identity** - Passwordless authentication
+- 📈 **Azure Functions** - Serverless media processing
+- 📈 **Event Grid Integration** - Event-driven architecture
+
+### Threats 🔒
+- ⚡ **Azure Lock-in** - Hard to switch cloud providers
+- ⚡ **Cost Surprises** - Azure costs can escalate
+- ⚡ **Service Changes** - Azure SDKs and services evolve
+- ⚡ **Regional Availability** - Cosmos DB not in all regions
+
+### Risk Mitigation
+1. **Abstract with ports** - Make cloud provider swappable
+2. **Cost monitoring** - Azure Cost Management alerts
+3. **Pin package versions** - Control SDK updates
+4. **Multi-region deployment** - Geographic redundancy
+
+## Related Documentation
+
+- **[Application Layer](../Mystira.App.Application/README.md)** - Where port interfaces belong
+- **[Infrastructure.Data](../Mystira.App.Infrastructure.Data/README.md)** - Data infrastructure (similar pattern)
+- **[Main README](../../README.md)** - Project overview
+
+## License
+
+Copyright (c) 2025 Mystira. All rights reserved.
