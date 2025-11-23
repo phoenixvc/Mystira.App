@@ -23,13 +23,26 @@
                 
                 @if (ShowCallToActions)
                 {
-                    <div class="hero-cta-buttons d-flex gap-3 justify-content-center flex-wrap">
+                    <div class="hero-cta-buttons d-flex gap-3 justify-content-center flex-wrap mb-4">
                         <a href="/signup" class="btn btn-primary-custom btn-lg px-5 py-3">
-                            <i class="fas fa-rocket me-2"></i>Get Started
+                            <i class="fas fa-rocket me-2"></i>Start Free Trial
                         </a>
                         <button class="btn btn-outline-primary btn-lg px-5 py-3" @onclick="OnWatchDemo">
-                            <i class="fas fa-play-circle me-2"></i>Watch Demo
+                            <i class="fas fa-play-circle me-2"></i>Watch Demo (2 min)
                         </button>
+                    </div>
+                    
+                    <!-- Trust Indicators -->
+                    <div class="trust-badges">
+                        <span class="trust-badge">
+                            <i class="fas fa-shield-alt me-1"></i>Safe for Kids
+                        </span>
+                        <span class="trust-badge">
+                            <i class="fas fa-ban me-1"></i>No Ads
+                        </span>
+                        <span class="trust-badge">
+                            <i class="fas fa-lock me-1"></i>COPPA Compliant
+                        </span>
                     </div>
                 }
             }

@@ -28,6 +28,7 @@
     <ProjectReference Include="..\Mystira.App.Infrastructure.Data\Mystira.App.Infrastructure.Data.csproj" />
     <ProjectReference Include="..\Mystira.App.Contracts\Mystira.App.Contracts.csproj" />
     <ProjectReference Include="..\Mystira.App.Application\Mystira.App.Application.csproj" />
+    <ProjectReference Include="..\Mystira.App.Infrastructure.Discord\Mystira.App.Infrastructure.Discord.csproj" />
   </ItemGroup>
 
   <ItemGroup>
