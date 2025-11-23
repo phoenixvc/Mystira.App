@@ -59,7 +59,6 @@ function MigrationManager() {
     blobStorage: false,
   });
 
-  const [migrationInProgress, setMigrationInProgress] = useState(false);
   const [currentOperation, setCurrentOperation] = useState<string>('');
   const [migrationResults, setMigrationResults] = useState<MigrationResponse | null>(null);
 
