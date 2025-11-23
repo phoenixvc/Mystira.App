@@ -919,3 +919,66 @@ h6 .markdown-content strong {
     transform: scale(0.98);
 }
 
+/* Mobile Input Font Size Fix - Prevents Auto-Zoom on iOS */
+@media screen and (max-width: 768px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="url"],
+    textarea,
+    select {
+        font-size: 16px !important;
+    }
+}
+
+/* Ghost Button Style for Sign In */
+.btn-link.nav-link {
+    text-decoration: none;
+    color: var(--secondary-color);
+    padding: 0.5rem 1rem;
+    transition: color 0.2s ease;
+}
+
+.btn-link.nav-link:hover {
+    color: var(--primary-color);
+    background-color: transparent;
+}
+
+/* Enhanced Dropdown Menu */
+.dropdown-menu {
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    border: 1px solid #E5E7EB;
+    margin-top: 0.5rem;
+    min-width: 200px;
+}
+
+.dropdown-header {
+    color: var(--secondary-color);
+    font-weight: 600;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+}
+
+.dropdown-item {
+    padding: 0.75rem 1rem;
+    color: var(--secondary-color);
+    transition: all 0.15s ease;
+}
+
+.dropdown-item:hover {
+    background-color: #F9FAFB;
+    color: var(--primary-color);
+}
+
+.dropdown-item i {
+    width: 20px;
+    text-align: center;
+}
+
+.dropdown-divider {
+    margin: 0.5rem 0;
+}
+

@@ -28,6 +28,7 @@ public class MediaController : ControllerBase
     /// Gets a specific media asset metadata by ID
     /// </summary>
     [HttpGet("{mediaId}/info")]
+    [AllowAnonymous]
     public async Task<ActionResult<Domain.Models.MediaAsset>> GetMediaById(string mediaId)
     {
         try
@@ -58,6 +59,7 @@ public class MediaController : ControllerBase
     /// Serves the actual media file content by ID
     /// </summary>
     [HttpGet("{mediaId}")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetMediaFile(string mediaId)
     {
         try
