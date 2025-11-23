@@ -7,6 +7,7 @@ import BicepViewer from './BicepViewer';
 import WhatIfViewer from './WhatIfViewer';
 import ResourceGrid from './ResourceGrid';
 import DeploymentHistory from './DeploymentHistory';
+import { ConfirmDialog } from './ConfirmDialog';
 
 type Tab = 'actions' | 'bicep' | 'resources' | 'history';
 
@@ -16,6 +17,7 @@ function InfrastructurePanel() {
   const [lastResponse, setLastResponse] = useState<CommandResponse | null>(null);
   const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus | null>(null);
   const [whatIfChanges, setWhatIfChanges] = useState<WhatIfChange[]>([]);
+  const [showDestroyConfirm, setShowDestroyConfirm] = useState(false);
 
   const workflowFile = 'infrastructure-deploy-dev.yml';
   const repository = 'phoenixvc/Mystira.App';
@@ -102,13 +104,7 @@ function InfrastructurePanel() {
           break;
 
         case 'destroy':
-          const confirmText = prompt(
-            'Type "DELETE" to confirm destruction of all infrastructure:'
-          );
-          if (confirmText !== 'DELETE') {
-            setLoading(false);
-            return;
-          }
+          // This should not be reached directly - destroy should go through confirmation dialog
           response = await invoke('infrastructure_destroy', {
             workflowFile,
             repository,
@@ -151,27 +147,43 @@ function InfrastructurePanel() {
     }
   };
 
+  const handleDestroyConfirm = async () => {
+    setShowDestroyConfirm(false);
+    await handleAction('destroy');
+  };
+
   return (
     <div className="p-8">
+      <ConfirmDialog
+        isOpen={showDestroyConfirm}
+        title="⚠️ Destroy Infrastructure"
+        message="This will permanently delete ALL infrastructure resources. This action cannot be undone!"
+        confirmText="Yes, Destroy Everything"
+        cancelText="Cancel"
+        confirmButtonClass="bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+        requireTextMatch="DELETE"
+        onConfirm={handleDestroyConfirm}
+        onCancel={() => setShowDestroyConfirm(false)}
+      />
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             Infrastructure Control Panel
           </h2>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             Manage Bicep infrastructure deployments via GitHub Actions
           </p>
         </div>
 
         {/* Tabs */}
         <div className="mb-6">
-          <nav className="flex space-x-1 border-b border-gray-200">
+          <nav className="flex space-x-1 border-b border-gray-200 dark:border-gray-700">
             <button
               onClick={() => setActiveTab('actions')}
               className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
                 activeTab === 'actions'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               ⚡ Actions
@@ -180,8 +192,8 @@ function InfrastructurePanel() {
               onClick={() => setActiveTab('bicep')}
               className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
                 activeTab === 'bicep'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               📄 Bicep Templates
@@ -190,8 +202,8 @@ function InfrastructurePanel() {
               onClick={() => setActiveTab('resources')}
               className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
                 activeTab === 'resources'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               ☁️ Azure Resources
@@ -251,13 +263,13 @@ function InfrastructurePanel() {
               </button>
 
               <button
-                onClick={() => handleAction('destroy')}
+                onClick={() => setShowDestroyConfirm(true)}
                 disabled={loading}
-                className="flex flex-col items-center p-6 bg-white border-2 border-red-200 rounded-lg hover:border-red-400 hover:bg-red-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex flex-col items-center p-6 bg-white dark:bg-gray-800 border-2 border-red-200 dark:border-red-800 rounded-lg hover:border-red-400 dark:hover:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="text-4xl mb-2">💥</div>
-                <div className="text-lg font-semibold text-gray-900">Destroy</div>
-                <div className="text-sm text-gray-500 text-center mt-1">
+                <div className="text-lg font-semibold text-gray-900 dark:text-white">Destroy</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
                   Delete all resources
                 </div>
               </button>

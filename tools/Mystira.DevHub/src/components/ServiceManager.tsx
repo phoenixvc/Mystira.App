@@ -429,8 +429,8 @@ function ServiceManager() {
       
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Service Manager</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Service Manager</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Keyboard shortcuts: Ctrl+Shift+S (Start All), Ctrl+Shift+X (Stop All), Ctrl+L (Logs), Ctrl+R (Refresh)
           </p>
         </div>
@@ -457,16 +457,16 @@ function ServiceManager() {
       </div>
       
       {/* Repository Root Configuration */}
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
-        <h2 className="text-lg font-semibold mb-3">Repository Configuration</h2>
+      <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <h2 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Repository Configuration</h2>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <label className="font-medium">Repository Root:</label>
+            <label className="font-medium text-gray-700 dark:text-gray-300">Repository Root:</label>
             <input
               type="text"
               value={repoRoot}
               onChange={(e) => setRepoRoot(e.target.value)}
-              className="flex-1 px-3 py-2 border rounded"
+              className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="C:\Users\smitj\repos\Mystira.App"
             />
             <button
@@ -478,9 +478,9 @@ function ServiceManager() {
           </div>
           {currentBranch && (
             <div className="flex items-center gap-3">
-              <label className="font-medium">Current Branch:</label>
-              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded">{currentBranch}</span>
-              <label className="flex items-center gap-2">
+              <label className="font-medium text-gray-700 dark:text-gray-300">Current Branch:</label>
+              <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">{currentBranch}</span>
+              <label className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                 <input
                   type="checkbox"
                   checked={useCurrentBranch}
@@ -507,30 +507,30 @@ function ServiceManager() {
           return (
             <div
               key={config.name}
-              className="border rounded-lg bg-white shadow-sm"
+              className="border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 shadow-sm"
             >
               <div className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <h3 className="text-xl font-semibold">{config.displayName}</h3>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{config.displayName}</h3>
                       <span
                         className={`px-2 py-1 rounded text-sm ${
                           isRunning
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
                         }`}
                       >
                         {isRunning ? 'Running' : 'Stopped'}
                       </span>
                       {isRunning && getHealthIndicator(status?.health)}
                       {status?.portConflict && (
-                        <span className="px-2 py-1 rounded text-sm bg-yellow-100 text-yellow-800" title="Port conflict detected">
+                        <span className="px-2 py-1 rounded text-sm bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300" title="Port conflict detected">
                           ⚠ Port {config.port} in use
                         </span>
                       )}
                       {isRunning && config.port && (
-                        <span className="text-sm text-gray-600">Port: {config.port}</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Port: {config.port}</span>
                       )}
                     </div>
                     {isRunning && config.url && (
@@ -589,9 +589,9 @@ function ServiceManager() {
               
               {/* Console Output with Filtering */}
               {showServiceLogs && (
-                <div className="border-t">
+                <div className="border-t border-gray-200 dark:border-gray-700">
                   {/* Log Filter Controls */}
-                  <div className="bg-gray-100 p-2 flex gap-2 items-center flex-wrap">
+                  <div className="bg-gray-100 dark:bg-gray-700 p-2 flex gap-2 items-center flex-wrap">
                     <input
                       type="text"
                       placeholder="Search logs..."
@@ -600,7 +600,7 @@ function ServiceManager() {
                         ...logFilters,
                         [config.name]: { ...filter, search: e.target.value }
                       })}
-                      className="flex-1 min-w-[200px] px-2 py-1 border rounded text-sm"
+                      className="flex-1 min-w-[200px] px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                     />
                     <select
                       value={filter.type}
@@ -608,7 +608,7 @@ function ServiceManager() {
                         ...logFilters,
                         [config.name]: { ...filter, type: e.target.value as 'all' | 'stdout' | 'stderr' }
                       })}
-                      className="px-2 py-1 border rounded text-sm"
+                      className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                       title="Filter log type"
                       aria-label="Filter log type"
                     >
@@ -616,7 +616,7 @@ function ServiceManager() {
                       <option value="stdout">Stdout</option>
                       <option value="stderr">Stderr</option>
                     </select>
-                    <label className="flex items-center gap-2 text-sm">
+                    <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                       <input
                         type="checkbox"
                         checked={isAutoScroll}
@@ -624,10 +624,11 @@ function ServiceManager() {
                           ...autoScroll,
                           [config.name]: e.target.checked
                         })}
+                        className="rounded border-gray-300 dark:border-gray-600"
                       />
                       <span>Auto-scroll</span>
                     </label>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
                       {serviceLogs.length} / {logs[config.name]?.length || 0} lines
                     </span>
                   </div>

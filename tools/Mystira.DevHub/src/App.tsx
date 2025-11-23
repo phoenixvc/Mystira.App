@@ -5,11 +5,13 @@ import Dashboard from './components/Dashboard';
 import InfrastructurePanel from './components/InfrastructurePanel';
 import MigrationManager from './components/MigrationManager';
 import ServiceManager from './components/ServiceManager';
+import { useDarkMode } from './hooks/useDarkMode';
 
 type View = 'dashboard' | 'cosmos' | 'migration' | 'infrastructure' | 'services';
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('services');
+  const { isDark, toggleDarkMode } = useDarkMode();
 
   // Wrapper function for type compatibility
   const handleNavigate = (view: string) => {
@@ -17,12 +19,21 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 p-4">
+      <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Mystira DevHub</h1>
-          <p className="text-sm text-gray-500">Development Operations</p>
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Mystira DevHub</h1>
+            <button
+              onClick={toggleDarkMode}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {isDark ? '☀️' : '🌙'}
+            </button>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Development Operations</p>
         </div>
 
         <nav className="space-y-1">
@@ -30,8 +41,8 @@ function App() {
             onClick={() => setCurrentView('dashboard')}
             className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
               currentView === 'dashboard'
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-100'
+                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
             Dashboard
@@ -41,8 +52,8 @@ function App() {
             onClick={() => setCurrentView('cosmos')}
             className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
               currentView === 'cosmos'
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-100'
+                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
             Cosmos Explorer
@@ -52,8 +63,8 @@ function App() {
             onClick={() => setCurrentView('migration')}
             className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
               currentView === 'migration'
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-100'
+                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
             Migration Manager
@@ -63,8 +74,8 @@ function App() {
             onClick={() => setCurrentView('infrastructure')}
             className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
               currentView === 'infrastructure'
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-100'
+                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
             Infrastructure
@@ -74,8 +85,8 @@ function App() {
             onClick={() => setCurrentView('services')}
             className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
               currentView === 'services'
-                ? 'bg-blue-50 text-blue-700'
-                : 'text-gray-700 hover:bg-gray-100'
+                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
             Services
@@ -84,7 +95,7 @@ function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
         {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
 
         {currentView === 'cosmos' && <CosmosExplorer />}

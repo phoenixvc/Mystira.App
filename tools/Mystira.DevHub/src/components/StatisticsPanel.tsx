@@ -65,13 +65,13 @@ function StatisticsPanel() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-semibold text-gray-900">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
           Scenario Completion Statistics
         </h3>
         <button
           onClick={fetchStatistics}
           disabled={loading}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+          className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
         >
           {loading ? (
             <>
@@ -86,20 +86,20 @@ function StatisticsPanel() {
 
       {/* Loading State */}
       {loading && statistics.length === 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-blue-800">Loading statistics...</p>
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4"></div>
+          <p className="text-blue-800 dark:text-blue-200">Loading statistics...</p>
         </div>
       )}
 
       {/* Error State */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
-          <h3 className="text-lg font-semibold text-red-900 mb-2">❌ Error</h3>
-          <p className="text-red-800">{error}</p>
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-6">
+          <h3 className="text-lg font-semibold text-red-900 dark:text-red-300 mb-2">❌ Error</h3>
+          <p className="text-red-800 dark:text-red-200">{error}</p>
           <button
             onClick={fetchStatistics}
-            className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            className="mt-3 px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
           >
             Retry
           </button>
@@ -108,10 +108,10 @@ function StatisticsPanel() {
 
       {/* Empty State */}
       {!loading && !error && statistics.length === 0 && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+        <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center">
           <div className="text-6xl mb-4">📊</div>
-          <p className="text-gray-600 text-lg mb-2">No Statistics Available</p>
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-600 dark:text-gray-400 text-lg mb-2">No Statistics Available</p>
+          <p className="text-gray-500 dark:text-gray-500 text-sm">
             No game sessions found in the database.
           </p>
         </div>
@@ -122,21 +122,21 @@ function StatisticsPanel() {
         <div className="space-y-4">
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <div className="text-sm text-gray-500 mb-1">Total Scenarios</div>
-              <div className="text-3xl font-bold text-gray-900">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+              <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Scenarios</div>
+              <div className="text-3xl font-bold text-gray-900 dark:text-white">
                 {statistics.length}
               </div>
             </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <div className="text-sm text-gray-500 mb-1">Total Sessions</div>
-              <div className="text-3xl font-bold text-blue-600">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+              <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Sessions</div>
+              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
                 {statistics.reduce((sum, s) => sum + s.totalSessions, 0)}
               </div>
             </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <div className="text-sm text-gray-500 mb-1">Completed Sessions</div>
-              <div className="text-3xl font-bold text-green-600">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+              <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Completed Sessions</div>
+              <div className="text-3xl font-bold text-green-600 dark:text-green-400">
                 {statistics.reduce((sum, s) => sum + s.completedSessions, 0)}
               </div>
             </div>
@@ -153,23 +153,23 @@ function StatisticsPanel() {
             return (
               <div
                 key={scenario.scenarioId}
-                className="bg-white border border-gray-200 rounded-lg overflow-hidden"
+                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
               >
                 {/* Scenario Header */}
                 <button
                   onClick={() => toggleScenario(scenario.scenarioId)}
-                  className="w-full p-6 text-left hover:bg-gray-50 transition-colors"
+                  className="w-full p-6 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                         {scenario.scenarioName || 'Unnamed Scenario'}
                       </h4>
                       <div className="flex items-center gap-6 text-sm">
-                        <span className="text-gray-600">
+                        <span className="text-gray-600 dark:text-gray-400">
                           <strong>{scenario.totalSessions}</strong> total sessions
                         </span>
-                        <span className="text-green-600">
+                        <span className="text-green-600 dark:text-green-400">
                           <strong>{scenario.completedSessions}</strong> completed
                         </span>
                         <span
@@ -185,13 +185,13 @@ function StatisticsPanel() {
                         </span>
                       </div>
                     </div>
-                    <div className="ml-4 text-gray-400">
+                    <div className="ml-4 text-gray-400 dark:text-gray-500">
                       {isExpanded ? '▼' : '▶'}
                     </div>
                   </div>
 
                   {/* Progress Bar */}
-                  <div className="mt-4 bg-gray-200 rounded-full h-2 overflow-hidden">
+                  <div className="mt-4 bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                     <div
                       className="bg-green-500 h-full transition-all duration-300"
                       style={{ width: `${completionRate}%` }}
@@ -201,8 +201,8 @@ function StatisticsPanel() {
 
                 {/* Account Breakdown (Expandable) */}
                 {isExpanded && scenario.accountStatistics.length > 0 && (
-                  <div className="border-t border-gray-200 bg-gray-50 p-6">
-                    <h5 className="font-semibold text-gray-900 mb-4">
+                  <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 p-6">
+                    <h5 className="font-semibold text-gray-900 dark:text-white mb-4">
                       Account Breakdown
                     </h5>
                     <div className="space-y-3">
@@ -215,19 +215,19 @@ function StatisticsPanel() {
                         return (
                           <div
                             key={account.accountId}
-                            className="bg-white border border-gray-200 rounded-lg p-4"
+                            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
                           >
                             <div className="flex justify-between items-start mb-2">
                               <div>
-                                <div className="font-medium text-gray-900">
+                                <div className="font-medium text-gray-900 dark:text-white">
                                   {account.accountAlias || 'Unknown User'}
                                 </div>
-                                <div className="text-sm text-gray-500">
+                                <div className="text-sm text-gray-500 dark:text-gray-400">
                                   {account.accountEmail}
                                 </div>
                               </div>
                               <div className="text-right">
-                                <div className="text-sm text-gray-600">
+                                <div className="text-sm text-gray-600 dark:text-gray-400">
                                   {account.completedSessions} / {account.sessionCount}
                                 </div>
                                 <div
@@ -243,7 +243,7 @@ function StatisticsPanel() {
                                 </div>
                               </div>
                             </div>
-                            <div className="bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                            <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
                               <div
                                 className={`h-full transition-all duration-300 ${
                                   accountCompletionRate >= 80
@@ -263,7 +263,7 @@ function StatisticsPanel() {
                 )}
 
                 {isExpanded && scenario.accountStatistics.length === 0 && (
-                  <div className="border-t border-gray-200 bg-gray-50 p-6 text-center text-gray-500">
+                  <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 p-6 text-center text-gray-500 dark:text-gray-400">
                     No account data available for this scenario
                   </div>
                 )}
@@ -275,9 +275,9 @@ function StatisticsPanel() {
 
       {/* Info Box */}
       {statistics.length > 0 && (
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-semibold text-blue-900 mb-2">ℹ️ Legend</h4>
-          <div className="text-sm text-blue-800 space-y-1">
+        <div className="mt-6 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">ℹ️ Legend</h4>
+          <div className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-green-600 font-semibold">Green (80%+):</span>
               <span>High completion rate</span>
