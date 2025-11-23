@@ -251,7 +251,7 @@
             </div>
         </div>
     }
-    else if ((isAuthenticated && hasProfiles || !isAuthenticated) && !string.IsNullOrEmpty(selectedBundleId) && filteredScenarios.Any())
+    else if (ShouldShowCatalog && !string.IsNullOrEmpty(selectedBundleId) && filteredScenarios.Any())
     {
         <div class="row">
             @foreach (var scenario in filteredScenarios)
@@ -312,7 +312,7 @@
             }
         </div>
     }
-    else if ((isAuthenticated && hasProfiles || !isAuthenticated) && !string.IsNullOrEmpty(selectedBundleId) && !filteredScenarios.Any() && scenarios.Any())
+    else if (ShouldShowCatalog && !string.IsNullOrEmpty(selectedBundleId) && !filteredScenarios.Any() && scenarios.Any())
     {
         <div class="row justify-content-center">
             <div class="col-md-6 text-center">
@@ -332,7 +332,7 @@
             </div>
         </div>
     }
-    else if ((isAuthenticated && hasProfiles || !isAuthenticated) && !string.IsNullOrEmpty(selectedBundleId) && !scenarios.Any())
+    else if (ShouldShowCatalog && !string.IsNullOrEmpty(selectedBundleId) && !scenarios.Any())
     {
         <div class="row justify-content-center">
             <div class="col-md-6 text-center">
@@ -388,7 +388,7 @@
             </div>
         </div>
     }
-    else if ((isAuthenticated && hasProfiles || !isAuthenticated) && string.IsNullOrEmpty(selectedBundleId))
+    else if (ShouldShowCatalog && string.IsNullOrEmpty(selectedBundleId))
     {
         <!-- Bundles are shown above; no scenarios until a bundle is selected -->
     }
@@ -456,6 +456,9 @@
     // Age group filter state
     private readonly HashSet<string> selectedAgeGroups = new();
     private readonly string[] availableAgeGroups = { "1-2", "3-5", "6-9", "10-12", "13-18", "19+" };
+    
+    // Computed property for catalog visibility logic
+    private bool ShouldShowCatalog => !isAuthenticated || (isAuthenticated && hasProfiles);
 
     protected override async Task OnInitializedAsync()
     {
