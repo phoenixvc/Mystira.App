@@ -230,9 +230,9 @@ public class ScenarioApiService : IScenarioApiService
                     Difficulty = scene.Difficulty,
                     Media = hasMedia ? new
                     {
-                        Image = media?.Image,
-                        Audio = media?.Audio,
-                        Video = media?.Video
+                        Image = media!.Image,
+                        Audio = media.Audio,
+                        Video = media.Video
                     } : null,
                     Branches = branches.Select(branch => new
                     {
@@ -497,7 +497,7 @@ public class ScenarioApiService : IScenarioApiService
         await ValidateCharacterReferences(scene, allCharacters, characterMetadata, validation, includeMetadataValidation);
     }
 
-    private async Task ValidateMediaReference(
+    private Task ValidateMediaReference(
         Scene scene,
         string? mediaId,
         string mediaType,
@@ -508,7 +508,7 @@ public class ScenarioApiService : IScenarioApiService
     {
         if (string.IsNullOrEmpty(mediaId))
         {
-            return;
+            return Task.CompletedTask;
         }
 
         var mediaExists = allMedia.ContainsKey(mediaId);
@@ -551,9 +551,11 @@ public class ScenarioApiService : IScenarioApiService
                 Description = $"Media file '{mediaId}' ({mediaType}) exists but has no metadata"
             });
         }
+        
+        return Task.CompletedTask;
     }
 
-    private async Task ValidateCharacterReferences(
+    private Task ValidateCharacterReferences(
         Scene scene,
         Dictionary<string, Character> allCharacters,
         CharacterMediaMetadataFile? characterMetadata,
@@ -600,6 +602,8 @@ public class ScenarioApiService : IScenarioApiService
                 }
             }
         }
+        
+        return Task.CompletedTask;
     }
 
     public async Task<ScenarioGameStateResponse> GetScenariosWithGameStateAsync(string accountId)
