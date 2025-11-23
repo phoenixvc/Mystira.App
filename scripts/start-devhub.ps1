@@ -1,16 +1,17 @@
-# Main launcher script - starts the DevHub Tauri app
-# The DevHub app will manage all services internally
-
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  Starting Mystira DevHub" -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "DevHub will manage all services (API, Admin API, PWA)" -ForegroundColor Yellow
-Write-Host "You can start/stop services and view them in the DevHub interface" -ForegroundColor Yellow
+# Start the DevHub Tauri Application
+Write-Host "Starting Mystira DevHub..." -ForegroundColor Green
+Write-Host "DevHub is a desktop application for development operations" -ForegroundColor Cyan
 Write-Host ""
 
-$repoRoot = $PSScriptRoot
-Set-Location "$repoRoot\tools\Mystira.DevHub"
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$devHubPath = "$repoRoot\tools\Mystira.DevHub"
+
+if (-not (Test-Path $devHubPath)) {
+    Write-Host "Error: DevHub directory not found at $devHubPath" -ForegroundColor Red
+    exit 1
+}
+
+Set-Location $devHubPath
 
 # Check if node_modules exists, install if needed
 if (-not (Test-Path "node_modules")) {

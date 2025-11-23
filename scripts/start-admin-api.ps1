@@ -11,5 +11,15 @@ Write-Host ""
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location "$repoRoot\src\Mystira.App.Admin.Api"
+
+# Build before running
+Write-Host "Building Admin API..." -ForegroundColor Yellow
+dotnet build
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Build failed! Exiting." -ForegroundColor Red
+    exit $LASTEXITCODE
+}
+
+Write-Host "Build successful. Starting Admin API..." -ForegroundColor Green
 dotnet run
 

@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Dashboard from './components/Dashboard';
 import InfrastructurePanel from './components/InfrastructurePanel';
 import CosmosExplorer from './components/CosmosExplorer';
 import MigrationManager from './components/MigrationManager';
+import ServiceManager from './components/ServiceManager';
 import './App.css';
 
-type View = 'dashboard' | 'cosmos' | 'migration' | 'infrastructure';
+type View = 'dashboard' | 'cosmos' | 'migration' | 'infrastructure' | 'services';
 
 function App() {
-  const [currentView, setCurrentView] = useState<View>('dashboard');
+  const [currentView, setCurrentView] = useState<View>('services');
 
   // Wrapper function for type compatibility
   const handleNavigate = (view: string) => {
@@ -68,6 +69,17 @@ function App() {
           >
             Infrastructure
           </button>
+
+          <button
+            onClick={() => setCurrentView('services')}
+            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+              currentView === 'services'
+                ? 'bg-blue-50 text-blue-700'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            Services
+          </button>
         </nav>
       </aside>
 
@@ -80,6 +92,8 @@ function App() {
         {currentView === 'migration' && <MigrationManager />}
 
         {currentView === 'infrastructure' && <InfrastructurePanel />}
+
+        {currentView === 'services' && <ServiceManager />}
       </main>
     </div>
   );
