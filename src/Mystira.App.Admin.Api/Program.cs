@@ -5,6 +5,7 @@ using Microsoft.OpenApi.Models;
 using Mystira.App.Admin.Api.Adapters;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Application.UseCases.Contributors;
 using Mystira.App.Application.UseCases.GameSessions;
 using Mystira.App.Application.UseCases.Media;
 using Mystira.App.Application.UseCases.Scenarios;
@@ -14,6 +15,7 @@ using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
+using Mystira.App.Infrastructure.StoryProtocol;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -103,6 +105,9 @@ else
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 builder.Services.Configure<AudioTranscodingOptions>(builder.Configuration.GetSection(AudioTranscodingOptions.SectionName));
 builder.Services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingService>();
+
+// Add Story Protocol Services
+builder.Services.AddStoryProtocolServices(builder.Configuration);
 
 // Register Content Bundle admin service
 builder.Services.AddScoped<IContentBundleAdminService, ContentBundleAdminService>();
@@ -218,6 +223,12 @@ builder.Services.AddScoped<UploadMediaUseCase>();
 builder.Services.AddScoped<UpdateMediaMetadataUseCase>();
 builder.Services.AddScoped<DeleteMediaUseCase>();
 builder.Services.AddScoped<DownloadMediaUseCase>();
+
+// Contributor / Story Protocol Use Cases
+builder.Services.AddScoped<SetScenarioContributorsUseCase>();
+builder.Services.AddScoped<SetBundleContributorsUseCase>();
+builder.Services.AddScoped<RegisterScenarioIpAssetUseCase>();
+builder.Services.AddScoped<RegisterBundleIpAssetUseCase>();
 
 builder.Services.AddScoped<IGameSessionApiService, GameSessionApiService>();
 builder.Services.AddScoped<IAccountApiService, AccountApiService>();
