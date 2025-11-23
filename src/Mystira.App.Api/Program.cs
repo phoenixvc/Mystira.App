@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Mystira.App.Api.Adapters;
-using Mystira.App.Api.Data;
 using Mystira.App.Api.Services;
+using Mystira.App.Infrastructure.Data;
 using Mystira.App.Application.UseCases.GameSessions;
 using Mystira.App.Application.UseCases.Media;
 using Mystira.App.Application.UseCases.Scenarios;
@@ -95,7 +95,8 @@ if (useCosmosDb)
 {
     // AZURE CLOUD DATABASE: Production Cosmos DB
     builder.Services.AddDbContext<MystiraAppDbContext>(options =>
-        options.UseCosmos(cosmosConnectionString!, "MystiraAppDb"));
+        options.UseCosmos(cosmosConnectionString!, "MystiraAppDb")
+               .AddInterceptors(new PartitionKeyInterceptor()));
 }
 else
 {

@@ -109,7 +109,7 @@ public class MediaAdminController : ControllerBase
             }
 
             // Resolve media ID and type from metadata
-            MediaMetadataEntry? metadataEntry = null;
+            Models.MediaMetadataEntry? metadataEntry = null;
 
             if (!string.IsNullOrEmpty(mediaId))
             {

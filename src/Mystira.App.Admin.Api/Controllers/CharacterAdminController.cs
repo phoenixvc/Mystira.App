@@ -27,7 +27,7 @@ public class CharacterAdminController : ControllerBase
     /// Updates an existing character
     /// </summary>
     [HttpPut("{id}")]
-    public async Task<ActionResult<CharacterMapFile>> UpdateCharacter(string id, [FromBody] Character character)
+    public async Task<ActionResult<Domain.Models.CharacterMapFile>> UpdateCharacter(string id, [FromBody] Character character)
     {
         try
         {
@@ -57,7 +57,7 @@ public class CharacterAdminController : ControllerBase
     /// Removes a character
     /// </summary>
     [HttpDelete("{id}")]
-    public async Task<ActionResult<CharacterMapFile>> DeleteCharacter(string id)
+    public async Task<ActionResult<Domain.Models.CharacterMapFile>> DeleteCharacter(string id)
     {
         try
         {
@@ -87,7 +87,7 @@ public class CharacterAdminController : ControllerBase
     /// Adds a new character
     /// </summary>
     [HttpPost]
-    public async Task<ActionResult<CharacterMapFile>> AddCharacter([FromBody] Character character)
+    public async Task<ActionResult<Domain.Models.CharacterMapFile>> AddCharacter([FromBody] Character character)
     {
         try
         {

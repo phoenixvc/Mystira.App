@@ -2,7 +2,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Admin.Api.Data;
+using Mystira.App.Infrastructure.Data;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Validation;
 using Mystira.App.Contracts.Requests.Scenarios;
@@ -533,17 +533,75 @@ public class ScenarioApiService : IScenarioApiService
             var allMedia = mediaResponse.Media.ToDictionary(m => m.MediaId, m => m);
 
             var characterMapFile = await _characterService.GetCharacterMapFileAsync();
-            var allCharacters = characterMapFile.Characters.ToDictionary(c => c.Id, c => c);
+            // Convert Api.Models.Character to Domain.Models.CharacterMapFileCharacter
+            var allCharacters = characterMapFile.Characters.ToDictionary(
+                c => c.Id,
+                c => new Domain.Models.CharacterMapFileCharacter
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    Image = c.Image,
+                    Metadata = new Domain.Models.CharacterMetadata
+                    {
+                        Roles = c.Metadata.Roles,
+                        Archetypes = c.Metadata.Archetypes,
+                        Species = c.Metadata.Species,
+                        Age = c.Metadata.Age,
+                        Traits = c.Metadata.Traits,
+                        Backstory = c.Metadata.Backstory
+                    }
+                });
 
-            MediaMetadataFile? mediaMetadata = null;
-            CharacterMediaMetadataFile? characterMetadata = null;
+            Domain.Models.MediaMetadataFile? mediaMetadata = null;
+            Domain.Models.CharacterMediaMetadataFile? characterMetadata = null;
 
             if (includeMetadataValidation)
             {
                 try
                 {
-                    mediaMetadata = await _mediaMetadataService.GetMediaMetadataFileAsync();
-                    characterMetadata = await _characterMetadataService.GetCharacterMediaMetadataFileAsync();
+                    var apiMediaMetadata = await _mediaMetadataService.GetMediaMetadataFileAsync();
+                    var apiCharacterMetadata = await _characterMetadataService.GetCharacterMediaMetadataFileAsync();
+
+                    // Convert Api.Models to Domain.Models
+                    mediaMetadata = apiMediaMetadata == null ? null : new Domain.Models.MediaMetadataFile
+                    {
+                        Id = apiMediaMetadata.Id,
+                        Entries = apiMediaMetadata.Entries.Select(e => new Domain.Models.MediaMetadataEntry
+                        {
+                            Id = e.Id,
+                            Title = e.Title,
+                            FileName = e.FileName,
+                            Type = e.Type,
+                            Description = e.Description,
+                            AgeRating = e.AgeRating,
+                            SubjectReferenceId = e.SubjectReferenceId,
+                            ClassificationTags = e.ClassificationTags.Select(t => new Domain.Models.ClassificationTag { Key = t.Key, Value = t.Value }).ToList(),
+                            Modifiers = e.Modifiers.Select(m => new Domain.Models.Modifier { Key = m.Key, Value = m.Value }).ToList(),
+                            Loopable = e.Loopable
+                        }).ToList(),
+                        CreatedAt = apiMediaMetadata.CreatedAt,
+                        UpdatedAt = apiMediaMetadata.UpdatedAt,
+                        Version = apiMediaMetadata.Version
+                    };
+
+                    characterMetadata = apiCharacterMetadata == null ? null : new Domain.Models.CharacterMediaMetadataFile
+                    {
+                        Id = apiCharacterMetadata.Id,
+                        Entries = apiCharacterMetadata.Entries.Select(e => new Domain.Models.CharacterMediaMetadataEntry
+                        {
+                            Id = e.Id,
+                            Title = e.Title,
+                            FileName = e.FileName,
+                            Type = e.Type,
+                            Description = e.Description,
+                            AgeRating = e.AgeRating,
+                            Tags = e.Tags,
+                            Loopable = e.Loopable
+                        }).ToList(),
+                        CreatedAt = apiCharacterMetadata.CreatedAt,
+                        UpdatedAt = apiCharacterMetadata.UpdatedAt,
+                        Version = apiCharacterMetadata.Version
+                    };
                 }
                 catch (Exception ex)
                 {
@@ -593,9 +651,9 @@ public class ScenarioApiService : IScenarioApiService
     private async Task ValidateSceneReferences(
         Scene scene,
         Dictionary<string, Domain.Models.MediaAsset> allMedia,
-        Dictionary<string, Character> allCharacters,
-        MediaMetadataFile? mediaMetadata,
-        CharacterMediaMetadataFile? characterMetadata,
+        Dictionary<string, Domain.Models.CharacterMapFileCharacter> allCharacters,
+        Domain.Models.MediaMetadataFile? mediaMetadata,
+        Domain.Models.CharacterMediaMetadataFile? characterMetadata,
         ScenarioReferenceValidation validation,
         bool includeMetadataValidation)
     {
@@ -617,7 +675,7 @@ public class ScenarioApiService : IScenarioApiService
         string? mediaId,
         string mediaType,
         Dictionary<string, Domain.Models.MediaAsset> allMedia,
-        MediaMetadataFile? mediaMetadata,
+        Domain.Models.MediaMetadataFile? mediaMetadata,
         ScenarioReferenceValidation validation,
         bool includeMetadataValidation)
     {
@@ -670,8 +728,8 @@ public class ScenarioApiService : IScenarioApiService
 
     private async Task ValidateCharacterReferences(
         Scene scene,
-        Dictionary<string, Character> allCharacters,
-        CharacterMediaMetadataFile? characterMetadata,
+        Dictionary<string, Domain.Models.CharacterMapFileCharacter> allCharacters,
+        Domain.Models.CharacterMediaMetadataFile? characterMetadata,
         ScenarioReferenceValidation validation,
         bool includeMetadataValidation)
     {

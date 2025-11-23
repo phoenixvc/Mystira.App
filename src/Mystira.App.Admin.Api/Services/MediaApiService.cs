@@ -2,7 +2,7 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Admin.Api.Data;
+using Mystira.App.Infrastructure.Data;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Application.UseCases.Media;
 using Mystira.App.Contracts.Requests.Media;
