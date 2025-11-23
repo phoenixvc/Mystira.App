@@ -39,7 +39,7 @@ public class RegisterScenarioIpAssetUseCase
         }
 
         // Check if already registered
-        if (scenario.StoryProtocol?.IsRegistered == true)
+        if (scenario.StoryProtocol?.IsRegistered ?? false)
         {
             throw new InvalidOperationException($"Scenario {scenarioId} is already registered on Story Protocol");
         }

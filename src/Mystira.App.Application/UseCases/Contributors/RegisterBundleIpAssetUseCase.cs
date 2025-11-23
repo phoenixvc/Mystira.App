@@ -39,7 +39,7 @@ public class RegisterBundleIpAssetUseCase
         }
 
         // Check if already registered
-        if (bundle.StoryProtocol?.IsRegistered == true)
+        if (bundle.StoryProtocol?.IsRegistered ?? false)
         {
             throw new InvalidOperationException($"Bundle {bundleId} is already registered on Story Protocol");
         }
