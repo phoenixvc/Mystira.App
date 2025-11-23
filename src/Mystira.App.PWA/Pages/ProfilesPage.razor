@@ -9,7 +9,7 @@
 
 @if (isLoading)
 {
-    <div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="d-flex justify-content-center align-items-center loading-container">
         <div class="text-center">
             <div class="spinner-border text-primary-custom mb-3" role="status">
                 <span class="visually-hidden">Loading...</span>
@@ -20,7 +20,7 @@
 }
 else if (!isAuthenticated)
 {
-    <div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="d-flex justify-content-center align-items-center loading-container">
         <div class="text-center">
             <i class="fas fa-lock fa-3x text-warning mb-3"></i>
             <h3>Authentication Required</h3>
@@ -172,7 +172,7 @@ else
 <!-- Create/Edit Modal -->
 @if (showModal)
 {
-    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal fade show d-block modal-backdrop">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
@@ -280,7 +280,7 @@ else
 <!-- Delete Confirmation Modal -->
 @if (showDeleteConfirm)
 {
-    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal fade show d-block modal-backdrop">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
