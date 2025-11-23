@@ -92,7 +92,8 @@ if (useCosmosDb)
 {
     // AZURE CLOUD DATABASE: Production Cosmos DB
     builder.Services.AddDbContext<MystiraAppDbContext>(options =>
-        options.UseCosmos(cosmosConnectionString!, "MystiraAppDb"));
+        options.UseCosmos(cosmosConnectionString!, "MystiraAppDb")
+               .AddInterceptors(new PartitionKeyInterceptor()));
 }
 else
 {
