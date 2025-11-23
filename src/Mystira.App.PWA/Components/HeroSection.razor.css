@@ -1,0 +1,190 @@
+/* Hero Section Scoped Styles */
+
+.hero-section {
+    padding: 40px 20px 60px;
+    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+    border-radius: 0 0 24px 24px;
+    margin-bottom: 40px;
+}
+
+.hero-content {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.mystira-title {
+    font-size: 3.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 50%, #6D28D9 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+    animation: fadeInScale 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.alpha-badge {
+    font-size: 1rem;
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+    vertical-align: super;
+}
+
+.mystira-tagline {
+    font-size: 1.25rem;
+    color: #6b7280;
+    font-weight: 500;
+    animation: fadeIn 0.8s ease-in-out;
+}
+
+.hero-logo-container {
+    animation: fadeIn 1s ease-in-out;
+}
+
+.hero-logo {
+    max-width: 100%;
+    height: auto;
+    filter: drop-shadow(0 4px 20px rgba(139, 92, 246, 0.15));
+    transition: transform 0.3s ease;
+}
+
+.hero-logo:hover {
+    transform: scale(1.02);
+}
+
+.hero-description {
+    font-size: 1.125rem;
+    line-height: 1.7;
+    color: #374151;
+    max-width: 720px;
+    margin: 0 auto 32px;
+    animation: fadeIn 1.2s ease-in-out;
+}
+
+.hero-cta-buttons {
+    animation: fadeIn 1.4s ease-in-out;
+    gap: 24px !important;
+}
+
+.hero-cta-buttons .btn {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-cta-buttons .btn-primary-custom {
+    box-shadow: 0 8px 20px rgba(139, 92, 246, 0.25);
+}
+
+.hero-cta-buttons .btn-primary-custom:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(139, 92, 246, 0.35);
+    background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+}
+
+.hero-cta-buttons .btn-outline-primary {
+    border: 2px solid #8B5CF6;
+    color: #8B5CF6;
+    background: white;
+}
+
+.hero-cta-buttons .btn-outline-primary:hover {
+    background: #8B5CF6;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(139, 92, 246, 0.25);
+}
+
+.hero-cta-buttons .btn i {
+    transition: transform 0.3s ease;
+}
+
+.hero-cta-buttons .btn:hover i {
+    transform: scale(1.1);
+}
+
+/* Trust badges (for future implementation) */
+.trust-badges {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+    animation: fadeIn 1.6s ease-in-out;
+}
+
+.trust-badge {
+    padding: 8px 16px;
+    background: rgba(139, 92, 246, 0.1);
+    color: #7C3AED;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .hero-section {
+        padding: 30px 15px 40px;
+    }
+    
+    .mystira-title {
+        font-size: 2.5rem;
+    }
+    
+    .mystira-tagline {
+        font-size: 1rem;
+    }
+    
+    .hero-description {
+        font-size: 1rem;
+    }
+    
+    .hero-cta-buttons {
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+    
+    .hero-cta-buttons .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .mystira-title {
+        font-size: 2rem;
+    }
+    
+    .hero-logo-container {
+        margin-bottom: 24px;
+    }
+}
