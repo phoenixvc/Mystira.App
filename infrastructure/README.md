@@ -16,24 +16,190 @@ The infrastructure is organized by environment:
 2. **Resource Group**: `dev-euw-rg-mystira` (Development) - must be created manually
 3. **Service Principal**: For GitHub Actions authentication
 
-### Required Secrets
+### Required Secrets Setup
 
-The following secrets must be configured in GitHub repository settings:
+The infrastructure deployment pipeline requires several secrets to be configured in your GitHub repository. Follow these steps to set them up:
 
-#### Azure Authentication
-- `AZURE_CLIENT_ID` - Service Principal client ID
-- `AZURE_TENANT_ID` - Azure AD tenant ID
-- `AZURE_SUBSCRIPTION_ID` - Already set as env var in workflow
+#### Step 1: Access GitHub Repository Settings
 
-#### Application Secrets
-- `JWT_SECRET_KEY` - Secret key for JWT token generation
-- `ACS_CONNECTION_STRING` - Azure Communication Services connection string (optional)
+1. Navigate to your repository: `https://github.com/phoenixvc/Mystira.App`
+2. Click on **Settings** (top navigation bar)
+3. In the left sidebar, expand **Secrets and variables** 
+4. Click on **Actions**
+5. Click the **New repository secret** button
 
-#### Azure Web App Publish Profiles (for API deployment)
-- `AZURE_WEBAPP_PUBLISH_PROFILE_DEV` - For main API (dev)
-- `AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN` - For admin API (dev)
-- `AZURE_WEBAPP_PUBLISH_PROFILE_PROD` - For main API (prod)
-- `AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN` - For admin API (prod)
+#### Step 2: Create Azure Service Principal
+
+Before adding secrets, you need to create a Service Principal for GitHub Actions to authenticate with Azure:
+
+```bash
+# Login to Azure CLI
+az login
+
+# Set your subscription
+az account set --subscription 22f9eb18-6553-4b7d-9451-47d0195085fe
+
+# Create a Service Principal with Contributor role
+az ad sp create-for-rbac \
+  --name "github-actions-mystira-app" \
+  --role Contributor \
+  --scopes /subscriptions/22f9eb18-6553-4b7d-9451-47d0195085fe/resourceGroups/dev-euw-rg-mystira \
+  --sdk-auth
+
+# The output will be a JSON object - save this entire output
+```
+
+The command will output JSON like this:
+```json
+{
+  "clientId": "12345678-1234-1234-1234-123456789abc",
+  "clientSecret": "your-client-secret-here",
+  "subscriptionId": "22f9eb18-6553-4b7d-9451-47d0195085fe",
+  "tenantId": "87654321-4321-4321-4321-abcdef123456",
+  "activeDirectoryEndpointUrl": "https://login.microsoftonline.com",
+  "resourceManagerEndpointUrl": "https://management.azure.com/",
+  ...
+}
+```
+
+#### Step 3: Add Required GitHub Secrets
+
+Add each of the following secrets to your GitHub repository:
+
+##### Azure Authentication Secrets
+
+1. **`AZURE_CLIENT_ID`**
+   - **Value**: The `clientId` from the Service Principal JSON output
+   - **Example**: `12345678-1234-1234-1234-123456789abc`
+   - **Location**: GitHub → Settings → Secrets and variables → Actions → New repository secret
+   - **Name**: `AZURE_CLIENT_ID`
+   - **Used by**: Infrastructure deployment workflow (`.github/workflows/infrastructure-deploy-dev.yml`)
+
+2. **`AZURE_TENANT_ID`**
+   - **Value**: The `tenantId` from the Service Principal JSON output
+   - **Example**: `87654321-4321-4321-4321-abcdef123456`
+   - **Location**: GitHub → Settings → Secrets and variables → Actions → New repository secret
+   - **Name**: `AZURE_TENANT_ID`
+   - **Used by**: Infrastructure deployment workflow
+
+##### Application Secrets
+
+3. **`JWT_SECRET_KEY`**
+   - **Value**: A strong, randomly generated secret key for JWT token signing (at least 32 characters)
+   - **How to generate**: 
+     ```bash
+     # Using OpenSSL
+     openssl rand -base64 32
+     
+     # Using PowerShell
+     [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Minimum 0 -Maximum 256 }))
+     ```
+   - **Example**: `YourSecretKeyHere123456789012345678901234567890==`
+   - **Location**: GitHub → Settings → Secrets and variables → Actions → New repository secret
+   - **Name**: `JWT_SECRET_KEY`
+   - **Used by**: Infrastructure deployment (passed to App Services)
+   - **⚠️ Important**: Use different keys for dev and prod environments
+
+4. **`ACS_CONNECTION_STRING`** (Optional)
+   - **Value**: Azure Communication Services connection string for sending emails
+   - **How to get**:
+     ```bash
+     # List your ACS resources
+     az communication list --resource-group dev-euw-rg-mystira
+     
+     # Get the connection string
+     az communication list-key \
+       --name dev-euw-acs-mystira \
+       --resource-group dev-euw-rg-mystira \
+       --query primaryConnectionString \
+       --output tsv
+     ```
+   - **Example**: `endpoint=https://dev-euw-acs-mystira.communication.azure.com/;accesskey=your-access-key-here`
+   - **Location**: GitHub → Settings → Secrets and variables → Actions → New repository secret
+   - **Name**: `ACS_CONNECTION_STRING`
+   - **Used by**: Infrastructure deployment (passed to App Services for email functionality)
+   - **Note**: If not provided, the app will log emails instead of sending them
+
+##### Azure Web App Publish Profiles (for API CI/CD)
+
+These secrets are used by the API deployment workflows to publish to Azure App Services:
+
+5. **`AZURE_WEBAPP_PUBLISH_PROFILE_DEV`**
+   - **Value**: Publish profile XML for the main API (dev environment)
+   - **How to get**:
+     ```bash
+     # Via Azure CLI
+     az webapp deployment list-publishing-profiles \
+       --name mystira-app-dev-api \
+       --resource-group dev-euw-rg-mystira \
+       --xml
+     ```
+     Or via Azure Portal:
+     1. Go to Azure Portal → App Services
+     2. Select `mystira-app-dev-api`
+     3. Click **Get publish profile** button (top toolbar)
+     4. Copy the entire XML content
+   - **Location**: GitHub → Settings → Secrets and variables → Actions → New repository secret
+   - **Name**: `AZURE_WEBAPP_PUBLISH_PROFILE_DEV`
+   - **Used by**: `.github/workflows/mystira-app-api-cicd-dev.yml`
+
+6. **`AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN`**
+   - **Value**: Publish profile XML for the admin API (dev environment)
+   - **How to get**: Same as above, but for `dev-euw-app-mystora-admin-api`
+   - **Location**: GitHub → Settings → Secrets and variables → Actions → New repository secret
+   - **Name**: `AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN`
+   - **Used by**: `.github/workflows/mystira-app-admin-api-cicd-dev.yml`
+
+7. **`AZURE_WEBAPP_PUBLISH_PROFILE_PROD`**
+   - **Value**: Publish profile XML for the main API (production environment)
+   - **How to get**: Same as above, but for `prod-wus-app-mystira-api`
+   - **Location**: GitHub → Settings → Secrets and variables → Actions → New repository secret
+   - **Name**: `AZURE_WEBAPP_PUBLISH_PROFILE_PROD`
+   - **Used by**: `.github/workflows/mystira-app-api-cicd-prod.yml`
+
+8. **`AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN`**
+   - **Value**: Publish profile XML for the admin API (production environment)
+   - **How to get**: Same as above, but for `prod-wus-app-mystira-api-admin`
+   - **Location**: GitHub → Settings → Secrets and variables → Actions → New repository secret
+   - **Name**: `AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN`
+   - **Used by**: `.github/workflows/mystira-app-admin-api-cicd-prod.yml`
+
+#### Step 4: Verify Secrets Configuration
+
+After adding all secrets, verify them in GitHub:
+
+1. Go to your repository → Settings → Secrets and variables → Actions
+2. You should see all 8 secrets listed (or at least the 4 required for infrastructure deployment)
+3. The secret values are hidden, but you can see when they were last updated
+
+#### Summary Table
+
+| Secret Name | Required | Used By | Where to Get Value |
+|-------------|----------|---------|-------------------|
+| `AZURE_CLIENT_ID` | ✅ Yes | Infrastructure deployment | Service Principal JSON → `clientId` |
+| `AZURE_TENANT_ID` | ✅ Yes | Infrastructure deployment | Service Principal JSON → `tenantId` |
+| `JWT_SECRET_KEY` | ✅ Yes | Infrastructure deployment | Generate with `openssl rand -base64 32` |
+| `ACS_CONNECTION_STRING` | ⚠️ Optional | Infrastructure deployment | Azure Communication Services → Connection string |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_DEV` | ✅ Yes | API deployment (dev) | Azure Portal → App Service → Get publish profile |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN` | ✅ Yes | Admin API deployment (dev) | Azure Portal → App Service → Get publish profile |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_PROD` | ✅ Yes | API deployment (prod) | Azure Portal → App Service → Get publish profile |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN` | ✅ Yes | Admin API deployment (prod) | Azure Portal → App Service → Get publish profile |
+
+#### Troubleshooting
+
+**Secret not found error**:
+- Ensure secret name matches exactly (case-sensitive)
+- Verify you added the secret to the correct repository
+- Check if you have admin access to the repository
+
+**Authentication failed**:
+- Verify Service Principal has Contributor role on the subscription/resource group
+- Ensure `AZURE_CLIENT_ID` and `AZURE_TENANT_ID` are correct
+- Check if Service Principal has been deleted or credentials expired
+
+**Deployment fails with "secret not set"**:
+- Check workflow YAML references the correct secret name
+- Ensure secret is not empty (re-add if needed)
 
 ## Dev Environment Resources
 
