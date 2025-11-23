@@ -196,7 +196,17 @@ public class ClientApiService : IClientApiService
 
             return versionParts.Length < minVersionParts.Length;
         }
-        catch
+        catch (FormatException)
+        {
+            // If parsing fails, assume version is lower
+            return true;
+        }
+        catch (ArgumentNullException)
+        {
+            // If parsing fails, assume version is lower
+            return true;
+        }
+        catch (OverflowException)
         {
             // If parsing fails, assume version is lower
             return true;
@@ -319,7 +329,7 @@ public class ClientApiService : IClientApiService
     /// </summary>
     /// <param name="sinceDate">The date to check for changes since</param>
     /// <returns>Media changes since the date</returns>
-    private async Task<MediaChanges> GetMediaChangesSinceAsync(DateTime? sinceDate)
+    private Task<MediaChanges> GetMediaChangesSinceAsync(DateTime? sinceDate)
     {
         var changes = new MediaChanges
         {
@@ -342,6 +352,6 @@ public class ClientApiService : IClientApiService
             _logger.LogError(ex, "Error getting media changes since {SinceDate}", sinceDate);
         }
 
-        return changes;
+        return Task.FromResult(changes);
     }
 }

@@ -364,7 +364,12 @@ public class MystiraAppDbContext : DbContext
                 metadata.Property(m => m.AdditionalProperties)
                         .HasConversion(
                             v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
-                            v => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new Dictionary<string, object>()
+                            v => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new Dictionary<string, object>(),
+                            new ValueComparer<Dictionary<string, object>>(
+                                (c1, c2) => c1 != null && c2 != null && c1.Count == c2.Count && !c1.Except(c2).Any(),
+                                c => c != null ? c.Aggregate(0, (a, v) => HashCode.Combine(a, v.Key.GetHashCode(), v.Value != null ? v.Value.GetHashCode() : 0)) : 0,
+                                c => c != null ? new Dictionary<string, object>(c) : new Dictionary<string, object>()
+                            )
                         );
             });
 

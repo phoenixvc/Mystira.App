@@ -52,7 +52,7 @@ public class AzureBlobService : IAzureBlobService
         }
     }
 
-    public async Task<string> GetMediaUrlAsync(string blobName)
+    public Task<string> GetMediaUrlAsync(string blobName)
     {
         try
         {
@@ -60,7 +60,7 @@ public class AzureBlobService : IAzureBlobService
             var blobClient = containerClient.GetBlobClient(blobName);
 
             // For public containers, we can return the direct URL
-            return blobClient.Uri.ToString();
+            return Task.FromResult(blobClient.Uri.ToString());
         }
         catch (Exception ex)
         {
