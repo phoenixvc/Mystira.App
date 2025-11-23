@@ -8,6 +8,24 @@ Built with **Tauri**, **React**, **TypeScript**, and **.NET 9**
 
 ## 🚀 Quick Start
 
+### Option 1: Launch from Repository Root (Recommended)
+
+```bash
+# From repository root (/home/user/Mystira.App)
+
+# Using make
+make devhub-dev    # Development mode with hot reload
+make devhub-build  # Build for production
+make devhub-test   # Run test suite
+
+# OR using shell script
+./devhub.sh dev    # Development mode with hot reload
+./devhub.sh build  # Build for production
+./devhub.sh test   # Run test suite
+```
+
+### Option 2: Launch from DevHub Directory
+
 ```bash
 # Navigate to DevHub directory
 cd tools/Mystira.DevHub
@@ -20,6 +38,8 @@ npm run tauri:dev
 ```
 
 **Prerequisites**: .NET 9 SDK, Node.js 18+, Rust, GitHub CLI (`gh`), Azure CLI (`az`)
+
+📘 **See [QUICKSTART.md](QUICKSTART.md) for detailed setup and troubleshooting.**
 
 ---
 

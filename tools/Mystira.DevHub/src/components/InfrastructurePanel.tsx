@@ -138,7 +138,7 @@ function InfrastructurePanel() {
 
   const fetchWorkflowStatus = async () => {
     try {
-      const response: CommandResponse = await invoke('infrastructure_status', {
+      const response: CommandResponse<WorkflowStatus> = await invoke('infrastructure_status', {
         workflowFile,
         repository,
       });
@@ -306,7 +306,7 @@ function InfrastructurePanel() {
                   </pre>
                 )}
 
-                {lastResponse.result && (
+                {lastResponse.result !== undefined && lastResponse.result !== null && (
                   <details className="mt-3">
                     <summary
                       className={`cursor-pointer font-medium ${
@@ -322,7 +322,7 @@ function InfrastructurePanel() {
                           : 'bg-red-100 text-red-900'
                       }`}
                     >
-                      {JSON.stringify(lastResponse.result, null, 2)}
+                      {JSON.stringify(lastResponse.result, null, 2) || 'No details available'}
                     </pre>
                   </details>
                 )}

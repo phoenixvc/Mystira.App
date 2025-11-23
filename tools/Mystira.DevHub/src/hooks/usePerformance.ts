@@ -1,11 +1,5 @@
 import { useEffect, useRef } from 'react';
 
-interface PerformanceMetrics {
-  componentName: string;
-  renderTime: number;
-  renderCount: number;
-}
-
 /**
  * Hook to monitor component render performance
  * Logs render times and counts in development
@@ -20,12 +14,6 @@ export function usePerformance(componentName: string, enabled = process.env.NODE
     renderCount.current += 1;
     const endTime = performance.now();
     const renderTime = endTime - startTime.current;
-
-    const metrics: PerformanceMetrics = {
-      componentName,
-      renderTime,
-      renderCount: renderCount.current,
-    };
 
     console.log(
       `[Performance] ${componentName} - Render #${renderCount.current} - ${renderTime.toFixed(2)}ms`

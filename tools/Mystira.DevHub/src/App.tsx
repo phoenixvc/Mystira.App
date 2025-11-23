@@ -10,6 +10,11 @@ type View = 'dashboard' | 'cosmos' | 'migration' | 'infrastructure';
 function App() {
   const [currentView, setCurrentView] = useState<View>('dashboard');
 
+  // Wrapper function for type compatibility
+  const handleNavigate = (view: string) => {
+    setCurrentView(view as View);
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
@@ -68,7 +73,7 @@ function App() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        {currentView === 'dashboard' && <Dashboard onNavigate={setCurrentView} />}
+        {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
 
         {currentView === 'cosmos' && <CosmosExplorer />}
 

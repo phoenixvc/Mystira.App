@@ -20,3 +20,13 @@
 #echo 'Husky.Net is awesome!'
 
 dotnet format --verbosity quiet --no-restore
+
+# Build Mystira DevHub Tauri app before commit
+echo "Building Mystira DevHub..."
+cd tools/Mystira.DevHub && npm run build
+if [ $? -ne 0 ]; then
+  echo "❌ DevHub build failed! Please fix the errors before committing."
+  exit 1
+fi
+echo "✅ DevHub build successful!"
+cd ../..

@@ -47,7 +47,7 @@ export async function waitForAsync() {
 /**
  * Mock connection test response
  */
-export function mockConnectionTestSuccess(type: string, result: any) {
+export function mockConnectionTestSuccess(_type: string, result: any) {
   return {
     success: true,
     result: {
