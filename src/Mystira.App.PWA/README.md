@@ -535,10 +535,228 @@ public async Task ScenarioClient_GetScenarios_ReturnsScenarios()
 - **Voice Input**: Voice-controlled gameplay
 - **Multiplayer**: Real-time co-op sessions
 
+## 🔍 Architectural Analysis
+
+### Current State Assessment
+
+**File Count**: ~45 C# files
+**Project References**: 1 (Domain only - but should use Contracts)
+**Dependencies**:
+- Domain ⚠️ (should be minimal/none)
+- No Contracts ❌ (should be primary dependency)
+- No Infrastructure ✅ (correct)
+- No Application ✅ (correct)
+
+**Folders**:
+- Pages/ ✅ (UI components)
+- Services/ ✅ (API clients and UI state)
+- Models/ ⚠️ (duplicate DTOs - should use Contracts)
+- Components/ ✅ (shared components)
+
+### ⚠️ Architectural Issues Found
+
+#### 1. **Missing Contracts Reference** (MEDIUM)
+**Location**: `Mystira.App.PWA.csproj` (no Contracts reference)
+
+**Issue**: PWA defines its own Models instead of using Contracts project:
+```
+PWA/Models/
+├── Scenario.cs               # Duplicate of domain/contract
+├── UserProfile.cs            # Duplicate
+├── Account.cs                # Duplicate
+├── Character.cs              # Duplicate
+├── CharacterAssignment.cs    # Duplicate
+└── ... (10+ duplicate models)
+```
+
+**Impact**:
+- ❌ Model duplication across PWA, API, and Contracts
+- ❌ Models can drift out of sync
+- ❌ API contract changes require updating PWA models manually
+- ❌ Violates DRY principle
+
+**Recommendation**:
+- **ADD** reference to `Mystira.App.Contracts` project
+- **DELETE** all models from `PWA/Models/` that exist in Contracts
+- **USE** Contracts DTOs for all API communication
+- Keep only PWA-specific view models (if any)
+
+**Example**:
+```diff
+  <ItemGroup>
+    <ProjectReference Include="../Mystira.App.Domain/Mystira.App.Domain.csproj" />
++   <ProjectReference Include="../Mystira.App.Contracts/Mystira.App.Contracts.csproj" />
+  </ItemGroup>
+```
+
+#### 2. **Direct Domain Reference** (MEDIUM)
+**Location**: 25 files importing `Mystira.App.Domain`
+
+**Issue**: Presentation layer directly depends on Domain layer:
+```csharp
+using Mystira.App.Domain.Entities;  // Should use Contracts instead
+using Mystira.App.Domain.ValueObjects;
+```
+
+**Impact**:
+- ⚠️ Frontend knows about internal domain models
+- ⚠️ Not pure hexagonal architecture (presentation should use DTOs)
+- ⚠️ Domain changes affect frontend directly
+
+**Recommendation**:
+- **MINIMIZE** Domain reference (or remove entirely)
+- **USE** Contracts DTOs for all API data transfer
+- Domain reference only acceptable for:
+  - Enums (AgeGroup, FantasyTheme)
+  - Value objects shared between layers
+  - But even these could be in Contracts
+
+#### 3. **Duplicate Project Reference** (LOW)
+**Location**: `Mystira.App.PWA.csproj` lines 38 and 46
+
+**Issue**: Domain project referenced twice:
+```xml
+<ItemGroup>
+  <ProjectReference Include="../Mystira.App.Domain/Mystira.App.Domain.csproj" />
+</ItemGroup>
+<!-- ... -->
+<ItemGroup>
+  <ProjectReference Include="..\Mystira.App.Domain\Mystira.App.Domain.csproj" />  <!-- Duplicate! -->
+</ItemGroup>
+```
+
+**Recommendation**:
+- Remove duplicate reference (keep only one)
+
+#### 4. **Performance Optimizations Disabled** (INFO)
+**Location**: `Mystira.App.PWA.csproj` lines 13-14
+
+**Issue**: AOT and Linking disabled:
+```xml
+<BlazorWebAssemblyEnableLinking>false</BlazorWebAssemblyEnableLinking>
+<RunAOTCompilation>false</RunAOTCompilation>
+```
+
+**Impact**:
+- ⚠️ Larger bundle size (slower initial load)
+- ⚠️ Slower runtime performance
+
+**Recommendation** (Future optimization):
+- Enable linking in Release builds to reduce bundle size
+- Consider AOT compilation for performance (increases build time)
+- Test thoroughly after enabling (can break reflection-based code)
+
+### ✅ What's Working Well
+
+1. **Clean Layer Separation** - No Infrastructure or Application references
+2. **API Client Pattern** - Well-structured HTTP clients with interfaces
+3. **State Management Services** - `AuthService`, `GameSessionService` manage UI state appropriately
+4. **PWA Features** - Service worker, offline support, manifest
+5. **Authentication Flow** - JWT token management with refresh
+6. **Dependency Injection** - Proper DI setup in `Program.cs`
+7. **Responsive Design** - Mobile-first, accessible
+
+## 📋 Refactoring TODO
+
+### 🟡 High Priority
+
+- [ ] **Add Contracts project reference**
+  - Add `<ProjectReference Include="../Mystira.App.Contracts/..." />`
+  - Location: `Mystira.App.PWA.csproj`
+
+- [ ] **Replace PWA models with Contracts DTOs**
+  - Delete `Models/Scenario.cs` (use `Contracts.Responses.ScenarioResponse`)
+  - Delete `Models/UserProfile.cs` (use `Contracts.Responses.UserProfileResponse`)
+  - Delete `Models/Account.cs` (use `Contracts.Responses.AccountResponse`)
+  - Delete all duplicate models
+  - Update API clients to use Contracts types
+  - Location: `PWA/Models/`
+
+### 🟢 Medium Priority
+
+- [ ] **Minimize Domain reference**
+  - Evaluate which Domain types are actually needed
+  - Move shared enums to Contracts if possible
+  - Reduce direct domain coupling
+  - Goal: Remove Domain reference entirely if feasible
+
+- [ ] **Remove duplicate project reference**
+  - Keep only one Domain reference in .csproj
+  - Location: `Mystira.App.PWA.csproj` line 46
+
+### 🔵 Low Priority (Performance)
+
+- [ ] **Enable Blazor Linking**
+  - Set `BlazorWebAssemblyEnableLinking>true` for Release
+  - Test thoroughly (can break reflection)
+  - Reduce bundle size
+
+- [ ] **Consider AOT Compilation**
+  - Evaluate `RunAOTCompilation>true` for Release
+  - Increases build time but improves runtime performance
+  - Test browser compatibility
+
+## 💡 Recommendations
+
+### Immediate Actions
+1. **Add Contracts reference** - Eliminate model duplication
+2. **Delete duplicate models** - Use Contracts DTOs
+3. **Fix duplicate project reference** - Clean up .csproj
+
+### Short-term
+1. **Minimize Domain coupling** - Use Contracts as primary dependency
+2. **Create PWA-specific view models** - For UI state that doesn't map to API
+3. **Document model usage** - When to use Contracts vs custom models
+
+### Long-term
+1. **State management library** - Consider Fluxor or Blazor State
+2. **Enable performance optimizations** - Linking and AOT
+3. **Improve offline capabilities** - Enhanced IndexedDB usage
+
+## 📊 SWOT Analysis
+
+### Strengths 💪
+- ✅ **Clean Architecture** - No Infrastructure/Application coupling
+- ✅ **Well-Structured API Clients** - Interface-based, testable
+- ✅ **PWA Features** - Service worker, offline, installable
+- ✅ **Modern Stack** - Blazor WebAssembly, .NET 9
+- ✅ **Authentication** - JWT with token refresh
+- ✅ **Responsive & Accessible** - Mobile-first, WCAG compliant
+- ✅ **Good DI Setup** - Proper service registration
+
+### Weaknesses ⚠️
+- ❌ **No Contracts Reference** - Duplicates all API models
+- ⚠️ **Direct Domain Reference** - Should use DTOs only
+- ⚠️ **Model Duplication** - 10+ duplicate model classes
+- ⚠️ **Performance Not Optimized** - Linking and AOT disabled
+- ⚠️ **Duplicate Project Reference** - .csproj needs cleanup
+
+### Opportunities 🚀
+- 📈 **Use Contracts DTOs** - Eliminate duplication
+- 📈 **State Management** - Fluxor for complex state
+- 📈 **Performance** - AOT and linking for faster loads
+- 📈 **Enhanced Offline** - Better IndexedDB usage
+- 📈 **Push Notifications** - Real-time updates
+- 📈 **GraphQL** - Consider GraphQL instead of REST
+- 📈 **TypeScript Alternative** - Could use React/Vue with TypeScript
+
+### Threats 🔒
+- ⚡ **Model Drift** - Duplicate models get out of sync with API
+- ⚡ **Breaking API Changes** - No compile-time safety without Contracts
+- ⚡ **Bundle Size** - Can grow large without optimization
+- ⚡ **Browser Support** - WebAssembly not universal
+
+### Risk Mitigation
+1. **Add Contracts reference NOW** - Prevent model drift
+2. **Integration tests** - Catch API contract mismatches
+3. **Bundle analysis** - Monitor and optimize size
+4. **Progressive enhancement** - Fallback for non-WASM browsers
+
 ## Related Documentation
 
 - **[API](../Mystira.App.Api/README.md)** - Backend API consumed by PWA
-- **[Domain](../Mystira.App.Domain/README.md)** - Shared domain models
+- **[Contracts](../Mystira.App.Contracts/README.md)** - DTOs for API communication
+- **[Domain](../Mystira.App.Domain/README.md)** - Shared domain models (minimize usage)
 - **[Main README](../../README.md)** - Project overview
 
 ## License
