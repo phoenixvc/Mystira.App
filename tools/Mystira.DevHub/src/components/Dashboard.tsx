@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useConnectionStore } from '../stores/connectionStore';
 import type { QuickAction, RecentOperation, DashboardProps } from '../types';
 
@@ -52,9 +52,10 @@ function Dashboard({ onNavigate }: DashboardProps) {
   // Test connections on mount using the store
   useEffect(() => {
     testConnections();
-  }, []); // Only run on mount
+  }, [testConnections]);
 
-  const quickActions: QuickAction[] = [
+  // Memoize quick actions to prevent recreation on every render
+  const quickActions: QuickAction[] = useMemo(() => [
     {
       id: 'export',
       title: 'Export Sessions',
@@ -103,9 +104,10 @@ function Dashboard({ onNavigate }: DashboardProps) {
       action: () => onNavigate('infrastructure'),
       color: 'from-indigo-400 to-indigo-600',
     },
-  ];
+  ], [onNavigate]);
 
-  const getStatusColor = (status: string) => {
+  // Memoize utility functions to prevent recreation
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case 'connected':
         return 'text-green-700 bg-green-100 border-green-200';
@@ -116,9 +118,9 @@ function Dashboard({ onNavigate }: DashboardProps) {
       default:
         return 'text-gray-700 bg-gray-100 border-gray-200';
     }
-  };
+  }, []);
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = useCallback((status: string) => {
     switch (status) {
       case 'connected':
         return '✓';
@@ -129,9 +131,9 @@ function Dashboard({ onNavigate }: DashboardProps) {
       default:
         return '?';
     }
-  };
+  }, []);
 
-  const getOperationIcon = (type: string) => {
+  const getOperationIcon = useCallback((type: string) => {
     switch (type) {
       case 'export':
         return '📤';
@@ -146,9 +148,9 @@ function Dashboard({ onNavigate }: DashboardProps) {
       default:
         return '📋';
     }
-  };
+  }, []);
 
-  const getOperationStatusBadge = (status: string) => {
+  const getOperationStatusBadge = useCallback((status: string) => {
     switch (status) {
       case 'success':
         return <span className="text-xs px-2 py-0.5 bg-green-100 text-green-800 rounded-full">Success</span>;
@@ -159,9 +161,9 @@ function Dashboard({ onNavigate }: DashboardProps) {
       default:
         return null;
     }
-  };
+  }, []);
 
-  const formatTimestamp = (timestamp: string) => {
+  const formatTimestamp = useCallback((timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
@@ -177,7 +179,7 @@ function Dashboard({ onNavigate }: DashboardProps) {
     } else {
       return `${days}d ago`;
     }
-  };
+  }, []);
 
   return (
     <main className="p-8" id="main-content">
@@ -353,4 +355,5 @@ function Dashboard({ onNavigate }: DashboardProps) {
   );
 }
 
-export default Dashboard;
+// Memoize the component to prevent unnecessary re-renders
+export default memo(Dashboard);
