@@ -90,7 +90,8 @@ else
                         <div class="card-body py-5">
                             <i class="fas fa-users fa-3x text-muted mb-3"></i>
                             <h5 class="card-title">No Profiles Yet</h5>
-                            <p class="text-muted mb-4">You haven't created any profiles yet. Create your first profile to get started!</p>
+                            <p class="text-muted mb-4">You haven't created any profiles yet. Create your first profile to get
+                                started!</p>
                             <button class="btn btn-primary-custom" @onclick="OpenCreateModal">
                                 <i class="fas fa-user-plus me-2"></i>Create Your First Profile
                             </button>
@@ -109,17 +110,15 @@ else
                             <div class="card-body">
                                 <!-- Profile Header -->
                                 <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <div class="d-flex align-items-start gap-2" style="flex: 1;">
+                                    <div class="d-flex align-items-start gap-2 profile-card-content">
                                         @if (!string.IsNullOrEmpty(profile.SelectedAvatarMediaId))
                                         {
-                                            <div style="flex-shrink: 0;">
-                                                @{ var altText = $"{profile.Name} avatar"; }
-                                                <CachedMystiraImage 
-                                                    MediaId="@profile.SelectedAvatarMediaId" 
-                                                    Alt="@altText" 
-                                                    ImageClass="thumbnail-image"
-                                                    Width="60"
-                                                    Height="60" />
+                                            <div class="profile-avatar-container">
+                                                @{
+                                                    var altText = $"{profile.Name} avatar";
+                                                }
+                                                <CachedMystiraImage MediaId="@profile.SelectedAvatarMediaId" Alt="@altText"
+                                                    ImageClass="thumbnail-image" Width="60" Height="60" />
                                             </div>
                                         }
                                         <div>
@@ -221,19 +220,15 @@ else
                     {
                         <div class="mb-3">
                             <label class="form-label">Choose Avatar</label>
-                            
+
                             @if (isAvatarSelected && !string.IsNullOrEmpty(formData.SelectedAvatarMediaId))
                             {
                                 <!-- Show selected avatar -->
                                 <div class="card">
                                     <div class="card-body text-center">
                                         <div class="mb-3">
-                                            <CachedMystiraImage 
-                                                MediaId="@formData.SelectedAvatarMediaId" 
-                                                Alt="Selected Avatar" 
-                                                ImageClass="thumbnail-image"
-                                                Width="150"
-                                                Height="150" />
+                                            <CachedMystiraImage MediaId="@formData.SelectedAvatarMediaId" Alt="Selected Avatar"
+                                                ImageClass="thumbnail-image" Width="150" Height="150" />
                                         </div>
                                         <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ChangeAvatar">
                                             <i class="fas fa-sync-alt me-2"></i>Change Avatar
@@ -340,7 +335,7 @@ else
         try
         {
             Logger.LogInformation("Initializing Profiles page");
-            
+
             currentAccount = await AuthService.GetCurrentAccountAsync();
             if (currentAccount == null)
             {
@@ -370,9 +365,9 @@ else
         try
         {
             Logger.LogInformation("Loading profiles for account {AccountId}", currentAccount?.Id);
-            
+
             if (currentAccount == null) return;
-            
+
             profiles = await ApiClient.GetProfilesByAccountAsync(currentAccount.Id) ?? new List<UserProfile>();
             Logger.LogInformation("Loaded {Count} profiles", profiles.Count);
         }
@@ -442,7 +437,7 @@ else
                 modalValidationMessage = "Age Range is required";
                 return;
             }
-            
+
             isSaving = true;
             StateHasChanged();
 
