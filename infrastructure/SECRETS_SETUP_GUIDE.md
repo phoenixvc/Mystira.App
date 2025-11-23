@@ -8,6 +8,35 @@ Navigate to: `https://github.com/phoenixvc/Mystira.App/settings/secrets/actions`
 
 Or: Repository → Settings → Secrets and variables → Actions
 
+## Secrets Overview
+
+The infrastructure deployment workflow automatically checks for required secrets and provides helpful feedback if any are missing. 
+
+### Required Secrets (for infrastructure deployment)
+
+| Secret | Required For | Skip Behavior |
+|--------|--------------|---------------|
+| `AZURE_CLIENT_ID` | All infrastructure operations | ❌ Workflow skips with helpful message |
+| `AZURE_TENANT_ID` | All infrastructure operations | ❌ Workflow skips with helpful message |
+| `JWT_SECRET_KEY` | API authentication | ❌ Workflow skips with helpful message |
+| `ACS_CONNECTION_STRING` | Email sending (optional) | ⚠️ Uses placeholder, emails logged to console |
+
+### Workflow Behavior
+
+**✅ All required secrets present**: 
+- Infrastructure operations run normally
+- PRs get automatic what-if analysis comments
+- Manual deployments work as expected
+
+**❌ Missing required secrets**:
+- Workflow posts a comment on PRs explaining which secrets are missing
+- Workflow logs warning with link to this setup guide
+- No authentication failures or cryptic errors
+
+**⚠️ Missing optional secrets**:
+- Deployment continues with placeholder values
+- Affected features fall back to console logging
+
 ## Prerequisites
 
 - Admin access to the GitHub repository
@@ -39,7 +68,7 @@ az ad sp create-for-rbac \
 
 ### ☑️ Step 2: Add Azure Authentication Secrets
 
-#### `AZURE_CLIENT_ID`
+#### `AZURE_CLIENT_ID` (Required)
 
 1. Go to: https://github.com/phoenixvc/Mystira.App/settings/secrets/actions
 2. Click: **New repository secret**
@@ -47,7 +76,7 @@ az ad sp create-for-rbac \
 4. Value: Copy `clientId` from Service Principal JSON output
 5. Click: **Add secret**
 
-#### `AZURE_TENANT_ID`
+#### `AZURE_TENANT_ID` (Required)
 
 1. Click: **New repository secret**
 2. Name: `AZURE_TENANT_ID`
@@ -56,7 +85,7 @@ az ad sp create-for-rbac \
 
 ### ☑️ Step 3: Add Application Secrets
 
-#### `JWT_SECRET_KEY`
+#### `JWT_SECRET_KEY` (Required)
 
 Generate a secure key:
 
@@ -78,7 +107,7 @@ Add to GitHub:
 
 #### `ACS_CONNECTION_STRING` (Optional)
 
-Only needed if you want to send emails via Azure Communication Services.
+Only needed if you want to send emails via Azure Communication Services. If not configured, emails will be logged to console instead.
 
 Get the connection string:
 

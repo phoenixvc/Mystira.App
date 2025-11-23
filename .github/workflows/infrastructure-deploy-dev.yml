@@ -37,10 +37,30 @@ env:
   PARAMETERS_FILE: 'infrastructure/dev/main.parameters.json'
 
 jobs:
+  check-secrets:
+    runs-on: ubuntu-latest
+    name: Check Required Secrets
+    outputs:
+      has-azure-secrets: ${{ steps.check.outputs.has-azure-secrets }}
+      has-jwt-secret: ${{ steps.check.outputs.has-jwt-secret }}
+      has-acs-secret: ${{ steps.check.outputs.has-acs-secret }}
+    steps:
+      - name: Check secrets availability
+        id: check
+        run: |
+          echo "has-azure-secrets=${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' }}" >> $GITHUB_OUTPUT
+          echo "has-jwt-secret=${{ secrets.JWT_SECRET_KEY != '' }}" >> $GITHUB_OUTPUT
+          echo "has-acs-secret=${{ secrets.ACS_CONNECTION_STRING != '' }}" >> $GITHUB_OUTPUT
+
   validate:
     runs-on: ubuntu-latest
+    needs: [check-secrets]
     name: Validate Bicep Templates
-    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.action == 'validate' || github.event.inputs.action == 'preview' || github.event.inputs.action == 'deploy')
+    if: |
+      github.event_name == 'workflow_dispatch' && 
+      (github.event.inputs.action == 'validate' || github.event.inputs.action == 'preview' || github.event.inputs.action == 'deploy') &&
+      needs.check-secrets.outputs.has-azure-secrets == 'true' &&
+      needs.check-secrets.outputs.has-jwt-secret == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -58,15 +78,18 @@ jobs:
           subscriptionId: ${{ env.AZURE_SUBSCRIPTION_ID }}
           resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
           template: ${{ env.BICEP_FILE }}
-          parameters: ${{ env.PARAMETERS_FILE }} jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} acsConnectionString=${{ secrets.ACS_CONNECTION_STRING }}
+          parameters: ${{ env.PARAMETERS_FILE }} jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} acsConnectionString=${{ secrets.ACS_CONNECTION_STRING || 'not-configured' }}
           deploymentMode: Validate
 
   preview:
     runs-on: ubuntu-latest
+    needs: [check-secrets]
     name: Preview Infrastructure Changes (What-If)
     if: |
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'preview') ||
-      github.event_name == 'pull_request'
+      ((github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'preview') ||
+      github.event_name == 'pull_request') &&
+      needs.check-secrets.outputs.has-azure-secrets == 'true' &&
+      needs.check-secrets.outputs.has-jwt-secret == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -87,7 +110,7 @@ jobs:
             --template-file ${{ env.BICEP_FILE }} \
             --parameters ${{ env.PARAMETERS_FILE }} \
             --parameters jwtSecretKey="${{ secrets.JWT_SECRET_KEY }}" \
-            --parameters acsConnectionString="${{ secrets.ACS_CONNECTION_STRING }}" \
+            --parameters acsConnectionString="${{ secrets.ACS_CONNECTION_STRING || 'not-configured' }}" \
             --no-pretty-print
           echo "::endgroup::"
 
@@ -115,11 +138,59 @@ jobs:
               body: output
             });
 
+  preview-skip:
+    runs-on: ubuntu-latest
+    needs: [check-secrets]
+    name: Preview Skipped - Missing Secrets
+    if: |
+      ((github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'preview') ||
+      github.event_name == 'pull_request') &&
+      (needs.check-secrets.outputs.has-azure-secrets != 'true' ||
+      needs.check-secrets.outputs.has-jwt-secret != 'true')
+    steps:
+      - name: Comment PR about missing secrets
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const output = `#### Infrastructure What-If Analysis ⚠️
+            
+            **Preview skipped**: Required secrets are not configured.
+            
+            Please configure the following secrets:
+            - \`AZURE_CLIENT_ID\` ${{ needs.check-secrets.outputs.has-azure-secrets == 'true' && '✅' || '❌' }}
+            - \`AZURE_TENANT_ID\` ${{ needs.check-secrets.outputs.has-azure-secrets == 'true' && '✅' || '❌' }}
+            - \`JWT_SECRET_KEY\` ${{ needs.check-secrets.outputs.has-jwt-secret == 'true' && '✅' || '❌' }}
+            
+            See: [infrastructure/SECRETS_SETUP_GUIDE.md](https://github.com/${{ github.repository }}/blob/${{ github.head_ref || github.ref_name }}/infrastructure/SECRETS_SETUP_GUIDE.md)
+            
+            *Workflow: \`${{ github.workflow }}\`, Run: [\`${{ github.run_number }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+      
+      - name: Log missing secrets
+        run: |
+          echo "::warning::Infrastructure preview skipped due to missing secrets"
+          echo "Required secrets status:"
+          echo "  AZURE_CLIENT_ID & AZURE_TENANT_ID: ${{ needs.check-secrets.outputs.has-azure-secrets }}"
+          echo "  JWT_SECRET_KEY: ${{ needs.check-secrets.outputs.has-jwt-secret }}"
+          echo ""
+          echo "See infrastructure/SECRETS_SETUP_GUIDE.md for setup instructions"
+
   deploy:
     runs-on: ubuntu-latest
-    needs: [validate]
+    needs: [check-secrets, validate]
     name: Deploy Infrastructure
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'deploy'
+    if: |
+      github.event_name == 'workflow_dispatch' && 
+      github.event.inputs.action == 'deploy' &&
+      needs.check-secrets.outputs.has-azure-secrets == 'true' &&
+      needs.check-secrets.outputs.has-jwt-secret == 'true'
     environment:
       name: development
       url: ${{ steps.deploy.outputs.apiAppServiceUrl }}
@@ -154,8 +225,13 @@ jobs:
 
   destroy:
     runs-on: ubuntu-latest
+    needs: [check-secrets]
     name: Destroy Infrastructure
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy' && github.event.inputs.destroyInfrastructure == 'true'
+    if: |
+      github.event_name == 'workflow_dispatch' && 
+      github.event.inputs.action == 'destroy' && 
+      github.event.inputs.destroyInfrastructure == 'true' &&
+      needs.check-secrets.outputs.has-azure-secrets == 'true'
     environment:
       name: development-destroy
     steps:
