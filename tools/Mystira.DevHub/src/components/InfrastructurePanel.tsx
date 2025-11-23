@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
 import BicepViewer from './BicepViewer';
 import WhatIfViewer from './WhatIfViewer';
@@ -21,84 +21,161 @@ function InfrastructurePanel() {
   const [workflowStatus, setWorkflowStatus] = useState<any>(null);
   const [whatIfChanges, setWhatIfChanges] = useState<any[]>([]);
 
+  // Azure resources state
+  const [resources, setResources] = useState<any[]>([]);
+  const [resourcesLoading, setResourcesLoading] = useState(false);
+  const [resourcesError, setResourcesError] = useState<string | null>(null);
+
+  // Deployment history state
+  const [deployments, setDeployments] = useState<any[]>([]);
+  const [deploymentsLoading, setDeploymentsLoading] = useState(false);
+  const [deploymentsError, setDeploymentsError] = useState<string | null>(null);
+
   const workflowFile = 'infrastructure-deploy-dev.yml';
   const repository = 'phoenixvc/Mystira.App';
 
-  // Mock data for demonstration (in real app, this would come from Azure/GitHub APIs)
-  const mockResources = [
-    {
-      id: '/subscriptions/xxx/resourceGroups/dev-rg/providers/Microsoft.DocumentDB/databaseAccounts/dev-euw-cosmos-mystira',
-      name: 'dev-euw-cosmos-mystira',
-      type: 'Microsoft.DocumentDB/databaseAccounts',
-      status: 'running' as const,
-      region: 'West Europe',
-      costToday: 2.45,
-      lastUpdated: new Date().toISOString(),
-      properties: {
-        'Consistency Level': 'Session',
-        'Multi-region': 'Disabled',
-      },
-    },
-    {
-      id: '/subscriptions/xxx/resourceGroups/dev-rg/providers/Microsoft.Storage/storageAccounts/deveuwstmystira',
-      name: 'deveuwstmystira',
-      type: 'Microsoft.Storage/storageAccounts',
-      status: 'running' as const,
-      region: 'West Europe',
-      costToday: 0.32,
-      lastUpdated: new Date().toISOString(),
-      properties: {
-        'Account Kind': 'StorageV2',
-        'Replication': 'LRS',
-      },
-    },
-    {
-      id: '/subscriptions/xxx/resourceGroups/dev-rg/providers/Microsoft.Web/sites/dev-euw-app-mystira-api',
-      name: 'dev-euw-app-mystira-api',
-      type: 'Microsoft.Web/sites',
-      status: 'running' as const,
-      region: 'West Europe',
-      costToday: 1.87,
-      lastUpdated: new Date().toISOString(),
-      properties: {
-        'Runtime': '.NET 9.0',
-        'Plan': 'B1',
-      },
-    },
-  ];
+  // Fetch Azure resources
+  const fetchAzureResources = async (signal?: AbortSignal) => {
+    setResourcesLoading(true);
+    setResourcesError(null);
 
-  const mockDeploymentHistory = [
-    {
-      id: '1',
-      timestamp: new Date(Date.now() - 86400000).toISOString(),
-      action: 'deploy' as const,
-      status: 'success' as const,
-      duration: '4m 32s',
-      resourcesAffected: 7,
-      user: 'GitHub Actions',
-      message: 'Deployed all infrastructure resources successfully',
-      githubUrl: 'https://github.com/phoenixvc/Mystira.App/actions',
-    },
-    {
-      id: '2',
-      timestamp: new Date(Date.now() - 172800000).toISOString(),
-      action: 'validate' as const,
-      status: 'success' as const,
-      duration: '23s',
-      user: 'GitHub Actions',
-      message: 'All Bicep templates validated successfully',
-    },
-    {
-      id: '3',
-      timestamp: new Date(Date.now() - 259200000).toISOString(),
-      action: 'preview' as const,
-      status: 'success' as const,
-      duration: '1m 12s',
-      resourcesAffected: 5,
-      user: 'GitHub Actions',
-      message: 'What-if analysis completed',
-    },
-  ];
+    try {
+      const response: CommandResponse = await invoke('get_azure_resources', {
+        subscriptionId: null, // Use default/current subscription
+        resourceGroup: null, // Get all resources
+      });
+
+      // Don't update state if aborted
+      if (signal?.aborted) return;
+
+      if (response.success && response.result) {
+        // Map Azure resources to ResourceGrid format
+        const mappedResources = response.result.map((resource: any) => ({
+          id: resource.id,
+          name: resource.name,
+          type: resource.type,
+          status: 'running' as const, // Azure doesn't provide a simple status, assume running if listed
+          region: resource.location || 'Unknown',
+          costToday: 0, // Cost data requires separate Azure Cost Management API
+          lastUpdated: new Date().toISOString(),
+          properties: {
+            'Resource Group': resource.resourceGroup || 'N/A',
+            'SKU': resource.sku?.name || 'N/A',
+            'Kind': resource.kind || 'N/A',
+          },
+        }));
+
+        setResources(mappedResources);
+      } else {
+        setResourcesError(response.error || 'Failed to fetch Azure resources');
+      }
+    } catch (error) {
+      if (!signal?.aborted) {
+        setResourcesError(String(error));
+      }
+    } finally {
+      if (!signal?.aborted) {
+        setResourcesLoading(false);
+      }
+    }
+  };
+
+  // Fetch GitHub deployment history
+  const fetchGitHubDeployments = async (signal?: AbortSignal) => {
+    setDeploymentsLoading(true);
+    setDeploymentsError(null);
+
+    try {
+      const response: CommandResponse = await invoke('get_github_deployments', {
+        repository,
+        limit: 20,
+      });
+
+      // Don't update state if aborted
+      if (signal?.aborted) return;
+
+      if (response.success && response.result) {
+        // Map GitHub workflow runs to DeploymentHistory format
+        const mappedDeployments = response.result.map((run: any, index: number) => {
+          const isInfrastructure = run.name?.toLowerCase().includes('infrastructure') ||
+                                   run.path?.toLowerCase().includes('infrastructure');
+
+          // Determine action type from workflow name
+          let action: 'deploy' | 'validate' | 'preview' | 'destroy' = 'deploy';
+          if (run.name?.toLowerCase().includes('validate')) action = 'validate';
+          else if (run.name?.toLowerCase().includes('preview') || run.name?.toLowerCase().includes('what-if')) action = 'preview';
+          else if (run.name?.toLowerCase().includes('destroy')) action = 'destroy';
+
+          // Map GitHub conclusion to our status
+          let status: 'success' | 'failed' | 'in_progress' = 'in_progress';
+          if (run.conclusion === 'success') status = 'success';
+          else if (run.conclusion === 'failure' || run.conclusion === 'cancelled') status = 'failed';
+          else if (run.status === 'completed') status = 'success';
+
+          // Calculate duration
+          let duration = 'N/A';
+          if (run.created_at && run.updated_at) {
+            const start = new Date(run.created_at).getTime();
+            const end = new Date(run.updated_at).getTime();
+            const diffSeconds = Math.floor((end - start) / 1000);
+            const minutes = Math.floor(diffSeconds / 60);
+            const seconds = diffSeconds % 60;
+            duration = `${minutes}m ${seconds}s`;
+          }
+
+          return {
+            id: run.id?.toString() || index.toString(),
+            timestamp: run.created_at || new Date().toISOString(),
+            action,
+            status,
+            duration,
+            resourcesAffected: 0, // GitHub doesn't provide this info easily
+            user: run.actor?.login || 'GitHub Actions',
+            message: run.display_title || run.name || 'Workflow run',
+            githubUrl: run.html_url,
+          };
+        });
+
+        setDeployments(mappedDeployments);
+      } else {
+        setDeploymentsError(response.error || 'Failed to fetch GitHub deployments');
+      }
+    } catch (error) {
+      if (!signal?.aborted) {
+        setDeploymentsError(String(error));
+      }
+    } finally {
+      if (!signal?.aborted) {
+        setDeploymentsLoading(false);
+      }
+    }
+  };
+
+  // Fetch resources when switching to resources tab
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    if (activeTab === 'resources' && resources.length === 0 && !resourcesLoading) {
+      fetchAzureResources(abortController.signal);
+    }
+
+    return () => {
+      abortController.abort();
+    };
+  }, [activeTab]);
+
+  // Fetch deployments when switching to history tab
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    if (activeTab === 'history' && deployments.length === 0 && !deploymentsLoading) {
+      fetchGitHubDeployments(abortController.signal);
+    }
+
+    return () => {
+      abortController.abort();
+    };
+  }, [activeTab]);
 
   const handleAction = async (action: 'validate' | 'preview' | 'deploy' | 'destroy') => {
     setLoading(true);
@@ -466,14 +543,58 @@ function InfrastructurePanel() {
         {/* Tab Content: Azure Resources */}
         {activeTab === 'resources' && (
           <div>
-            <ResourceGrid resources={mockResources} onRefresh={() => console.log('Refresh resources')} />
+            {resourcesLoading && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+                <p className="text-blue-800">Loading Azure resources...</p>
+              </div>
+            )}
+
+            {resourcesError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-4">
+                <h3 className="text-lg font-semibold text-red-900 mb-2">❌ Failed to Load Resources</h3>
+                <p className="text-red-800 mb-3">{resourcesError}</p>
+                <button
+                  onClick={fetchAzureResources}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {!resourcesLoading && !resourcesError && (
+              <ResourceGrid resources={resources} onRefresh={fetchAzureResources} />
+            )}
           </div>
         )}
 
         {/* Tab Content: Deployment History */}
         {activeTab === 'history' && (
           <div>
-            <DeploymentHistory events={mockDeploymentHistory} />
+            {deploymentsLoading && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+                <p className="text-blue-800">Loading deployment history...</p>
+              </div>
+            )}
+
+            {deploymentsError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-4">
+                <h3 className="text-lg font-semibold text-red-900 mb-2">❌ Failed to Load Deployments</h3>
+                <p className="text-red-800 mb-3">{deploymentsError}</p>
+                <button
+                  onClick={fetchGitHubDeployments}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {!deploymentsLoading && !deploymentsError && (
+              <DeploymentHistory events={deployments} />
+            )}
           </div>
         )}
       </div>

@@ -4,6 +4,8 @@
 use serde::{Deserialize, Serialize};
 use std::process::{Command, Stdio};
 use std::io::Write;
+use std::path::PathBuf;
+use std::env;
 use tauri::Manager;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -20,6 +22,51 @@ struct CommandResponse {
     error: Option<String>,
 }
 
+// Get the path to the built .NET CLI executable
+fn get_cli_executable_path() -> Result<PathBuf, String> {
+    // Try to find the executable relative to the Tauri app
+    let base_path = env::current_dir()
+        .map_err(|e| format!("Failed to get current directory: {}", e))?;
+
+    // Check for pre-built executable in multiple locations
+    let possible_paths = vec![
+        // Development: relative to Tauri project
+        base_path.join("../../Mystira.DevHub.CLI/bin/Debug/net9.0/Mystira.DevHub.CLI"),
+        base_path.join("../../Mystira.DevHub.CLI/bin/Release/net9.0/Mystira.DevHub.CLI"),
+        // Production: bundled with app
+        base_path.join("Mystira.DevHub.CLI"),
+        base_path.join("bin/Mystira.DevHub.CLI"),
+    ];
+
+    // Add .exe extension on Windows
+    #[cfg(target_os = "windows")]
+    let possible_paths: Vec<PathBuf> = possible_paths
+        .iter()
+        .map(|p| p.with_extension("exe"))
+        .collect();
+
+    // Find the first path that exists
+    for path in &possible_paths {
+        if path.exists() {
+            return Ok(path.clone());
+        }
+    }
+
+    // If no built executable found, provide helpful error
+    Err(format!(
+        "Could not find Mystira.DevHub.CLI executable. Please build it first:\n\
+         cd tools/Mystira.DevHub.CLI\n\
+         dotnet build\n\
+         \n\
+         Searched in:\n{}",
+        possible_paths
+            .iter()
+            .map(|p| format!("  - {}", p.display()))
+            .collect::<Vec<_>>()
+            .join("\n")
+    ))
+}
+
 // Execute .NET CLI wrapper and return response
 async fn execute_devhub_cli(command: String, args: serde_json::Value) -> Result<CommandResponse, String> {
     let request = CommandRequest {
@@ -30,24 +77,23 @@ async fn execute_devhub_cli(command: String, args: serde_json::Value) -> Result<
     let request_json = serde_json::to_string(&request)
         .map_err(|e| format!("Failed to serialize request: {}", e))?;
 
-    // Get the path to the .NET CLI project
-    let cli_project_path = "../../Mystira.DevHub.CLI/Mystira.DevHub.CLI.csproj";
+    // Get the CLI executable path
+    let cli_exe_path = get_cli_executable_path()?;
 
     // Spawn the .NET process
-    let mut child = Command::new("dotnet")
-        .arg("run")
-        .arg("--project")
-        .arg(cli_project_path)
+    let mut child = Command::new(&cli_exe_path)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| format!("Failed to spawn dotnet process: {}", e))?;
+        .map_err(|e| format!("Failed to spawn process at {}: {}", cli_exe_path.display(), e))?;
 
     // Write JSON to stdin
     if let Some(mut stdin) = child.stdin.take() {
         stdin.write_all(request_json.as_bytes())
             .map_err(|e| format!("Failed to write to stdin: {}", e))?;
+        // Close stdin to signal we're done writing
+        drop(stdin);
     }
 
     // Wait for the process to complete and read output
@@ -56,11 +102,23 @@ async fn execute_devhub_cli(command: String, args: serde_json::Value) -> Result<
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("Process failed with stderr: {}", stderr));
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        return Err(format!(
+            "Process failed with exit code: {:?}\nStderr: {}\nStdout: {}",
+            output.status.code(),
+            stderr,
+            stdout
+        ));
     }
 
     // Parse the JSON response
     let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Handle empty response
+    if stdout.trim().is_empty() {
+        return Err("Process returned empty response".to_string());
+    }
+
     let response: CommandResponse = serde_json::from_str(&stdout)
         .map_err(|e| format!("Failed to parse response JSON: {}. Output was: {}", e, stdout))?;
 
@@ -151,6 +209,36 @@ async fn infrastructure_status(workflow_file: String, repository: String) -> Res
     execute_devhub_cli("infrastructure.status".to_string(), args).await
 }
 
+// New commands for Wave 1: Real integrations
+
+#[tauri::command]
+async fn get_azure_resources(subscription_id: Option<String>) -> Result<CommandResponse, String> {
+    let args = if let Some(sub_id) = subscription_id {
+        serde_json::json!({ "subscriptionId": sub_id })
+    } else {
+        serde_json::json!({})
+    };
+    execute_devhub_cli("azure.list-resources".to_string(), args).await
+}
+
+#[tauri::command]
+async fn get_github_deployments(repository: String, limit: Option<i32>) -> Result<CommandResponse, String> {
+    let args = serde_json::json!({
+        "repository": repository,
+        "limit": limit.unwrap_or(10)
+    });
+    execute_devhub_cli("github.list-deployments".to_string(), args).await
+}
+
+#[tauri::command]
+async fn test_connection(connection_type: String, connection_string: Option<String>) -> Result<CommandResponse, String> {
+    let args = serde_json::json!({
+        "type": connection_type,
+        "connectionString": connection_string
+    });
+    execute_devhub_cli("connection.test".to_string(), args).await
+}
+
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -162,6 +250,9 @@ fn main() {
             infrastructure_deploy,
             infrastructure_destroy,
             infrastructure_status,
+            get_azure_resources,
+            get_github_deployments,
+            test_connection,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

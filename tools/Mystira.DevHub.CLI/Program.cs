@@ -61,6 +61,9 @@ internal class Program
             services.AddScoped<CosmosCommands>();
             services.AddScoped<MigrationCommands>();
             services.AddScoped<InfrastructureCommands>();
+            services.AddScoped<AzureCommands>();
+            services.AddScoped<GitHubCommands>();
+            services.AddScoped<ConnectionCommands>();
 
             var serviceProvider = services.BuildServiceProvider();
 
@@ -117,6 +120,9 @@ internal class Program
                     "infrastructure.deploy" => await serviceProvider.GetRequiredService<InfrastructureCommands>().DeployAsync(request.Args),
                     "infrastructure.destroy" => await serviceProvider.GetRequiredService<InfrastructureCommands>().DestroyAsync(request.Args),
                     "infrastructure.status" => await serviceProvider.GetRequiredService<InfrastructureCommands>().StatusAsync(request.Args),
+                    "azure.list-resources" => await serviceProvider.GetRequiredService<AzureCommands>().ListResourcesAsync(request.Args),
+                    "github.list-deployments" => await serviceProvider.GetRequiredService<GitHubCommands>().ListDeploymentsAsync(request.Args),
+                    "connection.test" => await serviceProvider.GetRequiredService<ConnectionCommands>().TestAsync(request.Args),
                     _ => CommandResponse.Fail($"Unknown command: {request.Command}")
                 };
             }
