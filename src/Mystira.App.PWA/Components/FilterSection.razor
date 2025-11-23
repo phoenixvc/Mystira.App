@@ -5,9 +5,9 @@
         <div class="card shadow-sm filter-card">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="card-title mb-0">
+                    <h5 class="card-title mb-0 filter-title">
                         <i class="fas fa-filter me-2"></i>Filter Adventures
-                    </h6>
+                    </h5>
                     @if (ResultCount.HasValue)
                     {
                         <div class="filter-results-count">
@@ -56,7 +56,7 @@
                 @* Show Completed Toggle *@
                 @if (ShowCompletedToggle)
                 {
-                    <div class="mb-3">
+                    <div class="mb-3 completed-toggle-container">
                         <div class="form-check form-switch">
                             <input class="form-check-input" 
                                    type="checkbox" 
@@ -65,16 +65,22 @@
                                    aria-label="Toggle completed stories visibility"
                                    checked="@ShowCompleted" 
                                    @onchange="OnShowCompletedChanged">
-                            <label class="form-check-label" for="showCompletedToggle">
-                                <i class="fas fa-check-circle me-1"></i>
-                                Show Completed Stories
-                                @if (!ShowCompleted && HiddenCount > 0)
-                                {
-                                    <span class="badge bg-secondary ms-2">@HiddenCount hidden</span>
-                                }
+                            <label class="form-check-label toggle-label" for="showCompletedToggle">
+                                <span class="toggle-text">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    Show Completed Stories
+                                    @if (!ShowCompleted && HiddenCount > 0)
+                                    {
+                                        <span class="badge bg-secondary ms-2 completed-count">@HiddenCount hidden</span>
+                                    }
+                                    else if (ShowCompleted && HiddenCount > 0)
+                                    {
+                                        <span class="badge bg-success ms-2 completed-count">@HiddenCount completed</span>
+                                    }
+                                </span>
                             </label>
                         </div>
-                        <small class="text-muted d-block mt-1">Include stories you've finished</small>
+                        <small class="text-muted d-block mt-1 toggle-helper">Include stories you've finished</small>
                     </div>
                 }
                 

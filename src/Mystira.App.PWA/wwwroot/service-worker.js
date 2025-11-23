@@ -31,6 +31,14 @@ const coreFilesToCache = [
     './dice.js'
 ];
 
+// Additional assets to cache for performance
+const performanceAssets = [
+    // Logo and key images (cached separately for instant rendering)
+    './icons/icon-512.png',
+    './icons/icon-192.png',
+    './icons/favicon.png'
+];
+
 // Install event - Cache essential PWA files
 self.addEventListener('install', event => {
     console.log('Service Worker: Installing...');
@@ -44,7 +52,7 @@ self.addEventListener('install', event => {
             caches.open(ICON_CACHE_NAME)
                 .then(cache => {
                     console.log('Service Worker: Caching Icon Files');
-                    return cache.addAll(filesToCache);
+                    return cache.addAll(filesToCache.concat(performanceAssets));
                 }),
             // Cache core files
             caches.open(CORE_CACHE_NAME)

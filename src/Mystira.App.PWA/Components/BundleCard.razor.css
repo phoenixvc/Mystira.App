@@ -1,17 +1,18 @@
 /* Bundle Card Scoped Styles */
 
 .bundle-card {
-    border-radius: 12px;
+    border-radius: 16px;
     overflow: hidden;
     border: 1px solid #e5e7eb;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
+    background: white;
 }
 
 .bundle-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(139, 92, 246, 0.2);
-    border-color: #8B5CF6;
+    box-shadow: 0 12px 24px rgba(147, 51, 234, 0.2);
+    border-color: #9333ea;
 }
 
 .bundle-image-container {
@@ -81,7 +82,7 @@
 }
 
 .badge.bg-primary {
-    background-color: #8B5CF6 !important;
+    background-color: #9333ea !important;
 }
 
 .badge.bg-success {
@@ -105,7 +106,7 @@
 }
 
 .card-footer .text-primary {
-    color: #8B5CF6 !important;
+    color: #9333ea !important;
     transition: transform 0.2s ease;
 }
 
@@ -115,7 +116,7 @@
 
 /* Accessibility */
 .bundle-card:focus-visible {
-    outline: 2px solid #8B5CF6;
+    outline: 2px solid #9333ea;
     outline-offset: 2px;
 }
 
