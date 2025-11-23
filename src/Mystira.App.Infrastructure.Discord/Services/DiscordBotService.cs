@@ -175,9 +175,8 @@ public class DiscordBotService : IDiscordBotService, IDisposable
 
     private Task ReadyAsync()
     {
-        _logger.LogInformation("Discord bot is ready! Logged in as {Username}#{Discriminator}", 
-            _client.CurrentUser?.Username, 
-            _client.CurrentUser?.Discriminator);
+        _logger.LogInformation("Discord bot is ready! Logged in as {Username}", 
+            _client.CurrentUser?.Username);
         
         return Task.CompletedTask;
     }
