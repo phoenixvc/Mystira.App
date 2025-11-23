@@ -76,10 +76,10 @@ public class MediaControllerTests
 
         // Assert
         result.Result.Should().BeOfType<NotFoundObjectResult>();
-        var notFound = result.Result as NotFoundObjectResult;
-        notFound!.Value.Should().BeOfType<ErrorResponse>();
-        var error = notFound.Value as ErrorResponse;
-        error!.Message.Should().Contain(mediaId);
+        var notFound = (NotFoundObjectResult)result.Result!;
+        notFound.Value.Should().BeOfType<ErrorResponse>();
+        var error = (ErrorResponse)notFound.Value!;
+        error.Message.Should().Contain(mediaId);
     }
 
     [Fact]
@@ -101,8 +101,8 @@ public class MediaControllerTests
 
         // Assert
         result.Should().BeOfType<FileStreamResult>();
-        var file = result as FileStreamResult;
-        file!.ContentType.Should().Be(contentType);
+        var file = (FileStreamResult)result;
+        file.ContentType.Should().Be(contentType);
         file.FileDownloadName.Should().Be(fileName);
         mediaService.Verify(s => s.GetMediaFileAsync(mediaId), Times.Once);
     }
@@ -123,10 +123,10 @@ public class MediaControllerTests
 
         // Assert
         result.Should().BeOfType<NotFoundObjectResult>();
-        var notFound = result as NotFoundObjectResult;
-        notFound!.Value.Should().BeOfType<ErrorResponse>();
-        var error = notFound.Value as ErrorResponse;
-        error!.Message.Should().Contain(mediaId);
+        var notFound = (NotFoundObjectResult)result;
+        notFound.Value.Should().BeOfType<ErrorResponse>();
+        var error = (ErrorResponse)notFound.Value!;
+        error.Message.Should().Contain(mediaId);
     }
 
     [Fact]
