@@ -26,6 +26,11 @@ The Mystira repository hosts the full suite of services, libraries, and client a
     - [Strengths](#strengths)
     - [Risks \& Gaps](#risks--gaps)
     - [Opportunities](#opportunities)
+  - [🏗️ Architectural Refactoring](#️-architectural-refactoring)
+    - [Critical Issues](#critical-issues)
+    - [Impact](#impact)
+    - [Solution](#solution)
+    - [Exemplar Project](#exemplar-project)
   - [Recommendations](#recommendations)
   - [Testing \& Quality Gates](#testing--quality-gates)
   - [Contributing / PR Checklist](#contributing--pr-checklist)
@@ -130,6 +135,49 @@ Configure `appsettings.Development.json`, user secrets, or environment variables
 - **Testing & Validation:** Add contract/integration tests for EF converters (classification tags, modifiers), IndexedDB abstractions, and Azure health checks.
 - **Security Posture:** Document Key Vault integration, standardise Managed Identity/Azure AD usage, and highlight PII-safe logging practices.
 - **Front-end Resilience:** Strengthen service-worker caching and IndexedDB migrations to improve offline robustness and release rollouts.
+
+## 🏗️ Architectural Refactoring
+
+**Status**: 🟡 Planning Phase | **Timeline**: 16-25 weeks | **Priority**: High
+
+A comprehensive architectural analysis has identified critical violations of hexagonal (ports & adapters) architecture principles. The refactoring plan addresses:
+
+### Critical Issues
+
+- **88 service files** with business logic misplaced in API/Admin.Api presentation layers
+- **138 infrastructure dependencies** in Application layer (violates Dependency Inversion Principle)
+- **12 repository files** in presentation layers instead of Infrastructure.Data
+- **~27 port interfaces** in Infrastructure instead of Application/Ports
+
+### Impact
+
+These violations affect:
+- ❌ **Testability** - Cannot unit test business logic without HTTP/database mocking
+- ❌ **Maintainability** - Business logic scattered across multiple layers
+- ❌ **Flexibility** - Cannot swap implementations (database, cloud provider)
+- ❌ **Reusability** - Use cases cannot be called from CLI tools or background jobs
+
+### Solution
+
+A **phased 10-phase refactoring plan** has been created to systematically address these issues:
+
+1. **Phase 1-2**: Move port interfaces to Application/Ports (Weeks 1-4)
+2. **Phase 3**: Fix Application layer DIP violations (Weeks 5-7)
+3. **Phase 4-5**: Migrate API services to use cases (Weeks 8-16)
+4. **Phase 6**: Fix PWA model duplication (Weeks 17-18)
+5. **Phase 7-10**: Cleanup, testing, deployment (Weeks 19-25)
+
+📖 **[View Complete Refactoring Plan](docs/architecture/REFACTORING_PLAN.md)**
+
+### Exemplar Project
+
+**Infrastructure.StoryProtocol** demonstrates perfect hexagonal architecture:
+- ✅ Port interface in `Application/Ports/` (correct layer)
+- ✅ Proper dependency flow: Infrastructure → Application → Domain
+- ✅ Multiple implementations (Mock + Production)
+- ✅ Zero architectural debt
+
+All other infrastructure projects should follow this pattern.
 
 ## Recommendations
 
