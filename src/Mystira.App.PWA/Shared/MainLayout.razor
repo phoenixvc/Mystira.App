@@ -33,6 +33,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="fas fa-compass me-1"></i>
+                            Adventures
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="/about">
                             <i class="fas fa-info-circle me-1"></i>
                             About
@@ -44,12 +50,6 @@
                             <a class="nav-link" href="/profiles">
                                 <i class="fas fa-users me-1"></i>
                                 Profiles
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/game">
-                                <i class="fas fa-compass me-1"></i>
-                                Adventures
                             </a>
                         </li>
                     }
@@ -70,11 +70,27 @@
                                     @onclick="ToggleSettingsMenu"
                                     @onclick:stopPropagation="true">
                                 <i class="fas fa-user-circle me-1"></i>
-                                Settings
+                                @if (CurrentAccount != null)
+                                {
+                                    <span>@CurrentAccount.DisplayName</span>
+                                }
+                                else
+                                {
+                                    <span>Account</span>
+                                }
                             </button>
                             @if (isProfileMenuOpen)
                             {
                                 <div class="dropdown-menu show dropdown-menu-end" style="position: absolute; right: 0;">
+                                    <h6 class="dropdown-header">
+                                        <i class="fas fa-user me-2"></i>
+                                        @(CurrentAccount?.DisplayName ?? "Account")
+                                    </h6>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item" href="/profiles">
+                                        <i class="fas fa-users me-2"></i>
+                                        My Profiles
+                                    </a>
                                     <AccountInstallOption />
                                     <div class="dropdown-divider"></div>
                                     <button class="dropdown-item" @onclick="SignOutAsync">
@@ -89,20 +105,17 @@
                     {
                         <li class="nav-item">
                             <a class="nav-link" href="/signin">
-                                <i class="fas fa-sign-in-alt me-1"></i>
                                 Sign In
                             </a>
                         </li>
-                        <li class="nav-item d-none d-md-flex align-items-center ms-md-3">
-                            <a class="btn btn-primary-custom px-3" href="/signup">
-                                <i class="fas fa-user-plus me-1"></i>
-                                Register
+                        <li class="nav-item d-none d-md-flex align-items-center ms-md-2">
+                            <a class="btn btn-primary-custom px-4 py-2" href="/signup">
+                                Get Started
                             </a>
                         </li>
-                        <li class="nav-item d-md-none mt-3">
-                            <a class="btn btn-outline-primary w-100" href="/signup">
-                                <i class="fas fa-user-plus me-1"></i>
-                                Register
+                        <li class="nav-item d-md-none mt-2">
+                            <a class="btn btn-primary-custom w-100" href="/signup">
+                                Get Started
                             </a>
                         </li>
                     }
