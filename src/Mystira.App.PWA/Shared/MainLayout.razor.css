@@ -13,10 +13,6 @@
     z-index: 1030; /* Bootstrap navbar z-index */
 }
 
-.offline-indicator {
-    display: none;
-}
-
 .profile-menu-dropdown {
     position: absolute;
     right: 0;
