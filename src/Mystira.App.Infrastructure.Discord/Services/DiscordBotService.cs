@@ -101,39 +101,87 @@ public class DiscordBotService : IDiscordBotService, IDisposable
 
     public async Task SendMessageAsync(ulong channelId, string message, CancellationToken cancellationToken = default)
     {
-        if (!IsConnected)
+        try
         {
-            throw new InvalidOperationException("Discord bot is not connected");
+            var channel = await GetMessageChannelAsync(channelId);
+            await channel.SendMessageAsync(message);
+            _logger.LogDebug("Sent message to channel {ChannelId}", channelId);
         }
-
-        var channel = _client.GetChannel(channelId) as IMessageChannel;
-        if (channel == null)
+        catch (global::Discord.Net.HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.TooManyRequests)
         {
-            throw new InvalidOperationException($"Channel {channelId} not found or is not a message channel");
+            _logger.LogWarning(ex, "Rate limited while sending message to channel {ChannelId}", channelId);
+            throw new InvalidOperationException($"Rate limited: {ex.Message}", ex);
         }
-
-        await channel.SendMessageAsync(message);
-        _logger.LogDebug("Sent message to channel {ChannelId}", channelId);
+        catch (global::Discord.Net.HttpException ex)
+        {
+            _logger.LogError(ex, "HTTP error sending message to channel {ChannelId}: {StatusCode}", channelId, ex.HttpCode);
+            throw new InvalidOperationException($"Discord API error: {ex.Message}", ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error sending message to channel {ChannelId}", channelId);
+            throw;
+        }
     }
 
     public async Task SendEmbedAsync(ulong channelId, Embed embed, CancellationToken cancellationToken = default)
     {
-        if (!IsConnected)
+        try
         {
-            throw new InvalidOperationException("Discord bot is not connected");
+            var channel = await GetMessageChannelAsync(channelId);
+            await channel.SendMessageAsync(embed: embed);
+            _logger.LogDebug("Sent embed to channel {ChannelId}", channelId);
         }
-
-        var channel = _client.GetChannel(channelId) as IMessageChannel;
-        if (channel == null)
+        catch (global::Discord.Net.HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.TooManyRequests)
         {
-            throw new InvalidOperationException($"Channel {channelId} not found or is not a message channel");
+            _logger.LogWarning(ex, "Rate limited while sending embed to channel {ChannelId}", channelId);
+            throw new InvalidOperationException($"Rate limited: {ex.Message}", ex);
         }
-
-        await channel.SendMessageAsync(embed: embed);
-        _logger.LogDebug("Sent embed to channel {ChannelId}", channelId);
+        catch (global::Discord.Net.HttpException ex)
+        {
+            _logger.LogError(ex, "HTTP error sending embed to channel {ChannelId}: {StatusCode}", channelId, ex.HttpCode);
+            throw new InvalidOperationException($"Discord API error: {ex.Message}", ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error sending embed to channel {ChannelId}", channelId);
+            throw;
+        }
     }
 
     public async Task ReplyToMessageAsync(ulong messageId, ulong channelId, string reply, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var channel = await GetMessageChannelAsync(channelId);
+            var message = await channel.GetMessageAsync(messageId);
+            
+            if (message == null)
+            {
+                throw new InvalidOperationException($"Message {messageId} not found in channel {channelId}");
+            }
+
+            await channel.SendMessageAsync(reply, messageReference: new MessageReference(messageId));
+            _logger.LogDebug("Replied to message {MessageId} in channel {ChannelId}", messageId, channelId);
+        }
+        catch (global::Discord.Net.HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.TooManyRequests)
+        {
+            _logger.LogWarning(ex, "Rate limited while replying to message {MessageId} in channel {ChannelId}", messageId, channelId);
+            throw new InvalidOperationException($"Rate limited: {ex.Message}", ex);
+        }
+        catch (global::Discord.Net.HttpException ex)
+        {
+            _logger.LogError(ex, "HTTP error replying to message {MessageId} in channel {ChannelId}: {StatusCode}", messageId, channelId, ex.HttpCode);
+            throw new InvalidOperationException($"Discord API error: {ex.Message}", ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error replying to message {MessageId} in channel {ChannelId}", messageId, channelId);
+            throw;
+        }
+    }
+
+    private Task<IMessageChannel> GetMessageChannelAsync(ulong channelId)
     {
         if (!IsConnected)
         {
@@ -146,14 +194,7 @@ public class DiscordBotService : IDiscordBotService, IDisposable
             throw new InvalidOperationException($"Channel {channelId} not found or is not a message channel");
         }
 
-        var message = await channel.GetMessageAsync(messageId);
-        if (message == null)
-        {
-            throw new InvalidOperationException($"Message {messageId} not found in channel {channelId}");
-        }
-
-        await channel.SendMessageAsync(reply, messageReference: new MessageReference(messageId));
-        _logger.LogDebug("Replied to message {MessageId} in channel {ChannelId}", messageId, channelId);
+        return Task.FromResult(channel);
     }
 
     private Task LogAsync(LogMessage log)

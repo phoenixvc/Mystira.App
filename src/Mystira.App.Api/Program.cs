@@ -15,6 +15,7 @@ using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
+using Mystira.App.Infrastructure.Discord;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -306,6 +307,16 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddHealthChecks()
     .AddCheck<BlobStorageHealthCheck>("blob_storage");
 
+// Add Discord Bot Integration (Optional - controlled by configuration)
+var discordEnabled = builder.Configuration.GetValue<bool>("Discord:Enabled", false);
+if (discordEnabled)
+{
+    builder.Services.AddDiscordBot(builder.Configuration);
+    builder.Services.AddDiscordBotHostedService();
+    builder.Services.AddHealthChecks()
+        .AddDiscordBotHealthCheck();
+}
+
 // Configure CORS for frontend integration
 var policyName = "MystiraAppPolicy";
 builder.Services.AddCors(options =>
@@ -340,6 +351,7 @@ var app = builder.Build();
 
 var logger = app.Logger;
 logger.LogInformation(useCosmosDb ? "Using Azure Cosmos DB (Cloud Database)" : "Using In-Memory Database (Local Development)");
+logger.LogInformation(discordEnabled ? "Discord bot integration: ENABLED" : "Discord bot integration: DISABLED");
 
 // Configure the HTTP request pipeline
 app.UseSwagger();
