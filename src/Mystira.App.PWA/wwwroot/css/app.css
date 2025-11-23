@@ -104,13 +104,13 @@ html, body {
 .pwa-install-container {
     position: fixed;
     left: 50%;
-    bottom: 1.25rem;
+    bottom: 24px;
     transform: translateX(-50%);
     width: calc(100% - 2.5rem);
-    max-width: 340px;
-    z-index: 9999;
+    max-width: 420px;
+    z-index: 1000;
     padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: slideUp 0.3s ease-out;
     pointer-events: auto;
     display: block;
 }
@@ -118,7 +118,7 @@ html, body {
 @keyframes slideUp {
     from {
         opacity: 0;
-        transform: translate(-50%, 20px);
+        transform: translate(-50%, 100px);
     }
     to {
         opacity: 1;
@@ -127,19 +127,22 @@ html, body {
 }
 
 .btn-pwa-install {
-    background: linear-gradient(135deg, var(--primary-color) 0%, #7C3AED 100%);
+    background: white;
     border: none;
-    color: white;
-    padding: 0.85rem 1.75rem;
-    border-radius: 999px;
+    color: #111827;
+    padding: 16px 20px;
+    border-radius: 16px;
     font-weight: 600;
     font-size: 1rem;
-    box-shadow: 0 12px 30px rgba(139, 92, 246, 0.3), 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     width: 100%;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
     visibility: visible;
     opacity: 1;
     pointer-events: auto;
@@ -147,7 +150,7 @@ html, body {
 
 .btn-pwa-install:hover,
 .btn-pwa-install:focus {
-    box-shadow: 0 16px 40px rgba(139, 92, 246, 0.4), 0 6px 16px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
     transform: translateY(-2px);
 }
 

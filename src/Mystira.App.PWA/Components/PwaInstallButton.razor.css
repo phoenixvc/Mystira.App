@@ -4,8 +4,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem 1.5rem;
-    gap: 12px;
+    padding: 16px 20px;
+    gap: 16px;
 }
 
 .install-content {
@@ -13,6 +13,11 @@
     align-items: center;
     gap: 12px;
     flex: 1;
+}
+
+.install-content i {
+    font-size: 1.25rem;
+    color: #9333ea;
 }
 
 .install-text {
@@ -25,29 +30,32 @@
 .install-text strong {
     font-size: 1rem;
     line-height: 1.2;
+    color: #111827;
 }
 
 .install-text small {
-    font-size: 0.75rem;
-    opacity: 0.9;
+    font-size: 0.8125rem;
+    opacity: 0.7;
     font-weight: 400;
     line-height: 1.2;
+    color: #6b7280;
 }
 
 .badge-pwa {
-    background: rgba(255, 255, 255, 0.25);
+    background: #9333ea;
     color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
     font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 0.5px;
+    text-transform: uppercase;
 }
 
 /* Mobile responsiveness */
 @media (max-width: 576px) {
     .btn-pwa-install {
-        padding: 0.875rem 1.25rem;
+        padding: 14px 18px;
     }
     
     .install-text strong {
@@ -55,6 +63,6 @@
     }
     
     .install-text small {
-        font-size: 0.7rem;
+        font-size: 0.75rem;
     }
 }

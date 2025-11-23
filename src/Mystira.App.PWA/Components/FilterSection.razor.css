@@ -1,17 +1,24 @@
 /* Filter Section Scoped Styles */
 
 .filter-card {
-    border-radius: 12px;
+    border-radius: 16px;
     border: 1px solid #e5e7eb;
     transition: box-shadow 0.2s ease;
+    background: white;
 }
 
 .filter-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
 }
 
 .filter-card .card-body {
-    padding: 20px;
+    padding: 24px;
+}
+
+.filter-title {
+    color: #1f2937;
+    font-weight: 600;
+    font-size: 1.125rem;
 }
 
 .filter-card .card-title {
@@ -29,27 +36,27 @@
 
 /* Search Bar Styles */
 .input-group {
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     transition: all 0.2s ease;
 }
 
 .input-group:focus-within {
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
-    outline: 2px solid #8B5CF6;
+    box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.1);
+    outline: 2px solid #9333ea;
 }
 
 .input-group-text {
     background: white;
-    border: 1px solid #d1d5db;
+    border: 2px solid #e5e7eb;
     border-right: none;
     color: #6b7280;
     padding: 12px 16px;
 }
 
 .input-group .form-control {
-    border: 1px solid #d1d5db;
+    border: 2px solid #e5e7eb;
     border-left: none;
     border-right: none;
     padding: 12px 16px;
@@ -58,7 +65,7 @@
 }
 
 .input-group .form-control:focus {
-    border-color: #8B5CF6;
+    border-color: #9333ea;
     box-shadow: none;
 }
 
@@ -68,7 +75,7 @@
 }
 
 .input-group .btn-outline-secondary {
-    border: 1px solid #d1d5db;
+    border: 2px solid #e5e7eb;
     border-left: none;
     background: white;
     color: #6b7280;
@@ -82,6 +89,13 @@
 }
 
 /* Completed Toggle Styles */
+.completed-toggle-container {
+    background: rgba(139, 92, 246, 0.03);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(139, 92, 246, 0.1);
+}
+
 .form-check-input {
     width: 2.5rem;
     height: 1.25rem;
@@ -91,19 +105,37 @@
 }
 
 .form-check-input:checked {
-    background-color: #8B5CF6;
-    border-color: #8B5CF6;
+    background-color: #9333ea;
+    border-color: #9333ea;
 }
 
 .form-check-input:focus {
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.15);
 }
 
-.form-check-label {
+.toggle-label {
     cursor: pointer;
     user-select: none;
     color: #374151;
     font-weight: 500;
+}
+
+.toggle-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.completed-count {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    font-weight: 600;
+}
+
+.toggle-helper {
+    margin-left: 42px;
+    font-size: 0.8125rem;
+    color: #6b7280;
 }
 
 .form-check-label .badge {
@@ -117,6 +149,7 @@
     scrollbar-width: thin;
     scrollbar-color: #d1d5db transparent;
     -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
 }
 
 .age-filter-container::-webkit-scrollbar {
@@ -133,10 +166,10 @@
 }
 
 .btn-age-filter {
-    padding: 8px 16px;
+    padding: 10px 18px;
     font-size: 0.875rem;
     font-weight: 600;
-    border-radius: 8px;
+    border-radius: 24px;
     transition: all 0.2s ease;
     white-space: nowrap;
     position: relative;
@@ -144,40 +177,42 @@
 
 .btn-age-filter:not(.btn-primary-custom) {
     background: white;
-    border: 2px solid #d1d5db;
-    color: #6b7280;
+    border: 2px solid #e5e7eb;
+    color: #4b5563;
 }
 
 .btn-age-filter:not(.btn-primary-custom):hover {
-    border-color: #8B5CF6;
-    background: rgba(139, 92, 246, 0.05);
-    color: #8B5CF6;
+    border-color: #9333ea;
+    background: rgba(147, 51, 234, 0.05);
+    color: #9333ea;
     transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(147, 51, 234, 0.15);
 }
 
 .btn-age-filter.btn-primary-custom {
-    background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
-    border: 2px solid #8B5CF6;
+    background: #9333ea;
+    border: 2px solid #9333ea;
     color: white;
-    transform: scale(1.02);
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.25);
 }
 
 .btn-age-filter.btn-primary-custom:hover {
-    background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
-    transform: scale(1.02) translateY(-1px);
+    background: #7c3aed;
+    border-color: #7c3aed;
+    transform: scale(1.05) translateY(-1px);
 }
 
 .badge-count {
     background: rgba(255, 255, 255, 0.3);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
     font-weight: 700;
 }
 
 .btn-age-filter:not(.btn-primary-custom) .badge-count {
-    background: #e5e7eb;
+    background: #f3f4f6;
     color: #6b7280;
 }
 
@@ -187,12 +222,14 @@
     background: white;
     font-weight: 600;
     transition: all 0.2s ease;
+    border-radius: 24px;
 }
 
 .btn-outline-danger:hover {
     background: #ef4444;
     color: white;
     transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
 }
 
 /* Sort Options Styles */

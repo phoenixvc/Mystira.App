@@ -110,7 +110,7 @@
 .trust-badges {
     display: flex;
     justify-content: center;
-    gap: 16px;
+    gap: 24px;
     margin-top: 32px;
     flex-wrap: wrap;
     animation: fadeIn 1.6s ease-in-out;
@@ -118,14 +118,25 @@
 
 .trust-badge {
     padding: 8px 16px;
-    background: rgba(139, 92, 246, 0.1);
-    color: #7C3AED;
+    background: white;
+    color: #10b981;
     border-radius: 20px;
     font-size: 0.875rem;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.trust-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.trust-badge i {
+    font-size: 1rem;
 }
 
 @keyframes fadeInScale {
