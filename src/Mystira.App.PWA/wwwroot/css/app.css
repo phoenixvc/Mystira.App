@@ -70,6 +70,7 @@ html, body {
 
 /* Global Offline Indicator */
 .offline-indicator {
+    display: none; /* Hidden by default, shown via JavaScript when offline */
     position: fixed;
     top: 56px; /* Position below navbar (navbar height is ~56px) */
     left: 0;
@@ -273,10 +274,14 @@ html {
     text-decoration: none;
     border-radius: 0 0 4px 0;
     z-index: 10001; /* Above everything including navbar and offline indicator */
+    opacity: 0; /* Completely hidden by default */
+    pointer-events: none; /* Not interactive when hidden */
 }
 
 .skip-link:focus {
     top: 0;
+    opacity: 1; /* Fully visible when focused */
+    pointer-events: auto; /* Interactive when focused */
 }
 
 /* Global Button Loading State */
