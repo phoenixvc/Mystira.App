@@ -148,7 +148,7 @@
     }
     
     <!-- Filter Section -->
-    @if (isAuthenticated && !isLoading)
+    @if (!isLoading)
     {
         <FilterSection 
             AgeGroups="@availableAgeGroups"
@@ -251,45 +251,7 @@
             </div>
         </div>
     }
-    else if (!isAuthenticated)
-    {
-        <div class="row g-4 justify-content-center">
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm text-center p-4">
-                    <div class="mb-3 text-primary-custom">
-                        <i class="fas fa-book-open fa-3x"></i>
-                    </div>
-                    <h4 class="mb-3">Interactive Adventures</h4>
-                    <p class="text-muted mb-0">
-                        Dive into guided quests that adapt to every group, helping facilitators lead unforgettable storytelling sessions with ease.
-                    </p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm text-center p-4">
-                    <div class="mb-3 text-success">
-                        <i class="fas fa-hands-helping fa-3x"></i>
-                    </div>
-                    <h4 class="mb-3">Built for Teamwork</h4>
-                    <p class="text-muted mb-0">
-                        Foster empathy, cooperation, and problem-solving with collaborative prompts that keep every child engaged.
-                    </p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm text-center p-4">
-                    <div class="mb-3 text-info">
-                        <i class="fas fa-magic fa-3x"></i>
-                    </div>
-                    <h4 class="mb-3">Guided Storytelling</h4>
-                    <p class="text-muted mb-0">
-                        Use curated visuals, music, and facilitator tips to spark imagination anywhere—from living rooms to after-school clubs.
-                    </p>
-                </div>
-            </div>
-        </div>
-    }
-    else if (hasProfiles && !string.IsNullOrEmpty(selectedBundleId) && filteredScenarios.Any())
+    else if ((isAuthenticated && hasProfiles || !isAuthenticated) && !string.IsNullOrEmpty(selectedBundleId) && filteredScenarios.Any())
     {
         <div class="row">
             @foreach (var scenario in filteredScenarios)
@@ -350,7 +312,7 @@
             }
         </div>
     }
-    else if (isAuthenticated && hasProfiles && !string.IsNullOrEmpty(selectedBundleId) && !filteredScenarios.Any() && scenarios.Any())
+    else if ((isAuthenticated && hasProfiles || !isAuthenticated) && !string.IsNullOrEmpty(selectedBundleId) && !filteredScenarios.Any() && scenarios.Any())
     {
         <div class="row justify-content-center">
             <div class="col-md-6 text-center">
@@ -370,7 +332,7 @@
             </div>
         </div>
     }
-    else if (isAuthenticated && hasProfiles && !string.IsNullOrEmpty(selectedBundleId) && !scenarios.Any())
+    else if ((isAuthenticated && hasProfiles || !isAuthenticated) && !string.IsNullOrEmpty(selectedBundleId) && !scenarios.Any())
     {
         <div class="row justify-content-center">
             <div class="col-md-6 text-center">
@@ -426,7 +388,7 @@
             </div>
         </div>
     }
-    else if (isAuthenticated && hasProfiles && string.IsNullOrEmpty(selectedBundleId))
+    else if ((isAuthenticated && hasProfiles || !isAuthenticated) && string.IsNullOrEmpty(selectedBundleId))
     {
         <!-- Bundles are shown above; no scenarios until a bundle is selected -->
     }
@@ -512,11 +474,13 @@
             
             Logger.LogInformation("Auth service initialized. IsAuthenticated: {IsAuthenticated}", isAuthenticated);
             
-            // Load scenarios only if authenticated
+            // Load bundles and scenarios for everyone (preview mode for unauthenticated)
+            await LoadBundles();
+            await LoadScenarios();
+            
+            // Load user-specific data only if authenticated
             if (isAuthenticated) 
             {
-                await LoadBundles();
-                await LoadScenarios();
                 await LoadProfiles();
                 await LoadInProgressSessions();
                 // Start loading game state in background
@@ -543,10 +507,12 @@
         isAuthenticated = authenticated;
         InvokeAsync(async () => 
         {
+            // Always reload bundles and scenarios
+            await LoadBundles();
+            await LoadScenarios();
+            
             if (authenticated)
             {
-                await LoadBundles();
-                await LoadScenarios();
                 await LoadProfiles();
                 await LoadInProgressSessions();
                 _ = LoadGameStateAsync();
@@ -555,10 +521,7 @@
             }
             else 
             {
-                scenarios.Clear();
-                filteredScenarios.Clear();
-                bundles.Clear();
-                filteredBundles.Clear();
+                // Clear user-specific data but keep catalog
                 inProgressSessions.Clear();
                 selectedAgeGroups.Clear();
                 completedScenarioIds.Clear();
@@ -775,6 +738,14 @@
     {
         try
         {
+            // Redirect unauthenticated users to sign up
+            if (!isAuthenticated)
+            {
+                Logger.LogInformation("Unauthenticated user attempted to start adventure, redirecting to sign up");
+                NavigationManager.NavigateTo("/signup");
+                return;
+            }
+            
             isStartingAdventure = true;
             StateHasChanged();
             
