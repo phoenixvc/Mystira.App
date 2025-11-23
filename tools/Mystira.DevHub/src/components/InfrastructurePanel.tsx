@@ -6,6 +6,7 @@ import type { CommandResponse, WhatIfChange, WorkflowStatus } from '../types';
 import BicepViewer from './BicepViewer';
 import { ConfirmDialog } from './ConfirmDialog';
 import DeploymentHistory from './DeploymentHistory';
+import { DestroyButton } from './DestroyButton';
 import ResourceGrid from './ResourceGrid';
 import WhatIfViewer from './WhatIfViewer';
 
@@ -262,18 +263,11 @@ function InfrastructurePanel() {
                 </div>
               </button>
 
-              <button
+              <DestroyButton
                 onClick={() => setShowDestroyConfirm(true)}
                 disabled={loading}
-                className="destroy-button flex flex-col items-center p-6 bg-white dark:bg-gray-800 border-2 border-red-200 dark:border-red-800 rounded-lg hover:border-red-400 dark:hover:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
-              >
-                <div className="destroy-icon text-4xl mb-2 relative z-10">💥</div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white relative z-10">Destroy</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1 relative z-10">
-                  Delete all resources
-                </div>
-                <div className="destroy-pulse absolute inset-0 bg-red-500 opacity-0"></div>
-              </button>
+                loading={loading}
+              />
             </div>
 
             {/* Loading State */}
