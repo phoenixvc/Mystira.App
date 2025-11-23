@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
+import { useState } from 'react';
 
 interface MigrationConfig {
   sourceCosmosConnection: string;
@@ -61,6 +61,7 @@ function MigrationManager() {
 
   const [currentOperation, setCurrentOperation] = useState<string>('');
   const [migrationResults, setMigrationResults] = useState<MigrationResponse | null>(null);
+  const [migrationInProgress, setMigrationInProgress] = useState<boolean>(false);
 
   const handleConfigChange = (field: keyof MigrationConfig, value: string) => {
     setConfig((prev) => ({ ...prev, [field]: value }));
@@ -126,7 +127,6 @@ function MigrationManager() {
     }
 
     setCurrentStep('running');
-    setMigrationInProgress(true);
     setMigrationResults(null);
 
     try {
@@ -240,7 +240,6 @@ function MigrationManager() {
       });
       setCurrentStep('complete');
     } finally {
-      setMigrationInProgress(false);
       setCurrentOperation('');
     }
   };

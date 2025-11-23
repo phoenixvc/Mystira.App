@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import { open } from '@tauri-apps/api/shell';
+import { useEffect } from 'react';
 
 interface WebViewPanelProps {
   url: string;
@@ -9,10 +9,8 @@ interface WebViewPanelProps {
 }
 
 function WebViewPanel({ url, title, onClose, embedded = false }: WebViewPanelProps) {
-  const [useEmbedded, setUseEmbedded] = useState(embedded);
-
   useEffect(() => {
-    if (!useEmbedded) {
+    if (!embedded) {
       // Open in external browser for now
       // TODO: In future, use Tauri's window API to create embedded webview windows
       open(url).catch(console.error);
@@ -20,9 +18,9 @@ function WebViewPanel({ url, title, onClose, embedded = false }: WebViewPanelPro
         onClose();
       }
     }
-  }, [url, useEmbedded, onClose]);
+  }, [url, embedded, onClose]);
 
-  if (!useEmbedded) {
+  if (!embedded) {
     return null;
   }
 

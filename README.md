@@ -20,6 +20,7 @@ The Mystira repository hosts the full suite of services, libraries, and client a
   - [Getting Started](#getting-started)
     - [Prerequisites](#prerequisites)
     - [Build](#build)
+    - [Setup Pre-commit Hooks](#setup-pre-commit-hooks)
     - [Run Key Projects](#run-key-projects)
   - [Upgrade Verification Checklist](#upgrade-verification-checklist)
   - [Project Analysis](#project-analysis)
@@ -31,6 +32,7 @@ The Mystira repository hosts the full suite of services, libraries, and client a
   - [Contributing / PR Checklist](#contributing--pr-checklist)
   - [Developer Quality of Life](#developer-quality-of-life)
   - [Further Reading](#further-reading)
+  - [AI Assistant Integration](#ai-assistant-integration)
 
 ## Repository Overview
 
@@ -81,6 +83,19 @@ This will automatically run `dotnet format` before each commit to ensure code st
 
 ### Run Key Projects
 
+**Option 1: Using DevHub (Recommended)**
+```bash
+# Launch DevHub - unified service manager
+.\start.ps1
+
+# Then use the Services tab in DevHub to:
+# - Start/stop all services with one click
+# - View services in embedded Chromium webviews
+# - Monitor real-time console output
+# - Auto-detect repository root from current path
+```
+
+**Option 2: Manual Start (Traditional)**
 ```bash
 # Public API
 dotnet run --project src/Mystira.App.Api/Mystira.App.Api.csproj
@@ -146,7 +161,7 @@ Configure `appsettings.Development.json`, user secrets, or environment variables
 | Unit / Integration Tests | `dotnet test Mystira.sln`                                                                                       | Runs cross-project tests (APIs, domain, infrastructure). |
 | Formatting               | `dotnet format Mystira.sln` (automated via pre-commit hook)                                                     | Keeps C# style consistent before pushing a PR.           |
 | PWA Lint / Build         | `npm install` (once), `npm run lint` / `npm run build` (inside `src/Mystira.App.PWA` if JS assets are modified) | Ensures JS/service-worker assets remain valid.           |
-| Console Smoke Test       | `dotnet run --project tools/Mystira.App.CosmosConsole/... -- stats`                                               | Confirms Cosmos CLI still connects post-change.          |
+| Console Smoke Test       | `dotnet run --project tools/Mystira.App.CosmosConsole/... -- stats`                                             | Confirms Cosmos CLI still connects post-change.          |
 
 Wire these into CI (GitHub Actions/Azure DevOps) to block merges when quality gates fail. Note that formatting is automatically enforced via the Husky pre-commit hook, so manual `dotnet format` runs are typically unnecessary.
 

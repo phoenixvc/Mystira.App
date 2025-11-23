@@ -11,18 +11,18 @@ Built with **Tauri**, **React**, **TypeScript**, and **.NET 9**
 ### Option 1: Launch from Repository Root (Recommended)
 
 ```bash
-# From repository root (/home/user/Mystira.App)
-
-# Using make
-make devhub-dev    # Development mode with hot reload
-make devhub-build  # Build for production
-make devhub-test   # Run test suite
-
-# OR using shell script
-./devhub.sh dev    # Development mode with hot reload
-./devhub.sh build  # Build for production
-./devhub.sh test   # Run test suite
+# From repository root
+.\start.ps1    # Windows PowerShell
+# OR
+./start.ps1    # Cross-platform (if PowerShell Core installed)
 ```
+
+This will:
+
+- Build the DevHub frontend
+- Launch the Tauri application
+- Auto-detect repository root from current path
+- Allow you to manage all services from within DevHub
 
 ### Option 2: Launch from DevHub Directory
 
@@ -30,8 +30,11 @@ make devhub-test   # Run test suite
 # Navigate to DevHub directory
 cd tools/Mystira.DevHub
 
-# Install dependencies
+# Install dependencies (first time only)
 npm install
+
+# Build frontend
+npm run build
 
 # Run in development mode
 npm run tauri:dev
@@ -41,19 +44,60 @@ npm run tauri:dev
 
 📘 **See [QUICKSTART.md](QUICKSTART.md) for detailed setup and troubleshooting.**
 
+### Using the Service Manager
+
+Once DevHub is running:
+
+1. **Navigate to Services Tab**: Click "Services" in the sidebar
+
+2. **Configure Repository Root**:
+
+   - Repository root auto-detects from current path
+   - Click "Browse..." to manually select a different location
+   - Optionally enable "Use current branch directory" to run from branch-specific paths
+
+3. **Start Services**:
+
+   - Click "Start All" to start all services at once
+   - Or start individual services with their "Start" buttons
+
+4. **View Services**:
+
+   - Click "Open in Webview" to view in embedded Chromium window
+   - Click "Open in External Browser" for system browser
+   - Click "Show Logs" to see real-time console output
+
+5. **Monitor**: Service status updates automatically every 2 seconds
+
 ---
 
 ## ✨ Features
 
+### 🚀 Service Manager (NEW!)
+
+- **Unified Service Control**: Start, stop, and monitor all development services from one place
+- **Embedded Chromium Webviews**: View APIs and frontends directly in DevHub windows (no external browsers needed)
+- **Real-time Console Streaming**: See live stdout/stderr output from all services
+- **Repository Root Management**:
+  - Auto-detects repository root from current path
+  - Browse button to manually select repository location
+  - Option to use current git branch directory vs main repo root
+- **Bulk Operations**: Start All / Stop All buttons for quick service management
+- **Service Status**: Real-time monitoring of API, Admin API, and PWA services
+- **Build Before Run**: Automatically builds services before starting to catch errors early
+
 ### 🏠 Dashboard
+
 - **Quick Actions**: One-click access to common operations
 - **Connection Status**: Real-time monitoring of Cosmos DB, Azure CLI, GitHub CLI, and Blob Storage
 - **Recent Operations**: Activity log with timestamps and status indicators
 - **System Info**: Tips, documentation links, and performance notes
 
 ### 📊 Cosmos Explorer
+
 - **Export Sessions**: Export game sessions to CSV with native file dialog
 - **Statistics Panel**:
+  
   - Visual analytics with color-coded completion rates
   - Scenario-by-scenario breakdown
   - Per-account statistics
@@ -61,7 +105,9 @@ npm run tauri:dev
   - Expandable detail cards
 
 ### 🔄 Migration Manager
+
 - **Multi-Step Wizard**:
+
   - Step 1: Configure source/destination connection strings
   - Step 2: Select resources (Scenarios, Content Bundles, Media Metadata, Blob Storage)
   - Step 3: Real-time migration progress
@@ -71,7 +117,9 @@ npm run tauri:dev
 - **Validation**: Pre-migration validation of connection strings
 
 ### ⚙️ Infrastructure Control Panel
+
 - **Tabbed Interface**:
+
   - **Actions**: Validate, Preview, Deploy, and Destroy infrastructure
   - **Bicep Templates**: Monaco Editor with file tree navigation
   - **Azure Resources**: Resource grid with health status and cost tracking
@@ -113,7 +161,7 @@ npm run tauri:dev
 
 ## 🏗️ Architecture
 
-```
+``` text
 ┌─────────────────────────────────────────┐
 │     React Frontend (TypeScript)         │
 │  - Dashboard                             │
@@ -157,31 +205,34 @@ npm run tauri:dev
 
 ### Required Software
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| .NET SDK | 9.0+ | Backend services |
-| Node.js | 18+ | Frontend build |
-| npm | 8+ | Package manager |
-| Rust | Latest | Tauri backend |
-| Cargo | Latest | Rust build tool |
-| GitHub CLI | Latest | Infrastructure operations |
-| Azure CLI | Latest | Resource management |
+| Tool       | Version | Purpose                   |
+| ---------- | ------- | ------------------------- |
+| .NET SDK   | 9.0+    | Backend services          |
+| Node.js    | 18+     | Frontend build            |
+| npm        | 8+      | Package manager           |
+| Rust       | Latest  | Tauri backend             |
+| Cargo      | Latest  | Rust build tool           |
+| GitHub CLI | Latest  | Infrastructure operations |
+| Azure CLI  | Latest  | Resource management       |
 
 ### Installation
 
 **macOS**:
+
 ```bash
 brew install dotnet-sdk node rust gh azure-cli
 ```
 
 **Windows**:
-- .NET: Download from https://dotnet.microsoft.com/download
-- Node.js: Download from https://nodejs.org/
-- Rust: Download from https://rustup.rs/
+
+- .NET: Download from [dotnet.microsoft.com/download](https://dotnet.microsoft.com/download)
+- Node.js: Download from [nodejs.org](https://nodejs.org/)
+- Rust: Download from [rustup.rs](https://rustup.rs/)
 - GitHub CLI: `winget install GitHub.cli`
 - Azure CLI: `winget install Microsoft.AzureCLI`
 
 **Linux** (Ubuntu/Debian):
+
 ```bash
 # .NET
 wget https://dot.net/v1/dotnet-install.sh
@@ -255,6 +306,7 @@ npm run tauri:dev
 ```
 
 This will:
+
 - Start Vite dev server (port 5173)
 - Compile Rust backend
 - Launch Tauri application
@@ -267,6 +319,7 @@ npm run tauri:build
 ```
 
 **Output locations**:
+
 - **Windows**: `src-tauri/target/release/bundle/msi/`
 - **macOS**: `src-tauri/target/release/bundle/dmg/`
 - **Linux**: `src-tauri/target/release/bundle/deb/` or `appimage/`
@@ -275,11 +328,13 @@ npm run tauri:build
 
 ## 📂 Project Structure
 
-```
+``` text
 Mystira.DevHub/
 ├── src/                              # React frontend
 │   ├── components/
 │   │   ├── Dashboard.tsx             # Home screen with quick actions
+│   │   ├── ServiceManager.tsx        # Service control with embedded webviews
+│   │   ├── WebViewPanel.tsx          # Embedded Chromium webview component
 │   │   ├── CosmosExplorer.tsx        # Cosmos DB operations
 │   │   ├── ExportPanel.tsx           # CSV export interface
 │   │   ├── StatisticsPanel.tsx       # Analytics visualizations
@@ -295,8 +350,8 @@ Mystira.DevHub/
 │
 ├── src-tauri/                        # Rust/Tauri backend
 │   ├── src/
-│   │   └── main.rs                   # Tauri commands
-│   ├── Cargo.toml                    # Rust dependencies
+│   │   └── main.rs                   # Tauri commands + service management
+│   ├── Cargo.toml                    # Rust dependencies (includes tokio for async)
 │   ├── tauri.conf.json               # Tauri configuration
 │   └── build.rs                      # Build script
 │
@@ -332,11 +387,43 @@ Mystira.DevHub/
 
 ## 🎯 Usage Guide
 
+### Service Manager
+
+**Navigate**: Dashboard → Services (sidebar)
+
+**Starting Services**:
+
+1. Repository root auto-detects from current path (or click "Browse..." to change)
+2. Optionally check "Use current branch directory" to run from branch-specific paths
+3. Click "Start All" to start all services, or start individual services
+4. Services automatically build before running to catch errors early
+
+**Viewing Services**:
+
+- **Embedded Webview**: Click "Open in Webview" to open in a Chromium window within DevHub
+- **External Browser**: Click "Open in External Browser" for system default browser
+- **Console Logs**: Click "Show Logs" to see real-time stdout/stderr output
+  - Logs auto-scroll to latest
+  - Color-coded (green for stdout, red for stderr)
+  - "Clear Logs" button to reset console view
+
+**Stopping Services**:
+
+- Click "Stop All" to stop all running services
+- Or stop individual services with their "Stop" buttons
+
+**Service Status**:
+
+- Real-time status updates every 2 seconds
+- Shows running/stopped state, port numbers, and URLs
+- Process monitoring ensures accurate status
+
 ### Dashboard
 
 **Launch DevHub** → Opens on Dashboard by default
 
 **Quick Actions**:
+
 - Click any gradient card to navigate to that feature
 - Monitor connection status at the top
 - View recent operations at the bottom
@@ -346,12 +433,14 @@ Mystira.DevHub/
 **Navigate**: Dashboard → Cosmos Explorer (sidebar)
 
 **Export Sessions**:
+
 1. Click "Export Sessions" tab
 2. Select output path via file dialog
 3. Click "Export" button
 4. View row count and file path in result
 
 **View Statistics**:
+
 1. Click "Statistics" tab
 2. Statistics auto-load on mount
 3. Click scenario cards to expand account details
@@ -362,12 +451,14 @@ Mystira.DevHub/
 **Navigate**: Dashboard → Migration Manager (sidebar)
 
 **Run Migration**:
+
 1. **Configure**: Enter source/dest connection strings
 2. **Select Resources**: Choose what to migrate (checkboxes)
 3. **Migrate**: Watch real-time progress
 4. **Results**: View detailed success/failure report
 
 **Migration Types**:
+
 - ✅ Scenarios (Cosmos DB)
 - ✅ Content Bundles (Cosmos DB)
 - ✅ Media Assets Metadata (Cosmos DB)
@@ -378,22 +469,26 @@ Mystira.DevHub/
 **Navigate**: Dashboard → Infrastructure (sidebar)
 
 **Actions Tab**:
+
 - **Validate**: Check Bicep syntax and ARM validation
 - **Preview**: Run what-if analysis (shows changes)
 - **Deploy**: Trigger GitHub Actions workflow
 - **Destroy**: Delete all resources (requires "DELETE" confirmation)
 
 **Bicep Templates Tab**:
+
 - Browse file tree (infrastructure/dev)
 - Click files to view in Monaco Editor
 - Read-only mode for safety
 
 **Azure Resources Tab**:
+
 - View resource cards with health status
 - See daily costs per resource
 - Click "View in Portal" to open Azure Portal
 
 **Deployment History Tab**:
+
 - Filter by action type
 - View timestamps and durations
 - Click "Details" for more info
@@ -447,26 +542,30 @@ See **[SECURITY.md](./SECURITY.md)** for comprehensive security guidelines.
 
 ### Common Issues
 
-**"dotnet: command not found"**
+#### **"dotnet: command not found"**
+
 ```bash
 # Install .NET 9 SDK
 # macOS: brew install dotnet-sdk
-# Windows: Download from https://dotnet.microsoft.com/download
+# Windows: Download from [dotnet.microsoft.com/download](https://dotnet.microsoft.com/download)
 # Linux: See installation section above
 ```
 
-**"gh: command not found"**
+#### **"gh: command not found"**
+
 ```bash
 # Install GitHub CLI
 gh --version  # Should return version number
 ```
 
-**"Failed to spawn dotnet process"**
+#### **"Failed to spawn dotnet process"**
+
 - Verify .NET installed: `dotnet --version`
 - Check CLI project exists: `ls ../Mystira.DevHub.CLI`
 - Rebuild CLI: `cd ../Mystira.DevHub.CLI && dotnet build`
 
-**GitHub Actions not triggering**
+#### **GitHub Actions not triggering**
+
 ```bash
 # Verify authentication
 gh auth status
@@ -475,7 +574,8 @@ gh auth status
 gh repo view phoenixvc/Mystira.App
 ```
 
-**Azure CLI errors**
+#### **Azure CLI errors**
+
 ```bash
 # Re-authenticate
 az login
@@ -484,7 +584,8 @@ az login
 az account set --subscription "Your Subscription"
 ```
 
-**Monaco Editor not loading**
+#### **Monaco Editor not loading**
+
 ```bash
 # Reinstall dependencies
 rm -rf node_modules package-lock.json
@@ -494,14 +595,17 @@ npm install
 ### Debug Mode
 
 **React DevTools**:
+
 - Right-click in app → Inspect Element
 - Console tab shows React logs
 
 **Rust Logs**:
+
 - Terminal output where `tauri:dev` runs
 - Use `println!()` for debugging
 
 **.NET CLI Logs**:
+
 - Errors shown in app UI response boxes
 - Check stdout/stderr from spawned process
 
@@ -527,6 +631,7 @@ echo '{"command":"cosmos.stats","args":{}}' | dotnet run
 ### Adding New Features
 
 **1. Add Tauri Command** (`src-tauri/src/main.rs`):
+
 ```rust
 #[tauri::command]
 async fn my_feature(param: String) -> Result<CommandResponse, String> {
@@ -535,6 +640,7 @@ async fn my_feature(param: String) -> Result<CommandResponse, String> {
 ```
 
 **2. Register Command**:
+
 ```rust
 .invoke_handler(tauri::generate_handler![
     my_feature,
@@ -543,6 +649,7 @@ async fn my_feature(param: String) -> Result<CommandResponse, String> {
 ```
 
 **3. Add .NET Handler** (`Mystira.DevHub.CLI/Commands/`):
+
 ```csharp
 public async Task<CommandResponse> MyFeatureAsync(JsonElement args) {
     // Implementation
@@ -550,11 +657,13 @@ public async Task<CommandResponse> MyFeatureAsync(JsonElement args) {
 ```
 
 **4. Route in CLI** (`Program.cs`):
+
 ```csharp
 "my.feature" => await myCommands.MyFeatureAsync(request.Args)
 ```
 
 **5. Call from React**:
+
 ```typescript
 const response = await invoke('my_feature', { param: 'value' });
 ```
@@ -588,6 +697,9 @@ const response = await invoke('my_feature', { param: 'value' });
 - [x] **Phase 5**: Infrastructure Panel enhancements (Monaco, Resource Grid, History)
 - [x] **Phase 6**: Dashboard with Quick Actions
 - [x] **Phase 7**: Security and Configuration documentation
+- [x] **Phase 8**: Service Manager with embedded webviews and console streaming
+- [x] **Phase 9**: Repository root auto-detection and branch support
+- [x] **Phase 10**: Unified launcher (start.ps1) for single-entry development
 
 ### 🔜 Future Enhancements
 
@@ -599,12 +711,17 @@ const response = await invoke('my_feature', { param: 'value' });
 - [ ] **Real-time Workflow Monitoring**: Live GitHub Actions log streaming
 - [ ] **Azure Cost Optimization**: Recommendations to reduce costs
 - [ ] **Backup & Restore**: Automated Cosmos DB backups
+- [ ] **Service Health Monitoring**: Automatic restart on crashes
+- [ ] **Log Filtering & Search**: Filter console logs by service, type, or keyword
+- [ ] **Service Presets**: Save and load service configurations
+- [ ] **Port Conflict Detection**: Warn when ports are already in use
 
 ---
 
 ## 🛠️ Technology Stack
 
 ### Frontend
+
 - **React 18** - UI framework
 - **TypeScript 5** - Type safety
 - **Vite 5** - Build tool and dev server
@@ -613,12 +730,14 @@ const response = await invoke('my_feature', { param: 'value' });
 - **Tauri API** - Desktop functionality
 
 ### Backend
+
 - **Tauri 1.5** - Cross-platform desktop framework
 - **Rust** - Native performance
 - **Tokio** - Async runtime
 - **Serde** - JSON serialization
 
 ### Services
+
 - **.NET 9** - Business logic
 - **Azure SDK** - Cosmos DB, Blob Storage
 - **GitHub CLI** - Workflow automation
@@ -671,6 +790,7 @@ const response = await invoke('my_feature', { param: 'value' });
 ## 🎉 Acknowledgments
 
 Built with:
+
 - [Tauri](https://tauri.app/) - Desktop framework
 - [React](https://react.dev/) - UI library
 - [Monaco Editor](https://microsoft.github.io/monaco-editor/) - Code editor

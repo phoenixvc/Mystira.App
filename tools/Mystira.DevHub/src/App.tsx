@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import './App.css';
+import CosmosExplorer from './components/CosmosExplorer';
 import Dashboard from './components/Dashboard';
 import InfrastructurePanel from './components/InfrastructurePanel';
-import CosmosExplorer from './components/CosmosExplorer';
 import MigrationManager from './components/MigrationManager';
 import ServiceManager from './components/ServiceManager';
-import './App.css';
 
 type View = 'dashboard' | 'cosmos' | 'migration' | 'infrastructure' | 'services';
 

@@ -359,7 +359,11 @@ async fn start_service(
                     serde_json::json!({
                         "service": service_name_stdout,
                         "type": "stdout",
-                        "message": line
+                        "message": line,
+                        "timestamp": std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_millis() as u64
                     }),
                 );
             }
@@ -376,7 +380,11 @@ async fn start_service(
                     serde_json::json!({
                         "service": service_name_stderr,
                         "type": "stderr",
-                        "message": line
+                        "message": line,
+                        "timestamp": std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_millis() as u64
                     }),
                 );
             }
@@ -482,6 +490,48 @@ async fn get_service_status(
 }
 
 #[tauri::command]
+async fn check_port_available(port: u16) -> Result<bool, String> {
+    #[cfg(target_os = "windows")]
+    {
+        let output = Command::new("powershell")
+            .args(&[
+                "-Command",
+                &format!("Get-NetTCPConnection -LocalPort {} -ErrorAction SilentlyContinue | Measure-Object | Select-Object -ExpandProperty Count", port)
+            ])
+            .output()
+            .map_err(|e| format!("Failed to check port: {}", e))?;
+        
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let count: u32 = stdout.trim().parse().unwrap_or(0);
+        Ok(count == 0)
+    }
+    
+    #[cfg(not(target_os = "windows"))]
+    {
+        use std::net::TcpListener;
+        match TcpListener::bind(format!("127.0.0.1:{}", port)) {
+            Ok(_) => Ok(true),
+            Err(_) => Ok(false),
+        }
+    }
+}
+
+#[tauri::command]
+async fn check_service_health(url: String) -> Result<bool, String> {
+    // Simple HTTP health check
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(2))
+        .danger_accept_invalid_certs(true) // For localhost self-signed certs
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    
+    match client.get(&url).send().await {
+        Ok(response) => Ok(response.status().is_success()),
+        Err(_) => Ok(false),
+    }
+}
+
+#[tauri::command]
 async fn get_repo_root() -> Result<String, String> {
     // Get the current working directory (where DevHub is running from)
     let current_dir = env::current_dir()
@@ -582,6 +632,8 @@ fn main() {
             get_repo_root,
             get_current_branch,
             create_webview_window,
+            check_port_available,
+            check_service_health,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
