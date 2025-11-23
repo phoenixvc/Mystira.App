@@ -513,12 +513,13 @@ else
         StateHasChanged();
     }
 
-    private async Task OnAvatarSelected(string mediaId)
+    private Task OnAvatarSelected(string mediaId)
     {
         selectedAvatarMediaId = mediaId;
         isAvatarSelected = true;
         Logger.LogInformation("Avatar selected: {MediaId}", mediaId);
         StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private void ChangeAvatar()
