@@ -2,7 +2,7 @@
 
 .adventure-card {
     height: 100%;
-    border-radius: 12px;
+    border-radius: 16px;
     overflow: hidden;
     background: white;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -10,11 +10,13 @@
     cursor: pointer;
     display: flex;
     flex-direction: column;
+    border: 1px solid #e5e7eb;
 }
 
 .adventure-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(139, 92, 246, 0.2);
+    box-shadow: 0 12px 24px rgba(147, 51, 234, 0.2);
+    border-color: #9333ea;
 }
 
 .adventure-image-container {
@@ -170,10 +172,10 @@
 .btn-adventure-start {
     width: 100%;
     padding: 10px 16px;
-    background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+    background: #9333ea;
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: 12px;
     font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
@@ -184,9 +186,9 @@
 }
 
 .btn-adventure-start:hover {
-    background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+    background: #7c3aed;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3);
 }
 
 .btn-adventure-start:active {
@@ -195,7 +197,7 @@
 
 /* Accessibility */
 .adventure-card:focus-visible {
-    outline: 2px solid #8B5CF6;
+    outline: 2px solid #9333ea;
     outline-offset: 2px;
 }
 

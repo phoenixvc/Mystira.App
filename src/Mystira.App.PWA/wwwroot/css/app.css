@@ -1,7 +1,8 @@
 /* Mystira PWA Custom Styles */
 
 :root {
-    --primary-color: #8B5CF6;
+    --primary-color: #9333ea;
+    --primary-hover: #7c3aed;
     --secondary-color: #1F2937;
     --success-color: #10B981;
     --danger-color: #EF4444;
@@ -46,19 +47,19 @@ html, body {
 }
 
 .btn-primary-custom:hover {
-    background-color: #7C3AED;
-    border-color: #7C3AED;
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
 }
 
 .scenario-card {
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
     border: 1px solid #E5E7EB;
-    border-radius: 0.75rem;
+    border-radius: 1rem;
 }
 
 .scenario-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(139, 92, 246, 0.15);
+    box-shadow: 0 10px 25px rgba(147, 51, 234, 0.15);
 }
 
 .scenario-metadata {

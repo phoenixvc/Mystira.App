@@ -283,21 +283,37 @@ button:focus-visible {
         padding: 16px;
     }
     
+    .filter-title {
+        font-size: 1rem;
+    }
+    
     .age-filter-container {
         white-space: nowrap;
         padding-bottom: 8px;
     }
     
     .btn-age-filter {
-        padding: 6px 12px;
+        padding: 8px 14px;
         font-size: 0.8125rem;
     }
     
-    /* Sticky filter on mobile */
+    .input-group .form-control {
+        font-size: 0.875rem;
+        padding: 10px 14px;
+    }
+    
+    .input-group-text {
+        padding: 10px 14px;
+    }
+}
+
+/* Tablet and desktop optimization */
+@media (min-width: 768px) {
     .filter-card {
-        position: sticky;
-        top: 60px;
-        z-index: 10;
-        background: white;
+        position: relative;
+    }
+    
+    .age-filter-container {
+        max-width: 100%;
     }
 }
