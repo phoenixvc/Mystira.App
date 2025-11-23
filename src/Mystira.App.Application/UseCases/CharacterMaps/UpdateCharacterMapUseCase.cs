@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Contracts.Requests.CharacterMaps;
 using Mystira.App.Domain.Models;
-using Mystira.App.Infrastructure.Data.Repositories;
-using Mystira.App.Infrastructure.Data.UnitOfWork;
+using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Application.UseCases.CharacterMaps;
 

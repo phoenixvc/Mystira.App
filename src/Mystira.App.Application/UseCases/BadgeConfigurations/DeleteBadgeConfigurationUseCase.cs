@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
-using Mystira.App.Infrastructure.Data.Repositories;
-using Mystira.App.Infrastructure.Data.UnitOfWork;
+using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Application.UseCases.BadgeConfigurations;
 
