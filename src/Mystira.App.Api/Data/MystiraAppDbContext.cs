@@ -291,10 +291,22 @@ public class MystiraAppDbContext : DbContext
                 scene.OwnsOne(s => s.Media);
                 scene.OwnsMany(s => s.Branches, branch =>
                 {
-                    branch.OwnsOne(b => b.EchoLog);
+                    branch.OwnsOne(b => b.EchoLog, echoLog =>
+                    {
+                        echoLog.Property(e => e.EchoType)
+                               .HasConversion(
+                                   v => v.Value,
+                                   v => EchoType.Parse(v) ?? EchoType.Parse("honesty")!);
+                    });
                     branch.OwnsOne(b => b.CompassChange);
                 });
-                scene.OwnsMany(s => s.EchoReveals);
+                scene.OwnsMany(s => s.EchoReveals, reveal =>
+                {
+                    reveal.Property(r => r.EchoType)
+                          .HasConversion(
+                              v => v.Value,
+                              v => EchoType.Parse(v) ?? EchoType.Parse("honesty")!);
+                });
             });
         });
 
@@ -322,11 +334,23 @@ public class MystiraAppDbContext : DbContext
 
             entity.OwnsMany(e => e.ChoiceHistory, choice =>
             {
-                choice.OwnsOne(c => c.EchoGenerated);
+                choice.OwnsOne(c => c.EchoGenerated, echo =>
+                {
+                    echo.Property(e => e.EchoType)
+                        .HasConversion(
+                            v => v.Value,
+                            v => EchoType.Parse(v) ?? EchoType.Parse("honesty")!);
+                });
                 choice.OwnsOne(c => c.CompassChange);
             });
 
-            entity.OwnsMany(e => e.EchoHistory);
+            entity.OwnsMany(e => e.EchoHistory, echo =>
+            {
+                echo.Property(e => e.EchoType)
+                    .HasConversion(
+                        v => v.Value,
+                        v => EchoType.Parse(v) ?? EchoType.Parse("honesty")!);
+            });
             entity.OwnsMany(e => e.Achievements);
 
             // Configure CompassValues as a JSON property
