@@ -1,7 +1,8 @@
-using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
-using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
+using Mystira.App.Api.Repositories;
+using Mystira.App.Contracts.Responses.Common;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 using YamlDotNet.Serialization;
 
 namespace Mystira.App.Api.Services;
@@ -11,12 +12,17 @@ namespace Mystira.App.Api.Services;
 /// </summary>
 public class MediaMetadataService : IMediaMetadataService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly IMediaMetadataFileRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<MediaMetadataService> _logger;
 
-    public MediaMetadataService(MystiraAppDbContext context, ILogger<MediaMetadataService> logger)
+    public MediaMetadataService(
+        IMediaMetadataFileRepository repository,
+        IUnitOfWork unitOfWork,
+        ILogger<MediaMetadataService> logger)
     {
-        _context = context;
+        _repository = repository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -30,7 +36,7 @@ public class MediaMetadataService : IMediaMetadataService
             // Attempt with normal EF Core approach first
             try
             {
-                var metadataFile = await _context.MediaMetadataFiles.FirstOrDefaultAsync();
+                var metadataFile = await _repository.GetAsync();
                 if (metadataFile != null)
                 {
                     // Ensure Entries is initialized
@@ -40,7 +46,7 @@ public class MediaMetadataService : IMediaMetadataService
                     }
                     return metadataFile;
                 }
-                
+
                 // No metadata file found
                 return null;
             }
@@ -48,7 +54,7 @@ public class MediaMetadataService : IMediaMetadataService
             {
                 // Log the specific error about the cast exception
                 _logger.LogError(ex, "Cast exception occurred when retrieving metadata file. This likely indicates data format issues in Cosmos DB.");
-                
+
                 // Return null instead of creating a new instance
                 return null;
             }
@@ -68,20 +74,10 @@ public class MediaMetadataService : IMediaMetadataService
         try
         {
             metadataFile.UpdatedAt = DateTime.UtcNow;
-            
-            var existingFile = await _context.MediaMetadataFiles.FirstOrDefaultAsync();
-            if (existingFile != null)
-            {
-                _context.Entry(existingFile).CurrentValues.SetValues(metadataFile);
-                existingFile.Entries = metadataFile.Entries;
-            }
-            else
-            {
-                await _context.MediaMetadataFiles.AddAsync(metadataFile);
-            }
 
-            await _context.SaveChangesAsync();
-            return metadataFile;
+            var result = await _repository.AddOrUpdateAsync(metadataFile);
+            await _unitOfWork.SaveChangesAsync();
+            return result;
         }
         catch (Exception ex)
         {
@@ -98,7 +94,7 @@ public class MediaMetadataService : IMediaMetadataService
         try
         {
             var metadataFile = await GetMediaMetadataFileAsync();
-            
+
             // Check if entry already exists
             var existingEntry = metadataFile?.Entries.FirstOrDefault(e => e.Id == entry.Id);
             if (existingEntry != null)
@@ -128,9 +124,9 @@ public class MediaMetadataService : IMediaMetadataService
             var metadataFile = await GetMediaMetadataFileAsync();
             if (metadataFile == null)
             {
-                throw new KeyNotFoundException($"Media metadata entry with ID '{entryId}' not found");
+                throw new InvalidOperationException("Media metadata file not found");
             }
-            
+
             var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entryId);
             if (existingEntry == null)
             {
@@ -161,9 +157,9 @@ public class MediaMetadataService : IMediaMetadataService
             var metadataFile = await GetMediaMetadataFileAsync();
             if (metadataFile == null)
             {
-                throw new KeyNotFoundException($"Media metadata entry with ID '{entryId}' not found");
+                throw new InvalidOperationException("Media metadata file not found");
             }
-            
+
             var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entryId);
             if (existingEntry == null)
             {
@@ -205,7 +201,7 @@ public class MediaMetadataService : IMediaMetadataService
         try
         {
             List<MediaMetadataEntry> importedEntries;
-            
+
             // Try to determine if data is JSON or YAML
             if (data.TrimStart().StartsWith('[') || data.TrimStart().StartsWith('{'))
             {
@@ -216,20 +212,16 @@ public class MediaMetadataService : IMediaMetadataService
             {
                 // YAML format
                 var deserializer = new DeserializerBuilder().Build();
-                importedEntries = deserializer.Deserialize<List<MediaMetadataEntry>>(data);
+                importedEntries = deserializer.Deserialize<List<MediaMetadataEntry>>(data) ?? new List<MediaMetadataEntry>();
             }
-            
+
             if (importedEntries == null || importedEntries.Count == 0)
             {
                 throw new ArgumentException("No valid media metadata entries found in data");
             }
 
-            var metadataFile = await GetMediaMetadataFileAsync();
-            if (metadataFile == null)
-            {
-                metadataFile = new MediaMetadataFile();
-            }
-            
+            var metadataFile = await GetMediaMetadataFileAsync() ?? new MediaMetadataFile();
+
             foreach (var entry in importedEntries)
             {
                 var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entry.Id);

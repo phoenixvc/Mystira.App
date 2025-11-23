@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Contracts.Responses.Common;
+using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
@@ -34,8 +36,8 @@ public class CharacterMediaMetadataAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting character media metadata file");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while getting character media metadata file",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -56,8 +58,8 @@ public class CharacterMediaMetadataAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating character media metadata file");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while updating character media metadata file",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -75,8 +77,8 @@ public class CharacterMediaMetadataAdminController : ControllerBase
             var entry = await _characterMediaMetadataService.GetCharacterMediaMetadataEntryAsync(entryId);
             if (entry == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Character media metadata entry not found: {entryId}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -86,8 +88,8 @@ public class CharacterMediaMetadataAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting character media metadata entry: {EntryId}", entryId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while getting character media metadata entry",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -107,8 +109,8 @@ public class CharacterMediaMetadataAdminController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -116,8 +118,8 @@ public class CharacterMediaMetadataAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error adding character media metadata entry: {EntryId}", entry.Id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while adding character media metadata entry",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -137,8 +139,8 @@ public class CharacterMediaMetadataAdminController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(new ErrorResponse 
-            { 
+            return NotFound(new ErrorResponse
+            {
                 Message = $"Character media metadata entry not found: {entryId}",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -146,8 +148,8 @@ public class CharacterMediaMetadataAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating character media metadata entry: {EntryId}", entryId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while updating character media metadata entry",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -167,8 +169,8 @@ public class CharacterMediaMetadataAdminController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(new ErrorResponse 
-            { 
+            return NotFound(new ErrorResponse
+            {
                 Message = $"Character media metadata entry not found: {entryId}",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -176,8 +178,8 @@ public class CharacterMediaMetadataAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error removing character media metadata entry: {EntryId}", entryId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while removing character media metadata entry",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -197,8 +199,8 @@ public class CharacterMediaMetadataAdminController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -206,8 +208,8 @@ public class CharacterMediaMetadataAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error importing character media metadata entries");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while importing character media metadata entries",
                 TraceId = HttpContext.TraceIdentifier
             });

@@ -1,6 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Api.Models;
 using Mystira.App.Api.Services;
+using Mystira.App.Contracts.Responses.Common;
+using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
 
 namespace Mystira.App.Api.Controllers;
 
@@ -32,8 +35,8 @@ public class MediaMetadataController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting media metadata file");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while getting media metadata file",
                 TraceId = HttpContext.TraceIdentifier
             });

@@ -1,11 +1,18 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Domain.Models;
 using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.App.Contracts.Responses.Common;
+using Mystira.App.Contracts.Responses.Scenarios;
+using Mystira.App.Domain.Models;
 using CharacterMetadata = Mystira.App.Admin.Api.Models.CharacterMetadata;
+using CreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;
+using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
+using ScenarioQueryRequest = Mystira.App.Contracts.Requests.Scenarios.ScenarioQueryRequest;
+using ValidationErrorResponse = Mystira.App.Contracts.Responses.Common.ValidationErrorResponse;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
@@ -58,7 +65,7 @@ public class AdminController : Controller
         {
             return RedirectToAction("Dashboard");
         }
-        
+
         return View("Login");
     }
 
@@ -105,6 +112,24 @@ public class AdminController : Controller
     public IActionResult CharacterMediaMetadata()
     {
         return View("CharacterMediaMetadata");
+    }
+
+    /// <summary>
+    /// Content bundles management page
+    /// </summary>
+    [HttpGet("bundles")]
+    public IActionResult Bundles()
+    {
+        return View("Bundles");
+    }
+
+    /// <summary>
+    /// Avatar management page
+    /// </summary>
+    [HttpGet("avatars")]
+    public IActionResult AvatarManagement()
+    {
+        return View("AvatarManagement");
     }
 
     /// <summary>
@@ -234,7 +259,7 @@ public class AdminController : Controller
             // Ensure nullable strings are never null
             config.MaintenanceMessage ??= string.Empty;
             config.UpdateMessage ??= string.Empty;
-            
+
             await _appStatusService.UpdateAppStatusAsync(config);
             TempData["SuccessMessage"] = "App status configuration updated successfully.";
             return RedirectToAction("AppStatus");
@@ -268,7 +293,7 @@ public class AdminController : Controller
             // For now, return success - implement YAML parsing in the character map service
             using var stream = yamlFile.OpenReadStream();
             var characterMaps = await _characterMapService.ImportCharacterMapsFromYamlAsync(stream);
-            
+
             return Ok(new { success = true, message = $"Successfully imported {characterMaps.Count} character map(s)", count = characterMaps.Count });
         }
         catch (Exception ex)
@@ -340,13 +365,13 @@ public class AdminController : Controller
         {
             // Initialize sample characters
             await InitializeSampleCharacters();
-            
+
             // Initialize sample media metadata
             await InitializeSampleMediaMetadata();
-            
+
             // Initialize sample character media metadata
             await InitializeSampleCharacterMediaMetadata();
-            
+
             return Ok(new { success = true, message = "Sample data initialized successfully" });
         }
         catch (Exception ex)
@@ -604,19 +629,20 @@ public class AdminController : Controller
                 .WithNamingConvention(YamlDotNet.Serialization.NamingConventions.CamelCaseNamingConvention.Instance)
                 .Build();
 
-            var scenarioData = (Dictionary<object, object>) deserializer.Deserialize<dynamic>(yamlContent);
+            var scenarioData = (Dictionary<object, object>)deserializer.Deserialize<dynamic>(yamlContent);
             var createRequest = ScenarioRequestCreator.Create(scenarioData);
 
             // Check for existing scenario with same title
             var existingScenarios = await _scenarioService.GetScenariosAsync(new ScenarioQueryRequest { PageSize = 1000 });
-            var existingScenario = existingScenarios.Scenarios.FirstOrDefault(s => 
+            var existingScenario = existingScenarios.Scenarios.FirstOrDefault(s =>
                 s.Title.Equals(createRequest.Title, StringComparison.OrdinalIgnoreCase));
 
-            Scenario scenario;
+            Scenario? scenario;
             if (existingScenario != null && !overwriteExisting)
             {
-                return BadRequest(new { 
-                    success = false, 
+                return BadRequest(new
+                {
+                    success = false,
                     message = $"Scenario with title '{createRequest.Title}' already exists. Set overwriteExisting=true to update it.",
                     existingScenarioId = existingScenario.Id
                 });
@@ -634,13 +660,24 @@ public class AdminController : Controller
             {
                 // Create new scenario
                 scenario = await _scenarioService.CreateScenarioAsync(createRequest);
+                if (scenario == null)
+                {
+                    return BadRequest(new { success = false, message = "Failed to create new scenario" });
+                }
             }
 
-            return Ok(new { 
-                success = true, 
-                message = "Scenario uploaded successfully", 
+            // Null check to satisfy compiler's nullable reference type analysis
+            if (scenario == null)
+            {
+                return BadRequest(new { success = false, message = "Failed to process scenario" });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                message = "Scenario uploaded successfully",
                 scenarioId = scenario.Id,
-                scenarioTitle = scenario.Title 
+                scenarioTitle = scenario.Title
             });
         }
         catch (Exception ex)

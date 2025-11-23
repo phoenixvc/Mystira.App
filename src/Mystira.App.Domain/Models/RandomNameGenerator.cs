@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Mystira.App.Domain.Models;
 
 /// <summary>
@@ -5,22 +7,25 @@ namespace Mystira.App.Domain.Models;
 /// </summary>
 public static class RandomNameGenerator
 {
-    private static readonly string[] FantasyNames =
-    [
-        "Aiden", "Luna", "Zara", "Kai", "Mia", "Leo", "Ella", "Sage", "Ruby", "Finn",
-        "Nova", "River", "Iris", "Atlas", "Willow", "Phoenix", "Aria", "Orion", "Ivy", "Storm",
-        "Ember", "Ocean", "Jade", "Blaze", "Star", "Forest", "Dawn", "Shadow", "Sky", "Flame",
-        "Coral", "Wind", "Stone", "Aurora", "Thunder", "Meadow", "Crystal", "Vale", "Frost", "Sunny",
-        "Raven", "Brook", "Cedar", "Aspen", "Rowan", "Sage", "Wren", "Fox", "Bear", "Wolf"
-    ];
+    private static readonly Lazy<string[]> FantasyNamesLazy = new(() => LoadNames("FantasyNames.json"));
+    private static readonly Lazy<string[]> AdjectiveNamesLazy = new(() => LoadNames("AdjectiveNames.json"));
 
-    private static readonly string[] AdjectiveNames =
-    [
-        "Brave", "Swift", "Clever", "Kind", "Bold", "Wise", "Gentle", "Strong", "Bright", "Noble",
-        "Quick", "Loyal", "Fierce", "Calm", "Smart", "Lucky", "Happy", "Curious", "Daring", "Cheerful"
-    ];
+    internal static string[] FantasyNames => FantasyNamesLazy.Value;
+    internal static string[] AdjectiveNames => AdjectiveNamesLazy.Value;
 
-    private static readonly Random Random = new();
+    private static readonly ThreadLocal<Random> Random = new(() => new Random());
+
+    private static string[] LoadNames(string fileName)
+    {
+        var path = Path.Combine("Data", fileName);
+        if (!File.Exists(path))
+        {
+            return Array.Empty<string>();
+        }
+
+        var json = File.ReadAllText(path);
+        return JsonSerializer.Deserialize<string[]>(json) ?? Array.Empty<string>();
+    }
 
     /// <summary>
     /// Generate a random fantasy name
@@ -28,7 +33,7 @@ public static class RandomNameGenerator
     /// <returns>A random fantasy name</returns>
     public static string GenerateFantasyName()
     {
-        return FantasyNames[Random.Next(FantasyNames.Length)];
+        return FantasyNames[Random.Value.Next(FantasyNames.Length)];
     }
 
     /// <summary>
@@ -37,8 +42,8 @@ public static class RandomNameGenerator
     /// <returns>A random adjective + name combination</returns>
     public static string GenerateAdjectiveName()
     {
-        var adjective = AdjectiveNames[Random.Next(AdjectiveNames.Length)];
-        var name = FantasyNames[Random.Next(FantasyNames.Length)];
+        var adjective = AdjectiveNames[Random.Value.Next(AdjectiveNames.Length)];
+        var name = FantasyNames[Random.Value.Next(FantasyNames.Length)];
         return $"{adjective} {name}";
     }
 
@@ -60,6 +65,12 @@ public static class RandomNameGenerator
     /// <returns>List of unique guest names</returns>
     public static List<string> GenerateUniqueGuestNames(int count, bool useAdjective = false)
     {
+        var maxUniqueNames = useAdjective ? AdjectiveNames.Length * FantasyNames.Length : FantasyNames.Length;
+        if (count > maxUniqueNames)
+        {
+            throw new ArgumentException($"Cannot generate more unique names than the number of possibilities ({maxUniqueNames}).", nameof(count));
+        }
+
         var names = new HashSet<string>();
         var attempts = 0;
         var maxAttempts = count * 10; // Prevent infinite loops

@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Contracts.Requests.CharacterMaps;
+using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Domain.Models;
+using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
+using ValidationErrorResponse = Mystira.App.Contracts.Responses.Common.ValidationErrorResponse;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
@@ -34,8 +37,8 @@ public class CharacterMapsAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting all character maps");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching character maps",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -53,8 +56,8 @@ public class CharacterMapsAdminController : ControllerBase
             var characterMap = await _characterMapService.GetCharacterMapAsync(id);
             if (characterMap == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Character map not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -65,8 +68,8 @@ public class CharacterMapsAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting character map {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching character map",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -101,8 +104,8 @@ public class CharacterMapsAdminController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error creating character map");
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -110,8 +113,8 @@ public class CharacterMapsAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating character map");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while creating character map",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -143,8 +146,8 @@ public class CharacterMapsAdminController : ControllerBase
             var characterMap = await _characterMapService.UpdateCharacterMapAsync(id, request);
             if (characterMap == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Character map not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -155,8 +158,8 @@ public class CharacterMapsAdminController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error updating character map {Id}", id);
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -164,8 +167,8 @@ public class CharacterMapsAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating character map {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while updating character map",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -184,8 +187,8 @@ public class CharacterMapsAdminController : ControllerBase
             var deleted = await _characterMapService.DeleteCharacterMapAsync(id);
             if (!deleted)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Character map not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -196,8 +199,8 @@ public class CharacterMapsAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting character map {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while deleting character map",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -219,8 +222,8 @@ public class CharacterMapsAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error exporting character maps");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while exporting character maps",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -238,8 +241,8 @@ public class CharacterMapsAdminController : ControllerBase
         {
             if (file == null || file.Length == 0)
             {
-                return BadRequest(new ErrorResponse 
-                { 
+                return BadRequest(new ErrorResponse
+                {
                     Message = "No file provided",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -247,8 +250,8 @@ public class CharacterMapsAdminController : ControllerBase
 
             if (!file.FileName.EndsWith(".yaml") && !file.FileName.EndsWith(".yml"))
             {
-                return BadRequest(new ErrorResponse 
-                { 
+                return BadRequest(new ErrorResponse
+                {
                     Message = "File must be a YAML file (.yaml or .yml)",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -261,8 +264,8 @@ public class CharacterMapsAdminController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error importing character maps");
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -270,8 +273,8 @@ public class CharacterMapsAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error importing character maps");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while importing character maps",
                 TraceId = HttpContext.TraceIdentifier
             });

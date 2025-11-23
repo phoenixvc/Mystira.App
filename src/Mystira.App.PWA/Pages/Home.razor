@@ -1,117 +1,228 @@
 @inject NavigationManager NavigationManager
+@inject IAuthService AuthService
+@inject IProfileService ProfileService
+@inject IGameSessionService GameSessionService
+@inject IApiClient ApiClient
+@inject ILogger<Home> Logger
 
 @page "/"
 @page "/home"
 @using Mystira.App.PWA.Models
 @using Mystira.App.PWA.Services
 @using Mystira.App.PWA.Components
+@using SessionStatus = Mystira.App.Domain.Models.SessionStatus
 @implements IDisposable
 
 <PageTitle>Mystira</PageTitle>
 
-<div class="container-fluid py-4">
-    <div class="row">
-        <div class="col-12 text-center mb-4">
-            <h1 class="display-4 text-primary-custom">
-                <i class="fas fa-dragon me-3"></i>
-                Mystira <small class="text-muted" style="font-size: 0.5em; vertical-align: super;">ALPHA</small>
-            </h1>
-            <p class="lead text-muted mb-3">
-                Where imagination meets growth
-            </p>
-            <div class="row">
-                <div class="col-12 text-center mb-4">
-                    <CachedMystiraImage 
-                        MediaId="image-final-logo-fe3f75db"
-                        Alt="This is a magical picture, but it seems to be having a difficult time loading!"
-                        Width="600"
-                        Height="600" />
-                </div>
-            </div>
-            <div class="row justify-content-center">
-                <div class="col-md-8 col-lg-6">
-                    <p class="text-muted mb-4">
-                        Bring stories to life with Mystira — an interactive adventure platform that helps children, parents, and group leaders explore imagination, teamwork, and growth through guided storytelling and play.
-                    </p>
-                </div>
-            </div>
-            @if (!isAuthenticated)
-            {
-                <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
-                    <a href="/signin" class="btn btn-primary-custom btn-lg">
-                        <i class="fas fa-sign-in-alt me-2"></i>
-                        Sign In
-                    </a>
-                    <a href="/signup" class="btn btn-outline-primary btn-lg">
-                        <i class="fas fa-user-plus me-2"></i>
-                        Register
-                    </a>
-                </div>
-            }
-        </div>
-    </div>
+<!-- Skip Navigation Link -->
+<a href="#adventures" class="skip-link">Skip to adventures</a>
+
+<div class="container-fluid pb-4">
+    <!-- Hero Section -->
+    <HeroSection 
+        ShowDescription="@(!isAuthenticated)"
+        ShowCallToActions="@(!isAuthenticated)"
+        OnWatchDemoClick="@(() => { /* TODO: Implement demo video modal */ })" />
     
-    <!-- Age Group Filters -->
-    @if (isAuthenticated && !isLoading)
+    <!-- Active Adventures Section -->
+    @if (isAuthenticated && !isLoading && activeSessions.Any())
     {
         <div class="row mb-4">
             <div class="col-12">
-                <div class="card shadow-sm">
+                <div class="card shadow-sm border-info">
                     <div class="card-body">
-                        <h6 class="card-title mb-3">
-                            <i class="fas fa-filter me-2"></i>Filter Adventures
-                        </h6>
-                        
-                        <!-- Show Completed Stories Toggle -->
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="showCompletedToggle" 
-                                       checked="@showCompletedStories" @onchange="ToggleCompletedStories">
-                                <label class="form-check-label" for="showCompletedToggle">
-                                    <i class="fas fa-check-circle me-1"></i>
-                                    Show Completed Stories
-                                </label>
-                            </div>
+                        <h5 class="card-title mb-3">
+                            <i class="fas fa-gamepad me-2 text-info"></i>Continue Your Adventures
+                        </h5>
+                        <div class="row">
+                            @foreach (var activeSession in activeSessions)
+                            {
+                                var scenario = scenarios.FirstOrDefault(s => s.Id == activeSession.ScenarioId);
+                                if (scenario != null)
+                                {
+                                    <div class="col-md-6 col-lg-4 mb-3">
+                                        <div class="card h-100 border-info">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <h6 class="card-title mb-0">@scenario.Name</h6>
+                                                    <span class="badge bg-info">
+                                                        <i class="fas fa-play-circle me-1"></i>In Progress
+                                                    </span>
+                                                </div>
+                                                <p class="card-text small text-muted mb-3">
+                                                    Started: @activeSession.StartedAt.ToLocalTime().ToString("g")
+                                                </p>
+                                                <button class="btn btn-info w-100" 
+                                                        @onclick="() => ContinueAdventure(activeSession, scenario)">
+                                                    <i class="fas fa-play me-2"></i>
+                                                    Continue
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
                         </div>
-                        
-                        <!-- Age Group Filters -->
-                        <div class="mb-2">
-                            <small class="text-muted d-block mb-2">Filter by Age Group:</small>
-                            <div class="d-flex flex-wrap gap-2">
-                                @foreach (var ageGroup in availableAgeGroups)
-                                {
-                                    var isSelected = selectedAgeGroups.Contains(ageGroup);
-                                    <button class="btn @(isSelected ? "btn-primary-custom" : "btn-outline-secondary")"
-                                            @onclick="() => ToggleAgeGroupFilter(ageGroup)">
-                                        <i class="fas fa-users me-1"></i>
-                                        Ages @ageGroup
-                                        @if (isSelected)
-                                        {
-                                            <i class="fas fa-check ms-1"></i>
-                                        }
-                                    </button>
-                                }
-                                @if (selectedAgeGroups.Any())
-                                {
-                                    <button class="btn btn-outline-danger" @onclick="ClearAllFilters">
-                                        <i class="fas fa-times me-1"></i>Clear All
-                                    </button>
-                                }
-                            </div>
-                        </div>
-                        
-                        @if (selectedAgeGroups.Any())
-                        {
-                            <div class="mt-2 text-muted small">
-                                Showing @filteredScenarios.Count of @scenarios.Count adventures
-                                @if (!showCompletedStories)
-                                {
-                                    <text> (@completedScenarioIds.Count completed hidden)</text>
-                                }
-                            </div>
-                        }
                     </div>
                 </div>
+            </div>
+        </div>
+    }
+
+    <!-- Game Session Content (shown when user has profiles and active game) -->
+    @if (isAuthenticated && hasProfiles && gameSession != null)
+    {
+        <div class="container-fluid py-4">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="me-4 flex-grow-1">
+                            <h2 class="text-primary-custom mb-1">
+                                Welcome "@(gameSession.PlayerNames.FirstOrDefault() ?? "Player")"! What adventures await us today?
+                            </h2>
+                        </div>
+                        <div class="avatar-placeholder">
+                            <CachedMystiraImage 
+                                MediaId="placeholder-avatar-default"
+                                Alt="Player avatar"
+                                Width="60"
+                                Height="60"
+                                ImageClass="thumbnail-image" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    
+    <!-- In-Progress Adventures Section -->
+    @if (isAuthenticated && hasProfiles && inProgressSessions.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-warning">
+                    <div class="card-body">
+                        <h6 class="card-title mb-3">
+                            <i class="fas fa-play-circle me-2"></i>Continue Your Adventures
+                        </h6>
+                        <div class="row">
+                            @foreach (var session in inProgressSessions)
+                            {
+                                var scenario = scenarios.FirstOrDefault(s => s.Id == session.ScenarioId);
+                                if (scenario != null)
+                                {
+                                    var scenarioProgress = (session.CurrentSceneId != null) ? $"{session.ChoiceCount} choices made" : "Just started";
+                                    <div class="col-md-6 col-lg-4 mb-3">
+                                        <div class="card h-100 border-warning">
+                                            <div class="card-body d-flex flex-column">
+                                                <h5 class="card-title">@scenario.Title</h5>
+                                                <p class="card-text small text-muted">@scenarioProgress</p>
+                                                <div class="mt-auto">
+                                                    <button class="btn btn-warning btn-sm w-100" 
+                                                            @onclick="() => StartAdventure(scenario)"
+                                                            disabled="@isStartingAdventure">
+                                                        <i class="fas fa-redo me-2"></i>
+                                                        Resume
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    
+    <!-- Filter Section -->
+    @if (!isLoading)
+    {
+        <FilterSection 
+            AgeGroups="@availableAgeGroups"
+            SelectedAgeGroups="@selectedAgeGroups"
+            AgeGroupCounts="@_ageGroupBundleCounts"
+            SearchQuery="@searchQuery"
+            SearchQueryChanged="@((value) => { searchQuery = value; })"
+            ShowCompleted="@showCompletedStories"
+            ShowCompletedChanged="@((value) => { showCompletedStories = value; ToggleCompletedStories(); })"
+            HiddenCount="@completedScenarioIds.Count"
+            ResultCount="@GetResultCount()"
+            ResultCountLabel="@GetResultCountLabel()"
+            ShowSortOptions="@(!string.IsNullOrEmpty(selectedBundleId))"
+            CurrentSort="@currentSort"
+            OnSortChanged="@OnSortChanged"
+            OnAgeGroupToggled="@ToggleAgeGroupFilter"
+            OnClearAllFilters="@ClearAllFilters"
+            OnSearchCleared="@ClearSearch" />
+
+        <!-- Content Bundles Grid -->
+        <div class="row mb-4" id="adventures">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="mb-0">
+                        <i class="fas fa-boxes-stacked me-2"></i>
+                        @if (!string.IsNullOrEmpty(selectedBundleId))
+                        {
+                            <span>Selected Bundle: @selectedBundleTitle</span>
+                        }
+                        else
+                        {
+                            <span>Available Bundles</span>
+                        }
+                    </h5>
+                    @if (!string.IsNullOrEmpty(selectedBundleId))
+                    {
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="ClearSelectedBundle">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Bundles
+                        </button>
+                    }
+                </div>
+
+                @if (isLoadingBundles)
+                {
+                    <SkeletonLoader Count="6" />
+                }
+                else if (!filteredBundles.Any())
+                {
+                    <EmptyState 
+                        IconClass="fas fa-box-open fa-4x"
+                        Title="No Bundles Found"
+                        Message="Try adjusting your age group filters to see available adventure bundles."
+                        ShowClearButton="true"
+                        OnClearFilters="@ClearAllFilters" />
+                }
+                else if (string.IsNullOrEmpty(selectedBundleId))
+                {
+                    @* Featured Bundle *@
+                    @if (filteredBundles.Any() && GetFeaturedBundle() != null)
+                    {
+                        var featured = GetFeaturedBundle();
+                        if (featured != null)
+                        {
+                            <FeaturedBundleCard 
+                                Bundle="@featured" 
+                                CompletedScenarioIds="@completedScenarioIds"
+                                ShowGameState="@gameStateLoadingComplete"
+                                OnExplore="@((bundle) => SelectBundle(bundle))" />
+                        }
+                    }
+                    
+                    @* Regular Bundle Grid *@
+                    <div class="row">
+                        @foreach (var bundle in filteredBundles.Where(b => b.Id != GetFeaturedBundle()?.Id))
+                        {
+                            <BundleCard 
+                                Bundle="@bundle"
+                                CompletedScenarioIds="@completedScenarioIds"
+                                ShowGameState="@gameStateLoadingComplete"
+                                OnClick="@((b) => SelectBundle(b))" />
+                        }
+                    </div>
+                }
             </div>
         </div>
     }
@@ -136,131 +247,80 @@
             </div>
         </div>
     }
-    else if (!isAuthenticated)
+    else if (ShouldShowCatalog && !string.IsNullOrEmpty(selectedBundleId) && filteredScenarios.Any())
     {
-        <div class="row g-4 justify-content-center">
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm text-center p-4">
-                    <div class="mb-3 text-primary-custom">
-                        <i class="fas fa-book-open fa-3x"></i>
-                    </div>
-                    <h4 class="mb-3">Interactive Adventures</h4>
-                    <p class="text-muted mb-0">
-                        Dive into guided quests that adapt to every group, helping facilitators lead unforgettable storytelling sessions with ease.
-                    </p>
+        <div class="adventures-grid row">
+            @foreach (var scenario in filteredScenarios)
+            {
+                var isCompleted = completedScenarioIds.Contains(scenario.Id);
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
+                    <AdventureCard 
+                        Adventure="@scenario"
+                        IsCompleted="@isCompleted"
+                        Themes="@(scenario.Tags?.Take(2).ToList())"
+                        OnStartAdventure="@StartAdventure" />
                 </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm text-center p-4">
-                    <div class="mb-3 text-success">
-                        <i class="fas fa-hands-helping fa-3x"></i>
+            }
+        </div>
+    }
+    else if (ShouldShowCatalog && !string.IsNullOrEmpty(selectedBundleId) && !filteredScenarios.Any() && scenarios.Any())
+    {
+        <EmptyState 
+            IconClass="fas fa-search-minus fa-4x"
+            Title="No Adventures Match Your Filters"
+            Message="Try adjusting your age group filters or search terms to discover more adventures."
+            ShowClearButton="true"
+            OnClearFilters="@ClearAllFilters" />
+    }
+    else if (ShouldShowCatalog && !string.IsNullOrEmpty(selectedBundleId) && !scenarios.Any())
+    {
+        <EmptyState 
+            IconClass="fas fa-wifi-slash fa-4x"
+            Title="Connection Issue"
+            Message="We couldn't load adventures right now. Please check your internet connection and try again."
+            ShowClearButton="false"
+            ShowRetryButton="true"
+            OnRetry="@LoadScenarios" />
+    }
+    else if (isAuthenticated && isLoadingProfiles)
+    {
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <div class="card border-0 shadow">
+                    <div class="card-body p-5">
+                        <i class="fas fa-spinner fa-spin fa-3x text-primary-custom mb-3"></i>
+                        <h3>Loading Profiles...</h3>
+                        <p class="text-muted">
+                            Please wait while we check your profiles
+                        </p>
                     </div>
-                    <h4 class="mb-3">Built for Teamwork</h4>
-                    <p class="text-muted mb-0">
-                        Foster empathy, cooperation, and problem-solving with collaborative prompts that keep every child engaged.
-                    </p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm text-center p-4">
-                    <div class="mb-3 text-info">
-                        <i class="fas fa-magic fa-3x"></i>
-                    </div>
-                    <h4 class="mb-3">Guided Storytelling</h4>
-                    <p class="text-muted mb-0">
-                        Use curated visuals, music, and facilitator tips to spark imagination anywhere—from living rooms to after-school clubs.
-                    </p>
                 </div>
             </div>
         </div>
     }
-    else if (filteredScenarios.Any())
+    else if (isAuthenticated && !hasProfiles)
     {
-        <div class="row">
-            @foreach (var scenario in filteredScenarios)
-            {
-                var isCompleted = completedScenarioIds.Contains(scenario.Id);
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card scenario-card h-100 @(isCompleted ? "border-success" : "")">
-                        <div class="card-body d-flex flex-column">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h5 class="card-title">@scenario.Name</h5>
-                                @if (isCompleted)
-                                {
-                                    <span class="badge bg-success">
-                                        <i class="fas fa-check me-1"></i>Completed
-                                    </span>
-                                }
-                            </div>
-                            <p class="card-text flex-grow-1">@scenario.Description</p>
-                            
-                            <div class="mt-auto">
-                                <!-- Scenario Metadata -->
-                                <div class="scenario-metadata mb-3">
-                                    <!-- Group AgeGroup, Difficulty, and Session Length badges in one row -->
-                                    <div class="d-flex flex-wrap mb-2">
-                                        <span class="badge bg-info text-dark me-1 mb-1">
-                                            <i class="fas fa-users me-1"></i>Ages @scenario.AgeGroup
-                                        </span>
-                                        <span class="badge bg-warning me-1 mb-1">
-                                            <i class="fas fa-signal me-1"></i>@scenario.Difficulty
-                                        </span>
-                                        <span class="badge bg-success me-1 mb-1">
-                                            <i class="fas fa-clock me-1"></i>@scenario.SessionLength
-                                        </span>
-                                    </div>
-        
-                                    <!-- Core Axes in a separate row -->
-                                    @if (scenario.CoreAxes != null && scenario.CoreAxes.Any())
-                                    {
-                                        <div class="d-flex flex-wrap mb-2">
-                                            @foreach (var axis in scenario.CoreAxes.Take(4))
-                                            {
-                                                <span class="badge bg-primary me-1 mb-1">@axis</span>
-                                            }
-                                            @if (scenario.CoreAxes.Count > 4)
-                                            {
-                                                <span class="badge bg-primary mb-1">+@(scenario.CoreAxes.Count - 4)</span>
-                                            }
-                                        </div>
-                                    }
-        
-                                    <!-- Tags in a separate row -->
-                                    @if (scenario.Tags?.Any() == true)
-                                    {
-                                        <div class="d-flex flex-wrap">
-                                            @foreach (var tag in scenario.Tags.Take(3))
-                                            {
-                                                <span class="badge bg-secondary me-1 mb-1">@System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(tag.ToLower())</span>
-                                            }
-                                            @if (scenario.Tags.Length > 3)
-                                            {
-                                                <span class="badge bg-secondary mb-1">+@(scenario.Tags.Length - 3)</span>
-                                            }
-                                        </div>
-                                    }
-                                </div>
-                                
-                                <button class="btn btn-primary-custom btn-lg w-100" 
-                                        @onclick="() => StartAdventure(scenario)"
-                                        disabled="@isStartingAdventure">
-                                    @if (isStartingAdventure)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                        <span>Starting...</span>
-                                    }
-                                    else
-                                    {
-                                        <i class="fas fa-play me-2"></i>
-                                        <span>Start Adventure</span>
-                                    }
-                                </button>
-                            </div>
-                        </div>
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <div class="card border-0 shadow">
+                    <div class="card-body p-5">
+                        <i class="fas fa-user-plus fa-3x text-primary-custom mb-3"></i>
+                        <h3>Create a Profile to Start</h3>
+                        <p class="text-muted mb-4">
+                            Create your first player profile to unlock magical adventures!
+                        </p>
+                        <a href="/profiles" class="btn btn-primary-custom">
+                            <i class="fas fa-user-plus me-2"></i>
+                            Create Profile
+                        </a>
                     </div>
                 </div>
-            }
+            </div>
         </div>
+    }
+    else if (ShouldShowCatalog && string.IsNullOrEmpty(selectedBundleId))
+    {
+        <!-- Bundles are shown above; no scenarios until a bundle is selected -->
     }
     else
     {
@@ -285,25 +345,50 @@
 </div>
 
 @code {
-    [Inject] private IAuthService AuthService { get; set; } = default!;
-    [Inject] private IApiClient ApiClient { get; set; } = default!;
-    [Inject] private IGameSessionService GameSessionService { get; set; } = default!;
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
-    [Inject] private ILogger<Home> Logger { get; set; } = default!;
-
     private List<Scenario> scenarios = new();
     private List<Scenario> filteredScenarios = new();
+    private List<ContentBundle> bundles = new();
+    private List<ContentBundle> filteredBundles = new();
+    private List<GameSession> inProgressSessions = new();
+    private bool isLoadingBundles = false;
+    private string? selectedBundleId;
+    private string selectedBundleTitle => bundles.FirstOrDefault(b => b.Id == selectedBundleId)?.Title ?? string.Empty;
     private bool isLoading = true;
     private bool isStartingAdventure = false;
     private bool isAuthenticated = false;
     private bool showCompletedStories = true;
     private HashSet<string> completedScenarioIds = new();
+    private List<GameSession> activeSessions = new();
     private bool isLoadingGameState = false;
     private bool gameStateLoadingComplete = false;
+    private bool hasProfiles = false;
+    private bool isLoadingProfiles = false;
+    private GameSession? gameSession;
+    private string _searchQuery = string.Empty;
+    private string searchQuery 
+    { 
+        get => _searchQuery;
+        set 
+        {
+            if (_searchQuery != value)
+            {
+                _searchQuery = value;
+                ApplyFilters();
+            }
+        }
+    }
+    private string currentSort = "newest";
+    
+    // Cache for performance optimization
+    private Dictionary<string, int> _ageGroupBundleCounts = new();
+    private ContentBundle? _cachedFeaturedBundle;
     
     // Age group filter state
     private readonly HashSet<string> selectedAgeGroups = new();
     private readonly string[] availableAgeGroups = { "1-2", "3-5", "6-9", "10-12", "13-18", "19+" };
+    
+    // Computed property for catalog visibility logic
+    private bool ShouldShowCatalog => !isAuthenticated || (isAuthenticated && hasProfiles);
 
     protected override async Task OnInitializedAsync()
     {
@@ -314,17 +399,27 @@
             // Subscribe to authentication state changes
             AuthService.AuthenticationStateChanged += OnAuthenticationStateChanged;
             
+            // Subscribe to game session changes
+            GameSessionService.GameSessionChanged += OnGameSessionChanged;
+            
             // Check current authentication status
             isAuthenticated = await AuthService.IsAuthenticatedAsync();
             
             Logger.LogInformation("Auth service initialized. IsAuthenticated: {IsAuthenticated}", isAuthenticated);
             
-            // Load scenarios only if authenticated
+            // Load bundles and scenarios for everyone (preview mode for unauthenticated)
+            await LoadBundles();
+            await LoadScenarios();
+            
+            // Load user-specific data only if authenticated
             if (isAuthenticated) 
             {
-                await LoadScenarios();
+                await LoadProfiles();
+                await LoadInProgressSessions();
                 // Start loading game state in background
                 _ = LoadGameStateAsync();
+                // Get current game session
+                gameSession = GameSessionService.CurrentGameSession;
             }
             else 
             {
@@ -345,21 +440,37 @@
         isAuthenticated = authenticated;
         InvokeAsync(async () => 
         {
+            // Always reload bundles and scenarios
+            await LoadBundles();
+            await LoadScenarios();
+            
             if (authenticated)
             {
-                await LoadScenarios();
+                await LoadProfiles();
+                await LoadInProgressSessions();
                 _ = LoadGameStateAsync();
+                // Get current game session
+                gameSession = GameSessionService.CurrentGameSession;
             }
             else 
             {
-                scenarios.Clear();
-                filteredScenarios.Clear();
+                // Clear user-specific data but keep catalog
+                inProgressSessions.Clear();
                 selectedAgeGroups.Clear();
                 completedScenarioIds.Clear();
+                activeSessions.Clear();
                 gameStateLoadingComplete = false;
+                hasProfiles = false;
+                gameSession = null;
             }
             StateHasChanged();
         });
+    }
+
+    private void OnGameSessionChanged(object? sender, GameSession? session)
+    {
+        gameSession = session;
+        InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
@@ -367,6 +478,65 @@
         if (AuthService != null)
         {
             AuthService.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        }
+        if (GameSessionService != null)
+        {
+            GameSessionService.GameSessionChanged -= OnGameSessionChanged;
+        }
+    }
+
+    private async Task LoadProfiles()
+    {
+        try
+        {
+            isLoadingProfiles = true;
+            StateHasChanged();
+            
+            var currentAccount = await AuthService.GetCurrentAccountAsync();
+            if (currentAccount != null)
+            {
+                hasProfiles = await ProfileService.HasProfilesAsync(currentAccount.Id);
+                Logger.LogInformation("Profile check for account {AccountId}: HasProfiles = {HasProfiles}", currentAccount.Id, hasProfiles);
+            }
+            else
+            {
+                hasProfiles = false;
+                Logger.LogWarning("No current account found during profile loading");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading profiles");
+            hasProfiles = false;
+        }
+        finally
+        {
+            isLoadingProfiles = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadInProgressSessions()
+    {
+        try
+        {
+            var currentAccount = await AuthService.GetCurrentAccountAsync();
+            if (currentAccount == null)
+            {
+                inProgressSessions.Clear();
+                return;
+            }
+
+            Logger.LogInformation("Loading in-progress sessions for account {AccountId}", currentAccount.Id);
+            var sessions = await ApiClient.GetInProgressSessionsAsync(currentAccount.Id);
+            inProgressSessions = sessions ?? new List<GameSession>();
+            Logger.LogInformation("Loaded {Count} in-progress sessions", inProgressSessions.Count);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading in-progress sessions");
+            inProgressSessions.Clear();
         }
     }
 
@@ -395,6 +565,64 @@
         }
     }
 
+    private async Task LoadBundles()
+    {
+        try
+        {
+            isLoadingBundles = true;
+            StateHasChanged();
+
+            Logger.LogInformation("Loading content bundles...");
+            bundles = await ApiClient.GetBundlesAsync();
+            Logger.LogInformation("Loaded {Count} bundles", bundles.Count);
+            
+            // Pre-compute age group counts for performance
+            UpdateAgeGroupCounts();
+
+            Logger.LogInformation("Loading completed scenarios and active sessions...");
+            
+            // Get current account
+            var account = await AuthService.GetCurrentAccountAsync();
+            if (account != null)
+            {
+                // Get sessions for this account
+                var sessions = await ApiClient.GetSessionsByAccountAsync(account.Id);
+                if (sessions != null)
+                {
+                    // Filter active sessions (InProgress or Paused)
+                    activeSessions = sessions
+                        .Where(s => s.Status == SessionStatus.InProgress.ToString() || s.Status == SessionStatus.Paused.ToString())
+                        .OrderByDescending(s => s.StartedAt)
+                        .ToList();
+                    
+                    Logger.LogInformation("Found {Count} active session(s) for account {AccountId}", 
+                        activeSessions.Count, account.Id);
+                    
+                    // Track completed scenarios
+                    completedScenarioIds = sessions
+                        .Where(s => s.Status == SessionStatus.Completed.ToString())
+                        .Select(s => s.ScenarioId)
+                        .ToHashSet();
+                    
+                    Logger.LogInformation("Loaded {Count} completed scenarios for account {AccountId}", 
+                        completedScenarioIds.Count, account.Id);
+                }
+            }
+            
+            // Apply filters to show/hide completed scenarios
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading bundles and game state");
+        }
+        finally
+        {
+            isLoadingBundles = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task LoadGameStateAsync()
     {
         try
@@ -402,38 +630,34 @@
             isLoadingGameState = true;
             StateHasChanged();
             
-            Logger.LogInformation("Loading game state for scenarios...");
-            
-            var account = await AuthService.GetCurrentAccountAsync();
-            if (account == null)
+            var currentAccount = await AuthService.GetCurrentAccountAsync();
+            if (currentAccount != null)
             {
-                Logger.LogWarning("No account found for loading game state");
-                gameStateLoadingComplete = true;
-                isLoadingGameState = false;
-                StateHasChanged();
-                return;
-            }
-
-            var gameStateResponse = await ApiClient.GetScenariosWithGameStateAsync(account.Id);
-            if (gameStateResponse != null)
-            {
-                completedScenarioIds = gameStateResponse.Scenarios
-                    .Where(s => s.GameState == ScenarioGameState.Completed)
-                    .Select(s => s.ScenarioId)
-                    .ToHashSet();
+                Logger.LogInformation("Loading game state for account {AccountId}", currentAccount.Id);
                 
-                Logger.LogInformation("Loaded game state for {Count} scenarios, {CompletedCount} completed", 
-                    gameStateResponse.TotalCount, completedScenarioIds.Count);
+                var gameStateResponse = await ApiClient.GetScenariosWithGameStateAsync(currentAccount.Id);
+                if (gameStateResponse != null)
+                {
+                    completedScenarioIds = new HashSet<string>(
+                        gameStateResponse.Scenarios
+                            .Where(s => s.GameState == ScenarioGameState.Completed)
+                            .Select(s => s.ScenarioId)
+                    );
+                    Logger.LogInformation("Loaded game state: {CompletedCount} completed scenarios", completedScenarioIds.Count);
+                }
+                else
+                {
+                    Logger.LogWarning("Failed to load game state response");
+                    completedScenarioIds = new HashSet<string>();
+                }
             }
             
             gameStateLoadingComplete = true;
-            
-            // Apply filters once game state is loaded
-            ApplyFilters();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading game state");
+            completedScenarioIds = new HashSet<string>();
             gameStateLoadingComplete = true;
         }
         finally
@@ -443,36 +667,32 @@
         }
     }
 
-    private async void ToggleCompletedStories(ChangeEventArgs e)
-    {
-        showCompletedStories = (bool)e.Value!;
-        
-        // Wait for game state to load if it hasn't finished yet
-        if (isLoadingGameState && !gameStateLoadingComplete)
-        {
-            Logger.LogInformation("Game state loading in progress, waiting for completion...");
-            await Task.Run(async () =>
-            {
-                var timeout = DateTime.UtcNow.AddSeconds(5);
-                while (isLoadingGameState && !gameStateLoadingComplete && DateTime.UtcNow < timeout)
-                {
-                    await Task.Delay(100);
-                }
-            });
-        }
-        
-        ApplyFilters();
-        StateHasChanged();
-    }
-
     private async Task StartAdventure(Scenario scenario)
     {
         try
         {
+            // Redirect unauthenticated users to sign up
+            if (!isAuthenticated)
+            {
+                Logger.LogInformation("Unauthenticated user attempted to start adventure, redirecting to sign up");
+                NavigationManager.NavigateTo("/signup");
+                return;
+            }
+            
             isStartingAdventure = true;
             StateHasChanged();
             
             Logger.LogInformation("Starting adventure: {ScenarioName}", scenario.Name);
+            
+            // Check if there's an in-progress session for this scenario
+            var inProgressSession = inProgressSessions.FirstOrDefault(s => s.ScenarioId == scenario.Id);
+            if (inProgressSession != null)
+            {
+                Logger.LogInformation("Found in-progress session {SessionId} for scenario {ScenarioId}, resuming it", 
+                    inProgressSession.Id, scenario.Id);
+                await ResumeInProgressSession(inProgressSession);
+                return;
+            }
             
             // Clear any existing game session
             GameSessionService.ClearGameSession();
@@ -494,7 +714,7 @@
                 var success = await GameSessionService.StartGameSessionAsync(fullScenario);
                 if (success)
                 {
-                    Navigation.NavigateTo("/game");
+                    NavigationManager.NavigateTo("/game");
                 }
                 else
                 {
@@ -506,7 +726,7 @@
                 // Navigate to character assignment page
                 Logger.LogInformation("Navigating to character assignment for scenario: {ScenarioId}", scenario.Id);
                 await Task.CompletedTask;
-                Navigation.NavigateTo($"/character-assignment/{scenario.Id}");
+                NavigationManager.NavigateTo($"/character-assignment/{scenario.Id}");
             }
         }
         catch (Exception ex)
@@ -517,6 +737,61 @@
         {
             isStartingAdventure = false;
             StateHasChanged();
+        }
+    }
+
+    private async Task ResumeInProgressSession(GameSession session)
+    {
+        try
+        {
+            Logger.LogInformation("Resuming in-progress session {SessionId}", session.Id);
+            
+            // Get the full scenario with scenes
+            var fullScenario = await ApiClient.GetScenarioAsync(session.ScenarioId);
+            if (fullScenario == null)
+            {
+                Logger.LogError("Failed to load scenario for in-progress session: {ScenarioId}", session.ScenarioId);
+                return;
+            }
+
+            // Find the current scene
+            var currentScene = fullScenario.Scenes.FirstOrDefault(s => s.Id == session.CurrentSceneId);
+            if (currentScene == null)
+            {
+                Logger.LogWarning("Current scene not found in scenario, using first scene");
+                currentScene = fullScenario.Scenes.FirstOrDefault();
+            }
+
+            if (currentScene == null)
+            {
+                Logger.LogError("No scenes available in scenario");
+                return;
+            }
+
+            // Load media for the current scene
+            currentScene.AudioUrl = !string.IsNullOrEmpty(currentScene.Media?.Audio) ? await ApiClient.GetMediaUrlFromId(currentScene.Media.Audio) : null;
+            currentScene.ImageUrl = !string.IsNullOrEmpty(currentScene.Media?.Image) ? await ApiClient.GetMediaUrlFromId(currentScene.Media.Image) : null;
+            currentScene.VideoUrl = !string.IsNullOrEmpty(currentScene.Media?.Video) ? await ApiClient.GetMediaUrlFromId(currentScene.Media.Video) : null;
+
+            // Create a game session object for the service
+            var localSession = new GameSession
+            {
+                Id = session.Id,
+                Scenario = fullScenario,
+                ScenarioId = fullScenario.Id,
+                ScenarioName = fullScenario.Title,
+                CurrentScene = currentScene,
+                StartedAt = session.StartedAt,
+                CompletedScenes = new List<Scene>(),
+                IsCompleted = false
+            };
+
+            GameSessionService.SetCurrentGameSession(localSession);
+            NavigationManager.NavigateTo("/game");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error resuming in-progress session {SessionId}", session.Id);
         }
     }
 
@@ -542,14 +817,55 @@
         StateHasChanged();
     }
 
+    private void ToggleCompletedStories()
+    {
+        showCompletedStories = !showCompletedStories;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
     private void ApplyFilters()
     {
+        // Filter bundles by selected age groups and search
+        var bundleFiltered = bundles.AsEnumerable();
+        if (selectedAgeGroups.Any())
+        {
+            bundleFiltered = bundleFiltered.Where(b => selectedAgeGroups.Contains(b.AgeGroup));
+        }
+        if (!string.IsNullOrEmpty(searchQuery))
+        {
+            bundleFiltered = bundleFiltered.Where(b => 
+                b.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                b.Description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+        }
+        filteredBundles = bundleFiltered.ToList();
+        
+        // Invalidate featured bundle cache when filters change
+        _cachedFeaturedBundle = null;
+
+        // Filter scenarios, optionally by selected bundle
         var filtered = scenarios.AsEnumerable();
+        if (!string.IsNullOrEmpty(selectedBundleId))
+        {
+            var selected = bundles.FirstOrDefault(b => b.Id == selectedBundleId);
+            var ids = selected?.ScenarioIds ?? new List<string>();
+            filtered = filtered.Where(s => ids.Contains(s.Id));
+        }
         
         // Apply age group filter
         if (selectedAgeGroups.Any())
         {
             filtered = filtered.Where(s => selectedAgeGroups.Contains(s.AgeGroup));
+        }
+        
+        // Apply search filter (optimized)
+        if (!string.IsNullOrEmpty(searchQuery))
+        {
+            var query = searchQuery.ToLowerInvariant();
+            filtered = filtered.Where(s => 
+                s.Name.ToLowerInvariant().Contains(query) ||
+                s.Description.ToLowerInvariant().Contains(query) ||
+                (s.Tags != null && s.Tags.Any(t => t.ToLowerInvariant().Contains(query))));
         }
         
         // Apply completed stories filter
@@ -558,9 +874,214 @@
             filtered = filtered.Where(s => !completedScenarioIds.Contains(s.Id));
         }
         
+        // Apply sorting
+        filtered = ApplySorting(filtered);
+        
         filteredScenarios = filtered.ToList();
         
-        Logger.LogInformation("Applied filters. Age groups: [{SelectedFilters}], Show completed: {ShowCompleted}, Showing {Count} of {Total} scenarios", 
-            string.Join(", ", selectedAgeGroups), showCompletedStories, filteredScenarios.Count, scenarios.Count);
+        Logger.LogInformation("Applied filters. Age groups: [{SelectedFilters}], Search: '{SearchQuery}', Sort: '{Sort}', Show completed: {ShowCompleted}, Showing {Count} of {Total} scenarios", 
+            string.Join(", ", selectedAgeGroups), searchQuery, currentSort, showCompletedStories, filteredScenarios.Count, scenarios.Count);
+    }
+    
+    private IEnumerable<Scenario> ApplySorting(IEnumerable<Scenario> scenarios)
+    {
+        return currentSort switch
+        {
+            "popular" => scenarios.OrderByDescending(s => s.CreatedAt), // TODO: Implement with actual play count from backend
+            "difficulty-asc" => scenarios.OrderBy(s => GetDifficultyOrder(s.Difficulty)),
+            "difficulty-desc" => scenarios.OrderByDescending(s => GetDifficultyOrder(s.Difficulty)),
+            "duration-asc" => scenarios.OrderBy(s => GetDurationOrder(s.SessionLength)),
+            "duration-desc" => scenarios.OrderByDescending(s => GetDurationOrder(s.SessionLength)),
+            "newest" or _ => scenarios.OrderByDescending(s => s.CreatedAt)
+        };
+    }
+    
+    private const int DefaultDurationOrder = 2;  // Medium duration default
+    
+    private int GetDifficultyOrder(string difficulty)
+    {
+        return difficulty?.ToLower() switch
+        {
+            "easy" => 1,
+            "medium" => 2,
+            "hard" => 3,
+            "expert" => 4,
+            _ => 0
+        };
+    }
+    
+    private int GetDurationOrder(string duration)
+    {
+        return duration?.ToLower() switch
+        {
+            "short" or "quick" => 1,
+            "medium" => 2,
+            "long" => 3,
+            "epic" => 4,
+            _ => DefaultDurationOrder
+        };
+    }
+    
+    private void OnSortChanged(string sort)
+    {
+        currentSort = sort;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private async Task ContinueAdventure(GameSession activeSession, Scenario scenario)
+    {
+        try
+        {
+            isStartingAdventure = true;
+            StateHasChanged();
+            
+            Logger.LogInformation("Continuing adventure for session: {SessionId}, Scenario: {ScenarioName}", 
+                activeSession.Id, scenario.Name);
+            
+            // Get the full scenario with scenes
+            var fullScenario = await ApiClient.GetScenarioAsync(scenario.Id);
+            if (fullScenario == null)
+            {
+                Logger.LogError("Failed to load full scenario details for: {ScenarioName}", scenario.Name);
+                return;
+            }
+            
+            // Find the current scene from the session
+            var currentScene = fullScenario.Scenes.FirstOrDefault(s => s.Id == activeSession.CurrentSceneId);
+            if (currentScene == null)
+            {
+                Logger.LogError("Could not find current scene {SceneId} in scenario {ScenarioId}", 
+                    activeSession.CurrentSceneId, scenario.Id);
+                return;
+            }
+            
+            // Load media URLs for the current scene
+            currentScene.AudioUrl = !string.IsNullOrEmpty(currentScene.Media?.Audio) 
+                ? await ApiClient.GetMediaUrlFromId(currentScene.Media.Audio) : null;
+            currentScene.ImageUrl = !string.IsNullOrEmpty(currentScene.Media?.Image) 
+                ? await ApiClient.GetMediaUrlFromId(currentScene.Media.Image) : null;
+            currentScene.VideoUrl = !string.IsNullOrEmpty(currentScene.Media?.Video) 
+                ? await ApiClient.GetMediaUrlFromId(currentScene.Media.Video) : null;
+            
+            // Create a local game session to resume from
+            var localGameSession = new Models.GameSession
+            {
+                Id = activeSession.Id,
+                Scenario = fullScenario,
+                ScenarioId = fullScenario.Id,
+                ScenarioName = fullScenario.Title,
+                CurrentScene = currentScene,
+                StartedAt = activeSession.StartedAt,
+                CompletedScenes = new List<Scene>(),
+                IsCompleted = false
+            };
+            
+            // Set the game session
+            GameSessionService.SetCurrentGameSession(localGameSession);
+            
+            // Navigate to the game page
+            NavigationManager.NavigateTo("/game");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error continuing adventure for session: {SessionId}", activeSession.Id);
+        }
+        finally
+        {
+            isStartingAdventure = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SelectBundle(ContentBundle bundle)
+    {
+        selectedBundleId = bundle.Id;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private void ClearSelectedBundle()
+    {
+        selectedBundleId = null;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private void ClearSearch()
+    {
+        searchQuery = string.Empty;
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private int GetBundleCountForAgeGroup(string ageGroup)
+    {
+        // Use cached counts for performance
+        if (_ageGroupBundleCounts.TryGetValue(ageGroup, out var count))
+        {
+            return count;
+        }
+        return 0;
+    }
+    
+    private void UpdateAgeGroupCounts()
+    {
+        // Pre-compute bundle counts for all age groups
+        _ageGroupBundleCounts = availableAgeGroups
+            .ToDictionary(
+                ageGroup => ageGroup,
+                ageGroup => bundles.Count(b => b.AgeGroup == ageGroup)
+            );
+    }
+
+    private ContentBundle? GetFeaturedBundle()
+    {
+        // Return cached value if available
+        if (_cachedFeaturedBundle != null || !filteredBundles.Any())
+        {
+            return _cachedFeaturedBundle;
+        }
+        
+        // Compute and cache the featured bundle
+        var freeBundle = filteredBundles.FirstOrDefault(b => b.IsFree);
+        if (freeBundle != null)
+        {
+            _cachedFeaturedBundle = freeBundle;
+            return _cachedFeaturedBundle;
+        }
+        
+        _cachedFeaturedBundle = filteredBundles
+            .OrderByDescending(b => b.ScenarioIds?.Count ?? 0)
+            .FirstOrDefault();
+            
+        return _cachedFeaturedBundle;
+    }
+    
+    private int? GetResultCount()
+    {
+        if (!string.IsNullOrEmpty(selectedBundleId))
+        {
+            return filteredScenarios.Count;
+        }
+        else if (selectedAgeGroups.Any())
+        {
+            return filteredBundles.Count;
+        }
+        return null;
+    }
+    
+    private string GetResultCountLabel()
+    {
+        if (!string.IsNullOrEmpty(selectedBundleId))
+        {
+            return $"Showing {filteredScenarios.Count} of {scenarios.Count} adventures";
+        }
+        else if (selectedAgeGroups.Any())
+        {
+            var pluralSuffix = filteredBundles.Count != 1 ? "s" : "";
+            return $"{filteredBundles.Count} bundle{pluralSuffix} match your filters";
+        }
+        return string.Empty;
     }
 }

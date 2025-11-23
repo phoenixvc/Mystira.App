@@ -1,0 +1,137 @@
+@* Adventure Card Component - Enhanced visual design for scenarios *@
+@using Mystira.App.PWA.Models
+
+<div class="adventure-card" 
+     tabindex="0"
+     role="article"
+     aria-label="Adventure: @Adventure.Name"
+     @onclick="OnCardClick"
+     @onkeydown="HandleKeyDown">
+    <div class="adventure-image-container">
+        <div class="adventure-card-placeholder">
+            <i class="fas fa-book-open fa-3x"></i>
+        </div>
+        
+        @if (IsCompleted)
+        {
+            <div class="adventure-completed-badge">
+                <span class="badge bg-success">
+                    <i class="fas fa-check-circle me-1"></i>Completed
+                </span>
+            </div>
+        }
+    </div>
+    
+    <div class="adventure-card-body">
+        <h6 class="adventure-card-title">@Adventure.Name</h6>
+        <p class="adventure-card-description">@GetTruncatedDescription()</p>
+        
+        <div class="adventure-metadata">
+            <span class="metadata-badge badge-age">
+                <i class="fas fa-users me-1"></i>Ages @Adventure.AgeGroup
+            </span>
+            <span class="metadata-badge badge-difficulty">
+                <i class="fas fa-signal me-1"></i>@Adventure.Difficulty
+            </span>
+            <span class="metadata-badge badge-duration">
+                <i class="fas fa-clock me-1"></i>@Adventure.SessionLength
+            </span>
+        </div>
+        
+        @if (Adventure.Tags != null && Adventure.Tags.Length > 0)
+        {
+            <div class="adventure-tags">
+                @foreach (var tag in Adventure.Tags.Take(3))
+                {
+                    <span class="tag-pill">@tag</span>
+                }
+                @if (Adventure.Tags.Length > 3)
+                {
+                    <span class="tag-pill tag-more">+@(Adventure.Tags.Length - 3)</span>
+                }
+            </div>
+        }
+        
+        @if (Themes != null && Themes.Any())
+        {
+            <div class="adventure-themes">
+                @foreach (var theme in Themes.Take(2))
+                {
+                    <span class="theme-badge">
+                        <i class="fas fa-tag me-1"></i>@theme
+                    </span>
+                }
+            </div>
+        }
+    </div>
+    
+    <div class="adventure-card-footer">
+        <button class="btn-adventure-start" 
+                @onclick="OnStartClick" 
+                @onclick:stopPropagation="true"
+                aria-label="@(IsCompleted ? "Play again" : "Start adventure") @Adventure.Name">
+            <i class="fas fa-play me-2"></i>
+            @if (IsCompleted)
+            {
+                <span>Play Again</span>
+            }
+            else
+            {
+                <span>Start Adventure</span>
+            }
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Scenario Adventure { get; set; } = null!;
+    
+    [Parameter]
+    public bool IsCompleted { get; set; } = false;
+    
+    [Parameter]
+    public List<string>? Themes { get; set; }
+    
+    [Parameter]
+    public EventCallback<Scenario> OnClick { get; set; }
+    
+    [Parameter]
+    public EventCallback<Scenario> OnStartAdventure { get; set; }
+    
+    private async Task OnCardClick()
+    {
+        if (OnClick.HasDelegate)
+        {
+            await OnClick.InvokeAsync(Adventure);
+        }
+    }
+    
+    private async Task OnStartClick()
+    {
+        if (OnStartAdventure.HasDelegate)
+        {
+            await OnStartAdventure.InvokeAsync(Adventure);
+        }
+    }
+    
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Key == " ")
+        {
+            await OnCardClick();
+        }
+    }
+    
+    private string GetTruncatedDescription()
+    {
+        if (string.IsNullOrEmpty(Adventure.Description))
+            return string.Empty;
+            
+        const int maxLength = 120;
+        if (Adventure.Description.Length <= maxLength)
+            return Adventure.Description;
+            
+        return Adventure.Description.Substring(0, maxLength) + "...";
+    }
+}

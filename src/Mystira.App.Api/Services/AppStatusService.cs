@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Mystira.App.Api.Models;
+using Mystira.App.Contracts.Responses.Common;
 
 namespace Mystira.App.Api.Services;
 
@@ -37,7 +38,7 @@ public class AppStatusService : IAppStatusService
         try
         {
             config.LastUpdated = DateTime.UtcNow;
-            
+
             var options = new JsonSerializerOptions
             {
                 WriteIndented = true,
@@ -104,7 +105,7 @@ public class AppStatusService : IAppStatusService
             if (!File.Exists(_configFilePath))
             {
                 _logger.LogWarning("App status configuration file not found at {Path}. Creating default configuration.", _configFilePath);
-                
+
                 var defaultConfig = new AppStatusConfiguration();
                 await UpdateAppStatusAsync(defaultConfig);
                 return;

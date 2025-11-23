@@ -1,8 +1,9 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Domain.Models;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Mystira.App.Api.Models;
+using Mystira.App.Api.Models; // For MediaMetadataFile, CharacterMediaMetadataFile, etc. (API DTOs)
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Data;
 
@@ -21,6 +22,7 @@ public class MystiraAppDbContext : DbContext
 
     // Scenario Management
     public DbSet<Scenario> Scenarios { get; set; }
+    public DbSet<ContentBundle> ContentBundles { get; set; }
     public DbSet<CharacterMap> CharacterMaps { get; set; }
     public DbSet<BadgeConfiguration> BadgeConfigurations { get; set; }
 
@@ -29,6 +31,7 @@ public class MystiraAppDbContext : DbContext
     public DbSet<MediaMetadataFile> MediaMetadataFiles { get; set; }
     public DbSet<CharacterMediaMetadataFile> CharacterMediaMetadataFiles { get; set; }
     public DbSet<CharacterMapFile> CharacterMapFiles { get; set; }
+    public DbSet<AvatarConfigurationFile> AvatarConfigurationFiles { get; set; }
 
     // Game Session Management
     public DbSet<GameSession> GameSessions { get; set; }
@@ -39,7 +42,7 @@ public class MystiraAppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        
+
         // Check if we're using in-memory database (for testing)
         var isInMemoryDatabase = Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory";
 
@@ -47,42 +50,44 @@ public class MystiraAppDbContext : DbContext
         modelBuilder.Entity<UserProfile>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
                 entity.ToContainer("UserProfiles")
                       .HasPartitionKey(e => e.Id);
             }
-            
+
             entity.Property(e => e.PreferredFantasyThemes)
                   .HasConversion(
-                      v => string.Join(',', v),
-                      v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
-                  .Metadata.SetValueComparer(new ValueComparer<List<string>>(
-                      (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2), 
+                        v => string.Join(',', v.Select(e => e.Value)),
+                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => FantasyTheme.Parse(s))
+                            .Where(x => x != null)
+                            .ToList()!)
+                  .Metadata.SetValueComparer(new ValueComparer<List<FantasyTheme>>(
+                      (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                       c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                       c => c.ToList()));
-            
+
             // Configure UserBadge as owned by UserProfile
             entity.OwnsMany(p => p.EarnedBadges, badges =>
             {
                 badges.WithOwner().HasForeignKey(b => b.UserProfileId);
                 badges.HasKey(b => b.Id);
-        
+
                 // Only apply Cosmos DB specific configurations when not using in-memory database
                 if (!isInMemoryDatabase)
                 {
                     // No need for ToContainer or HasPartitionKey for owned entities
                     // They'll be embedded in the UserProfile document
                 }
-        
+
                 badges.Property(b => b.UserProfileId).IsRequired();
                 badges.Property(b => b.BadgeConfigurationId).IsRequired();
                 badges.Property(b => b.BadgeName).IsRequired();
                 badges.Property(b => b.BadgeMessage).IsRequired();
                 badges.Property(b => b.Axis).IsRequired();
-        
+
                 // Indexes may not be applicable for owned entities in Cosmos DB
                 // If using SQL Server, you can still configure these:
                 if (isInMemoryDatabase)
@@ -92,27 +97,27 @@ public class MystiraAppDbContext : DbContext
                 }
             });
         });
-        
+
         modelBuilder.Entity<UserProfile>().OwnsMany(p => p.EarnedBadges);
 
         // Configure Account
         modelBuilder.Entity<Account>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
                 entity.ToContainer("Accounts")
                       .HasPartitionKey(e => e.Id);
             }
-            
+
             entity.Property(e => e.UserProfileIds)
                   .HasConversion(
                       v => string.Join(',', v),
                       v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
                   .Metadata.SetValueComparer(new ValueComparer<List<string>>(
-                      (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2), 
+                      (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                       c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                       c => c.ToList()));
 
@@ -123,7 +128,7 @@ public class MystiraAppDbContext : DbContext
                         v => string.Join(',', v),
                         v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
                     .Metadata.SetValueComparer(new ValueComparer<List<string>>(
-                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2), 
+                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                         c => c.ToList()));
             });
@@ -131,11 +136,41 @@ public class MystiraAppDbContext : DbContext
             entity.OwnsOne(e => e.Settings);
         });
 
+        // Configure ContentBundle
+        modelBuilder.Entity<ContentBundle>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            if (!isInMemoryDatabase)
+            {
+                entity.ToContainer("ContentBundles")
+                      .HasPartitionKey(e => e.Id);
+            }
+
+            entity.Property(e => e.ScenarioIds)
+                  .HasConversion(
+                      v => string.Join(',', v),
+                      v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
+                  .Metadata.SetValueComparer(new ValueComparer<List<string>>(
+                      (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+                      c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                      c => c.ToList()));
+
+            entity.Property(e => e.Prices)
+                  .HasConversion(
+                      v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                      v => JsonSerializer.Deserialize<List<BundlePrice>>(v, (JsonSerializerOptions?)null) ?? new List<BundlePrice>())
+                  .Metadata.SetValueComparer(new ValueComparer<List<BundlePrice>>(
+                      (c1, c2) => c1 != null && c2 != null && c1.Count == c2.Count && c1.Zip(c2).All(x => x.First.Value == x.Second.Value && x.First.Currency == x.Second.Currency),
+                      c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.Value.GetHashCode(), v.Currency.GetHashCode())),
+                      c => c.Select(p => new BundlePrice { Value = p.Value, Currency = p.Currency }).ToList()));
+        });
+
         // Configure CharacterMap
         modelBuilder.Entity<CharacterMap>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
@@ -150,7 +185,7 @@ public class MystiraAppDbContext : DbContext
                         v => string.Join(',', v),
                         v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
                     .Metadata.SetValueComparer(new ValueComparer<List<string>>(
-                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2), 
+                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                         c => c.ToList()));
             });
@@ -160,7 +195,7 @@ public class MystiraAppDbContext : DbContext
         modelBuilder.Entity<BadgeConfiguration>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
@@ -173,7 +208,7 @@ public class MystiraAppDbContext : DbContext
         modelBuilder.Entity<Scenario>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
@@ -193,23 +228,27 @@ public class MystiraAppDbContext : DbContext
 
             entity.Property(e => e.Archetypes)
                   .HasConversion(
-                      v => string.Join(',', v),
-                      v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
-                  )
-                  .Metadata.SetValueComparer(new ValueComparer<List<string>>(
-                      (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
-                      c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-                      c => c.ToList()));
+                        v => string.Join(',', v.Select(e => e.Value)),
+                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => Archetype.Parse(s))
+                            .Where(x => x != null)
+                            .ToList()!)
+                  .Metadata.SetValueComparer(new ValueComparer<List<Archetype>>(
+                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                        c => c.ToList()));
 
             entity.Property(e => e.CoreAxes)
                   .HasConversion(
-                      v => string.Join(',', v),
-                      v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
-                  )
-                  .Metadata.SetValueComparer(new ValueComparer<List<string>>(
-                      (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
-                      c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-                      c => c.ToList()));
+                        v => string.Join(',', v.Select(e => e.Value)),
+                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => CoreAxis.Parse(s))
+                            .Where(x => x != null)
+                            .ToList()!)
+                  .Metadata.SetValueComparer(new ValueComparer<List<CoreAxis>>(
+                        (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+                        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                        c => c.ToList()));
 
             entity.OwnsMany(e => e.Characters, character =>
             {
@@ -226,9 +265,12 @@ public class MystiraAppDbContext : DbContext
 
                     metadata.Property(m => m.Archetype)
                             .HasConversion(
-                                v => string.Join(',', v),
-                                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
-                            .Metadata.SetValueComparer(new ValueComparer<List<string>>(
+                                v => string.Join(',', v.Select(e => e.Value)),
+                                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                    .Select(s => Archetype.Parse(s))
+                                    .Where(x => x != null)
+                                    .ToList()!)
+                            .Metadata.SetValueComparer(new ValueComparer<List<Archetype>>(
                                 (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                                 c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                                 c => c.ToList()));
@@ -260,7 +302,7 @@ public class MystiraAppDbContext : DbContext
         modelBuilder.Entity<GameSession>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
@@ -300,10 +342,10 @@ public class MystiraAppDbContext : DbContext
         });
 
         // Configure MediaAsset
-        modelBuilder.Entity<MediaAsset>(entity =>
+        modelBuilder.Entity<Domain.Models.MediaAsset>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
@@ -335,17 +377,17 @@ public class MystiraAppDbContext : DbContext
             entity.HasIndex(e => e.MediaType);
             entity.HasIndex(e => e.CreatedAt);
         });
-        
+
         // Configure MediaAsset.Tags
-        modelBuilder.Entity<MediaAsset>()
+        modelBuilder.Entity<Domain.Models.MediaAsset>()
             .Property(m => m.Tags)
             .HasConversion(
                 v => string.Join(',', v),
                 v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
                 new ValueComparer<List<string>>(
-                    (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
-                    c => c != null ? c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())) : 0,
-                    c => c != null ? c.ToList() : new List<string>()
+                    (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+                    c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                    c => c.ToList()
                 )
             );
 
@@ -353,7 +395,7 @@ public class MystiraAppDbContext : DbContext
         modelBuilder.Entity<MediaMetadataFile>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
@@ -367,18 +409,18 @@ public class MystiraAppDbContext : DbContext
                 entry.Property(e => e.ClassificationTags)
                     .HasConversion(new ClassificationTagListConverter())
                     .Metadata.SetValueComparer(new ValueComparer<List<ClassificationTag>>(
-                        (c1, c2) => c1 != null && c2 != null && 
-                                    c1.Count == c2.Count && 
+                        (c1, c2) => c1 != null && c2 != null &&
+                                    c1.Count == c2.Count &&
                                     !c1.Except(c2, new ClassificationTagComparer()).Any(),
                         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.Key.GetHashCode(), v.Value.GetHashCode())),
                         c => c.Select(x => new ClassificationTag { Key = x.Key, Value = x.Value }).ToList()
                     ));
-                
+
                 entry.Property(e => e.Modifiers)
                     .HasConversion(new ModifierListConverter())
                     .Metadata.SetValueComparer(new ValueComparer<List<Modifier>>(
-                        (c1, c2) => c1 != null && c2 != null && 
-                                    c1.Count == c2.Count && 
+                        (c1, c2) => c1 != null && c2 != null &&
+                                    c1.Count == c2.Count &&
                                     !c1.Except(c2, new ModifierComparer()).Any(),
                         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.Key.GetHashCode(), v.Value.GetHashCode())),
                         c => c.Select(x => new Modifier { Key = x.Key, Value = x.Value }).ToList()
@@ -391,7 +433,7 @@ public class MystiraAppDbContext : DbContext
         modelBuilder.Entity<CharacterMediaMetadataFile>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
@@ -407,7 +449,7 @@ public class MystiraAppDbContext : DbContext
                          v => string.Join(',', v),
                          v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
                      .Metadata.SetValueComparer(new ValueComparer<List<string>>(
-                         (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2), 
+                         (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                          c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                          c => c.ToList()));
             });
@@ -417,7 +459,7 @@ public class MystiraAppDbContext : DbContext
         modelBuilder.Entity<CharacterMapFile>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
@@ -435,7 +477,7 @@ public class MystiraAppDbContext : DbContext
                                 v => string.Join(',', v),
                                 v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
                             .Metadata.SetValueComparer(new ValueComparer<List<string>>(
-                                (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2), 
+                                (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                                 c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                                 c => c.ToList()));
 
@@ -444,7 +486,7 @@ public class MystiraAppDbContext : DbContext
                                 v => string.Join(',', v),
                                 v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
                             .Metadata.SetValueComparer(new ValueComparer<List<string>>(
-                                (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2), 
+                                (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                                 c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                                 c => c.ToList()));
 
@@ -453,18 +495,38 @@ public class MystiraAppDbContext : DbContext
                                 v => string.Join(',', v),
                                 v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
                             .Metadata.SetValueComparer(new ValueComparer<List<string>>(
-                                (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2), 
+                                (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                                 c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                                 c => c.ToList()));
                 });
             });
         });
 
+        // Configure AvatarConfigurationFile
+        modelBuilder.Entity<AvatarConfigurationFile>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            // Only apply Cosmos DB configurations when not using in-memory database
+            if (!isInMemoryDatabase)
+            {
+                entity.ToContainer("AvatarConfigurationFiles")
+                      .HasPartitionKey(e => e.Id);
+            }
+
+            // Convert Dictionary<string, List<string>> for storage
+            entity.Property(e => e.AgeGroupAvatars)
+                  .HasConversion(
+                      v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
+                      v => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, List<string>>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new Dictionary<string, List<string>>()
+                  );
+        });
+
         // Configure CompassTracking as a separate container for analytics
         modelBuilder.Entity<CompassTracking>(entity =>
         {
             entity.HasKey(e => e.Axis);
-            
+
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
@@ -491,22 +553,28 @@ public class ClassificationTagListConverter : ValueConverter<List<Classification
     private static string ConvertToString(List<ClassificationTag> tags)
     {
         if (tags == null || !tags.Any())
+        {
             return string.Empty;
-            
+        }
+
         return string.Join("|", tags.Select(tag => $"{tag.Key}:{tag.Value}"));
     }
-    
+
     private static List<ClassificationTag> ConvertFromString(string dbString)
     {
         if (string.IsNullOrEmpty(dbString))
+        {
             return new List<ClassificationTag>();
-            
+        }
+
         return dbString.Split('|', StringSplitOptions.RemoveEmptyEntries)
-            .Select(s => {
+            .Select(s =>
+            {
                 var parts = s.Split(':', 2);
-                return new ClassificationTag { 
-                    Key = parts[0], 
-                    Value = parts.Length > 1 ? parts[1] : string.Empty 
+                return new ClassificationTag
+                {
+                    Key = parts[0],
+                    Value = parts.Length > 1 ? parts[1] : string.Empty
                 };
             })
             .ToList();
@@ -518,17 +586,20 @@ public class ClassificationTagComparer : IEqualityComparer<ClassificationTag>
     public bool Equals(ClassificationTag? x, ClassificationTag? y)
     {
         if (x == null && y == null)
+        {
             return true;
+        }
+
         if (x == null || y == null)
+        {
             return false;
-            
+        }
+
         return x.Key == y.Key && x.Value == y.Value;
     }
 
     public int GetHashCode(ClassificationTag obj)
     {
-        if (obj == null)
-            return 0;
         return HashCode.Combine(obj.Key, obj.Value);
     }
 }
@@ -547,22 +618,28 @@ public class ModifierListConverter : ValueConverter<List<Modifier>, string>
     private static string ConvertToString(List<Modifier> modifiers)
     {
         if (modifiers == null || !modifiers.Any())
+        {
             return string.Empty;
-            
+        }
+
         return string.Join("|", modifiers.Select(mod => $"{mod.Key}:{mod.Value}"));
     }
-    
+
     private static List<Modifier> ConvertFromString(string dbString)
     {
         if (string.IsNullOrEmpty(dbString))
+        {
             return new List<Modifier>();
-            
+        }
+
         return dbString.Split('|', StringSplitOptions.RemoveEmptyEntries)
-            .Select(s => {
+            .Select(s =>
+            {
                 var parts = s.Split(':', 2);
-                return new Modifier { 
-                    Key = parts[0], 
-                    Value = parts.Length > 1 ? parts[1] : string.Empty 
+                return new Modifier
+                {
+                    Key = parts[0],
+                    Value = parts.Length > 1 ? parts[1] : string.Empty
                 };
             })
             .ToList();
@@ -574,17 +651,21 @@ public class ModifierComparer : IEqualityComparer<Modifier>
     public bool Equals(Modifier? x, Modifier? y)
     {
         if (x == null && y == null)
+        {
             return true;
+        }
+
         if (x == null || y == null)
+        {
             return false;
-            
+        }
+
         return x.Key == y.Key && x.Value == y.Value;
     }
 
     public int GetHashCode(Modifier obj)
     {
-        if (obj == null)
-            return 0;
         return HashCode.Combine(obj.Key, obj.Value);
     }
 }
+

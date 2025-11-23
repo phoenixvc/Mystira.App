@@ -1,22 +1,28 @@
+using Mystira.App.Contracts.Requests.Badges;
 using Mystira.App.Domain.Models;
-using Microsoft.EntityFrameworkCore;
-using Mystira.App.Api.Data;
-using Mystira.App.Api.Models;
+using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 namespace Mystira.App.Api.Services;
 
 public class UserBadgeApiService : IUserBadgeApiService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly IUserBadgeRepository _repository;
+    private readonly IUserProfileRepository _userProfileRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IBadgeConfigurationApiService _badgeConfigService;
     private readonly ILogger<UserBadgeApiService> _logger;
 
     public UserBadgeApiService(
-        MystiraAppDbContext context,
+        IUserBadgeRepository repository,
+        IUserProfileRepository userProfileRepository,
+        IUnitOfWork unitOfWork,
         IBadgeConfigurationApiService badgeConfigService,
         ILogger<UserBadgeApiService> logger)
     {
-        _context = context;
+        _repository = repository;
+        _userProfileRepository = userProfileRepository;
+        _unitOfWork = unitOfWork;
         _badgeConfigService = badgeConfigService;
         _logger = logger;
     }
@@ -26,13 +32,12 @@ public class UserBadgeApiService : IUserBadgeApiService
         try
         {
             // Check if user already has this badge
-            var existingBadge = await _context.UserBadges
-                .FirstOrDefaultAsync(b => b.UserProfileId == request.UserProfileId 
-                                       && b.BadgeConfigurationId == request.BadgeConfigurationId);
+            var existingBadge = await _repository.GetByUserProfileIdAndBadgeConfigIdAsync(
+                request.UserProfileId, request.BadgeConfigurationId);
 
             if (existingBadge != null)
             {
-                _logger.LogWarning("User {UserProfileId} already has badge {BadgeId}", 
+                _logger.LogWarning("User {UserProfileId} already has badge {BadgeId}",
                     request.UserProfileId, request.BadgeConfigurationId);
                 return existingBadge;
             }
@@ -45,8 +50,7 @@ public class UserBadgeApiService : IUserBadgeApiService
             }
 
             // Verify user profile exists
-            var userProfile = await _context.UserProfiles
-                .FirstOrDefaultAsync(p => p.Id == request.UserProfileId);
+            var userProfile = await _userProfileRepository.GetByIdAsync(request.UserProfileId);
             if (userProfile == null)
             {
                 throw new ArgumentException($"User profile not found: {request.UserProfileId}");
@@ -68,17 +72,17 @@ public class UserBadgeApiService : IUserBadgeApiService
                 EarnedAt = DateTime.UtcNow
             };
 
-            _context.UserBadges.Add(newBadge);
-            await _context.SaveChangesAsync();
+            await _repository.AddAsync(newBadge);
+            await _unitOfWork.SaveChangesAsync();
 
-            _logger.LogInformation("Awarded badge {BadgeName} to user {UserProfileId}", 
+            _logger.LogInformation("Awarded badge {BadgeName} to user {UserProfileId}",
                 badgeConfig.Name, request.UserProfileId);
 
             return newBadge;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error awarding badge {BadgeId} to user {UserProfileId}", 
+            _logger.LogError(ex, "Error awarding badge {BadgeId} to user {UserProfileId}",
                 request.BadgeConfigurationId, request.UserProfileId);
             throw;
         }
@@ -88,10 +92,7 @@ public class UserBadgeApiService : IUserBadgeApiService
     {
         try
         {
-            return await _context.UserBadges
-                .Where(b => b.UserProfileId == userProfileId)
-                .OrderByDescending(b => b.EarnedAt)
-                .ToListAsync();
+            return (await _repository.GetByUserProfileIdAsync(userProfileId)).ToList();
         }
         catch (Exception ex)
         {
@@ -104,15 +105,14 @@ public class UserBadgeApiService : IUserBadgeApiService
     {
         try
         {
-            return await _context.UserBadges
-                .Where(b => b.UserProfileId == userProfileId 
-                         && b.Axis.Equals(axis, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(b => b.EarnedAt)
-                .ToListAsync();
+            var badges = await _repository.GetByUserProfileIdAndAxisAsync(userProfileId, axis);
+            return badges
+                .Where(b => b.Axis.Equals(axis, StringComparison.OrdinalIgnoreCase))
+                .ToList();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting badges for user {UserProfileId} and axis {Axis}", 
+            _logger.LogError(ex, "Error getting badges for user {UserProfileId} and axis {Axis}",
                 userProfileId, axis);
             throw;
         }
@@ -122,13 +122,12 @@ public class UserBadgeApiService : IUserBadgeApiService
     {
         try
         {
-            return await _context.UserBadges
-                .AnyAsync(b => b.UserProfileId == userProfileId 
-                            && b.BadgeConfigurationId == badgeConfigurationId);
+            var badge = await _repository.GetByUserProfileIdAndBadgeConfigIdAsync(userProfileId, badgeConfigurationId);
+            return badge != null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking if user {UserProfileId} has badge {BadgeId}", 
+            _logger.LogError(ex, "Error checking if user {UserProfileId} has badge {BadgeId}",
                 userProfileId, badgeConfigurationId);
             throw;
         }
@@ -138,25 +137,23 @@ public class UserBadgeApiService : IUserBadgeApiService
     {
         try
         {
-            var badge = await _context.UserBadges
-                .FirstOrDefaultAsync(b => b.UserProfileId == userProfileId && b.Id == badgeId);
-
-            if (badge == null)
+            var badge = await _repository.GetByIdAsync(badgeId);
+            if (badge == null || badge.UserProfileId != userProfileId)
             {
                 return false;
             }
 
-            _context.UserBadges.Remove(badge);
-            await _context.SaveChangesAsync();
+            await _repository.DeleteAsync(badgeId);
+            await _unitOfWork.SaveChangesAsync();
 
-            _logger.LogInformation("Removed badge {BadgeId} from user {UserProfileId}", 
+            _logger.LogInformation("Removed badge {BadgeId} from user {UserProfileId}",
                 badgeId, userProfileId);
 
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error removing badge {BadgeId} from user {UserProfileId}", 
+            _logger.LogError(ex, "Error removing badge {BadgeId} from user {UserProfileId}",
                 badgeId, userProfileId);
             throw;
         }
@@ -166,9 +163,7 @@ public class UserBadgeApiService : IUserBadgeApiService
     {
         try
         {
-            var badges = await _context.UserBadges
-                .Where(b => b.UserProfileId == userProfileId)
-                .ToListAsync();
+            var badges = (await _repository.GetByUserProfileIdAsync(userProfileId)).ToList();
 
             var statistics = new Dictionary<string, int>
             {

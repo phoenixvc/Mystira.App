@@ -1,6 +1,10 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Api.Models;
 using Mystira.App.Api.Services;
+using Mystira.App.Contracts.Requests.CharacterMaps;
+using Mystira.App.Contracts.Responses.Common;
+using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
 
 namespace Mystira.App.Api.Controllers;
 
@@ -29,8 +33,8 @@ public class CharacterController : ControllerBase
             var character = await _characterMapService.GetCharacterAsync(id);
             if (character == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Character not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -40,8 +44,8 @@ public class CharacterController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting character: {CharacterId}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while getting character",
                 TraceId = HttpContext.TraceIdentifier
             });

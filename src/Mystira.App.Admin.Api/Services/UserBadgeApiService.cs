@@ -1,7 +1,7 @@
-using Mystira.App.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Data;
-using Mystira.App.Admin.Api.Models;
+using Mystira.App.Contracts.Requests.Badges;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -27,12 +27,12 @@ public class UserBadgeApiService : IUserBadgeApiService
         {
             // Check if user already has this badge
             var existingBadge = await _context.UserBadges
-                .FirstOrDefaultAsync(b => b.UserProfileId == request.UserProfileId 
+                .FirstOrDefaultAsync(b => b.UserProfileId == request.UserProfileId
                                        && b.BadgeConfigurationId == request.BadgeConfigurationId);
 
             if (existingBadge != null)
             {
-                _logger.LogWarning("User {UserProfileId} already has badge {BadgeId}", 
+                _logger.LogWarning("User {UserProfileId} already has badge {BadgeId}",
                     request.UserProfileId, request.BadgeConfigurationId);
                 return existingBadge;
             }
@@ -71,14 +71,14 @@ public class UserBadgeApiService : IUserBadgeApiService
             _context.UserBadges.Add(newBadge);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Awarded badge {BadgeName} to user {UserProfileId}", 
+            _logger.LogInformation("Awarded badge {BadgeName} to user {UserProfileId}",
                 badgeConfig.Name, request.UserProfileId);
 
             return newBadge;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error awarding badge {BadgeId} to user {UserProfileId}", 
+            _logger.LogError(ex, "Error awarding badge {BadgeId} to user {UserProfileId}",
                 request.BadgeConfigurationId, request.UserProfileId);
             throw;
         }
@@ -105,14 +105,14 @@ public class UserBadgeApiService : IUserBadgeApiService
         try
         {
             return await _context.UserBadges
-                .Where(b => b.UserProfileId == userProfileId 
+                .Where(b => b.UserProfileId == userProfileId
                          && b.Axis.Equals(axis, StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(b => b.EarnedAt)
                 .ToListAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting badges for user {UserProfileId} and axis {Axis}", 
+            _logger.LogError(ex, "Error getting badges for user {UserProfileId} and axis {Axis}",
                 userProfileId, axis);
             throw;
         }
@@ -123,12 +123,12 @@ public class UserBadgeApiService : IUserBadgeApiService
         try
         {
             return await _context.UserBadges
-                .AnyAsync(b => b.UserProfileId == userProfileId 
+                .AnyAsync(b => b.UserProfileId == userProfileId
                             && b.BadgeConfigurationId == badgeConfigurationId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking if user {UserProfileId} has badge {BadgeId}", 
+            _logger.LogError(ex, "Error checking if user {UserProfileId} has badge {BadgeId}",
                 userProfileId, badgeConfigurationId);
             throw;
         }
@@ -149,14 +149,14 @@ public class UserBadgeApiService : IUserBadgeApiService
             _context.UserBadges.Remove(badge);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Removed badge {BadgeId} from user {UserProfileId}", 
+            _logger.LogInformation("Removed badge {BadgeId} from user {UserProfileId}",
                 badgeId, userProfileId);
 
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error removing badge {BadgeId} from user {UserProfileId}", 
+            _logger.LogError(ex, "Error removing badge {BadgeId} from user {UserProfileId}",
                 badgeId, userProfileId);
             throw;
         }

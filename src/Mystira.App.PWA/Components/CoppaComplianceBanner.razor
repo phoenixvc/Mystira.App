@@ -1,0 +1,40 @@
+@* COPPA Compliance Status Banner - Prominent notice for stakeholders *@
+
+<div class="coppa-banner">
+    <div class="coppa-banner-content">
+        <div class="coppa-banner-icon">
+            ⚠️
+        </div>
+        <div class="coppa-banner-text">
+            <h3 class="coppa-banner-title">COPPA Compliance Implementation In Progress</h3>
+            <p class="coppa-banner-message">
+                This platform is being updated to meet Children's Online Privacy Protection Act (COPPA) requirements.
+                Parental consent, age verification, and privacy controls are currently being implemented.
+                <strong>Do not collect children's data until compliance features are complete.</strong>
+            </p>
+            <div class="coppa-banner-links">
+                <a href="/coppa-status" class="coppa-banner-link">Implementation Status</a>
+                <span class="coppa-banner-separator">•</span>
+                <a href="https://www.ftc.gov/business-guidance/privacy-security/childrens-privacy"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="coppa-banner-link">
+                    COPPA Requirements (FTC)
+                </a>
+            </div>
+        </div>
+        <button class="coppa-banner-close" @onclick="DismissTemporarily" aria-label="Dismiss temporarily">
+            ✕
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback OnDismiss { get; set; }
+
+    private async Task DismissTemporarily()
+    {
+        await OnDismiss.InvokeAsync();
+    }
+}

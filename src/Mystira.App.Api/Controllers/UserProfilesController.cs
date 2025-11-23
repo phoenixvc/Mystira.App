@@ -1,8 +1,9 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Mystira.App.Domain.Models;
-using Mystira.App.Api.Models;
+using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Api.Services;
+using Mystira.App.Contracts.Requests.UserProfiles;
+using Mystira.App.Contracts.Responses.Common;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;
 
@@ -16,7 +17,7 @@ public class UserProfilesController : ControllerBase
     private readonly ILogger<UserProfilesController> _logger;
 
     public UserProfilesController(
-        IUserProfileApiService profileService, 
+        IUserProfileApiService profileService,
         IAccountApiService accountService,
         ILogger<UserProfilesController> logger)
     {
@@ -52,8 +53,8 @@ public class UserProfilesController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error creating profile");
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -61,8 +62,8 @@ public class UserProfilesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating profile");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while creating profile",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -78,15 +79,15 @@ public class UserProfilesController : ControllerBase
         try
         {
             _logger.LogInformation("Getting profiles for account {AccountId}", accountId);
-            
+
             var profiles = await _accountService.GetUserProfilesForAccountAsync(accountId);
             return Ok(profiles);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting profiles for account {AccountId}", accountId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching profiles",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -104,8 +105,8 @@ public class UserProfilesController : ControllerBase
             var profile = await _profileService.GetProfileByIdAsync(id);
             if (profile == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Profile not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -116,8 +117,8 @@ public class UserProfilesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting profile {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching profile",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -148,8 +149,8 @@ public class UserProfilesController : ControllerBase
             var updatedProfile = await _profileService.UpdateProfileByIdAsync(id, request);
             if (updatedProfile == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Profile not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -160,8 +161,8 @@ public class UserProfilesController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error updating profile {Id}", id);
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -169,8 +170,8 @@ public class UserProfilesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating profile {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while updating profile",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -201,8 +202,8 @@ public class UserProfilesController : ControllerBase
             var updatedProfile = await _profileService.UpdateProfileByIdAsync(profileId, request);
             if (updatedProfile == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Profile not found: {profileId}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -213,8 +214,8 @@ public class UserProfilesController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error updating profile {ProfileId}", profileId);
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -222,8 +223,8 @@ public class UserProfilesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating profile {ProfileId}", profileId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while updating profile",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -241,8 +242,8 @@ public class UserProfilesController : ControllerBase
             var profile = await _profileService.GetProfileByIdAsync(id);
             if (profile == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Profile not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -251,8 +252,8 @@ public class UserProfilesController : ControllerBase
             var deleted = await _profileService.DeleteProfileAsync(profile.Id);
             if (!deleted)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Profile not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -263,8 +264,8 @@ public class UserProfilesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting profile {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while deleting profile",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -282,8 +283,8 @@ public class UserProfilesController : ControllerBase
             var profile = await _profileService.GetProfileByIdAsync(id);
             if (profile == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Profile not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -292,8 +293,8 @@ public class UserProfilesController : ControllerBase
             var success = await _profileService.CompleteOnboardingAsync(profile.Name);
             if (!success)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Profile not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -304,8 +305,8 @@ public class UserProfilesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error completing onboarding for {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while completing onboarding",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -340,8 +341,8 @@ public class UserProfilesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating multiple profiles");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while creating multiple profiles",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -374,8 +375,8 @@ public class UserProfilesController : ControllerBase
 
             if (!success)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Profile or character not found",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -385,10 +386,10 @@ public class UserProfilesController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error assigning character {CharacterId} to profile {ProfileId}", 
+            _logger.LogError(ex, "Error assigning character {CharacterId} to profile {ProfileId}",
                 request.CharacterId, request.ProfileId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while assigning character",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -407,8 +408,8 @@ public class UserProfilesController : ControllerBase
             var profile = await _profileService.GetProfileByIdAsync(profileId);
             if (profile == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Profile with ID {profileId} not found",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -436,8 +437,8 @@ public class UserProfilesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error removing profile {ProfileId} from account", profileId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while removing profile from account",
                 TraceId = HttpContext.TraceIdentifier
             });

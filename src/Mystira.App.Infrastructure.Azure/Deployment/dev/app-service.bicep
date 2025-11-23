@@ -19,6 +19,9 @@ param storageConnectionString string
 @secure()
 param jwtSecretKey string
 
+@description('Key Vault name for Story Protocol secrets')
+param keyVaultName string
+
 // App Service Plan (Azure Cloud Hosting)
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: '${appServiceName}-plan'
@@ -69,6 +72,10 @@ resource appService 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'Jwt__Audience'
           value: 'mystira-app'
+        }
+        {
+          name: 'StoryProtocol__KeyVaultName'
+          value: keyVaultName
         }
         {
           name: 'WEBSITES_ENABLE_APP_SERVICE_STORAGE'

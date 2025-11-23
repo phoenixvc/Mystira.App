@@ -1,5 +1,5 @@
+using Mystira.App.Contracts.Requests.UserProfiles;
 using Mystira.App.Domain.Models;
-using Mystira.App.Api.Models;
 
 namespace Mystira.App.Api.Services;
 

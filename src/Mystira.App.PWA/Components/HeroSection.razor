@@ -1,0 +1,69 @@
+@* Hero Section Component *@
+
+<div class="row mt-4">
+    <div class="col-12 text-center mb-5 hero-section">
+        <div class="hero-content">
+            <h1 class="mystira-title mb-2">
+                Mystira <span class="alpha-badge">ALPHA</span>
+            </h1>
+            <p class="mystira-tagline mb-4">Where imagination meets growth</p>
+            <div class="hero-logo-container mb-4">
+                <img src="icons/icon-512.png"
+                     alt="Mystira - Where imagination meets growth"
+                     width="600"
+                     height="600"
+                     class="hero-logo" />
+            </div>
+            @if (ShowDescription)
+            {
+                <p class="hero-description mb-4">
+                    Bring stories to life with Mystira — an interactive adventure platform that helps children, parents, and group leaders explore imagination, teamwork, and growth through guided storytelling and play.
+                </p>
+                
+                @if (ShowCallToActions)
+                {
+                    <div class="hero-cta-buttons d-flex gap-3 justify-content-center flex-wrap mb-4">
+                        <a href="/signup" class="btn btn-primary-custom btn-lg px-5 py-3">
+                            <i class="fas fa-rocket me-2"></i>Start Free Trial
+                        </a>
+                        <button class="btn btn-outline-primary btn-lg px-5 py-3" @onclick="OnWatchDemo">
+                            <i class="fas fa-play-circle me-2"></i>Watch Demo (2 min)
+                        </button>
+                    </div>
+                    
+                    <!-- Trust Indicators -->
+                    <div class="trust-badges">
+                        <span class="trust-badge">
+                            <i class="fas fa-shield-alt me-1"></i>Safe for Kids
+                        </span>
+                        <span class="trust-badge">
+                            <i class="fas fa-ban me-1"></i>No Ads
+                        </span>
+                        <span class="trust-badge">
+                            <i class="fas fa-lock me-1"></i>COPPA Compliant
+                        </span>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public bool ShowDescription { get; set; } = false;
+    
+    [Parameter]
+    public bool ShowCallToActions { get; set; } = false;
+    
+    [Parameter]
+    public EventCallback OnWatchDemoClick { get; set; }
+    
+    private async Task OnWatchDemo()
+    {
+        if (OnWatchDemoClick.HasDelegate)
+        {
+            await OnWatchDemoClick.InvokeAsync();
+        }
+    }
+}

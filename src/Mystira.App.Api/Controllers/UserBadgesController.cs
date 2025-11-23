@@ -1,7 +1,10 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Domain.Models;
-using Mystira.App.Api.Models;
 using Mystira.App.Api.Services;
+using Mystira.App.Contracts.Requests.Badges;
+using Mystira.App.Contracts.Responses.Badges;
+using Mystira.App.Contracts.Responses.Common;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;
 
@@ -15,7 +18,7 @@ public class UserBadgesController : ControllerBase
     private readonly ILogger<UserBadgesController> _logger;
 
     public UserBadgesController(
-        IUserBadgeApiService badgeService, 
+        IUserBadgeApiService badgeService,
         IAccountApiService accountService,
         ILogger<UserBadgesController> logger)
     {
@@ -46,14 +49,14 @@ public class UserBadgesController : ControllerBase
             }
 
             var badge = await _badgeService.AwardBadgeAsync(request);
-            return CreatedAtAction(nameof(GetUserBadges), 
+            return CreatedAtAction(nameof(GetUserBadges),
                 new { userProfileId = request.UserProfileId }, badge);
         }
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error awarding badge");
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -61,8 +64,8 @@ public class UserBadgesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error awarding badge");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while awarding badge",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -83,8 +86,8 @@ public class UserBadgesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting badges for user {UserProfileId}", userProfileId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching badges",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -104,10 +107,10 @@ public class UserBadgesController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting badges for user {UserProfileId} and axis {Axis}", 
+            _logger.LogError(ex, "Error getting badges for user {UserProfileId} and axis {Axis}",
                 userProfileId, axis);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching badges for axis",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -127,10 +130,10 @@ public class UserBadgesController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking if user {UserProfileId} has badge {BadgeId}", 
+            _logger.LogError(ex, "Error checking if user {UserProfileId} has badge {BadgeId}",
                 userProfileId, badgeConfigurationId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while checking badge status",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -151,8 +154,8 @@ public class UserBadgesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting badge statistics for user {UserProfileId}", userProfileId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching badge statistics",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -170,8 +173,8 @@ public class UserBadgesController : ControllerBase
             var account = await _accountService.GetAccountByEmailAsync(email);
             if (account == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Account with email {email} not found",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -191,8 +194,8 @@ public class UserBadgesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting badges for account {Email}", email);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while getting account badges",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -210,8 +213,8 @@ public class UserBadgesController : ControllerBase
             var account = await _accountService.GetAccountByEmailAsync(email);
             if (account == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Account with email {email} not found",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -241,8 +244,8 @@ public class UserBadgesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting badge statistics for account {Email}", email);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while getting account badge statistics",
                 TraceId = HttpContext.TraceIdentifier
             });

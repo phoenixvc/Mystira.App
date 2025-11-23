@@ -11,6 +11,7 @@ Welcome to the Mystira.App documentation. This directory contains comprehensive 
 ## Setup Guides
 
 ### Email & Authentication
+
 - **[Email Setup](setup/EMAIL_SETUP.md)** - Complete guide for email integration with Azure Communication Services
   - Quick start (no Azure required)
   - Azure Communication Services setup
@@ -20,6 +21,7 @@ Welcome to the Mystira.App documentation. This directory contains comprehensive 
 ## Feature Documentation
 
 ### Authentication
+
 - **[Passwordless Signup](features/PASSWORDLESS_SIGNUP.md)** - Technical implementation of passwordless authentication
   - Architecture and flow
   - Backend implementation
@@ -27,6 +29,7 @@ Welcome to the Mystira.App documentation. This directory contains comprehensive 
   - Security features
 
 ### Architecture
+
 - **[Admin API Separation](features/ADMIN_API_SEPARATION.md)** - Admin and client API architecture
   - Project structure
   - API separation rationale
@@ -35,7 +38,7 @@ Welcome to the Mystira.App documentation. This directory contains comprehensive 
 
 ## Project Structure
 
-```
+``` text
 docs/
 ├── README.md                        # This file
 ├── setup/                           # Setup and configuration guides
@@ -61,6 +64,7 @@ docs/
 ## Contributing
 
 When adding new documentation:
+
 1. Place setup/configuration guides in `docs/setup/`
 2. Place feature documentation in `docs/features/`
 3. Update this README.md with links to new documentation
@@ -77,6 +81,7 @@ When adding new documentation:
 ## Support
 
 For questions or issues:
+
 - Check the relevant documentation first
 - Review [Main README](../README.md) for general information
 - Open an issue on GitHub for bugs or feature requests
