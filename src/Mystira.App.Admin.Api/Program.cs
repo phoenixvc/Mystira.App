@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Mystira.App.Admin.Api.Adapters;
-using Mystira.App.Admin.Api.Data;
+using Mystira.App.Infrastructure.Data;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Application.UseCases.Contributors;
 using Mystira.App.Application.UseCases.GameSessions;

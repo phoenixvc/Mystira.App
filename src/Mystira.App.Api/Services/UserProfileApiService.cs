@@ -1,6 +1,6 @@
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Api.Data;
+using Mystira.App.Infrastructure.Data;
 using Mystira.App.Application.UseCases.UserProfiles;
 using Mystira.App.Contracts.Requests.UserProfiles;
 using Mystira.App.Domain.Models;

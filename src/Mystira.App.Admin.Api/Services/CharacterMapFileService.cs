@@ -1,7 +1,10 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Admin.Api.Data;
+using Mystira.App.Infrastructure.Data;
 using Mystira.App.Admin.Api.Models;
+using Mystira.App.Domain.Models;
+using ApiModels = Mystira.App.Admin.Api.Models;
+using DomainModels = Mystira.App.Domain.Models;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -22,12 +25,12 @@ public class CharacterMapFileService : ICharacterMapFileService
     /// <summary>
     /// Gets the character map file
     /// </summary>
-    public async Task<CharacterMapFile> GetCharacterMapFileAsync()
+    public async Task<ApiModels.CharacterMapFile> GetCharacterMapFileAsync()
     {
         try
         {
-            var characterMapFile = await _context.CharacterMapFiles.FirstOrDefaultAsync();
-            return characterMapFile ?? new CharacterMapFile();
+            var domainFile = await _context.CharacterMapFiles.FirstOrDefaultAsync();
+            return domainFile == null ? new ApiModels.CharacterMapFile() : ConvertToApiModel(domainFile);
         }
         catch (Exception ex)
         {
@@ -39,25 +42,26 @@ public class CharacterMapFileService : ICharacterMapFileService
     /// <summary>
     /// Updates the character map file
     /// </summary>
-    public async Task<CharacterMapFile> UpdateCharacterMapFileAsync(CharacterMapFile characterMapFile)
+    public async Task<ApiModels.CharacterMapFile> UpdateCharacterMapFileAsync(ApiModels.CharacterMapFile characterMapFile)
     {
         try
         {
-            characterMapFile.UpdatedAt = DateTime.UtcNow;
+            var domainFile = ConvertToDomainModel(characterMapFile);
+            domainFile.UpdatedAt = DateTime.UtcNow;
 
             var existingFile = await _context.CharacterMapFiles.FirstOrDefaultAsync();
             if (existingFile != null)
             {
-                _context.Entry(existingFile).CurrentValues.SetValues(characterMapFile);
-                existingFile.Characters = characterMapFile.Characters;
+                _context.Entry(existingFile).CurrentValues.SetValues(domainFile);
+                existingFile.Characters = domainFile.Characters;
             }
             else
             {
-                await _context.CharacterMapFiles.AddAsync(characterMapFile);
+                await _context.CharacterMapFiles.AddAsync(domainFile);
             }
 
             await _context.SaveChangesAsync();
-            return characterMapFile;
+            return ConvertToApiModel(domainFile);
         }
         catch (Exception ex)
         {
@@ -69,12 +73,14 @@ public class CharacterMapFileService : ICharacterMapFileService
     /// <summary>
     /// Gets a specific character by ID
     /// </summary>
-    public async Task<Character?> GetCharacterAsync(string characterId)
+    public async Task<ApiModels.Character?> GetCharacterAsync(string characterId)
     {
         try
         {
-            var characterMapFile = await GetCharacterMapFileAsync();
-            return characterMapFile.Characters.FirstOrDefault(c => c.Id == characterId);
+            var apiFile = await GetCharacterMapFileAsync();
+            var domainFile = ConvertToDomainModel(apiFile);
+            var domainCharacter = domainFile.Characters.FirstOrDefault(c => c.Id == characterId);
+            return domainCharacter == null ? null : ConvertToApiCharacter(domainCharacter);
         }
         catch (Exception ex)
         {
@@ -86,21 +92,22 @@ public class CharacterMapFileService : ICharacterMapFileService
     /// <summary>
     /// Adds a new character
     /// </summary>
-    public async Task<CharacterMapFile> AddCharacterAsync(Character character)
+    public async Task<ApiModels.CharacterMapFile> AddCharacterAsync(ApiModels.Character character)
     {
         try
         {
-            var characterMapFile = await GetCharacterMapFileAsync();
+            var apiFile = await GetCharacterMapFileAsync();
+            var domainFile = ConvertToDomainModel(apiFile);
 
             // Check if character already exists
-            var existingCharacter = characterMapFile.Characters.FirstOrDefault(c => c.Id == character.Id);
+            var existingCharacter = domainFile.Characters.FirstOrDefault(c => c.Id == character.Id);
             if (existingCharacter != null)
             {
                 throw new InvalidOperationException($"Character with ID '{character.Id}' already exists");
             }
 
-            characterMapFile.Characters.Add(character);
-            return await UpdateCharacterMapFileAsync(characterMapFile);
+            domainFile.Characters.Add(ConvertToDomainCharacter(character));
+            return await UpdateCharacterMapFileAsync(ConvertToApiModel(domainFile));
         }
         catch (Exception ex)
         {
@@ -112,24 +119,25 @@ public class CharacterMapFileService : ICharacterMapFileService
     /// <summary>
     /// Updates an existing character
     /// </summary>
-    public async Task<CharacterMapFile> UpdateCharacterAsync(string characterId, Character character)
+    public async Task<ApiModels.CharacterMapFile> UpdateCharacterAsync(string characterId, ApiModels.Character character)
     {
         try
         {
-            var characterMapFile = await GetCharacterMapFileAsync();
+            var apiFile = await GetCharacterMapFileAsync();
+            var domainFile = ConvertToDomainModel(apiFile);
 
-            var existingCharacter = characterMapFile.Characters.FirstOrDefault(c => c.Id == characterId);
+            var existingCharacter = domainFile.Characters.FirstOrDefault(c => c.Id == characterId);
             if (existingCharacter == null)
             {
                 throw new KeyNotFoundException($"Character with ID '{characterId}' not found");
             }
 
             // Update the character
-            var index = characterMapFile.Characters.IndexOf(existingCharacter);
+            var index = domainFile.Characters.IndexOf(existingCharacter);
             character.Id = characterId; // Ensure ID stays the same
-            characterMapFile.Characters[index] = character;
+            domainFile.Characters[index] = ConvertToDomainCharacter(character);
 
-            return await UpdateCharacterMapFileAsync(characterMapFile);
+            return await UpdateCharacterMapFileAsync(ConvertToApiModel(domainFile));
         }
         catch (Exception ex)
         {
@@ -141,20 +149,21 @@ public class CharacterMapFileService : ICharacterMapFileService
     /// <summary>
     /// Removes a character
     /// </summary>
-    public async Task<CharacterMapFile> RemoveCharacterAsync(string characterId)
+    public async Task<ApiModels.CharacterMapFile> RemoveCharacterAsync(string characterId)
     {
         try
         {
-            var characterMapFile = await GetCharacterMapFileAsync();
+            var apiFile = await GetCharacterMapFileAsync();
+            var domainFile = ConvertToDomainModel(apiFile);
 
-            var existingCharacter = characterMapFile.Characters.FirstOrDefault(c => c.Id == characterId);
+            var existingCharacter = domainFile.Characters.FirstOrDefault(c => c.Id == characterId);
             if (existingCharacter == null)
             {
                 throw new KeyNotFoundException($"Character with ID '{characterId}' not found");
             }
 
-            characterMapFile.Characters.Remove(existingCharacter);
-            return await UpdateCharacterMapFileAsync(characterMapFile);
+            domainFile.Characters.Remove(existingCharacter);
+            return await UpdateCharacterMapFileAsync(ConvertToApiModel(domainFile));
         }
         catch (Exception ex)
         {
@@ -193,11 +202,11 @@ public class CharacterMapFileService : ICharacterMapFileService
     /// <summary>
     /// Imports characters from JSON data
     /// </summary>
-    public async Task<CharacterMapFile> ImportCharacterMapAsync(string jsonData, bool overwriteExisting = false)
+    public async Task<ApiModels.CharacterMapFile> ImportCharacterMapAsync(string jsonData, bool overwriteExisting = false)
     {
         try
         {
-            var importData = JsonSerializer.Deserialize<Dictionary<string, List<Character>>>(jsonData, new JsonSerializerOptions
+            var importData = JsonSerializer.Deserialize<Dictionary<string, List<ApiModels.Character>>>(jsonData, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
@@ -213,35 +222,109 @@ public class CharacterMapFileService : ICharacterMapFileService
                 throw new ArgumentException("No valid characters found in JSON data");
             }
 
-            var characterMapFile = await GetCharacterMapFileAsync();
+            var apiFile = await GetCharacterMapFileAsync();
+            var domainFile = ConvertToDomainModel(apiFile);
 
             foreach (var character in importedCharacters)
             {
-                var existingCharacter = characterMapFile.Characters.FirstOrDefault(c => c.Id == character.Id);
+                var domainCharacter = ConvertToDomainCharacter(character);
+                var existingCharacter = domainFile.Characters.FirstOrDefault(c => c.Id == domainCharacter.Id);
                 if (existingCharacter != null)
                 {
                     if (overwriteExisting)
                     {
-                        var index = characterMapFile.Characters.IndexOf(existingCharacter);
-                        characterMapFile.Characters[index] = character;
+                        var index = domainFile.Characters.IndexOf(existingCharacter);
+                        domainFile.Characters[index] = domainCharacter;
                     }
                     else
                     {
-                        _logger.LogWarning("Skipping existing character: {CharacterId}", character.Id);
+                        _logger.LogWarning("Skipping existing character: {CharacterId}", domainCharacter.Id);
                     }
                 }
                 else
                 {
-                    characterMapFile.Characters.Add(character);
+                    domainFile.Characters.Add(domainCharacter);
                 }
             }
 
-            return await UpdateCharacterMapFileAsync(characterMapFile);
+            return await UpdateCharacterMapFileAsync(ConvertToApiModel(domainFile));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error importing character map");
             throw;
         }
+    }
+
+    private static ApiModels.CharacterMapFile ConvertToApiModel(DomainModels.CharacterMapFile domainFile)
+    {
+        return new ApiModels.CharacterMapFile
+        {
+            Id = domainFile.Id,
+            Characters = domainFile.Characters.Select(ConvertToApiCharacter).ToList(),
+            CreatedAt = domainFile.CreatedAt,
+            UpdatedAt = domainFile.UpdatedAt,
+            Version = domainFile.Version
+        };
+    }
+
+    private static DomainModels.CharacterMapFile ConvertToDomainModel(ApiModels.CharacterMapFile apiFile)
+    {
+        return new DomainModels.CharacterMapFile
+        {
+            Id = apiFile.Id,
+            Characters = apiFile.Characters.Select(ConvertToDomainCharacter).ToList(),
+            CreatedAt = apiFile.CreatedAt,
+            UpdatedAt = apiFile.UpdatedAt,
+            Version = apiFile.Version
+        };
+    }
+
+    private static ApiModels.Character ConvertToApiCharacter(DomainModels.CharacterMapFileCharacter domainCharacter)
+    {
+        return new ApiModels.Character
+        {
+            Id = domainCharacter.Id,
+            Name = domainCharacter.Name,
+            Image = domainCharacter.Image,
+            Metadata = ConvertToApiMetadata(domainCharacter.Metadata)
+        };
+    }
+
+    private static DomainModels.CharacterMapFileCharacter ConvertToDomainCharacter(ApiModels.Character apiCharacter)
+    {
+        return new DomainModels.CharacterMapFileCharacter
+        {
+            Id = apiCharacter.Id,
+            Name = apiCharacter.Name,
+            Image = apiCharacter.Image,
+            Metadata = ConvertToDomainMetadata(apiCharacter.Metadata)
+        };
+    }
+
+    private static ApiModels.CharacterMetadata ConvertToApiMetadata(DomainModels.CharacterMetadata domainMetadata)
+    {
+        return new ApiModels.CharacterMetadata
+        {
+            Roles = domainMetadata.Roles,
+            Archetypes = domainMetadata.Archetypes,
+            Species = domainMetadata.Species,
+            Age = domainMetadata.Age,
+            Traits = domainMetadata.Traits,
+            Backstory = domainMetadata.Backstory
+        };
+    }
+
+    private static DomainModels.CharacterMetadata ConvertToDomainMetadata(ApiModels.CharacterMetadata apiMetadata)
+    {
+        return new DomainModels.CharacterMetadata
+        {
+            Roles = apiMetadata.Roles,
+            Archetypes = apiMetadata.Archetypes,
+            Species = apiMetadata.Species,
+            Age = apiMetadata.Age,
+            Traits = apiMetadata.Traits,
+            Backstory = apiMetadata.Backstory
+        };
     }
 }

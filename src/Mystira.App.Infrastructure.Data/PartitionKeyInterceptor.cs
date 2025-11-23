@@ -1,8 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
-namespace Mystira.App.Admin.Api.Data;
+namespace Mystira.App.Infrastructure.Data;
 
+/// <summary>
+/// Interceptor to sync shadow properties for partition keys in Cosmos DB
+/// Ensures JSON documents have both 'id' (document ID) and 'Id' (partition key) properties
+/// </summary>
 public class PartitionKeyInterceptor : SaveChangesInterceptor
 {
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
