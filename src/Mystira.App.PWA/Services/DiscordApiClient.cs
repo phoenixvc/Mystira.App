@@ -16,7 +16,7 @@ public class DiscordApiClient : BaseApiClient, IDiscordApiClient
     {
         try
         {
-            await SetAuthorizationHeaderAsync();
+            // Discord status is a public endpoint - no auth required
             return await HttpClient.GetFromJsonAsync<DiscordStatusResponse>("api/discord/status", JsonOptions);
         }
         catch (Exception ex)

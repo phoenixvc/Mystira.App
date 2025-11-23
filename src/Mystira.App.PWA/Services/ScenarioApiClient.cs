@@ -20,8 +20,7 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
         {
             Logger.LogInformation("Fetching scenarios from API...");
 
-            await SetAuthorizationHeaderAsync();
-
+            // Scenarios endpoint is public - no auth required
             var request = new HttpRequestMessage(HttpMethod.Get, "api/scenarios");
             request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
 

@@ -17,7 +17,7 @@ public class ContentBundleApiClient : BaseApiClient, IContentBundleApiClient
     {
         try
         {
-            await SetAuthorizationHeaderAsync();
+            // Bundles endpoint is public - no auth required
             var response = await HttpClient.GetAsync("api/bundles");
             if (response.IsSuccessStatusCode)
             {
@@ -36,7 +36,7 @@ public class ContentBundleApiClient : BaseApiClient, IContentBundleApiClient
     {
         try
         {
-            await SetAuthorizationHeaderAsync();
+            // Bundles endpoint is public - no auth required
             var response = await HttpClient.GetAsync($"api/bundles/age-group/{ageGroup}");
             if (response.IsSuccessStatusCode)
             {
