@@ -230,9 +230,9 @@ public class ScenarioApiService : IScenarioApiService
                     Difficulty = scene.Difficulty,
                     Media = hasMedia ? new
                     {
-                        Image = media?.Image,
-                        Audio = media?.Audio,
-                        Video = media?.Video
+                        Image = media!.Image,
+                        Audio = media.Audio,
+                        Video = media.Video
                     } : null,
                     Branches = branches.Select(branch => new
                     {
