@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Mystira.App.Application.Ports;
@@ -27,24 +28,17 @@ public static class ServiceCollectionExtensions
             .GetSection(StoryProtocolOptions.SectionName)
             .Get<StoryProtocolOptions>() ?? new StoryProtocolOptions();
 
-        if (!options.Enabled)
+        // For now, always use mock implementation until blockchain integration is ready
+        // TODO: Implement actual blockchain service and add conditional logic
+        if (options.Enabled && !options.UseMockImplementation)
         {
-            // Register a no-op implementation if disabled
-            services.AddSingleton<IStoryProtocolService, MockStoryProtocolService>();
-        }
-        else if (options.UseMockImplementation)
-        {
-            // Register mock implementation for development/testing
-            services.AddSingleton<IStoryProtocolService, MockStoryProtocolService>();
-        }
-        else
-        {
-            // TODO: Register actual blockchain implementation when ready
+            // Placeholder for future blockchain implementation
             // services.AddSingleton<IStoryProtocolService, StoryProtocolService>();
-            
-            // For now, fall back to mock
-            services.AddSingleton<IStoryProtocolService, MockStoryProtocolService>();
+            throw new NotImplementedException("Blockchain Story Protocol integration not yet implemented. Please set UseMockImplementation to true.");
         }
+
+        // Register mock implementation (default)
+        services.AddSingleton<IStoryProtocolService, MockStoryProtocolService>();
 
         return services;
     }

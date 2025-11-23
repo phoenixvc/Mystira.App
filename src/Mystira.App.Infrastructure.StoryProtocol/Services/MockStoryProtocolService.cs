@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -17,7 +18,7 @@ public class MockStoryProtocolService : IStoryProtocolService
 {
     private readonly ILogger<MockStoryProtocolService> _logger;
     private readonly StoryProtocolOptions _options;
-    private readonly Dictionary<string, StoryProtocolMetadata> _registeredAssets = new();
+    private readonly ConcurrentDictionary<string, StoryProtocolMetadata> _registeredAssets = new();
 
     public MockStoryProtocolService(
         ILogger<MockStoryProtocolService> logger,

@@ -65,14 +65,18 @@ public class StoryProtocolMetadata
         }
 
         // Check for duplicate wallet addresses
-        var duplicateWallets = Contributors
+        var hasDuplicateWallets = Contributors
             .GroupBy(c => c.WalletAddress.ToLowerInvariant())
-            .Where(g => g.Count() > 1)
-            .Select(g => g.Key)
-            .ToList();
+            .Any(g => g.Count() > 1);
 
-        if (duplicateWallets.Any())
+        if (hasDuplicateWallets)
         {
+            var duplicateWallets = Contributors
+                .GroupBy(c => c.WalletAddress.ToLowerInvariant())
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key)
+                .ToList();
+            
             errors.Add($"Duplicate wallet addresses found: {string.Join(", ", duplicateWallets)}");
         }
 
