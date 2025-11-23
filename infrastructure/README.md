@@ -264,16 +264,21 @@ The development environment includes:
 
 ## Deployment
 
-### Automatic Deployment
+### Manual Deployment via GitHub Actions (Recommended)
 
-Infrastructure is automatically deployed when:
-1. Code is pushed to the `dev` branch with changes in `infrastructure/dev/`
-2. A PR is merged to `dev` with infrastructure changes
-3. Manually triggered via GitHub Actions workflow dispatch
+Infrastructure deployment is **manual only** to prevent accidental changes. Use the GitHub Actions workflow dispatch:
 
-### Manual Deployment
+1. Go to **Actions** → **"Infrastructure Deployment - Dev Environment"**
+2. Click **"Run workflow"**
+3. Select the action to perform:
+   - **validate**: Validates Bicep templates without deploying
+   - **deploy**: Validates and deploys infrastructure
+   - **destroy**: Deletes all infrastructure (requires confirmation)
+4. Click **"Run workflow"**
 
-#### Using Azure CLI
+**Note**: Destroy action requires checking the "Confirm destruction" checkbox.
+
+### Manual Deployment via Azure CLI
 
 ```bash
 # Login to Azure
@@ -296,12 +301,25 @@ az deployment group create \
   --parameters acsConnectionString="<your-acs-connection>"
 ```
 
-#### Using GitHub Actions
+### Manual Deployment via CosmosConsole Tool
 
-1. Go to Actions → "Infrastructure Deployment - Dev Environment"
-2. Click "Run workflow"
-3. Select the `dev` branch
-4. Click "Run workflow"
+For data migration between environments, use the CosmosConsole tool located in `/tools/Mystira.App.CosmosConsole`:
+
+```bash
+# Navigate to tools directory
+cd tools/Mystira.App.CosmosConsole
+
+# Set connection strings
+export SOURCE_COSMOS_CONNECTION="AccountEndpoint=https://old-cosmos..."
+export DEST_COSMOS_CONNECTION="AccountEndpoint=https://new-cosmos..."
+export SOURCE_STORAGE_CONNECTION="DefaultEndpointsProtocol=https;..."
+export DEST_STORAGE_CONNECTION="DefaultEndpointsProtocol=https;..."
+
+# Run migration
+dotnet run -- migrate all
+```
+
+See `tools/Mystira.App.CosmosConsole/README.md` for detailed migration documentation.
 
 ### Preview Changes (What-If)
 

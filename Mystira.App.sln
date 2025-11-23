@@ -15,7 +15,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.Admin.Api", "sr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.PWA", "src\Mystira.App.PWA\Mystira.App.PWA.csproj", "{998C75B4-2658-4C64-A7E3-9A6CCA82796A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.CosmosConsole", "src\Mystira.App.CosmosConsole\Mystira.App.CosmosConsole.csproj", "{DFA869D7-4638-44B4-B36F-5D10E62605D4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.CosmosConsole", "tools\Mystira.App.CosmosConsole\Mystira.App.CosmosConsole.csproj", "{DFA869D7-4638-44B4-B36F-5D10E62605D4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.Admin.Api.Tests", "tests\Mystira.App.Admin.Api.Tests\Mystira.App.Admin.Api.Tests.csproj", "{3EF25EF9-9ADA-4BA9-8BE3-2613E82C73ED}"
 EndProject
