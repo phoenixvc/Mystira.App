@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import InfrastructurePanel from './components/InfrastructurePanel';
 import CosmosExplorer from './components/CosmosExplorer';
+import MigrationManager from './components/MigrationManager';
 import './App.css';
 
 type View = 'dashboard' | 'cosmos' | 'migration' | 'infrastructure';
@@ -75,12 +76,7 @@ function App() {
 
         {currentView === 'cosmos' && <CosmosExplorer />}
 
-        {currentView === 'migration' && (
-          <div className="p-8">
-            <h2 className="text-3xl font-bold mb-4">Migration Manager</h2>
-            <p className="text-gray-600">Coming soon...</p>
-          </div>
-        )}
+        {currentView === 'migration' && <MigrationManager />}
 
         {currentView === 'infrastructure' && <InfrastructurePanel />}
       </main>
