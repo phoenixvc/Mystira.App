@@ -348,43 +348,43 @@ function MigrationManager() {
 
             {/* Blob Storage Configuration */}
             <div className="mb-6">
-              <h4 className="text-lg font-medium text-gray-900 mb-3">Blob Storage Connections</h4>
+              <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Blob Storage Connections</h4>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Source Storage Connection String
                   </label>
                   <input
                     type="text"
                     value={config.sourceStorageConnection}
                     onChange={(e) => handleConfigChange('sourceStorageConnection', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="DefaultEndpointsProtocol=https;AccountName=sourcestorage;..."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Destination Storage Connection String
                   </label>
                   <input
                     type="text"
                     value={config.destStorageConnection}
                     onChange={(e) => handleConfigChange('destStorageConnection', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="DefaultEndpointsProtocol=https;AccountName=deststorage;..."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Container Name
                   </label>
                   <input
                     type="text"
                     value={config.containerName}
                     onChange={(e) => handleConfigChange('containerName', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="media-assets"
                   />
                 </div>
@@ -394,7 +394,7 @@ function MigrationManager() {
             <div className="flex justify-end">
               <button
                 onClick={() => setCurrentStep('select')}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-6 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
               >
                 Next: Select Resources
               </button>
@@ -424,7 +424,7 @@ function MigrationManager() {
               </div>
 
               <div className="space-y-3">
-                <label className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <label className="flex items-center p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedResources.scenarios}
@@ -432,14 +432,14 @@ function MigrationManager() {
                     className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                   />
                   <div className="ml-3">
-                    <div className="font-medium text-gray-900">Scenarios</div>
-                    <div className="text-sm text-gray-500">
+                    <div className="font-medium text-gray-900 dark:text-white">Scenarios</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
                       Migrate all game scenarios from the Scenarios container
                     </div>
                   </div>
                 </label>
 
-                <label className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <label className="flex items-center p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedResources.bundles}
@@ -447,14 +447,14 @@ function MigrationManager() {
                     className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                   />
                   <div className="ml-3">
-                    <div className="font-medium text-gray-900">Content Bundles</div>
-                    <div className="text-sm text-gray-500">
+                    <div className="font-medium text-gray-900 dark:text-white">Content Bundles</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
                       Migrate all content bundles from the ContentBundles container
                     </div>
                   </div>
                 </label>
 
-                <label className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <label className="flex items-center p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedResources.mediaMetadata}
@@ -462,14 +462,14 @@ function MigrationManager() {
                     className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                   />
                   <div className="ml-3">
-                    <div className="font-medium text-gray-900">Media Assets Metadata</div>
-                    <div className="text-sm text-gray-500">
+                    <div className="font-medium text-gray-900 dark:text-white">Media Assets Metadata</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
                       Migrate media asset records from the MediaAssets container
                     </div>
                   </div>
                 </label>
 
-                <label className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                <label className="flex items-center p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedResources.blobStorage}
@@ -477,8 +477,8 @@ function MigrationManager() {
                     className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                   />
                   <div className="ml-3">
-                    <div className="font-medium text-gray-900">Blob Storage Files</div>
-                    <div className="text-sm text-gray-500">
+                    <div className="font-medium text-gray-900 dark:text-white">Blob Storage Files</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
                       Copy all blob files from source storage container to destination
                     </div>
                   </div>
@@ -489,14 +489,14 @@ function MigrationManager() {
             <div className="flex justify-between">
               <button
                 onClick={() => setCurrentStep('configure')}
-                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-6 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               >
                 Back
               </button>
               <button
                 onClick={startMigration}
                 disabled={!Object.values(selectedResources).some((v) => v)}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Start Migration
               </button>
@@ -506,16 +506,16 @@ function MigrationManager() {
 
         {/* Step 3: Migration in Progress */}
         {currentStep === 'running' && (
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Migration in Progress</h3>
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Migration in Progress</h3>
 
             <div className="space-y-6">
               {/* Current Operation */}
               <div className="flex items-center space-x-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
                 <div>
-                  <div className="font-medium text-gray-900">{currentOperation}</div>
-                  <div className="text-sm text-gray-500">Please wait while migration is in progress...</div>
+                  <div className="font-medium text-gray-900 dark:text-white">{currentOperation}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Please wait while migration is in progress...</div>
                 </div>
               </div>
 
@@ -531,20 +531,20 @@ function MigrationManager() {
 
         {/* Step 4: Migration Complete */}
         {currentStep === 'complete' && migrationResults && (
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Migration Complete</h3>
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Migration Complete</h3>
 
             {/* Overall Result */}
             {migrationResults.success ? (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
+              <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-6 mb-6">
                 <div className="flex items-start">
                   <div className="text-4xl mr-4">✅</div>
                   <div className="flex-1">
-                    <h4 className="text-lg font-semibold text-green-900 mb-2">
+                    <h4 className="text-lg font-semibold text-green-900 dark:text-green-300 mb-2">
                       Migration Successful
                     </h4>
                     {migrationResults.result && (
-                      <div className="text-green-800 space-y-1">
+                      <div className="text-green-800 dark:text-green-200 space-y-1">
                         <div>
                           <strong>Total Items:</strong> {migrationResults.result.totalItems}
                         </div>
@@ -552,7 +552,7 @@ function MigrationManager() {
                           <strong>Successful:</strong> {migrationResults.result.totalSuccess}
                         </div>
                         {migrationResults.result.totalFailures > 0 && (
-                          <div className="text-yellow-700">
+                          <div className="text-yellow-700 dark:text-yellow-400">
                             <strong>Failed:</strong> {migrationResults.result.totalFailures}
                           </div>
                         )}
@@ -562,14 +562,14 @@ function MigrationManager() {
                 </div>
               </div>
             ) : (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
+              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-6">
                 <div className="flex items-start">
                   <div className="text-4xl mr-4">❌</div>
                   <div className="flex-1">
-                    <h4 className="text-lg font-semibold text-red-900 mb-2">
+                    <h4 className="text-lg font-semibold text-red-900 dark:text-red-300 mb-2">
                       Migration Failed
                     </h4>
-                    <p className="text-red-800">{migrationResults.error || 'An error occurred during migration'}</p>
+                    <p className="text-red-800 dark:text-red-200">{migrationResults.error || 'An error occurred during migration'}</p>
                   </div>
                 </div>
               </div>
@@ -578,40 +578,40 @@ function MigrationManager() {
             {/* Detailed Results */}
             {migrationResults.result && migrationResults.result.results.length > 0 && (
               <div className="mb-6">
-                <h4 className="font-semibold text-gray-900 mb-3">Detailed Results</h4>
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Detailed Results</h4>
                 <div className="space-y-3">
                   {migrationResults.result.results.map((result, index) => (
                     <div
                       key={index}
                       className={`border rounded-lg p-4 ${
                         result.success
-                          ? 'border-green-200 bg-green-50'
-                          : 'border-red-200 bg-red-50'
+                          ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30'
+                          : 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30'
                       }`}
                     >
                       <div className="flex justify-between items-start mb-2">
-                        <div className="font-medium">
+                        <div className="font-medium text-gray-900 dark:text-white">
                           {result.success ? '✅' : '❌'} Operation {index + 1}
                         </div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
                           Duration: {result.duration}
                         </div>
                       </div>
-                      <div className="text-sm space-y-1">
+                      <div className="text-sm space-y-1 text-gray-900 dark:text-gray-200">
                         <div>Total Items: {result.totalItems}</div>
-                        <div className="text-green-700">Successful: {result.successCount}</div>
+                        <div className="text-green-700 dark:text-green-300">Successful: {result.successCount}</div>
                         {result.failureCount > 0 && (
-                          <div className="text-red-700">Failed: {result.failureCount}</div>
+                          <div className="text-red-700 dark:text-red-300">Failed: {result.failureCount}</div>
                         )}
                       </div>
 
                       {/* Errors */}
                       {result.errors && result.errors.length > 0 && (
                         <div className="mt-3">
-                          <div className="font-medium text-red-900 mb-1">Errors:</div>
-                          <div className="bg-red-100 rounded p-2 max-h-32 overflow-y-auto">
+                          <div className="font-medium text-red-900 dark:text-red-300 mb-1">Errors:</div>
+                          <div className="bg-red-100 dark:bg-red-900/50 rounded p-2 max-h-32 overflow-y-auto">
                             {result.errors.map((error, errorIndex) => (
-                              <div key={errorIndex} className="text-sm text-red-800 mb-1">
+                              <div key={errorIndex} className="text-sm text-red-800 dark:text-red-200 mb-1">
                                 • {error}
                               </div>
                             ))}
@@ -627,7 +627,7 @@ function MigrationManager() {
             <div className="flex justify-end">
               <button
                 onClick={resetMigration}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-6 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
               >
                 Start New Migration
               </button>
@@ -636,9 +636,9 @@ function MigrationManager() {
         )}
 
         {/* Info Box */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-semibold text-blue-900 mb-2">ℹ️ Migration Information</h4>
-          <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+        <div className="mt-8 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">ℹ️ Migration Information</h4>
+          <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
             <li>Migrations use upsert operations (existing items are overwritten)</li>
             <li>Blob storage files are copied only if they don't exist in destination</li>
             <li>Connection strings are not stored and must be re-entered each time</li>

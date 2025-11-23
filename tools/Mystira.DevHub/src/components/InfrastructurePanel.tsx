@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
-import { useResourcesStore } from '../stores/resourcesStore';
+import { useEffect, useState } from 'react';
 import { useDeploymentsStore } from '../stores/deploymentsStore';
+import { useResourcesStore } from '../stores/resourcesStore';
 import type { CommandResponse, WhatIfChange, WorkflowStatus } from '../types';
 import BicepViewer from './BicepViewer';
-import WhatIfViewer from './WhatIfViewer';
-import ResourceGrid from './ResourceGrid';
-import DeploymentHistory from './DeploymentHistory';
 import { ConfirmDialog } from './ConfirmDialog';
+import DeploymentHistory from './DeploymentHistory';
+import ResourceGrid from './ResourceGrid';
+import WhatIfViewer from './WhatIfViewer';
 
 type Tab = 'actions' | 'bicep' | 'resources' | 'history';
 
@@ -229,11 +229,11 @@ function InfrastructurePanel() {
               <button
                 onClick={() => handleAction('validate')}
                 disabled={loading}
-                className="flex flex-col items-center p-6 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex flex-col items-center p-6 bg-white dark:bg-gray-800 border-2 border-blue-200 dark:border-blue-800 rounded-lg hover:border-blue-400 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="text-4xl mb-2">🔍</div>
-                <div className="text-lg font-semibold text-gray-900">Validate</div>
-                <div className="text-sm text-gray-500 text-center mt-1">
+                <div className="text-lg font-semibold text-gray-900 dark:text-white">Validate</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
                   Check Bicep templates
                 </div>
               </button>
@@ -241,11 +241,11 @@ function InfrastructurePanel() {
               <button
                 onClick={() => handleAction('preview')}
                 disabled={loading}
-                className="flex flex-col items-center p-6 bg-white border-2 border-yellow-200 rounded-lg hover:border-yellow-400 hover:bg-yellow-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex flex-col items-center p-6 bg-white dark:bg-gray-800 border-2 border-yellow-200 dark:border-yellow-800 rounded-lg hover:border-yellow-400 dark:hover:border-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="text-4xl mb-2">👁️</div>
-                <div className="text-lg font-semibold text-gray-900">Preview</div>
-                <div className="text-sm text-gray-500 text-center mt-1">
+                <div className="text-lg font-semibold text-gray-900 dark:text-white">Preview</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
                   What-if analysis
                 </div>
               </button>
@@ -253,11 +253,11 @@ function InfrastructurePanel() {
               <button
                 onClick={() => handleAction('deploy')}
                 disabled={loading}
-                className="flex flex-col items-center p-6 bg-white border-2 border-green-200 rounded-lg hover:border-green-400 hover:bg-green-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex flex-col items-center p-6 bg-white dark:bg-gray-800 border-2 border-green-200 dark:border-green-800 rounded-lg hover:border-green-400 dark:hover:border-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="text-4xl mb-2">🚀</div>
-                <div className="text-lg font-semibold text-gray-900">Deploy</div>
-                <div className="text-sm text-gray-500 text-center mt-1">
+                <div className="text-lg font-semibold text-gray-900 dark:text-white">Deploy</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
                   Deploy infrastructure
                 </div>
               </button>
@@ -265,22 +265,23 @@ function InfrastructurePanel() {
               <button
                 onClick={() => setShowDestroyConfirm(true)}
                 disabled={loading}
-                className="flex flex-col items-center p-6 bg-white dark:bg-gray-800 border-2 border-red-200 dark:border-red-800 rounded-lg hover:border-red-400 dark:hover:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="destroy-button flex flex-col items-center p-6 bg-white dark:bg-gray-800 border-2 border-red-200 dark:border-red-800 rounded-lg hover:border-red-400 dark:hover:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
               >
-                <div className="text-4xl mb-2">💥</div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">Destroy</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
+                <div className="destroy-icon text-4xl mb-2 relative z-10">💥</div>
+                <div className="text-lg font-semibold text-gray-900 dark:text-white relative z-10">Destroy</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1 relative z-10">
                   Delete all resources
                 </div>
+                <div className="destroy-pulse absolute inset-0 bg-red-500 opacity-0"></div>
               </button>
             </div>
 
             {/* Loading State */}
             {loading && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
+              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-8">
                 <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
-                  <span className="text-blue-800">Executing command...</span>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 dark:border-blue-400 mr-3"></div>
+                  <span className="text-blue-800 dark:text-blue-200">Executing command...</span>
                 </div>
               </div>
             )}
@@ -290,13 +291,13 @@ function InfrastructurePanel() {
               <div
                 className={`rounded-lg p-6 mb-8 ${
                   lastResponse.success
-                    ? 'bg-green-50 border border-green-200'
-                    : 'bg-red-50 border border-red-200'
+                    ? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800'
+                    : 'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800'
                 }`}
               >
                 <h3
                   className={`text-lg font-semibold mb-2 ${
-                    lastResponse.success ? 'text-green-900' : 'text-red-900'
+                    lastResponse.success ? 'text-green-900 dark:text-green-300' : 'text-red-900 dark:text-red-300'
                   }`}
                 >
                   {lastResponse.success ? '✅ Success' : '❌ Error'}
@@ -305,7 +306,7 @@ function InfrastructurePanel() {
                 {lastResponse.message && (
                   <p
                     className={`mb-3 ${
-                      lastResponse.success ? 'text-green-800' : 'text-red-800'
+                      lastResponse.success ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'
                     }`}
                   >
                     {lastResponse.message}
@@ -313,7 +314,7 @@ function InfrastructurePanel() {
                 )}
 
                 {lastResponse.error && (
-                  <pre className="bg-red-100 p-3 rounded text-sm text-red-900 overflow-auto">
+                  <pre className="bg-red-100 dark:bg-red-900/50 p-3 rounded text-sm text-red-900 dark:text-red-200 overflow-auto">
                     {lastResponse.error}
                   </pre>
                 )}
@@ -322,7 +323,7 @@ function InfrastructurePanel() {
                   <details className="mt-3">
                     <summary
                       className={`cursor-pointer font-medium ${
-                        lastResponse.success ? 'text-green-700' : 'text-red-700'
+                        lastResponse.success ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
                       }`}
                     >
                       View Details
@@ -330,8 +331,8 @@ function InfrastructurePanel() {
                     <pre
                       className={`mt-2 p-3 rounded text-sm overflow-auto ${
                         lastResponse.success
-                          ? 'bg-green-100 text-green-900'
-                          : 'bg-red-100 text-red-900'
+                          ? 'bg-green-100 dark:bg-green-900/50 text-green-900 dark:text-green-200'
+                          : 'bg-red-100 dark:bg-red-900/50 text-red-900 dark:text-red-200'
                       }`}
                     >
                       {JSON.stringify(lastResponse.result, null, 2) || 'No details available'}
@@ -405,9 +406,9 @@ function InfrastructurePanel() {
             )}
 
             {/* Info Box */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-900 mb-2">ℹ️ Information</h4>
-              <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">ℹ️ Information</h4>
+              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
                 <li>Workflow: {workflowFile}</li>
                 <li>Repository: {repository}</li>
                 <li>All actions trigger GitHub Actions workflows</li>
@@ -428,19 +429,19 @@ function InfrastructurePanel() {
         {activeTab === 'resources' && (
           <div>
             {resourcesLoading && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
-                <p className="text-blue-800">Loading Azure resources...</p>
+              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-8 text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mb-3"></div>
+                <p className="text-blue-800 dark:text-blue-200">Loading Azure resources...</p>
               </div>
             )}
 
             {resourcesError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-4">
-                <h3 className="text-lg font-semibold text-red-900 mb-2">❌ Failed to Load Resources</h3>
-                <p className="text-red-800 mb-3">{resourcesError}</p>
+              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-4">
+                <h3 className="text-lg font-semibold text-red-900 dark:text-red-300 mb-2">❌ Failed to Load Resources</h3>
+                <p className="text-red-800 dark:text-red-200 mb-3">{resourcesError}</p>
                 <button
                   onClick={() => fetchResources(true)}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
                 >
                   Retry
                 </button>
@@ -457,19 +458,19 @@ function InfrastructurePanel() {
         {activeTab === 'history' && (
           <div>
             {deploymentsLoading && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
-                <p className="text-blue-800">Loading deployment history...</p>
+              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-8 text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mb-3"></div>
+                <p className="text-blue-800 dark:text-blue-200">Loading deployment history...</p>
               </div>
             )}
 
             {deploymentsError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-4">
-                <h3 className="text-lg font-semibold text-red-900 mb-2">❌ Failed to Load Deployments</h3>
-                <p className="text-red-800 mb-3">{deploymentsError}</p>
+              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-4">
+                <h3 className="text-lg font-semibold text-red-900 dark:text-red-300 mb-2">❌ Failed to Load Deployments</h3>
+                <p className="text-red-800 dark:text-red-200 mb-3">{deploymentsError}</p>
                 <button
                   onClick={() => fetchDeployments(true)}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
                 >
                   Retry
                 </button>

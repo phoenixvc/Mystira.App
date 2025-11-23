@@ -50,6 +50,13 @@ function ServiceManager() {
   };
 
   useEffect(() => {
+    // Check if we're in a Tauri environment
+    const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+    if (!isTauri) {
+      console.warn('Not running in Tauri environment. Some features may not work.');
+      addToast('Warning: Not running in Tauri. Please use the Tauri application window.', 'warning', 5000);
+    }
+
     // Get repository root from Tauri - use current path as default
     const loadRepoRoot = async () => {
       try {
@@ -175,11 +182,15 @@ function ServiceManager() {
       
       // Check for port conflicts before starting
       if (config?.port) {
-        const available = await invoke<boolean>('check_port_available', { port: config.port });
-        if (!available) {
-          addToast(`Port ${config.port} is already in use!`, 'warning', 7000);
-          setLoading({ ...loading, [serviceName]: false });
-          return;
+        try {
+          const available = await invoke<boolean>('check_port_available', { port: config.port });
+          if (!available) {
+            addToast(`Port ${config.port} is already in use!`, 'warning', 7000);
+            setLoading({ ...loading, [serviceName]: false });
+            return;
+          }
+        } catch (portError) {
+          console.warn('Port check failed, continuing anyway:', portError);
         }
       }
       
@@ -198,8 +209,20 @@ function ServiceManager() {
       setAutoScroll((prev) => ({ ...prev, [serviceName]: true }));
       await refreshServices();
       addToast(`${config?.displayName || serviceName} started successfully`, 'success');
-    } catch (error) {
-      addToast(`Failed to start ${serviceName}: ${error}`, 'error');
+    } catch (error: any) {
+      const errorMessage = error?.message || String(error);
+      console.error(`Failed to start ${serviceName}:`, error);
+      
+      // Provide more helpful error messages
+      if (errorMessage.includes('__TAURI_IPC__') || errorMessage.includes('not a function')) {
+        addToast(
+          `Tauri API error: Make sure you're running DevHub through Tauri (not in a browser). Restart the app if the issue persists.`,
+          'error',
+          10000
+        );
+      } else {
+        addToast(`Failed to start ${serviceName}: ${errorMessage}`, 'error');
+      }
     } finally {
       setLoading({ ...loading, [serviceName]: false });
     }
