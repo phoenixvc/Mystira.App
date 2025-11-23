@@ -71,14 +71,14 @@ html, body {
 /* Global Offline Indicator */
 .offline-indicator {
     position: fixed;
-    top: 0;
+    top: 56px; /* Position below navbar (navbar height is ~56px) */
     left: 0;
     right: 0;
     background-color: var(--danger-color);
     color: white;
     text-align: center;
     padding: 0.5rem;
-    z-index: 9999;
+    z-index: 1030; /* Bootstrap navbar is 1030, this should be below it */
     font-size: 0.875rem;
 }
 
@@ -264,7 +264,7 @@ html {
 
 /* Global Skip Link */
 .skip-link {
-    position: absolute;
+    position: fixed;
     top: -40px;
     left: 0;
     background: var(--primary-color);
@@ -272,7 +272,7 @@ html {
     padding: 8px 16px;
     text-decoration: none;
     border-radius: 0 0 4px 0;
-    z-index: 10000;
+    z-index: 10001; /* Above everything including navbar and offline indicator */
 }
 
 .skip-link:focus {
