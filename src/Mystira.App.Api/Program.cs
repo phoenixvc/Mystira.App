@@ -301,6 +301,8 @@ builder.Services.AddScoped<IClientApiService, ClientApiService>();
 builder.Services.AddScoped<IAppStatusService, AppStatusService>();
 builder.Services.AddScoped<IMediaApiService, MediaApiService>();
 builder.Services.AddScoped<IMediaMetadataService, MediaMetadataService>();
+// Register Application.Ports.IMediaMetadataService for use cases
+builder.Services.AddScoped<Mystira.App.Application.Ports.IMediaMetadataService, MediaMetadataServiceAdapter>();
 builder.Services.AddScoped<ICharacterMediaMetadataService, CharacterMediaMetadataService>();
 builder.Services.AddScoped<IBundleService, BundleService>();
 builder.Services.AddScoped<ICharacterMapFileService, CharacterMapFileService>();
