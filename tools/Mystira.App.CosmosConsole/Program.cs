@@ -94,10 +94,20 @@ internal class Program
                     }
                     return await ExecuteMigration(serviceProvider, args, logger, configuration);
 
+                case "infra":
+                case "infrastructure":
+                    if (args.Length < 2)
+                    {
+                        ShowInfrastructureHelp();
+                        return 1;
+                    }
+                    return await ExecuteInfrastructure(args, logger);
+
                 default:
                     Console.WriteLine($"Unknown command: {command}");
-                    Console.WriteLine("Available commands: export, stats, migrate");
+                    Console.WriteLine("Available commands: export, stats, migrate, infrastructure");
                     Console.WriteLine("Use 'migrate --help' for migration options");
+                    Console.WriteLine("Use 'infrastructure --help' for infrastructure deployment options");
                     return 1;
             }
 
@@ -206,6 +216,7 @@ internal class Program
         Console.WriteLine("  export --output <file.csv>     Export game sessions to CSV");
         Console.WriteLine("  stats                          Show scenario completion statistics");
         Console.WriteLine("  migrate <type> [options]       Migrate data between environments");
+        Console.WriteLine("  infrastructure <action>        Deploy or manage infrastructure");
         Console.WriteLine("\nMigration Commands:");
         Console.WriteLine("  migrate --help                 Show detailed migration help");
         Console.WriteLine("  migrate scenarios              Migrate scenarios");
@@ -213,6 +224,11 @@ internal class Program
         Console.WriteLine("  migrate media-metadata         Migrate media asset metadata");
         Console.WriteLine("  migrate blobs                  Migrate blob storage files");
         Console.WriteLine("  migrate all                    Migrate everything");
+        Console.WriteLine("\nInfrastructure Commands:");
+        Console.WriteLine("  infrastructure --help          Show infrastructure deployment help");
+        Console.WriteLine("  infrastructure validate        Validate infrastructure templates");
+        Console.WriteLine("  infrastructure preview         Preview infrastructure changes");
+        Console.WriteLine("  infrastructure deploy          Deploy infrastructure");
     }
 
     private static void ShowMigrateHelp()
@@ -409,6 +425,136 @@ internal class Program
             {
                 Console.WriteLine($"    ... and {result.Errors.Count - 10} more errors");
             }
+        }
+    }
+
+    private static void ShowInfrastructureHelp()
+    {
+        Console.WriteLine("Mystira Infrastructure Deployment Tool");
+        Console.WriteLine("\nThis tool uses GitHub CLI (gh) to trigger infrastructure deployment workflows.");
+        Console.WriteLine("\nPrerequisites:");
+        Console.WriteLine("  1. Install GitHub CLI: https://cli.github.com/");
+        Console.WriteLine("  2. Authenticate: gh auth login");
+        Console.WriteLine("  3. Ensure you have access to the repository");
+        Console.WriteLine("\nAvailable Actions:");
+        Console.WriteLine("  validate    Validate Bicep templates without deploying");
+        Console.WriteLine("  preview     Preview infrastructure changes (what-if analysis)");
+        Console.WriteLine("  deploy      Deploy infrastructure to Azure");
+        Console.WriteLine("\nExamples:");
+        Console.WriteLine("  # Validate templates");
+        Console.WriteLine("  dotnet run -- infrastructure validate");
+        Console.WriteLine("");
+        Console.WriteLine("  # Preview changes");
+        Console.WriteLine("  dotnet run -- infrastructure preview");
+        Console.WriteLine("");
+        Console.WriteLine("  # Deploy infrastructure");
+        Console.WriteLine("  dotnet run -- infrastructure deploy");
+        Console.WriteLine("\nNote: The deployment workflow must be configured in GitHub Actions");
+        Console.WriteLine("      with the required secrets (AZURE_CLIENT_ID, AZURE_TENANT_ID, JWT_SECRET_KEY, etc.)");
+    }
+
+    private static async Task<int> ExecuteInfrastructure(string[] args, ILogger logger)
+    {
+        var action = args[1].ToLower();
+
+        if (action == "--help" || action == "-h")
+        {
+            ShowInfrastructureHelp();
+            return 0;
+        }
+
+        // Validate action
+        var validActions = new[] { "validate", "preview", "deploy" };
+        if (!validActions.Contains(action))
+        {
+            Console.WriteLine($"Error: Invalid action '{action}'");
+            Console.WriteLine($"Valid actions: {string.Join(", ", validActions)}");
+            Console.WriteLine("Use 'infrastructure --help' for more information");
+            return 1;
+        }
+
+        // Check if gh CLI is installed
+        try
+        {
+            var process = new System.Diagnostics.Process
+            {
+                StartInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "gh",
+                    Arguments = "--version",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+
+            process.Start();
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode != 0)
+            {
+                Console.WriteLine("Error: GitHub CLI (gh) is not installed or not working properly.");
+                Console.WriteLine("Install it from: https://cli.github.com/");
+                return 1;
+            }
+        }
+        catch (Exception)
+        {
+            Console.WriteLine("Error: GitHub CLI (gh) is not installed.");
+            Console.WriteLine("Install it from: https://cli.github.com/");
+            return 1;
+        }
+
+        // Get current repository information
+        logger.LogInformation("Triggering infrastructure deployment workflow: {Action}", action);
+        Console.WriteLine($"🚀 Triggering infrastructure deployment workflow with action: {action}");
+        Console.WriteLine("This will dispatch the 'Infrastructure Deployment - Dev Environment' workflow...\n");
+
+        try
+        {
+            // Trigger the workflow
+            var process = new System.Diagnostics.Process
+            {
+                StartInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "gh",
+                    Arguments = $"workflow run \"infrastructure-deploy-dev.yml\" --field action={action} --repo phoenixvc/Mystira.App",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+
+            process.Start();
+            var output = await process.StandardOutput.ReadToEndAsync();
+            var error = await process.StandardError.ReadToEndAsync();
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode != 0)
+            {
+                Console.WriteLine($"❌ Failed to trigger workflow:");
+                Console.WriteLine(error);
+                logger.LogError("Failed to trigger workflow: {Error}", error);
+                return 1;
+            }
+
+            Console.WriteLine($"✅ Workflow triggered successfully!");
+            Console.WriteLine(output);
+            Console.WriteLine("\n📊 View workflow run:");
+            Console.WriteLine("   gh run list --workflow=infrastructure-deploy-dev.yml --limit 1");
+            Console.WriteLine("\n🔍 Watch workflow progress:");
+            Console.WriteLine("   gh run watch");
+            
+            logger.LogInformation("Infrastructure workflow triggered successfully");
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error triggering infrastructure workflow");
+            Console.WriteLine($"❌ Error: {ex.Message}");
+            return 1;
         }
     }
 }

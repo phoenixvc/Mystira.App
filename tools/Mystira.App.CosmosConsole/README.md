@@ -260,16 +260,68 @@ Scenario: The Lost Kingdom
 ================================
 ```
 
+### Infrastructure Deployment (NEW)
+Trigger infrastructure deployment workflows directly from the console using GitHub CLI.
+
+**Prerequisites:**
+- Install GitHub CLI: https://cli.github.com/
+- Authenticate with: `gh auth login`
+- Ensure you have access to the repository
+
+**Usage:**
+```bash
+# Show infrastructure help
+dotnet run -- infrastructure --help
+
+# Validate Bicep templates
+dotnet run -- infrastructure validate
+
+# Preview infrastructure changes (what-if analysis)
+dotnet run -- infrastructure preview
+
+# Deploy infrastructure to Azure
+dotnet run -- infrastructure deploy
+```
+
+**Features:**
+- ✅ Triggers GitHub Actions workflows remotely
+- ✅ Validate Bicep templates before deployment
+- ✅ Preview infrastructure changes with what-if analysis
+- ✅ Deploy infrastructure changes
+- ✅ View workflow status and progress
+
+**Output:**
+- Workflow trigger confirmation
+- Commands to view workflow run status
+- Commands to watch workflow progress in real-time
+
+**Example:**
+```bash
+$ dotnet run -- infrastructure deploy
+🚀 Triggering infrastructure deployment workflow with action: deploy
+This will dispatch the 'Infrastructure Deployment - Dev Environment' workflow...
+
+✅ Workflow triggered successfully!
+
+📊 View workflow run:
+   gh run list --workflow=infrastructure-deploy-dev.yml --limit 1
+
+🔍 Watch workflow progress:
+   gh run watch
+```
+
 ## Requirements
 
-- .NET 8.0 SDK
+- .NET 9.0 SDK
 - Access to Azure Cosmos DB account
 - Valid Cosmos DB connection string
 - Appropriate permissions to read GameSessions, Accounts, and Scenarios containers
+- GitHub CLI (gh) for infrastructure deployment features
 
 ## Security Notes
 
 - Store Cosmos DB connection strings securely
 - Use Azure AD authentication where possible
 - Never commit connection strings to source control
+- GitHub CLI respects your authentication and repository access permissions
 - Ensure least privilege access for the Cosmos DB account

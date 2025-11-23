@@ -272,11 +272,44 @@ Infrastructure deployment is **manual only** to prevent accidental changes. Use 
 2. Click **"Run workflow"**
 3. Select the action to perform:
    - **validate**: Validates Bicep templates without deploying
+   - **preview**: Previews infrastructure changes (what-if analysis)
    - **deploy**: Validates and deploys infrastructure
    - **destroy**: Deletes all infrastructure (requires confirmation)
 4. Click **"Run workflow"**
 
-**Note**: Destroy action requires checking the "Confirm destruction" checkbox.
+**Note**: 
+- Destroy action requires checking the "Confirm destruction" checkbox
+- Preview action automatically runs on pull requests that modify infrastructure files
+- Preview action generates a what-if analysis comment on the PR
+
+### Deployment via CosmosConsole Tool
+
+You can also trigger infrastructure deployments directly from the CosmosConsole tool:
+
+```bash
+# Navigate to tools directory
+cd tools/Mystira.App.CosmosConsole
+
+# Prerequisites: Install and authenticate with GitHub CLI
+gh auth login
+
+# Validate templates
+dotnet run -- infrastructure validate
+
+# Preview changes
+dotnet run -- infrastructure preview
+
+# Deploy infrastructure
+dotnet run -- infrastructure deploy
+```
+
+**Benefits of using CosmosConsole for deployment:**
+- ✅ Trigger workflows from command line
+- ✅ No need to navigate to GitHub Actions UI
+- ✅ Integrated with other management operations
+- ✅ View workflow status and progress commands
+
+See `tools/Mystira.App.CosmosConsole/README.md` for detailed deployment documentation.
 
 ### Manual Deployment via Azure CLI
 
@@ -301,7 +334,7 @@ az deployment group create \
   --parameters acsConnectionString="<your-acs-connection>"
 ```
 
-### Manual Deployment via CosmosConsole Tool
+### Data Migration via CosmosConsole Tool
 
 For data migration between environments, use the CosmosConsole tool located in `/tools/Mystira.App.CosmosConsole`:
 
