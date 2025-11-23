@@ -1,11 +1,18 @@
 @using Mystira.App.PWA.Models
 @using Mystira.App.PWA.Services
+@using Mystira.App.PWA.Components
 @inherits LayoutComponentBase
 @implements IDisposable
 
 @inject IJSRuntime JSRuntime
 
 <div class="page">
+    <!-- COPPA Compliance Notice (FEAT-INC-1: Work in Progress) -->
+    @if (!coppaBannerDismissed)
+    {
+        <CoppaComplianceBanner OnDismiss="DismissCoppaBanner" />
+    }
+
     <!-- Offline Indicator -->
     <div id="offline-indicator" class="offline-indicator" style="display: none;">
         <i class="fas fa-wifi me-2"></i>
@@ -157,6 +164,7 @@
     private bool isProfileMenuOpen;
     private ElementReference profileMenuElement;
     private IJSObjectReference? outsideClickHandler;
+    private bool coppaBannerDismissed = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -251,6 +259,12 @@
             await LoadAuthenticationStateAsync();
             Navigation.NavigateTo("/");
         }
+    }
+
+    private void DismissCoppaBanner()
+    {
+        coppaBannerDismissed = true;
+        StateHasChanged();
     }
 
     public async void Dispose()

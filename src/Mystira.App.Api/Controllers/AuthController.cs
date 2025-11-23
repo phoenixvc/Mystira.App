@@ -1,12 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Mystira.App.Api.Services;
 using Mystira.App.Contracts.Requests.Auth;
 using Mystira.App.Contracts.Responses.Auth;
+using Mystira.App.Shared.Logging;
 
 namespace Mystira.App.Api.Controllers
 {
     [Route("api/auth")]
     [ApiController]
+    [EnableRateLimiting("auth")] // Apply strict rate limiting to all auth endpoints (BUG-5)
     public class AuthController : ControllerBase
     {
         private readonly IConfiguration _configuration;
@@ -36,7 +39,11 @@ namespace Mystira.App.Api.Controllers
 
             var (success, message, code) = await _passwordlessAuthService.RequestSignupAsync(request.Email, request.DisplayName);
 
-            _logger.LogInformation("Passwordless signup request: email={Email}, success={Success}", request.Email, success);
+            // Use PII redaction for COPPA/GDPR compliance
+            _logger.LogInformation("Passwordless signup request: user={UserHash}, domain={EmailDomain}, success={Success}",
+                PiiRedactor.HashEmail(request.Email),
+                PiiRedactor.RedactEmail(request.Email),
+                success);
 
             return Ok(new PasswordlessSignupResponse
             {
@@ -69,7 +76,9 @@ namespace Mystira.App.Api.Controllers
                 });
             }
 
-            _logger.LogInformation("Passwordless signup verified: email={Email}", request.Email);
+            // Use PII redaction for COPPA/GDPR compliance
+            _logger.LogInformation("Passwordless signup verified: user={UserHash}",
+                PiiRedactor.HashEmail(request.Email));
 
             var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName, account.Role);
             var refreshToken = _jwtService.GenerateRefreshToken();
@@ -100,7 +109,11 @@ namespace Mystira.App.Api.Controllers
 
             var (success, message, code) = await _passwordlessAuthService.RequestSigninAsync(request.Email);
 
-            _logger.LogInformation("Passwordless signin request: email={Email}, success={Success}", request.Email, success);
+            // Use PII redaction for COPPA/GDPR compliance
+            _logger.LogInformation("Passwordless signin request: user={UserHash}, domain={EmailDomain}, success={Success}",
+                PiiRedactor.HashEmail(request.Email),
+                PiiRedactor.RedactEmail(request.Email),
+                success);
 
             return Ok(new PasswordlessSigninResponse
             {
@@ -133,7 +146,9 @@ namespace Mystira.App.Api.Controllers
                 });
             }
 
-            _logger.LogInformation("Passwordless signin verified: email={Email}", request.Email);
+            // Use PII redaction for COPPA/GDPR compliance
+            _logger.LogInformation("Passwordless signin verified: user={UserHash}",
+                PiiRedactor.HashEmail(request.Email));
 
             var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName, account.Role);
             var refreshToken = _jwtService.GenerateRefreshToken();
