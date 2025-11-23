@@ -1,27 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useConnectionStore } from '../stores/connectionStore';
-
-interface QuickAction {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  action: () => void;
-  color: string;
-}
-
-interface RecentOperation {
-  id: string;
-  type: string;
-  title: string;
-  timestamp: string;
-  status: 'success' | 'failed' | 'in_progress';
-  details?: string;
-}
-
-interface DashboardProps {
-  onNavigate: (view: string) => void;
-}
+import type { QuickAction, RecentOperation, DashboardProps } from '../types';
 
 function Dashboard({ onNavigate }: DashboardProps) {
   // Use connection store instead of local state

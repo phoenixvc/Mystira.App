@@ -1,14 +1,6 @@
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/tauri';
-
-export interface ConnectionStatus {
-  name: string;
-  type: 'cosmos' | 'storage' | 'azurecli' | 'githubcli';
-  status: 'connected' | 'disconnected' | 'checking';
-  icon: string;
-  details?: string;
-  error?: string;
-}
+import type { CommandResponse, ConnectionStatus, ConnectionTestResult } from '../types';
 
 interface ConnectionState {
   connections: ConnectionStatus[];
@@ -63,7 +55,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       await get().testConnection(
         conn.type,
         conn.type === 'cosmos' || conn.type === 'storage'
-          ? (process.env as any)[`${conn.type.toUpperCase()}_CONNECTION_STRING`]
+          ? (process.env as Record<string, string | undefined>)[`${conn.type.toUpperCase()}_CONNECTION_STRING`]
           : undefined
       );
     }
@@ -73,7 +65,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 
   testConnection: async (type: string, connectionString?: string) => {
     try {
-      const response: any = await invoke('test_connection', {
+      const response = await invoke<CommandResponse<ConnectionTestResult>>('test_connection', {
         connectionType: type,
         connectionString: connectionString || null,
       });
@@ -94,7 +86,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
     } catch (error) {
       get().setConnectionStatus(type, {
         status: 'disconnected',
-        error: String(error),
+        error: error instanceof Error ? error.message : String(error),
         details: undefined,
       });
     }
@@ -117,7 +109,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   },
 }));
 
-function getConnectionDetails(type: string, result: any): string {
+function getConnectionDetails(type: string, result: ConnectionTestResult): string {
   switch (type) {
     case 'cosmos':
       return result.accountName || 'Connected';
@@ -131,3 +123,6 @@ function getConnectionDetails(type: string, result: any): string {
       return 'Connected';
   }
 }
+
+// Re-export ConnectionStatus for backward compatibility
+export type { ConnectionStatus };

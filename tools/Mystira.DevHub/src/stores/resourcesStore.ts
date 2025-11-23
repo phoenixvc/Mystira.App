@@ -1,19 +1,9 @@
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/tauri';
-
-export interface AzureResource {
-  id: string;
-  name: string;
-  type: string;
-  status: 'running' | 'stopped' | 'unknown';
-  region: string;
-  costToday: number;
-  lastUpdated: string;
-  properties: Record<string, string>;
-}
+import type { CommandResponse, AzureResource, AzureResourceMapped } from '../types';
 
 interface ResourcesState {
-  resources: AzureResource[];
+  resources: AzureResourceMapped[];
   isLoading: boolean;
   error: string | null;
   lastFetched: Date | null;
@@ -52,13 +42,13 @@ export const useResourcesStore = create<ResourcesState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const response: any = await invoke('get_azure_resources', {
+      const response = await invoke<CommandResponse<AzureResource[]>>('get_azure_resources', {
         subscriptionId: null,
         resourceGroup: null,
       });
 
       if (response.success && response.result) {
-        const mappedResources: AzureResource[] = response.result.map((resource: any) => ({
+        const mappedResources: AzureResourceMapped[] = response.result.map((resource) => ({
           id: resource.id,
           name: resource.name,
           type: resource.type,
@@ -90,7 +80,7 @@ export const useResourcesStore = create<ResourcesState>((set, get) => ({
     } catch (error) {
       set({
         isLoading: false,
-        error: String(error),
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   },

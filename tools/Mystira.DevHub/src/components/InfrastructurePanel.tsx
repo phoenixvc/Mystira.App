@@ -2,17 +2,11 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
 import { useResourcesStore } from '../stores/resourcesStore';
 import { useDeploymentsStore } from '../stores/deploymentsStore';
+import type { CommandResponse, WhatIfChange, WorkflowStatus } from '../types';
 import BicepViewer from './BicepViewer';
 import WhatIfViewer from './WhatIfViewer';
 import ResourceGrid from './ResourceGrid';
 import DeploymentHistory from './DeploymentHistory';
-
-interface CommandResponse {
-  success: boolean;
-  result?: any;
-  message?: string;
-  error?: string;
-}
 
 type Tab = 'actions' | 'bicep' | 'resources' | 'history';
 
@@ -20,8 +14,8 @@ function InfrastructurePanel() {
   const [activeTab, setActiveTab] = useState<Tab>('actions');
   const [loading, setLoading] = useState(false);
   const [lastResponse, setLastResponse] = useState<CommandResponse | null>(null);
-  const [workflowStatus, setWorkflowStatus] = useState<any>(null);
-  const [whatIfChanges, setWhatIfChanges] = useState<any[]>([]);
+  const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus | null>(null);
+  const [whatIfChanges, setWhatIfChanges] = useState<WhatIfChange[]>([]);
 
   const workflowFile = 'infrastructure-deploy-dev.yml';
   const repository = 'phoenixvc/Mystira.App';

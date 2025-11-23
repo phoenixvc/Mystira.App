@@ -1,17 +1,6 @@
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/tauri';
-
-export interface Deployment {
-  id: string;
-  timestamp: string;
-  action: 'deploy' | 'validate' | 'preview' | 'destroy';
-  status: 'success' | 'failed' | 'in_progress';
-  duration: string;
-  resourcesAffected?: number;
-  user: string;
-  message: string;
-  githubUrl?: string;
-}
+import type { CommandResponse, Deployment, GitHubWorkflowRun } from '../types';
 
 interface DeploymentsState {
   deployments: Deployment[];
@@ -56,13 +45,13 @@ export const useDeploymentsStore = create<DeploymentsState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const response: any = await invoke('get_github_deployments', {
+      const response = await invoke<CommandResponse<GitHubWorkflowRun[]>>('get_github_deployments', {
         repository,
         limit: 20,
       });
 
       if (response.success && response.result) {
-        const mappedDeployments: Deployment[] = response.result.map((run: any, index: number) => {
+        const mappedDeployments: Deployment[] = response.result.map((run, index) => {
           // Determine action type from workflow name
           let action: 'deploy' | 'validate' | 'preview' | 'destroy' = 'deploy';
           if (run.name?.toLowerCase().includes('validate')) action = 'validate';
@@ -116,7 +105,7 @@ export const useDeploymentsStore = create<DeploymentsState>((set, get) => ({
     } catch (error) {
       set({
         isLoading: false,
-        error: String(error),
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   },
