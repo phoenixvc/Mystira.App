@@ -54,7 +54,6 @@ public class StoryProtocolService : IStoryProtocolService
         try
         {
             // Get private key from Azure Key Vault or configuration
-            var privateKey = await GetPrivateKeyAsync();
             
             // TODO: Implement actual Story Protocol SDK integration
             // This is a placeholder that should be replaced with actual blockchain calls
