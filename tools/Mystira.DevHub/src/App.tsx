@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Dashboard from './components/Dashboard';
 import InfrastructurePanel from './components/InfrastructurePanel';
 import CosmosExplorer from './components/CosmosExplorer';
 import MigrationManager from './components/MigrationManager';
@@ -7,7 +8,7 @@ import './App.css';
 type View = 'dashboard' | 'cosmos' | 'migration' | 'infrastructure';
 
 function App() {
-  const [currentView, setCurrentView] = useState<View>('cosmos');
+  const [currentView, setCurrentView] = useState<View>('dashboard');
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -67,12 +68,7 @@ function App() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        {currentView === 'dashboard' && (
-          <div className="p-8">
-            <h2 className="text-3xl font-bold mb-4">Dashboard</h2>
-            <p className="text-gray-600">Coming soon...</p>
-          </div>
-        )}
+        {currentView === 'dashboard' && <Dashboard onNavigate={setCurrentView} />}
 
         {currentView === 'cosmos' && <CosmosExplorer />}
 
