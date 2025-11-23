@@ -1,6 +1,6 @@
 using Mystira.App.Domain.Models;
 
-namespace Mystira.App.Infrastructure.Data.Repositories;
+namespace Mystira.App.Application.Ports.Data;
 
 /// <summary>
 /// Repository interface for PendingSignup entity with domain-specific queries

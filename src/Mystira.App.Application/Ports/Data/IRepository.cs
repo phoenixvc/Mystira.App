@@ -1,4 +1,4 @@
-namespace Mystira.App.Infrastructure.Data.Repositories;
+namespace Mystira.App.Application.Ports.Data;
 
 /// <summary>
 /// Generic repository interface following the Repository pattern

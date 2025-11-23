@@ -1,8 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using Mystira.App.Application.Ports.Data;
 using Mystira.App.Infrastructure.Data;
 using Mystira.App.Domain.Models;
 
-namespace Mystira.App.Admin.Api.Repositories;
+namespace Mystira.App.Infrastructure.Data.Repositories;
 
 /// <summary>
 /// Repository implementation for MediaMetadataFile singleton entity
