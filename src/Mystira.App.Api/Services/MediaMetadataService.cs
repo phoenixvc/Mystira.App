@@ -126,6 +126,10 @@ public class MediaMetadataService : IMediaMetadataService
         try
         {
             var metadataFile = await GetMediaMetadataFileAsync();
+            if (metadataFile == null)
+            {
+                throw new KeyNotFoundException($"Media metadata entry with ID '{entryId}' not found");
+            }
             
             var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entryId);
             if (existingEntry == null)
@@ -155,6 +159,10 @@ public class MediaMetadataService : IMediaMetadataService
         try
         {
             var metadataFile = await GetMediaMetadataFileAsync();
+            if (metadataFile == null)
+            {
+                throw new KeyNotFoundException($"Media metadata entry with ID '{entryId}' not found");
+            }
             
             var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entryId);
             if (existingEntry == null)
@@ -180,7 +188,7 @@ public class MediaMetadataService : IMediaMetadataService
         try
         {
             var metadataFile = await GetMediaMetadataFileAsync();
-            return metadataFile.Entries.FirstOrDefault(e => e.Id == entryId);
+            return metadataFile?.Entries.FirstOrDefault(e => e.Id == entryId);
         }
         catch (Exception ex)
         {
@@ -202,7 +210,7 @@ public class MediaMetadataService : IMediaMetadataService
             if (data.TrimStart().StartsWith('[') || data.TrimStart().StartsWith('{'))
             {
                 // JSON format
-                importedEntries = JsonSerializer.Deserialize<List<MediaMetadataEntry>>(data);
+                importedEntries = JsonSerializer.Deserialize<List<MediaMetadataEntry>>(data) ?? new List<MediaMetadataEntry>();
             }
             else
             {
@@ -216,7 +224,11 @@ public class MediaMetadataService : IMediaMetadataService
                 throw new ArgumentException("No valid media metadata entries found in data");
             }
 
-            var metadataFile = await GetMediaMetadataFileAsync() ?? new MediaMetadataFile();
+            var metadataFile = await GetMediaMetadataFileAsync();
+            if (metadataFile == null)
+            {
+                metadataFile = new MediaMetadataFile();
+            }
             
             foreach (var entry in importedEntries)
             {

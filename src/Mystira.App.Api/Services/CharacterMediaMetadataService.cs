@@ -177,7 +177,7 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
             if (data.TrimStart().StartsWith('[') || data.TrimStart().StartsWith('{'))
             {
                 // JSON format
-                importedEntries = JsonSerializer.Deserialize<List<CharacterMediaMetadataEntry>>(data);
+                importedEntries = JsonSerializer.Deserialize<List<CharacterMediaMetadataEntry>>(data) ?? new List<CharacterMediaMetadataEntry>();
             }
             else
             {

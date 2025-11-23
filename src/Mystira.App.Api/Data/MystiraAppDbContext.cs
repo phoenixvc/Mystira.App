@@ -322,7 +322,12 @@ public class MystiraAppDbContext : DbContext
                 metadata.Property(m => m.AdditionalProperties)
                         .HasConversion(
                             v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
-                            v => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new Dictionary<string, object>()
+                            v => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new Dictionary<string, object>(),
+                            new ValueComparer<Dictionary<string, object>>(
+                                (c1, c2) => c1 != null && c2 != null && c1.Count == c2.Count && !c1.Except(c2).Any(),
+                                c => c != null ? c.Aggregate(0, (a, v) => HashCode.Combine(a, v.Key.GetHashCode(), v.Value != null ? v.Value.GetHashCode() : 0)) : 0,
+                                c => c != null ? new Dictionary<string, object>(c) : new Dictionary<string, object>()
+                            )
                         );
             });
 
@@ -338,9 +343,9 @@ public class MystiraAppDbContext : DbContext
                 v => string.Join(',', v),
                 v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
                 new ValueComparer<List<string>>(
-                    (c1, c2) => c1.SequenceEqual(c2),
-                    c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
-                    c => c.ToList()
+                    (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+                    c => c != null ? c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())) : 0,
+                    c => c != null ? c.ToList() : new List<string>()
                 )
             );
 
@@ -510,7 +515,7 @@ public class ClassificationTagListConverter : ValueConverter<List<Classification
 
 public class ClassificationTagComparer : IEqualityComparer<ClassificationTag>
 {
-    public bool Equals(ClassificationTag x, ClassificationTag y)
+    public bool Equals(ClassificationTag? x, ClassificationTag? y)
     {
         if (x == null && y == null)
             return true;
@@ -522,6 +527,8 @@ public class ClassificationTagComparer : IEqualityComparer<ClassificationTag>
 
     public int GetHashCode(ClassificationTag obj)
     {
+        if (obj == null)
+            return 0;
         return HashCode.Combine(obj.Key, obj.Value);
     }
 }
@@ -564,7 +571,7 @@ public class ModifierListConverter : ValueConverter<List<Modifier>, string>
 
 public class ModifierComparer : IEqualityComparer<Modifier>
 {
-    public bool Equals(Modifier x, Modifier y)
+    public bool Equals(Modifier? x, Modifier? y)
     {
         if (x == null && y == null)
             return true;
@@ -576,6 +583,8 @@ public class ModifierComparer : IEqualityComparer<Modifier>
 
     public int GetHashCode(Modifier obj)
     {
+        if (obj == null)
+            return 0;
         return HashCode.Combine(obj.Key, obj.Value);
     }
 }

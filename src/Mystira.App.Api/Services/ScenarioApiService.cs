@@ -387,7 +387,7 @@ public class ScenarioApiService : IScenarioApiService
             .ToListAsync();
     }
 
-    public async Task ValidateScenarioAsync(Scenario scenario)
+    public Task ValidateScenarioAsync(Scenario scenario)
     {
         try
         {
@@ -470,6 +470,8 @@ public class ScenarioApiService : IScenarioApiService
             _logger.LogError(ex, "Error validating scenario: {ScenarioId}", scenario.Id);
             throw new ScenarioValidationException($"Unexpected error validating scenario: {ex.Message}", ex);
         }
+        
+        return Task.CompletedTask;
     }
 
     public async Task<ScenarioReferenceValidation> ValidateScenarioReferencesAsync(string scenarioId, bool includeMetadataValidation = true)
@@ -573,7 +575,7 @@ public class ScenarioApiService : IScenarioApiService
         await ValidateCharacterReferences(scene, allCharacters, characterMetadata, validation, includeMetadataValidation);
     }
 
-    private async Task ValidateMediaReference(
+    private Task ValidateMediaReference(
         Scene scene,
         string? mediaId,
         string mediaType,
@@ -582,7 +584,7 @@ public class ScenarioApiService : IScenarioApiService
         ScenarioReferenceValidation validation,
         bool includeMetadataValidation)
     {
-        if (string.IsNullOrEmpty(mediaId)) return;
+        if (string.IsNullOrEmpty(mediaId)) return Task.CompletedTask;
 
         var mediaExists = allMedia.ContainsKey(mediaId);
         var hasMetadata = includeMetadataValidation && mediaMetadata?.Entries.Any(e => e.Id == mediaId) == true;
@@ -624,9 +626,11 @@ public class ScenarioApiService : IScenarioApiService
                 Description = $"Media file '{mediaId}' ({mediaType}) exists but has no metadata"
             });
         }
+        
+        return Task.CompletedTask;
     }
 
-    private async Task ValidateCharacterReferences(
+    private Task ValidateCharacterReferences(
         Scene scene,
         Dictionary<string, Character> allCharacters,
         CharacterMediaMetadataFile? characterMetadata,
@@ -673,6 +677,8 @@ public class ScenarioApiService : IScenarioApiService
                 }
             }
         }
+        
+        return Task.CompletedTask;
     }
 
     public async Task<ScenarioGameStateResponse> GetScenariosWithGameStateAsync(string accountId)
