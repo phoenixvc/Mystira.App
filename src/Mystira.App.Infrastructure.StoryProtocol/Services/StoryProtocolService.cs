@@ -128,7 +128,6 @@ public class StoryProtocolService : IStoryProtocolService
         try
         {
             // Get private key
-            var privateKey = await GetPrivateKeyAsync();
 
             // TODO: Implement royalty split update transaction
             throw new NotImplementedException("Story Protocol royalty update not yet implemented.");
