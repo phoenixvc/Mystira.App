@@ -104,6 +104,9 @@ else
         options.UseInMemoryDatabase("MystiraAppInMemoryDb_Local"));
 }
 
+// Register DbContext base type for repositories and UnitOfWork that depend on it
+builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<MystiraAppDbContext>());
+
 // Add Azure Infrastructure Services
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 builder.Services.Configure<AudioTranscodingOptions>(builder.Configuration.GetSection(AudioTranscodingOptions.SectionName));
@@ -298,6 +301,8 @@ builder.Services.AddScoped<IClientApiService, ClientApiService>();
 builder.Services.AddScoped<IAppStatusService, AppStatusService>();
 builder.Services.AddScoped<IMediaApiService, MediaApiService>();
 builder.Services.AddScoped<IMediaMetadataService, MediaMetadataService>();
+// Register Application.Ports.IMediaMetadataService for use cases
+builder.Services.AddScoped<Mystira.App.Application.Ports.IMediaMetadataService, MediaMetadataServiceAdapter>();
 builder.Services.AddScoped<ICharacterMediaMetadataService, CharacterMediaMetadataService>();
 builder.Services.AddScoped<IBundleService, BundleService>();
 builder.Services.AddScoped<ICharacterMapFileService, CharacterMapFileService>();

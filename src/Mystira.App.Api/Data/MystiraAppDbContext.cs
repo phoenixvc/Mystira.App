@@ -291,10 +291,22 @@ public class MystiraAppDbContext : DbContext
                 scene.OwnsOne(s => s.Media);
                 scene.OwnsMany(s => s.Branches, branch =>
                 {
-                    branch.OwnsOne(b => b.EchoLog);
+                    branch.OwnsOne(b => b.EchoLog, echoLog =>
+                    {
+                        echoLog.Property(e => e.EchoType)
+                               .HasConversion(
+                                   v => v.Value,
+                                   v => EchoType.Parse(v) ?? EchoType.Parse("honesty")!);
+                    });
                     branch.OwnsOne(b => b.CompassChange);
                 });
-                scene.OwnsMany(s => s.EchoReveals);
+                scene.OwnsMany(s => s.EchoReveals, reveal =>
+                {
+                    reveal.Property(r => r.EchoType)
+                          .HasConversion(
+                              v => v.Value,
+                              v => EchoType.Parse(v) ?? EchoType.Parse("honesty")!);
+                });
             });
         });
 
@@ -322,11 +334,23 @@ public class MystiraAppDbContext : DbContext
 
             entity.OwnsMany(e => e.ChoiceHistory, choice =>
             {
-                choice.OwnsOne(c => c.EchoGenerated);
+                choice.OwnsOne(c => c.EchoGenerated, echo =>
+                {
+                    echo.Property(e => e.EchoType)
+                        .HasConversion(
+                            v => v.Value,
+                            v => EchoType.Parse(v) ?? EchoType.Parse("honesty")!);
+                });
                 choice.OwnsOne(c => c.CompassChange);
             });
 
-            entity.OwnsMany(e => e.EchoHistory);
+            entity.OwnsMany(e => e.EchoHistory, echo =>
+            {
+                echo.Property(e => e.EchoType)
+                    .HasConversion(
+                        v => v.Value,
+                        v => EchoType.Parse(v) ?? EchoType.Parse("honesty")!);
+            });
             entity.OwnsMany(e => e.Achievements);
 
             // Configure CompassValues as a JSON property
@@ -373,9 +397,13 @@ public class MystiraAppDbContext : DbContext
                         );
             });
 
-            entity.HasIndex(e => e.MediaId).IsUnique();
-            entity.HasIndex(e => e.MediaType);
-            entity.HasIndex(e => e.CreatedAt);
+            // Only apply indexes when using in-memory database (Cosmos DB doesn't support HasIndex)
+            if (isInMemoryDatabase)
+            {
+                entity.HasIndex(e => e.MediaId).IsUnique();
+                entity.HasIndex(e => e.MediaType);
+                entity.HasIndex(e => e.CreatedAt);
+            }
         });
 
         // Configure MediaAsset.Tags
@@ -519,7 +547,25 @@ public class MystiraAppDbContext : DbContext
                   .HasConversion(
                       v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
                       v => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, List<string>>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new Dictionary<string, List<string>>()
-                  );
+                  )
+                  .Metadata.SetValueComparer(new ValueComparer<Dictionary<string, List<string>>>(
+                      (c1, c2) => c1 != null && c2 != null && c1.Count == c2.Count && 
+                                  c1.Keys.All(k => c2.ContainsKey(k) && c1[k].SequenceEqual(c2[k])),
+                      c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.Key.GetHashCode(), v.Value.Aggregate(0, (a2, s) => HashCode.Combine(a2, s.GetHashCode())))),
+                      c => new Dictionary<string, List<string>>(c.ToDictionary(kvp => kvp.Key, kvp => new List<string>(kvp.Value)))));
+        });
+
+        // Configure PendingSignup
+        modelBuilder.Entity<PendingSignup>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            // Only apply Cosmos DB configurations when not using in-memory database
+            if (!isInMemoryDatabase)
+            {
+                entity.ToContainer("PendingSignups")
+                      .HasPartitionKey(e => e.Id);
+            }
         });
 
         // Configure CompassTracking as a separate container for analytics
