@@ -1,6 +1,6 @@
 # Mystira.App.CosmosConsole
 
-A console application for interfacing with Cosmos DB to generate reports and statistics for the Mystira application.
+A console application for interfacing with Cosmos DB to generate reports, statistics, and migrate data between environments for the Mystira application.
 
 ## Features
 
@@ -40,6 +40,36 @@ Mystira.App.CosmosConsole stats
   - Individual session counts
   - Individual completion counts
   - Per-account completion rates
+
+### Data Migration (NEW)
+Migrate data from old resource naming to new standardized naming convention, or between environments.
+
+**Usage:**
+```bash
+# Show migration help
+Mystira.App.CosmosConsole migrate --help
+
+# Migrate scenarios
+Mystira.App.CosmosConsole migrate scenarios
+
+# Migrate content bundles
+Mystira.App.CosmosConsole migrate bundles
+
+# Migrate media assets metadata
+Mystira.App.CosmosConsole migrate media-metadata
+
+# Migrate blob storage files
+Mystira.App.CosmosConsole migrate blobs
+
+# Migrate everything
+Mystira.App.CosmosConsole migrate all
+```
+
+**What gets migrated:**
+- **Scenarios**: All scenario definitions and content
+- **Content Bundles**: Bundle configurations linking scenarios
+- **Media Assets Metadata**: Media asset references (URLs, metadata)
+- **Blob Storage**: Actual media files (images, audio, video)
 
 ## Configuration
 
@@ -85,6 +115,84 @@ Mystira.App.CosmosConsole export --output path/to/sessions.csv
 # Show scenario completion statistics
 Mystira.App.CosmosConsole stats
 ```
+
+### Migration Commands
+```bash
+# Migrate scenarios from old to new Cosmos DB
+Mystira.App.CosmosConsole migrate scenarios
+
+# Migrate content bundles
+Mystira.App.CosmosConsole migrate bundles
+
+# Migrate media assets metadata
+Mystira.App.CosmosConsole migrate media-metadata
+
+# Migrate blob storage files (media assets)
+Mystira.App.CosmosConsole migrate blobs
+
+# Migrate everything
+Mystira.App.CosmosConsole migrate all
+```
+
+## Migration Guide
+
+### Setting Up Migration
+
+Migrations require source and destination connection strings. Set them via environment variables:
+
+**For Cosmos DB migrations:**
+```bash
+export SOURCE_COSMOS_CONNECTION="AccountEndpoint=https://old-cosmos.documents.azure.com:443/;AccountKey=..."
+export DEST_COSMOS_CONNECTION="AccountEndpoint=https://new-cosmos.documents.azure.com:443/;AccountKey=..."
+export COSMOS_DATABASE_NAME="MystiraAppDb"  # Optional, defaults to MystiraAppDb
+```
+
+**For Blob Storage migration:**
+```bash
+export SOURCE_STORAGE_CONNECTION="DefaultEndpointsProtocol=https;AccountName=oldaccount;..."
+export DEST_STORAGE_CONNECTION="DefaultEndpointsProtocol=https;AccountName=newaccount;..."
+export STORAGE_CONTAINER_NAME="mystira-app-media"  # Optional
+```
+
+### Migration Example: Old to New Naming Convention
+
+```bash
+# Example: Migrating from old naming to standardized naming
+
+# Old resources:
+#   Cosmos DB: mystiraappdevcosmos
+#   Storage: mystiraappdevstorage
+
+# New resources:
+#   Cosmos DB: dev-euw-cosmos-mystira
+#   Storage: deveuwstmystira
+
+# Step 1: Get connection strings from Azure Portal
+# For Cosmos DB: Go to Keys section
+# For Storage: Go to Access keys section
+
+# Step 2: Set environment variables
+export SOURCE_COSMOS_CONNECTION="AccountEndpoint=https://mystiraappdevcosmos.documents.azure.com:443/;AccountKey=YOUR_KEY;"
+export DEST_COSMOS_CONNECTION="AccountEndpoint=https://dev-euw-cosmos-mystira.documents.azure.com:443/;AccountKey=YOUR_KEY;"
+export SOURCE_STORAGE_CONNECTION="DefaultEndpointsProtocol=https;AccountName=mystiraappdevstorage;AccountKey=YOUR_KEY;..."
+export DEST_STORAGE_CONNECTION="DefaultEndpointsProtocol=https;AccountName=deveuwstmystira;AccountKey=YOUR_KEY;..."
+
+# Step 3: Run migration
+dotnet run -- migrate all
+
+# Or migrate specific resources:
+dotnet run -- migrate scenarios
+dotnet run -- migrate bundles
+dotnet run -- migrate blobs
+```
+
+### Migration Features
+
+- **Idempotent**: Safe to run multiple times, uses upsert operations
+- **Container Creation**: Automatically creates destination containers if needed
+- **Error Handling**: Reports failures per-item, continues processing
+- **Progress Tracking**: Shows counts and duration for each migration
+- **Server-Side Copy**: Blob migration uses Azure server-side copy (no download/upload)
 
 ## Implementation Details
 
