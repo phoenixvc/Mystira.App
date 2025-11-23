@@ -455,6 +455,86 @@ public static class ServiceCollectionExtensions
 - **[Application](../Mystira.App.Application/README.md)** - Application layer using shared services
 - **[API](../Mystira.App.Api/README.md)** - API using shared middleware
 
+## 🔍 Architectural Analysis
+
+### Current State Assessment
+
+**File Count**: ~5-10 files (small, focused)
+**Dependencies**: Domain, ASP.NET Core
+**Purpose**: Cross-cutting concerns
+
+### ✅ What's Working Well
+
+1. **Clear Purpose** - Cross-cutting concerns well-defined
+2. **Security Focus** - OWASP-compliant security headers
+3. **COPPA Compliance** - PII redaction for child protection
+4. **Middleware Pattern** - Proper ASP.NET Core middleware
+5. **Small and Focused** - Not becoming a dumping ground
+
+### ⚠️ Potential Issues (Minor)
+
+#### 1. **UserProfileService Location** (LOW)
+**Issue**: Business logic service in Shared project
+
+**Impact**:
+- ⚠️ Blurs line between shared infrastructure and application logic
+- ⚠️ Similar to issue in API layer
+
+**Recommendation**:
+- Evaluate if `UserProfileService` should be in Application layer as use case
+- Keep ONLY infrastructure concerns in Shared
+- Move business workflow to Application/UseCases
+
+## 📋 Refactoring TODO
+
+### 🟢 Medium Priority
+
+- [ ] **Evaluate UserProfileService placement**
+  - Determine if it's infrastructure or application logic
+  - If application logic → move to Application/UseCases
+  - If coordinating services → keep in Shared
+  - Location: `Shared/Services/UserProfileService.cs`
+
+- [ ] **Add more middleware**
+  - Request logging middleware
+  - Error handling middleware
+  - Rate limiting middleware
+
+### 🔵 Low Priority
+
+- [ ] **Add extension method tests**
+  - Test service registration extensions
+  - Verify middleware registration
+
+## 📊 SWOT Analysis
+
+### Strengths 💪
+- ✅ **Security-Focused**: OWASP headers, PII redaction
+- ✅ **COPPA Compliant**: Child protection built-in
+- ✅ **Proper Middleware**: ASP.NET Core patterns
+- ✅ **Small Scope**: Not a catch-all dumping ground
+- ✅ **Testable**: Components are unit testable
+- ✅ **Well-Documented**: Clear security explanations
+
+### Weaknesses ⚠️
+- ⚠️ **UserProfileService**: May belong in Application layer
+- ⚠️ **Limited Middleware**: Only security headers so far
+
+### Opportunities 🚀
+- 📈 **More Middleware**: Logging, error handling, rate limiting
+- 📈 **Distributed Caching**: Abstract caching concerns
+- 📈 **Email/SMS Services**: Shared communication infrastructure
+- 📈 **Telemetry**: Shared Application Insights integration
+
+### Threats 🔒
+- ⚡ **Scope Creep**: Risk of becoming dumping ground
+- ⚡ **Business Logic Leak**: Services might belong elsewhere
+
+### Risk Mitigation
+1. **Clear Guidelines**: Document what belongs in Shared
+2. **Code Reviews**: Ensure proper placement
+3. **Refactor Regularly**: Move misplaced code
+
 ## License
 
 Copyright (c) 2025 Mystira. All rights reserved.

@@ -511,6 +511,206 @@ await _context.SaveChangesAsync();
 - **[Application](../Mystira.App.Application/README.md)** - Use cases that consume repositories
 - **[Azure Infrastructure](../Mystira.App.Infrastructure.Azure/README.md)** - Cosmos DB deployment
 
+## 🔍 Architectural Analysis
+
+### Current State Assessment
+
+**File Count**: 28 C# files
+**Key Files**:
+- `MystiraAppDbContext.cs` (moved here from API - good! ✅)
+- `PartitionKeyInterceptor.cs` (moved here from Admin.Api - good! ✅)
+- 20+ repository implementations
+- UnitOfWork implementation
+
+**Dependencies**:
+- Domain (correct ✅)
+- EF Core Cosmos, InMemory (correct ✅)
+
+**Target Framework**: net9.0
+
+### ⚠️ Architectural Issues Found
+
+#### 1. **Repository Interfaces Location** (MEDIUM)
+**Location**: `Repositories/I*Repository.cs` files
+
+**Issue**: Repository interfaces (`IRepository<T>`, `IScenarioRepository`, etc.) are defined in Infrastructure.Data
+
+**Impact**:
+- ⚠️ Application layer depends on Infrastructure to get interfaces
+- ⚠️ Violates Dependency Inversion (infrastructure should depend on application, not vice versa)
+- ⚠️ Makes it harder to swap implementations
+
+**Current (Wrong)**:
+```
+Application → Infrastructure.Data (for interfaces)
+Infrastructure.Data (implements own interfaces)
+```
+
+**Should Be**:
+```
+Application (defines ports/interfaces)
+    ↑
+Infrastructure.Data (implements application's interfaces)
+```
+
+**Recommendation**:
+- **MOVE** all `I*Repository.cs` interfaces to `Application/Ports/Data/`
+- **MOVE** `IUnitOfWork.cs` to `Application/Ports/Data/`
+- Keep only **implementations** in Infrastructure.Data
+- Update namespaces: `Mystira.App.Infrastructure.Data.Repositories` → `Mystira.App.Application.Ports.Data`
+
+#### 2. **DbContext Location** (RESOLVED ✅)
+**Location**: `MystiraAppDbContext.cs`
+
+**Status**: **Recently fixed!** Moved from API to Infrastructure.Data
+
+**Previous Issue**: Was in `Api/Data/` and `Admin.Api/Data/` (violation)
+**Current State**: Correctly in Infrastructure.Data ✅
+
+**Impact**: This was a major violation that has been fixed
+
+### ✅ What's Working Well
+
+1. **DbContext Centralized** - Single DbContext in Infrastructure (recently fixed!)
+2. **Repository Pattern** - Proper abstraction of data access
+3. **Unit of Work** - Transaction coordination
+4. **Cosmos DB + InMemory** - Good dual provider support
+5. **Clean Separation** - No business logic in repositories
+6. **Partition Key Interceptor** - Cosmos DB optimization
+
+## 📋 Refactoring TODO
+
+### 🟡 High Priority
+
+- [ ] **Move repository interfaces to Application/Ports**
+  - Create `Application/Ports/Data/` folder
+  - Move all `I*Repository.cs` interfaces
+  - Move `IUnitOfWork.cs` interface
+  - Update all `using` statements in Application layer
+  - Location: `Infrastructure.Data/Repositories/I*.cs` → `Application/Ports/Data/`
+  - Estimated: ~15 interface files
+
+- [ ] **Update namespaces after move**
+  - Change namespace from `Mystira.App.Infrastructure.Data.Repositories`
+  - To: `Mystira.App.Application.Ports.Data`
+  - Update DI registrations in API/Admin.Api `Program.cs`
+
+### 🟢 Medium Priority
+
+- [ ] **Add specification pattern**
+  - Create `ISpecification<T>` interface in Application/Ports
+  - Implement in Infrastructure.Data
+  - Enables reusable query logic
+
+- [ ] **Implement generic repository**
+  - Create `Repository<T>` base class
+  - Reduce code duplication across repositories
+  - Inherit specific repositories from base
+
+### 🔵 Low Priority
+
+- [ ] **Add audit fields tracking**
+  - Automatically set CreatedAt, UpdatedAt, CreatedBy, UpdatedBy
+  - Implement in SaveChangesAsync override
+
+- [ ] **Implement soft delete**
+  - Add IsDeleted flag to entities
+  - Global query filter to exclude deleted
+  - Change Delete methods to set flag instead of removing
+
+## 💡 Recommendations
+
+### Immediate Actions
+1. **Coordinate with Application layer refactoring** - Move interfaces when Application is ready
+2. **Document interface locations** - Update team wiki about where interfaces live
+3. **Plan migration** - Interfaces move is dependency for Application refactoring
+
+### Short-term
+1. **Move interfaces to Application/Ports** - Proper dependency direction
+2. **Update all using statements** - Across Application and API projects
+3. **Fix DI registrations** - Update Program.cs in API projects
+
+### Long-term
+1. **Specification pattern** - Reusable query logic
+2. **Generic repository** - Reduce boilerplate
+3. **CQRS read models** - Separate read and write concerns
+
+## 📊 SWOT Analysis
+
+### Strengths 💪
+- ✅ **DbContext Centralized**: Recently moved to correct location
+- ✅ **Repository Pattern**: Proper data access abstraction
+- ✅ **Unit of Work**: Transaction management
+- ✅ **Dual Providers**: Cosmos DB + InMemory for testing
+- ✅ **Partition Strategy**: Cosmos DB optimization with interceptor
+- ✅ **Clean Implementation**: No business logic leakage
+- ✅ **Type Safety**: Strongly typed repositories
+- ✅ **Good Structure**: 28 files, well-organized
+
+### Weaknesses ⚠️
+- ⚠️ **Interfaces in Wrong Layer**: Should be in Application/Ports
+- ⚠️ **Some Duplication**: Repository methods could share base class
+- ⚠️ **No Specifications**: Query logic scattered
+- ⚠️ **Hard Deletes**: No soft delete support
+- ⚠️ **No Audit Trail**: Missing CreatedBy, UpdatedBy tracking
+
+### Opportunities 🚀
+- 📈 **Move to Ports**: Achieve true dependency inversion
+- 📈 **Specification Pattern**: Reusable, testable query logic
+- 📈 **Generic Repository**: Reduce code duplication
+- 📈 **CQRS**: Separate read/write models (Dapper for reads)
+- 📈 **Event Sourcing**: Append-only event store
+- 📈 **Audit Logging**: Full entity change tracking
+- 📈 **Soft Deletes**: Better data recovery
+- 📈 **Read Replicas**: Scale reads independently
+
+### Threats 🔒
+- ⚡ **Interface Move Coordination**: Must coordinate with Application refactoring
+- ⚡ **Breaking Changes**: Moving interfaces affects multiple projects
+- ⚡ **Cosmos DB Costs**: RU consumption can grow
+- ⚡ **Testing Gaps**: Need integration tests for repositories
+- ⚡ **N+1 Queries**: Easy to create with lazy loading
+
+### Risk Mitigation
+1. **Phased Migration**: Move interfaces with Application layer refactoring
+2. **Comprehensive Tests**: Test all repositories before and after move
+3. **Query Analysis**: Monitor Cosmos DB RU consumption
+4. **Code Reviews**: Ensure eager loading used appropriately
+
+## Current vs Target Architecture
+
+### Current (Needs Improvement)
+```
+Application Layer
+    ↓ depends on
+Infrastructure.Data (defines interfaces + implements)
+```
+
+### Target (Correct Hexagonal)
+```
+Application Layer (defines ports/interfaces)
+    ↑ implemented by
+Infrastructure.Data (adapters/implementations only)
+```
+
+## Integration Points
+
+### Used By
+- **Application Layer**: Uses repository interfaces (currently from here, should be from Application/Ports)
+- **API Layer**: Registers implementations via DI
+- **Admin.Api Layer**: Registers implementations via DI
+
+### Depends On
+- **Domain Layer**: For entity definitions
+- **EF Core**: For ORM functionality
+- **Cosmos DB SDK**: For Azure Cosmos DB provider
+
+## Related Documentation
+
+- **[Domain](../Mystira.App.Domain/README.md)** - Entities persisted by this layer
+- **[Application](../Mystira.App.Application/README.md)** - Should define repository interfaces (ports)
+- **[API](../Mystira.App.Api/README.md)** - Registers implementations via DI
+
 ## License
 
 Copyright (c) 2025 Mystira. All rights reserved.
