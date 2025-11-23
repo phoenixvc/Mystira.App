@@ -38,6 +38,10 @@ This document outlines the key best practices and standards for developing the M
 
 - **Component-Based Design:** Build reusable Blazor components for UI elements.
 - **Design System:** Adhere to the established design system (colors, typography, spacing) defined in `wwwroot/css/app.css`.
+- **CSS Styling:** Use Blazor Scoped CSS for component-specific styles. See [CSS Styling Approach](features/CSS_STYLING_APPROACH.md) for detailed guidance.
+  - Create `.razor.css` files alongside components for scoped styles
+  - Use global CSS (`app.css`) only for shared utilities and design system foundations
+  - Avoid CSS Modules (designed for JavaScript frameworks, not Blazor)
 - **Accessibility (A11y):** Ensure all UI components are accessible and meet WCAG 2.1 AA standards. This includes:
   - Using semantic HTML.
   - Providing alternative text for images.
