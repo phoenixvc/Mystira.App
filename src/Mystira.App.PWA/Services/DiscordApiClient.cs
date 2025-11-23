@@ -19,8 +19,9 @@ public class DiscordApiClient : BaseApiClient, IDiscordApiClient
             await SetAuthorizationHeaderAsync();
             return await HttpClient.GetFromJsonAsync<DiscordStatusResponse>("api/discord/status", JsonOptions);
         }
-        catch
+        catch (Exception ex)
         {
+            Logger.LogError(ex, "Failed to get Discord status from API.");
             // Return disabled status if API call fails
             return new DiscordStatusResponse
             {
@@ -45,7 +46,8 @@ public class DiscordApiClient : BaseApiClient, IDiscordApiClient
             var response = await HttpClient.PostAsJsonAsync("api/discord/send", request, JsonOptions);
             return response.IsSuccessStatusCode;
         }
-        catch
+        catch (Exception ex)
+            Logger.LogError(ex, "Failed to send Discord message.");
         {
             return false;
         }
@@ -59,7 +61,8 @@ public class DiscordApiClient : BaseApiClient, IDiscordApiClient
             var response = await HttpClient.PostAsJsonAsync("api/discord/send-embed", request, JsonOptions);
             return response.IsSuccessStatusCode;
         }
-        catch
+        catch (Exception ex)
+            Logger.LogError(ex, "Failed to send Discord embed.");
         {
             return false;
         }
