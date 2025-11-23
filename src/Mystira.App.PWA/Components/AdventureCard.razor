@@ -1,7 +1,12 @@
 @* Adventure Card Component - Enhanced visual design for scenarios *@
 @using Mystira.App.PWA.Models
 
-<div class="adventure-card" @onclick="OnCardClick">
+<div class="adventure-card" 
+     tabindex="0"
+     role="article"
+     aria-label="Adventure: @Adventure.Name"
+     @onclick="OnCardClick"
+     @onkeydown="HandleKeyDown">
     <div class="adventure-image-container">
         <div class="adventure-card-placeholder">
             <i class="fas fa-book-open fa-3x"></i>
@@ -61,7 +66,10 @@
     </div>
     
     <div class="adventure-card-footer">
-        <button class="btn-adventure-start" @onclick="OnStartClick" @onclick:stopPropagation="true">
+        <button class="btn-adventure-start" 
+                @onclick="OnStartClick" 
+                @onclick:stopPropagation="true"
+                aria-label="@(IsCompleted ? "Play again" : "Start adventure") @Adventure.Name">
             <i class="fas fa-play me-2"></i>
             @if (IsCompleted)
             {
@@ -104,6 +112,14 @@
         if (OnStartAdventure.HasDelegate)
         {
             await OnStartAdventure.InvokeAsync(Adventure);
+        }
+    }
+    
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Key == " ")
+        {
+            await OnCardClick();
         }
     }
     

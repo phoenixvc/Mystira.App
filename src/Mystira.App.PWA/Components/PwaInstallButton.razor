@@ -6,8 +6,14 @@
 {
     <div class="pwa-install-container">
         <button class="btn btn-pwa-install" @onclick="InstallPwaAsync">
-            <i class="fas fa-download me-2"></i>
-            Install App
+            <div class="install-content">
+                <i class="fas fa-download me-2"></i>
+                <div class="install-text">
+                    <strong>Install Mystira</strong>
+                    <small>Works offline • No app store needed</small>
+                </div>
+            </div>
+            <span class="badge badge-pwa">PWA</span>
         </button>
     </div>
 }

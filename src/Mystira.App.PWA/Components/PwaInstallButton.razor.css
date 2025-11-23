@@ -1,0 +1,60 @@
+/* PWA Install Button Scoped Styles */
+
+.btn-pwa-install {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    gap: 12px;
+}
+
+.install-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.install-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+}
+
+.install-text strong {
+    font-size: 1rem;
+    line-height: 1.2;
+}
+
+.install-text small {
+    font-size: 0.75rem;
+    opacity: 0.9;
+    font-weight: 400;
+    line-height: 1.2;
+}
+
+.badge-pwa {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 576px) {
+    .btn-pwa-install {
+        padding: 0.875rem 1.25rem;
+    }
+    
+    .install-text strong {
+        font-size: 0.9375rem;
+    }
+    
+    .install-text small {
+        font-size: 0.7rem;
+    }
+}
