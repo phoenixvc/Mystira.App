@@ -1,6 +1,7 @@
 using Mystira.App.Application.Ports;
-using Mystira.App.Contracts.Models;
+using Mystira.App.Domain.Models;
 using Mystira.App.Api.Services;
+using ApiModels = Mystira.App.Api.Models;
 
 namespace Mystira.App.Api.Adapters;
 
@@ -19,97 +20,98 @@ public class MediaMetadataServiceAdapter : Application.Ports.IMediaMetadataServi
     public async Task<MediaMetadataFile?> GetMediaMetadataFileAsync()
     {
         var apiFile = await _apiService.GetMediaMetadataFileAsync();
-        return apiFile == null ? null : ConvertToContractsFile(apiFile);
+        return apiFile == null ? null : ConvertToDomainFile(apiFile);
     }
 
     public async Task<MediaMetadataFile> UpdateMediaMetadataFileAsync(MediaMetadataFile metadataFile)
     {
         var apiFile = ConvertToApiFile(metadataFile);
         var result = await _apiService.UpdateMediaMetadataFileAsync(apiFile);
-        return ConvertToContractsFile(result);
+        return ConvertToDomainFile(result);
     }
 
     public async Task<MediaMetadataFile> AddMediaMetadataEntryAsync(MediaMetadataEntry entry)
     {
         var apiEntry = ConvertToApiEntry(entry);
         var result = await _apiService.AddMediaMetadataEntryAsync(apiEntry);
-        return ConvertToContractsFile(result);
+        return ConvertToDomainFile(result);
     }
 
     public async Task<MediaMetadataFile> UpdateMediaMetadataEntryAsync(string entryId, MediaMetadataEntry entry)
     {
         var apiEntry = ConvertToApiEntry(entry);
         var result = await _apiService.UpdateMediaMetadataEntryAsync(entryId, apiEntry);
-        return ConvertToContractsFile(result);
+        return ConvertToDomainFile(result);
     }
 
     public async Task<MediaMetadataFile> RemoveMediaMetadataEntryAsync(string entryId)
     {
         var result = await _apiService.RemoveMediaMetadataEntryAsync(entryId);
-        return ConvertToContractsFile(result);
+        return ConvertToDomainFile(result);
     }
 
     public async Task<MediaMetadataEntry?> GetMediaMetadataEntryAsync(string entryId)
     {
         var apiEntry = await _apiService.GetMediaMetadataEntryAsync(entryId);
-        return apiEntry == null ? null : ConvertToContractsEntry(apiEntry);
+        return apiEntry == null ? null : ConvertToDomainEntry(apiEntry);
     }
 
     public async Task<MediaMetadataFile> ImportMediaMetadataEntriesAsync(string jsonData, bool overwriteExisting = false)
     {
         var result = await _apiService.ImportMediaMetadataEntriesAsync(jsonData, overwriteExisting);
-        return ConvertToContractsFile(result);
+        return ConvertToDomainFile(result);
     }
 
-    private static Models.MediaMetadataFile ConvertToApiFile(MediaMetadataFile contractsFile)
+    private static ApiModels.MediaMetadataFile ConvertToApiFile(MediaMetadataFile domainFile)
     {
-        return new Models.MediaMetadataFile
+        return new ApiModels.MediaMetadataFile
         {
-            Id = contractsFile.Id,
-            Entries = contractsFile.Entries.Select(ConvertToApiEntry).ToList(),
-            CreatedAt = contractsFile.CreatedAt,
-            UpdatedAt = contractsFile.UpdatedAt,
-            Version = "1.0"
+            Id = domainFile.Id,
+            Entries = domainFile.Entries.Select(ConvertToApiEntry).ToList(),
+            CreatedAt = domainFile.CreatedAt,
+            UpdatedAt = domainFile.UpdatedAt,
+            Version = domainFile.Version
         };
     }
 
-    private static MediaMetadataFile ConvertToContractsFile(Models.MediaMetadataFile apiFile)
+    private static MediaMetadataFile ConvertToDomainFile(ApiModels.MediaMetadataFile apiFile)
     {
         return new MediaMetadataFile
         {
             Id = apiFile.Id,
-            Entries = apiFile.Entries.Select(ConvertToContractsEntry).ToList(),
+            Entries = apiFile.Entries.Select(ConvertToDomainEntry).ToList(),
             CreatedAt = apiFile.CreatedAt,
-            UpdatedAt = apiFile.UpdatedAt
+            UpdatedAt = apiFile.UpdatedAt,
+            Version = apiFile.Version
         };
     }
 
-    private static Models.MediaMetadataEntry ConvertToApiEntry(MediaMetadataEntry contractsEntry)
+    private static ApiModels.MediaMetadataEntry ConvertToApiEntry(MediaMetadataEntry domainEntry)
     {
-        return new Models.MediaMetadataEntry
+        return new ApiModels.MediaMetadataEntry
         {
-            Id = contractsEntry.Id,
-            Title = contractsEntry.Title,
-            FileName = contractsEntry.FileName,
-            Type = contractsEntry.Type,
-            Description = contractsEntry.Description,
-            AgeRating = contractsEntry.AgeRating,
-            SubjectReferenceId = contractsEntry.SubjectReferenceId,
-            ClassificationTags = contractsEntry.ClassificationTags.Select(t => new Models.ClassificationTag
+            Id = domainEntry.Id,
+            Title = domainEntry.Title,
+            FileName = domainEntry.FileName,
+            Type = domainEntry.Type,
+            Description = domainEntry.Description,
+            AgeRating = domainEntry.AgeRating,
+            SubjectReferenceId = domainEntry.SubjectReferenceId,
+            ClassificationTags = domainEntry.ClassificationTags.Select(t => new ApiModels.ClassificationTag
             {
                 Key = t.Key,
                 Value = t.Value
             }).ToList(),
-            Modifiers = contractsEntry.Modifiers.Select(m => new Models.Modifier
+            Modifiers = domainEntry.Modifiers.Select(m => new ApiModels.Modifier
             {
                 Key = m.Key,
                 Value = m.Value
             }).ToList(),
-            Loopable = contractsEntry.Loopable
+            Loopable = domainEntry.Loopable
         };
     }
 
-    private static MediaMetadataEntry ConvertToContractsEntry(Models.MediaMetadataEntry apiEntry)
+    private static MediaMetadataEntry ConvertToDomainEntry(ApiModels.MediaMetadataEntry apiEntry)
     {
         return new MediaMetadataEntry
         {

@@ -2,11 +2,14 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Mystira.App.Api.Models; // For MediaMetadataFile, CharacterMediaMetadataFile, etc. (API DTOs)
 using Mystira.App.Domain.Models;
 
-namespace Mystira.App.Api.Data;
+namespace Mystira.App.Infrastructure.Data;
 
+/// <summary>
+/// DbContext for Mystira App following Hexagonal Architecture
+/// Located in Infrastructure.Data (outer layer) as per Ports and Adapters pattern
+/// </summary>
 public class MystiraAppDbContext : DbContext
 {
     public MystiraAppDbContext(DbContextOptions<MystiraAppDbContext> options)
@@ -53,8 +56,9 @@ public class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
+                entity.Property<string>("PartitionKeyId").ToJsonProperty("Id");
                 entity.ToContainer("UserProfiles")
-                      .HasPartitionKey(e => e.Id);
+                      .HasPartitionKey("PartitionKeyId");
             }
 
             entity.Property(e => e.PreferredFantasyThemes)
@@ -108,8 +112,9 @@ public class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
+                entity.Property<string>("PartitionKeyId").ToJsonProperty("Id");
                 entity.ToContainer("Accounts")
-                      .HasPartitionKey(e => e.Id);
+                      .HasPartitionKey("PartitionKeyId");
             }
 
             entity.Property(e => e.UserProfileIds)
@@ -143,8 +148,9 @@ public class MystiraAppDbContext : DbContext
 
             if (!isInMemoryDatabase)
             {
+                entity.Property<string>("PartitionKeyId").ToJsonProperty("Id");
                 entity.ToContainer("ContentBundles")
-                      .HasPartitionKey(e => e.Id);
+                      .HasPartitionKey("PartitionKeyId");
             }
 
             entity.Property(e => e.ScenarioIds)
@@ -174,8 +180,9 @@ public class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
+                entity.Property<string>("PartitionKeyId").ToJsonProperty("Id");
                 entity.ToContainer("CharacterMaps")
-                      .HasPartitionKey(e => e.Id);
+                      .HasPartitionKey("PartitionKeyId");
             }
 
             entity.OwnsOne(e => e.Metadata, metadata =>
@@ -199,8 +206,9 @@ public class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
+                entity.Property<string>("PartitionKeyId").ToJsonProperty("Id");
                 entity.ToContainer("BadgeConfigurations")
-                      .HasPartitionKey(e => e.Id);
+                      .HasPartitionKey("PartitionKeyId");
             }
         });
 
@@ -212,8 +220,9 @@ public class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
+                entity.Property<string>("PartitionKeyId").ToJsonProperty("Id");
                 entity.ToContainer("Scenarios")
-                      .HasPartitionKey(e => e.Id);
+                      .HasPartitionKey("PartitionKeyId");
             }
 
             entity.Property(e => e.Tags)
@@ -366,7 +375,7 @@ public class MystiraAppDbContext : DbContext
         });
 
         // Configure MediaAsset
-        modelBuilder.Entity<Domain.Models.MediaAsset>(entity =>
+        modelBuilder.Entity<MediaAsset>(entity =>
         {
             entity.HasKey(e => e.Id);
 
@@ -407,7 +416,7 @@ public class MystiraAppDbContext : DbContext
         });
 
         // Configure MediaAsset.Tags
-        modelBuilder.Entity<Domain.Models.MediaAsset>()
+        modelBuilder.Entity<MediaAsset>()
             .Property(m => m.Tags)
             .HasConversion(
                 v => string.Join(',', v),
@@ -427,8 +436,9 @@ public class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
+                entity.Property<string>("PartitionKeyId").ToJsonProperty("Id");
                 entity.ToContainer("MediaMetadataFiles")
-                      .HasPartitionKey(e => e.Id);
+                      .HasPartitionKey("PartitionKeyId");
             }
 
             // Use OwnsMany for proper JSON handling in Cosmos DB
@@ -465,8 +475,9 @@ public class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
+                entity.Property<string>("PartitionKeyId").ToJsonProperty("Id");
                 entity.ToContainer("CharacterMediaMetadataFiles")
-                      .HasPartitionKey(e => e.Id);
+                      .HasPartitionKey("PartitionKeyId");
             }
 
             // Use OwnsMany for proper JSON handling in Cosmos DB
@@ -491,11 +502,13 @@ public class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
+                entity.Property<string>("PartitionKeyId").ToJsonProperty("Id");
                 entity.ToContainer("CharacterMapFiles")
-                      .HasPartitionKey(e => e.Id);
+                      .HasPartitionKey("PartitionKeyId");
             }
 
             // Use OwnsMany for proper JSON handling in Cosmos DB
+            // Note: Characters property uses CharacterMapFileCharacter from Domain
             entity.OwnsMany(e => e.Characters, character =>
             {
                 character.OwnsOne(c => c.Metadata, metadata =>
@@ -538,8 +551,9 @@ public class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
+                entity.Property<string>("PartitionKeyId").ToJsonProperty("Id");
                 entity.ToContainer("AvatarConfigurationFiles")
-                      .HasPartitionKey(e => e.Id);
+                      .HasPartitionKey("PartitionKeyId");
             }
 
             // Convert Dictionary<string, List<string>> for storage
@@ -549,7 +563,7 @@ public class MystiraAppDbContext : DbContext
                       v => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, List<string>>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new Dictionary<string, List<string>>()
                   )
                   .Metadata.SetValueComparer(new ValueComparer<Dictionary<string, List<string>>>(
-                      (c1, c2) => c1 != null && c2 != null && c1.Count == c2.Count && 
+                      (c1, c2) => c1 != null && c2 != null && c1.Count == c2.Count &&
                                   c1.Keys.All(k => c2.ContainsKey(k) && c1[k].SequenceEqual(c2[k])),
                       c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.Key.GetHashCode(), v.Value.Aggregate(0, (a2, s) => HashCode.Combine(a2, s.GetHashCode())))),
                       c => new Dictionary<string, List<string>>(c.ToDictionary(kvp => kvp.Key, kvp => new List<string>(kvp.Value)))));
@@ -563,8 +577,9 @@ public class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
+                entity.Property<string>("PartitionKeyId").ToJsonProperty("Id");
                 entity.ToContainer("PendingSignups")
-                      .HasPartitionKey(e => e.Id);
+                      .HasPartitionKey("PartitionKeyId");
             }
         });
 
@@ -572,12 +587,17 @@ public class MystiraAppDbContext : DbContext
         modelBuilder.Entity<CompassTracking>(entity =>
         {
             entity.HasKey(e => e.Axis);
+            // Axis as key automatically maps to 'id' (lowercase) for document ID
 
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
+                // Add shadow property that maps to 'Axis' (uppercase) in JSON for partition key
+                entity.Property<string>("PartitionKeyAxis")
+                      .ToJsonProperty("Axis");
+
                 entity.ToContainer("CompassTrackings")
-                      .HasPartitionKey(e => e.Axis);
+                      .HasPartitionKey("PartitionKeyAxis");
             }
 
             entity.OwnsMany(e => e.History);

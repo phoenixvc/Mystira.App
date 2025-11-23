@@ -1,8 +1,11 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Admin.Api.Data;
+using Mystira.App.Infrastructure.Data;
 using Mystira.App.Admin.Api.Models;
+using Mystira.App.Domain.Models;
 using YamlDotNet.Serialization;
+using ApiModels = Mystira.App.Admin.Api.Models;
+using DomainModels = Mystira.App.Domain.Models;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -23,22 +26,22 @@ public class MediaMetadataService : IMediaMetadataService
     /// <summary>
     /// Gets the media metadata file
     /// </summary>
-    public async Task<MediaMetadataFile?> GetMediaMetadataFileAsync()
+    public async Task<ApiModels.MediaMetadataFile?> GetMediaMetadataFileAsync()
     {
         try
         {
             // Attempt with normal EF Core approach first
             try
             {
-                var metadataFile = await _context.MediaMetadataFiles.FirstOrDefaultAsync();
-                if (metadataFile != null)
+                var domainFile = await _context.MediaMetadataFiles.FirstOrDefaultAsync();
+                if (domainFile != null)
                 {
                     // Ensure Entries is initialized
-                    if (metadataFile.Entries == null)
+                    if (domainFile.Entries == null)
                     {
-                        metadataFile.Entries = new List<MediaMetadataEntry>();
+                        domainFile.Entries = new List<DomainModels.MediaMetadataEntry>();
                     }
-                    return metadataFile;
+                    return ConvertToApiModel(domainFile);
                 }
 
                 // No metadata file found
@@ -63,25 +66,26 @@ public class MediaMetadataService : IMediaMetadataService
     /// <summary>
     /// Updates the media metadata file
     /// </summary>
-    public async Task<MediaMetadataFile> UpdateMediaMetadataFileAsync(MediaMetadataFile metadataFile)
+    public async Task<ApiModels.MediaMetadataFile> UpdateMediaMetadataFileAsync(ApiModels.MediaMetadataFile metadataFile)
     {
         try
         {
-            metadataFile.UpdatedAt = DateTime.UtcNow;
+            var domainFile = ConvertToDomainModel(metadataFile);
+            domainFile.UpdatedAt = DateTime.UtcNow;
 
             var existingFile = await _context.MediaMetadataFiles.FirstOrDefaultAsync();
             if (existingFile != null)
             {
-                _context.Entry(existingFile).CurrentValues.SetValues(metadataFile);
-                existingFile.Entries = metadataFile.Entries;
+                _context.Entry(existingFile).CurrentValues.SetValues(domainFile);
+                existingFile.Entries = domainFile.Entries;
             }
             else
             {
-                await _context.MediaMetadataFiles.AddAsync(metadataFile);
+                await _context.MediaMetadataFiles.AddAsync(domainFile);
             }
 
             await _context.SaveChangesAsync();
-            return metadataFile;
+            return ConvertToApiModel(domainFile);
         }
         catch (Exception ex)
         {
@@ -93,23 +97,23 @@ public class MediaMetadataService : IMediaMetadataService
     /// <summary>
     /// Adds a new media metadata entry
     /// </summary>
-    public async Task<MediaMetadataFile> AddMediaMetadataEntryAsync(MediaMetadataEntry entry)
+    public async Task<ApiModels.MediaMetadataFile> AddMediaMetadataEntryAsync(ApiModels.MediaMetadataEntry entry)
     {
         try
         {
-            var metadataFile = await GetMediaMetadataFileAsync();
+            var apiFile = await GetMediaMetadataFileAsync();
+            var domainFile = apiFile == null ? new DomainModels.MediaMetadataFile() : ConvertToDomainModel(apiFile);
 
             // Check if entry already exists
-            var existingEntry = metadataFile?.Entries.FirstOrDefault(e => e.Id == entry.Id);
+            var existingEntry = domainFile.Entries.FirstOrDefault(e => e.Id == entry.Id);
             if (existingEntry != null)
             {
                 throw new InvalidOperationException($"Media metadata entry with ID '{entry.Id}' already exists");
             }
 
-            // Ensure Entries is initialized
-            metadataFile ??= new MediaMetadataFile();
-            metadataFile.Entries.Add(entry);
-            return await UpdateMediaMetadataFileAsync(metadataFile);
+            // Add the entry
+            domainFile.Entries.Add(ConvertToDomainEntry(entry));
+            return await UpdateMediaMetadataFileAsync(ConvertToApiModel(domainFile));
         }
         catch (Exception ex)
         {
@@ -121,28 +125,29 @@ public class MediaMetadataService : IMediaMetadataService
     /// <summary>
     /// Updates an existing media metadata entry
     /// </summary>
-    public async Task<MediaMetadataFile> UpdateMediaMetadataEntryAsync(string entryId, MediaMetadataEntry entry)
+    public async Task<ApiModels.MediaMetadataFile> UpdateMediaMetadataEntryAsync(string entryId, ApiModels.MediaMetadataEntry entry)
     {
         try
         {
-            var metadataFile = await GetMediaMetadataFileAsync();
-            if (metadataFile == null)
+            var apiFile = await GetMediaMetadataFileAsync();
+            if (apiFile == null)
             {
                 throw new InvalidOperationException("Media metadata file not found");
             }
 
-            var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entryId);
+            var domainFile = ConvertToDomainModel(apiFile);
+            var existingEntry = domainFile.Entries.FirstOrDefault(e => e.Id == entryId);
             if (existingEntry == null)
             {
                 throw new KeyNotFoundException($"Media metadata entry with ID '{entryId}' not found");
             }
 
             // Update the entry
-            var index = metadataFile.Entries.IndexOf(existingEntry);
+            var index = domainFile.Entries.IndexOf(existingEntry);
             entry.Id = entryId; // Ensure ID stays the same
-            metadataFile.Entries[index] = entry;
+            domainFile.Entries[index] = ConvertToDomainEntry(entry);
 
-            return await UpdateMediaMetadataFileAsync(metadataFile);
+            return await UpdateMediaMetadataFileAsync(ConvertToApiModel(domainFile));
         }
         catch (Exception ex)
         {
@@ -154,24 +159,25 @@ public class MediaMetadataService : IMediaMetadataService
     /// <summary>
     /// Removes a media metadata entry
     /// </summary>
-    public async Task<MediaMetadataFile> RemoveMediaMetadataEntryAsync(string entryId)
+    public async Task<ApiModels.MediaMetadataFile> RemoveMediaMetadataEntryAsync(string entryId)
     {
         try
         {
-            var metadataFile = await GetMediaMetadataFileAsync();
-            if (metadataFile == null)
+            var apiFile = await GetMediaMetadataFileAsync();
+            if (apiFile == null)
             {
                 throw new InvalidOperationException("Media metadata file not found");
             }
 
-            var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entryId);
+            var domainFile = ConvertToDomainModel(apiFile);
+            var existingEntry = domainFile.Entries.FirstOrDefault(e => e.Id == entryId);
             if (existingEntry == null)
             {
                 throw new KeyNotFoundException($"Media metadata entry with ID '{entryId}' not found");
             }
 
-            metadataFile.Entries.Remove(existingEntry);
-            return await UpdateMediaMetadataFileAsync(metadataFile);
+            domainFile.Entries.Remove(existingEntry);
+            return await UpdateMediaMetadataFileAsync(ConvertToApiModel(domainFile));
         }
         catch (Exception ex)
         {
@@ -183,12 +189,19 @@ public class MediaMetadataService : IMediaMetadataService
     /// <summary>
     /// Gets a specific media metadata entry by ID
     /// </summary>
-    public async Task<MediaMetadataEntry?> GetMediaMetadataEntryAsync(string entryId)
+    public async Task<ApiModels.MediaMetadataEntry?> GetMediaMetadataEntryAsync(string entryId)
     {
         try
         {
-            var metadataFile = await GetMediaMetadataFileAsync();
-            return metadataFile?.Entries.FirstOrDefault(e => e.Id == entryId);
+            var apiFile = await GetMediaMetadataFileAsync();
+            if (apiFile == null)
+            {
+                return null;
+            }
+
+            var domainFile = ConvertToDomainModel(apiFile);
+            var domainEntry = domainFile.Entries.FirstOrDefault(e => e.Id == entryId);
+            return domainEntry == null ? null : ConvertToApiEntry(domainEntry);
         }
         catch (Exception ex)
         {
@@ -200,23 +213,23 @@ public class MediaMetadataService : IMediaMetadataService
     /// <summary>
     /// Imports media metadata entries from JSON or YAML data
     /// </summary>
-    public async Task<MediaMetadataFile> ImportMediaMetadataEntriesAsync(string data, bool overwriteExisting = false)
+    public async Task<ApiModels.MediaMetadataFile> ImportMediaMetadataEntriesAsync(string data, bool overwriteExisting = false)
     {
         try
         {
-            List<MediaMetadataEntry> importedEntries;
+            List<ApiModels.MediaMetadataEntry> importedEntries;
 
             // Try to determine if data is JSON or YAML
             if (data.TrimStart().StartsWith('[') || data.TrimStart().StartsWith('{'))
             {
                 // JSON format
-                importedEntries = JsonSerializer.Deserialize<List<MediaMetadataEntry>>(data) ?? new List<MediaMetadataEntry>();
+                importedEntries = JsonSerializer.Deserialize<List<ApiModels.MediaMetadataEntry>>(data) ?? new List<ApiModels.MediaMetadataEntry>();
             }
             else
             {
                 // YAML format
                 var deserializer = new DeserializerBuilder().Build();
-                importedEntries = deserializer.Deserialize<List<MediaMetadataEntry>>(data) ?? new List<MediaMetadataEntry>();
+                importedEntries = deserializer.Deserialize<List<ApiModels.MediaMetadataEntry>>(data) ?? new List<ApiModels.MediaMetadataEntry>();
             }
 
             if (importedEntries == null || importedEntries.Count == 0)
@@ -224,35 +237,111 @@ public class MediaMetadataService : IMediaMetadataService
                 throw new ArgumentException("No valid media metadata entries found in data");
             }
 
-            var metadataFile = await GetMediaMetadataFileAsync() ?? new MediaMetadataFile();
+            var apiFile = await GetMediaMetadataFileAsync();
+            var domainFile = apiFile == null ? new DomainModels.MediaMetadataFile() : ConvertToDomainModel(apiFile);
 
             foreach (var entry in importedEntries)
             {
-                var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entry.Id);
+                var domainEntry = ConvertToDomainEntry(entry);
+                var existingEntry = domainFile.Entries.FirstOrDefault(e => e.Id == domainEntry.Id);
                 if (existingEntry != null)
                 {
                     if (overwriteExisting)
                     {
-                        var index = metadataFile.Entries.IndexOf(existingEntry);
-                        metadataFile.Entries[index] = entry;
+                        var index = domainFile.Entries.IndexOf(existingEntry);
+                        domainFile.Entries[index] = domainEntry;
                     }
                     else
                     {
-                        _logger.LogWarning("Skipping existing media metadata entry: {EntryId}", entry.Id);
+                        _logger.LogWarning("Skipping existing media metadata entry: {EntryId}", domainEntry.Id);
                     }
                 }
                 else
                 {
-                    metadataFile.Entries.Add(entry);
+                    domainFile.Entries.Add(domainEntry);
                 }
             }
 
-            return await UpdateMediaMetadataFileAsync(metadataFile);
+            return await UpdateMediaMetadataFileAsync(ConvertToApiModel(domainFile));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error importing media metadata entries");
             throw;
         }
+    }
+
+    private static ApiModels.MediaMetadataFile ConvertToApiModel(DomainModels.MediaMetadataFile domainFile)
+    {
+        return new ApiModels.MediaMetadataFile
+        {
+            Id = domainFile.Id,
+            Entries = domainFile.Entries.Select(ConvertToApiEntry).ToList(),
+            CreatedAt = domainFile.CreatedAt,
+            UpdatedAt = domainFile.UpdatedAt,
+            Version = domainFile.Version
+        };
+    }
+
+    private static DomainModels.MediaMetadataFile ConvertToDomainModel(ApiModels.MediaMetadataFile apiFile)
+    {
+        return new DomainModels.MediaMetadataFile
+        {
+            Id = apiFile.Id,
+            Entries = apiFile.Entries.Select(ConvertToDomainEntry).ToList(),
+            CreatedAt = apiFile.CreatedAt,
+            UpdatedAt = apiFile.UpdatedAt,
+            Version = apiFile.Version
+        };
+    }
+
+    private static ApiModels.MediaMetadataEntry ConvertToApiEntry(DomainModels.MediaMetadataEntry domainEntry)
+    {
+        return new ApiModels.MediaMetadataEntry
+        {
+            Id = domainEntry.Id,
+            Title = domainEntry.Title,
+            FileName = domainEntry.FileName,
+            Type = domainEntry.Type,
+            Description = domainEntry.Description,
+            AgeRating = domainEntry.AgeRating,
+            SubjectReferenceId = domainEntry.SubjectReferenceId,
+            ClassificationTags = domainEntry.ClassificationTags.Select(t => new ApiModels.ClassificationTag
+            {
+                Key = t.Key,
+                Value = t.Value
+            }).ToList(),
+            Modifiers = domainEntry.Modifiers.Select(m => new ApiModels.Modifier
+            {
+                Key = m.Key,
+                Value = m.Value
+            }).ToList(),
+            Loopable = domainEntry.Loopable
+        };
+    }
+
+    private static DomainModels.MediaMetadataEntry ConvertToDomainEntry(ApiModels.MediaMetadataEntry apiEntry)
+    {
+        return new DomainModels.MediaMetadataEntry
+        {
+            Id = apiEntry.Id,
+            Title = apiEntry.Title,
+            FileName = apiEntry.FileName,
+            Type = apiEntry.Type,
+            Description = apiEntry.Description,
+            AgeRating = apiEntry.AgeRating,
+            SubjectReferenceId = apiEntry.SubjectReferenceId,
+            ClassificationTags = apiEntry.ClassificationTags.Select(t => new DomainModels.ClassificationTag
+            {
+                Key = t.Key,
+                Value = t.Value
+            }).ToList(),
+            Modifiers = apiEntry.Modifiers.Select(m => new DomainModels.Modifier
+            {
+                Key = m.Key,
+                Value = m.Value
+            }).ToList(),
+            Loopable = apiEntry.Loopable
+        };
     }
 }

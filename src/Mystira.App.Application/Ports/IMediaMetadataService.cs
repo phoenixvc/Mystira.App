@@ -1,9 +1,10 @@
-using Mystira.App.Contracts.Models;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.Ports;
 
 /// <summary>
 /// Port interface for media metadata service (file-based metadata management)
+/// Uses Domain models as per Hexagonal Architecture - Application layer depends on Domain, not Contracts
 /// </summary>
 public interface IMediaMetadataService
 {

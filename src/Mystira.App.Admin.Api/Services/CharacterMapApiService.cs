@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Admin.Api.Data;
+using Mystira.App.Infrastructure.Data;
 using Mystira.App.Contracts.Requests.CharacterMaps;
 using Mystira.App.Domain.Models;
 using YamlDotNet.Serialization;
