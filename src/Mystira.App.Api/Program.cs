@@ -104,6 +104,9 @@ else
         options.UseInMemoryDatabase("MystiraAppInMemoryDb_Local"));
 }
 
+// Register DbContext base type for repositories and UnitOfWork that depend on it
+builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<MystiraAppDbContext>());
+
 // Add Azure Infrastructure Services
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 builder.Services.Configure<AudioTranscodingOptions>(builder.Configuration.GetSection(AudioTranscodingOptions.SectionName));
