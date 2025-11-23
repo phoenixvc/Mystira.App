@@ -31,6 +31,11 @@ public class StoryProtocolOptions
     public string? PrivateKey { get; set; }
 
     /// <summary>
+    /// Azure Key Vault name containing Story Protocol secrets
+    /// </summary>
+    public string? KeyVaultName { get; set; }
+
+    /// <summary>
     /// Whether Story Protocol integration is enabled
     /// </summary>
     public bool Enabled { get; set; } = false;

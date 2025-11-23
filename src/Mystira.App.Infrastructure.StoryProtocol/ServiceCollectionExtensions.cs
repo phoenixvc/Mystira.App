@@ -28,17 +28,21 @@ public static class ServiceCollectionExtensions
             .GetSection(StoryProtocolOptions.SectionName)
             .Get<StoryProtocolOptions>() ?? new StoryProtocolOptions();
 
-        // For now, always use mock implementation until blockchain integration is ready
-        // TODO: Implement actual blockchain service and add conditional logic
-        if (options.Enabled && !options.UseMockImplementation)
+        if (!options.Enabled)
         {
-            // Placeholder for future blockchain implementation
-            // services.AddSingleton<IStoryProtocolService, StoryProtocolService>();
-            throw new NotImplementedException("Blockchain Story Protocol integration not yet implemented. Please set UseMockImplementation to true.");
+            // When disabled, register mock implementation
+            services.AddSingleton<IStoryProtocolService, MockStoryProtocolService>();
         }
-
-        // Register mock implementation (default)
-        services.AddSingleton<IStoryProtocolService, MockStoryProtocolService>();
+        else if (options.UseMockImplementation)
+        {
+            // Register mock implementation for development/testing
+            services.AddSingleton<IStoryProtocolService, MockStoryProtocolService>();
+        }
+        else
+        {
+            // Register real blockchain implementation for production
+            services.AddSingleton<IStoryProtocolService, StoryProtocolService>();
+        }
 
         return services;
     }
