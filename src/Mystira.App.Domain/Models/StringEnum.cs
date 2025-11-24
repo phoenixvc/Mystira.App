@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text.Json;
 
 namespace Mystira.App.Domain.Models;
@@ -19,13 +20,17 @@ public abstract class StringEnum<T> where T : StringEnum<T>
     private static Dictionary<string, T> GetAll()
     {
         var type = typeof(T);
-        var fileName = $"Data/{type.Name}s.json";
-        if (!File.Exists(fileName))
+        var assembly = Assembly.GetExecutingAssembly();
+        var resourceName = $"Mystira.App.Domain.Data.{type.Name}s.json";
+
+        using var stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream == null)
         {
             return new Dictionary<string, T>();
         }
 
-        var json = File.ReadAllText(fileName);
+        using var reader = new StreamReader(stream);
+        var json = reader.ReadToEnd();
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true

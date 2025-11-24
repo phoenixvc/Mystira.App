@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 
 namespace Mystira.App.Domain.Models;
@@ -17,13 +18,17 @@ public static class RandomNameGenerator
 
     private static string[] LoadNames(string fileName)
     {
-        var path = Path.Combine("Data", fileName);
-        if (!File.Exists(path))
+        var assembly = Assembly.GetExecutingAssembly();
+        var resourceName = $"Mystira.App.Domain.Data.{fileName}";
+
+        using var stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream == null)
         {
             return Array.Empty<string>();
         }
 
-        var json = File.ReadAllText(path);
+        using var reader = new StreamReader(stream);
+        var json = reader.ReadToEnd();
         return JsonSerializer.Deserialize<string[]>(json) ?? Array.Empty<string>();
     }
 

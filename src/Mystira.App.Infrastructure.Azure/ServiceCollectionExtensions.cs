@@ -4,6 +4,8 @@ using Azure.Storage.Blobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Mystira.App.Application.Ports.Media;
+using Mystira.App.Application.Ports.Storage;
 using Mystira.App.Infrastructure.Azure.Configuration;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
@@ -23,7 +25,7 @@ public static class ServiceCollectionExtensions
         configuration.GetSection(AzureOptions.SectionName).Bind(azureOptions);
 
         services.Configure<AudioTranscodingOptions>(configuration.GetSection(AudioTranscodingOptions.SectionName));
-        services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingService>();
+        services.AddSingleton<Services.IAudioTranscodingService, FfmpegAudioTranscodingService>();
 
         // Add Cosmos DB
         services.AddCosmosDb(configuration, azureOptions.CosmosDb);
@@ -99,7 +101,7 @@ public static class ServiceCollectionExtensions
             });
         }
 
-        services.AddScoped<IAzureBlobService, AzureBlobService>();
+        services.AddScoped<IBlobService, AzureBlobService>();
 
         return services;
     }
@@ -139,7 +141,7 @@ public static class ServiceCollectionExtensions
             });
         }
 
-        services.AddScoped<IAzureBlobService, AzureBlobService>();
+        services.AddScoped<IBlobService, AzureBlobService>();
 
         return services;
     }

@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Contracts.Requests.UserProfiles;
 using Mystira.App.Domain.Models;
-using Mystira.App.Infrastructure.Data.Repositories;
-using Mystira.App.Infrastructure.Data.UnitOfWork;
+using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Application.UseCases.UserProfiles;
 
@@ -35,7 +34,7 @@ public class CreateUserProfileUseCase
         }
 
         // Validate fantasy themes
-        var invalidThemes = request.PreferredFantasyThemes.Where(t => FantasyTheme.Parse(t) == null).ToList();
+        var invalidThemes = (request.PreferredFantasyThemes ?? Enumerable.Empty<string>()).Where(t => FantasyTheme.Parse(t) == null).ToList();
         if (invalidThemes.Any())
         {
             throw new ArgumentException($"Invalid fantasy themes: {string.Join(", ", invalidThemes)}");

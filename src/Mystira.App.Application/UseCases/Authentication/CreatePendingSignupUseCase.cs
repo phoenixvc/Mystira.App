@@ -2,8 +2,7 @@ using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Contracts.Requests.Auth;
 using Mystira.App.Domain.Models;
-using Mystira.App.Infrastructure.Data.Repositories;
-using Mystira.App.Infrastructure.Data.UnitOfWork;
+using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Application.UseCases.Authentication;
 

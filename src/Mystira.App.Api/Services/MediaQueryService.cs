@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Api.Models;
 using Mystira.App.Domain.Models;
-using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Api.Services;
 
@@ -10,7 +10,7 @@ namespace Mystira.App.Api.Services;
 /// </summary>
 public class MediaQueryService : IMediaQueryService
 {
-    private readonly Mystira.App.Infrastructure.Data.Repositories.IMediaAssetRepository _repository;
+    private readonly IMediaAssetRepository _repository;
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ILogger<MediaQueryService> _logger;
 

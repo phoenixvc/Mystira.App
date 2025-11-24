@@ -1,11 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Infrastructure.Data.UnitOfWork;
 
 /// <summary>
 /// Unit of Work implementation for managing transactions and repositories
 /// </summary>
-public class UnitOfWork : IUnitOfWork
+public class UnitOfWork : Application.Ports.Data.IUnitOfWork
 {
     private readonly DbContext _context;
     private Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? _transaction;

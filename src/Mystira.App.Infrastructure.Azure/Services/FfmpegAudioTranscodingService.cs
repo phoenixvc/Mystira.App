@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FFMpegCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Mystira.App.Application.Ports.Media;
 
 namespace Mystira.App.Infrastructure.Azure.Services;
 

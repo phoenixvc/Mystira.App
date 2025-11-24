@@ -20,13 +20,12 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration)
     {
         // Register configuration
-        services.Configure<StoryProtocolOptions>(
-            configuration.GetSection(StoryProtocolOptions.SectionName));
+        services.Configure<StoryProtocolOptions>(config =>
+            configuration.GetSection(StoryProtocolOptions.SectionName).Bind(config));
 
         // Register the appropriate implementation based on configuration
-        var options = configuration
-            .GetSection(StoryProtocolOptions.SectionName)
-            .Get<StoryProtocolOptions>() ?? new StoryProtocolOptions();
+        var options = new StoryProtocolOptions();
+        configuration.GetSection(StoryProtocolOptions.SectionName).Bind(options);
 
         if (!options.Enabled)
         {

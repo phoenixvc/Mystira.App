@@ -6,6 +6,7 @@ using Microsoft.OpenApi.Models;
 using Mystira.App.Api.Adapters;
 using Mystira.App.Api.Services;
 using Mystira.App.Infrastructure.Data;
+using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.UseCases.GameSessions;
 using Mystira.App.Application.UseCases.Media;
 using Mystira.App.Application.UseCases.Scenarios;
@@ -112,10 +113,6 @@ builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<MystiraAppDbCo
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 builder.Services.Configure<AudioTranscodingOptions>(builder.Configuration.GetSection(AudioTranscodingOptions.SectionName));
 builder.Services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingService>();
-
-// Register Content Bundle services
-builder.Services.AddScoped<IContentBundleService, ContentBundleService>();
-
 // Configure JWT Authentication - Load from secure configuration only
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];
 var jwtAudience = builder.Configuration["JwtSettings:Audience"];
@@ -238,12 +235,12 @@ builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
 builder.Services.AddScoped<IBadgeConfigurationRepository, BadgeConfigurationRepository>();
 builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
 builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
-builder.Services.AddScoped<Mystira.App.Infrastructure.Data.Repositories.IMediaAssetRepository, Mystira.App.Infrastructure.Data.Repositories.MediaAssetRepository>();
-builder.Services.AddScoped<Mystira.App.Api.Repositories.IMediaMetadataFileRepository, Mystira.App.Api.Repositories.MediaMetadataFileRepository>();
-builder.Services.AddScoped<Mystira.App.Api.Repositories.ICharacterMediaMetadataFileRepository, Mystira.App.Api.Repositories.CharacterMediaMetadataFileRepository>();
-builder.Services.AddScoped<Mystira.App.Api.Repositories.ICharacterMapFileRepository, Mystira.App.Api.Repositories.CharacterMapFileRepository>();
+builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
+builder.Services.AddScoped<IMediaMetadataFileRepository, MediaMetadataFileRepository>();
+builder.Services.AddScoped<ICharacterMediaMetadataFileRepository, CharacterMediaMetadataFileRepository>();
+builder.Services.AddScoped<ICharacterMapFileRepository, CharacterMapFileRepository>();
 builder.Services.AddScoped<IAvatarConfigurationFileRepository, AvatarConfigurationFileRepository>();
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<Mystira.App.Application.Ports.Data.IUnitOfWork, Mystira.App.Infrastructure.Data.UnitOfWork.UnitOfWork>();
 
 // Register Application Layer Use Cases
 // Scenario Use Cases
@@ -291,12 +288,10 @@ builder.Services.AddScoped<IMediaQueryService, MediaQueryService>();
 
 // Register application services
 builder.Services.AddScoped<IScenarioApiService, ScenarioApiService>();
-builder.Services.AddScoped<IGameSessionApiService, GameSessionApiService>();
 builder.Services.AddScoped<IUserProfileApiService, UserProfileApiService>();
 builder.Services.AddScoped<IUserBadgeApiService, UserBadgeApiService>();
 builder.Services.AddScoped<IAccountApiService, AccountApiService>();
 builder.Services.AddScoped<ICharacterMapApiService, CharacterMapApiService>();
-builder.Services.AddScoped<IBadgeConfigurationApiService, BadgeConfigurationApiService>();
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
 builder.Services.AddScoped<IClientApiService, ClientApiService>();
 builder.Services.AddScoped<IAppStatusService, AppStatusService>();
@@ -311,6 +306,27 @@ builder.Services.AddScoped<IAvatarApiService, AvatarApiService>();
 builder.Services.AddScoped<IPasswordlessAuthService, PasswordlessAuthService>();
 builder.Services.AddScoped<IEmailService, AzureEmailService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+
+// Configure Memory Cache for query caching
+builder.Services.AddMemoryCache(options =>
+{
+    options.SizeLimit = 1024; // Limit cache to 1024 entries
+    options.CompactionPercentage = 0.25; // Compact 25% when size limit reached
+});
+
+// Configure MediatR for CQRS pattern
+builder.Services.AddMediatR(cfg =>
+{
+    // Register all handlers from Application assembly
+    cfg.RegisterServicesFromAssembly(typeof(Mystira.App.Application.CQRS.ICommand<>).Assembly);
+
+    // Add query caching pipeline behavior
+    cfg.AddOpenBehavior(typeof(Mystira.App.Application.Behaviors.QueryCachingBehavior<,>));
+});
+
+// Register query cache invalidation service
+builder.Services.AddSingleton<Mystira.App.Application.Services.IQueryCacheInvalidationService,
+    Mystira.App.Application.Services.QueryCacheInvalidationService>();
 
 // Configure Health Checks
 builder.Services.AddHealthChecks()

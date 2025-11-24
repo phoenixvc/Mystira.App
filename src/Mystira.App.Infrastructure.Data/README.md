@@ -1,66 +1,69 @@
 # Mystira.App.Infrastructure.Data
 
-Data persistence infrastructure implementing the repository pattern and unit of work. This project serves as a **secondary adapter** in the hexagonal architecture, providing concrete implementations of data access ports defined by the application layer.
+Data persistence infrastructure implementing the repository pattern and unit of work. This project serves as a **secondary adapter** in the hexagonal architecture, providing concrete implementations of data access ports defined by the Application layer.
 
-## Role in Hexagonal Architecture
+## ✅ Hexagonal Architecture - FULLY COMPLIANT
 
 **Layer**: **Infrastructure - Data Adapter (Secondary/Driven)**
 
 The Infrastructure.Data layer is a **secondary adapter** (driven adapter) that:
-- **Implements** repository interfaces (ports) defined in the application/domain
+- **Implements** repository port interfaces defined in `Application.Ports.Data`
 - **Translates** domain entities to/from database representations
 - **Manages** data persistence using Entity Framework Core
 - **Abstracts** database technology from the core business logic
 - **Coordinates** transactions via Unit of Work pattern
+- **ZERO reverse dependencies** - Application never references Infrastructure
 
-**Dependency Flow**:
+**Dependency Flow** (Correct ✅):
 ```
 Domain Layer (Core)
-    ↑ defines interfaces
+    ↓ references
 Application Layer
-    ↓ depends on
-IRepository Ports (Interfaces)
+    ↓ defines
+Application.Ports.Data (Interfaces)
     ↑ implemented by
-Infrastructure.Data (THIS - Adapter)
+Infrastructure.Data (THIS - Implementations)
     ↓ uses
 Entity Framework Core / Cosmos DB
 ```
 
 **Key Principles**:
-- ✅ **Port Implementation** - Implements repository interfaces from domain/application
+- ✅ **Port Implementation** - Implements repository interfaces from `Application.Ports.Data`
 - ✅ **Persistence Ignorance** - Domain models don't know about EF Core
-- ✅ **Technology Adapter** - Adapts EF Core to domain needs
-- ✅ **Dependency Inversion** - Depends on domain, not vice versa
+- ✅ **Technology Adapter** - Adapts EF Core to application needs
+- ✅ **Dependency Inversion** - Application defines ports, Infrastructure implements them
+- ✅ **Clean Architecture** - No circular dependencies, proper layering
 
 ## Project Structure
 
 ```
 Mystira.App.Infrastructure.Data/
 ├── Repositories/
-│   ├── IRepository.cs                       # Base repository interface (port)
-│   ├── AccountRepository.cs                 # Account data access
-│   ├── IScenarioRepository.cs               # Scenario port
-│   ├── ScenarioRepository.cs                # Scenario implementation
-│   ├── IGameSessionRepository.cs            # Game session port
-│   ├── GameSessionRepository.cs             # Game session implementation
-│   ├── IMediaAssetRepository.cs             # Media asset port
-│   ├── MediaAssetRepository.cs              # Media asset implementation
-│   ├── IBadgeConfigurationRepository.cs     # Badge config port
-│   ├── BadgeConfigurationRepository.cs      # Badge config implementation
-│   ├── ICharacterMapRepository.cs           # Character map port
-│   ├── CharacterMapRepository.cs            # Character map implementation
-│   ├── IUserBadgeRepository.cs              # User badge port
-│   ├── UserBadgeRepository.cs               # User badge implementation
-│   ├── IAvatarConfigurationFileRepository.cs
-│   ├── AvatarConfigurationFileRepository.cs
-│   ├── ContentBundleRepository.cs
-│   ├── IPendingSignupRepository.cs
-│   └── PendingSignupRepository.cs
+│   ├── AccountRepository.cs                  # Implements IAccountRepository
+│   ├── ScenarioRepository.cs                 # Implements IScenarioRepository
+│   ├── GameSessionRepository.cs              # Implements IGameSessionRepository
+│   ├── MediaAssetRepository.cs               # Implements IMediaAssetRepository
+│   ├── BadgeConfigurationRepository.cs       # Implements IBadgeConfigurationRepository
+│   ├── CharacterMapRepository.cs             # Implements ICharacterMapRepository
+│   ├── UserBadgeRepository.cs                # Implements IUserBadgeRepository
+│   ├── UserProfileRepository.cs              # Implements IUserProfileRepository
+│   ├── AvatarConfigurationFileRepository.cs  # Implements IAvatarConfigurationFileRepository
+│   ├── CharacterMapFileRepository.cs         # Implements ICharacterMapFileRepository
+│   ├── CharacterMediaMetadataFileRepository.cs
+│   ├── MediaMetadataFileRepository.cs
+│   ├── ContentBundleRepository.cs            # Implements IContentBundleRepository
+│   └── PendingSignupRepository.cs            # Implements IPendingSignupRepository
 ├── UnitOfWork/
-│   ├── IUnitOfWork.cs                       # Unit of Work interface (port)
-│   └── UnitOfWork.cs                        # Unit of Work implementation
+│   └── UnitOfWork.cs                         # Implements IUnitOfWork
+├── MystiraAppDbContext.cs                    # EF Core DbContext
+├── PartitionKeyInterceptor.cs                # Cosmos DB optimization
 └── Mystira.App.Infrastructure.Data.csproj
 ```
+
+**Port Interfaces** (defined in Application layer):
+- All `I*Repository` interfaces live in `Application/Ports/Data/`
+- `IUnitOfWork` lives in `Application/Ports/Data/`
+- Infrastructure.Data references Application to implement these ports
 
 ## Core Concepts
 
@@ -68,8 +71,11 @@ Mystira.App.Infrastructure.Data/
 
 The repository pattern abstracts data access, allowing the application to work with domain entities without knowing about database details.
 
-#### Base Repository Interface (Port)
+#### Port Interface (defined in Application.Ports.Data)
 ```csharp
+// Location: Application/Ports/Data/IRepository.cs
+namespace Mystira.App.Application.Ports.Data;
+
 public interface IRepository<T> where T : class
 {
     Task<T?> GetByIdAsync(string id);
@@ -77,14 +83,25 @@ public interface IRepository<T> where T : class
     Task AddAsync(T entity);
     Task UpdateAsync(T entity);
     Task DeleteAsync(string id);
+    IQueryable<T> GetQueryable();
 }
 ```
 
-#### Example: ScenarioRepository
+#### Implementation (in Infrastructure.Data)
 ```csharp
+// Location: Infrastructure.Data/Repositories/ScenarioRepository.cs
+using Mystira.App.Application.Ports.Data;  // Port interface ✅
+
+namespace Mystira.App.Infrastructure.Data.Repositories;
+
 public class ScenarioRepository : IScenarioRepository
 {
-    private readonly DbContext _context;
+    private readonly MystiraAppDbContext _context;
+
+    public ScenarioRepository(MystiraAppDbContext context)
+    {
+        _context = context;
+    }
 
     public async Task<Scenario?> GetByIdAsync(string id)
     {
@@ -94,7 +111,7 @@ public class ScenarioRepository : IScenarioRepository
             .FirstOrDefaultAsync(s => s.Id == id);
     }
 
-    public async Task<IEnumerable<Scenario>> GetByAgeGroupAsync(AgeGroup ageGroup)
+    public async Task<IEnumerable<Scenario>> GetByAgeGroupAsync(string ageGroup)
     {
         return await _context.Scenarios
             .Where(s => s.AgeGroup == ageGroup)
@@ -110,10 +127,13 @@ public class ScenarioRepository : IScenarioRepository
 
 ### Unit of Work Pattern
 
-Coordinates multiple repository operations into a single transaction:
+Coordinates multiple repository operations into a single transaction.
 
-#### IUnitOfWork Interface (Port)
+#### Port Interface (Application.Ports.Data)
 ```csharp
+// Location: Application/Ports/Data/IUnitOfWork.cs
+namespace Mystira.App.Application.Ports.Data;
+
 public interface IUnitOfWork : IDisposable
 {
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
@@ -123,12 +143,22 @@ public interface IUnitOfWork : IDisposable
 }
 ```
 
-#### UnitOfWork Implementation
+#### Implementation (Infrastructure.Data)
 ```csharp
+// Location: Infrastructure.Data/UnitOfWork/UnitOfWork.cs
+using Mystira.App.Application.Ports.Data;  // Port interface ✅
+
+namespace Mystira.App.Infrastructure.Data.UnitOfWork;
+
 public class UnitOfWork : IUnitOfWork
 {
-    private readonly DbContext _context;
+    private readonly MystiraAppDbContext _context;
     private IDbContextTransaction? _transaction;
+
+    public UnitOfWork(MystiraAppDbContext context)
+    {
+        _context = context;
+    }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -142,7 +172,19 @@ public class UnitOfWork : IUnitOfWork
 
     public async Task CommitTransactionAsync()
     {
-        await _transaction?.CommitAsync();
+        if (_transaction != null)
+            await _transaction.CommitAsync();
+    }
+
+    public async Task RollbackTransactionAsync()
+    {
+        if (_transaction != null)
+            await _transaction.RollbackAsync();
+    }
+
+    public void Dispose()
+    {
+        _transaction?.Dispose();
     }
 }
 ```
@@ -150,50 +192,50 @@ public class UnitOfWork : IUnitOfWork
 ## Repository Implementations
 
 ### AccountRepository
-Manages DM (Dungeon Master) accounts:
+Manages user accounts:
 - `GetByIdAsync(string id)`: Get account by ID
 - `GetByEmailAsync(string email)`: Find by email
-- `GetByUsernameAsync(string username)`: Find by username
-- COPPA-compliant (no child accounts)
+- `AddAsync(Account)`: Create new account
+- `UpdateAsync(Account)`: Update existing account
 
 ### ScenarioRepository
 Manages interactive story scenarios:
-- `GetByAgeGroupAsync(AgeGroup)`: Filter by age group
-- `GetFeaturedAsync()`: Get featured scenarios
-- `GetByThemeAsync(FantasyTheme)`: Filter by theme
-- Includes navigation properties (Scenes, Characters)
+- `GetByAgeGroupAsync(string)`: Filter by age group
+- `GetAllAsync()`: Get all scenarios
+- Includes navigation properties (Scenes, CharacterArchetypes)
 
 ### GameSessionRepository
 Manages active game sessions:
-- `GetActiveSessionsAsync(string userId)`: User's active sessions
+- `GetActiveSessionsByUserIdAsync(string userId)`: User's active sessions
 - `GetByScenarioIdAsync(string scenarioId)`: Sessions for a scenario
-- `GetSessionStatsAsync(string sessionId)`: Calculate statistics
 - Tracks choice history and compass values
 
 ### MediaAssetRepository
 Manages media file metadata:
 - `GetByBlobNameAsync(string blobName)`: Find by blob name
 - `GetByScenarioIdAsync(string scenarioId)`: Media for scenario
-- `GetOrphanedAssetsAsync()`: Find unused media
 - Links to Azure Blob Storage
 
 ### BadgeConfigurationRepository
 Manages achievement badge definitions:
 - `GetByAxisAsync(string axis)`: Badges for compass axis
-- `GetEligibleBadgesAsync(CompassTracking)`: Badges user can earn
-- Validates threshold ranges
+- Badge configuration lookup
 
 ### CharacterMapRepository
 Maps characters to media assets:
 - `GetByCharacterIdAsync(string characterId)`: Maps for character
 - `GetByMediaIdAsync(string mediaId)`: Maps using media
-- Coordinates character-media relationships
 
 ### UserBadgeRepository
 Tracks user-earned badges:
 - `GetByUserIdAsync(string userId)`: User's earned badges
 - `HasBadgeAsync(string userId, string badgeId)`: Check if earned
-- `AwardBadgeAsync(UserBadge)`: Award badge to user
+
+### UserProfileRepository
+Manages user profiles:
+- `GetByIdAsync(string id)`: Get profile
+- `GetNonGuestProfilesAsync()`: Non-guest profiles
+- `GetGuestProfilesAsync()`: Guest profiles
 
 ## Database Technology
 
@@ -212,9 +254,9 @@ Entity Framework Core with Cosmos DB provider:
 - JSON document storage
 - Optimized for read-heavy workloads
 
-**Configuration**:
+**Configuration** (in API layer):
 ```csharp
-services.AddDbContext<ApplicationDbContext>(options =>
+services.AddDbContext<MystiraAppDbContext>(options =>
     options.UseCosmos(
         connectionString,
         databaseName: "MystiraAppDb"
@@ -232,117 +274,132 @@ For local development and testing:
 
 **Configuration**:
 ```csharp
-services.AddDbContext<ApplicationDbContext>(options =>
+services.AddDbContext<MystiraAppDbContext>(options =>
     options.UseInMemoryDatabase("MystiraAppTestDb")
 );
 ```
 
-## Data Mapping
+## DbContext Configuration
 
-### Entity Configuration
+### MystiraAppDbContext
 
-Repositories use EF Core configurations for entity mapping:
+Centralized DbContext for all entity configurations:
 
 ```csharp
-public class ScenarioConfiguration : IEntityTypeConfiguration<Scenario>
+public class MystiraAppDbContext : DbContext
 {
-    public void Configure(EntityTypeBuilder<Scenario> builder)
+    public MystiraAppDbContext(DbContextOptions<MystiraAppDbContext> options)
+        : base(options)
     {
-        builder.HasKey(s => s.Id);
-        builder.Property(s => s.Title).IsRequired().HasMaxLength(200);
+    }
 
-        builder.OwnsMany(s => s.Scenes, scene =>
-        {
-            scene.Property(sc => sc.Narrative).IsRequired();
-            scene.OwnsMany(sc => sc.Choices);
-        });
+    public DbSet<Account> Accounts => Set<Account>();
+    public DbSet<Scenario> Scenarios => Set<Scenario>();
+    public DbSet<GameSession> GameSessions => Set<GameSession>();
+    public DbSet<MediaAsset> MediaAssets => Set<MediaAsset>();
+    public DbSet<BadgeConfiguration> BadgeConfigurations => Set<BadgeConfiguration>();
+    public DbSet<CharacterMap> CharacterMaps => Set<CharacterMap>();
+    public DbSet<UserBadge> UserBadges => Set<UserBadges>();
+    public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
 
-        builder.HasMany(s => s.CharacterArchetypes)
-               .WithOne()
-               .HasForeignKey("ScenarioId");
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        // Apply entity configurations
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(MystiraAppDbContext).Assembly);
     }
 }
 ```
 
-### Value Conversions
+### PartitionKeyInterceptor
 
-Convert domain value objects to database primitives:
+Cosmos DB optimization for partition key handling:
 
 ```csharp
-builder.Property(s => s.AgeGroup)
-    .HasConversion(
-        v => v.Value,
-        v => AgeGroup.FromValue(v)
-    );
+public class PartitionKeyInterceptor : SaveChangesInterceptor
+{
+    public override InterceptionResult<int> SavingChanges(
+        DbContextEventData eventData,
+        InterceptionResult<int> result)
+    {
+        SetPartitionKeys(eventData.Context);
+        return result;
+    }
 
-builder.Property(s => s.FantasyTheme)
-    .HasConversion(
-        v => v.Value,
-        v => FantasyTheme.FromValue(v)
-    );
+    private void SetPartitionKeys(DbContext? context)
+    {
+        if (context == null) return;
+
+        foreach (var entry in context.ChangeTracker.Entries())
+        {
+            // Set partition key based on entity type
+            // Optimizes Cosmos DB queries
+        }
+    }
+}
 ```
 
 ## Dependency Injection
 
-Register repositories and Unit of Work in `Program.cs`:
+Register repositories and Unit of Work in API layer `Program.cs`:
 
 ```csharp
 // DbContext
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+builder.Services.AddDbContext<MystiraAppDbContext>(options =>
     options.UseCosmos(connectionString, databaseName)
 );
 
-// Unit of Work
+// Unit of Work (implements Application port)
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-// Repositories
+// Repositories (implement Application ports)
+builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IScenarioRepository, ScenarioRepository>();
 builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();
 builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
 builder.Services.AddScoped<IBadgeConfigurationRepository, BadgeConfigurationRepository>();
 builder.Services.AddScoped<ICharacterMapRepository, CharacterMapRepository>();
 builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
+builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
+builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
+builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
 ```
 
-## Usage Example
+## Usage in Application Layer
 
-### In Application Use Case
+Application use cases depend on port interfaces, not implementations:
 
 ```csharp
-public class StartGameSessionUseCase
+// Location: Application/UseCases/Scenarios/GetScenarioUseCase.cs
+using Mystira.App.Application.Ports.Data;  // Port interface ✅
+
+namespace Mystira.App.Application.UseCases.Scenarios;
+
+public class GetScenarioUseCase
 {
-    private readonly IGameSessionRepository _sessionRepository;
-    private readonly IScenarioRepository _scenarioRepository;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IScenarioRepository _repository;  // Port ✅
+    private readonly ILogger<GetScenarioUseCase> _logger;
 
-    public async Task<GameSession> ExecuteAsync(string scenarioId, string userId)
+    public GetScenarioUseCase(
+        IScenarioRepository repository,  // Port ✅
+        ILogger<GetScenarioUseCase> logger)
     {
-        // Load from repository
-        var scenario = await _scenarioRepository.GetByIdAsync(scenarioId);
+        _repository = repository;
+        _logger = logger;
+    }
 
-        if (scenario == null)
-            throw new ScenarioNotFoundException(scenarioId);
-
-        // Create domain entity
-        var session = new GameSession
-        {
-            Id = Guid.NewGuid().ToString(),
-            ScenarioId = scenarioId,
-            UserId = userId,
-            State = SessionState.Active,
-            StartedAt = DateTime.UtcNow
-        };
-
-        // Persist via repository
-        await _sessionRepository.AddAsync(session);
-
-        // Commit transaction
-        await _unitOfWork.SaveChangesAsync();
-
-        return session;
+    public async Task<Scenario?> ExecuteAsync(string scenarioId)
+    {
+        _logger.LogInformation("Getting scenario {ScenarioId}", scenarioId);
+        return await _repository.GetByIdAsync(scenarioId);
     }
 }
 ```
+
+**Benefits**:
+- ✅ Application never references Infrastructure.Data
+- ✅ Can swap implementations without changing Application
+- ✅ Easy to mock for testing
+- ✅ Clear separation of concerns
 
 ## Transaction Coordination
 
@@ -351,9 +408,9 @@ public class StartGameSessionUseCase
 ```csharp
 public class CompleteGameSessionUseCase
 {
-    private readonly IGameSessionRepository _sessionRepository;
-    private readonly IUserBadgeRepository _badgeRepository;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IGameSessionRepository _sessionRepository;  // Port ✅
+    private readonly IUserBadgeRepository _badgeRepository;      // Port ✅
+    private readonly IUnitOfWork _unitOfWork;                    // Port ✅
 
     public async Task ExecuteAsync(string sessionId)
     {
@@ -363,16 +420,18 @@ public class CompleteGameSessionUseCase
         {
             // Load session
             var session = await _sessionRepository.GetByIdAsync(sessionId);
+            if (session == null)
+                throw new SessionNotFoundException(sessionId);
+
             session.State = SessionState.Completed;
             session.CompletedAt = DateTime.UtcNow;
-
             await _sessionRepository.UpdateAsync(session);
 
             // Award badges based on compass values
             var earnedBadges = DetermineEarnedBadges(session.CompassTracking);
             foreach (var badge in earnedBadges)
             {
-                await _badgeRepository.AwardBadgeAsync(badge);
+                await _badgeRepository.AddAsync(badge);
             }
 
             // Commit atomically
@@ -428,7 +487,10 @@ public async Task<IEnumerable<ScenarioSummary>> GetSummariesAsync()
 ### Filtering and Paging
 
 ```csharp
-public async Task<IEnumerable<Scenario>> GetPagedAsync(int page, int pageSize, AgeGroup? ageGroup = null)
+public async Task<IEnumerable<Scenario>> GetPagedAsync(
+    int page,
+    int pageSize,
+    string? ageGroup = null)
 {
     var query = _context.Scenarios.AsQueryable();
 
@@ -445,20 +507,47 @@ public async Task<IEnumerable<Scenario>> GetPagedAsync(int page, int pageSize, A
 
 ## Testing
 
-### Unit Testing Repositories
+### Unit Testing Use Cases with Mocked Repositories
 
-Use in-memory database for testing:
+Application use cases can be tested without Infrastructure:
+
+```csharp
+[Fact]
+public async Task GetScenario_WithValidId_ReturnsScenario()
+{
+    // Arrange
+    var mockRepo = new Mock<IScenarioRepository>();  // Mock port ✅
+    mockRepo.Setup(r => r.GetByIdAsync("test-123"))
+        .ReturnsAsync(new Scenario { Id = "test-123", Title = "Test" });
+
+    var useCase = new GetScenarioUseCase(
+        mockRepo.Object,
+        mockLogger.Object);
+
+    // Act
+    var result = await useCase.ExecuteAsync("test-123");
+
+    // Assert
+    Assert.NotNull(result);
+    Assert.Equal("Test", result.Title);
+    mockRepo.Verify(r => r.GetByIdAsync("test-123"), Times.Once);
+}
+```
+
+### Integration Testing Repositories
+
+Use in-memory database for repository testing:
 
 ```csharp
 [Fact]
 public async Task GetByIdAsync_WithValidId_ReturnsScenario()
 {
     // Arrange
-    var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+    var options = new DbContextOptionsBuilder<MystiraAppDbContext>()
         .UseInMemoryDatabase("TestDb")
         .Options;
 
-    using var context = new ApplicationDbContext(options);
+    using var context = new MystiraAppDbContext(options);
     var repository = new ScenarioRepository(context);
 
     var scenario = new Scenario { Id = "test-123", Title = "Test" };
@@ -474,6 +563,31 @@ public async Task GetByIdAsync_WithValidId_ReturnsScenario()
 }
 ```
 
+## Architectural Compliance Verification
+
+Verify that Infrastructure.Data correctly implements Application ports:
+
+```bash
+# Check that Infrastructure.Data references Application
+grep "Mystira.App.Application" Mystira.App.Infrastructure.Data.csproj
+# Expected: <ProjectReference Include="..\Mystira.App.Application\...">
+
+# Check that repositories use Application.Ports namespace
+grep -r "using Mystira.App.Application.Ports.Data" Repositories/
+# Expected: All repository files import from Application.Ports.Data
+
+# Check NO Infrastructure references in Application
+cd ../Mystira.App.Application
+grep -r "using Mystira.App.Infrastructure" .
+# Expected: (no output - Application never references Infrastructure)
+```
+
+**Results**:
+- ✅ Infrastructure.Data references Application (correct direction)
+- ✅ Repositories implement Application.Ports.Data interfaces
+- ✅ Application has ZERO Infrastructure references
+- ✅ Full dependency inversion achieved
+
 ## Performance Considerations
 
 ### Indexing
@@ -482,6 +596,7 @@ Ensure proper indexing for common queries:
 - `Scenario.AgeGroup` - Frequent filtering
 - `GameSession.UserId` - User session lookups
 - `MediaAsset.BlobName` - Blob name lookups
+- `Account.Email` - Account lookups
 
 ### Caching
 
@@ -499,217 +614,38 @@ await _context.SaveChangesAsync();
 
 ## Future Enhancements
 
-- **CQRS**: Separate read and write models
-- **Dapper**: Use for read-heavy queries
-- **Outbox Pattern**: For reliable event publishing
+- **CQRS**: Separate read and write models (Dapper for reads, EF for writes)
+- **Specification Pattern**: Reusable query logic
+- **Outbox Pattern**: Reliable event publishing
 - **Soft Delete**: Instead of hard deletes
-- **Audit Logging**: Track entity changes
+- **Audit Logging**: Track entity changes automatically
 
 ## Related Documentation
 
+- **[Application](../Mystira.App.Application/README.md)** - Defines port interfaces this layer implements
 - **[Domain](../Mystira.App.Domain/README.md)** - Domain entities persisted by repositories
-- **[Application](../Mystira.App.Application/README.md)** - Use cases that consume repositories
-- **[Azure Infrastructure](../Mystira.App.Infrastructure.Azure/README.md)** - Cosmos DB deployment
+- **[API](../Mystira.App.Api/README.md)** - Registers repository implementations via DI
+- **[Admin.Api](../Mystira.App.Admin.Api/README.md)** - Also registers implementations
 
-## 🔍 Architectural Analysis
+## Summary
 
-### Current State Assessment
+**What This Layer Does**:
+- ✅ Implements data access port interfaces from Application.Ports.Data
+- ✅ Provides EF Core-based repository implementations
+- ✅ Manages Cosmos DB / InMemory database access
+- ✅ Coordinates transactions via Unit of Work
+- ✅ Maintains clean hexagonal architecture
 
-**File Count**: 28 C# files
-**Key Files**:
-- `MystiraAppDbContext.cs` (moved here from API - good! ✅)
-- `PartitionKeyInterceptor.cs` (moved here from Admin.Api - good! ✅)
-- 20+ repository implementations
-- UnitOfWork implementation
+**What This Layer Does NOT Do**:
+- ❌ Define port interfaces (Application does that)
+- ❌ Contain business logic (Application/Domain does that)
+- ❌ Make decisions about what to persist (Application decides)
 
-**Dependencies**:
-- Domain (correct ✅)
-- EF Core Cosmos, InMemory (correct ✅)
-
-**Target Framework**: net9.0
-
-### ⚠️ Architectural Issues Found
-
-#### 1. **Repository Interfaces Location** (MEDIUM)
-**Location**: `Repositories/I*Repository.cs` files
-
-**Issue**: Repository interfaces (`IRepository<T>`, `IScenarioRepository`, etc.) are defined in Infrastructure.Data
-
-**Impact**:
-- ⚠️ Application layer depends on Infrastructure to get interfaces
-- ⚠️ Violates Dependency Inversion (infrastructure should depend on application, not vice versa)
-- ⚠️ Makes it harder to swap implementations
-
-**Current (Wrong)**:
-```
-Application → Infrastructure.Data (for interfaces)
-Infrastructure.Data (implements own interfaces)
-```
-
-**Should Be**:
-```
-Application (defines ports/interfaces)
-    ↑
-Infrastructure.Data (implements application's interfaces)
-```
-
-**Recommendation**:
-- **MOVE** all `I*Repository.cs` interfaces to `Application/Ports/Data/`
-- **MOVE** `IUnitOfWork.cs` to `Application/Ports/Data/`
-- Keep only **implementations** in Infrastructure.Data
-- Update namespaces: `Mystira.App.Infrastructure.Data.Repositories` → `Mystira.App.Application.Ports.Data`
-
-#### 2. **DbContext Location** (RESOLVED ✅)
-**Location**: `MystiraAppDbContext.cs`
-
-**Status**: **Recently fixed!** Moved from API to Infrastructure.Data
-
-**Previous Issue**: Was in `Api/Data/` and `Admin.Api/Data/` (violation)
-**Current State**: Correctly in Infrastructure.Data ✅
-
-**Impact**: This was a major violation that has been fixed
-
-### ✅ What's Working Well
-
-1. **DbContext Centralized** - Single DbContext in Infrastructure (recently fixed!)
-2. **Repository Pattern** - Proper abstraction of data access
-3. **Unit of Work** - Transaction coordination
-4. **Cosmos DB + InMemory** - Good dual provider support
-5. **Clean Separation** - No business logic in repositories
-6. **Partition Key Interceptor** - Cosmos DB optimization
-
-## 📋 Refactoring TODO
-
-### 🟡 High Priority
-
-- [ ] **Move repository interfaces to Application/Ports**
-  - Create `Application/Ports/Data/` folder
-  - Move all `I*Repository.cs` interfaces
-  - Move `IUnitOfWork.cs` interface
-  - Update all `using` statements in Application layer
-  - Location: `Infrastructure.Data/Repositories/I*.cs` → `Application/Ports/Data/`
-  - Estimated: ~15 interface files
-
-- [ ] **Update namespaces after move**
-  - Change namespace from `Mystira.App.Infrastructure.Data.Repositories`
-  - To: `Mystira.App.Application.Ports.Data`
-  - Update DI registrations in API/Admin.Api `Program.cs`
-
-### 🟢 Medium Priority
-
-- [ ] **Add specification pattern**
-  - Create `ISpecification<T>` interface in Application/Ports
-  - Implement in Infrastructure.Data
-  - Enables reusable query logic
-
-- [ ] **Implement generic repository**
-  - Create `Repository<T>` base class
-  - Reduce code duplication across repositories
-  - Inherit specific repositories from base
-
-### 🔵 Low Priority
-
-- [ ] **Add audit fields tracking**
-  - Automatically set CreatedAt, UpdatedAt, CreatedBy, UpdatedBy
-  - Implement in SaveChangesAsync override
-
-- [ ] **Implement soft delete**
-  - Add IsDeleted flag to entities
-  - Global query filter to exclude deleted
-  - Change Delete methods to set flag instead of removing
-
-## 💡 Recommendations
-
-### Immediate Actions
-1. **Coordinate with Application layer refactoring** - Move interfaces when Application is ready
-2. **Document interface locations** - Update team wiki about where interfaces live
-3. **Plan migration** - Interfaces move is dependency for Application refactoring
-
-### Short-term
-1. **Move interfaces to Application/Ports** - Proper dependency direction
-2. **Update all using statements** - Across Application and API projects
-3. **Fix DI registrations** - Update Program.cs in API projects
-
-### Long-term
-1. **Specification pattern** - Reusable query logic
-2. **Generic repository** - Reduce boilerplate
-3. **CQRS read models** - Separate read and write concerns
-
-## 📊 SWOT Analysis
-
-### Strengths 💪
-- ✅ **DbContext Centralized**: Recently moved to correct location
-- ✅ **Repository Pattern**: Proper data access abstraction
-- ✅ **Unit of Work**: Transaction management
-- ✅ **Dual Providers**: Cosmos DB + InMemory for testing
-- ✅ **Partition Strategy**: Cosmos DB optimization with interceptor
-- ✅ **Clean Implementation**: No business logic leakage
-- ✅ **Type Safety**: Strongly typed repositories
-- ✅ **Good Structure**: 28 files, well-organized
-
-### Weaknesses ⚠️
-- ⚠️ **Interfaces in Wrong Layer**: Should be in Application/Ports
-- ⚠️ **Some Duplication**: Repository methods could share base class
-- ⚠️ **No Specifications**: Query logic scattered
-- ⚠️ **Hard Deletes**: No soft delete support
-- ⚠️ **No Audit Trail**: Missing CreatedBy, UpdatedBy tracking
-
-### Opportunities 🚀
-- 📈 **Move to Ports**: Achieve true dependency inversion
-- 📈 **Specification Pattern**: Reusable, testable query logic
-- 📈 **Generic Repository**: Reduce code duplication
-- 📈 **CQRS**: Separate read/write models (Dapper for reads)
-- 📈 **Event Sourcing**: Append-only event store
-- 📈 **Audit Logging**: Full entity change tracking
-- 📈 **Soft Deletes**: Better data recovery
-- 📈 **Read Replicas**: Scale reads independently
-
-### Threats 🔒
-- ⚡ **Interface Move Coordination**: Must coordinate with Application refactoring
-- ⚡ **Breaking Changes**: Moving interfaces affects multiple projects
-- ⚡ **Cosmos DB Costs**: RU consumption can grow
-- ⚡ **Testing Gaps**: Need integration tests for repositories
-- ⚡ **N+1 Queries**: Easy to create with lazy loading
-
-### Risk Mitigation
-1. **Phased Migration**: Move interfaces with Application layer refactoring
-2. **Comprehensive Tests**: Test all repositories before and after move
-3. **Query Analysis**: Monitor Cosmos DB RU consumption
-4. **Code Reviews**: Ensure eager loading used appropriately
-
-## Current vs Target Architecture
-
-### Current (Needs Improvement)
-```
-Application Layer
-    ↓ depends on
-Infrastructure.Data (defines interfaces + implements)
-```
-
-### Target (Correct Hexagonal)
-```
-Application Layer (defines ports/interfaces)
-    ↑ implemented by
-Infrastructure.Data (adapters/implementations only)
-```
-
-## Integration Points
-
-### Used By
-- **Application Layer**: Uses repository interfaces (currently from here, should be from Application/Ports)
-- **API Layer**: Registers implementations via DI
-- **Admin.Api Layer**: Registers implementations via DI
-
-### Depends On
-- **Domain Layer**: For entity definitions
-- **EF Core**: For ORM functionality
-- **Cosmos DB SDK**: For Azure Cosmos DB provider
-
-## Related Documentation
-
-- **[Domain](../Mystira.App.Domain/README.md)** - Entities persisted by this layer
-- **[Application](../Mystira.App.Application/README.md)** - Should define repository interfaces (ports)
-- **[API](../Mystira.App.Api/README.md)** - Registers implementations via DI
+**Key Success Metrics**:
+- ✅ **Zero reverse dependencies** - Application never references Infrastructure
+- ✅ **Clean interfaces** - All ports defined in Application layer
+- ✅ **Testability** - Use cases can mock repositories
+- ✅ **Swappability** - Can replace EF Core with Dapper without touching Application
 
 ## License
 
