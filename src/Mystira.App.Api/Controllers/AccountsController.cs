@@ -1,6 +1,10 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Api.Services;
+using Mystira.App.Application.CQRS.Accounts.Commands;
+using Mystira.App.Application.CQRS.Accounts.Queries;
+using Mystira.App.Application.CQRS.UserProfiles.Queries;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;
@@ -9,12 +13,12 @@ namespace Mystira.App.Api.Controllers;
 [Route("api/[controller]")]
 public class AccountsController : ControllerBase
 {
-    private readonly IAccountApiService _accountService;
+    private readonly IMediator _mediator;
     private readonly ILogger<AccountsController> _logger;
 
-    public AccountsController(IAccountApiService accountService, ILogger<AccountsController> logger)
+    public AccountsController(IMediator mediator, ILogger<AccountsController> logger)
     {
-        _accountService = accountService;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -26,7 +30,8 @@ public class AccountsController : ControllerBase
     {
         try
         {
-            var account = await _accountService.GetAccountByEmailAsync(email);
+            var query = new GetAccountByEmailQuery(email);
+            var account = await _mediator.Send(query);
             if (account == null)
             {
                 return NotFound($"Account with email {email} not found");
@@ -49,7 +54,8 @@ public class AccountsController : ControllerBase
     {
         try
         {
-            var account = await _accountService.GetAccountByIdAsync(accountId);
+            var query = new GetAccountQuery(accountId);
+            var account = await _mediator.Send(query);
             if (account == null)
             {
                 return NotFound($"Account with ID {accountId} not found");
@@ -82,17 +88,15 @@ public class AccountsController : ControllerBase
                 return BadRequest("Auth0 User ID is required");
             }
 
-            var account = new Account
-            {
-                Auth0UserId = request.Auth0UserId,
-                Email = request.Email,
-                DisplayName = request.DisplayName ?? request.Email.Split('@')[0],
-                UserProfileIds = request.UserProfileIds ?? new List<string>(),
-                Subscription = request.Subscription ?? new SubscriptionDetails(),
-                Settings = request.Settings ?? new AccountSettings()
-            };
+            var command = new CreateAccountCommand(
+                request.Auth0UserId,
+                request.Email,
+                request.DisplayName,
+                request.UserProfileIds,
+                request.Subscription,
+                request.Settings);
 
-            var createdAccount = await _accountService.CreateAccountAsync(account);
+            var createdAccount = await _mediator.Send(command);
             return CreatedAtAction(nameof(GetAccountById), new { accountId = createdAccount.Id }, createdAccount);
         }
         catch (InvalidOperationException ex)
@@ -114,34 +118,19 @@ public class AccountsController : ControllerBase
     {
         try
         {
-            var existingAccount = await _accountService.GetAccountByIdAsync(accountId);
-            if (existingAccount == null)
+            var command = new UpdateAccountCommand(
+                accountId,
+                request.DisplayName,
+                request.UserProfileIds,
+                request.Subscription,
+                request.Settings);
+
+            var updatedAccount = await _mediator.Send(command);
+            if (updatedAccount == null)
             {
                 return NotFound($"Account with ID {accountId} not found");
             }
 
-            // Update only provided fields
-            if (!string.IsNullOrEmpty(request.DisplayName))
-            {
-                existingAccount.DisplayName = request.DisplayName;
-            }
-
-            if (request.UserProfileIds != null)
-            {
-                existingAccount.UserProfileIds = request.UserProfileIds;
-            }
-
-            if (request.Subscription != null)
-            {
-                existingAccount.Subscription = request.Subscription;
-            }
-
-            if (request.Settings != null)
-            {
-                existingAccount.Settings = request.Settings;
-            }
-
-            var updatedAccount = await _accountService.UpdateAccountAsync(existingAccount);
             return Ok(updatedAccount);
         }
         catch (Exception ex)
@@ -159,7 +148,8 @@ public class AccountsController : ControllerBase
     {
         try
         {
-            var success = await _accountService.DeleteAccountAsync(accountId);
+            var command = new DeleteAccountCommand(accountId);
+            var success = await _mediator.Send(command);
             if (!success)
             {
                 return NotFound($"Account with ID {accountId} not found");
@@ -210,7 +200,8 @@ public class AccountsController : ControllerBase
     {
         try
         {
-            var profiles = await _accountService.GetUserProfilesForAccountAsync(accountId);
+            var query = new GetProfilesByAccountQuery(accountId);
+            var profiles = await _mediator.Send(query);
             return Ok(profiles);
         }
         catch (Exception ex)

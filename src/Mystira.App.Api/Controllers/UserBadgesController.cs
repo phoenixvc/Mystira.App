@@ -1,6 +1,9 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Api.Services;
+using Mystira.App.Application.CQRS.UserBadges.Commands;
+using Mystira.App.Application.CQRS.UserBadges.Queries;
 using Mystira.App.Contracts.Requests.Badges;
 using Mystira.App.Contracts.Responses.Badges;
 using Mystira.App.Contracts.Responses.Common;
@@ -13,15 +16,18 @@ namespace Mystira.App.Api.Controllers;
 [Produces("application/json")]
 public class UserBadgesController : ControllerBase
 {
+    private readonly IMediator _mediator;
     private readonly IUserBadgeApiService _badgeService;
     private readonly IAccountApiService _accountService;
     private readonly ILogger<UserBadgesController> _logger;
 
     public UserBadgesController(
+        IMediator mediator,
         IUserBadgeApiService badgeService,
         IAccountApiService accountService,
         ILogger<UserBadgesController> logger)
     {
+        _mediator = mediator;
         _badgeService = badgeService;
         _accountService = accountService;
         _logger = logger;
@@ -48,7 +54,8 @@ public class UserBadgesController : ControllerBase
                 });
             }
 
-            var badge = await _badgeService.AwardBadgeAsync(request);
+            var command = new AwardBadgeCommand(request);
+            var badge = await _mediator.Send(command);
             return CreatedAtAction(nameof(GetUserBadges),
                 new { userProfileId = request.UserProfileId }, badge);
         }
@@ -80,7 +87,8 @@ public class UserBadgesController : ControllerBase
     {
         try
         {
-            var badges = await _badgeService.GetUserBadgesAsync(userProfileId);
+            var query = new GetUserBadgesQuery(userProfileId);
+            var badges = await _mediator.Send(query);
             return Ok(badges);
         }
         catch (Exception ex)
