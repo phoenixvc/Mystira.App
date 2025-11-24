@@ -6,6 +6,7 @@ using Microsoft.OpenApi.Models;
 using Mystira.App.Api.Adapters;
 using Mystira.App.Api.Services;
 using Mystira.App.Infrastructure.Data;
+using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.UseCases.GameSessions;
 using Mystira.App.Application.UseCases.Media;
 using Mystira.App.Application.UseCases.Scenarios;
