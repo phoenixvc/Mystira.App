@@ -243,7 +243,7 @@ public class StoryProtocolClient
         return @"[]"; // Placeholder
     }
 
-    private string ExtractIpAssetIdFromLogs(Nethereum.RPC.Eth.DTOs.Log[] logs)
+    private string ExtractIpAssetIdFromLogs(Nethereum.RPC.Eth.DTOs.FilterLog[] logs)
     {
         // TODO: Parse event logs to extract IP Asset ID
         // Story Protocol emits IPAssetRegistered event with the ID
