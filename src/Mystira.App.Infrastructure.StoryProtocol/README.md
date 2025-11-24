@@ -1,6 +1,19 @@
 # Mystira.App.Infrastructure.StoryProtocol
 
-Infrastructure layer implementation for Story Protocol blockchain integration. This project handles royalty splits and IP asset registration for content creators.
+Blockchain adapter implementing IP asset registration and royalty management for Story Protocol. This project serves as a **secondary adapter** in the hexagonal architecture.
+
+## ✅ Hexagonal Architecture - FULLY COMPLIANT
+
+**Layer**: **Infrastructure - Blockchain Adapter (Secondary/Driven)**
+
+The Infrastructure.StoryProtocol layer is a **secondary adapter** (driven adapter) that:
+- **Implements** blockchain integration port interfaces defined in Application
+- **Provides** IP asset registration on Story Protocol blockchain
+- **Manages** royalty splits and revenue distribution
+- **Abstracts** blockchain SDK details from the Application layer
+- **ZERO reverse dependencies** - Application never references Infrastructure
+
+**This project demonstrates CORRECT hexagonal architecture** - use as a template for other infrastructure adapters!
 
 ## Overview
 
