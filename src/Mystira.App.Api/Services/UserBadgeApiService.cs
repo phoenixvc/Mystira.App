@@ -1,6 +1,7 @@
+using MediatR;
+using Mystira.App.Application.CQRS.BadgeConfigurations.Queries;
 using Mystira.App.Contracts.Requests.Badges;
 using Mystira.App.Domain.Models;
-using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Api.Services;
@@ -10,20 +11,20 @@ public class UserBadgeApiService : IUserBadgeApiService
     private readonly IUserBadgeRepository _repository;
     private readonly IUserProfileRepository _userProfileRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IBadgeConfigurationApiService _badgeConfigService;
+    private readonly IMediator _mediator;
     private readonly ILogger<UserBadgeApiService> _logger;
 
     public UserBadgeApiService(
         IUserBadgeRepository repository,
         IUserProfileRepository userProfileRepository,
         IUnitOfWork unitOfWork,
-        IBadgeConfigurationApiService badgeConfigService,
+        IMediator mediator,
         ILogger<UserBadgeApiService> logger)
     {
         _repository = repository;
         _userProfileRepository = userProfileRepository;
         _unitOfWork = unitOfWork;
-        _badgeConfigService = badgeConfigService;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -42,8 +43,9 @@ public class UserBadgeApiService : IUserBadgeApiService
                 return existingBadge;
             }
 
-            // Get badge configuration
-            var badgeConfig = await _badgeConfigService.GetBadgeConfigurationAsync(request.BadgeConfigurationId);
+            // Get badge configuration using CQRS query
+            var query = new GetBadgeConfigurationQuery(request.BadgeConfigurationId);
+            var badgeConfig = await _mediator.Send(query);
             if (badgeConfig == null)
             {
                 throw new ArgumentException($"Badge configuration not found: {request.BadgeConfigurationId}");

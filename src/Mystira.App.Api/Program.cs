@@ -112,10 +112,6 @@ builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<MystiraAppDbCo
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 builder.Services.Configure<AudioTranscodingOptions>(builder.Configuration.GetSection(AudioTranscodingOptions.SectionName));
 builder.Services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingService>();
-
-// Register Content Bundle services
-builder.Services.AddScoped<IContentBundleService, ContentBundleService>();
-
 // Configure JWT Authentication - Load from secure configuration only
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];
 var jwtAudience = builder.Configuration["JwtSettings:Audience"];
@@ -291,12 +287,10 @@ builder.Services.AddScoped<IMediaQueryService, MediaQueryService>();
 
 // Register application services
 builder.Services.AddScoped<IScenarioApiService, ScenarioApiService>();
-builder.Services.AddScoped<IGameSessionApiService, GameSessionApiService>();
 builder.Services.AddScoped<IUserProfileApiService, UserProfileApiService>();
 builder.Services.AddScoped<IUserBadgeApiService, UserBadgeApiService>();
 builder.Services.AddScoped<IAccountApiService, AccountApiService>();
 builder.Services.AddScoped<ICharacterMapApiService, CharacterMapApiService>();
-builder.Services.AddScoped<IBadgeConfigurationApiService, BadgeConfigurationApiService>();
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
 builder.Services.AddScoped<IClientApiService, ClientApiService>();
 builder.Services.AddScoped<IAppStatusService, AppStatusService>();
