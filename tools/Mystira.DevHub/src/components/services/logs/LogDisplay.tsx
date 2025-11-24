@@ -5,10 +5,7 @@ interface LogDisplayProps {
   logs: ServiceLog[];
   filter: { search: string };
   showLineNumbers: boolean;
-  timestampFormat: 'time' | 'full' | 'relative';
-  isAutoScroll: boolean;
   isMaximized: boolean;
-  containerClass: string;
   logLineRefs: React.MutableRefObject<Map<number, HTMLDivElement>>;
   highlightErrorIndex?: number;
   onCopyLog: (log: ServiceLog) => void;
@@ -20,10 +17,7 @@ export function LogDisplay({
   logs,
   filter,
   showLineNumbers,
-  timestampFormat,
-  isAutoScroll,
   isMaximized,
-  containerClass,
   logLineRefs,
   highlightErrorIndex,
   onCopyLog,
