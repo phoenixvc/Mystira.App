@@ -458,7 +458,7 @@ export function ServiceCard({
         )}
         
         {/* Show ViewModeSelector during builds or when running */}
-        {!isCollapsed && ((isBuilding || buildFailed) || (isRunning && config.url)) && (
+        {((isBuilding || buildFailed) || (isRunning && config.url)) && (
           <ViewModeSelector
             config={config}
             currentMode={currentViewMode}
