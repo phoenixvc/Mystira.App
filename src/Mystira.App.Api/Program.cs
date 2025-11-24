@@ -240,7 +240,7 @@ builder.Services.AddScoped<IMediaMetadataFileRepository, MediaMetadataFileReposi
 builder.Services.AddScoped<ICharacterMediaMetadataFileRepository, CharacterMediaMetadataFileRepository>();
 builder.Services.AddScoped<ICharacterMapFileRepository, CharacterMapFileRepository>();
 builder.Services.AddScoped<IAvatarConfigurationFileRepository, AvatarConfigurationFileRepository>();
-builder.Services.AddScoped<Application.Ports.Data.IUnitOfWork, Infrastructure.Data.UnitOfWork.UnitOfWork>();
+builder.Services.AddScoped<Mystira.App.Application.Ports.Data.IUnitOfWork, Mystira.App.Infrastructure.Data.UnitOfWork.UnitOfWork>();
 
 // Register Application Layer Use Cases
 // Scenario Use Cases
