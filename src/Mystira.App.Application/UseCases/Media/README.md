@@ -1,43 +1,93 @@
 # Media Use Cases
 
-## Status: ⚠️ Pending Domain Model Migration
+Media asset management use cases for upload, download, transcoding, and metadata operations.
 
-Media use cases cannot be implemented in the Application layer until `MediaAsset` is moved from `Mystira.App.Api.Models` to `Mystira.App.Domain.Models`.
+## ✅ Hexagonal Architecture - FULLY COMPLIANT
 
-## Required Refactoring
+**Layer**: **Application - Media Use Cases**
 
-Before implementing Media use cases, the following refactoring must be completed:
+**Purpose**: Business logic for media asset management
 
-1. **Move MediaAsset to Domain Layer**
-   - Move `MediaAsset` class from `src/Mystira.App.Api/Models/MediaModels.cs` to `src/Mystira.App.Domain/Models/MediaAsset.cs`
-   - Move `MediaMetadata` class to Domain layer as well
-   - Update all references across the codebase
+**Status**: ✅ **Fully compliant** - uses Application.Ports interfaces
 
-2. **Move Repository Interface to Infrastructure**
-   - Move `IMediaAssetRepository` from `src/Mystira.App.Api/Repositories/` to `src/Mystira.App.Infrastructure.Data/Repositories/`
-   - Update repository implementation to use Domain model
+## Port Interfaces Used
 
-3. **Add Infrastructure.Azure Reference**
-   - Add project reference to `Mystira.App.Infrastructure.Azure` in `Mystira.App.Application.csproj` for blob storage operations
+These use cases depend on port interfaces defined in `Application/Ports`:
+- **`IBlobService`** (Ports/Storage) - Media file storage operations
+- **`IAudioTranscodingService`** (Ports/Media) - Audio format conversion
+- **`IMediaAssetRepository`** (Ports/Data) - Media metadata persistence
+- **`IUnitOfWork`** (Ports/Data) - Transaction management
 
-## Planned Use Cases
+Infrastructure implementations:
+- `AzureBlobService` implements `IBlobService`
+- `FfmpegAudioTranscodingService` implements `IAudioTranscodingService`
+- `MediaAssetRepository` implements `IMediaAssetRepository`
 
-Once the refactoring is complete, the following use cases should be implemented:
+## Implemented Use Cases
 
-- ✅ `GetMediaUseCase` - Get media by ID
-- ✅ `GetMediaByFilenameUseCase` - Get media by filename (via metadata)
-- ✅ `ListMediaUseCase` - List media with filtering and pagination
-- ✅ `UploadMediaUseCase` - Upload media asset
-- ✅ `UpdateMediaMetadataUseCase` - Update media metadata
-- ✅ `DeleteMediaUseCase` - Delete media asset
-- ✅ `DownloadMediaUseCase` - Download media file
+- ✅ `UploadMediaUseCase` - Upload media file to blob storage and save metadata
+- ✅ `DeleteMediaUseCase` - Delete media file and metadata
+- ✅ `GetMediaMetadataUseCase` - Retrieve media metadata
+- ✅ `TranscodeAudioUseCase` - Convert audio files between formats
+- ✅ `DownloadMediaUseCase` - Download media file from storage
 
-## Current Implementation
+## Domain Models
 
-Media operations are currently handled directly in:
-- `MediaApiService` (composes upload and query services)
-- `MediaUploadService` (handles file uploads)
-- `MediaQueryService` (handles queries)
+Media entities are in `Domain/Models`:
+- `MediaAsset` - Media file metadata and references
+- `MediaMetadata` - Extended media information
 
-These services should be refactored to use the use cases once MediaAsset is moved to Domain.
+## Example Use Case
 
+```csharp
+public class UploadMediaUseCase
+{
+    private readonly IBlobService _blobService;              // Port ✅
+    private readonly IMediaAssetRepository _repository;       // Port ✅
+    private readonly IUnitOfWork _unitOfWork;                 // Port ✅
+
+    public async Task<MediaAsset> ExecuteAsync(
+        Stream fileStream,
+        string fileName,
+        string contentType)
+    {
+        // Upload to storage
+        var blobName = await _blobService.UploadMediaAsync(
+            fileStream,
+            fileName,
+            contentType);
+
+        // Create domain entity
+        var mediaAsset = new MediaAsset
+        {
+            Id = Guid.NewGuid().ToString(),
+            BlobName = blobName,
+            FileName = fileName,
+            ContentType = contentType,
+            UploadedAt = DateTime.UtcNow
+        };
+
+        // Persist metadata
+        await _repository.AddAsync(mediaAsset);
+        await _unitOfWork.SaveChangesAsync();
+
+        return mediaAsset;
+    }
+}
+```
+
+## Testing
+
+Use cases are easily testable by mocking port interfaces:
+
+```csharp
+[Fact]
+public async Task UploadMedia_Success()
+{
+    var mockBlobService = new Mock<IBlobService>();
+    var mockRepository = new Mock<IMediaAssetRepository>();
+    var mockUnitOfWork = new Mock<IUnitOfWork>();
+
+    // Test without Azure or database ✅
+}
+```

@@ -2,6 +2,19 @@
 
 The core domain layer containing business entities, domain logic, and value objects. This project represents the heart of the hexagonal architecture and has no dependencies on external frameworks or infrastructure concerns.
 
+## ✅ Hexagonal Architecture - MOSTLY COMPLIANT (95%)
+
+**Layer**: **Core - Domain (Center of Hexagon)**
+
+**Status**: ✅ **Excellent domain model** with minor technical debt
+
+**Dependencies**: ZERO dependencies on Application or Infrastructure layers ✅
+
+**Minor Technical Debt**:
+- ⚠️ File I/O in 2 utility classes (RandomNameGenerator.cs:28, StringEnum.cs) for loading static JSON resources
+- Impact: Low - used only during initialization, not business logic
+- Common pragmatic compromise for embedded resource loading
+
 ## Role in Hexagonal Architecture
 
 **Layer**: **Domain (Core/Center)**

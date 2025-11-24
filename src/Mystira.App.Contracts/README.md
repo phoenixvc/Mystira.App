@@ -2,6 +2,14 @@
 
 Data Transfer Objects (DTOs) and API contracts for communication between layers. This project serves as the **contract boundary** between the API layer and Application/Domain layers, enabling independent evolution of API and domain models.
 
+## ✅ Hexagonal Architecture - FULLY COMPLIANT
+
+**Layer**: **Contracts - Data Transfer Layer**
+
+**Status**: ✅ **Fully compliant** - pure DTOs with no business logic or infrastructure concerns
+
+**Dependencies**: Domain only ✅ (minimal - DTOs map to/from domain entities)
+
 ## Role in Hexagonal Architecture
 
 **Layer**: **Presentation Contract (DTO Layer)**

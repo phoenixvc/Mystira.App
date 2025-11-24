@@ -2,6 +2,14 @@
 
 Progressive Web Application (PWA) built with Blazor WebAssembly, serving as the primary user interface for the Mystira platform. This project is a **primary adapter** in the hexagonal architecture, translating user interactions into application use cases.
 
+## ✅ Hexagonal Architecture - COMPLIANT
+
+**Layer**: **Presentation - Blazor UI Adapter (Primary/Driver)**
+
+**Purpose**: Frontend UI that drives the application through Admin.Api
+
+**Status**: ✅ **Compliant** - consumes API via HTTP, no direct infrastructure access
+
 ## Role in Hexagonal Architecture
 
 **Layer**: **Presentation - UI Adapter (Primary/Driving)**
