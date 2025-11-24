@@ -312,6 +312,418 @@ public class CreateAccountUseCase
 
 ---
 
+## CQRS Pattern (Command Query Responsibility Segregation)
+
+### Overview
+
+CQRS separates **read operations** (Queries) from **write operations** (Commands), providing clear separation of concerns and enabling independent optimization of each path.
+
+**Benefits:**
+- ✅ **Clear Intent** - Commands modify state, Queries retrieve data
+- ✅ **Scalability** - Read and write paths can be optimized separately
+- ✅ **Maintainability** - Single responsibility for each handler
+- ✅ **Testability** - Easy to test commands and queries independently
+- ✅ **Flexibility** - Can add caching, validation, logging per operation type
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│              API Controller                     │
+└──────────────┬──────────────────────────────────┘
+               ↓
+┌──────────────┴──────────────────────────────────┐
+│            MediatR (Mediator)                   │
+└──────┬───────────────────────────┬──────────────┘
+       ↓                           ↓
+┌──────────────────┐     ┌──────────────────────┐
+│  Command Handler │     │   Query Handler      │
+│  (Write)         │     │   (Read)             │
+└─────────┬────────┘     └──────────┬───────────┘
+          ↓                         ↓
+┌──────────────────┐     ┌──────────────────────┐
+│  Write Model     │     │   Read Model         │
+│  (Repository)    │     │   (Repository +      │
+│                  │     │    Specifications)   │
+└──────────────────┘     └──────────────────────┘
+```
+
+### Commands (Write Operations)
+
+Commands modify state and should be **idempotent** when possible.
+
+**Structure:**
+```
+Application/CQRS/Scenarios/Commands/
+├── CreateScenarioCommand.cs          # Command definition (record)
+└── CreateScenarioCommandHandler.cs   # Command handler (implementation)
+```
+
+**Example - CreateScenarioCommand:**
+```csharp
+using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.App.Domain.Models;
+
+namespace Mystira.App.Application.CQRS.Scenarios.Commands;
+
+/// <summary>
+/// Command to create a new scenario (write operation)
+/// </summary>
+public record CreateScenarioCommand(CreateScenarioRequest Request) : ICommand<Scenario>;
+```
+
+**Example - CreateScenarioCommandHandler:**
+```csharp
+public class CreateScenarioCommandHandler : ICommandHandler<CreateScenarioCommand, Scenario>
+{
+    private readonly IScenarioRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<CreateScenarioCommandHandler> _logger;
+
+    public async Task<Scenario> Handle(CreateScenarioCommand command, CancellationToken cancellationToken)
+    {
+        // 1. Validate
+        // 2. Create domain entity
+        // 3. Persist changes
+        // 4. Return result
+    }
+}
+```
+
+### Queries (Read Operations)
+
+Queries retrieve data and should **NOT modify state**. They can be cached for performance.
+
+**Structure:**
+```
+Application/CQRS/Scenarios/Queries/
+├── GetScenarioQuery.cs               # Query definition (record)
+└── GetScenarioQueryHandler.cs        # Query handler (implementation)
+```
+
+**Example - GetScenarioQuery:**
+```csharp
+using Mystira.App.Domain.Models;
+
+namespace Mystira.App.Application.CQRS.Scenarios.Queries;
+
+/// <summary>
+/// Query to retrieve a single scenario by ID (read operation)
+/// </summary>
+public record GetScenarioQuery(string ScenarioId) : IQuery<Scenario?>;
+```
+
+**Example - GetScenarioQueryHandler:**
+```csharp
+public class GetScenarioQueryHandler : IQueryHandler<GetScenarioQuery, Scenario?>
+{
+    private readonly IScenarioRepository _repository;
+    private readonly ILogger<GetScenarioQueryHandler> _logger;
+
+    public async Task<Scenario?> Handle(GetScenarioQuery request, CancellationToken cancellationToken)
+    {
+        return await _repository.GetByIdAsync(request.ScenarioId);
+    }
+}
+```
+
+### Using CQRS from Controllers
+
+```csharp
+[ApiController]
+[Route("api/scenarios")]
+public class ScenariosController : ControllerBase
+{
+    private readonly IMediator _mediator;
+
+    public ScenariosController(IMediator mediator)
+    {
+        _mediator = mediator;
+    }
+
+    // Command (Write)
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreateScenarioRequest request)
+    {
+        var command = new CreateScenarioCommand(request);
+        var scenario = await _mediator.Send(command);
+        return CreatedAtAction(nameof(Get), new { id = scenario.Id }, scenario);
+    }
+
+    // Query (Read)
+    [HttpGet("{id}")]
+    public async Task<IActionResult> Get(string id)
+    {
+        var query = new GetScenarioQuery(id);
+        var scenario = await _mediator.Send(query);
+        if (scenario == null) return NotFound();
+        return Ok(scenario);
+    }
+}
+```
+
+### CQRS Base Interfaces
+
+**ICommand<TResponse>** - Commands that return a result:
+```csharp
+public interface ICommand<out TResponse> : IRequest<TResponse> { }
+```
+
+**ICommand** - Commands with no result:
+```csharp
+public interface ICommand : IRequest { }
+```
+
+**IQuery<TResponse>** - Queries (always return data):
+```csharp
+public interface IQuery<out TResponse> : IRequest<TResponse> { }
+```
+
+**ICommandHandler<TCommand, TResponse>** - Command handlers:
+```csharp
+public interface ICommandHandler<in TCommand, TResponse> : IRequestHandler<TCommand, TResponse>
+    where TCommand : ICommand<TResponse> { }
+```
+
+**IQueryHandler<TQuery, TResponse>** - Query handlers:
+```csharp
+public interface IQueryHandler<in TQuery, TResponse> : IRequestHandler<TQuery, TResponse>
+    where TQuery : IQuery<TResponse> { }
+```
+
+---
+
+## Specification Pattern
+
+### Overview
+
+The Specification Pattern encapsulates **query logic** into reusable, composable objects. This allows complex queries to be:
+- **Defined once** and reused across use cases
+- **Composed** to build complex filters
+- **Tested** independently of infrastructure
+- **Maintained** in a single location
+
+**Benefits:**
+- ✅ **Reusability** - Define query logic once, use everywhere
+- ✅ **Composability** - Combine specifications for complex queries
+- ✅ **Testability** - Test query logic independently
+- ✅ **Maintainability** - Centralized query definitions
+- ✅ **Type Safety** - Compile-time query validation
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│           Query Handler (Application)           │
+└──────────────┬──────────────────────────────────┘
+               ↓ creates
+┌──────────────┴──────────────────────────────────┐
+│          Specification (Domain)                 │
+│  - Criteria (WHERE)                             │
+│  - Includes (Eager Loading)                     │
+│  - OrderBy/OrderByDescending                    │
+│  - Paging (Skip/Take)                           │
+└──────────────┬──────────────────────────────────┘
+               ↓ passed to
+┌──────────────┴──────────────────────────────────┐
+│         Repository (Infrastructure)             │
+│  - ListAsync(spec)                              │
+│  - GetBySpecAsync(spec)                         │
+│  - CountAsync(spec)                             │
+└──────────────┬──────────────────────────────────┘
+               ↓ evaluates
+┌──────────────┴──────────────────────────────────┐
+│      SpecificationEvaluator (Infrastructure)    │
+│  - Applies criteria to EF Core IQueryable       │
+└─────────────────────────────────────────────────┘
+```
+
+### Creating Specifications
+
+Specifications are defined in the **Domain layer** (`Domain/Specifications/`):
+
+**Example - ScenariosByAgeGroupSpecification:**
+```csharp
+using Mystira.App.Domain.Models;
+
+namespace Mystira.App.Domain.Specifications;
+
+public class ScenariosByAgeGroupSpecification : BaseSpecification<Scenario>
+{
+    public ScenariosByAgeGroupSpecification(string ageGroup)
+        : base(s => s.AgeGroup == ageGroup)  // WHERE clause
+    {
+        ApplyOrderBy(s => s.Title);  // ORDER BY
+    }
+}
+```
+
+**Example - PaginatedScenariosSpecification:**
+```csharp
+public class PaginatedScenariosSpecification : BaseSpecification<Scenario>
+{
+    public PaginatedScenariosSpecification(int pageNumber, int pageSize)
+        : base(s => !s.IsDeleted)
+    {
+        ApplyOrderByDescending(s => s.CreatedAt);
+        ApplyPaging((pageNumber - 1) * pageSize, pageSize);  // OFFSET/LIMIT
+    }
+}
+```
+
+**Example - FeaturedScenariosSpecification (Composite):**
+```csharp
+public class FeaturedScenariosSpecification : BaseSpecification<Scenario>
+{
+    public FeaturedScenariosSpecification()
+        : base(s =>
+            !s.IsDeleted &&
+            s.Tags != null &&
+            s.Tags.Contains("featured"))
+    {
+        ApplyOrderByDescending(s => s.CreatedAt);
+    }
+}
+```
+
+### Using Specifications in Queries
+
+**Example - GetScenariosByAgeGroupQuery:**
+```csharp
+public class GetScenariosByAgeGroupQueryHandler : IQueryHandler<GetScenariosByAgeGroupQuery, IEnumerable<Scenario>>
+{
+    private readonly IScenarioRepository _repository;
+
+    public async Task<IEnumerable<Scenario>> Handle(GetScenariosByAgeGroupQuery request, CancellationToken cancellationToken)
+    {
+        // Create specification
+        var spec = new ScenariosByAgeGroupSpecification(request.AgeGroup);
+
+        // Use specification to query repository
+        var scenarios = await _repository.ListAsync(spec);
+
+        return scenarios;
+    }
+}
+```
+
+### Repository Support
+
+Repositories support specifications through three methods:
+
+```csharp
+public interface IRepository<TEntity> where TEntity : class
+{
+    // ... existing methods ...
+
+    // Specification pattern operations
+    Task<TEntity?> GetBySpecAsync(ISpecification<TEntity> spec);
+    Task<IEnumerable<TEntity>> ListAsync(ISpecification<TEntity> spec);
+    Task<int> CountAsync(ISpecification<TEntity> spec);
+}
+```
+
+**Implementation (Infrastructure.Data):**
+```csharp
+public class Repository<TEntity> : IRepository<TEntity>
+{
+    public async Task<IEnumerable<TEntity>> ListAsync(ISpecification<TEntity> spec)
+    {
+        return await ApplySpecification(spec).ToListAsync();
+    }
+
+    private IQueryable<TEntity> ApplySpecification(ISpecification<TEntity> spec)
+    {
+        return SpecificationEvaluator<TEntity>.GetQuery(_dbSet.AsQueryable(), spec);
+    }
+}
+```
+
+### BaseSpecification Features
+
+**Criteria** - WHERE clause:
+```csharp
+base(s => s.AgeGroup == "Ages7to9")
+```
+
+**Includes** - Eager loading:
+```csharp
+AddInclude(s => s.Scenes);
+AddInclude("Scenes.Choices");  // ThenInclude
+```
+
+**OrderBy** - Sorting:
+```csharp
+ApplyOrderBy(s => s.Title);              // ASC
+ApplyOrderByDescending(s => s.CreatedAt); // DESC
+```
+
+**Paging** - Pagination:
+```csharp
+ApplyPaging(skip: 20, take: 10);  // Page 3, size 10
+```
+
+**GroupBy** - Grouping:
+```csharp
+ApplyGroupBy(s => s.AgeGroup);
+```
+
+### Example Specifications
+
+The project includes these pre-built specifications in `Domain/Specifications/ScenarioSpecifications.cs`:
+
+- `ScenariosByAgeGroupSpecification` - Filter by age group
+- `ScenariosByTagSpecification` - Filter by tag
+- `ScenariosByDifficultySpecification` - Filter by difficulty
+- `ActiveScenariosSpecification` - Non-deleted scenarios
+- `PaginatedScenariosSpecification` - Paginated results
+- `ScenariosByCreatorSpecification` - Filter by creator
+- `ScenariosByArchetypeSpecification` - Filter by archetype
+- `FeaturedScenariosSpecification` - Featured content
+
+---
+
+## CQRS + Specification Pattern = Powerful Queries
+
+Combine CQRS queries with Specifications for clean, maintainable code:
+
+```csharp
+// Query (CQRS)
+public record GetPaginatedScenariosQuery(int PageNumber, int PageSize) : IQuery<IEnumerable<Scenario>>;
+
+// Query Handler (CQRS)
+public class GetPaginatedScenariosQueryHandler : IQueryHandler<GetPaginatedScenariosQuery, IEnumerable<Scenario>>
+{
+    private readonly IScenarioRepository _repository;
+
+    public async Task<IEnumerable<Scenario>> Handle(GetPaginatedScenariosQuery request, CancellationToken cancellationToken)
+    {
+        // Specification (Domain)
+        var spec = new PaginatedScenariosSpecification(request.PageNumber, request.PageSize);
+
+        // Repository (Infrastructure)
+        return await _repository.ListAsync(spec);
+    }
+}
+
+// Controller (API)
+[HttpGet]
+public async Task<IActionResult> GetScenarios([FromQuery] int page = 1, [FromQuery] int size = 10)
+{
+    var query = new GetPaginatedScenariosQuery(page, size);
+    var scenarios = await _mediator.Send(query);
+    return Ok(scenarios);
+}
+```
+
+**Result:**
+- ✅ Clear separation: Query (CQRS) + Specification (Domain) + Repository (Infrastructure)
+- ✅ Reusable: `PaginatedScenariosSpecification` can be used in multiple queries
+- ✅ Testable: Each layer can be tested independently
+- ✅ Maintainable: Query logic lives in one place (Specification)
+
+---
+
 ## Dependencies
 
 ### ✅ Correct Dependencies (ONLY These)
@@ -331,6 +743,7 @@ public class CreateAccountUseCase
 <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
 <PackageReference Include="AutoMapper" Version="13.0.1" />
 <PackageReference Include="NJsonSchema" Version="11.1.0" />
+<PackageReference Include="MediatR" Version="12.4.1" />
 ```
 
 ---
@@ -462,12 +875,14 @@ public class AccountsController : ControllerBase
 
 ## Design Patterns
 
-1. **Command Pattern** - Each use case is a command
-2. **Repository Pattern** - Data access through repositories
-3. **Unit of Work** - Transactional consistency
-4. **Dependency Injection** - All dependencies injected
-5. **Ports & Adapters** - Hexagonal architecture
-6. **SOLID Principles** - Single Responsibility, Dependency Inversion
+1. **CQRS (Command Query Responsibility Segregation)** - Separate read/write operations
+2. **Specification Pattern** - Reusable, composable query logic
+3. **Mediator Pattern** - MediatR for request/response handling
+4. **Repository Pattern** - Data access through repositories
+5. **Unit of Work** - Transactional consistency
+6. **Dependency Injection** - All dependencies injected
+7. **Ports & Adapters** - Hexagonal architecture
+8. **SOLID Principles** - Single Responsibility, Dependency Inversion
 
 ---
 

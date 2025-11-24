@@ -1,10 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Domain.Specifications;
+using Mystira.App.Infrastructure.Data.Specifications;
 
 namespace Mystira.App.Infrastructure.Data.Repositories;
 
 /// <summary>
 /// Generic repository implementation following the Repository pattern
+/// Supports both basic CRUD operations and specification-based queries
 /// </summary>
 public class Repository<TEntity> : IRepository<TEntity> where TEntity : class
 {
@@ -67,6 +70,28 @@ public class Repository<TEntity> : IRepository<TEntity> where TEntity : class
     {
         var entity = await GetByIdAsync(id);
         return entity != null;
+    }
+
+    // Specification pattern operations
+
+    public virtual async Task<TEntity?> GetBySpecAsync(ISpecification<TEntity> spec)
+    {
+        return await ApplySpecification(spec).FirstOrDefaultAsync();
+    }
+
+    public virtual async Task<IEnumerable<TEntity>> ListAsync(ISpecification<TEntity> spec)
+    {
+        return await ApplySpecification(spec).ToListAsync();
+    }
+
+    public virtual async Task<int> CountAsync(ISpecification<TEntity> spec)
+    {
+        return await ApplySpecification(spec).CountAsync();
+    }
+
+    private IQueryable<TEntity> ApplySpecification(ISpecification<TEntity> spec)
+    {
+        return SpecificationEvaluator<TEntity>.GetQuery(_dbSet.AsQueryable(), spec);
     }
 }
 
