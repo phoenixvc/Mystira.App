@@ -235,12 +235,12 @@ builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
 builder.Services.AddScoped<IBadgeConfigurationRepository, BadgeConfigurationRepository>();
 builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
 builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
-builder.Services.AddScoped<Mystira.App.Infrastructure.Data.Repositories.IMediaAssetRepository, Mystira.App.Infrastructure.Data.Repositories.MediaAssetRepository>();
-builder.Services.AddScoped<Mystira.App.Api.Repositories.IMediaMetadataFileRepository, Mystira.App.Api.Repositories.MediaMetadataFileRepository>();
-builder.Services.AddScoped<Mystira.App.Api.Repositories.ICharacterMediaMetadataFileRepository, Mystira.App.Api.Repositories.CharacterMediaMetadataFileRepository>();
-builder.Services.AddScoped<Mystira.App.Api.Repositories.ICharacterMapFileRepository, Mystira.App.Api.Repositories.CharacterMapFileRepository>();
+builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
+builder.Services.AddScoped<IMediaMetadataFileRepository, MediaMetadataFileRepository>();
+builder.Services.AddScoped<ICharacterMediaMetadataFileRepository, CharacterMediaMetadataFileRepository>();
+builder.Services.AddScoped<ICharacterMapFileRepository, CharacterMapFileRepository>();
 builder.Services.AddScoped<IAvatarConfigurationFileRepository, AvatarConfigurationFileRepository>();
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<Application.Ports.Data.IUnitOfWork, Infrastructure.Data.UnitOfWork.UnitOfWork>();
 
 // Register Application Layer Use Cases
 // Scenario Use Cases
@@ -318,7 +318,7 @@ builder.Services.AddMemoryCache(options =>
 builder.Services.AddMediatR(cfg =>
 {
     // Register all handlers from Application assembly
-    cfg.RegisterServicesFromAssembly(typeof(Mystira.App.Application.Interfaces.ICommand<>).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(Mystira.App.Application.CQRS.ICommand<>).Assembly);
 
     // Add query caching pipeline behavior
     cfg.AddOpenBehavior(typeof(Mystira.App.Application.Behaviors.QueryCachingBehavior<,>));

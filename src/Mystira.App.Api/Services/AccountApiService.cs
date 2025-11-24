@@ -70,10 +70,9 @@ public class AccountApiService : IAccountApiService
         {
             var request = new CreateAccountRequest
             {
+                Auth0UserId = account.Auth0UserId,
                 Email = account.Email,
-                DisplayName = account.DisplayName,
-                Subscription = account.Subscription,
-                Settings = account.Settings
+                DisplayName = account.DisplayName
             };
 
             return await _createAccountUseCase.ExecuteAsync(request);
@@ -91,14 +90,11 @@ public class AccountApiService : IAccountApiService
         {
             var request = new UpdateAccountRequest
             {
-                Id = account.Id,
                 DisplayName = account.DisplayName,
-                UserProfileIds = account.UserProfileIds,
-                Subscription = account.Subscription,
                 Settings = account.Settings
             };
 
-            return await _updateAccountUseCase.ExecuteAsync(request);
+            return await _updateAccountUseCase.ExecuteAsync(account.Id, request);
         }
         catch (Exception ex)
         {
@@ -175,7 +171,8 @@ public class AccountApiService : IAccountApiService
     {
         try
         {
-            return await _addCompletedScenarioUseCase.ExecuteAsync(accountId, scenarioId);
+            await _addCompletedScenarioUseCase.ExecuteAsync(accountId, scenarioId);
+            return true;
         }
         catch (Exception ex)
         {
