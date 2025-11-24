@@ -203,6 +203,8 @@ After adding all secrets, verify them in GitHub:
 
 ## Dev Environment Resources
 
+**Note**: The resource names listed below represent the desired naming convention. The actual Azure resources currently use different names. See [NAMING_AND_OPTIMIZATION.md](./NAMING_AND_OPTIMIZATION.md) for details on current vs. desired resource names and the migration plan.
+
 The development environment includes:
 
 ### Core Infrastructure
