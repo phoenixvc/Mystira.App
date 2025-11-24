@@ -35,17 +35,19 @@ Where:
 
 ## Dev Environment Resource Names
 
-| Resource Type | Name | Previous Name |
-|---------------|------|---------------|
-| Storage Account | `deveuwstmystira` | `mystiraappdevstorage` |
-| Cosmos DB | `dev-euw-cosmos-mystira` | `mystiraappdevcosmos` |
-| Main API | `dev-euw-app-mystira-api` | `mystira-app-dev-api` |
-| Admin API | `dev-euw-app-mystira-admin-api` | `dev-euw-app-mystora-admin-api` |
+| Resource Type | Current Name (in Azure) | Desired Name (convention) |
+|---------------|-------------------------|---------------------------|
+| Storage Account | `mystiraappdevstorage` | `deveuwstmystira` |
+| Cosmos DB | `mystiraappdevcosmos` | `dev-euw-cosmos-mystira` |
+| Main API | `mystira-app-dev-api` | `dev-euw-app-mystira-api` |
+| Admin API | `dev-euw-app-mystora-admin-api` | `dev-euw-app-mystira-admin-api` |
 | Log Analytics | `dev-euw-log-mystira` | ✅ Already correct |
 | App Insights | `dev-euw-ai-mystira` | ✅ Already correct |
 | Communication Service | `dev-euw-acs-mystira` | ✅ Already correct |
 | Email Service | `dev-euw-ecs-mystira` | ✅ Already correct |
 | Static Web App | `dev-euw-swa-mystira-app` | ✅ Already correct |
+
+**Note**: The GitHub Actions workflows have been updated to use the current Azure resource names to ensure successful deployments. Future infrastructure changes should migrate to the desired naming convention.
 
 ## Cost Optimization for Dev Environment
 
@@ -163,23 +165,25 @@ If resources already exist in Azure with old names, you have two options:
 ### Updating GitHub Secrets
 
 After renaming App Services, update publish profile secrets:
-- `AZURE_WEBAPP_PUBLISH_PROFILE_DEV` - for `dev-euw-app-mystira-api`
-- `AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN` - for `dev-euw-app-mystira-admin-api`
+- `AZURE_WEBAPP_PUBLISH_PROFILE_DEV` - for `mystira-app-dev-api` (current name)
+- `AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN` - for `dev-euw-app-mystora-admin-api` (current name)
 
 Download new publish profiles:
 ```bash
-# Main API
+# Main API (using current Azure resource name)
 az webapp deployment list-publishing-profiles \
-  --name dev-euw-app-mystira-api \
+  --name mystira-app-dev-api \
   --resource-group dev-euw-rg-mystira \
   --xml
 
-# Admin API
+# Admin API (using current Azure resource name)
 az webapp deployment list-publishing-profiles \
-  --name dev-euw-app-mystira-admin-api \
+  --name dev-euw-app-mystora-admin-api \
   --resource-group dev-euw-rg-mystira \
   --xml
 ```
+
+**Note**: These commands use the current actual Azure resource names. If you need to use the future desired names (`dev-euw-app-mystira-api` and `dev-euw-app-mystira-admin-api`), first rename or recreate the Azure resources.
 
 ## Benefits of New Naming Convention
 
