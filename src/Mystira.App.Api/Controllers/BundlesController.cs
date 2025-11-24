@@ -1,5 +1,6 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Api.Services;
+using Mystira.App.Application.CQRS.ContentBundles.Queries;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;
@@ -9,21 +10,26 @@ namespace Mystira.App.Api.Controllers;
 [Produces("application/json")]
 public class BundlesController : ControllerBase
 {
-    private readonly IContentBundleService _bundleService;
+    private readonly IMediator _mediator;
     private readonly ILogger<BundlesController> _logger;
 
-    public BundlesController(IContentBundleService bundleService, ILogger<BundlesController> logger)
+    public BundlesController(IMediator mediator, ILogger<BundlesController> logger)
     {
-        _bundleService = bundleService;
+        _mediator = mediator;
         _logger = logger;
     }
 
+    /// <summary>
+    /// Get all content bundles
+    /// </summary>
+    /// <returns>List of content bundles</returns>
     [HttpGet]
-    public async Task<ActionResult<List<ContentBundle>>> GetBundles()
+    public async Task<ActionResult<IEnumerable<ContentBundle>>> GetBundles()
     {
         try
         {
-            var bundles = await _bundleService.GetAllAsync();
+            var query = new GetAllContentBundlesQuery();
+            var bundles = await _mediator.Send(query);
             return Ok(bundles);
         }
         catch (Exception ex)
@@ -33,13 +39,24 @@ public class BundlesController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Get content bundles by age group
+    /// </summary>
+    /// <param name="ageGroup">Age group (e.g., "Ages7to9")</param>
+    /// <returns>List of content bundles for the specified age group</returns>
     [HttpGet("age-group/{ageGroup}")]
-    public async Task<ActionResult<List<ContentBundle>>> GetBundlesByAgeGroup(string ageGroup)
+    public async Task<ActionResult<IEnumerable<ContentBundle>>> GetBundlesByAgeGroup(string ageGroup)
     {
         try
         {
-            var bundles = await _bundleService.GetByAgeGroupAsync(ageGroup);
+            var query = new GetContentBundlesByAgeGroupQuery(ageGroup);
+            var bundles = await _mediator.Send(query);
             return Ok(bundles);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid age group parameter: {AgeGroup}", ageGroup);
+            return BadRequest(new { Message = ex.Message });
         }
         catch (Exception ex)
         {
