@@ -58,6 +58,9 @@ Each ADR follows this structure:
 |-----|-------|--------|------|------|
 | [ADR-0001](ADR-0001-adopt-cqrs-pattern.md) | Adopt CQRS Pattern | ✅ Accepted | 2025-11-24 | architecture, cqrs, patterns, application-layer |
 | [ADR-0002](ADR-0002-adopt-specification-pattern.md) | Adopt Specification Pattern | ✅ Accepted | 2025-11-24 | architecture, specification, patterns, domain-layer |
+| [ADR-0003](ADR-0003-adopt-hexagonal-architecture.md) | Adopt Hexagonal Architecture | ✅ Accepted | 2025-11-24 | architecture, hexagonal, ports-and-adapters, clean-architecture |
+| [ADR-0004](ADR-0004-use-mediatr-for-cqrs.md) | Use MediatR for Request/Response Handling | ✅ Accepted | 2025-11-24 | technology, mediatr, cqrs, request-response |
+| [ADR-0005](ADR-0005-separate-api-and-admin-api.md) | Separate API and Admin API | ✅ Accepted | 2025-11-24 | architecture, api, security, separation-of-concerns |
 
 ---
 
