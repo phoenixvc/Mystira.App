@@ -34,7 +34,7 @@ public class CreateUserProfileUseCase
         }
 
         // Validate fantasy themes
-        var invalidThemes = request.PreferredFantasyThemes.Where(t => FantasyTheme.Parse(t) == null).ToList();
+        var invalidThemes = (request.PreferredFantasyThemes ?? Enumerable.Empty<string>()).Where(t => FantasyTheme.Parse(t) == null).ToList();
         if (invalidThemes.Any())
         {
             throw new ArgumentException($"Invalid fantasy themes: {string.Join(", ", invalidThemes)}");
