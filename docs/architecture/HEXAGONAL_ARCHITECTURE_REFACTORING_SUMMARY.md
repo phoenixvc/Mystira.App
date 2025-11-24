@@ -617,7 +617,10 @@ All changes pushed to branch: `claude/add-project-readmes-0164TfHyDcEfm3nKpnPk6o
 
 ### Low Priority
 6. **Advanced Patterns**
-   - Consider CQRS (Command Query Responsibility Segregation)
+   - ✅ **CQRS Implementation Complete** - See [ADR-0006](adr/ADR-0006-phase-5-cqrs-migration.md)
+     - All 8 entities migrated to CQRS with MediatR
+     - 16 commands, 20 queries, 32 specifications created
+     - 104 files created maintaining hexagonal architecture
    - Add domain events
    - Implement saga pattern for complex workflows
 
@@ -688,6 +691,43 @@ This refactoring represents a **complete transformation** of the Mystira.App cod
 - 💰 **Lower costs** - Maintainable code reduces technical debt
 - 🔄 **More flexible** - Easy to swap infrastructure providers
 - 📈 **Scalable** - Clean architecture supports growth
+
+---
+
+## Post-Refactoring Enhancements
+
+### CQRS Migration (Phase 5)
+**Status:** ✅ Complete (2025-11-24)
+**Documentation:** [ADR-0006: Phase 5 - Complete CQRS Migration](adr/ADR-0006-phase-5-cqrs-migration.md)
+
+Following the hexagonal architecture refactoring, all domain entities were migrated to the CQRS (Command Query Responsibility Segregation) pattern using MediatR:
+
+**Entities Migrated (8):**
+1. Scenario
+2. ContentBundle
+3. GameSession
+4. UserProfile
+5. BadgeConfiguration
+6. MediaAsset
+7. Account
+8. UserBadge
+
+**Metrics:**
+- 16 Commands with handlers
+- 20 Queries with handlers
+- 32 Specifications for reusable query logic
+- 104 files created across Application and Domain layers
+- 8 controllers migrated to IMediator
+- Zero Application → Infrastructure dependencies maintained ✅
+
+**Benefits:**
+- Consistent architectural pattern across all entities
+- Clear separation between reads and writes
+- Improved testability and maintainability
+- Performance optimization opportunities (query caching, read replicas)
+- Foundation for event sourcing and advanced patterns
+
+For detailed migration guide and lessons learned, see [CQRS_MIGRATION_GUIDE.md](CQRS_MIGRATION_GUIDE.md).
 
 ---
 
