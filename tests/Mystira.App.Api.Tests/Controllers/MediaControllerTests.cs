@@ -48,8 +48,9 @@ public class MediaControllerTests
             Url = "https://example.com/logo.png"
         };
         var mediator = new Mock<IMediator>();
+        mediator.Setup(m => m.Send(It.IsAny<Mystira.App.Application.CQRS.MediaAssets.Queries.GetMediaAssetQuery>(), It.IsAny<System.Threading.CancellationToken>()))
+            .ReturnsAsync(mediaAsset);
         var mediaService = new Mock<IMediaApiService>();
-        mediaService.Setup(s => s.GetMediaByIdAsync(mediaId)).ReturnsAsync(mediaAsset);
         var controller = CreateController(mediator, mediaService);
 
         // Act
@@ -59,7 +60,7 @@ public class MediaControllerTests
         result.Result.Should().BeOfType<OkObjectResult>();
         var ok = result.Result as OkObjectResult;
         ok!.Value.Should().BeEquivalentTo(mediaAsset);
-        mediaService.Verify(s => s.GetMediaByIdAsync(mediaId), Times.Once);
+        mediator.Verify(m => m.Send(It.IsAny<Mystira.App.Application.CQRS.MediaAssets.Queries.GetMediaAssetQuery>(), It.IsAny<System.Threading.CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -68,8 +69,9 @@ public class MediaControllerTests
         // Arrange
         var mediaId = "non-existent-media";
         var mediator = new Mock<IMediator>();
+        mediator.Setup(m => m.Send(It.IsAny<Mystira.App.Application.CQRS.MediaAssets.Queries.GetMediaAssetQuery>(), It.IsAny<System.Threading.CancellationToken>()))
+            .ReturnsAsync((MediaAsset?)null);
         var mediaService = new Mock<IMediaApiService>();
-        mediaService.Setup(s => s.GetMediaByIdAsync(mediaId)).ReturnsAsync((MediaAsset?)null);
         var controller = CreateController(mediator, mediaService);
 
         // Act
