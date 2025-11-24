@@ -1,6 +1,9 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Api.Services;
+using Mystira.App.Application.CQRS.GameSessions.Commands;
+using Mystira.App.Application.CQRS.GameSessions.Queries;
 using Mystira.App.Contracts.Requests.GameSessions;
 using Mystira.App.Contracts.Requests.Scenarios;
 using Mystira.App.Contracts.Responses.Common;
@@ -14,16 +17,16 @@ namespace Mystira.App.Api.Controllers;
 [Produces("application/json")]
 public class GameSessionsController : ControllerBase
 {
-    private readonly IGameSessionApiService _sessionService;
+    private readonly IMediator _mediator;
     private readonly IAccountApiService _accountService;
     private readonly ILogger<GameSessionsController> _logger;
 
     public GameSessionsController(
-        IGameSessionApiService sessionService,
+        IMediator mediator,
         IAccountApiService accountService,
         ILogger<GameSessionsController> logger)
     {
-        _sessionService = sessionService;
+        _mediator = mediator;
         _accountService = accountService;
         _logger = logger;
     }
@@ -59,7 +62,8 @@ public class GameSessionsController : ControllerBase
                 });
             }
 
-            var session = await _sessionService.StartSessionAsync(request);
+            var command = new StartGameSessionCommand(request);
+            var session = await _mediator.Send(command);
             return CreatedAtAction(nameof(GetSession), new { id = session.Id }, session);
         }
         catch (ArgumentException ex)
@@ -90,7 +94,8 @@ public class GameSessionsController : ControllerBase
     {
         try
         {
-            var session = await _sessionService.EndSessionAsync(id);
+            var command = new EndGameSessionCommand(id);
+            var session = await _mediator.Send(command);
             if (session == null)
             {
                 return NotFound(new ErrorResponse
@@ -104,10 +109,10 @@ public class GameSessionsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting session {SessionId}", id);
+            _logger.LogError(ex, "Error ending session {SessionId}", id);
             return StatusCode(500, new ErrorResponse
             {
-                Message = "Internal server error while fetching session",
+                Message = "Internal server error while ending session",
                 TraceId = HttpContext.TraceIdentifier
             });
         }
@@ -140,7 +145,8 @@ public class GameSessionsController : ControllerBase
                 return Forbid();
             }
 
-            var sessions = await _sessionService.GetSessionsByAccountAsync(accountId);
+            var query = new GetSessionsByAccountQuery(accountId);
+            var sessions = await _mediator.Send(query);
             return Ok(sessions);
         }
         catch (Exception ex)
@@ -176,7 +182,8 @@ public class GameSessionsController : ControllerBase
                 });
             }
 
-            var session = await _sessionService.MakeChoiceAsync(request);
+            var command = new MakeChoiceCommand(request);
+            var session = await _mediator.Send(command);
             if (session == null)
             {
                 return NotFound(new ErrorResponse
@@ -225,7 +232,8 @@ public class GameSessionsController : ControllerBase
     {
         try
         {
-            var session = await _sessionService.GetSessionAsync(id);
+            var query = new GetGameSessionQuery(id);
+            var session = await _mediator.Send(query);
             if (session == null)
             {
                 return NotFound(new ErrorResponse
@@ -256,7 +264,8 @@ public class GameSessionsController : ControllerBase
     {
         try
         {
-            var sessions = await _sessionService.GetSessionsByProfileAsync(profileId);
+            var query = new GetSessionsByProfileQuery(profileId);
+            var sessions = await _mediator.Send(query);
             return Ok(sessions);
         }
         catch (Exception ex)
@@ -297,7 +306,8 @@ public class GameSessionsController : ControllerBase
                 return Forbid();
             }
 
-            var sessions = await _sessionService.GetInProgressSessionsAsync(accountId);
+            var query = new GetInProgressSessionsQuery(accountId);
+            var sessions = await _mediator.Send(query);
             return Ok(sessions);
         }
         catch (Exception ex)
@@ -320,7 +330,8 @@ public class GameSessionsController : ControllerBase
     {
         try
         {
-            var stats = await _sessionService.GetSessionStatsAsync(id);
+            var query = new GetSessionStatsQuery(id);
+            var stats = await _mediator.Send(query);
             if (stats == null)
             {
                 return NotFound(new ErrorResponse
@@ -351,7 +362,8 @@ public class GameSessionsController : ControllerBase
     {
         try
         {
-            var achievements = await _sessionService.CheckAchievementsAsync(id);
+            var query = new GetAchievementsQuery(id);
+            var achievements = await _mediator.Send(query);
             return Ok(achievements);
         }
         catch (Exception ex)
@@ -383,7 +395,8 @@ public class GameSessionsController : ControllerBase
             }
 
             request.SessionId = id;
-            var session = await _sessionService.ProgressToSceneAsync(request);
+            var command = new ProgressSceneCommand(request);
+            var session = await _mediator.Send(command);
             if (session == null)
             {
                 return NotFound(new ErrorResponse
