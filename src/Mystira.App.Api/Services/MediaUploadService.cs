@@ -45,7 +45,7 @@ public class MediaUploadService : IMediaUploadService
     public MediaUploadService(
         IMediaAssetRepository repository,
         IUnitOfWork unitOfWork,
-        IAzureBlobService blobStorageService,
+        IBlobService blobStorageService,
         IMediaMetadataService mediaMetadataService,
         ILogger<MediaUploadService> logger)
     {

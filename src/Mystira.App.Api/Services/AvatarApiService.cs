@@ -1,7 +1,6 @@
 using Mystira.App.Contracts.Responses.Media;
 using Mystira.App.Domain.Models;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Api.Services;
 

@@ -10,7 +10,7 @@ namespace Mystira.App.Api.Services;
 /// </summary>
 public class MediaQueryService : IMediaQueryService
 {
-    private readonly Mystira.App.Infrastructure.Data.Repositories.IMediaAssetRepository _repository;
+    private readonly IMediaAssetRepository _repository;
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ILogger<MediaQueryService> _logger;
 
