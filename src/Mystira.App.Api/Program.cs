@@ -306,6 +306,27 @@ builder.Services.AddScoped<IPasswordlessAuthService, PasswordlessAuthService>();
 builder.Services.AddScoped<IEmailService, AzureEmailService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 
+// Configure Memory Cache for query caching
+builder.Services.AddMemoryCache(options =>
+{
+    options.SizeLimit = 1024; // Limit cache to 1024 entries
+    options.CompactionPercentage = 0.25; // Compact 25% when size limit reached
+});
+
+// Configure MediatR for CQRS pattern
+builder.Services.AddMediatR(cfg =>
+{
+    // Register all handlers from Application assembly
+    cfg.RegisterServicesFromAssembly(typeof(Mystira.App.Application.Interfaces.ICommand<>).Assembly);
+
+    // Add query caching pipeline behavior
+    cfg.AddOpenBehavior(typeof(Mystira.App.Application.Behaviors.QueryCachingBehavior<,>));
+});
+
+// Register query cache invalidation service
+builder.Services.AddSingleton<Mystira.App.Application.Services.IQueryCacheInvalidationService,
+    Mystira.App.Application.Services.QueryCacheInvalidationService>();
+
 // Configure Health Checks
 builder.Services.AddHealthChecks()
     .AddCheck<BlobStorageHealthCheck>("blob_storage");
