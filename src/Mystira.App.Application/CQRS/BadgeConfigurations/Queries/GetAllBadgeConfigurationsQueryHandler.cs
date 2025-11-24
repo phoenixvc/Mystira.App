@@ -22,7 +22,7 @@ public class GetAllBadgeConfigurationsQueryHandler : IQueryHandler<GetAllBadgeCo
         GetAllBadgeConfigurationsQuery request,
         CancellationToken cancellationToken)
     {
-        var badges = await _repository.ListAllAsync();
+        var badges = await _repository.GetAllAsync();
         _logger.LogDebug("Retrieved {Count} badge configurations", badges.Count());
         return badges.ToList();
     }

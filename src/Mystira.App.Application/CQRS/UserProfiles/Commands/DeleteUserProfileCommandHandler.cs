@@ -36,10 +36,10 @@ public class DeleteUserProfileCommandHandler : ICommandHandler<DeleteUserProfile
         }
 
         // Delete profile
-        await _repository.DeleteAsync(profile);
+        await _repository.DeleteAsync(profile.Id);
 
         // Persist changes
-        await _unitOfWork.CommitAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Deleted user profile {ProfileId}", command.ProfileId);
 

@@ -44,7 +44,7 @@ public class EndGameSessionCommandHandler : ICommandHandler<EndGameSessionComman
         await _repository.UpdateAsync(session);
 
         // Persist changes
-        await _unitOfWork.CommitAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Ended game session {SessionId}", session.Id);
 

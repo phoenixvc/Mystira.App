@@ -79,7 +79,7 @@ public class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUserProfile
         await _repository.UpdateAsync(profile);
 
         // Persist changes
-        await _unitOfWork.CommitAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Updated user profile {ProfileId}", profile.Id);
 

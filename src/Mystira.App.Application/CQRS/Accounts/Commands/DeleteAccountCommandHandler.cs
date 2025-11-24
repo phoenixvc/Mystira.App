@@ -29,8 +29,8 @@ public class DeleteAccountCommandHandler : ICommandHandler<DeleteAccountCommand,
             return false;
         }
 
-        await _repository.DeleteAsync(account);
-        await _unitOfWork.CommitAsync(cancellationToken);
+        await _repository.DeleteAsync(account.Id);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Deleted account {AccountId}", command.AccountId);
         return true;

@@ -43,7 +43,7 @@ public class CompleteOnboardingCommandHandler : ICommandHandler<CompleteOnboardi
         await _repository.UpdateAsync(profile);
 
         // Persist changes
-        await _unitOfWork.CommitAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Completed onboarding for profile {ProfileId}", command.ProfileId);
 

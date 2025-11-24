@@ -50,7 +50,7 @@ public class GetInProgressSessionsQueryHandler : IQueryHandler<GetInProgressSess
             ElapsedTime = s.GetTotalElapsedTime(),
             IsPaused = s.Status == Domain.Models.SessionStatus.Paused,
             SceneCount = s.ChoiceHistory?.Select(c => c.SceneId).Distinct().Count() ?? 0,
-            TargetAgeGroup = s.TargetAgeGroup
+            TargetAgeGroup = s.TargetAgeGroup.Value
         }).ToList();
 
         _logger.LogDebug("Retrieved {Count} in-progress sessions for account {AccountId}", response.Count, request.AccountId);

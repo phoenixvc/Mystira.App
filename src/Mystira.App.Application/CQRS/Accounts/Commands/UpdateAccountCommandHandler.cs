@@ -43,7 +43,7 @@ public class UpdateAccountCommandHandler : ICommandHandler<UpdateAccountCommand,
             account.Settings = command.Settings;
 
         await _repository.UpdateAsync(account);
-        await _unitOfWork.CommitAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Updated account {AccountId}", account.Id);
         return account;

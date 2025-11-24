@@ -57,7 +57,7 @@ public class ProgressSceneCommandHandler : ICommandHandler<ProgressSceneCommand,
         await _repository.UpdateAsync(session);
 
         // Persist changes
-        await _unitOfWork.CommitAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
             "Progressed session {SessionId} to scene {SceneId}",

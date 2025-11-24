@@ -55,15 +55,15 @@ public class MakeChoiceCommandHandler : ICommandHandler<MakeChoiceCommand, GameS
         }
 
         // Record the choice
-        var choice = new GameSession.SessionChoice
+        var choice = new SessionChoice
         {
             SceneId = request.SceneId,
             ChoiceText = request.ChoiceText,
-            NextSceneId = request.NextSceneId,
-            Timestamp = DateTime.UtcNow
+            NextScene = request.NextSceneId,
+            ChosenAt = DateTime.UtcNow
         };
 
-        session.ChoiceHistory ??= new List<GameSession.SessionChoice>();
+        session.ChoiceHistory ??= new List<SessionChoice>();
         session.ChoiceHistory.Add(choice);
 
         // Update current scene
@@ -73,7 +73,7 @@ public class MakeChoiceCommandHandler : ICommandHandler<MakeChoiceCommand, GameS
         await _repository.UpdateAsync(session);
 
         // Persist changes
-        await _unitOfWork.CommitAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
             "Recorded choice in session {SessionId}: {ChoiceText} -> {NextSceneId}",

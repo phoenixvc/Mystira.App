@@ -70,7 +70,7 @@ public class CreateUserProfileCommandHandler : ICommandHandler<CreateUserProfile
         await _repository.AddAsync(profile);
 
         // Persist changes
-        await _unitOfWork.CommitAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Created user profile {ProfileId} with name {Name}", profile.Id, profile.Name);
 

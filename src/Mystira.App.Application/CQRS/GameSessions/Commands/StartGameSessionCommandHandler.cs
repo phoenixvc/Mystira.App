@@ -49,20 +49,20 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
             AccountId = request.AccountId,
             ProfileId = request.ProfileId,
             PlayerNames = request.PlayerNames,
-            TargetAgeGroup = request.TargetAgeGroup,
+            TargetAgeGroup = AgeGroup.Parse(request.TargetAgeGroup) ?? AgeGroup.School,
             Status = SessionStatus.InProgress,
             StartTime = DateTime.UtcNow,
-            ChoiceHistory = new List<GameSession.SessionChoice>(),
-            EchoHistory = new List<string>(),
-            Achievements = new List<GameSession.SessionAchievement>(),
-            CompassValues = new Dictionary<string, int>()
+            ChoiceHistory = new List<SessionChoice>(),
+            EchoHistory = new List<EchoLog>(),
+            Achievements = new List<SessionAchievement>(),
+            CompassValues = new Dictionary<string, CompassTracking>()
         };
 
         // Add to repository
         await _repository.AddAsync(session);
 
         // Persist changes
-        await _unitOfWork.CommitAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
             "Started game session {SessionId} for scenario {ScenarioId}, account {AccountId}",

@@ -34,23 +34,22 @@ public class GetSessionStatsQueryHandler : IQueryHandler<GetSessionStatsQuery, S
             return null;
         }
 
-        // Build compass values (convert int to double)
+        // Build compass values (convert CompassTracking.CurrentValue to double)
         var compassValues = session.CompassValues?.ToDictionary(
             kvp => kvp.Key,
-            kvp => (double)kvp.Value
+            kvp => kvp.Value.CurrentValue
         ) ?? new Dictionary<string, double>();
 
         // Get recent echo logs from EchoHistory
         var recentEchoes = session.EchoHistory?
             .TakeLast(10)
-            .Select(echo => new EchoLog { Text = echo })
             .ToList() ?? new List<EchoLog>();
 
         var stats = new SessionStatsResponse
         {
             CompassValues = compassValues,
             RecentEchoes = recentEchoes,
-            Achievements = session.Achievements ?? new List<GameSession.SessionAchievement>(),
+            Achievements = session.Achievements ?? new List<SessionAchievement>(),
             TotalChoices = session.ChoiceHistory?.Count ?? 0,
             SessionDuration = session.GetTotalElapsedTime()
         };

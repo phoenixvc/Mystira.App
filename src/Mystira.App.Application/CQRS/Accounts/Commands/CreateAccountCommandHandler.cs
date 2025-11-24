@@ -42,7 +42,7 @@ public class CreateAccountCommandHandler : ICommandHandler<CreateAccountCommand,
         };
 
         await _repository.AddAsync(account);
-        await _unitOfWork.CommitAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Created account {AccountId} for email {Email}", account.Id, account.Email);
         return account;
