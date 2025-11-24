@@ -15,11 +15,13 @@ public class AccountsController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ILogger<AccountsController> _logger;
+    private readonly IAccountApiService _accountService;
 
-    public AccountsController(IMediator mediator, ILogger<AccountsController> logger)
+    public AccountsController(IMediator mediator, ILogger<AccountsController> logger, IAccountApiService accountService)
     {
         _mediator = mediator;
         _logger = logger;
+        _accountService = accountService;
     }
 
     /// <summary>

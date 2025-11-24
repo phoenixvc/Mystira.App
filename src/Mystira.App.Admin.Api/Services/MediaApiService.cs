@@ -9,6 +9,7 @@ using Mystira.App.Application.UseCases.Media;
 using Mystira.App.Contracts.Requests.Media;
 using Mystira.App.Contracts.Responses.Media;
 using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -67,7 +68,7 @@ public class MediaApiService : IMediaApiService
         DeleteMediaUseCase deleteMediaUseCase,
         DownloadMediaUseCase downloadMediaUseCase,
         MystiraAppDbContext context,
-        IAzureBlobService blobStorageService,
+        IBlobService blobStorageService,
         IMediaMetadataService mediaMetadataService,
         ILogger<MediaApiService> logger,
         IAudioTranscodingService audioTranscodingService)

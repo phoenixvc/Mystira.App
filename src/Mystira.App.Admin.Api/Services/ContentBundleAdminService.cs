@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data;
 
 namespace Mystira.App.Admin.Api.Services;
 

@@ -7,6 +7,7 @@ using Mystira.App.Admin.Api.Validation;
 using Mystira.App.Contracts.Requests.Scenarios;
 using Mystira.App.Contracts.Responses.Scenarios;
 using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data;
 using NJsonSchema;
 using CharacterReference = Mystira.App.Contracts.Responses.Scenarios.CharacterReference;
 using CreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;

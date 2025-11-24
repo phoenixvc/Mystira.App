@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Contracts.Requests.Badges;
 using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data;
 using YamlDotNet.Serialization;
 
 namespace Mystira.App.Admin.Api.Services;
