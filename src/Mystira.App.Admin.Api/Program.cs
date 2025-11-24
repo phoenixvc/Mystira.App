@@ -5,6 +5,7 @@ using Microsoft.OpenApi.Models;
 using Mystira.App.Admin.Api.Adapters;
 using Mystira.App.Infrastructure.Data;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.UseCases.Contributors;
 using Mystira.App.Application.UseCases.GameSessions;
 using Mystira.App.Application.UseCases.Media;
@@ -179,11 +180,11 @@ builder.Services.AddScoped<IBadgeConfigurationRepository, BadgeConfigurationRepo
 builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
 builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
 builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
-builder.Services.AddScoped<Mystira.App.Admin.Api.Repositories.IMediaMetadataFileRepository, Mystira.App.Admin.Api.Repositories.MediaMetadataFileRepository>();
-builder.Services.AddScoped<Mystira.App.Admin.Api.Repositories.ICharacterMediaMetadataFileRepository, Mystira.App.Admin.Api.Repositories.CharacterMediaMetadataFileRepository>();
-builder.Services.AddScoped<Mystira.App.Admin.Api.Repositories.ICharacterMapFileRepository, Mystira.App.Admin.Api.Repositories.CharacterMapFileRepository>();
+builder.Services.AddScoped<IMediaMetadataFileRepository, MediaMetadataFileRepository>();
+builder.Services.AddScoped<ICharacterMediaMetadataFileRepository, CharacterMediaMetadataFileRepository>();
+builder.Services.AddScoped<ICharacterMapFileRepository, CharacterMapFileRepository>();
 builder.Services.AddScoped<IAvatarConfigurationFileRepository, AvatarConfigurationFileRepository>();
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<Mystira.App.Application.Ports.Data.IUnitOfWork, Mystira.App.Infrastructure.Data.UnitOfWork.UnitOfWork>();
 
 // Register Application Layer Use Cases
 // Scenario Use Cases

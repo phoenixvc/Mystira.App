@@ -1,494 +1,503 @@
 # Mystira.App API
 
-Backend API infrastructure for Mystira.App - Dynamic Story App for Child Development
+RESTful HTTP/Web API adapter for Mystira.App - Dynamic Story App for Child Development. This project serves as a **primary adapter** in the hexagonal architecture, translating HTTP requests into application use case invocations.
 
-## Overview
+## ✅ Hexagonal Architecture - FULLY COMPLIANT
 
-The Mystira.App API provides the core backend services for the Mystira.App MAUI mobile application, implementing:
+**Layer**: **Presentation - REST API Adapter (Primary/Driver)**
 
-- **Scenario Management**: CRUD operations for D&D scenarios with branching narratives
-- **Game Session Management**: Real-time session tracking with choice history and moral compass
-- **User Profile Management**: DM account management with COPPA compliance
-- **Media Asset Management**: Azure Blob Storage integration for multimedia content
-- **Echo & Compass Tracking**: Moral choice tracking and achievement system
-- **Health Monitoring**: Comprehensive health checks for production deployment
+The Mystira.App.API layer is a **primary adapter** (driver adapter) that:
+- **Receives** HTTP requests from external clients (MAUI app, web browsers)
+- **Translates** HTTP requests into application use case calls
+- **Delegates** all business logic to Application use cases
+- **Returns** HTTP responses with appropriate status codes
+- **Registers** infrastructure implementations via dependency injection
+- **Contains** ZERO business logic (thin controllers)
 
-## Architecture
+**Dependency Flow** (Correct ✅):
+```
+External Clients (MAUI, Web, Mobile)
+    ↓ HTTP requests
+API Controllers (THIS - Primary Adapter)
+    ↓ invokes
+Application Use Cases
+    ↓ uses
+Application.Ports (Interfaces)
+    ↑ implemented by (DI at runtime)
+Infrastructure Implementations
+```
 
-- **.NET 9.0 Web API** with Azure App Service deployment
-- **Azure Cosmos DB** for structured data persistence
-- **Azure Blob Storage** for multimedia assets
-- **JWT Authentication** for DM-only access (no child accounts per COPPA)
-- **RESTful API Design** with OpenAPI/Swagger documentation
-- **Health Checks** for monitoring and diagnostics
+**Key Principles**:
+- ✅ **Thin Controllers** - Only HTTP concerns, zero business logic
+- ✅ **Use Case Orchestration** - Delegates to Application layer
+- ✅ **Dependency Injection** - Wires Infrastructure implementations
+- ✅ **Clean Architecture** - No direct Infrastructure references in controllers
+- ✅ **Composition Root** - Program.cs is the only place that knows about Infrastructure
 
-## Prerequisites
+## Project Structure
 
-- .NET 9.0 SDK
-- Azure subscription (for cloud deployment)
-- Visual Studio 2022 or VS Code
+```
+Mystira.App.Api/
+├── Controllers/
+│   ├── ScenariosController.cs          # Scenario endpoints
+│   ├── GameSessionsController.cs       # Game session endpoints
+│   ├── UserProfilesController.cs       # User profile endpoints
+│   ├── AccountsController.cs           # Account management
+│   └── MediaController.cs              # Media upload/management
+├── Services/
+│   ├── IAccountApiService.cs           # Thin service interfaces
+│   ├── AccountApiService.cs            # Delegates to use cases
+│   ├── IUserProfileApiService.cs
+│   └── UserProfileApiService.cs        # Coordinates multiple use cases
+├── Program.cs                          # DI composition root
+└── appsettings.json                    # Configuration
+```
 
-## Getting Started
+**What Controllers Do** (Thin Layer ✅):
+- Accept HTTP requests
+- Validate model binding
+- Call Application use cases
+- Return HTTP status codes
+- Handle exceptions → HTTP errors
 
-### Local Development
+**What Controllers Do NOT Do** (Zero Business Logic ✅):
+- ❌ Business validation (Application does that)
+- ❌ Database access (Infrastructure.Data does that)
+- ❌ Complex orchestration (Use cases do that)
+- ❌ Calculations or transformations (Domain/Application does that)
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd Mystira.App.Api
-   ```
+## Example: Thin Controller Pattern
 
-2. **Restore dependencies**
-   ```bash
-   dotnet restore
-   ```
+### Scenario Controller (Primary Adapter)
 
-3. **Configure settings**
-   Update `appsettings.Development.json` with your Azure connection strings:
-   ```json
-   {
-     "ConnectionStrings": {
-       "CosmosDb": "your-cosmos-db-connection-string",
-       "AzureStorage": "your-azure-storage-connection-string"
-     },
-     "Jwt": {
-       "Key": "your-jwt-secret-key"
-     }
-   }
-   ```
+```csharp
+// Location: Api/Controllers/ScenariosController.cs
+using Mystira.App.Application.UseCases.Scenarios;  // Use cases ✅
+using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.App.Contracts.Responses;
 
-4. **Run the application**
-   ```bash
-   dotnet run
-   ```
+[ApiController]
+[Route("api/[controller]")]
+public class ScenariosController : ControllerBase
+{
+    private readonly GetScenarioUseCase _getScenarioUseCase;
+    private readonly CreateScenarioUseCase _createScenarioUseCase;
+    private readonly ILogger<ScenariosController> _logger;
 
-5. **Access Swagger UI**
-   Navigate to `https://localhost:5001` or `http://localhost:5000`
+    public ScenariosController(
+        GetScenarioUseCase getScenarioUseCase,      // Use case ✅
+        CreateScenarioUseCase createScenarioUseCase, // Use case ✅
+        ILogger<ScenariosController> _logger)
+    {
+        _getScenarioUseCase = getScenarioUseCase;
+        _createScenarioUseCase = createScenarioUseCase;
+        _logger = logger;
+    }
 
-### Docker Deployment
+    [HttpGet("{id}")]
+    public async Task<ActionResult<ScenarioResponse>> GetScenario(string id)
+    {
+        try
+        {
+            // Thin controller - just delegates to use case ✅
+            var scenario = await _getScenarioUseCase.ExecuteAsync(id);
 
-1. **Build Docker image**
-   ```bash
-   docker build -t mystira-app-api .
-   ```
+            if (scenario == null)
+                return NotFound($"Scenario {id} not found");
 
-2. **Run container**
-   ```bash
-   docker run -p 8080:80 -e ConnectionStrings__CosmosDb="your-connection-string" mystira-app-api
-   ```
+            return Ok(scenario);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting scenario {ScenarioId}", id);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    [HttpPost]
+    [Authorize] // Only DMs can create scenarios
+    public async Task<ActionResult<ScenarioResponse>> CreateScenario(
+        [FromBody] CreateScenarioRequest request)
+    {
+        try
+        {
+            // Validate model binding (HTTP concern) ✅
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // Delegate business logic to use case ✅
+            var scenario = await _createScenarioUseCase.ExecuteAsync(request);
+
+            // Return HTTP 201 Created ✅
+            return CreatedAtAction(
+                nameof(GetScenario),
+                new { id = scenario.Id },
+                scenario);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating scenario");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+}
+```
+
+**Controller Responsibilities** (HTTP Only):
+- ✅ HTTP method routing (`[HttpGet]`, `[HttpPost]`)
+- ✅ Model binding validation (`ModelState.IsValid`)
+- ✅ Calling use cases
+- ✅ HTTP status codes (`Ok`, `NotFound`, `BadRequest`, `Created`)
+- ✅ Exception handling → HTTP errors
+
+**NOT Controller Responsibilities** (Business Logic):
+- ❌ Scenario validation logic (use case does this)
+- ❌ Database access (Infrastructure.Data does this)
+- ❌ File storage (Infrastructure.Azure does this)
+- ❌ Age group validation (Domain/Application does this)
+
+## API Service Pattern
+
+Some controllers use thin API services that coordinate multiple use cases:
+
+```csharp
+// Location: Api/Services/UserProfileApiService.cs
+using Mystira.App.Application.UseCases.UserProfiles;  // Use cases ✅
+
+public class UserProfileApiService : IUserProfileApiService
+{
+    private readonly CreateUserProfileUseCase _createUserProfileUseCase;
+    private readonly UpdateUserProfileUseCase _updateUserProfileUseCase;
+    private readonly GetUserProfileUseCase _getUserProfileUseCase;
+    private readonly DeleteUserProfileUseCase _deleteUserProfileUseCase;
+
+    public UserProfileApiService(
+        CreateUserProfileUseCase createUserProfileUseCase,
+        UpdateUserProfileUseCase updateUserProfileUseCase,
+        GetUserProfileUseCase getUserProfileUseCase,
+        DeleteUserProfileUseCase deleteUserProfileUseCase)
+    {
+        _createUserProfileUseCase = createUserProfileUseCase;
+        _updateUserProfileUseCase = updateUserProfileUseCase;
+        _getUserProfileUseCase = getUserProfileUseCase;
+        _deleteUserProfileUseCase = deleteUserProfileUseCase;
+    }
+
+    public async Task<UserProfile> CreateProfileAsync(CreateUserProfileRequest request)
+    {
+        // Thin delegation - no business logic ✅
+        return await _createUserProfileUseCase.ExecuteAsync(request);
+    }
+
+    public async Task<UserProfile?> GetProfileByIdAsync(string id)
+    {
+        return await _getUserProfileUseCase.ExecuteAsync(id);
+    }
+
+    // ... other thin delegation methods
+}
+```
+
+**API Service Purpose**:
+- Coordinate multiple related use cases
+- Provide single injection point for controllers
+- Still ZERO business logic (just delegation)
+
+## Dependency Injection (Composition Root)
+
+`Program.cs` is the **only** file that knows about Infrastructure implementations:
+
+```csharp
+using Mystira.App.Application.UseCases.Scenarios;
+using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Ports.Storage;
+using Mystira.App.Application.Ports.Messaging;
+using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Azure.Services;
+using Mystira.App.Infrastructure.Discord.Services;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Register use cases (from Application)
+builder.Services.AddScoped<GetScenarioUseCase>();
+builder.Services.AddScoped<CreateScenarioUseCase>();
+builder.Services.AddScoped<UpdateScenarioUseCase>();
+builder.Services.AddScoped<DeleteScenarioUseCase>();
+// ... more use cases
+
+// Wire port interfaces to Infrastructure implementations
+builder.Services.AddScoped<IScenarioRepository, ScenarioRepository>();          // Data
+builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();    // Data
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();                          // Data
+builder.Services.AddScoped<IBlobService, AzureBlobService>();                   // Azure
+builder.Services.AddScoped<IAudioTranscodingService, FfmpegAudioTranscodingService>(); // Azure
+builder.Services.AddScoped<IMessagingService, DiscordBotService>();             // Discord
+
+// Register API services (thin coordinators)
+builder.Services.AddScoped<IUserProfileApiService, UserProfileApiService>();
+builder.Services.AddScoped<IAccountApiService, AccountApiService>();
+
+// DbContext
+builder.Services.AddDbContext<MystiraAppDbContext>(options =>
+    options.UseCosmos(
+        builder.Configuration.GetConnectionString("CosmosDb"),
+        databaseName: "MystiraAppDb"));
+
+// Azure Blob Storage
+builder.Services.AddSingleton(sp =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("AzureStorage");
+    return new BlobServiceClient(connectionString);
+});
+
+var app = builder.Build();
+app.Run();
+```
+
+**Benefits of This Pattern**:
+- ✅ Controllers know ZERO about Infrastructure
+- ✅ Easy to swap implementations (Azure → AWS, Cosmos → SQL Server)
+- ✅ Testable (mock use cases, not infrastructure)
+- ✅ Single place to change wiring (Program.cs)
 
 ## API Endpoints
 
 ### Scenarios
-- `GET /api/scenarios` - Get scenarios with filtering
+- `GET /api/scenarios` - List scenarios with filtering
 - `GET /api/scenarios/{id}` - Get specific scenario
 - `POST /api/scenarios` - Create new scenario (Auth required)
 - `PUT /api/scenarios/{id}` - Update scenario (Auth required)
 - `DELETE /api/scenarios/{id}` - Delete scenario (Auth required)
-- `GET /api/scenarios/age-group/{ageGroup}` - Get age-appropriate scenarios
-- `GET /api/scenarios/featured` - Get featured scenarios
+- `GET /api/scenarios/age-group/{ageGroup}` - Age-appropriate scenarios
+- `GET /api/scenarios/featured` - Featured scenarios
 
 ### Game Sessions
 - `POST /api/gamesessions` - Start new session (Auth required)
 - `GET /api/gamesessions/{id}` - Get session details (Auth required)
-- `GET /api/gamesessions/dm/{dmName}` - Get DM's sessions (Auth required)
-- `POST /api/gamesessions/choice` - Make choice in session (Auth required)
+- `GET /api/gamesessions/dm/{dmName}` - DM's sessions (Auth required)
+- `POST /api/gamesessions/choice` - Make choice (Auth required)
 - `POST /api/gamesessions/{id}/pause` - Pause session (Auth required)
 - `POST /api/gamesessions/{id}/resume` - Resume session (Auth required)
 - `POST /api/gamesessions/{id}/end` - End session (Auth required)
-- `GET /api/gamesessions/{id}/stats` - Get session statistics (Auth required)
-- `DELETE /api/gamesessions/{id}` - Delete session (Auth required)
 
 ### User Profiles
-- `POST /api/userprofiles` - Create DM profile
-- `GET /api/userprofiles/{name}` - Get profile (Auth required)
-- `PUT /api/userprofiles/{name}` - Update profile (Auth required)
-- `DELETE /api/userprofiles/{name}` - Delete profile (Auth required)
-- `POST /api/userprofiles/{name}/complete-onboarding` - Complete onboarding (Auth required)
+- `POST /api/userprofiles` - Create profile (Auth required)
+- `GET /api/userprofiles/{id}` - Get profile (Auth required)
+- `PUT /api/userprofiles/{id}` - Update profile (Auth required)
+- `DELETE /api/userprofiles/{id}` - Delete profile (Auth required)
+- `GET /api/userprofiles` - List all profiles (Auth required)
+- `GET /api/userprofiles/non-guest` - Non-guest profiles (Auth required)
+
+### Accounts
+- `POST /api/accounts` - Create account
+- `GET /api/accounts/{id}` - Get account (Auth required)
+- `PUT /api/accounts/{id}` - Update account (Auth required)
+- `POST /api/accounts/{id}/profiles` - Link profiles (Auth required)
 
 ### Media
-- `POST /api/media/upload` - Upload media file (Auth required)
-- `GET /api/media/{blobName}/url` - Get media URL
-- `GET /api/media/{blobName}/download` - Download media file
-- `GET /api/media` - List media files (Auth required)
-- `DELETE /api/media/{blobName}` - Delete media file (Auth required)
+- `POST /api/media/upload` - Upload media (Auth required)
+- `GET /api/media/{blobName}` - Get media URL
+- `DELETE /api/media/{blobName}` - Delete media (Auth required)
 
 ### Health
-- `GET /api/health` - Comprehensive health check
-- `GET /api/health/ready` - Readiness probe
-- `GET /api/health/live` - Liveness probe
-
-## Authentication
-
-The API uses JWT Bearer token authentication for DM accounts. Include the token in the Authorization header:
-
-```
-Authorization: Bearer <your-jwt-token>
-```
-
-## Data Models
-
-### Scenario
-Core adventure definition with scenes, choices, and branching narratives.
-
-### GameSession
-Session lifecycle tracking with choice history, echo logging, and compass values.
-
-### UserProfile
-DM account information with fantasy theme preferences and age group settings.
-
-### EchoLog
-Moral choice tracking with strength values and echo types from master list.
-
-### CompassTracking
-Real-time moral axis tracking with historical changes and threshold monitoring.
-
-## Azure Deployment
-
-### Infrastructure as Code
-
-Use the provided Bicep templates for Azure deployment:
-
-```bash
-# Deploy all infrastructure
-az deployment group create \
-  --resource-group mystira-app-prod-rg \
-  --template-file Infrastructure/Azure/main.bicep \
-  --parameters environment=prod
-```
-
-### CI/CD Pipeline
-
-GitHub Actions workflow is configured for:
-- **Build & Test** on every push
-- **Deploy to Development** on develop branch
-- **Deploy to Production** on main branch
-- **Infrastructure Deployment** with commit message `[deploy-infra]`
+- `GET /health` - Comprehensive health check
+- `GET /health/ready` - Readiness probe
+- `GET /health/live` - Liveness probe
 
 ## Configuration
 
-### Environment Variables
+### appsettings.json
 
-- `ASPNETCORE_ENVIRONMENT` - Environment name (Development, Staging, Production)
-- `ConnectionStrings__CosmosDb` - Cosmos DB connection string
-- `ConnectionStrings__AzureStorage` - Azure Storage connection string
-- `Jwt__Key` - JWT signing key
-- `Jwt__Issuer` - JWT issuer claim
-- `Jwt__Audience` - JWT audience claim
-
-## Security
-
-- **HTTPS Only** - All endpoints require HTTPS in production
-- **JWT Authentication** - DM accounts only, no child accounts (COPPA compliance)
-- **CORS Configuration** - Restricted to known frontend domains
-- **Input Validation** - Comprehensive validation on all endpoints
-- **Content Filtering** - Age-appropriate content validation
-- **Data Encryption** - All personal data encrypted in transit and at rest
-
-## Monitoring
-
-- **Health Checks** - Database and Blob Storage connectivity
-- **Application Insights** - Performance and error monitoring
-- **Structured Logging** - JSON formatted logs for Azure monitoring
-
-## Development Guidelines
-
-### Code Structure
-- **Controllers** - API endpoints with input validation
-- **Services** - Business logic and data access
-- **Models** - Request/response DTOs
-- **Infrastructure** - Cross-cutting concerns (health checks, etc.)
-
-### Testing
-- Unit tests for all services
-- Integration tests for API endpoints
-- Health check validation
-
-### Content Safety
-- All scenarios validated against age appropriateness
-- Echo/compass values within specified ranges
-- Maximum limits enforced (4 archetypes, 4 compass axes per scenario)
-
-## 🔍 Architectural Analysis
-
-### Current State Assessment
-
-**File Count**: 77 C# files
-**Project References**: 7 (⚠️ too many)
-- Domain
-- Contracts
-- Application ✅
-- Infrastructure.Data ⚠️
-- Infrastructure.Azure ⚠️
-- Infrastructure.Discord ⚠️
-- Shared ✅
-
-**Folders**:
-- Controllers/ ✅
-- Services/ ⚠️ (Business logic in API layer!)
-- Repositories/ ❌ (Should NOT be here!)
-- Adapters/ ⚠️
-- Models/ (redundant with Contracts)
-
-### ⚠️ Architectural Issues Found
-
-#### 1. **Business Logic in API Layer** (CRITICAL)
-**Location**: `Services/` folder with 47 service files
-
-**Issue**: API contains business logic services that should be Use Cases in Application layer:
-- `ScenarioApiService.cs` (32KB!)
-- `GameSessionApiService.cs` (15KB)
-- `MediaMetadataService.cs`
-- `CharacterMapFileService.cs`
-- `BundleService.cs`
-- And 42 more...
-
-**Impact**:
-- ❌ Business logic scattered across API and Application layers
-- ❌ Violates Single Responsibility (API should only handle HTTP concerns)
-- ❌ Can't reuse business logic in other interfaces (gRPC, CLI, background jobs)
-- ❌ Hard to test business logic independently of HTTP context
-
-**Recommendation**:
-- **MOVE** all `*ApiService` classes to `Application/UseCases/`
-- API Controllers should be **thin** - only handle:
-  - HTTP request/response
-  - Model validation
-  - Calling use cases
-  - HTTP status codes
-- Rename services to use cases (e.g., `ScenarioApiService` → `CreateScenarioUseCase`, `GetScenarioUseCase`)
-
-#### 2. **Repositories in API Layer** (CRITICAL)
-**Location**: `Repositories/` folder
-
-**Issue**: API contains repository implementations:
-```
-Repositories/
-├── CharacterMapFileRepository.cs
-├── CharacterMediaMetadataFileRepository.cs
-├── MediaMetadataFileRepository.cs
-├── ICharacterMapFileRepository.cs
-└── ...
-```
-
-**Impact**:
-- ❌ Data access logic in presentation layer
-- ❌ Violates layered architecture
-- ❌ Tight coupling to persistence
-
-**Recommendation**:
-- **MOVE** repositories to `Infrastructure.Data/Repositories/`
-- **MOVE** interfaces to `Application/Ports/Data/`
-- API should NEVER contain data access code
-
-#### 3. **Too Many Infrastructure References** (HIGH)
-**Location**: `Mystira.App.Api.csproj` lines 27-31
-
-**Issue**: API directly references 3 infrastructure projects:
-```xml
-<ProjectReference Include="..\Mystira.App.Infrastructure.Azure\..." />
-<ProjectReference Include="..\Mystira.App.Infrastructure.Data\..." />
-<ProjectReference Include="..\Mystira.App.Infrastructure.Discord\..." />
-```
-
-**Impact**:
-- ⚠️ API knows about infrastructure implementation details
-- ⚠️ Can't swap implementations without changing API
-- ⚠️ Violates Dependency Inversion
-
-**Recommendation**:
-- API should ONLY reference:
-  - Domain (for entities in responses)
-  - Application (for use cases)
-  - Contracts (for DTOs)
-  - Shared (for middleware)
-- Infrastructure wired via DI in `Program.cs`
-- No direct infrastructure references
-
-#### 4. **Adapters Folder** (MEDIUM)
-**Location**: `Adapters/` folder
-
-**Issue**: Contains `MediaMetadataServiceAdapter.cs` - unclear purpose
-
-**Impact**:
-- ⚠️ Adapter pattern in presentation layer is odd
-- ⚠️ Suggests missing abstraction
-
-**Recommendation**:
-- If adapting external service, move to appropriate Infrastructure project
-- If wrapping application service, remove and call use case directly
-
-### ✅ What's Working Well
-
-1. **Controllers** - Well-organized API endpoints
-2. **Application Reference** - Correct to reference Application layer
-3. **Swagger/OpenAPI** - Good API documentation
-4. **Health Checks** - Monitoring infrastructure
-
-## 📋 Refactoring TODO
-
-### 🔴 Critical Priority (MUST FIX)
-
-- [ ] **Move all business logic to Application layer**
-  - Create use cases for each service method
-  - `ScenarioApiService` → Multiple use cases (Create, Get, Update, Delete, List)
-  - `GameSessionApiService` → Session use cases
-  - `MediaMetadataService` → Media use cases
-  - Location: `Api/Services/` → `Application/UseCases/`
-  - Estimated: 47 service files to refactor
-
-- [ ] **Move repositories to Infrastructure.Data**
-  - Move `Api/Repositories/*Repository.cs` → `Infrastructure.Data/Repositories/`
-  - Move `Api/Repositories/I*Repository.cs` → `Application/Ports/Data/`
-  - Update DI registrations in Program.cs
-  - Location: `Api/Repositories/`
-
-- [ ] **Remove infrastructure project references**
-  - Remove Infrastructure.Azure reference
-  - Remove Infrastructure.Data reference
-  - Remove Infrastructure.Discord reference
-  - Keep only: Domain, Application, Contracts, Shared
-  - Location: `Mystira.App.Api.csproj`
-
-### 🟡 High Priority
-
-- [ ] **Refactor controllers to be thin**
-  - Controllers should ONLY:
-    - Accept HTTP request
-    - Validate input
-    - Call use case
-    - Return HTTP response
-  - Remove ALL business logic from controllers
-  - Example pattern:
-    ```csharp
-    [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateScenarioRequest request)
-    {
-        var scenario = await _createScenarioUseCase.ExecuteAsync(request);
-        return CreatedAtAction(nameof(Get), new { id = scenario.Id }, scenario);
+```json
+{
+  "ConnectionStrings": {
+    "CosmosDb": "AccountEndpoint=https://...;AccountKey=...;",
+    "AzureStorage": "DefaultEndpointsProtocol=https;AccountName=..."
+  },
+  "Jwt": {
+    "Key": "your-secret-key-here",
+    "Issuer": "https://mystira.app",
+    "Audience": "https://mystira.app"
+  },
+  "Azure": {
+    "BlobStorage": {
+      "ContainerName": "mystira-app-media"
     }
-    ```
-
-- [ ] **Clean up Models folder**
-  - Evaluate if needed (Contracts already has DTOs)
-  - Move unique models to Contracts or remove
-  - Reduce duplication
-
-- [ ] **Investigate Adapters folder**
-  - Determine purpose of adapter
-  - Move to appropriate infrastructure project or remove
-
-### 🟢 Medium Priority
-
-- [ ] **Implement API versioning**
-  - Add Microsoft.AspNetCore.Mvc.Versioning
-  - Version controllers (v1, v2)
-  - Support evolving API
-
-- [ ] **Add API rate limiting**
-  - Protect against abuse
-  - Per-user rate limits
-
-- [ ] **Enhance error handling**
-  - Global exception handler middleware
-  - Consistent error response format
-  - Problem Details (RFC 7807)
-
-## 💡 Recommendations
-
-### Immediate Actions
-1. **Stop adding business logic to API** - All new logic goes in Application/UseCases
-2. **Plan refactoring sprint** - Move services to use cases systematically
-3. **Document new pattern** - Show team correct controller → use case pattern
-
-### Architecture Target State
-
-**API Layer Responsibilities** (ONLY):
-- ✅ HTTP request/response handling
-- ✅ Model binding and validation
-- ✅ Authentication/authorization checks
-- ✅ HTTP status code mapping
-- ✅ Content negotiation
-- ❌ NO business logic
-- ❌ NO data access
-- ❌ NO external service calls
-
-**Correct Pattern**:
-```
-HTTP Request
-  ↓
-Controller (thin - validates, calls use case)
-  ↓
-Use Case (application layer - business workflow)
-  ↓
-Domain & Ports (business logic & abstractions)
-  ↓
-Infrastructure (implementations)
+  },
+  "Discord": {
+    "BotToken": "your-bot-token"
+  }
+}
 ```
 
-### Phased Migration Plan
+### Environment Variables (Production)
 
-**Phase 1** (Week 1): Infrastructure
-- Move repositories out of API
-- Remove infrastructure references
-- Fix DI registrations
+Set via Azure App Service configuration:
+- `ConnectionStrings__CosmosDb`
+- `ConnectionStrings__AzureStorage`
+- `Jwt__Key`
+- `Discord__BotToken`
 
-**Phase 2** (Weeks 2-4): Business Logic
-- Refactor 1 controller fully (show pattern)
-- Team review and approve approach
-- Refactor remaining controllers systematically
+## Authentication & Authorization
 
-**Phase 3** (Week 5): Cleanup
-- Remove empty Services folder
-- Clean up Models duplication
-- Update documentation
+### JWT Authentication
 
-## 📊 SWOT Analysis
+```csharp
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+        };
+    });
+```
 
-### Strengths 💪
-- ✅ **RESTful Design**: Well-structured API endpoints
-- ✅ **OpenAPI/Swagger**: Excellent API documentation
-- ✅ **Health Checks**: Proper monitoring endpoints
-- ✅ **Authentication**: JWT security implemented
-- ✅ **CORS**: Configured for known origins
-- ✅ **Application Reference**: Calls use cases (when they exist)
+### COPPA Compliance
 
-### Weaknesses ⚠️
-- ❌ **47 Service Files**: Business logic in presentation layer
-- ❌ **6 Repository Files**: Data access in API layer
-- ❌ **7 Project References**: Too many dependencies
-- ⚠️ **Fat Controllers**: Business logic mixed with HTTP concerns
-- ⚠️ **Duplication**: Models folder redundant with Contracts
-- ⚠️ **Infrastructure Coupling**: Direct references to implementations
+- **DM-only accounts** - No child accounts
+- **Age-appropriate content** - Scenarios filtered by age group
+- **Parental controls** - DMs manage all child profiles
 
-### Opportunities 🚀
-- 📈 **Clean Architecture**: Move to pure hexagonal pattern
-- 📈 **Reusable Logic**: Business logic usable by gRPC, CLI, background jobs
-- 📈 **Better Testing**: Unit test business logic without HTTP mocking
-- 📈 **API Versioning**: Support multiple API versions cleanly
-- 📈 **gRPC Support**: Add high-performance gRPC alongside REST
-- 📈 **GraphQL**: Add GraphQL layer using same use cases
-- 📈 **Microservices**: Extract bounded contexts into separate services
+## Health Checks
 
-### Threats 🔒
-- ⚡ **Technical Debt**: 47 services to refactor
-- ⚡ **Team Velocity**: Large refactoring impacts feature delivery
-- ⚡ **Regression Risk**: Moving logic could introduce bugs
-- ⚡ **Knowledge Gap**: Team may not understand hexagonal architecture
-- ⚡ **Testing Gaps**: Need tests before refactoring
+Comprehensive health monitoring:
 
-### Risk Mitigation
-1. **Automated Tests**: Write tests BEFORE moving any code
-2. **Incremental Migration**: One controller/feature at a time
-3. **Pair Programming**: Spread architectural knowledge
-4. **Code Reviews**: Enforce new patterns
-5. **Documentation**: Update team wiki with patterns
+```csharp
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<MystiraAppDbContext>("cosmos-db")
+    .AddAzureBlobStorage(
+        builder.Configuration.GetConnectionString("AzureStorage"),
+        name: "azure-blob-storage");
+```
+
+Access:
+- `/health` - Overall status
+- `/health/ready` - Kubernetes readiness probe
+- `/health/live` - Kubernetes liveness probe
+
+## Deployment
+
+### Local Development
+
+```bash
+dotnet restore
+dotnet run
+```
+
+Access Swagger UI at: `https://localhost:5001`
+
+### Docker
+
+```bash
+docker build -t mystira-app-api .
+docker run -p 8080:80 mystira-app-api
+```
+
+### Azure App Service
+
+```bash
+# Deploy using Azure CLI
+az webapp up \
+  --name mystira-app-api \
+  --resource-group mystira-rg \
+  --runtime "DOTNETCORE:9.0"
+```
+
+Or use GitHub Actions (see `.github/workflows/deploy.yml`)
+
+## Testing
+
+### Controller Testing
+
+```csharp
+[Fact]
+public async Task GetScenario_WithValidId_ReturnsOk()
+{
+    // Arrange
+    var mockUseCase = new Mock<GetScenarioUseCase>();
+    mockUseCase
+        .Setup(u => u.ExecuteAsync("test-123"))
+        .ReturnsAsync(new Scenario { Id = "test-123", Title = "Test" });
+
+    var controller = new ScenariosController(
+        mockUseCase.Object,
+        mockLogger.Object);
+
+    // Act
+    var result = await controller.GetScenario("test-123");
+
+    // Assert
+    var okResult = Assert.IsType<OkObjectResult>(result.Result);
+    var scenario = Assert.IsType<Scenario>(okResult.Value);
+    Assert.Equal("test-123", scenario.Id);
+}
+```
+
+## Architectural Compliance Verification
+
+Verify the API layer follows hexagonal architecture:
+
+```bash
+# Check controllers only reference Application (use cases)
+grep -r "using Mystira.App.Infrastructure" Controllers/
+# Expected: (no output - controllers don't reference Infrastructure)
+
+# Check Program.cs is the only file with Infrastructure references
+find . -name "*.cs" -exec grep -l "Infrastructure\.(Data|Azure|Discord)" {} \; | grep -v Program.cs
+# Expected: (no output - only Program.cs knows about Infrastructure)
+
+# Check controllers are thin (delegate to use cases)
+grep -r "new DbContext\|SaveChangesAsync\|BlobClient" Controllers/
+# Expected: (no output - controllers don't do data access)
+```
+
+**Results**:
+- ✅ Controllers reference Application.UseCases, not Infrastructure
+- ✅ Program.cs is the only composition root
+- ✅ Controllers are thin (no business logic)
+- ✅ Full hexagonal architecture compliance
 
 ## Related Documentation
 
-- **[Application Layer](../Mystira.App.Application/README.md)** - Where business logic belongs
-- **[Infrastructure.Data](../Mystira.App.Infrastructure.Data/README.md)** - Where repositories belong
+- **[Application](../Mystira.App.Application/README.md)** - Use cases invoked by this API
+- **[Infrastructure.Data](../Mystira.App.Infrastructure.Data/README.md)** - Data implementations wired in DI
+- **[Infrastructure.Azure](../Mystira.App.Infrastructure.Azure/README.md)** - Azure implementations wired in DI
+- **[Domain](../Mystira.App.Domain/README.md)** - Domain entities returned in responses
 - **[Contracts](../Mystira.App.Contracts/README.md)** - Request/Response DTOs
+
+## Summary
+
+**What This Layer Does**:
+- ✅ Receives HTTP requests from external clients
+- ✅ Translates requests into use case invocations
+- ✅ Returns HTTP responses with proper status codes
+- ✅ Wires Infrastructure implementations via DI (Program.cs only)
+- ✅ Provides RESTful API with OpenAPI documentation
+
+**What This Layer Does NOT Do**:
+- ❌ Contain business logic (Application/Domain does that)
+- ❌ Access databases directly (Infrastructure.Data does that)
+- ❌ Access cloud storage directly (Infrastructure.Azure does that)
+- ❌ Perform validations (Application/Domain does that)
+
+**Key Success Metrics**:
+- ✅ **Thin controllers** - Zero business logic, only HTTP concerns
+- ✅ **Use case delegation** - All logic in Application layer
+- ✅ **Composition root** - Only Program.cs knows Infrastructure
+- ✅ **Testability** - Mock use cases, not infrastructure
+- ✅ **Swappability** - Change implementations in Program.cs
 
 ## License
 

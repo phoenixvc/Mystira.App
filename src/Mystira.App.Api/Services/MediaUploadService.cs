@@ -1,9 +1,8 @@
 using System.Security.Cryptography;
 using Mystira.App.Api.Models;
+using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Ports.Storage;
 using Mystira.App.Domain.Models;
-using Mystira.App.Infrastructure.Azure.Services;
-using Mystira.App.Infrastructure.Data.Repositories;
-using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 namespace Mystira.App.Api.Services;
 
@@ -12,9 +11,9 @@ namespace Mystira.App.Api.Services;
 /// </summary>
 public class MediaUploadService : IMediaUploadService
 {
-    private readonly Mystira.App.Infrastructure.Data.Repositories.IMediaAssetRepository _repository;
+    private readonly IMediaAssetRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IAzureBlobService _blobStorageService;
+    private readonly IBlobService _blobStorageService;
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ILogger<MediaUploadService> _logger;
 
@@ -46,7 +45,7 @@ public class MediaUploadService : IMediaUploadService
     public MediaUploadService(
         IMediaAssetRepository repository,
         IUnitOfWork unitOfWork,
-        IAzureBlobService blobStorageService,
+        IBlobService blobStorageService,
         IMediaMetadataService mediaMetadataService,
         ILogger<MediaUploadService> logger)
     {

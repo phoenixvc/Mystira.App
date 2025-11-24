@@ -2,7 +2,7 @@
 
 > **📋 Architectural Rules**: See [ARCHITECTURAL_RULES.md](ARCHITECTURAL_RULES.md) for strict enforcement guidelines
 
-## Current Phase: Phase 4 - Large File Refactoring ✅
+## Current Phase: Phase 5 - CQRS & Specification Pattern ✅
 
 ## Overview
 
@@ -134,6 +134,104 @@ This document tracks the complete status of the hexagonal architecture refactori
    - ✅ Updated `Program.cs` in both API projects to register `Infrastructure.Data.Repositories.IMediaAssetRepository`
    - ✅ Removed `MediaAsset` and `MediaMetadata` from `Api.Models` and `Admin.Api.Models`
    - ✅ Updated all services and controllers to use `Domain.Models.MediaAsset`
+
+### Phase 5: CQRS & Specification Pattern ✅ COMPLETED
+
+**Implemented CQRS (Command Query Responsibility Segregation) and Specification Pattern for improved architecture.**
+
+#### CQRS Implementation ✅
+
+**MediatR Integration:**
+- ✅ Added MediatR (v12.4.1) package to Application layer
+- ✅ Created `ICommand<TResponse>` and `ICommand` interfaces for write operations
+- ✅ Created `IQuery<TResponse>` interface for read operations
+- ✅ Created `ICommandHandler<TCommand, TResponse>` and `IQueryHandler<TQuery, TResponse>` interfaces
+
+**Example Commands (Write Operations):**
+- ✅ `CreateScenarioCommand` + `CreateScenarioCommandHandler`
+- ✅ `DeleteScenarioCommand` + `DeleteScenarioCommandHandler`
+
+**Example Queries (Read Operations):**
+- ✅ `GetScenarioQuery` + `GetScenarioQueryHandler`
+- ✅ `GetScenariosQuery` + `GetScenariosQueryHandler`
+- ✅ `GetScenariosByAgeGroupQuery` + `GetScenariosByAgeGroupQueryHandler` (uses Specification)
+- ✅ `GetPaginatedScenariosQuery` + `GetPaginatedScenariosQueryHandler` (uses Specification)
+
+**Structure:**
+```
+Application/CQRS/
+├── ICommand.cs, ICommandHandler.cs
+├── IQuery.cs, IQueryHandler.cs
+└── Scenarios/
+    ├── Commands/ (CreateScenario, DeleteScenario)
+    └── Queries/ (GetScenario, GetScenarios, GetByAgeGroup, Paginated)
+```
+
+#### Specification Pattern Implementation ✅
+
+**Domain Layer Specifications:**
+- ✅ Created `ISpecification<T>` interface in `Domain/Specifications/`
+- ✅ Created `BaseSpecification<T>` with fluent API for building specs
+- ✅ Created 8 pre-built scenario specifications:
+  - `ScenariosByAgeGroupSpecification`
+  - `ScenariosByTagSpecification`
+  - `ScenariosByDifficultySpecification`
+  - `ActiveScenariosSpecification`
+  - `PaginatedScenariosSpecification`
+  - `ScenariosByCreatorSpecification`
+  - `ScenariosByArchetypeSpecification`
+  - `FeaturedScenariosSpecification`
+
+**Infrastructure Layer Support:**
+- ✅ Created `SpecificationEvaluator<T>` in `Infrastructure.Data/Specifications/`
+- ✅ Extended `IRepository<T>` with specification methods:
+  - `GetBySpecAsync(spec)` - Get single entity
+  - `ListAsync(spec)` - Get multiple entities
+  - `CountAsync(spec)` - Count matching entities
+- ✅ Updated `Repository<T>` base class to implement specification methods
+
+**Specification Features:**
+- ✅ Criteria (WHERE clause)
+- ✅ Includes (eager loading)
+- ✅ OrderBy/OrderByDescending (sorting)
+- ✅ Paging (Skip/Take)
+- ✅ GroupBy (grouping)
+
+#### Documentation ✅
+
+- ✅ Updated `Application/README.md` with comprehensive CQRS and Specification Pattern sections
+- ✅ Added architecture diagrams for both patterns
+- ✅ Included code examples and usage patterns
+- ✅ Updated Design Patterns list
+- ✅ Updated dependencies section with MediatR
+
+**Commit:** `be18d7c` - feat: Implement CQRS and Specification Pattern
+
+---
+
+### Previous: Phase 4: Large File Refactoring ✅ COMPLETED
+
+**Large files split into smaller, focused components.**
+
+#### Completed Refactorings
+
+1. **ApiClient.cs (957 lines)** → ✅ COMPLETED
+   - Split into `BaseApiClient` (common HTTP logic) and domain-specific clients:
+     - `ScenarioApiClient`, `GameSessionApiClient`, `UserProfileApiClient`, `MediaApiClient`, `AuthApiClient`, `AvatarApiClient`, `ContentBundleApiClient`, `CharacterApiClient`
+   - Original `ApiClient` now acts as composite facade
+
+2. **MediaApiService.cs (555 lines)** → ✅ COMPLETED
+   - Split by responsibility:
+     - `MediaUploadService` (upload logic)
+     - `MediaQueryService` (query, update, delete, stats logic)
+   - Original `MediaApiService` now acts as composite facade
+
+3. **ScenarioRequestCreator.cs (727 lines)** → ✅ COMPLETED
+   - Refactored into shared parsers in `Application.Parsers`:
+     - `ScenarioParser`, `SceneParser`, `CharacterParser`, `CharacterMetadataParser`, `BranchParser`, `EchoLogParser`, `CompassChangeParser`, `EchoRevealParser`, `MediaReferencesParser`
+   - Refactored `ScenarioRequestCreator` (~20 lines) - facade delegating to parsers
+   - Parsers shared between Api and Admin.Api via Application layer
+
 
 ## 🔄 In Progress
 

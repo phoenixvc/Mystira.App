@@ -1,12 +1,10 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports;
+using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Ports.Storage;
 using Mystira.App.Contracts.Requests.Media;
 using Mystira.App.Domain.Models;
-using Mystira.App.Infrastructure.Azure.Services;
-using Mystira.App.Infrastructure.Data.Repositories;
-using Mystira.App.Infrastructure.Data.UnitOfWork;
-using IMediaAssetRepository = Mystira.App.Infrastructure.Data.Repositories.IMediaAssetRepository;
 
 namespace Mystira.App.Application.UseCases.Media;
 
@@ -17,7 +15,7 @@ public class UploadMediaUseCase
 {
     private readonly IMediaAssetRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IAzureBlobService _blobStorageService;
+    private readonly IBlobService _blobStorageService;
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ILogger<UploadMediaUseCase> _logger;
 
@@ -49,7 +47,7 @@ public class UploadMediaUseCase
     public UploadMediaUseCase(
         IMediaAssetRepository repository,
         IUnitOfWork unitOfWork,
-        IAzureBlobService blobStorageService,
+        IBlobService blobStorageService,
         IMediaMetadataService mediaMetadataService,
         ILogger<UploadMediaUseCase> logger)
     {

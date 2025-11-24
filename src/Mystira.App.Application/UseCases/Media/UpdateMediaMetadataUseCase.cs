@@ -1,9 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Contracts.Requests.Media;
 using Mystira.App.Domain.Models;
-using Mystira.App.Infrastructure.Data.Repositories;
-using Mystira.App.Infrastructure.Data.UnitOfWork;
-using IMediaAssetRepository = Mystira.App.Infrastructure.Data.Repositories.IMediaAssetRepository;
+using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Application.UseCases.Media;
 

@@ -1,10 +1,10 @@
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Mystira.App.Infrastructure.Data;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Contracts.Requests.UserProfiles;
 using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data;
 using Mystira.App.Shared.Models;
 using Mystira.App.Shared.Services;
 using ContractsCreateGuestProfileRequest = Mystira.App.Contracts.Requests.UserProfiles.CreateGuestProfileRequest;

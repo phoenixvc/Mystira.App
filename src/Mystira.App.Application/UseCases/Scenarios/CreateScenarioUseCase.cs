@@ -2,8 +2,7 @@ using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Validation;
 using Mystira.App.Contracts.Requests.Scenarios;
 using Mystira.App.Domain.Models;
-using Mystira.App.Infrastructure.Data.Repositories;
-using Mystira.App.Infrastructure.Data.UnitOfWork;
+using Mystira.App.Application.Ports.Data;
 using NJsonSchema;
 
 namespace Mystira.App.Application.UseCases.Scenarios;

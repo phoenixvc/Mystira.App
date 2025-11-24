@@ -1,6 +1,9 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Api.Services;
+using Mystira.App.Application.CQRS.UserProfiles.Commands;
+using Mystira.App.Application.CQRS.UserProfiles.Queries;
 using Mystira.App.Contracts.Requests.UserProfiles;
 using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Domain.Models;
@@ -12,15 +15,18 @@ namespace Mystira.App.Api.Controllers;
 [Produces("application/json")]
 public class UserProfilesController : ControllerBase
 {
+    private readonly IMediator _mediator;
     private readonly IUserProfileApiService _profileService;
     private readonly IAccountApiService _accountService;
     private readonly ILogger<UserProfilesController> _logger;
 
     public UserProfilesController(
+        IMediator mediator,
         IUserProfileApiService profileService,
         IAccountApiService accountService,
         ILogger<UserProfilesController> logger)
     {
+        _mediator = mediator;
         _profileService = profileService;
         _accountService = accountService;
         _logger = logger;
@@ -47,7 +53,8 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-            var profile = await _profileService.CreateProfileAsync(request);
+            var command = new CreateUserProfileCommand(request);
+            var profile = await _mediator.Send(command);
             return CreatedAtAction(nameof(GetProfileById), new { id = profile.Id }, profile);
         }
         catch (ArgumentException ex)
@@ -80,7 +87,8 @@ public class UserProfilesController : ControllerBase
         {
             _logger.LogInformation("Getting profiles for account {AccountId}", accountId);
 
-            var profiles = await _accountService.GetUserProfilesForAccountAsync(accountId);
+            var query = new GetProfilesByAccountQuery(accountId);
+            var profiles = await _mediator.Send(query);
             return Ok(profiles);
         }
         catch (Exception ex)
@@ -102,7 +110,8 @@ public class UserProfilesController : ControllerBase
     {
         try
         {
-            var profile = await _profileService.GetProfileByIdAsync(id);
+            var query = new GetUserProfileQuery(id);
+            var profile = await _mediator.Send(query);
             if (profile == null)
             {
                 return NotFound(new ErrorResponse
@@ -146,7 +155,8 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-            var updatedProfile = await _profileService.UpdateProfileByIdAsync(id, request);
+            var command = new UpdateUserProfileCommand(id, request);
+            var updatedProfile = await _mediator.Send(command);
             if (updatedProfile == null)
             {
                 return NotFound(new ErrorResponse
@@ -199,7 +209,8 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-            var updatedProfile = await _profileService.UpdateProfileByIdAsync(profileId, request);
+            var command = new UpdateUserProfileCommand(profileId, request);
+            var updatedProfile = await _mediator.Send(command);
             if (updatedProfile == null)
             {
                 return NotFound(new ErrorResponse
@@ -239,17 +250,8 @@ public class UserProfilesController : ControllerBase
     {
         try
         {
-            var profile = await _profileService.GetProfileByIdAsync(id);
-            if (profile == null)
-            {
-                return NotFound(new ErrorResponse
-                {
-                    Message = $"Profile not found: {id}",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            var deleted = await _profileService.DeleteProfileAsync(profile.Id);
+            var command = new DeleteUserProfileCommand(id);
+            var deleted = await _mediator.Send(command);
             if (!deleted)
             {
                 return NotFound(new ErrorResponse
@@ -280,17 +282,8 @@ public class UserProfilesController : ControllerBase
     {
         try
         {
-            var profile = await _profileService.GetProfileByIdAsync(id);
-            if (profile == null)
-            {
-                return NotFound(new ErrorResponse
-                {
-                    Message = $"Profile not found: {id}",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            var success = await _profileService.CompleteOnboardingAsync(profile.Name);
+            var command = new CompleteOnboardingCommand(id);
+            var success = await _mediator.Send(command);
             if (!success)
             {
                 return NotFound(new ErrorResponse

@@ -1,11 +1,9 @@
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Infrastructure.Data;
+using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.UseCases.UserProfiles;
 using Mystira.App.Contracts.Requests.UserProfiles;
 using Mystira.App.Domain.Models;
-using Mystira.App.Infrastructure.Data.Repositories;
-using Mystira.App.Infrastructure.Data.UnitOfWork;
 
 namespace Mystira.App.Api.Services;
 

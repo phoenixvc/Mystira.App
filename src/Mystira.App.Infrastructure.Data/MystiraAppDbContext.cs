@@ -10,7 +10,7 @@ namespace Mystira.App.Infrastructure.Data;
 /// DbContext for Mystira App following Hexagonal Architecture
 /// Located in Infrastructure.Data (outer layer) as per Ports and Adapters pattern
 /// </summary>
-public class MystiraAppDbContext : DbContext
+public partial class MystiraAppDbContext : DbContext
 {
     public MystiraAppDbContext(DbContextOptions<MystiraAppDbContext> options)
         : base(options)

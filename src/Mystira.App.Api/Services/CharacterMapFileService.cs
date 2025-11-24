@@ -1,9 +1,8 @@
 using System.Text.Json;
 using Mystira.App.Api.Models;
-using Mystira.App.Api.Repositories;
+using Mystira.App.Application.Ports.Data;
 using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Domain.Models;
-using Mystira.App.Infrastructure.Data.UnitOfWork;
 using ApiModels = Mystira.App.Api.Models;
 
 namespace Mystira.App.Api.Services;

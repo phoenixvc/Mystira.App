@@ -1,12 +1,14 @@
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Mystira.App.Api.Controllers;
-using Mystira.App.Api.Services;
+using Mystira.App.Application.CQRS.ContentBundles.Queries;
 using Mystira.App.Domain.Models;
 using Xunit;
 
@@ -14,10 +16,10 @@ namespace Mystira.App.Api.Tests.Controllers;
 
 public class BundlesControllerTests
 {
-    private static BundlesController CreateController(Mock<IContentBundleService> serviceMock)
+    private static BundlesController CreateController(Mock<IMediator> mediatorMock)
     {
         var logger = new Mock<ILogger<BundlesController>>().Object;
-        var controller = new BundlesController(serviceMock.Object, logger)
+        var controller = new BundlesController(mediatorMock.Object, logger)
         {
             ControllerContext = new ControllerContext
             {
@@ -36,9 +38,10 @@ public class BundlesControllerTests
             new() { Id = "b1", Title = "Bundle 1", AgeGroup = "6-9", ScenarioIds = new List<string>{"s1","s2"}, ImageId = "img1" },
             new() { Id = "b2", Title = "Bundle 2", AgeGroup = "10-12", ScenarioIds = new List<string>{"s3"}, ImageId = "img2", IsFree = true }
         };
-        var service = new Mock<IContentBundleService>();
-        service.Setup(s => s.GetAllAsync()).ReturnsAsync(bundles);
-        var controller = CreateController(service);
+        var mediator = new Mock<IMediator>();
+        mediator.Setup(m => m.Send(It.IsAny<GetAllContentBundlesQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(bundles);
+        var controller = CreateController(mediator);
 
         // Act
         var result = await controller.GetBundles();
@@ -47,16 +50,17 @@ public class BundlesControllerTests
         result.Result.Should().BeOfType<OkObjectResult>();
         var ok = result.Result as OkObjectResult;
         ok!.Value.Should().BeEquivalentTo(bundles);
-        service.Verify(s => s.GetAllAsync(), Times.Once);
+        mediator.Verify(m => m.Send(It.IsAny<GetAllContentBundlesQuery>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task GetBundles_WhenServiceThrows_Returns500_WithTraceId()
+    public async Task GetBundles_WhenMediatorThrows_Returns500_WithTraceId()
     {
         // Arrange
-        var service = new Mock<IContentBundleService>();
-        service.Setup(s => s.GetAllAsync()).ThrowsAsync(new System.Exception("boom"));
-        var controller = CreateController(service);
+        var mediator = new Mock<IMediator>();
+        mediator.Setup(m => m.Send(It.IsAny<GetAllContentBundlesQuery>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new System.Exception("boom"));
+        var controller = CreateController(mediator);
 
         // Act
         var result = await controller.GetBundles();
@@ -67,7 +71,7 @@ public class BundlesControllerTests
         obj!.StatusCode.Should().Be(500);
         obj.Value.Should().NotBeNull();
         obj.Value!.ToString().Should().Contain("TraceId");
-        service.Verify(s => s.GetAllAsync(), Times.Once);
+        mediator.Verify(m => m.Send(It.IsAny<GetAllContentBundlesQuery>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -79,9 +83,10 @@ public class BundlesControllerTests
         {
             new() { Id = "b1", Title = "Bundle 1", AgeGroup = ageGroup, ScenarioIds = new List<string>{"s1"}, ImageId = "img1" }
         };
-        var service = new Mock<IContentBundleService>();
-        service.Setup(s => s.GetByAgeGroupAsync(ageGroup)).ReturnsAsync(bundles);
-        var controller = CreateController(service);
+        var mediator = new Mock<IMediator>();
+        mediator.Setup(m => m.Send(It.Is<GetContentBundlesByAgeGroupQuery>(q => q.AgeGroup == ageGroup), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(bundles);
+        var controller = CreateController(mediator);
 
         // Act
         var result = await controller.GetBundlesByAgeGroup(ageGroup);
@@ -90,17 +95,18 @@ public class BundlesControllerTests
         result.Result.Should().BeOfType<OkObjectResult>();
         var ok = result.Result as OkObjectResult;
         ok!.Value.Should().BeEquivalentTo(bundles);
-        service.Verify(s => s.GetByAgeGroupAsync(ageGroup), Times.Once);
+        mediator.Verify(m => m.Send(It.Is<GetContentBundlesByAgeGroupQuery>(q => q.AgeGroup == ageGroup), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task GetBundlesByAgeGroup_WhenServiceThrows_Returns500_WithTraceId()
+    public async Task GetBundlesByAgeGroup_WhenMediatorThrows_Returns500_WithTraceId()
     {
         // Arrange
         var ageGroup = "3-5";
-        var service = new Mock<IContentBundleService>();
-        service.Setup(s => s.GetByAgeGroupAsync(ageGroup)).ThrowsAsync(new System.Exception("boom"));
-        var controller = CreateController(service);
+        var mediator = new Mock<IMediator>();
+        mediator.Setup(m => m.Send(It.Is<GetContentBundlesByAgeGroupQuery>(q => q.AgeGroup == ageGroup), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new System.Exception("boom"));
+        var controller = CreateController(mediator);
 
         // Act
         var result = await controller.GetBundlesByAgeGroup(ageGroup);
@@ -111,6 +117,6 @@ public class BundlesControllerTests
         obj!.StatusCode.Should().Be(500);
         obj.Value.Should().NotBeNull();
         obj.Value!.ToString().Should().Contain("TraceId");
-        service.Verify(s => s.GetByAgeGroupAsync(ageGroup), Times.Once);
+        mediator.Verify(m => m.Send(It.Is<GetContentBundlesByAgeGroupQuery>(q => q.AgeGroup == ageGroup), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

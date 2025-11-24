@@ -2,6 +2,14 @@
 
 Shared infrastructure and cross-cutting concerns used across multiple layers of the application. This project contains reusable services, middleware, and utilities that don't fit neatly into a single architectural layer.
 
+## ✅ Hexagonal Architecture - COMPLIANT
+
+**Layer**: **Shared - Cross-Cutting Utilities**
+
+**Purpose**: Reusable utilities and middleware for API layers
+
+**Status**: ✅ **Compliant** - no business logic, pure infrastructure utilities
+
 ## Role in Hexagonal Architecture
 
 **Layer**: **Shared Infrastructure (Cross-Cutting Concerns)**

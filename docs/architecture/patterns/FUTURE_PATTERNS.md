@@ -4,105 +4,38 @@
 
 This document outlines architectural patterns that could be beneficial to adopt in the future as the application grows and evolves.
 
+## ✅ Recently Implemented Patterns
+
+The following patterns have been successfully implemented:
+
+- **✅ CQRS (Command Query Responsibility Segregation)** - See [CQRS_PATTERN.md](CQRS_PATTERN.md)
+- **✅ Specification Pattern** - See [SPECIFICATION_PATTERN.md](SPECIFICATION_PATTERN.md)
+- **✅ Command Handler Pattern** - Implemented via MediatR
+- **✅ Mediator Pattern** - Implemented via MediatR library
+
+---
+
 ## Patterns to Consider
 
-### 1. CQRS (Command Query Responsibility Segregation)
+### 1. CQRS (Command Query Responsibility Segregation) ✅ IMPLEMENTED
 
-**Description**: Separates read and write operations into different models.
+**Status**: ✅ **IMPLEMENTED** - See [CQRS_PATTERN.md](CQRS_PATTERN.md)
 
-**Benefits**:
+**Implementation Details**:
+- MediatR (v12.4.1) for request/response handling
+- Separate Commands (write) and Queries (read)
+- Example implementations in `Application/CQRS/Scenarios/`
+- Full documentation in Application layer README
 
-- Optimize read and write operations independently
-- Scale read and write sides separately
-- Better performance for read-heavy applications
+### 2. Command Handler Pattern ✅ IMPLEMENTED
 
-**When to Consider**:
+**Status**: ✅ **IMPLEMENTED** - Part of CQRS implementation
 
-- When read and write operations have different performance requirements
-- When you need to scale reads independently from writes
-- When complex query requirements differ from write requirements
-
-**Implementation Approach**:
-
-- Create separate read models (DTOs) and write models (Commands)
-- Use different repositories for reads and writes
-- Consider event sourcing for audit trails
-
-### 2. Command Handler Pattern
-
-**Description**: Encapsulates business logic for handling commands (write operations) in dedicated handler classes. Often used with CQRS and Mediator patterns.
-
-**Benefits**:
-
-- Clear separation of command logic from controllers/services
-- Single Responsibility Principle - each handler handles one command
-- Easy to test handlers in isolation
-- Centralized command validation and execution
-- Supports async/await patterns naturally
-
-**When to Consider**:
-
-- When you want to separate command logic from controllers
-- When implementing CQRS pattern
-- When you need to handle complex command workflows
-- When you want to add cross-cutting concerns (logging, validation, transactions) uniformly
-
-**Implementation Approach**:
-
-```csharp
-// Command
-public class CreateGameSessionCommand
-{
-    public string AccountId { get; set; }
-    public string ScenarioId { get; set; }
-    public string ProfileId { get; set; }
-}
-
-// Command Handler
-public class CreateGameSessionCommandHandler : IRequestHandler<CreateGameSessionCommand, GameSession>
-{
-    private readonly IGameSessionRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-
-    public CreateGameSessionCommandHandler(
-        IGameSessionRepository repository,
-        IUnitOfWork unitOfWork)
-    {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-    }
-
-    public async Task<GameSession> Handle(CreateGameSessionCommand request, CancellationToken cancellationToken)
-    {
-        // Business logic here
-        var session = new GameSession
-        {
-            AccountId = request.AccountId,
-            ScenarioId = request.ScenarioId,
-            ProfileId = request.ProfileId,
-            Status = SessionStatus.InProgress
-        };
-
-        await _repository.AddAsync(session);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return session;
-    }
-}
-
-// Usage in Controller
-[HttpPost]
-public async Task<IActionResult> CreateSession([FromBody] CreateGameSessionCommand command)
-{
-    var session = await _mediator.Send(command);
-    return Ok(session);
-}
-```
-
-**Libraries**:
-
-- MediatR (most popular for .NET)
-- Brighter (for more complex scenarios)
-- Custom implementation
+**Implementation Details**:
+- Implemented via `ICommandHandler<TCommand, TResponse>` interface
+- Each command has a dedicated handler class
+- Supports both commands with results and void commands
+- Example: `CreateScenarioCommandHandler`, `DeleteScenarioCommandHandler`
 
 ### 3. Event Sourcing
 
@@ -126,62 +59,26 @@ public async Task<IActionResult> CreateSession([FromBody] CreateGameSessionComma
 - Replay events to rebuild current state
 - Use event store (e.g., EventStore, Cosmos DB change feed)
 
-### 4. Mediator Pattern
+### 4. Mediator Pattern ✅ IMPLEMENTED
 
-**Description**: Reduces coupling between components by having them communicate through a mediator.
+**Status**: ✅ **IMPLEMENTED** - MediatR library integrated
 
-**Benefits**:
+**Implementation Details**:
+- MediatR (v12.4.1) handles request routing
+- Controllers use `IMediator.Send()` to dispatch commands/queries
+- Decouples controllers from handler implementations
+- Supports pipeline behaviors for cross-cutting concerns
 
-- Loose coupling between components
-- Centralized communication logic
-- Easier to add new components
+### 5. Specification Pattern ✅ IMPLEMENTED
 
-**When to Consider**:
+**Status**: ✅ **IMPLEMENTED** - See [SPECIFICATION_PATTERN.md](SPECIFICATION_PATTERN.md)
 
-- When components need to communicate but shouldn't know about each other
-- When you want to centralize communication logic
-- When using CQRS (MediatR library)
-
-**Implementation Approach**:
-
-- Use MediatR library for .NET
-- Create handlers for each command/query
-- Decouple controllers from services
-
-### 5. Specification Pattern
-
-**Description**: Encapsulates business rules in reusable, composable specifications.
-
-**Benefits**:
-
-- Reusable business rules
-- Composable queries
-- Testable business logic
-
-**When to Consider**:
-
-- When you have complex query logic
-- When business rules need to be reused
-- When queries need to be composed dynamically
-
-**Implementation Approach**:
-
-```csharp
-public interface ISpecification<T>
-{
-    bool IsSatisfiedBy(T entity);
-    Expression<Func<T, bool>> ToExpression();
-}
-
-public class ActiveGameSessionSpecification : ISpecification<GameSession>
-{
-    public bool IsSatisfiedBy(GameSession session)
-    {
-        return session.Status == SessionStatus.InProgress || 
-               session.Status == SessionStatus.Paused;
-    }
-}
-```
+**Implementation Details**:
+- `ISpecification<T>` and `BaseSpecification<T>` in Domain layer
+- `SpecificationEvaluator<T>` in Infrastructure.Data
+- Repository support via `ListAsync(spec)`, `GetBySpecAsync(spec)`, `CountAsync(spec)`
+- 8 pre-built specifications for Scenarios
+- Supports WHERE, ORDER BY, INCLUDES, PAGING, GROUP BY
 
 ### 6. Factory Pattern
 
@@ -257,21 +154,27 @@ public class PaidPricingStrategy : IPricingStrategy { }
 
 ## Migration Priority
 
-1. **High Priority**:
+1. **✅ Completed**:
 
-   - Command Handler Pattern (using MediatR) - Simplifies CQRS implementation and improves separation of concerns
-   - Mediator Pattern (using MediatR) - Works hand-in-hand with Command Handler pattern
-   - Specification Pattern - Improves query logic organization
+   - ✅ **Command Handler Pattern** - Implemented via MediatR
+   - ✅ **Mediator Pattern** - MediatR integrated
+   - ✅ **Specification Pattern** - Fully implemented with 8 example specs
+   - ✅ **CQRS** - Implemented with Commands and Queries
 
-2. **Medium Priority**:
+2. **High Priority**:
 
-   - CQRS - When read/write separation becomes beneficial (Command Handler is a prerequisite)
    - Factory Pattern - For complex domain object creation
+   - Domain Events - For event-driven domain logic
 
-3. **Low Priority**:
+3. **Medium Priority**:
+
+   - Observer Pattern - When event-driven architecture is needed
+   - Strategy Pattern - For algorithm selection
+
+4. **Low Priority**:
 
    - Event Sourcing - When audit requirements become critical
-   - Observer Pattern - When event-driven architecture is needed
+   - Full Event-Driven Architecture - When distributed events are needed
 
 ## References
 

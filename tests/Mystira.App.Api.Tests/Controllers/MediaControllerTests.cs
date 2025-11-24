@@ -1,6 +1,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -16,13 +17,13 @@ namespace Mystira.App.Api.Tests.Controllers;
 public class MediaControllerTests
 {
     private static MediaController CreateController(
-        Mock<IMediaApiService> mediaServiceMock,
-        Mock<IMediaMetadataService> metadataServiceMock)
+        Mock<IMediator> mediatorMock,
+        Mock<IMediaApiService> mediaServiceMock)
     {
         var logger = new Mock<ILogger<MediaController>>().Object;
         var controller = new MediaController(
+            mediatorMock.Object,
             mediaServiceMock.Object,
-            metadataServiceMock.Object,
             logger)
         {
             ControllerContext = new ControllerContext
@@ -46,10 +47,11 @@ public class MediaControllerTests
             MimeType = "image/png",
             Url = "https://example.com/logo.png"
         };
+        var mediator = new Mock<IMediator>();
+        mediator.Setup(m => m.Send(It.IsAny<Mystira.App.Application.CQRS.MediaAssets.Queries.GetMediaAssetQuery>(), It.IsAny<System.Threading.CancellationToken>()))
+            .ReturnsAsync(mediaAsset);
         var mediaService = new Mock<IMediaApiService>();
-        mediaService.Setup(s => s.GetMediaByIdAsync(mediaId)).ReturnsAsync(mediaAsset);
-        var metadataService = new Mock<IMediaMetadataService>();
-        var controller = CreateController(mediaService, metadataService);
+        var controller = CreateController(mediator, mediaService);
 
         // Act
         var result = await controller.GetMediaById(mediaId);
@@ -58,7 +60,7 @@ public class MediaControllerTests
         result.Result.Should().BeOfType<OkObjectResult>();
         var ok = result.Result as OkObjectResult;
         ok!.Value.Should().BeEquivalentTo(mediaAsset);
-        mediaService.Verify(s => s.GetMediaByIdAsync(mediaId), Times.Once);
+        mediator.Verify(m => m.Send(It.IsAny<Mystira.App.Application.CQRS.MediaAssets.Queries.GetMediaAssetQuery>(), It.IsAny<System.Threading.CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -66,10 +68,11 @@ public class MediaControllerTests
     {
         // Arrange
         var mediaId = "non-existent-media";
+        var mediator = new Mock<IMediator>();
+        mediator.Setup(m => m.Send(It.IsAny<Mystira.App.Application.CQRS.MediaAssets.Queries.GetMediaAssetQuery>(), It.IsAny<System.Threading.CancellationToken>()))
+            .ReturnsAsync((MediaAsset?)null);
         var mediaService = new Mock<IMediaApiService>();
-        mediaService.Setup(s => s.GetMediaByIdAsync(mediaId)).ReturnsAsync((MediaAsset?)null);
-        var metadataService = new Mock<IMediaMetadataService>();
-        var controller = CreateController(mediaService, metadataService);
+        var controller = CreateController(mediator, mediaService);
 
         // Act
         var result = await controller.GetMediaById(mediaId);
@@ -90,11 +93,11 @@ public class MediaControllerTests
         var stream = new MemoryStream(new byte[] { 1, 2, 3, 4 });
         var contentType = "image/png";
         var fileName = "logo.png";
+        var mediator = new Mock<IMediator>();
         var mediaService = new Mock<IMediaApiService>();
         mediaService.Setup(s => s.GetMediaFileAsync(mediaId))
             .ReturnsAsync((stream, contentType, fileName));
-        var metadataService = new Mock<IMediaMetadataService>();
-        var controller = CreateController(mediaService, metadataService);
+        var controller = CreateController(mediator, mediaService);
 
         // Act
         var result = await controller.GetMediaFile(mediaId);
@@ -112,11 +115,11 @@ public class MediaControllerTests
     {
         // Arrange
         var mediaId = "non-existent-media";
+        var mediator = new Mock<IMediator>();
         var mediaService = new Mock<IMediaApiService>();
         mediaService.Setup(s => s.GetMediaFileAsync(mediaId))
             .ReturnsAsync(((Stream, string, string)?)null);
-        var metadataService = new Mock<IMediaMetadataService>();
-        var controller = CreateController(mediaService, metadataService);
+        var controller = CreateController(mediator, mediaService);
 
         // Act
         var result = await controller.GetMediaFile(mediaId);

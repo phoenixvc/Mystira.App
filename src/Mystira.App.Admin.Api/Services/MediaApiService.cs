@@ -2,13 +2,14 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Infrastructure.Data;
 using Mystira.App.Admin.Api.Models;
+using Mystira.App.Application.Ports.Media;
+using Mystira.App.Application.Ports.Storage;
 using Mystira.App.Application.UseCases.Media;
 using Mystira.App.Contracts.Requests.Media;
 using Mystira.App.Contracts.Responses.Media;
 using Mystira.App.Domain.Models;
-using Mystira.App.Infrastructure.Azure.Services;
+using Mystira.App.Infrastructure.Data;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -27,7 +28,7 @@ public class MediaApiService : IMediaApiService
     private readonly DeleteMediaUseCase _deleteMediaUseCase;
     private readonly DownloadMediaUseCase _downloadMediaUseCase;
     private readonly MystiraAppDbContext _context;
-    private readonly IAzureBlobService _blobStorageService;
+    private readonly IBlobService _blobStorageService;
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ILogger<MediaApiService> _logger;
     private readonly IAudioTranscodingService _audioTranscodingService;
@@ -67,7 +68,7 @@ public class MediaApiService : IMediaApiService
         DeleteMediaUseCase deleteMediaUseCase,
         DownloadMediaUseCase downloadMediaUseCase,
         MystiraAppDbContext context,
-        IAzureBlobService blobStorageService,
+        IBlobService blobStorageService,
         IMediaMetadataService mediaMetadataService,
         ILogger<MediaApiService> logger,
         IAudioTranscodingService audioTranscodingService)

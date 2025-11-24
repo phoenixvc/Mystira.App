@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Mystira.App.Application.Ports.Messaging;
 using Mystira.App.Infrastructure.Discord.Configuration;
 using Mystira.App.Infrastructure.Discord.HealthChecks;
 using Mystira.App.Infrastructure.Discord.Services;
@@ -32,7 +33,10 @@ public static class ServiceCollectionExtensions
         }
 
         // Register Discord bot service as singleton (maintains persistent connection)
-        services.AddSingleton<IDiscordBotService, DiscordBotService>();
+        // Register as both IMessagingService (Application port) and IDiscordBotService (backwards compatibility)
+        services.AddSingleton<DiscordBotService>();
+        services.AddSingleton<IMessagingService>(sp => sp.GetRequiredService<DiscordBotService>());
+        services.AddSingleton<IDiscordBotService>(sp => sp.GetRequiredService<DiscordBotService>());
 
         return services;
     }
