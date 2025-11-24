@@ -1,5 +1,5 @@
-import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -12,6 +12,7 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    open: false, // Don't open browser - Tauri will handle the window
   },
 
   // To make use of `TAURI_DEBUG` and other env variables

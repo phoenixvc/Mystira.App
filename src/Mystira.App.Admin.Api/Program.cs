@@ -103,6 +103,9 @@ else
         options.UseInMemoryDatabase("MystiraAppInMemoryDb_Local"));
 }
 
+// Register DbContext base type for repository dependency injection
+builder.Services.AddScoped<Microsoft.EntityFrameworkCore.DbContext>(sp => sp.GetRequiredService<MystiraAppDbContext>());
+
 // Add Azure Infrastructure Services
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 builder.Services.Configure<AudioTranscodingOptions>(builder.Configuration.GetSection(AudioTranscodingOptions.SectionName));

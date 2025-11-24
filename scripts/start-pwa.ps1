@@ -7,5 +7,15 @@ Write-Host ""
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location "$repoRoot\src\Mystira.App.PWA"
+
+# Build before running
+Write-Host "Building PWA..." -ForegroundColor Yellow
+dotnet build
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Build failed! Exiting." -ForegroundColor Red
+    exit $LASTEXITCODE
+}
+
+Write-Host "Build successful. Starting PWA..." -ForegroundColor Green
 dotnet run
 
