@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Domain.Models;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Application.Ports.Data;
 using YamlDotNet.Serialization;
 
 namespace Mystira.App.Application.UseCases.CharacterMaps;

@@ -71,7 +71,7 @@ public class CompletedSessionsSpecification : BaseSpecification<GameSession>
     public CompletedSessionsSpecification()
         : base(s => s.Status == SessionStatus.Completed)
     {
-        ApplyOrderByDescending(s => s.EndTime);
+        ApplyOrderByDescending(s => s.EndTime ?? s.StartTime);
     }
 }
 
