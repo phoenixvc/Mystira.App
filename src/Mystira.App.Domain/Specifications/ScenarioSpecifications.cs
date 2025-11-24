@@ -31,22 +31,10 @@ public class ScenariosByTagSpecification : BaseSpecification<Scenario>
 /// </summary>
 public class ScenariosByDifficultySpecification : BaseSpecification<Scenario>
 {
-    public ScenariosByDifficultySpecification(string difficulty)
+    public ScenariosByDifficultySpecification(DifficultyLevel difficulty)
         : base(s => s.Difficulty == difficulty)
     {
         ApplyOrderBy(s => s.Title);
-    }
-}
-
-/// <summary>
-/// Specification for active (non-deleted) scenarios
-/// </summary>
-public class ActiveScenariosSpecification : BaseSpecification<Scenario>
-{
-    public ActiveScenariosSpecification()
-        : base(s => !s.IsDeleted)
-    {
-        ApplyOrderByDescending(s => s.CreatedAt);
     }
 }
 
@@ -56,22 +44,10 @@ public class ActiveScenariosSpecification : BaseSpecification<Scenario>
 public class PaginatedScenariosSpecification : BaseSpecification<Scenario>
 {
     public PaginatedScenariosSpecification(int pageNumber, int pageSize)
-        : base(s => !s.IsDeleted)
+        : base(s => true)
     {
         ApplyOrderByDescending(s => s.CreatedAt);
         ApplyPaging((pageNumber - 1) * pageSize, pageSize);
-    }
-}
-
-/// <summary>
-/// Specification for scenarios by creator account ID
-/// </summary>
-public class ScenariosByCreatorSpecification : BaseSpecification<Scenario>
-{
-    public ScenariosByCreatorSpecification(string creatorAccountId)
-        : base(s => s.CreatedBy == creatorAccountId)
-    {
-        ApplyOrderByDescending(s => s.CreatedAt);
     }
 }
 
@@ -81,7 +57,7 @@ public class ScenariosByCreatorSpecification : BaseSpecification<Scenario>
 public class ScenariosByArchetypeSpecification : BaseSpecification<Scenario>
 {
     public ScenariosByArchetypeSpecification(string archetypeName)
-        : base(s => s.Archetypes != null && s.Archetypes.Any(a => a.Name == archetypeName))
+        : base(s => s.Archetypes != null && s.Archetypes.Any(a => a.Value == archetypeName))
     {
         ApplyOrderBy(s => s.Title);
     }
@@ -95,7 +71,6 @@ public class FeaturedScenariosSpecification : BaseSpecification<Scenario>
 {
     public FeaturedScenariosSpecification()
         : base(s =>
-            !s.IsDeleted &&
             s.Tags != null &&
             s.Tags.Contains("featured"))
     {
