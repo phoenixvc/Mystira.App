@@ -2,16 +2,17 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use serde::{Deserialize, Serialize};
-use std::process::{Command, Stdio, Child};
-use std::io::{Write, BufRead, BufReader};
+use serde_json::Value;
+use std::process::{Command, Stdio};
+use std::io::Write;
 use std::path::PathBuf;
 use std::env;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
-use tauri::{State, Manager, Emitter};
+use tauri::{State, Manager};
 use tokio::process::Command as TokioCommand;
 use tokio::io::{AsyncBufReadExt, BufReader as TokioBufReader};
-use tokio::sync::mpsc;
+use std::fs;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct CommandRequest {
@@ -266,20 +267,12 @@ async fn test_connection(connection_type: String, connection_string: Option<Stri
 
 // Service Management Commands
 #[tauri::command]
-async fn start_service(
+async fn prebuild_service(
     service_name: String,
     repo_root: String,
-    services: State<'_, ServiceManager>,
     app_handle: tauri::AppHandle,
-) -> Result<ServiceStatus, String> {
-    let mut services_guard = services.lock().map_err(|e| format!("Lock error: {}", e))?;
-    
-    // Check if service is already running
-    if services_guard.contains_key(&service_name) {
-        return Err(format!("Service {} is already running", service_name));
-    }
-
-    let (project_path, port, url) = match service_name.as_str() {
+) -> Result<(), String> {
+    let (project_path, _port, _url) = match service_name.as_str() {
         "api" => (
             format!("{}\\src\\Mystira.App.Api", repo_root),
             7096,
@@ -287,8 +280,8 @@ async fn start_service(
         ),
         "admin-api" => (
             format!("{}\\src\\Mystira.App.Admin.Api", repo_root),
-            7096,
-            Some("https://localhost:7096/admin".to_string()),
+            7097,
+            Some("https://localhost:7097/swagger".to_string()),
         ),
         "pwa" => (
             format!("{}\\src\\Mystira.App.PWA", repo_root),
@@ -298,16 +291,171 @@ async fn start_service(
         _ => return Err(format!("Unknown service: {}", service_name)),
     };
 
-    // Build first
-    let build_output = Command::new("dotnet")
+    // Build with streaming output
+    let mut build_child = TokioCommand::new("dotnet")
         .args(&["build"])
         .current_dir(&project_path)
-        .output()
-        .map_err(|e| format!("Failed to build {}: {}", service_name, e))?;
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Failed to start build for {}: {}", service_name, e))?;
 
-    if !build_output.status.success() {
-        let stderr = String::from_utf8_lossy(&build_output.stderr);
-        return Err(format!("Build failed for {}: {}", service_name, stderr));
+    // Stream build output as logs
+    let app_handle_build_stdout = app_handle.clone();
+    let app_handle_build_stderr = app_handle.clone();
+    let service_name_build_stdout = service_name.clone();
+    let service_name_build_stderr = service_name.clone();
+
+    if let Some(build_stdout) = build_child.stdout.take() {
+        tokio::spawn(async move {
+            let reader = TokioBufReader::new(build_stdout);
+            let mut lines = reader.lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                let _ = app_handle_build_stdout.emit_all(
+                    "service-log",
+                    serde_json::json!({
+                        "service": service_name_build_stdout,
+                        "type": "stdout",
+                        "message": line,
+                        "timestamp": std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_millis() as u64
+                    }),
+                );
+            }
+        });
+    }
+
+    if let Some(build_stderr) = build_child.stderr.take() {
+        tokio::spawn(async move {
+            let reader = TokioBufReader::new(build_stderr);
+            let mut lines = reader.lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                let _ = app_handle_build_stderr.emit_all(
+                    "service-log",
+                    serde_json::json!({
+                        "service": service_name_build_stderr,
+                        "type": "stderr",
+                        "message": line,
+                        "timestamp": std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_millis() as u64
+                    }),
+                );
+            }
+        });
+    }
+
+    // Wait for build to complete
+    let build_status = build_child.wait().await
+        .map_err(|e| format!("Failed to wait for build: {}", e))?;
+
+    if !build_status.success() {
+        return Err(format!("Build failed for {}", service_name));
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn start_service(
+    service_name: String,
+    repo_root: String,
+    services: State<'_, ServiceManager>,
+    app_handle: tauri::AppHandle,
+) -> Result<ServiceStatus, String> {
+    // Check if service is already running (drop guard immediately)
+    {
+        let services_guard = services.lock().map_err(|e| format!("Lock error: {}", e))?;
+        if services_guard.contains_key(&service_name) {
+            return Err(format!("Service {} is already running", service_name));
+        }
+    } // Guard is dropped here
+
+    let (project_path, port, url) = match service_name.as_str() {
+        "api" => (
+            format!("{}\\src\\Mystira.App.Api", repo_root),
+            7096,
+            Some("https://localhost:7096/swagger".to_string()),
+        ),
+        "admin-api" => (
+            format!("{}\\src\\Mystira.App.Admin.Api", repo_root),
+            7097,
+            Some("https://localhost:7097/swagger".to_string()),
+        ),
+        "pwa" => (
+            format!("{}\\src\\Mystira.App.PWA", repo_root),
+            7000,
+            Some("http://localhost:7000".to_string()),
+        ),
+        _ => return Err(format!("Unknown service: {}", service_name)),
+    };
+
+    // Build with streaming output
+    let mut build_child = TokioCommand::new("dotnet")
+        .args(&["build"])
+        .current_dir(&project_path)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Failed to start build for {}: {}", service_name, e))?;
+
+    // Stream build output as logs
+    let app_handle_build_stdout = app_handle.clone();
+    let app_handle_build_stderr = app_handle.clone();
+    let service_name_build_stdout = service_name.clone();
+    let service_name_build_stderr = service_name.clone();
+
+    if let Some(build_stdout) = build_child.stdout.take() {
+        tokio::spawn(async move {
+            let reader = TokioBufReader::new(build_stdout);
+            let mut lines = reader.lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                let _ = app_handle_build_stdout.emit_all(
+                    "service-log",
+                    serde_json::json!({
+                        "service": service_name_build_stdout,
+                        "type": "stdout",
+                        "message": line,
+                        "timestamp": std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_millis() as u64
+                    }),
+                );
+            }
+        });
+    }
+
+    if let Some(build_stderr) = build_child.stderr.take() {
+        tokio::spawn(async move {
+            let reader = TokioBufReader::new(build_stderr);
+            let mut lines = reader.lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                let _ = app_handle_build_stderr.emit_all(
+                    "service-log",
+                    serde_json::json!({
+                        "service": service_name_build_stderr,
+                        "type": "stderr",
+                        "message": line,
+                        "timestamp": std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_millis() as u64
+                    }),
+                );
+            }
+        });
+    }
+
+    // Wait for build to complete
+    let build_status = build_child.wait().await
+        .map_err(|e| format!("Failed to wait for build: {}", e))?;
+
+    if !build_status.success() {
+        return Err(format!("Build failed for {}", service_name));
     }
 
     // Start the service with tokio for async stdout/stderr reading
@@ -322,23 +470,32 @@ async fn start_service(
     // Get the process ID
     let pid = child.id();
 
-    // Store service info
+    // Take stdout and stderr BEFORE moving child into spawn
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+
+    // Store service info (re-acquire lock after build)
     let service_info = ServiceInfo {
         name: service_name.clone(),
         port,
         url: url.clone(),
-        pid: Some(pid),
+        pid,
     };
-    services_guard.insert(service_name.clone(), service_info.clone());
+    {
+        let mut services_guard = services.lock().map_err(|e| format!("Lock error: {}", e))?;
+        services_guard.insert(service_name.clone(), service_info.clone());
+    } // Guard dropped here
+    
+    // Clone the Arc from the State before spawning
+    let services_arc = Arc::clone(&*services);
+    let service_name_clone = service_name.clone();
     
     // Spawn a task to wait for the process (keeps it alive)
     // When it exits, remove it from the services map
-    let services_clone = services.clone();
-    let service_name_clone = service_name.clone();
     tokio::spawn(async move {
         let _ = child.wait().await;
         // Process exited, remove from services
-        if let Ok(mut guard) = services_clone.lock() {
+        if let Ok(mut guard) = services_arc.lock() {
             guard.remove(&service_name_clone);
         }
     });
@@ -349,7 +506,7 @@ async fn start_service(
     let service_name_stdout = service_name.clone();
     let service_name_stderr = service_name.clone();
 
-    if let Some(stdout) = child.stdout.take() {
+    if let Some(stdout) = stdout {
         tokio::spawn(async move {
             let reader = TokioBufReader::new(stdout);
             let mut lines = reader.lines();
@@ -370,7 +527,7 @@ async fn start_service(
         });
     }
 
-    if let Some(stderr) = child.stderr.take() {
+    if let Some(stderr) = stderr {
         tokio::spawn(async move {
             let reader = TokioBufReader::new(stderr);
             let mut lines = reader.lines();
@@ -586,6 +743,98 @@ async fn get_current_branch(repo_root: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+async fn get_service_port(service_name: String, repo_root: String) -> Result<u16, String> {
+    let launch_settings_path = match service_name.as_str() {
+        "api" => format!("{}\\src\\Mystira.App.Api\\Properties\\launchSettings.json", repo_root),
+        "admin-api" => format!("{}\\src\\Mystira.App.Admin.Api\\Properties\\launchSettings.json", repo_root),
+        "pwa" => format!("{}\\src\\Mystira.App.PWA\\Properties\\launchSettings.json", repo_root),
+        _ => return Err(format!("Unknown service: {}", service_name)),
+    };
+
+    let content = fs::read_to_string(&launch_settings_path)
+        .map_err(|e| format!("Failed to read launchSettings.json: {}", e))?;
+    
+    let json: Value = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse launchSettings.json: {}", e))?;
+    
+    // Extract port from https profile
+    if let Some(profiles) = json.get("profiles") {
+        if let Some(https_profile) = profiles.get("https") {
+            if let Some(app_url) = https_profile.get("applicationUrl").and_then(|v| v.as_str()) {
+                // Parse "https://localhost:7096;http://localhost:5260"
+                if let Some(https_part) = app_url.split(';').next() {
+                    if let Some(port_str) = https_part.split(':').last() {
+                        if let Ok(port) = port_str.parse::<u16>() {
+                            return Ok(port);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    Err("Could not find port in launchSettings.json".to_string())
+}
+
+#[tauri::command]
+async fn update_service_port(service_name: String, repo_root: String, new_port: u16) -> Result<(), String> {
+    let launch_settings_path = match service_name.as_str() {
+        "api" => format!("{}\\src\\Mystira.App.Api\\Properties\\launchSettings.json", repo_root),
+        "admin-api" => format!("{}\\src\\Mystira.App.Admin.Api\\Properties\\launchSettings.json", repo_root),
+        "pwa" => format!("{}\\src\\Mystira.App.PWA\\Properties\\launchSettings.json", repo_root),
+        _ => return Err(format!("Unknown service: {}", service_name)),
+    };
+
+    let content = fs::read_to_string(&launch_settings_path)
+        .map_err(|e| format!("Failed to read launchSettings.json: {}", e))?;
+    
+    let mut json: Value = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse launchSettings.json: {}", e))?;
+    
+    // Update port in https profile
+    if let Some(profiles) = json.get_mut("profiles") {
+        if let Some(https_profile) = profiles.get_mut("https") {
+            if let Some(app_url) = https_profile.get_mut("applicationUrl") {
+                if let Some(url_str) = app_url.as_str() {
+                    // Parse and update: "https://localhost:7096;http://localhost:5260"
+                    let parts: Vec<&str> = url_str.split(';').collect();
+                    let http_part = if parts.len() > 1 { parts[1] } else { "" };
+                    let http_port = if !http_part.is_empty() {
+                        http_part.split(':').last().unwrap_or("5260")
+                    } else {
+                        "5260"
+                    };
+                    
+                    let new_url = format!("https://localhost:{};http://localhost:{}", new_port, http_port);
+                    *app_url = Value::String(new_url);
+                }
+            }
+        }
+    }
+    
+    // Write back to file
+    let updated_content = serde_json::to_string_pretty(&json)
+        .map_err(|e| format!("Failed to serialize launchSettings.json: {}", e))?;
+    
+    fs::write(&launch_settings_path, updated_content)
+        .map_err(|e| format!("Failed to write launchSettings.json: {}", e))?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn find_available_port(start_port: u16) -> Result<u16, String> {
+    // Try ports starting from start_port, up to start_port + 100
+    for port in start_port..(start_port + 100) {
+        let available = check_port_available(port).await?;
+        if available {
+            return Ok(port);
+        }
+    }
+    Err("Could not find available port".to_string())
+}
+
+#[tauri::command]
 async fn create_webview_window(
     url: String,
     title: String,
@@ -610,7 +859,7 @@ async fn create_webview_window(
 
 fn main() {
     // Initialize service manager
-    let services: Arc<Mutex<HashMap<String, Child>>> = Arc::new(Mutex::new(HashMap::new()));
+    let services: ServiceManager = Arc::new(Mutex::new(HashMap::new()));
     
     tauri::Builder::default()
         .manage(services)
@@ -626,6 +875,7 @@ fn main() {
             get_azure_resources,
             get_github_deployments,
             test_connection,
+            prebuild_service,
             start_service,
             stop_service,
             get_service_status,
@@ -634,6 +884,9 @@ fn main() {
             create_webview_window,
             check_port_available,
             check_service_health,
+            get_service_port,
+            update_service_port,
+            find_available_port,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
