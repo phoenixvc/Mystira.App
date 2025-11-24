@@ -110,7 +110,8 @@ public class StoryProtocolClient
 
             // TODO: Parse logs to extract IP Asset ID
             // Story Protocol emits events with the registered IP Asset ID
-            var ipAssetId = ExtractIpAssetIdFromLogs(receipt.Logs);
+            var logs = receipt.Logs?.ToObject<Nethereum.RPC.Eth.DTOs.FilterLog[]>() ?? Array.Empty<Nethereum.RPC.Eth.DTOs.FilterLog>();
+            var ipAssetId = ExtractIpAssetIdFromLogs(logs);
 
             _logger.LogInformation(
                 "IP Asset registered successfully - ID: {IpAssetId}, TxHash: {TxHash}",

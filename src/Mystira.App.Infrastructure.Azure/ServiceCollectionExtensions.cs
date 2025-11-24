@@ -25,7 +25,7 @@ public static class ServiceCollectionExtensions
         configuration.GetSection(AzureOptions.SectionName).Bind(azureOptions);
 
         services.Configure<AudioTranscodingOptions>(configuration.GetSection(AudioTranscodingOptions.SectionName));
-        services.AddSingleton<Application.Ports.Media.IAudioTranscodingService, FfmpegAudioTranscodingService>();
+        services.AddSingleton<Services.IAudioTranscodingService, FfmpegAudioTranscodingService>();
 
         // Add Cosmos DB
         services.AddCosmosDb(configuration, azureOptions.CosmosDb);
