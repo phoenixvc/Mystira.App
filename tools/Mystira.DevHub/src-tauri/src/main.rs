@@ -272,29 +272,48 @@ async fn prebuild_service(
     repo_root: String,
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
+    // Validate repo_root is not empty
+    if repo_root.is_empty() {
+        return Err(format!("Repository root is empty. Please configure the repository root in DevHub."));
+    }
+    
+    // Convert to PathBuf for proper path handling
+    let repo_path = PathBuf::from(&repo_root);
+    if !repo_path.exists() {
+        return Err(format!("Repository root does not exist: {}", repo_root));
+    }
+    
     let (project_path, _port, _url) = match service_name.as_str() {
         "api" => (
-            format!("{}\\src\\Mystira.App.Api", repo_root),
+            repo_path.join("src").join("Mystira.App.Api"),
             7096,
             Some("https://localhost:7096/swagger".to_string()),
         ),
         "admin-api" => (
-            format!("{}\\src\\Mystira.App.Admin.Api", repo_root),
+            repo_path.join("src").join("Mystira.App.Admin.Api"),
             7097,
             Some("https://localhost:7097/swagger".to_string()),
         ),
         "pwa" => (
-            format!("{}\\src\\Mystira.App.PWA", repo_root),
+            repo_path.join("src").join("Mystira.App.PWA"),
             7000,
             Some("http://localhost:7000".to_string()),
         ),
         _ => return Err(format!("Unknown service: {}", service_name)),
     };
+    
+    // Validate project path exists
+    if !project_path.exists() {
+        return Err(format!("Project directory does not exist: {}", project_path.display()));
+    }
+    
+    // Convert PathBuf to string for current_dir
+    let project_path_str = project_path.to_string_lossy().to_string();
 
     // Build with streaming output
     let mut build_child = TokioCommand::new("dotnet")
         .args(&["build"])
-        .current_dir(&project_path)
+        .current_dir(&project_path_str)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -374,29 +393,48 @@ async fn start_service(
         }
     } // Guard is dropped here
 
+    // Validate repo_root is not empty
+    if repo_root.is_empty() {
+        return Err(format!("Repository root is empty. Please configure the repository root in DevHub."));
+    }
+    
+    // Convert to PathBuf for proper path handling
+    let repo_path = PathBuf::from(&repo_root);
+    if !repo_path.exists() {
+        return Err(format!("Repository root does not exist: {}", repo_root));
+    }
+    
     let (project_path, port, url) = match service_name.as_str() {
         "api" => (
-            format!("{}\\src\\Mystira.App.Api", repo_root),
+            repo_path.join("src").join("Mystira.App.Api"),
             7096,
             Some("https://localhost:7096/swagger".to_string()),
         ),
         "admin-api" => (
-            format!("{}\\src\\Mystira.App.Admin.Api", repo_root),
+            repo_path.join("src").join("Mystira.App.Admin.Api"),
             7097,
             Some("https://localhost:7097/swagger".to_string()),
         ),
         "pwa" => (
-            format!("{}\\src\\Mystira.App.PWA", repo_root),
+            repo_path.join("src").join("Mystira.App.PWA"),
             7000,
             Some("http://localhost:7000".to_string()),
         ),
         _ => return Err(format!("Unknown service: {}", service_name)),
     };
+    
+    // Validate project path exists
+    if !project_path.exists() {
+        return Err(format!("Project directory does not exist: {}", project_path.display()));
+    }
+    
+    // Convert PathBuf to string for current_dir
+    let project_path_str = project_path.to_string_lossy().to_string();
 
     // Build with streaming output
     let mut build_child = TokioCommand::new("dotnet")
         .args(&["build"])
-        .current_dir(&project_path)
+        .current_dir(&project_path_str)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -461,11 +499,11 @@ async fn start_service(
     // Start the service with tokio for async stdout/stderr reading
     let mut child = TokioCommand::new("dotnet")
         .arg("run")
-        .current_dir(&project_path)
+        .current_dir(&project_path_str)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| format!("Failed to start {}: {}", service_name, e))?;
+        .map_err(|e| format!("Failed to start {}: {} (path: {})", service_name, e, project_path_str))?;
 
     // Get the process ID
     let pid = child.id();

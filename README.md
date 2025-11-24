@@ -84,18 +84,40 @@ This will automatically run `dotnet format` before each commit to ensure code st
 ### Run Key Projects
 
 **Option 1: Using DevHub (Recommended)**
-```bash
-# Launch DevHub - unified service manager
-.\start.ps1
 
-# Then use the Services tab in DevHub to:
-# - Start/stop all services with one click
-# - View services in embedded Chromium webviews
-# - Monitor real-time console output
-# - Auto-detect repository root from current path
+DevHub is a unified desktop application that provides a modern interface for managing all development services, infrastructure operations, and data migrations. It's the recommended way to work with the Mystira application suite.
+
+```bash
+# Launch DevHub from repository root
+.\start.ps1    # Windows PowerShell
+# OR
+./start.ps1    # Cross-platform (if PowerShell Core installed)
 ```
 
+**DevHub Features:**
+- 🚀 **Service Manager**: Start/stop all services with one click, view services in embedded webviews, monitor real-time console output
+- 📊 **Cosmos Explorer**: Export game sessions to CSV, view statistics and analytics
+- 🔄 **Migration Manager**: Multi-step wizard for migrating data between environments
+- ⚙️ **Infrastructure Panel**: Deploy, validate, and manage Azure infrastructure via GitHub Actions
+- 🏠 **Dashboard**: Quick actions and connection status monitoring
+
+**DevHub Documentation:**
+- 📘 **[Quick Start Guide](tools/Mystira.DevHub/QUICKSTART.md)** - Get up and running quickly
+- 📖 **[Full Documentation](tools/Mystira.DevHub/README.md)** - Complete feature reference and usage guide
+- ⚙️ **[Configuration Guide](tools/Mystira.DevHub/CONFIGURATION.md)** - Detailed configuration options
+- 🔒 **[Security Guide](tools/Mystira.DevHub/SECURITY.md)** - Security best practices
+
+**Prerequisites for DevHub:**
+- .NET 9 SDK
+- Node.js 18+
+- Rust (for Tauri backend)
+- GitHub CLI (`gh`) - for infrastructure operations
+- Azure CLI (`az`) - for resource management
+
 **Option 2: Manual Start (Traditional)**
+
+If you prefer to run services individually without DevHub:
+
 ```bash
 # Public API
 dotnet run --project src/Mystira.App.Api/Mystira.App.Api.csproj
@@ -184,6 +206,15 @@ Wire these into CI (GitHub Actions/Azure DevOps) to block merges when quality ga
 - **Observability:** Leverage the existing health-check endpoints in deployment manifests and surface them in dashboards/alerts.
 
 ## Further Reading
+
+### Development Tools
+
+- **[DevHub Documentation](tools/Mystira.DevHub/README.md)** – Complete guide to the unified development operations tool
+  - [Quick Start](tools/Mystira.DevHub/QUICKSTART.md) – Get started with DevHub in minutes
+  - [Configuration Guide](tools/Mystira.DevHub/CONFIGURATION.md) – Detailed configuration options
+  - [Security Guide](tools/Mystira.DevHub/SECURITY.md) – Security best practices
+
+### Architecture & Planning
 
 - `docs/NEXT_ITERATION_PLAN.md` – roadmap context and future iteration ideas.
 - `src/*/Validation/ScenarioSchemaDefinitions.cs` – schema enforcement shared across services.
