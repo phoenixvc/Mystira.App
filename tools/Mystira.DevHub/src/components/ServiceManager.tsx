@@ -102,6 +102,14 @@ function ServiceManager() {
   };
 
   const startService = async (serviceName: string) => {
+    // Check if service is currently building
+    const currentBuild = buildStatus[serviceName];
+    if (currentBuild?.status === 'building') {
+      const config = getServiceConfigs(customPorts, serviceEnvironments, getEnvironmentUrls).find((s: ServiceConfig) => s.name === serviceName);
+      addToast(`Cannot start ${config?.displayName || serviceName}: build is in progress. Please wait for the build to complete.`, 'warning', 5000);
+      return;
+    }
+
     const environment = serviceEnvironments[serviceName] || 'local';
     if (environment !== 'local') {
       const envName = environment.toUpperCase();
@@ -191,10 +199,39 @@ function ServiceManager() {
       return;
     }
 
-    try {
-      await prebuildService(serviceName, rootToUse, setViewModeForService, handleShowLogs, true);
+    // Check if service is running - need to stop it first to avoid file lock errors
+    const serviceStatus = services.find(s => s.name === serviceName);
+    const wasRunning = serviceStatus?.running || false;
+    
+    if (wasRunning) {
       const config = getServiceConfigs(customPorts, serviceEnvironments, getEnvironmentUrls).find((s: ServiceConfig) => s.name === serviceName);
-      addToast(`${config?.displayName || serviceName} rebuilt successfully`, 'success');
+      addToast(`Stopping ${config?.displayName || serviceName} before rebuild...`, 'info', 2000);
+      try {
+        await stopService(serviceName);
+        // The Rust backend now waits for process termination (up to 3s), but we'll add extra wait for file handles
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Verify the service is actually stopped
+        await refreshServices();
+        const stillRunning = services.find(s => s.name === serviceName)?.running;
+        if (stillRunning) {
+          addToast(`Service ${serviceName} is still running. Please stop it manually and try again.`, 'error', 5000);
+          return;
+        }
+      } catch (error) {
+        addToast(`Failed to stop ${serviceName} before rebuild: ${error}`, 'error');
+        return;
+      }
+    }
+
+    try {
+      const success = await prebuildService(serviceName, rootToUse, setViewModeForService, handleShowLogs, true);
+      const config = getServiceConfigs(customPorts, serviceEnvironments, getEnvironmentUrls).find((s: ServiceConfig) => s.name === serviceName);
+      if (success) {
+        addToast(`${config?.displayName || serviceName} rebuilt successfully`, 'success');
+      } else {
+        addToast(`Failed to rebuild ${config?.displayName || serviceName}`, 'error');
+      }
     } catch (error) {
       const config = getServiceConfigs(customPorts, serviceEnvironments, getEnvironmentUrls).find((s: ServiceConfig) => s.name === serviceName);
       addToast(`Failed to rebuild ${config?.displayName || serviceName}`, 'error');
@@ -204,11 +241,22 @@ function ServiceManager() {
   const startAllServices = async () => {
     const servicesToStart = getServiceConfigs(customPorts, serviceEnvironments, getEnvironmentUrls).filter((config: ServiceConfig) => {
       const status = services.find(s => s.name === config.name);
-      return !status?.running;
+      const currentBuild = buildStatus[config.name];
+      // Don't start if already running or currently building
+      return !status?.running && currentBuild?.status !== 'building';
     });
 
     if (servicesToStart.length === 0) {
-      addToast('All services are already running!', 'info');
+      const buildingServices = getServiceConfigs(customPorts, serviceEnvironments, getEnvironmentUrls).filter((config: ServiceConfig) => {
+        const currentBuild = buildStatus[config.name];
+        return currentBuild?.status === 'building';
+      });
+      
+      if (buildingServices.length > 0) {
+        addToast(`Cannot start services: ${buildingServices.map(s => s.displayName).join(', ')} ${buildingServices.length === 1 ? 'is' : 'are'} currently building. Please wait for the build to complete.`, 'warning', 5000);
+      } else {
+        addToast('All services are already running or configured for remote environments!', 'info');
+      }
       return;
     }
 

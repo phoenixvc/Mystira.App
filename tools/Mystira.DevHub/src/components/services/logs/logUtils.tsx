@@ -53,6 +53,28 @@ export function findErrorIndices(logs: ServiceLog[]): number[] {
     .filter(index => index !== -1);
 }
 
+export function formatLogsForCopy(
+  logs: ServiceLog[],
+  formatTimestamp: (timestamp: number) => string
+): string {
+  return logs
+    .map((log) => {
+      const timestamp = formatTimestamp(log.timestamp);
+      const source = log.source === 'build' ? '[BUILD]' : '';
+      const type = log.type === 'stderr' ? 'ERROR' : 'INFO';
+      return `[${timestamp}] ${source} [${log.service}] [${type}] ${log.message}`;
+    })
+    .join('\n');
+}
+
+export async function copyLogsToClipboard(
+  logs: ServiceLog[],
+  formatTimestamp: (timestamp: number) => string
+): Promise<void> {
+  const logContent = formatLogsForCopy(logs, formatTimestamp);
+  await navigator.clipboard.writeText(logContent);
+}
+
 export async function exportLogs(
   serviceName: string,
   logs: ServiceLog[],
@@ -70,15 +92,7 @@ export async function exportLogs(
   });
 
   if (filePath) {
-    const logContent = logs
-      .map((log) => {
-        const timestamp = formatTimestamp(log.timestamp);
-        const source = log.source === 'build' ? '[BUILD]' : '';
-        const type = log.type === 'stderr' ? 'ERROR' : 'INFO';
-        return `[${timestamp}] ${source} [${log.service}] [${type}] ${log.message}`;
-      })
-      .join('\n');
-
+    const logContent = formatLogsForCopy(logs, formatTimestamp);
     await writeTextFile(filePath, logContent);
     alert(`Logs exported successfully to:\n${filePath}`);
   }

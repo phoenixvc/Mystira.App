@@ -11,7 +11,7 @@ export function useBuildManagement() {
     onViewModeChange: (serviceName: string, mode: 'logs') => void,
     onShowLogs: (serviceName: string, show: boolean) => void,
     isManual: boolean = false
-  ) => {
+  ): Promise<boolean> => {
     const startTime = Date.now();
     
     onShowLogs(serviceName, true);
@@ -49,23 +49,24 @@ export function useBuildManagement() {
       });
       
       clearInterval(progressInterval);
-      const duration = Date.now() - startTime;
+      const buildDuration = Date.now() - startTime;
       setBuildStatus(prev => ({
         ...prev,
         [serviceName]: {
           status: 'success',
           progress: 100,
           lastBuildTime: Date.now(),
-          buildDuration: duration,
+          buildDuration: buildDuration,
           message: isManual 
-            ? `Rebuilt in ${(duration / 1000).toFixed(1)}s` 
-            : `Built in ${(duration / 1000).toFixed(1)}s`,
+            ? `Rebuilt in ${(buildDuration / 1000).toFixed(1)}s` 
+            : `Built in ${(buildDuration / 1000).toFixed(1)}s`,
           isManual,
         },
       }));
+      return true; // Success
     } catch (error: any) {
       clearInterval(progressInterval);
-      const duration = Date.now() - startTime;
+      const buildDuration = Date.now() - startTime;
       onShowLogs(serviceName, true);
       onViewModeChange(serviceName, 'logs');
       setBuildStatus(prev => ({
@@ -74,7 +75,7 @@ export function useBuildManagement() {
           status: 'failed',
           progress: 0,
           lastBuildTime: Date.now(),
-          buildDuration: duration,
+          buildDuration: buildDuration,
           message: isManual 
             ? `Rebuild failed: ${error?.message || error}` 
             : `Build failed: ${error?.message || error}`,
@@ -82,6 +83,7 @@ export function useBuildManagement() {
         },
       }));
       console.error(`Prebuild failed for ${serviceName}:`, error);
+      return false; // Failure
     }
   };
 

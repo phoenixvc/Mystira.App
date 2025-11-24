@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LogFilterBar } from './logs/LogFilterBar';
-import { exportLogs, findErrorIndices, formatTimestamp, highlightSearch } from './logs/logUtils';
+import { copyLogsToClipboard, exportLogs, findErrorIndices, formatTimestamp, highlightSearch } from './logs/logUtils';
 import { useLogGrouping } from './logs/useLogGrouping';
 import { LogFilter, ServiceLog } from './types';
 
@@ -95,6 +95,40 @@ export function LogsViewer({
     }
   };
 
+  // Copy visible (filtered) logs
+  const handleCopyVisible = async () => {
+    try {
+      await copyLogsToClipboard(filteredLogs, formatTimestampHelper);
+      // Show brief feedback (could use toast if available)
+      const button = document.activeElement as HTMLElement;
+      const originalText = button.textContent;
+      button.textContent = '✓ Copied!';
+      setTimeout(() => {
+        button.textContent = originalText;
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to copy logs:', error);
+      alert(`Failed to copy logs: ${error}`);
+    }
+  };
+
+  // Copy all logs
+  const handleCopyAll = async () => {
+    try {
+      await copyLogsToClipboard(logs, formatTimestampHelper);
+      // Show brief feedback
+      const button = document.activeElement as HTMLElement;
+      const originalText = button.textContent;
+      button.textContent = '✓ Copied!';
+      setTimeout(() => {
+        button.textContent = originalText;
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to copy logs:', error);
+      alert(`Failed to copy logs: ${error}`);
+    }
+  };
+
   // Copy log line
   const handleCopyLog = async (log: ServiceLog) => {
     const logText = `[${formatTimestampHelper(log.timestamp)}] [${log.service}] ${log.message}`;
@@ -169,29 +203,31 @@ export function LogsViewer({
 
   return (
     <div className={`flex flex-col ${isMaximized ? 'h-full flex-1 min-h-0' : containerClass}`}>
-      <LogFilterBar
-        filter={filter}
-        filteredLogs={filteredLogs}
-        logs={logs}
-        isAutoScroll={isAutoScroll}
-        autoScrollToErrors={autoScrollToErrors}
-        showLineNumbers={showLineNumbers}
-        collapseSimilar={collapseSimilar}
-        timestampFormat={timestampFormat}
-        maxLogs={maxLogs}
-        errorIndices={errorIndices}
-        currentErrorIndex={currentErrorIndex}
-        onFilterChange={onFilterChange}
-        onAutoScrollChange={onAutoScrollChange}
-        onAutoScrollToErrorsChange={setAutoScrollToErrors}
-        onShowLineNumbersChange={setShowLineNumbers}
-        onCollapseSimilarChange={setCollapseSimilar}
-        onTimestampFormatChange={setTimestampFormat}
-        onMaxLogsChange={onMaxLogsChange}
-        onExport={handleExportLogs}
-        onNavigateError={navigateError}
-        onApplyPreset={applyPreset}
-      />
+          <LogFilterBar
+            filter={filter}
+            filteredLogs={filteredLogs}
+            logs={logs}
+            isAutoScroll={isAutoScroll}
+            autoScrollToErrors={autoScrollToErrors}
+            showLineNumbers={showLineNumbers}
+            collapseSimilar={collapseSimilar}
+            timestampFormat={timestampFormat}
+            maxLogs={maxLogs}
+            errorIndices={errorIndices}
+            currentErrorIndex={currentErrorIndex}
+            onFilterChange={onFilterChange}
+            onAutoScrollChange={onAutoScrollChange}
+            onAutoScrollToErrorsChange={setAutoScrollToErrors}
+            onShowLineNumbersChange={setShowLineNumbers}
+            onCollapseSimilarChange={setCollapseSimilar}
+            onTimestampFormatChange={setTimestampFormat}
+            onMaxLogsChange={onMaxLogsChange}
+            onExport={handleExportLogs}
+            onCopyVisible={handleCopyVisible}
+            onCopyAll={handleCopyAll}
+            onNavigateError={navigateError}
+            onApplyPreset={applyPreset}
+          />
       
       <div 
         ref={logContainerRef}

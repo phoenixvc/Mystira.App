@@ -608,42 +608,71 @@ async fn stop_service(
     service_name: String,
     services: State<'_, ServiceManager>,
 ) -> Result<(), String> {
-    let mut services_guard = services.lock().map_err(|e| format!("Lock error: {}", e))?;
+    let pid;
+    let port;
     
-    if let Some(info) = services_guard.remove(&service_name) {
-        // Try to kill the process by PID first, then by port as fallback
-        #[cfg(target_os = "windows")]
-        {
-            if let Some(pid) = info.pid {
-                // Try to kill by PID
-                let _ = Command::new("taskkill")
-                    .args(&["/F", "/PID", &pid.to_string()])
-                    .output();
-            } else {
-                // Fallback: kill by port
-                let port = info.port;
-                let _ = Command::new("powershell")
-                    .args(&[
-                        "-Command",
-                        &format!("Get-NetTCPConnection -LocalPort {} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object {{ Stop-Process -Id $_ -Force }}", port)
-                    ])
-                    .output();
-            }
-        }
+    // Extract PID and port while holding the lock, then drop it
+    {
+        let mut services_guard = services.lock().map_err(|e| format!("Lock error: {}", e))?;
         
-        #[cfg(not(target_os = "windows"))]
-        {
-            if let Some(pid) = info.pid {
-                let _ = Command::new("kill")
-                    .args(&["-9", &pid.to_string()])
-                    .output();
-            }
+        if let Some(info) = services_guard.remove(&service_name) {
+            pid = info.pid;
+            port = info.port;
+        } else {
+            return Err(format!("Service {} is not running", service_name));
         }
-        
-        Ok(())
-    } else {
-        Err(format!("Service {} is not running", service_name))
     }
+    
+    // Now we can await without holding the lock
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(pid_val) = pid {
+            // Try to kill by PID
+            let _ = Command::new("taskkill")
+                .args(&["/F", "/PID", &pid_val.to_string()])
+                .output();
+            
+            // Wait for process to actually terminate (up to 3 seconds)
+            for _ in 0..30 {
+                let check = Command::new("tasklist")
+                    .args(&["/FI", &format!("PID eq {}", pid_val)])
+                    .output();
+                
+                if let Ok(output) = check {
+                    let output_str = String::from_utf8_lossy(&output.stdout);
+                    if !output_str.contains(&pid_val.to_string()) {
+                        // Process is gone, wait a bit more for file handles to release
+                        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                        break;
+                    }
+                }
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            }
+        } else {
+            // Fallback: kill by port
+            let _ = Command::new("powershell")
+                .args(&[
+                    "-Command",
+                    &format!("Get-NetTCPConnection -LocalPort {} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object {{ Stop-Process -Id $_ -Force }}", port)
+                ])
+                .output();
+            // Wait a bit for file handles to release
+            tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+        }
+    }
+    
+    #[cfg(not(target_os = "windows"))]
+    {
+        if let Some(pid_val) = pid {
+            let _ = Command::new("kill")
+                .args(&["-9", &pid_val.to_string()])
+                .output();
+            // Wait a bit for file handles to release
+            tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+        }
+    }
+    
+    Ok(())
 }
 
 #[tauri::command]

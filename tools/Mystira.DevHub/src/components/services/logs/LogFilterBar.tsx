@@ -20,6 +20,8 @@ interface LogFilterBarProps {
   onTimestampFormatChange: (format: 'time' | 'full' | 'relative') => void;
   onMaxLogsChange?: (limit: number) => void;
   onExport: () => void;
+  onCopyVisible: () => void;
+  onCopyAll: () => void;
   onNavigateError: (direction: 'next' | 'prev') => void;
   onApplyPreset: (preset: 'build-errors' | 'runtime-warnings' | 'all-errors' | 'build-only' | 'runtime-only') => void;
 }
@@ -44,6 +46,8 @@ export function LogFilterBar({
   onTimestampFormatChange,
   onMaxLogsChange,
   onExport,
+  onCopyVisible,
+  onCopyAll,
   onNavigateError,
   onApplyPreset,
 }: LogFilterBarProps) {
@@ -221,16 +225,36 @@ export function LogFilterBar({
         </div>
       )}
 
-      {/* Export Button */}
-      {filteredLogs.length > 0 && (
-        <button
-          onClick={onExport}
-          className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-          title="Export filtered logs to file"
-        >
-          💾 Export
-        </button>
-      )}
+      {/* Copy and Export Buttons */}
+      <div className="flex gap-1 items-center border-l border-gray-300 dark:border-gray-600 pl-2">
+        {filteredLogs.length > 0 && (
+          <>
+            <button
+              onClick={onCopyVisible}
+              className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+              title={`Copy ${filteredLogs.length} visible (filtered) logs to clipboard`}
+            >
+              📋 Copy Visible
+            </button>
+            {logs.length > filteredLogs.length && (
+              <button
+                onClick={onCopyAll}
+                className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                title={`Copy all ${logs.length} logs to clipboard`}
+              >
+                📋 Copy All
+              </button>
+            )}
+            <button
+              onClick={onExport}
+              className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              title="Export filtered logs to file"
+            >
+              💾 Export
+            </button>
+          </>
+        )}
+      </div>
 
       {/* Auto-scroll Options */}
       <div className="flex items-center gap-2 border-l border-gray-300 dark:border-gray-600 pl-2">

@@ -252,11 +252,17 @@ export function ServiceCard({
                   e.stopPropagation();
                   onStart();
                 }}
-                disabled={isLoading || status?.portConflict}
+                disabled={isLoading || status?.portConflict || isBuilding}
                 className="px-2.5 py-1 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors uppercase"
-                title={status?.portConflict ? `Port ${config.port} is already in use` : ''}
+                title={
+                  isBuilding 
+                    ? 'Service is currently building. Please wait for the build to complete.' 
+                    : status?.portConflict 
+                    ? `Port ${config.port} is already in use` 
+                    : ''
+                }
               >
-                {isLoading ? (statusMsg || 'STARTING') : 'START'}
+                {isLoading ? (statusMsg || 'STARTING') : isBuilding ? 'BUILDING...' : 'START'}
               </button>
             )}
           </div>
