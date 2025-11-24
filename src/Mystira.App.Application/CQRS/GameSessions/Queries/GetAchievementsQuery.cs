@@ -6,4 +6,4 @@ namespace Mystira.App.Application.CQRS.GameSessions.Queries;
 /// <summary>
 /// Query to retrieve achievements for a game session
 /// </summary>
-public record GetAchievementsQuery(string SessionId) : IQuery<List<GameSession.SessionAchievement>>;
+public record GetAchievementsQuery(string SessionId) : IQuery<List<SessionAchievement>>;

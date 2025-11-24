@@ -9,11 +9,11 @@ namespace Mystira.App.Application.UseCases.Media;
 /// </summary>
 public class GetMediaUseCase
 {
-    private readonly Mystira.App.Infrastructure.Data.Repositories.IMediaAssetRepository _repository;
+    private readonly IMediaAssetRepository _repository;
     private readonly ILogger<GetMediaUseCase> _logger;
 
     public GetMediaUseCase(
-        Mystira.App.Infrastructure.Data.Repositories.IMediaAssetRepository repository,
+        IMediaAssetRepository repository,
         ILogger<GetMediaUseCase> logger)
     {
         _repository = repository;

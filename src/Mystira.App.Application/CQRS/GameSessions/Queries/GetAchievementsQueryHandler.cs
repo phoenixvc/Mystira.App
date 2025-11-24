@@ -9,7 +9,7 @@ namespace Mystira.App.Application.CQRS.GameSessions.Queries;
 /// Handler for GetAchievementsQuery
 /// Retrieves all achievements for a game session
 /// </summary>
-public class GetAchievementsQueryHandler : IQueryHandler<GetAchievementsQuery, List<GameSession.SessionAchievement>>
+public class GetAchievementsQueryHandler : IQueryHandler<GetAchievementsQuery, List<SessionAchievement>>
 {
     private readonly IGameSessionRepository _repository;
     private readonly ILogger<GetAchievementsQueryHandler> _logger;
@@ -22,7 +22,7 @@ public class GetAchievementsQueryHandler : IQueryHandler<GetAchievementsQuery, L
         _logger = logger;
     }
 
-    public async Task<List<GameSession.SessionAchievement>> Handle(
+    public async Task<List<SessionAchievement>> Handle(
         GetAchievementsQuery request,
         CancellationToken cancellationToken)
     {
@@ -30,10 +30,10 @@ public class GetAchievementsQueryHandler : IQueryHandler<GetAchievementsQuery, L
         if (session == null)
         {
             _logger.LogWarning("Session not found: {SessionId}", request.SessionId);
-            return new List<GameSession.SessionAchievement>();
+            return new List<SessionAchievement>();
         }
 
-        var achievements = session.Achievements ?? new List<GameSession.SessionAchievement>();
+        var achievements = session.Achievements ?? new List<SessionAchievement>();
 
         _logger.LogDebug("Retrieved {Count} achievements for session {SessionId}",
             achievements.Count, request.SessionId);
