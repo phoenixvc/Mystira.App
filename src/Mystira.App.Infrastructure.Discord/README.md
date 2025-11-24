@@ -1,22 +1,217 @@
 # Mystira.App.Infrastructure.Discord
 
-Discord bot integration infrastructure for the Mystira platform.
+Discord messaging adapter implementing the messaging port defined by the Application layer. This project serves as a **secondary adapter** in the hexagonal architecture.
 
-## Overview
+## ✅ Hexagonal Architecture - FULLY COMPLIANT
 
-This library provides Discord bot functionality using Discord.NET, following the hexagonal architecture pattern. It includes:
+**Layer**: **Infrastructure - Discord Adapter (Secondary/Driven)**
 
-- **Discord Bot Service**: Core Discord.NET client wrapper with message handling
-- **Hosted Service**: Background service for continuous bot operation
-- **Health Checks**: Monitor bot connectivity and status
-- **Configuration**: Flexible configuration via appsettings.json or Azure Key Vault
+The Infrastructure.Discord layer is a **secondary adapter** (driven adapter) that:
+- **Implements** messaging port interface defined in `Application.Ports.Messaging`
+- **Provides** Discord bot functionality using Discord.NET
+- **Manages** Discord-specific health checks and configuration
+- **Abstracts** Discord.NET SDK details from the Application layer
+- **ZERO reverse dependencies** - Application never references Infrastructure
 
-## Installation
+**Dependency Flow** (Correct ✅):
+```
+Domain Layer (Core)
+    ↓ references
+Application Layer
+    ↓ defines
+Application.Ports.Messaging (IMessagingService)
+    ↑ implemented by
+Infrastructure.Discord (THIS - Implementation)
+    ↓ uses
+Discord.NET SDK
+```
 
-Add the package reference to your project:
+**Key Principles**:
+- ✅ **Port Implementation** - Implements `IMessagingService` from Application
+- ✅ **Technology Adapter** - Adapts Discord.NET to Application needs
+- ✅ **Dependency Inversion** - Application defines ports, Infrastructure implements them
+- ✅ **Clean Architecture** - No circular dependencies, proper layering
+- ✅ **Swappable** - Can be replaced with other messaging platforms (Slack, Teams, etc.)
 
-```bash
-dotnet add reference ../Mystira.App.Infrastructure.Discord/Mystira.App.Infrastructure.Discord.csproj
+## Project Structure
+
+```
+Mystira.App.Infrastructure.Discord/
+├── Services/
+│   ├── DiscordBotService.cs              # Implements IMessagingService
+│   └── DiscordBotHostedService.cs        # Background service for bot
+├── HealthChecks/
+│   └── DiscordBotHealthCheck.cs          # Discord health monitoring
+├── Configuration/
+│   └── DiscordOptions.cs                 # Configuration model
+└── ServiceCollectionExtensions.cs        # DI registration
+```
+
+**Port Interface** (defined in Application layer):
+- `IMessagingService` lives in `Application/Ports/Messaging/`
+- Infrastructure.Discord references Application to implement this port
+
+## Port Implementation
+
+Application defines the platform-agnostic port interface:
+
+```csharp
+// Location: Application/Ports/Messaging/IMessagingService.cs
+namespace Mystira.App.Application.Ports.Messaging;
+
+public interface IMessagingService
+{
+    Task SendMessageAsync(ulong channelId, string message);
+    Task SendRichMessageAsync(ulong channelId, RichMessage richMessage);
+    Task<bool> IsConnectedAsync();
+}
+```
+
+Infrastructure.Discord provides the Discord-specific implementation:
+
+```csharp
+// Location: Infrastructure.Discord/Services/DiscordBotService.cs
+using Mystira.App.Application.Ports.Messaging;  // Port interface ✅
+using Discord;
+using Discord.WebSocket;
+
+namespace Mystira.App.Infrastructure.Discord.Services;
+
+public class DiscordBotService : IMessagingService  // Implements port ✅
+{
+    private readonly DiscordSocketClient _client;
+    private readonly ILogger<DiscordBotService> _logger;
+
+    public DiscordBotService(
+        DiscordSocketClient client,
+        ILogger<DiscordBotService> logger)
+    {
+        _client = client;
+        _logger = logger;
+    }
+
+    public async Task SendMessageAsync(ulong channelId, string message)
+    {
+        var channel = await _client.GetChannelAsync(channelId) as IMessageChannel;
+        if (channel != null)
+        {
+            await channel.SendMessageAsync(message);
+            _logger.LogInformation("Sent message to Discord channel {ChannelId}", channelId);
+        }
+    }
+
+    public async Task SendRichMessageAsync(ulong channelId, RichMessage richMessage)
+    {
+        var channel = await _client.GetChannelAsync(channelId) as IMessageChannel;
+        if (channel != null)
+        {
+            var embed = new EmbedBuilder()
+                .WithTitle(richMessage.Title)
+                .WithDescription(richMessage.Description)
+                .WithColor(Color.Blue)
+                .WithTimestamp(DateTimeOffset.Now)
+                .Build();
+
+            await channel.SendMessageAsync(embed: embed);
+            _logger.LogInformation("Sent rich message to Discord channel {ChannelId}", channelId);
+        }
+    }
+
+    public Task<bool> IsConnectedAsync()
+    {
+        return Task.FromResult(_client.ConnectionState == ConnectionState.Connected);
+    }
+}
+```
+
+## Usage in Application Layer
+
+Application use cases depend on the port interface, not Discord implementation:
+
+```csharp
+// Location: Application/UseCases/Notifications/SendGameNotificationUseCase.cs
+using Mystira.App.Application.Ports.Messaging;  // Port ✅
+
+namespace Mystira.App.Application.UseCases.Notifications;
+
+public class SendGameNotificationUseCase
+{
+    private readonly IMessagingService _messagingService;  // Port interface ✅
+    private readonly ILogger<SendGameNotificationUseCase> _logger;
+
+    public SendGameNotificationUseCase(
+        IMessagingService messagingService,  // Port ✅
+        ILogger<SendGameNotificationUseCase> logger)
+    {
+        _messagingService = messagingService;
+        _logger = logger;
+    }
+
+    public async Task ExecuteAsync(ulong channelId, string gameEvent)
+    {
+        if (!await _messagingService.IsConnectedAsync())
+        {
+            _logger.LogWarning("Messaging service not connected");
+            return;
+        }
+
+        var richMessage = new RichMessage
+        {
+            Title = "Game Event",
+            Description = gameEvent
+        };
+
+        await _messagingService.SendRichMessageAsync(channelId, richMessage);
+        _logger.LogInformation("Game notification sent: {Event}", gameEvent);
+    }
+}
+```
+
+**Benefits**:
+- ✅ Application never references Infrastructure.Discord
+- ✅ Can swap Discord for Slack/Teams without changing Application
+- ✅ Easy to mock for testing
+- ✅ Clear separation of concerns
+
+## Dependency Injection
+
+Register Discord implementation in API layer `Program.cs`:
+
+```csharp
+using Mystira.App.Application.Ports.Messaging;
+using Mystira.App.Infrastructure.Discord.Services;
+using Discord.WebSocket;
+
+// Register Discord client
+builder.Services.AddSingleton(sp =>
+{
+    var config = new DiscordSocketConfig
+    {
+        GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMessages
+    };
+    return new DiscordSocketClient(config);
+});
+
+// Register port implementation
+builder.Services.AddScoped<IMessagingService, DiscordBotService>();  // Discord adapter ✅
+
+// Add hosted service for bot
+builder.Services.AddDiscordBotHostedService();
+
+// Or use extension method
+builder.Services.AddDiscordBot(builder.Configuration);
+```
+
+For testing, swap with mock implementation:
+
+```csharp
+#if DEBUG
+// Use console logging for development
+builder.Services.AddScoped<IMessagingService, ConsoleMessagingService>();
+#else
+// Use Discord for production
+builder.Services.AddScoped<IMessagingService, DiscordBotService>();
+#endif
 ```
 
 ## Configuration
@@ -27,12 +222,8 @@ dotnet add reference ../Mystira.App.Infrastructure.Discord/Mystira.App.Infrastru
 {
   "Discord": {
     "BotToken": "YOUR_BOT_TOKEN_HERE",
-    "GuildIds": "",
     "EnableMessageContentIntent": true,
     "EnableGuildMembersIntent": false,
-    "DefaultTimeoutSeconds": 30,
-    "MaxRetryAttempts": 3,
-    "LogAllMessages": false,
     "CommandPrefix": "!"
   }
 }
@@ -40,17 +231,13 @@ dotnet add reference ../Mystira.App.Infrastructure.Discord/Mystira.App.Infrastru
 
 ### Azure Key Vault (Recommended for Production)
 
-Store the bot token securely in Azure Key Vault:
-
 ```csharp
 builder.Configuration.AddAzureKeyVault(
     new Uri($"https://{keyVaultName}.vault.azure.net/"),
     new DefaultAzureCredential());
 ```
 
-Then set the secret:
-- Key: `Discord--BotToken`
-- Value: Your Discord bot token
+Secret: `Discord--BotToken`
 
 ### User Secrets (Development)
 
@@ -64,125 +251,138 @@ dotnet user-secrets set "Discord:BotToken" "YOUR_BOT_TOKEN_HERE"
 2. Click "New Application" and give it a name
 3. Go to the "Bot" section
 4. Click "Add Bot"
-5. Under "Token", click "Copy" to get your bot token
-6. Enable the required **Privileged Gateway Intents**:
-   - **Message Content Intent** (required if `EnableMessageContentIntent` is true)
-   - **Server Members Intent** (required if `EnableGuildMembersIntent` is true)
-7. Save your changes
+5. Under "Token", click "Copy"
+6. Enable required **Privileged Gateway Intents**:
+   - **Message Content Intent** (if reading messages)
+   - **Server Members Intent** (if tracking members)
 
-## Usage
+## Health Checks
 
-### Basic Setup (Console App or WebJob)
-
-```csharp
-using Mystira.App.Infrastructure.Discord;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-
-var builder = Host.CreateApplicationBuilder(args);
-
-// Add Discord bot services
-builder.Services.AddDiscordBot(builder.Configuration);
-builder.Services.AddDiscordBotHostedService();
-
-// Add health checks (optional)
-builder.Services.AddHealthChecks()
-    .AddDiscordBotHealthCheck();
-
-var host = builder.Build();
-await host.RunAsync();
-```
-
-### ASP.NET Core Integration
+Discord-specific health checks:
 
 ```csharp
-using Mystira.App.Infrastructure.Discord;
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Add Discord bot services
-builder.Services.AddDiscordBot(builder.Configuration);
-builder.Services.AddDiscordBotHostedService();
-
-// Add health checks
-builder.Services.AddHealthChecks()
-    .AddDiscordBotHealthCheck();
-
-var app = builder.Build();
-
-// Map health check endpoint
-app.MapHealthChecks("/health");
-
-app.Run();
-```
-
-### Using the Discord Bot Service
-
-```csharp
-using Mystira.App.Infrastructure.Discord.Services;
-using Discord;
-
-public class MyService
+public class DiscordBotHealthCheck : IHealthCheck
 {
-    private readonly IDiscordBotService _discordBot;
+    private readonly IMessagingService _messagingService;  // Port ✅
 
-    public MyService(IDiscordBotService discordBot)
+    public async Task<HealthCheckResult> CheckHealthAsync(
+        HealthCheckContext context,
+        CancellationToken cancellationToken = default)
     {
-        _discordBot = discordBot;
-    }
+        var isConnected = await _messagingService.IsConnectedAsync();
 
-    public async Task SendNotificationAsync(ulong channelId, string message)
-    {
-        if (_discordBot.IsConnected)
+        if (isConnected)
         {
-            await _discordBot.SendMessageAsync(channelId, message);
+            return HealthCheckResult.Healthy("Discord bot is connected");
         }
-    }
 
-    public async Task SendRichNotificationAsync(ulong channelId)
-    {
-        var embed = new EmbedBuilder()
-            .WithTitle("Game Session Started")
-            .WithDescription("A new adventure begins!")
-            .WithColor(Color.Blue)
-            .WithTimestamp(DateTimeOffset.Now)
-            .Build();
-
-        await _discordBot.SendEmbedAsync(channelId, embed);
+        return HealthCheckResult.Unhealthy("Discord bot is not connected");
     }
 }
 ```
 
-## Hosting Options on Azure
+Register health checks:
 
-### 1. Azure App Service WebJobs (Recommended)
-
-**Best for:** Always-on Discord bots that need persistent connections
-
-**Setup:**
-```bash
-# Create App Service with Always On enabled
-az webapp create --resource-group myRG --plan myPlan --name my-discord-bot
-
-# Enable Always On (required for WebJobs)
-az webapp config set --resource-group myRG --name my-discord-bot --always-on true
-
-# Deploy as WebJob
-az webapp deployment source config-zip \
-  --resource-group myRG \
-  --name my-discord-bot \
-  --src discord-bot.zip
+```csharp
+builder.Services.AddHealthChecks()
+    .AddDiscordBotHealthCheck();
 ```
 
-**Cost:** ~$55/month (B1 tier minimum for Always On)
+Access at:
+- `/health` - Comprehensive health status
+- `/health/ready` - Readiness probe
+- `/health/live` - Liveness probe
 
-### 2. Azure Container Apps
+## Testing
 
-**Best for:** Scalable deployments with modern container orchestration
+### Unit Testing with Mocked Port
 
-**Setup:**
+Application use cases can be tested without Discord:
+
+```csharp
+[Fact]
+public async Task SendGameNotification_WithConnectedService_SendsMessage()
+{
+    // Arrange
+    var mockMessaging = new Mock<IMessagingService>();  // Mock port ✅
+    mockMessaging
+        .Setup(m => m.IsConnectedAsync())
+        .ReturnsAsync(true);
+    mockMessaging
+        .Setup(m => m.SendRichMessageAsync(
+            123456789,
+            It.IsAny<RichMessage>()))
+        .Returns(Task.CompletedTask);
+
+    var useCase = new SendGameNotificationUseCase(
+        mockMessaging.Object,
+        mockLogger.Object);
+
+    // Act
+    await useCase.ExecuteAsync(123456789, "Player joined the game");
+
+    // Assert
+    mockMessaging.Verify(m => m.SendRichMessageAsync(
+        123456789,
+        It.IsAny<RichMessage>()), Times.Once);
+}
+```
+
+### Integration Testing with Mock Discord Client
+
+```csharp
+[Fact]
+public async Task DiscordBotService_SendMessage_Success()
+{
+    // Arrange
+    var mockClient = new Mock<DiscordSocketClient>();
+    var mockChannel = new Mock<IMessageChannel>();
+
+    mockClient
+        .Setup(c => c.GetChannelAsync(It.IsAny<ulong>(), CacheMode.AllowDownload, null))
+        .ReturnsAsync(mockChannel.Object);
+
+    var service = new DiscordBotService(mockClient.Object, mockLogger.Object);
+
+    // Act
+    await service.SendMessageAsync(123456789, "Test message");
+
+    // Assert
+    mockChannel.Verify(c => c.SendMessageAsync(
+        "Test message",
+        false,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        MessageFlags.None), Times.Once);
+}
+```
+
+## Hosting on Azure
+
+### Azure App Service WebJobs (Recommended)
+
+Best for always-on Discord bots with persistent connections.
+
 ```bash
-# Create container app with minimum 1 replica (bot must stay online)
+# Create App Service
+az webapp create --resource-group myRG --plan myPlan --name my-discord-bot
+
+# Enable Always On
+az webapp config set --resource-group myRG --name my-discord-bot --always-on true
+```
+
+**Cost**: ~$55/month (B1 tier minimum)
+
+### Azure Container Apps
+
+Best for scalable deployments with container orchestration.
+
+```bash
 az containerapp create \
   --name my-discord-bot \
   --resource-group myRG \
@@ -192,326 +392,134 @@ az containerapp create \
   --max-replicas 1
 ```
 
-**Cost:** Pay-per-use, typically $15-30/month for 1 replica
+**Cost**: $15-30/month for 1 replica
 
-### 3. Azure Functions
+## Architectural Compliance Verification
 
-**Note:** Not ideal for Discord bots requiring persistent connections. Use for slash commands only.
+Verify that Infrastructure.Discord correctly implements Application port:
 
-## Architecture
+```bash
+# Check that Infrastructure.Discord references Application
+grep "Mystira.App.Application" Mystira.App.Infrastructure.Discord.csproj
+# Expected: <ProjectReference Include="..\Mystira.App.Application\...">
 
-This library follows hexagonal/clean architecture:
+# Check that services use Application.Ports namespace
+grep -r "using Mystira.App.Application.Ports" Services/
+# Expected: All service files import from Application.Ports
 
-- **Port (Interface)**: `IDiscordBotService` - defines operations without implementation details
-- **Adapter (Implementation)**: `DiscordBotService` - Discord.NET specific implementation
-- **Configuration**: `DiscordOptions` - configuration POCO
-- **Infrastructure**: Health checks, hosted services, DI registration
-
-### Dependency Flow
-
+# Check NO Infrastructure references in Application
+cd ../Mystira.App.Application
+grep -r "using Mystira.App.Infrastructure" .
+# Expected: (no output - Application never references Infrastructure)
 ```
-Your Application Layer (Use Cases)
-        ↓ (depends on)
-IDiscordBotService (Port/Interface)
-        ↑ (implemented by)
-DiscordBotService (Adapter)
-        ↓ (uses)
-    Discord.NET Library
+
+**Results**:
+- ✅ Infrastructure.Discord references Application (correct direction)
+- ✅ Services implement Application.Ports.Messaging interface
+- ✅ Application has ZERO Infrastructure references
+- ✅ Full dependency inversion achieved
+
+## Alternative Implementations
+
+The port-based architecture allows easy swapping of messaging platforms:
+
+### Console Messaging (Development)
+```csharp
+public class ConsoleMessagingService : IMessagingService
+{
+    public Task SendMessageAsync(ulong channelId, string message)
+    {
+        Console.WriteLine($"[Channel {channelId}] {message}");
+        return Task.CompletedTask;
+    }
+
+    public Task SendRichMessageAsync(ulong channelId, RichMessage richMessage)
+    {
+        Console.WriteLine($"[Channel {channelId}] {richMessage.Title}: {richMessage.Description}");
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> IsConnectedAsync() => Task.FromResult(true);
+}
+```
+
+### Slack Messaging (Alternative Platform)
+```csharp
+public class SlackMessagingService : IMessagingService
+{
+    private readonly SlackClient _slackClient;
+
+    public async Task SendMessageAsync(ulong channelId, string message)
+    {
+        await _slackClient.PostMessageAsync(
+            channelId.ToString(),
+            message);
+    }
+
+    public async Task SendRichMessageAsync(ulong channelId, RichMessage richMessage)
+    {
+        var blocks = new[]
+        {
+            new { type = "header", text = richMessage.Title },
+            new { type = "section", text = richMessage.Description }
+        };
+
+        await _slackClient.PostMessageAsync(
+            channelId.ToString(),
+            blocks: blocks);
+    }
+    // ... other methods
+}
 ```
 
 ## Security Best Practices
 
-1. **Never commit bot tokens** - Always use User Secrets, Azure Key Vault, or environment variables
-2. **Use Managed Identity** - When possible, use Azure Managed Identity for Key Vault access
-3. **Implement rate limiting** - Discord has rate limits; respect them to avoid bans
-4. **Enable Application Insights** - Monitor bot health and usage
-5. **Minimal intents** - Only enable required gateway intents (reduces data exposure)
-6. **Validate input** - Always validate and sanitize user input from Discord messages
-
-## Monitoring
-
-### Health Checks
-
-The health check endpoint provides bot status:
-
-```json
-{
-  "status": "Healthy",
-  "results": {
-    "discord_bot": {
-      "status": "Healthy",
-      "description": "Discord bot is connected and operational",
-      "data": {
-        "IsConnected": true,
-        "BotUsername": "MystiraBot",
-        "BotId": 123456789012345678
-      }
-    }
-  }
-}
-```
-
-### Application Insights
-
-Add Application Insights to track:
-- Bot connection events
-- Message processing metrics
-- Error rates and exceptions
-- Custom telemetry for game-related events
-
-```csharp
-builder.Services.AddApplicationInsightsTelemetry();
-```
-
-## Message Content Intent Warning
-
-⚠️ **Important:** Discord's Message Content Intent is a **privileged intent** that requires verification for bots in 100+ servers.
-
-- For development/small deployments: Enable it in the Discord Developer Portal
-- For production/large deployments: You may need to request verification from Discord
-- Alternative: Use slash commands (`/`) instead of message content parsing
+1. **Never commit bot tokens** - Use User Secrets, Key Vault, or environment variables
+2. **Use Managed Identity** - Azure Managed Identity for Key Vault access
+3. **Implement rate limiting** - Respect Discord rate limits
+4. **Enable Application Insights** - Monitor bot health
+5. **Minimal intents** - Only enable required gateway intents
+6. **Validate input** - Sanitize Discord message input
 
 ## Troubleshooting
 
 ### Bot Not Connecting
-
 1. Verify bot token is correct
-2. Check that required intents are enabled in Discord Developer Portal
-3. Ensure bot has been invited to your server
-4. Check Application Insights or logs for error messages
+2. Check required intents enabled in Discord Developer Portal
+3. Ensure bot is invited to server
+4. Check logs for error messages
 
 ### Health Check Failing
-
-1. Bot may still be connecting (takes 5-10 seconds on startup)
+1. Bot may still be connecting (5-10 seconds)
 2. Network connectivity issues
-3. Invalid token or revoked token
-4. Discord API may be experiencing issues
-
-### Bot Invited But Not Responding
-
-1. Verify `EnableMessageContentIntent` is true in config
-2. Verify Message Content Intent is enabled in Discord Developer Portal
-3. Check command prefix matches your configuration
-4. Review logs for message processing errors
-
-## Examples
-
-See the `/examples` folder in the repository root for:
-- Console app example
-- ASP.NET Core integration example
-- Advanced message handling example
-- Slash commands integration
-
-## 🔍 Architectural Analysis
-
-### Current State Assessment
-
-**File Count**: 6 C# files (very small, focused)
-**Project References**: 0 (none!)
-- Domain ✅ (not needed for Discord bot)
-- Application ❌ (missing - should reference for port interfaces)
-
-**Dependencies**:
-- Discord.Net ✅ (Discord SDK)
-- Microsoft.Extensions.* ✅ (DI, Health Checks, Hosting, Logging)
-
-**Folders**:
-- Services/ ✅ (Discord bot service and hosted service)
-- HealthChecks/ ✅ (Discord health monitoring)
-- Configuration/ ✅ (Discord options)
-- ServiceCollectionExtensions ✅ (DI registration)
-
-### ⚠️ Architectural Issues Found
-
-#### 1. **Port Interface in Infrastructure Layer** (MEDIUM)
-**Location**: `Services/IDiscordBotService.cs`
-
-**Issue**: Port interface (abstraction) is defined in Infrastructure project:
-```csharp
-// Currently in Infrastructure.Discord/Services/
-public interface IDiscordBotService  // This is a PORT!
-{
-    Task SendMessageAsync(ulong channelId, string message);
-    Task SendEmbedAsync(ulong channelId, Embed embed);
-    bool IsConnected { get; }
-    // ...
-}
-```
-
-**Impact**:
-- ⚠️ Violates Dependency Inversion Principle
-- ⚠️ Application layer would need to reference Infrastructure to use the interface
-- ⚠️ Port (abstraction) and Adapter (implementation) in same project
-- ⚠️ Can't easily swap implementations (e.g., Slack adapter for different messaging)
-
-**Recommendation**:
-- **MOVE** `IDiscordBotService` → `Application/Ports/Messaging/IMessagingService.cs`
-- **KEEP** implementation (`DiscordBotService`) in Infrastructure.Discord
-- **ADD** Application project reference to Infrastructure.Discord
-- Infrastructure implements ports defined in Application
-- Rename interface to be platform-agnostic (e.g., `IMessagingService` instead of `IDiscordBotService`)
-
-**Correct Structure**:
-```
-Application/Ports/Messaging/
-├── IMessagingService.cs               # Port interface (platform-agnostic)
-
-Infrastructure.Discord/Services/
-├── DiscordBotService.cs               # Adapter (implements IMessagingService)
-```
-
-#### 2. **Missing Application Reference** (MEDIUM)
-**Location**: `Mystira.App.Infrastructure.Discord.csproj`
-
-**Issue**: Infrastructure.Discord has NO project references:
-```xml
-<ItemGroup>
-  <!-- No project references at all -->
-</ItemGroup>
-```
-
-**Impact**:
-- ⚠️ Can't implement ports defined in Application
-- ⚠️ Forces port interfaces to live in Infrastructure (wrong layer)
-- ⚠️ Breaks hexagonal architecture dependency flow
-
-**Recommendation**:
-- **ADD** reference to Application project
-- After moving interface to Application/Ports
-- Correct dependency flow: Infrastructure → Application → Domain
-- Discord bot doesn't need Domain reference (no domain entities needed)
-
-**Example**:
-```diff
-+ <ItemGroup>
-+   <ProjectReference Include="..\Mystira.App.Application\Mystira.App.Application.csproj" />
-+ </ItemGroup>
-```
-
-#### 3. **Platform-Specific Interface Name** (LOW)
-**Location**: `Services/IDiscordBotService.cs`
-
-**Issue**: Interface name ties abstraction to Discord implementation
-
-**Impact**:
-- ⚠️ Makes it harder to swap messaging platforms
-- ⚠️ Interface name should be implementation-agnostic
-
-**Recommendation**:
-- Rename `IDiscordBotService` → `IMessagingService` or `INotificationService`
-- Keep implementation name as `DiscordBotService` (specific)
-- Allows for future `SlackBotService`, `TeamsB otService`, etc.
-
-### ✅ What's Working Well
-
-1. **Zero Project Dependencies** - Very clean, no coupling to other projects
-2. **Small and Focused** - Only 6 files, does one thing well
-3. **Proper Abstractions** - Has interface and implementation separated
-4. **Health Checks** - Monitoring infrastructure
-5. **Hosted Service** - Background service for continuous operation
-6. **Configuration** - Flexible config via appsettings/Key Vault
-7. **Security Best Practices** - Token management, minimal intents
-8. **Excellent Documentation** - Deployment guides, troubleshooting, examples
-
-## 📋 Refactoring TODO
-
-### 🟡 High Priority
-
-- [ ] **Move port interface to Application layer**
-  - Move `Services/IDiscordBotService.cs` → `Application/Ports/Messaging/IMessagingService.cs`
-  - Rename to platform-agnostic name (`IMessagingService`)
-  - Location: `Infrastructure.Discord/Services/IDiscordBotService.cs`
-
-- [ ] **Add Application project reference**
-  - Add `<ProjectReference Include="..\Mystira.App.Application\..." />`
-  - Update implementation to reference Application port
-  - Location: `Mystira.App.Infrastructure.Discord.csproj`
-
-- [ ] **Update implementation to use Application port**
-  - `DiscordBotService : IMessagingService` (from Application)
-  - Remove local interface definition
-  - Keep implementation details Discord-specific
-
-### 🟢 Medium Priority
-
-- [ ] **Consider platform-agnostic port design**
-  - Design `IMessagingService` to support multiple platforms
-  - Could support Discord, Slack, Teams, etc.
-  - Common operations: SendMessage, SendRichMessage, etc.
-
-### 🔵 Low Priority
-
-- [ ] **Add alternative messaging adapters**
-  - Create `Infrastructure.Slack` for Slack integration
-  - Create `Infrastructure.Teams` for Microsoft Teams
-  - All implement same `IMessagingService` port
-
-- [ ] **Add integration tests**
-  - Test Discord bot service with mock Discord client
-  - Test health checks
-  - Verify hosted service lifecycle
-
-## 💡 Recommendations
-
-### Immediate Actions
-1. **Move port interface to Application/Ports** - Correct dependency inversion
-2. **Add Application reference** - Enable proper layering
-3. **Rename to platform-agnostic name** - Support future messaging platforms
-
-### Short-term
-1. **Design generic messaging port** - Support multiple platforms
-2. **Add port documentation** - Explain messaging abstraction
-3. **Integration tests** - Mock Discord client for testing
-
-### Long-term
-1. **Multi-platform support** - Add Slack, Teams adapters
-2. **Slash commands** - Modern Discord interaction model
-3. **Event-driven architecture** - Publish domain events to Discord
-
-## 📊 SWOT Analysis
-
-### Strengths 💪
-- ✅ **Zero Project Dependencies** - Completely decoupled
-- ✅ **Small and Focused** - Only 6 files, single responsibility
-- ✅ **Clean Separation** - Interface and implementation separated
-- ✅ **Health Checks** - Proper monitoring
-- ✅ **Hosted Service** - Background operation support
-- ✅ **Security Best Practices** - Token management, minimal intents
-- ✅ **Excellent Documentation** - Deployment, troubleshooting, examples
-- ✅ **Modern Discord.NET** - Latest SDK version
-
-### Weaknesses ⚠️
-- ⚠️ **Port Interface Misplaced** - Should be in Application layer
-- ⚠️ **Missing Application Reference** - Can't implement Application ports
-- ⚠️ **Platform-Specific Interface** - Name tied to Discord
-- ⚠️ **No Tests** - Missing integration tests
-
-### Opportunities 🚀
-- 📈 **Multi-Platform Messaging** - Support Slack, Teams, etc.
-- 📈 **Slash Commands** - Modern Discord interactions
-- 📈 **Event-Driven** - Domain events → Discord notifications
-- 📈 **Rich Embeds** - Enhanced notification formatting
-- 📈 **Bot Commands** - Interactive game commands
-- 📈 **Thread Support** - Organized game session discussions
-
-### Threats 🔒
-- ⚡ **Discord API Changes** - Discord.NET SDK updates required
-- ⚡ **Rate Limiting** - Discord rate limits can impact functionality
-- ⚡ **Intent Verification** - Message Content Intent requires verification for 100+ servers
-- ⚡ **Hosting Costs** - Always-on hosting required for bots
-
-### Risk Mitigation
-1. **Abstract with ports** - Make messaging platform swappable
-2. **Implement rate limiting** - Respect Discord API limits
-3. **Monitor usage** - Track message counts and intent usage
-4. **Pin SDK versions** - Control Discord.NET updates
+3. Invalid or revoked token
+4. Discord API issues
 
 ## Related Documentation
 
-- **[Application Layer](../Mystira.App.Application/README.md)** - Where port interfaces belong
-- **[Infrastructure.Azure](../Mystira.App.Infrastructure.Azure/README.md)** - Similar port interface pattern
-- **[Main README](../../README.md)** - Project overview
+- **[Application](../Mystira.App.Application/README.md)** - Defines port interface this layer implements
+- **[Infrastructure.Azure](../Mystira.App.Infrastructure.Azure/README.md)** - Similar port adapter pattern
+- **[API](../Mystira.App.Api/README.md)** - Registers Discord implementation via DI
+
+## Summary
+
+**What This Layer Does**:
+- ✅ Implements messaging port interface from Application.Ports.Messaging
+- ✅ Provides Discord bot functionality using Discord.NET
+- ✅ Manages Discord-specific health checks and configuration
+- ✅ Maintains clean hexagonal architecture
+
+**What This Layer Does NOT Do**:
+- ❌ Define port interfaces (Application does that)
+- ❌ Contain business logic (Application/Domain does that)
+- ❌ Make decisions about when to send messages (Application decides)
+
+**Key Success Metrics**:
+- ✅ **Zero reverse dependencies** - Application never references Infrastructure.Discord
+- ✅ **Clean interfaces** - All ports defined in Application layer
+- ✅ **Testability** - Use cases can mock messaging service
+- ✅ **Swappability** - Can replace Discord with Slack, Teams, or console output
 
 ## License
 
-This library is part of the Mystira.App project and follows the same license.
+Copyright (c) 2025 Mystira. All rights reserved.
