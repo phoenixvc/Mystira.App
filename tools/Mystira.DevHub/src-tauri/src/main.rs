@@ -335,6 +335,7 @@ async fn prebuild_service(
                     serde_json::json!({
                         "service": service_name_build_stdout,
                         "type": "stdout",
+                        "source": "build",
                         "message": line,
                         "timestamp": std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
@@ -356,6 +357,7 @@ async fn prebuild_service(
                     serde_json::json!({
                         "service": service_name_build_stderr,
                         "type": "stderr",
+                        "source": "build",
                         "message": line,
                         "timestamp": std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
@@ -456,6 +458,7 @@ async fn start_service(
                     serde_json::json!({
                         "service": service_name_build_stdout,
                         "type": "stdout",
+                        "source": "build",
                         "message": line,
                         "timestamp": std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
@@ -477,6 +480,7 @@ async fn start_service(
                     serde_json::json!({
                         "service": service_name_build_stderr,
                         "type": "stderr",
+                        "source": "build",
                         "message": line,
                         "timestamp": std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
@@ -554,6 +558,7 @@ async fn start_service(
                     serde_json::json!({
                         "service": service_name_stdout,
                         "type": "stdout",
+                        "source": "run",
                         "message": line,
                         "timestamp": std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
@@ -575,6 +580,7 @@ async fn start_service(
                     serde_json::json!({
                         "service": service_name_stderr,
                         "type": "stderr",
+                        "source": "run",
                         "message": line,
                         "timestamp": std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)

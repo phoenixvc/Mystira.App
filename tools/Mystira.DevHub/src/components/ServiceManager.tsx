@@ -43,7 +43,7 @@ function ServiceManager() {
     getEnvironmentUrls,
     addToast
   );
-  const { logs, logFilters, autoScroll, setLogFilters, setAutoScroll, getServiceLogs, clearLogs } = useServiceLogs();
+  const { logs, logFilters, autoScroll, maxLogs, setLogFilters, setAutoScroll, getServiceLogs, clearLogs, updateMaxLogs } = useServiceLogs();
   const { viewMode, maximizedService, webviewErrors, setViewModeForService, toggleMaximize, setWebviewErrors, setShowLogs } = useViewManagement();
   const { buildStatus, prebuildAllServices } = useBuildManagement();
   
@@ -484,6 +484,8 @@ function ServiceManager() {
         onAutoScrollChange={(name, enabled) => setAutoScroll(prev => ({ ...prev, [name]: enabled }))}
         onWebviewRetry={(name) => setWebviewErrors(prev => ({ ...prev, [name]: false }))}
         onWebviewError={(name) => setWebviewErrors(prev => ({ ...prev, [name]: true }))}
+        maxLogs={maxLogs}
+        onMaxLogsChange={updateMaxLogs}
       />
     </div>
   );

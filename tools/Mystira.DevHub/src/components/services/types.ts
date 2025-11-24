@@ -18,6 +18,7 @@ export interface BuildStatus {
 export interface ServiceLog {
   service: string;
   type: 'stdout' | 'stderr';
+  source?: 'build' | 'run'; // Distinguish between build logs and runtime logs
   message: string;
   timestamp: number;
 }
@@ -46,5 +47,16 @@ export interface EnvironmentStatus {
 export interface LogFilter {
   search: string;
   type: 'all' | 'stdout' | 'stderr';
+  source?: 'all' | 'build' | 'run'; // Filter by log source
+  severity?: 'all' | 'errors' | 'warnings' | 'info'; // Filter by log severity
+  timestampFormat?: 'time' | 'full' | 'relative'; // Timestamp display format
+}
+
+export interface LogViewerSettings {
+  autoScroll: boolean;
+  autoScrollToErrors: boolean;
+  showLineNumbers: boolean;
+  collapseSimilar: boolean;
+  maxLogs: number; // Log retention limit
 }
 

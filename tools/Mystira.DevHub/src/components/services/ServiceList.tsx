@@ -30,6 +30,8 @@ interface ServiceListProps {
   onAutoScrollChange: (serviceName: string, enabled: boolean) => void;
   onWebviewRetry: (serviceName: string) => void;
   onWebviewError: (serviceName: string) => void;
+  maxLogs?: number;
+  onMaxLogsChange?: (limit: number) => void;
 }
 
 export function ServiceList({
@@ -61,6 +63,8 @@ export function ServiceList({
   onAutoScrollChange,
   onWebviewRetry,
   onWebviewError,
+  maxLogs,
+  onMaxLogsChange,
 }: ServiceListProps) {
   return (
     <div className="space-y-4">
@@ -107,6 +111,8 @@ export function ServiceList({
             onAutoScrollChange={(enabled) => onAutoScrollChange(config.name, enabled)}
             onWebviewRetry={() => onWebviewRetry(config.name)}
             onWebviewError={() => onWebviewError(config.name)}
+            maxLogs={maxLogs}
+            onMaxLogsChange={onMaxLogsChange}
           />
         );
       })}
