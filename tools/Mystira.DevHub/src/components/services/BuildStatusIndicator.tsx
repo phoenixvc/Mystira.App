@@ -14,10 +14,10 @@ export function BuildStatusIndicator({ build, formatTimeSince }: BuildStatusIndi
             <div className="flex items-center gap-2">
               <div className="animate-spin h-3 w-3 border-2 border-blue-500 border-t-transparent rounded-full"></div>
               <span className="text-blue-600 dark:text-blue-400 font-bold">
-                [BUILDING]
+                {build.isManual ? '[REBUILDING]' : '[BUILDING]'}
               </span>
               <span className="text-gray-600 dark:text-gray-400">
-                {build.message || 'Building...'}
+                {build.message || (build.isManual ? 'Rebuilding...' : 'Building...')}
               </span>
               {build.progress !== undefined && (
                 <span className="text-gray-500 dark:text-gray-500">
@@ -30,20 +30,22 @@ export function BuildStatusIndicator({ build, formatTimeSince }: BuildStatusIndi
             <div className="flex items-center gap-2">
               <span className="text-green-600 dark:text-green-400 font-bold">[OK]</span>
               <span className="text-gray-600 dark:text-gray-400">
-                {build.message || 'Build successful'}
+                {build.message || (build.isManual ? 'Rebuild successful' : 'Build successful')}
               </span>
               {build.lastBuildTime && (
-                <span className="text-gray-500 dark:text-gray-500">
-                  {formatTimeSince(build.lastBuildTime)}
+                <span className="text-blue-600 dark:text-blue-400 font-semibold">
+                  {build.isManual ? 'Rebuilt' : 'Built'}: {formatTimeSince(build.lastBuildTime)}
                 </span>
               )}
             </div>
           )}
           {build.status === 'failed' && (
             <div className="flex items-center gap-2">
-              <span className="text-red-600 dark:text-red-400 font-bold">[FAIL]</span>
+              <span className="text-red-600 dark:text-red-400 font-bold">
+                {build.isManual ? '[REBUILD FAIL]' : '[FAIL]'}
+              </span>
               <span className="text-red-600 dark:text-red-400">
-                {build.message || 'Build failed'}
+                {build.message || (build.isManual ? 'Rebuild failed' : 'Build failed')}
               </span>
               {build.lastBuildTime && (
                 <span className="text-gray-500 dark:text-gray-500">

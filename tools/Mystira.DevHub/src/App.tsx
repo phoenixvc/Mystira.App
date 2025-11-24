@@ -1,110 +1,126 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './App.css';
 import CosmosExplorer from './components/CosmosExplorer';
 import Dashboard from './components/Dashboard';
 import InfrastructurePanel from './components/InfrastructurePanel';
 import MigrationManager from './components/MigrationManager';
 import ServiceManager from './components/ServiceManager';
+import { Sidebar, type View } from './components/Sidebar';
+import { getServiceConfigs } from './components/services';
+import { EnvironmentBanner } from './components/services/EnvironmentBanner';
+import { useEnvironmentManagement } from './components/services/hooks/useEnvironmentManagement';
 import { useDarkMode } from './hooks/useDarkMode';
-
-type View = 'dashboard' | 'cosmos' | 'migration' | 'infrastructure' | 'services';
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('services');
+  const [sidebarPosition, setSidebarPosition] = useState<'left' | 'right'>('left');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { isDark, toggleDarkMode } = useDarkMode();
+  
+  // Environment status for header (only when on services view)
+  const [serviceEnvironments, setServiceEnvironments] = useState<Record<string, 'local' | 'dev' | 'prod'>>(() => {
+    const saved = localStorage.getItem('serviceEnvironments');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const { environmentStatus, getEnvironmentUrls } = useEnvironmentManagement();
+  
+  // Listen for environment changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem('serviceEnvironments');
+      if (saved) {
+        setServiceEnvironments(JSON.parse(saved));
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    // Also check periodically for same-tab updates
+    const interval = setInterval(handleStorageChange, 1000);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
 
-  // Wrapper function for type compatibility
   const handleNavigate = (view: string) => {
     setCurrentView(view as View);
   };
+  
+  const serviceConfigs = currentView === 'services' ? getServiceConfigs({}, serviceEnvironments, getEnvironmentUrls) : [];
+  
+  const getEnvironmentInfo = (serviceName: string) => {
+    const env = serviceEnvironments[serviceName] || 'local';
+    const config = serviceConfigs.find((c) => c.name === serviceName);
+    return { 
+      environment: env, 
+      url: config?.url || '', 
+    };
+  };
+  
+  const handleResetAll = () => {
+    if (window.confirm('Switch all services to Local environment?\n\nThis will disconnect from deployed environments.')) {
+      const updated: Record<string, 'local' | 'dev' | 'prod'> = { ...serviceEnvironments };
+      serviceConfigs.forEach((config) => {
+        if (serviceEnvironments[config.name] && serviceEnvironments[config.name] !== 'local') {
+          updated[config.name] = 'local';
+        }
+      });
+      setServiceEnvironments(updated);
+      localStorage.setItem('serviceEnvironments', JSON.stringify(updated));
+    }
+  };
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="h-screen bg-gray-50 dark:bg-gray-900 flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Mystira DevHub</h1>
-            <button
-              onClick={toggleDarkMode}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {isDark ? '☀️' : '🌙'}
-            </button>
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Development Operations</p>
-        </div>
-
-        <nav className="space-y-1">
-          <button
-            onClick={() => setCurrentView('dashboard')}
-            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-              currentView === 'dashboard'
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
-            Dashboard
-          </button>
-
-          <button
-            onClick={() => setCurrentView('cosmos')}
-            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-              currentView === 'cosmos'
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
-            Cosmos Explorer
-          </button>
-
-          <button
-            onClick={() => setCurrentView('migration')}
-            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-              currentView === 'migration'
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
-            Migration Manager
-          </button>
-
-          <button
-            onClick={() => setCurrentView('infrastructure')}
-            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-              currentView === 'infrastructure'
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
-            Infrastructure
-          </button>
-
-          <button
-            onClick={() => setCurrentView('services')}
-            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-              currentView === 'services'
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
-            Services
-          </button>
-        </nav>
-      </aside>
+      <Sidebar
+        currentView={currentView}
+        onViewChange={setCurrentView}
+        onPositionChange={setSidebarPosition}
+        onCollapsedChange={setSidebarCollapsed}
+      />
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
-        {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
+      <main
+        className={`flex-1 overflow-auto transition-all duration-300 ${
+          sidebarPosition === 'left' 
+            ? (sidebarCollapsed ? 'ml-12' : 'ml-56')
+            : (sidebarCollapsed ? 'mr-12' : 'mr-56')
+        }`}
+      >
+        {/* Top Bar */}
+        <div className="sticky top-0 z-30 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-600 px-4 py-2 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white font-mono">MYSTIRA DEVHUB</h1>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Development Operations</span>
+            {currentView === 'services' && serviceConfigs.length > 0 && (
+              <div className="flex-1 flex items-center justify-center min-w-0">
+                <EnvironmentBanner
+                  serviceConfigs={serviceConfigs}
+                  serviceEnvironments={serviceEnvironments}
+                  environmentStatus={environmentStatus}
+                  getEnvironmentInfo={getEnvironmentInfo}
+                  onResetAll={handleResetAll}
+                />
+              </div>
+            )}
+          </div>
+          <button
+            onClick={toggleDarkMode}
+            className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300 flex-shrink-0"
+            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {isDark ? '☀️' : '🌙'}
+          </button>
+        </div>
 
-        {currentView === 'cosmos' && <CosmosExplorer />}
-
-        {currentView === 'migration' && <MigrationManager />}
-
-        {currentView === 'infrastructure' && <InfrastructurePanel />}
-
-        {currentView === 'services' && <ServiceManager />}
+        {/* Content Area */}
+        <div className="p-4">
+          {currentView === 'services' && <ServiceManager />}
+          {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
+          {currentView === 'cosmos' && <CosmosExplorer />}
+          {currentView === 'migration' && <MigrationManager />}
+          {currentView === 'infrastructure' && <InfrastructurePanel />}
+        </div>
       </main>
     </div>
   );

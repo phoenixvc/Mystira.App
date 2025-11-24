@@ -56,10 +56,20 @@ export function LogsViewer({
     }
   }, [autoScrollToErrors, currentErrorIndex, errorIndices]);
 
-  // Auto-scroll to end
+  const logContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to end - only scroll within log container, not main window
   useEffect(() => {
-    if (isAutoScroll && logEndRef.current) {
-      logEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (isAutoScroll && logEndRef.current && logContainerRef.current) {
+      const container = logContainerRef.current;
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+      if (isNearBottom) {
+        // Scroll within container only
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
     }
   }, [filteredLogs, isAutoScroll]);
 
@@ -183,7 +193,27 @@ export function LogsViewer({
         onApplyPreset={applyPreset}
       />
       
-      <div className={`bg-black text-green-400 font-mono text-xs p-4 overflow-y-auto flex-1 ${isMaximized ? 'h-full' : ''}`}>
+      <div 
+        ref={logContainerRef}
+        className={`bg-black text-green-400 font-mono text-xs p-4 overflow-y-auto flex-1 relative ${isMaximized ? 'h-full' : ''}`}
+      >
+        {/* Small scroll-to-bottom button - unobtrusive */}
+        {filteredLogs.length > 0 && (
+          <button
+            onClick={() => {
+              if (logContainerRef.current) {
+                logContainerRef.current.scrollTo({
+                  top: logContainerRef.current.scrollHeight,
+                  behavior: 'smooth'
+                });
+              }
+            }}
+            className="absolute bottom-1.5 right-1.5 w-5 h-5 bg-gray-900/70 hover:bg-gray-800/80 text-gray-500 hover:text-gray-300 rounded text-[10px] flex items-center justify-center transition-all opacity-50 hover:opacity-90 z-10 border border-gray-700/50"
+            title="Scroll to bottom"
+          >
+            ↓
+          </button>
+        )}
         {displayLogs.length === 0 ? (
           <div className="text-gray-500">
             {logs.length === 0 

@@ -13,6 +13,7 @@ export interface BuildStatus {
   lastBuildTime?: number; // timestamp
   buildDuration?: number; // milliseconds
   message?: string;
+  isManual?: boolean; // true if manually triggered, false if automatic/initial
 }
 
 export interface ServiceLog {

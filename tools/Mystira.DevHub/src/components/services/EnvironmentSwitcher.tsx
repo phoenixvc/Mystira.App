@@ -21,20 +21,22 @@ export function EnvironmentSwitcher({
   const prodStatus = environmentStatus?.prod;
   
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5">
       <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Environment:</span>
-      <div className="flex items-center gap-0.5 border-2 border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden shadow-sm">
+      <div className="flex items-center gap-0 border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden shadow-sm">
         <button
           onClick={() => onSwitch('local')}
           disabled={isRunning}
-          className={`px-3 py-1.5 text-xs font-semibold transition-all ${
+          className={`px-2 py-1 text-xs font-semibold transition-all flex items-center gap-1 ${
             currentEnv === 'local'
               ? 'bg-green-500 text-white shadow-md'
               : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20'
           } ${isRunning ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           title={isRunning ? 'Stop service to switch environment' : '🏠 Switch to local environment (localhost)'}
         >
-          🏠 Local
+          <span>🏠</span>
+          <span>Local</span>
+          {currentEnv === 'local' && <span className="text-[8px] ml-0.5">🟢</span>}
         </button>
         {envUrls.dev && (
           <>
@@ -49,12 +51,12 @@ export function EnvironmentSwitcher({
                 onSwitch('dev');
               }}
               disabled={isRunning}
-              className={`px-3 py-1.5 text-xs font-semibold transition-all ${
+              className={`px-2 py-1 text-xs font-semibold transition-all flex items-center gap-1 ${
                 currentEnv === 'dev'
                   ? 'bg-blue-500 text-white shadow-md'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
               } ${isRunning ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${
-                devStatus === 'offline' ? 'ring-2 ring-red-400' : ''
+                devStatus === 'offline' ? 'ring-1 ring-red-400' : ''
               }`}
               title={
                 isRunning 
@@ -62,7 +64,11 @@ export function EnvironmentSwitcher({
                   : `🧪 Switch to dev environment\n${envUrls.dev}\nStatus: ${devStatus === 'online' ? '🟢 Online' : devStatus === 'offline' ? '🔴 Offline' : devStatus === 'checking' ? '🟡 Checking...' : '⚪ Unknown'}`
               }
             >
-              🧪 Dev {devStatus === 'online' ? '🟢' : devStatus === 'offline' ? '🔴' : devStatus === 'checking' ? '🟡' : ''}
+              <span>🧪</span>
+              <span>Dev</span>
+              <span className={`text-[8px] ml-0.5 ${devStatus === 'online' ? 'text-green-400' : devStatus === 'offline' ? 'text-red-400' : devStatus === 'checking' ? 'text-yellow-400' : 'text-gray-400'}`}>
+                {devStatus === 'online' ? '🟢' : devStatus === 'offline' ? '🔴' : devStatus === 'checking' ? '🟡' : '⚪'}
+              </span>
             </button>
           </>
         )}
@@ -79,12 +85,12 @@ export function EnvironmentSwitcher({
                 onSwitch('prod');
               }}
               disabled={isRunning}
-              className={`px-3 py-1.5 text-xs font-semibold transition-all ${
+              className={`px-2 py-1 text-xs font-semibold transition-all flex items-center gap-1 ${
                 currentEnv === 'prod'
                   ? 'bg-red-600 text-white shadow-md animate-pulse'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20'
               } ${isRunning ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${
-                prodStatus === 'offline' ? 'ring-2 ring-red-500' : ''
+                prodStatus === 'offline' ? 'ring-1 ring-red-500' : ''
               }`}
               title={
                 isRunning 
@@ -92,7 +98,11 @@ export function EnvironmentSwitcher({
                   : `⚠️ Switch to PRODUCTION environment (WARNING: Shows danger dialog)\n${envUrls.prod}\nStatus: ${prodStatus === 'online' ? '🟢 Online' : prodStatus === 'offline' ? '🔴 Offline' : prodStatus === 'checking' ? '🟡 Checking...' : '⚪ Unknown'}`
               }
             >
-              ⚠️ PROD {prodStatus === 'online' ? '🟢' : prodStatus === 'offline' ? '🔴' : prodStatus === 'checking' ? '🟡' : ''}
+              <span>⚠️</span>
+              <span>PROD</span>
+              <span className={`text-[8px] ml-0.5 ${prodStatus === 'online' ? 'text-green-400' : prodStatus === 'offline' ? 'text-red-400' : prodStatus === 'checking' ? 'text-yellow-400' : 'text-gray-400'}`}>
+                {prodStatus === 'online' ? '🟢' : prodStatus === 'offline' ? '🔴' : prodStatus === 'checking' ? '🟡' : '⚪'}
+              </span>
             </button>
           </>
         )}

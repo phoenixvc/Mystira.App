@@ -45,6 +45,46 @@ export function EnvironmentBanner({
     ? 'text-yellow-800 dark:text-yellow-200'
     : 'text-green-800 dark:text-green-200';
   
+  // Compact version for header
+  const isCompact = true;
+  
+  if (isCompact) {
+    return (
+      <div className="flex items-center gap-2">
+        {environments.map(env => {
+          const envColors = {
+            local: 'bg-green-500 text-white',
+            dev: 'bg-blue-500 text-white',
+            prod: 'bg-red-600 text-white',
+          };
+          const statusIcon = env.status === 'online' ? '🟢' : 
+                            env.status === 'offline' ? '🔴' : 
+                            env.status === 'checking' ? '🟡' : '';
+          const statusText = env.status === 'online' ? ' (Online)' : 
+                            env.status === 'offline' ? ' (Offline)' : 
+                            env.status === 'checking' ? ' (Checking...)' : '';
+          return (
+            <div key={env.name} className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{env.displayName}:</span>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${envColors[env.environment]} ${env.environment === 'prod' ? 'animate-pulse' : ''}`} title={env.environment !== 'local' ? `${env.url}${statusText}` : 'Local environment'}>
+                {env.environment === 'local' ? '🏠' : env.environment === 'dev' ? '🧪' : '⚠️'} {env.environment === 'local' ? 'LOCAL' : env.environment === 'dev' ? 'DEV' : 'PROD'} {statusIcon}
+              </span>
+            </div>
+          );
+        })}
+        {!allLocal && (
+          <button
+            onClick={onResetAll}
+            className="px-1.5 py-0.5 text-[10px] bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 font-medium transition-colors"
+            title="Reset all services to local environment"
+          >
+            🔄 Reset
+          </button>
+        )}
+      </div>
+    );
+  }
+  
   return (
     <div className={`mb-6 p-4 rounded-lg border-2 ${bannerColor} sticky top-0 z-10 shadow-lg backdrop-blur-sm`}>
       <div className="flex items-center justify-between flex-wrap gap-4">

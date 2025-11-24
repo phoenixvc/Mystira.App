@@ -9,7 +9,8 @@ export function useBuildManagement() {
     serviceName: string,
     repoRoot: string,
     onViewModeChange: (serviceName: string, mode: 'logs') => void,
-    onShowLogs: (serviceName: string, show: boolean) => void
+    onShowLogs: (serviceName: string, show: boolean) => void,
+    isManual: boolean = false
   ) => {
     const startTime = Date.now();
     
@@ -21,7 +22,8 @@ export function useBuildManagement() {
       [serviceName]: {
         status: 'building',
         progress: 0,
-        message: 'Initializing build...',
+        message: isManual ? 'Manual rebuild...' : 'Initializing build...',
+        isManual,
       },
     }));
     
@@ -33,7 +35,9 @@ export function useBuildManagement() {
         [serviceName]: {
           ...prev[serviceName],
           progress: Math.floor(estimatedProgress),
-          message: `Building... (${Math.floor(estimatedProgress)}%)`,
+          message: isManual 
+            ? `Rebuilding... (${Math.floor(estimatedProgress)}%)` 
+            : `Building... (${Math.floor(estimatedProgress)}%)`,
         },
       }));
     }, 500);
@@ -53,7 +57,10 @@ export function useBuildManagement() {
           progress: 100,
           lastBuildTime: Date.now(),
           buildDuration: duration,
-          message: `Built in ${(duration / 1000).toFixed(1)}s`,
+          message: isManual 
+            ? `Rebuilt in ${(duration / 1000).toFixed(1)}s` 
+            : `Built in ${(duration / 1000).toFixed(1)}s`,
+          isManual,
         },
       }));
     } catch (error: any) {
@@ -68,7 +75,10 @@ export function useBuildManagement() {
           progress: 0,
           lastBuildTime: Date.now(),
           buildDuration: duration,
-          message: `Build failed: ${error?.message || error}`,
+          message: isManual 
+            ? `Rebuild failed: ${error?.message || error}` 
+            : `Build failed: ${error?.message || error}`,
+          isManual,
         },
       }));
       console.error(`Prebuild failed for ${serviceName}:`, error);
@@ -94,7 +104,7 @@ export function useBuildManagement() {
       : repoRoot;
     
     const prebuildPromises = serviceConfigs.map((config) =>
-      prebuildService(config.name, rootToUse, onViewModeChange, onShowLogs).catch(err => {
+      prebuildService(config.name, rootToUse, onViewModeChange, onShowLogs, false).catch(err => {
         console.error(`Failed to prebuild ${config.name}:`, err);
       })
     );

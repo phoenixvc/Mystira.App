@@ -4,9 +4,7 @@ import { useEffect, useState } from 'react';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcut';
 import { Toast, ToastContainer, useToast } from './Toast';
 import {
-  EnvironmentBanner,
   EnvironmentPresetSelector,
-  RepositoryConfig,
   ServiceList,
   checkEnvironmentContext,
   getServiceConfigs,
@@ -45,7 +43,7 @@ function ServiceManager() {
   );
   const { logs, logFilters, autoScroll, maxLogs, setLogFilters, setAutoScroll, getServiceLogs, clearLogs, updateMaxLogs } = useServiceLogs();
   const { viewMode, maximizedService, webviewErrors, setViewModeForService, toggleMaximize, setWebviewErrors, setShowLogs } = useViewManagement();
-  const { buildStatus, prebuildAllServices } = useBuildManagement();
+  const { buildStatus, prebuildService, prebuildAllServices } = useBuildManagement();
   
   const handleShowLogs = (serviceName: string, show: boolean) => {
     setShowLogs(prev => ({ ...prev, [serviceName]: show }));
@@ -174,6 +172,32 @@ function ServiceManager() {
       addToast(`${config?.displayName || serviceName} stopped`, 'info');
     } catch (error) {
       addToast(`Failed to stop ${serviceName}: ${error}`, 'error');
+    }
+  };
+
+  const rebuildService = async (serviceName: string) => {
+    const environment = serviceEnvironments[serviceName] || 'local';
+    if (environment !== 'local') {
+      addToast(`Cannot rebuild ${serviceName}: it's connected to ${environment.toUpperCase()} environment`, 'info');
+      return;
+    }
+
+    const rootToUse = useCurrentBranch && currentBranch 
+      ? `${repoRoot}\\..\\Mystira.App-${currentBranch}`
+      : repoRoot;
+
+    if (!rootToUse || rootToUse.trim() === '') {
+      addToast('Repository root is not set. Please configure it first.', 'error');
+      return;
+    }
+
+    try {
+      await prebuildService(serviceName, rootToUse, setViewModeForService, handleShowLogs, true);
+      const config = getServiceConfigs(customPorts, serviceEnvironments, getEnvironmentUrls).find((s: ServiceConfig) => s.name === serviceName);
+      addToast(`${config?.displayName || serviceName} rebuilt successfully`, 'success');
+    } catch (error) {
+      const config = getServiceConfigs(customPorts, serviceEnvironments, getEnvironmentUrls).find((s: ServiceConfig) => s.name === serviceName);
+      addToast(`Failed to rebuild ${config?.displayName || serviceName}`, 'error');
     }
   };
 
@@ -370,90 +394,115 @@ function ServiceManager() {
   const allRunning = services.length === serviceConfigs.length && services.every((s: ServiceStatus) => s.running);
   const anyRunning = services.some((s: ServiceStatus) => s.running);
 
-  const getEnvironmentInfo = (serviceName: string) => {
-    const env = serviceEnvironments[serviceName] || 'local';
-    const config = serviceConfigs.find((c: ServiceConfig) => c.name === serviceName);
-    const envUrls = getEnvironmentUrls(serviceName);
-    return { environment: env, url: config?.url || '', hasDev: !!envUrls.dev, hasProd: !!envUrls.prod };
-  };
-
   return (
     <div className="p-8">
       <ToastContainer toasts={toasts} onClose={removeToast} />
       
-      <EnvironmentBanner
-        serviceConfigs={serviceConfigs}
-        serviceEnvironments={serviceEnvironments}
-        environmentStatus={environmentStatus}
-        getEnvironmentInfo={getEnvironmentInfo}
-        onResetAll={() => {
-          if (window.confirm('Switch all services to Local environment?\n\nThis will disconnect from deployed environments.')) {
-            serviceConfigs.forEach((config: ServiceConfig) => {
-              if (serviceEnvironments[config.name] && serviceEnvironments[config.name] !== 'local') {
-                switchServiceEnvironment(config.name, 'local');
-              }
-            });
-          }
-        }}
-      />
-      
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Service Manager</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Keyboard shortcuts: Ctrl+Shift+S (Start All), Ctrl+Shift+X (Stop All), Ctrl+R (Refresh)
-          </p>
-        </div>
-        <div className="flex gap-2 items-center">
-          <EnvironmentPresetSelector
-            currentEnvironments={serviceEnvironments}
-            onApplyPreset={(preset: EnvironmentPreset) => {
-              const hasProd = Object.values(preset.environments).includes('prod');
-              if (hasProd) {
-                const confirmed = window.confirm('⚠️ WARNING: This preset includes PRODUCTION environments.\n\nAre you sure you want to apply this preset?');
-                if (!confirmed) return;
-              }
-              
-              setServiceEnvironments(preset.environments);
-              localStorage.setItem('serviceEnvironments', JSON.stringify(preset.environments));
-              
-              Object.entries(preset.environments).forEach(([serviceName, env]) => {
-                if (env !== 'local' && (env === 'dev' || env === 'prod')) {
-                  checkEnvironmentHealth(serviceName, env as 'dev' | 'prod');
+      {/* Combined Title and Repository Config */}
+      <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white font-mono">SERVICE MANAGER</h1>
+            <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
+              Ctrl+Shift+S (Start All) | Ctrl+Shift+X (Stop All) | Ctrl+R (Refresh)
+            </span>
+          </div>
+          <div className="flex gap-2 items-center flex-shrink-0">
+            <EnvironmentPresetSelector
+              currentEnvironments={serviceEnvironments}
+              onApplyPreset={(preset: EnvironmentPreset) => {
+                const hasProd = Object.values(preset.environments).includes('prod');
+                if (hasProd) {
+                  const confirmed = window.confirm('⚠️ WARNING: This preset includes PRODUCTION environments.\n\nAre you sure you want to apply this preset?');
+                  if (!confirmed) return;
                 }
-              });
-              
-              addToast(`Applied preset: ${preset.name}`, 'success');
-            }}
-            onSaveCurrent={() => {}}
-          />
-          {!allRunning && (
+                
+                setServiceEnvironments(preset.environments);
+                localStorage.setItem('serviceEnvironments', JSON.stringify(preset.environments));
+                
+                Object.entries(preset.environments).forEach(([serviceName, env]) => {
+                  if (env !== 'local' && (env === 'dev' || env === 'prod')) {
+                    checkEnvironmentHealth(serviceName, env as 'dev' | 'prod');
+                  }
+                });
+                
+                addToast(`Applied preset: ${preset.name}`, 'success');
+              }}
+              onSaveCurrent={() => {}}
+            />
+            {!allRunning && (
+              <button
+                onClick={startAllServices}
+                disabled={anyRunning}
+                className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                Start All
+              </button>
+            )}
+            {anyRunning && (
+              <button
+                onClick={stopAllServices}
+                className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                Stop All
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <label className="text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">Repo:</label>
+            <input
+              type="text"
+              value={repoRoot}
+              onChange={(e) => setRepoRoot(e.target.value)}
+              className="flex-1 min-w-0 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="C:\Users\smitj\repos\Mystira.App"
+            />
             <button
-              onClick={startAllServices}
-              disabled={anyRunning}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={async () => {
+                try {
+                  const { open } = await import('@tauri-apps/api/dialog');
+                  const selected = await open({
+                    directory: true,
+                    multiple: false,
+                    defaultPath: repoRoot || undefined,
+                  });
+                  
+                  if (selected && typeof selected === 'string') {
+                    setRepoRoot(selected);
+                    try {
+                      await invoke<string>('get_current_branch', { repoRoot: selected });
+                    } catch (error) {
+                      console.warn('Failed to get current branch:', error);
+                    }
+                  }
+                } catch (error) {
+                  console.error('Failed to pick repo root:', error);
+                }
+              }}
+              className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 flex-shrink-0"
             >
-              Start All
+              Browse
             </button>
-          )}
-          {anyRunning && (
-            <button
-              onClick={stopAllServices}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Stop All
-            </button>
+          </div>
+          {currentBranch && (
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="text-xs text-gray-600 dark:text-gray-400">Branch:</span>
+              <span className="px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded font-mono">{currentBranch}</span>
+              <label className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
+                <input
+                  type="checkbox"
+                  checked={useCurrentBranch}
+                  onChange={(e) => setUseCurrentBranch(e.target.checked)}
+                  className="w-3 h-3"
+                />
+                <span>Use branch dir</span>
+              </label>
+            </div>
           )}
         </div>
       </div>
-      
-      <RepositoryConfig
-        repoRoot={repoRoot}
-        currentBranch={currentBranch}
-        useCurrentBranch={useCurrentBranch}
-        onRepoRootChange={setRepoRoot}
-        onUseCurrentBranchChange={setUseCurrentBranch}
-      />
       
       <ServiceList
         serviceConfigs={serviceConfigs}
@@ -473,6 +522,7 @@ function ServiceManager() {
         getEnvironmentUrls={getEnvironmentUrls}
         onStart={startService}
         onStop={stopService}
+        onRebuild={rebuildService}
         onPortChange={(name, port) => updateServicePort(name, port, false)}
         onEnvironmentSwitch={switchServiceEnvironment}
         onViewModeChange={setViewModeForService}
