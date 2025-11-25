@@ -143,7 +143,7 @@ export function LogsViewer({
   const navigateError = (direction: 'next' | 'prev') => {
     if (errorIndices.length === 0) return;
 
-    let newIndex = currentErrorIndex;
+    let newIndex;
     if (direction === 'next') {
       newIndex = currentErrorIndex < errorIndices.length - 1 ? currentErrorIndex + 1 : 0;
     } else {
