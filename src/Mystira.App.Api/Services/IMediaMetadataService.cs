@@ -3,8 +3,16 @@ using Mystira.App.Api.Models;
 namespace Mystira.App.Api.Services;
 
 /// <summary>
-/// Service for managing media metadata files
+/// DEPRECATED: This service violates hexagonal architecture.
+/// Controllers should use IMediator (CQRS pattern) instead.
 /// </summary>
+/// <remarks>
+/// Migration guide:
+/// - GetMediaMetadataFileAsync → GetMediaMetadataFileQuery
+/// - Other methods → Create corresponding CQRS commands/queries as needed
+/// See ARCHITECTURAL_REFACTORING_PLAN.md for details.
+/// </remarks>
+[Obsolete("Use IMediator with CQRS queries/commands instead. See ARCHITECTURAL_REFACTORING_PLAN.md")]
 public interface IMediaMetadataService
 {
     /// <summary>

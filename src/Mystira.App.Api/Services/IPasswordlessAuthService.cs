@@ -2,6 +2,11 @@ using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Services;
 
+/// <summary>
+/// Legacy authentication service - DEPRECATED in favor of CQRS commands.
+/// Use RequestPasswordlessSignupCommand, VerifyPasswordlessSignupCommand, etc. instead.
+/// </summary>
+[Obsolete("Use CQRS commands in Mystira.App.Application.CQRS.Auth.Commands instead. This service will be removed in a future version.")]
 public interface IPasswordlessAuthService
 {
     Task<(bool Success, string Message, string? Code)> RequestSignupAsync(string email, string displayName);

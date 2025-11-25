@@ -14,7 +14,12 @@ public static class RandomNameGenerator
     internal static string[] FantasyNames => FantasyNamesLazy.Value;
     internal static string[] AdjectiveNames => AdjectiveNamesLazy.Value;
 
-    private static readonly ThreadLocal<Random> Random = new(() => new Random());
+    private static readonly ThreadLocal<Random> ThreadLocalRandom = new(() => new Random());
+    
+    /// <summary>
+    /// Gets the thread-local Random instance, ensuring it is never null.
+    /// </summary>
+    private static Random RandomInstance => ThreadLocalRandom.Value ?? new Random();
 
     private static string[] LoadNames(string fileName)
     {
@@ -38,7 +43,7 @@ public static class RandomNameGenerator
     /// <returns>A random fantasy name</returns>
     public static string GenerateFantasyName()
     {
-        return FantasyNames[Random.Value.Next(FantasyNames.Length)];
+        return FantasyNames[RandomInstance.Next(FantasyNames.Length)];
     }
 
     /// <summary>
@@ -47,8 +52,8 @@ public static class RandomNameGenerator
     /// <returns>A random adjective + name combination</returns>
     public static string GenerateAdjectiveName()
     {
-        var adjective = AdjectiveNames[Random.Value.Next(AdjectiveNames.Length)];
-        var name = FantasyNames[Random.Value.Next(FantasyNames.Length)];
+        var adjective = AdjectiveNames[RandomInstance.Next(AdjectiveNames.Length)];
+        var name = FantasyNames[RandomInstance.Next(FantasyNames.Length)];
         return $"{adjective} {name}";
     }
 
