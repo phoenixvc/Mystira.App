@@ -85,8 +85,8 @@ public class ScenariosControllerTests
 
         // Assert
         result.Result.Should().BeOfType<NotFoundObjectResult>();
-        var notFound = result.Result as NotFoundObjectResult;
-        notFound!.Value.Should().BeOfType<ErrorResponse>();
+        var notFound = (NotFoundObjectResult)result.Result;
+        notFound.Value.Should().BeOfType<ErrorResponse>();
         var error = notFound.Value as ErrorResponse;
         error!.Message.Should().Contain(scenarioId);
     }
@@ -111,7 +111,9 @@ public class ScenariosControllerTests
         // Assert
         result.Result.Should().BeOfType<OkObjectResult>();
         var okResult = result.Result as OkObjectResult;
-        var returnedScenarios = okResult!.Value as List<ScenarioResponse>;
+        okResult!.Value.Should().NotBeNull();
+        okResult.Value.Should().BeOfType<List<ScenarioResponse>>();
+        var returnedScenarios = (List<ScenarioResponse>)okResult.Value;
         returnedScenarios.Should().HaveCount(2);
     }
 
@@ -145,6 +147,7 @@ public class ScenariosControllerTests
         // Assert
         result.Result.Should().BeOfType<CreatedAtActionResult>();
         var created = result.Result as CreatedAtActionResult;
+        created.Should().NotBeNull();
         created!.Value.Should().BeEquivalentTo(createdScenario);
         created.ActionName.Should().Be(nameof(_controller.GetScenarioById));
         created.RouteValues!["id"].Should().Be(createdScenario.Id);
@@ -264,8 +267,8 @@ public class ScenariosControllerTests
 
         // Assert
         result.Result.Should().BeOfType<ObjectResult>();
-        var objectResult = result.Result as ObjectResult;
-        objectResult!.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+        var objectResult = result.Result.As<ObjectResult>();
+        objectResult.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
         objectResult.Value.Should().BeOfType<ErrorResponse>();
 
         // Verify error was logged

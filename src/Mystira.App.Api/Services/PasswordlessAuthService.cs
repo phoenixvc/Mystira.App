@@ -4,6 +4,11 @@ using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Api.Services;
 
+/// <summary>
+/// Legacy authentication service implementation - DEPRECATED.
+/// All functionality has been migrated to CQRS command handlers.
+/// </summary>
+[Obsolete("Use CQRS commands in Mystira.App.Application.CQRS.Auth.Commands instead. This service will be removed in a future version.")]
 public class PasswordlessAuthService : IPasswordlessAuthService
 {
     private readonly IAccountRepository _accountRepository;

@@ -31,8 +31,8 @@ public class GetBadgeStatisticsQueryHandler
         var badges = await _repository.GetByUserProfileIdAsync(query.UserProfileId);
 
         var statistics = badges
-            .Where(b => b.BadgeConfiguration?.Axis != null)
-            .GroupBy(b => b.BadgeConfiguration!.Axis!)
+            .Where(b => !string.IsNullOrEmpty(b.Axis))
+            .GroupBy(b => b.Axis)
             .ToDictionary(g => g.Key, g => g.Count());
 
         _logger.LogInformation("Found badge statistics for {AxisCount} axes", statistics.Count);
