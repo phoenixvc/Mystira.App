@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Api.Services;
 using Mystira.App.Application.CQRS.Accounts.Commands;
 using Mystira.App.Application.CQRS.Accounts.Queries;
 using Mystira.App.Application.CQRS.UserProfiles.Queries;
@@ -9,19 +8,21 @@ using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;
 
+/// <summary>
+/// Controller for account management.
+/// Follows hexagonal architecture - uses only IMediator (CQRS pattern).
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class AccountsController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ILogger<AccountsController> _logger;
-    private readonly IAccountApiService _accountService;
 
-    public AccountsController(IMediator mediator, ILogger<AccountsController> logger, IAccountApiService accountService)
+    public AccountsController(IMediator mediator, ILogger<AccountsController> logger)
     {
         _mediator = mediator;
         _logger = logger;
-        _accountService = accountService;
     }
 
     /// <summary>
@@ -179,10 +180,11 @@ public class AccountsController : ControllerBase
                 return BadRequest("User profile IDs are required");
             }
 
-            var success = await _accountService.LinkUserProfilesToAccountAsync(accountId, request.UserProfileIds);
+            var command = new LinkProfilesToAccountCommand(accountId, request.UserProfileIds);
+            var success = await _mediator.Send(command);
             if (!success)
             {
-                return NotFound($"Account with ID {accountId} not found");
+                return NotFound($"Account with ID {accountId} not found or no profiles were linked");
             }
 
             return Ok();
@@ -221,7 +223,8 @@ public class AccountsController : ControllerBase
     {
         try
         {
-            var isValid = await _accountService.ValidateAccountAsync(email);
+            var query = new ValidateAccountQuery(email);
+            var isValid = await _mediator.Send(query);
             return Ok(isValid);
         }
         catch (Exception ex)
