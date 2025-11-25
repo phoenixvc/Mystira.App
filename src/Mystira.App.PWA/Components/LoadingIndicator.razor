@@ -1,0 +1,59 @@
+@* LoadingIndicator.razor - Reusable loading indicator component *@
+
+<div class="loading-container" role="status" aria-live="polite">
+    @if (ShowSpinner)
+    {
+        <div class="loading-spinner-wrapper">
+            <div class="loading-spinner"></div>
+            @if (!string.IsNullOrEmpty(Message))
+            {
+                <p class="loading-message">@Message</p>
+            }
+        </div>
+    }
+    @if (ShowSkeleton)
+    {
+        <div class="skeleton-container">
+            @for (int i = 0; i < SkeletonCount; i++)
+            {
+                <div class="skeleton-item">
+                    <div class="skeleton-line skeleton-line-title"></div>
+                    <div class="skeleton-line skeleton-line-text"></div>
+                    <div class="skeleton-line skeleton-line-text"></div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Whether to show a spinner loading indicator
+    /// </summary>
+    [Parameter]
+    public bool ShowSpinner { get; set; } = true;
+
+    /// <summary>
+    /// Whether to show skeleton loading placeholders
+    /// </summary>
+    [Parameter]
+    public bool ShowSkeleton { get; set; } = false;
+
+    /// <summary>
+    /// Number of skeleton items to display
+    /// </summary>
+    [Parameter]
+    public int SkeletonCount { get; set; } = 3;
+
+    /// <summary>
+    /// Optional loading message to display
+    /// </summary>
+    [Parameter]
+    public string? Message { get; set; }
+
+    /// <summary>
+    /// Custom CSS class to apply
+    /// </summary>
+    [Parameter]
+    public string? CssClass { get; set; }
+}
