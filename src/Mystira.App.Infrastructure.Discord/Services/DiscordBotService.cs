@@ -262,4 +262,44 @@ public class DiscordBotService : IMessagingService, IDiscordBotService, Applicat
         _disposed = true;
         GC.SuppressFinalize(this);
     }
+
+    /// <summary>
+    /// Send an embed using platform-agnostic EmbedData (implements Application.Ports.Messaging.IDiscordBotService)
+    /// </summary>
+    public async Task SendEmbedAsync(ulong channelId, EmbedData embedData, CancellationToken cancellationToken = default)
+    {
+        var embedBuilder = new EmbedBuilder()
+            .WithTitle(embedData.Title)
+            .WithDescription(embedData.Description)
+            .WithColor(new Color(embedData.ColorRed, embedData.ColorGreen, embedData.ColorBlue));
+
+        if (!string.IsNullOrEmpty(embedData.Footer))
+        {
+            embedBuilder.WithFooter(embedData.Footer);
+        }
+
+        if (embedData.Fields != null)
+        {
+            foreach (var field in embedData.Fields)
+            {
+                embedBuilder.AddField(field.Name, field.Value, field.Inline);
+            }
+        }
+
+        await SendEmbedAsync(channelId, embedBuilder.Build(), cancellationToken);
+    }
+
+    /// <summary>
+    /// Get bot status information (implements Application.Ports.Messaging.IDiscordBotService)
+    /// </summary>
+    public BotStatus GetStatus()
+    {
+        return new BotStatus
+        {
+            IsEnabled = !string.IsNullOrWhiteSpace(_options.BotToken),
+            IsConnected = IsConnected,
+            BotName = _client.CurrentUser?.Username,
+            GuildCount = _client.Guilds.Count
+        };
+    }
 }
