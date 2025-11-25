@@ -51,6 +51,14 @@
       }
     },
     {
+      "route": "/_framework/*.wasm",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin"
+      }
+    },
+    {
       "route": "/_framework/*",
       "headers": {
         "Cache-Control": "public, max-age=31536000, immutable"
