@@ -1,7 +1,9 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Api.Models;
 using Mystira.App.Api.Services;
+using Mystira.App.Application.CQRS.CharacterMediaMetadata.Queries;
 using Mystira.App.Contracts.Responses.Common;
 using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
 
@@ -12,12 +14,12 @@ namespace Mystira.App.Api.Controllers;
 [Produces("application/json")]
 public class CharacterMediaMetadataController : ControllerBase
 {
-    private readonly ICharacterMediaMetadataService _characterMediaMetadataService;
+    private readonly IMediator _mediator;
     private readonly ILogger<CharacterMediaMetadataController> _logger;
 
-    public CharacterMediaMetadataController(ICharacterMediaMetadataService characterMediaMetadataService, ILogger<CharacterMediaMetadataController> logger)
+    public CharacterMediaMetadataController(IMediator mediator, ILogger<CharacterMediaMetadataController> logger)
     {
-        _characterMediaMetadataService = characterMediaMetadataService;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -29,7 +31,8 @@ public class CharacterMediaMetadataController : ControllerBase
     {
         try
         {
-            var metadataFile = await _characterMediaMetadataService.GetCharacterMediaMetadataFileAsync();
+            var query = new GetCharacterMediaMetadataFileQuery();
+            var metadataFile = await _mediator.Send(query);
             return Ok(metadataFile);
         }
         catch (Exception ex)
@@ -51,7 +54,9 @@ public class CharacterMediaMetadataController : ControllerBase
     {
         try
         {
-            var entry = await _characterMediaMetadataService.GetCharacterMediaMetadataEntryAsync(entryId);
+            var query = new GetCharacterMediaMetadataEntryQuery(entryId);
+            var entry = await _mediator.Send(query);
+
             if (entry == null)
             {
                 return NotFound(new ErrorResponse
@@ -60,6 +65,7 @@ public class CharacterMediaMetadataController : ControllerBase
                     TraceId = HttpContext.TraceIdentifier
                 });
             }
+
             return Ok(entry);
         }
         catch (Exception ex)
