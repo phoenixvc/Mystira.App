@@ -11,9 +11,22 @@ The Mystira repository hosts the full suite of services, libraries, and client a
 
 > **Why this matters:** Everything in the repo builds against the same runtime, which simplifies dependency management, improves security posture, and keeps developer tooling consistent.
 
+## Deployments
+
+| Environment | Service | URL |
+|-------------|---------|-----|
+| **Production** | PWA | [mystira.app](https://mystira.app) |
+| **Production** | PWA (Azure) | [blue-water-0eab7991e.3.azurestaticapps.net](https://blue-water-0eab7991e.3.azurestaticapps.net) |
+| **Production** | API | [prod-wus-app-mystira-api.azurewebsites.net](https://prod-wus-app-mystira-api.azurewebsites.net) |
+| **Production** | Admin API | [prod-wus-app-mystira-api-admin.azurewebsites.net](https://prod-wus-app-mystira-api-admin.azurewebsites.net) |
+| **Development** | PWA | [mango-water-04fdb1c03.3.azurestaticapps.net](https://mango-water-04fdb1c03.3.azurestaticapps.net) |
+| **Development** | API | [mystira-app-dev-api.azurewebsites.net/swagger](https://mystira-app-dev-api.azurewebsites.net/swagger) |
+| **Development** | Admin API | [dev-euw-app-mystira-admin-api.azurewebsites.net/swagger](https://dev-euw-app-mystira-admin-api.azurewebsites.net/swagger) |
+
 ## Contents
 
 - [Mystira Application Suite](#mystira-application-suite)
+  - [Deployments](#deployments)
   - [Contents](#contents)
   - [Repository Overview](#repository-overview)
   - [Technology Stack](#technology-stack)

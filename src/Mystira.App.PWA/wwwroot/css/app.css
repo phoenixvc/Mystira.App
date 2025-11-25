@@ -134,7 +134,7 @@ html, body {
     color: white;
     text-align: center;
     padding: 0.5rem;
-    z-index: 1030; /* Bootstrap navbar is 1030, this should be below it */
+    z-index: 1020; /* Below navbar (1030) to avoid overlap */
     font-size: 0.875rem;
 }
 
