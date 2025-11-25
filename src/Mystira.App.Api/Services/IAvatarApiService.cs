@@ -4,8 +4,19 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Api.Services;
 
 /// <summary>
-/// Service interface for managing avatar configurations
+/// DEPRECATED: This service violates hexagonal architecture.
+/// Controllers should use IMediator (CQRS pattern) instead.
 /// </summary>
+/// <remarks>
+/// Migration guide:
+/// - GetAvatarsAsync → GetAvatarsQuery
+/// - GetAvatarsByAgeGroupAsync → GetAvatarsByAgeGroupQuery
+/// - GetAvatarConfigurationFileAsync → (Create GetAvatarConfigurationFileQuery if needed)
+/// - UpdateAvatarConfigurationFileAsync → (Create UpdateAvatarConfigurationFileCommand if needed)
+/// - SetAvatarsForAgeGroupAsync → (Create SetAvatarsForAgeGroupCommand if needed)
+/// See ARCHITECTURAL_REFACTORING_PLAN.md for details.
+/// </remarks>
+[Obsolete("Use IMediator with CQRS queries/commands instead. See ARCHITECTURAL_REFACTORING_PLAN.md")]
 public interface IAvatarApiService
 {
     /// <summary>
