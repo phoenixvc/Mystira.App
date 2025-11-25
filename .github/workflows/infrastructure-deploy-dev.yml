@@ -1,26 +1,26 @@
-name: Infrastructure Deployment - Dev Environment
+name: Infrastructure Deploy - Dev
 
 on:
   workflow_dispatch:
     inputs:
       action:
-        description: 'Action to perform'
+        description: 'Deployment action'
         required: true
         type: choice
         options:
           - validate
           - preview
           - deploy
-          - destroy
-        default: 'validate'
-      destroyInfrastructure:
-        description: 'Confirm destruction (only for destroy action)'
-        required: false
-        type: boolean
-        default: false
+      environment:
+        description: 'Environment'
+        required: true
+        type: choice
+        options:
+          - dev
+        default: 'dev'
   pull_request:
     paths:
-      - 'infrastructure/dev/**'
+      - 'src/Mystira.App.Infrastructure.Azure/Deployment/dev/**'
     branches:
       - dev
       - main
@@ -30,11 +30,10 @@ permissions:
   contents: read
 
 env:
-  AZURE_SUBSCRIPTION_ID: '22f9eb18-6553-4b7d-9451-47d0195085fe'
-  AZURE_RESOURCE_GROUP: 'dev-euw-rg-mystira'
-  AZURE_LOCATION: 'westeurope'
-  BICEP_FILE: 'infrastructure/dev/main.bicep'
-  PARAMETERS_FILE: 'infrastructure/dev/main.parameters.json'
+  ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+  LOCATION: 'westeurope'
+  RESOURCE_GROUP: 'dev-euw-rg-mystira-app'
+  SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
 jobs:
   check-secrets:
@@ -43,110 +42,114 @@ jobs:
     outputs:
       has-azure-secrets: ${{ steps.check.outputs.has-azure-secrets }}
       has-jwt-secret: ${{ steps.check.outputs.has-jwt-secret }}
-      has-acs-secret: ${{ steps.check.outputs.has-acs-secret }}
     steps:
       - name: Check secrets availability
         id: check
         run: |
-          echo "has-azure-secrets=${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' }}" >> $GITHUB_OUTPUT
+          echo "has-azure-secrets=${{ secrets.AZURE_CREDENTIALS != '' }}" >> $GITHUB_OUTPUT
           echo "has-jwt-secret=${{ secrets.JWT_SECRET_KEY != '' }}" >> $GITHUB_OUTPUT
-          echo "has-acs-secret=${{ secrets.ACS_CONNECTION_STRING != '' }}" >> $GITHUB_OUTPUT
 
   validate:
+    if: github.event.inputs.action == 'validate'
     runs-on: ubuntu-latest
     needs: [check-secrets]
-    name: Validate Bicep Templates
+    environment: development
     if: |
-      github.event_name == 'workflow_dispatch' && 
-      (github.event.inputs.action == 'validate' || github.event.inputs.action == 'preview' || github.event.inputs.action == 'deploy') &&
       needs.check-secrets.outputs.has-azure-secrets == 'true' &&
       needs.check-secrets.outputs.has-jwt-secret == 'true'
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Validate Bicep template
-        uses: azure/arm-deploy@v2
-        with:
-          subscriptionId: ${{ env.AZURE_SUBSCRIPTION_ID }}
-          resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
-          template: ${{ env.BICEP_FILE }}
-          parameters: ${{ env.PARAMETERS_FILE }} jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} acsConnectionString=${{ secrets.ACS_CONNECTION_STRING || 'not-configured' }}
-          deploymentMode: Validate
+    - uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Set Azure Subscription
+      run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
+    
+    - name: Validate Bicep Templates
+      run: |
+        az deployment group validate \
+          --resource-group "${{ env.RESOURCE_GROUP }}" \
+          --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/dev/main.bicep' \
+          --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=dummy deployStorage=true deployCosmos=true deployAppService=true \
+          --output json
 
   preview:
+    if: github.event.inputs.action == 'preview' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     needs: [check-secrets]
-    name: Preview Infrastructure Changes (What-If)
+    environment: development
     if: |
-      ((github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'preview') ||
-      github.event_name == 'pull_request') &&
       needs.check-secrets.outputs.has-azure-secrets == 'true' &&
       needs.check-secrets.outputs.has-jwt-secret == 'true'
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Run What-If Analysis
-        id: whatif
-        run: |
-          echo "::group::Running What-If Analysis"
-          az deployment group what-if \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --template-file ${{ env.BICEP_FILE }} \
-            --parameters ${{ env.PARAMETERS_FILE }} \
-            --parameters jwtSecretKey="${{ secrets.JWT_SECRET_KEY }}" \
-            --parameters acsConnectionString="${{ secrets.ACS_CONNECTION_STRING || 'not-configured' }}" \
-            --no-pretty-print
-          echo "::endgroup::"
-
-      - name: Comment PR with What-If Results
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const output = `#### Infrastructure What-If Analysis 🔍
-            
-            <details><summary>Show What-If Results</summary>
-            
-            \`\`\`
-            ${{ steps.whatif.outputs.stdout }}
-            \`\`\`
-            
-            </details>
-            
-            *Workflow: \`${{ github.workflow }}\`, Run: [\`${{ github.run_number }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*`;
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            });
+    - uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Set Azure Subscription
+      run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
+    
+    - name: Create Resource Group if not exists
+      run: |
+        az group create \
+          --name "${{ env.RESOURCE_GROUP }}" \
+          --location "${{ env.LOCATION }}" \
+          --output none || true
+    
+    - name: Preview Infrastructure Changes (What-If)
+      id: whatif
+      run: |
+        az deployment group what-if \
+          --resource-group "${{ env.RESOURCE_GROUP }}" \
+          --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/dev/main.bicep' \
+          --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} deployStorage=true deployCosmos=true deployAppService=true \
+          --output json > what-if-output.json
+        cat what-if-output.json
+    
+    - name: Comment PR with What-If Results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const whatIfOutput = fs.readFileSync('what-if-output.json', 'utf8');
+          const output = `#### Infrastructure What-If Analysis 🔍
+          
+          <details><summary>Show What-If Results</summary>
+          
+          \`\`\`json
+          ${whatIfOutput}
+          \`\`\`
+          
+          </details>
+          
+          *Workflow: \`${{ github.workflow }}\`, Run: [\`${{ github.run_number }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          });
 
   preview-skip:
     runs-on: ubuntu-latest
     needs: [check-secrets]
     name: Preview Skipped - Missing Secrets
     if: |
-      ((github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'preview') ||
-      github.event_name == 'pull_request') &&
-      (needs.check-secrets.outputs.has-azure-secrets != 'true' ||
-      needs.check-secrets.outputs.has-jwt-secret != 'true')
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'preview') ||
+      github.event_name == 'pull_request'
+    if: |
+      needs.check-secrets.outputs.has-azure-secrets != 'true' ||
+      needs.check-secrets.outputs.has-jwt-secret != 'true'
     steps:
       - name: Comment PR about missing secrets
         if: github.event_name == 'pull_request'
@@ -158,11 +161,8 @@ jobs:
             **Preview skipped**: Required secrets are not configured.
             
             Please configure the following secrets:
-            - \`AZURE_CLIENT_ID\` ${{ needs.check-secrets.outputs.has-azure-secrets == 'true' && '✅' || '❌' }}
-            - \`AZURE_TENANT_ID\` ${{ needs.check-secrets.outputs.has-azure-secrets == 'true' && '✅' || '❌' }}
+            - \`AZURE_CREDENTIALS\` ${{ needs.check-secrets.outputs.has-azure-secrets == 'true' && '✅' || '❌' }}
             - \`JWT_SECRET_KEY\` ${{ needs.check-secrets.outputs.has-jwt-secret == 'true' && '✅' || '❌' }}
-            
-            See: [infrastructure/SECRETS_SETUP_GUIDE.md](https://github.com/${{ github.repository }}/blob/${{ github.head_ref || github.ref_name }}/infrastructure/SECRETS_SETUP_GUIDE.md)
             
             *Workflow: \`${{ github.workflow }}\`, Run: [\`${{ github.run_number }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*`;
             
@@ -177,79 +177,60 @@ jobs:
         run: |
           echo "::warning::Infrastructure preview skipped due to missing secrets"
           echo "Required secrets status:"
-          echo "  AZURE_CLIENT_ID & AZURE_TENANT_ID: ${{ needs.check-secrets.outputs.has-azure-secrets }}"
+          echo "  AZURE_CREDENTIALS: ${{ needs.check-secrets.outputs.has-azure-secrets }}"
           echo "  JWT_SECRET_KEY: ${{ needs.check-secrets.outputs.has-jwt-secret }}"
-          echo ""
-          echo "See infrastructure/SECRETS_SETUP_GUIDE.md for setup instructions"
 
   deploy:
+    if: github.event.inputs.action == 'deploy'
     runs-on: ubuntu-latest
     needs: [check-secrets, validate]
-    name: Deploy Infrastructure
+    environment: development
     if: |
-      github.event_name == 'workflow_dispatch' && 
-      github.event.inputs.action == 'deploy' &&
       needs.check-secrets.outputs.has-azure-secrets == 'true' &&
       needs.check-secrets.outputs.has-jwt-secret == 'true'
-    environment:
-      name: development
-      url: ${{ steps.deploy.outputs.apiAppServiceUrl }}
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Deploy Bicep template
-        id: deploy
-        uses: azure/arm-deploy@v2
-        with:
-          subscriptionId: ${{ env.AZURE_SUBSCRIPTION_ID }}
-          resourceGroupName: ${{ env.AZURE_RESOURCE_GROUP }}
-          template: ${{ env.BICEP_FILE }}
-          parameters: ${{ env.PARAMETERS_FILE }} jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} acsConnectionString=${{ secrets.ACS_CONNECTION_STRING }}
-          deploymentName: 'mystira-dev-${{ github.run_number }}'
-          failOnStdErr: false
-
-      - name: Output deployment details
-        run: |
-          echo "API App Service URL: ${{ steps.deploy.outputs.apiAppServiceUrl }}"
-          echo "Admin API App Service URL: ${{ steps.deploy.outputs.adminApiAppServiceUrl }}"
-          echo "Storage Account: ${{ steps.deploy.outputs.storageAccountName }}"
-          echo "Cosmos DB Account: ${{ steps.deploy.outputs.cosmosDbAccountName }}"
-
-  destroy:
-    runs-on: ubuntu-latest
-    needs: [check-secrets]
-    name: Destroy Infrastructure
-    if: |
-      github.event_name == 'workflow_dispatch' && 
-      github.event.inputs.action == 'destroy' && 
-      github.event.inputs.destroyInfrastructure == 'true' &&
-      needs.check-secrets.outputs.has-azure-secrets == 'true'
-    environment:
-      name: development-destroy
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Delete Resource Group
-        run: |
-          echo "⚠️ WARNING: Deleting resource group ${{ env.AZURE_RESOURCE_GROUP }}"
-          az group delete \
-            --name ${{ env.AZURE_RESOURCE_GROUP }} \
-            --subscription ${{ env.AZURE_SUBSCRIPTION_ID }} \
-            --yes \
-            --no-wait
+    - uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Set Azure Subscription
+      run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
+    
+    - name: Create Resource Group if not exists
+      run: |
+        az group create \
+          --name "${{ env.RESOURCE_GROUP }}" \
+          --location "${{ env.LOCATION }}" \
+          --output none || true
+    
+    - name: Deploy Infrastructure (Incremental - Safe Mode)
+      id: deploy
+      run: |
+        # ⚠️ SAFETY: Using --mode Incremental to prevent accidental resource deletion
+        # Incremental mode only creates/updates resources in the template, never deletes existing ones
+        az deployment group create \
+          --resource-group "${{ env.RESOURCE_GROUP }}" \
+          --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/dev/main.bicep' \
+          --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} deployStorage=true deployCosmos=true deployAppService=true \
+          --mode Incremental \
+          --name "mystira-app-dev-$(date +%Y%m%d-%H%M%S)" \
+          --output json
+    
+    - name: Get Deployment Outputs
+      id: outputs
+      run: |
+        APP_SERVICE_URL=$(az deployment group show \
+          --resource-group "${{ env.RESOURCE_GROUP }}" \
+          --name "$(az deployment group list --resource-group ${{ env.RESOURCE_GROUP }} --query '[0].name' -o tsv)" \
+          --query "properties.outputs.appServiceUrl.value" -o tsv)
+        echo "appServiceUrl=$APP_SERVICE_URL" >> $GITHUB_OUTPUT
+    
+    - name: Deployment Summary
+      run: |
+        echo "✅ Infrastructure deployed successfully!"
+        echo "📊 Resource Group: ${{ env.RESOURCE_GROUP }}"
+        echo "🌐 App Service URL: ${{ steps.outputs.outputs.appServiceUrl }}"

@@ -5,15 +5,58 @@ interface WhatIfChange {
   resourceName: string;
   changeType: 'create' | 'modify' | 'delete' | 'noChange';
   changes?: string[];
+  selected?: boolean;
+  resourceId?: string;
 }
 
 interface WhatIfViewerProps {
   changes?: WhatIfChange[];
   loading?: boolean;
+  onSelectionChange?: (changes: WhatIfChange[]) => void;
+  showSelection?: boolean;
 }
 
-function WhatIfViewer({ changes, loading }: WhatIfViewerProps) {
+function WhatIfViewer({ changes, loading, onSelectionChange, showSelection = false }: WhatIfViewerProps) {
   const [expandedResources, setExpandedResources] = useState<Set<string>>(new Set());
+  const [localChanges, setLocalChanges] = useState<WhatIfChange[]>(changes || []);
+  
+  // Sync local changes with props
+  useState(() => {
+    if (changes) {
+      const withSelection = changes.map(c => ({ ...c, selected: c.selected !== false }));
+      setLocalChanges(withSelection);
+    }
+  });
+  
+  const toggleResourceSelection = (resourceName: string) => {
+    const updated = localChanges.map(change => 
+      change.resourceName === resourceName 
+        ? { ...change, selected: !change.selected }
+        : change
+    );
+    setLocalChanges(updated);
+    if (onSelectionChange) {
+      onSelectionChange(updated);
+    }
+  };
+  
+  const selectAll = () => {
+    const updated = localChanges.map(change => ({ ...change, selected: true }));
+    setLocalChanges(updated);
+    if (onSelectionChange) {
+      onSelectionChange(updated);
+    }
+  };
+  
+  const deselectAll = () => {
+    const updated = localChanges.map(change => ({ ...change, selected: false }));
+    setLocalChanges(updated);
+    if (onSelectionChange) {
+      onSelectionChange(updated);
+    }
+  };
+  
+  const selectedCount = localChanges.filter(c => c.selected).length;
 
   const toggleResource = (resourceName: string) => {
     setExpandedResources((prev) => {
@@ -104,7 +147,28 @@ function WhatIfViewer({ changes, loading }: WhatIfViewerProps) {
     <div className="border border-gray-200 rounded-lg overflow-hidden">
       {/* Summary Header */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 p-4">
-        <h3 className="font-semibold text-gray-900 mb-3">Infrastructure Changes Preview</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-gray-900">Infrastructure Changes Preview</h3>
+          {showSelection && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={selectAll}
+                className="text-xs px-2 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50"
+              >
+                Select All
+              </button>
+              <button
+                onClick={deselectAll}
+                className="text-xs px-2 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50"
+              >
+                Deselect All
+              </button>
+              <span className="text-xs text-gray-600">
+                {selectedCount} of {localChanges.length} selected
+              </span>
+            </div>
+          )}
+        </div>
         <div className="grid grid-cols-4 gap-3">
           {createCount > 0 && (
             <div className="bg-white border border-green-200 rounded-lg p-3 text-center">
@@ -135,41 +199,55 @@ function WhatIfViewer({ changes, loading }: WhatIfViewerProps) {
 
       {/* Changes List */}
       <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-        {changes.map((change, index) => {
+        {localChanges.map((change, index) => {
           const isExpanded = expandedResources.has(change.resourceName);
           const hasDetails = change.changes && change.changes.length > 0;
+          const isSelected = change.selected !== false;
 
           return (
             <div
               key={index}
-              className={`${getChangeTypeColor(change.changeType)} border-l-4`}
+              className={`${getChangeTypeColor(change.changeType)} border-l-4 ${!isSelected && showSelection ? 'opacity-50' : ''}`}
             >
-              <button
-                onClick={() => hasDetails && toggleResource(change.resourceName)}
-                className="w-full px-4 py-3 text-left hover:bg-opacity-75 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <span className="font-mono text-lg font-bold">
-                      {getChangeTypeIcon(change.changeType)}
-                    </span>
-                    <div>
-                      <div className="font-medium">{change.resourceName}</div>
-                      <div className="text-sm opacity-75">{change.resourceType}</div>
+              <div className="flex items-start">
+                {showSelection && (
+                  <div className="px-3 py-3 flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleResourceSelection(change.resourceName)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+                <button
+                  onClick={() => hasDetails && toggleResource(change.resourceName)}
+                  className="flex-1 px-4 py-3 text-left hover:bg-opacity-75 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <span className="font-mono text-lg font-bold">
+                        {getChangeTypeIcon(change.changeType)}
+                      </span>
+                      <div>
+                        <div className="font-medium">{change.resourceName}</div>
+                        <div className="text-sm opacity-75">{change.resourceType}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs font-semibold px-2 py-1 rounded">
+                        {getChangeTypeLabel(change.changeType)}
+                      </span>
+                      {hasDetails && (
+                        <span className="text-sm">
+                          {isExpanded ? '▼' : '▶'}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs font-semibold px-2 py-1 rounded">
-                      {getChangeTypeLabel(change.changeType)}
-                    </span>
-                    {hasDetails && (
-                      <span className="text-sm">
-                        {isExpanded ? '▼' : '▶'}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </button>
+                </button>
+              </div>
 
               {/* Expanded Details */}
               {isExpanded && hasDetails && (
@@ -206,6 +284,47 @@ function WhatIfViewer({ changes, loading }: WhatIfViewerProps) {
           </div>
         </div>
       )}
+
+      {/* Dependency warnings */}
+      {showSelection && (() => {
+        const selectedModules = new Set(
+          localChanges
+            .filter(c => c.selected !== false)
+            .map(c => {
+              const type = (c.resourceType || '').toLowerCase();
+              if (type.includes('web/sites') || type.includes('appservice') || type.includes('web/serverfarms')) return 'appservice';
+              if (type.includes('documentdb') || type.includes('cosmos')) return 'cosmos';
+              if (type.includes('storage') && type.includes('account')) return 'storage';
+              return null;
+            })
+            .filter(Boolean)
+        );
+        
+        const hasAppService = selectedModules.has('appservice');
+        const hasCosmos = selectedModules.has('cosmos');
+        const hasStorage = selectedModules.has('storage');
+        const missingDeps: string[] = [];
+        
+        if (hasAppService) {
+          if (!hasCosmos) missingDeps.push('Cosmos DB');
+          if (!hasStorage) missingDeps.push('Storage Account');
+        }
+        
+        return missingDeps.length > 0 ? (
+          <div className="bg-yellow-50 border-t border-yellow-200 p-4">
+            <div className="flex items-start">
+              <span className="text-2xl mr-3">⚠️</span>
+              <div>
+                <div className="font-semibold text-yellow-900 mb-1">Dependency Warning</div>
+                <div className="text-sm text-yellow-800">
+                  App Service is selected but {missingDeps.join(' and ')} {missingDeps.length === 1 ? 'is' : 'are'} not selected.
+                  App Service requires these dependencies to function. Please select {missingDeps.join(' and ')} before deploying.
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null;
+      })()}
     </div>
   );
 }

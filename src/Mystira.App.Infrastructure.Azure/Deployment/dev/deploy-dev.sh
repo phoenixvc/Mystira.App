@@ -6,9 +6,9 @@ set -e
 # ⚠️ CONFIGURATION REQUIRED: Update these default values for your deployment
 # Default values - ⚠️ UPDATE: Change these defaults to match your environment
 ENVIRONMENT="dev" # ⚠️ UPDATE: Set to 'dev', 'staging', or 'prod'
-RESOURCE_GROUP="dev-wus-app-mystira" # ⚠️ UPDATE: Set your resource group name (e.g., 'myapp-rg-dev')
-LOCATION="westus" # ⚠️ UPDATE: Set your preferred Azure region
-SUBSCRIPTION_ID="991fddfd-dba0-4154-88fb-00abc2108e69" # ⚠️ UPDATE: Set your Azure subscription ID
+RESOURCE_GROUP="dev-euw-rg-mystira-app" # ⚠️ UPDATE: Set your resource group name (standardized format: {env}-{location}-rg-{app})
+LOCATION="westeurope" # ⚠️ UPDATE: Set your preferred Azure region
+SUBSCRIPTION_ID="22f9eb18-6553-4b7d-9451-47d0195085fe" # ⚠️ UPDATE: Phoenix Azure Sponsorship subscription ID
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -34,7 +34,7 @@ while [[ $# -gt 0 ]]; do
             echo "Options:"
             echo "  -e, --environment    Environment (dev, staging, prod) [default: dev]"
             echo "  -g, --resource-group Resource group name [required]"
-            echo "  -l, --location       Azure location [default: westus]"
+            echo "  -l, --location       Azure location [default: westeurope]"
             echo "  -s, --subscription   Azure subscription ID [optional]"
             echo "  -h, --help          Show this help message"
             exit 0
@@ -85,16 +85,22 @@ if [ ! -f "$BICEP_TEMPLATE" ]; then
     exit 1
 fi
 
-# Deploy infrastructure
-echo "🏗️  Deploying Azure resources..."
+# Deploy infrastructure (Incremental mode - SAFE: won't delete resources not in template)
+echo "🏗️  Deploying Azure resources (Incremental mode - safe, won't delete existing resources)..."
 DEPLOYMENT_NAME="mystira-app-$ENVIRONMENT-$(date +%Y%m%d-%H%M%S)"
 
+# ⚠️ SAFETY: Using --mode Incremental (default) to prevent accidental resource deletion
+# Incremental mode only creates/updates resources in the template, never deletes existing ones
 az deployment group create \
     --resource-group "$RESOURCE_GROUP" \
     --template-file "$BICEP_TEMPLATE" \
     --parameters environment="$ENVIRONMENT" \
                location="$LOCATION" \
                jwtSecretKey="$JWT_SECRET" \
+               deployStorage=true \
+               deployCosmos=true \
+               deployAppService=true \
+    --mode Incremental \
     --name "$DEPLOYMENT_NAME" \
     --output table
 

@@ -10,18 +10,26 @@ param location string = resourceGroup().location // ⚠️ UPDATE: Set your pref
 @secure()
 param jwtSecretKey string = newGuid() // ⚠️ UPDATE: Provide your own secure JWT key for production
 
-@description('Object ID for Key Vault admin access')
-param keyVaultAdminObjectId string // ⚠️ REQUIRED: Provide the Object ID of the user/service principal for Key Vault access
+@description('Resources to deploy (empty array = deploy all)')
+param deployStorage bool = true
+@description('Deploy Cosmos DB')
+param deployCosmos bool = true
+@description('Deploy App Service')
+param deployAppService bool = true
+
+@description('Object ID for Key Vault admin access (optional)')
+param keyVaultAdminObjectId string = ''
 
 @description('Location short name')
-param shortLocation string = 'wus'
+param shortLocation string = 'euw'
 
-// Variables - ⚠️ UPDATE: Change 'mystira' to your app name
-var resourcePrefix = 'mystira-app-${environment}' // ⚠️ UPDATE: Change 'mystira' prefix to your app name
+// Variables - Standardized naming: {env}-{location}-app-{name}
+var resourcePrefix = '${environment}-euw-app-mystira' // Standardized format: {env}-{location}-app-{name}
 var cosmosDbName = replace('${resourcePrefix}cosmos', '-', '')  // Remove hyphens for Cosmos DB name
+var appServiceName = '${resourcePrefix}-api' // App Service name with -api suffix
 
-// Deploy Key Vault for Story Protocol secrets
-module keyVault 'key-vault.bicep' = {
+// Deploy Key Vault for Story Protocol secrets (conditional - only if keyVaultAdminObjectId is provided)
+module keyVault 'key-vault.bicep' = if (keyVaultAdminObjectId != '') {
   name: 'keyvault-deployment'
   params: {
     environment: environment
@@ -31,18 +39,18 @@ module keyVault 'key-vault.bicep' = {
   }
 }
 
-// Deploy Storage Account
-module storage 'storage.bicep' = {
+// Deploy Storage Account (conditional)
+module storage 'storage.bicep' = if (deployStorage) {
   name: 'storage-deployment'
   params: {
     storageAccountName: '${replace(resourcePrefix, '-', '')}storage'
     location: location
-    sku: environment == 'prod' ? 'Standard_GRS' : 'Standard_LRS' // ⚠️ UPDATE: Update according to data needs
+    sku: environment == 'prod' ? 'Standard_GRS' : 'Standard_LRS'
   }
 }
 
-// Deploy Cosmos DB
-module cosmosDb 'cosmos-db.bicep' = {
+// Deploy Cosmos DB (conditional)
+module cosmosDb 'cosmos-db.bicep' = if (deployCosmos) {
   name: 'cosmosdb-deployment'
   params: {
     cosmosDbAccountName: cosmosDbName
@@ -51,24 +59,24 @@ module cosmosDb 'cosmos-db.bicep' = {
   }
 }
 
-// Deploy App Service
-module appService 'app-service.bicep' = {
+// Deploy App Service (conditional)
+module appService 'app-service.bicep' = if (deployAppService) {
   name: 'appservice-deployment'
   params: {
-    appServiceName: '${resourcePrefix}-api'
+    appServiceName: appServiceName
     location: location
     sku: environment == 'prod' ? 'P1v3' : 'B1'
-    cosmosDbConnectionString: cosmosDb.outputs.cosmosDbConnectionString
-    storageConnectionString: storage.outputs.storageConnectionString
+    cosmosDbConnectionString: deployCosmos ? cosmosDb.outputs.cosmosDbConnectionString : ''
+    storageConnectionString: deployStorage ? storage.outputs.storageConnectionString : ''
     jwtSecretKey: jwtSecretKey
-    keyVaultName: keyVault.outputs.keyVaultName
+    keyVaultName: keyVaultAdminObjectId != '' ? keyVault.outputs.keyVaultName : ''
   }
 }
 
-// Outputs
-output appServiceUrl string = appService.outputs.appServiceUrl
-output storageAccountName string = storage.outputs.storageAccountName
-output cosmosDbAccountName string = cosmosDb.outputs.cosmosDbAccountName
-output mediaContainerUrl string = storage.outputs.mediaContainerUrl
-output keyVaultName string = keyVault.outputs.keyVaultName
-output keyVaultUri string = keyVault.outputs.keyVaultUri
+// Outputs (conditional based on what was deployed)
+output appServiceUrl string = deployAppService ? appService.outputs.appServiceUrl : ''
+output storageAccountName string = deployStorage ? storage.outputs.storageAccountName : ''
+output cosmosDbAccountName string = deployCosmos ? cosmosDb.outputs.cosmosDbAccountName : ''
+output mediaContainerUrl string = deployStorage ? storage.outputs.mediaContainerUrl : ''
+output keyVaultName string = keyVaultAdminObjectId != '' ? keyVault.outputs.keyVaultName : ''
+output keyVaultUri string = keyVaultAdminObjectId != '' ? keyVault.outputs.keyVaultUri : ''

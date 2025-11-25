@@ -108,6 +108,8 @@ export interface WhatIfChange {
   resourceName: string;
   changeType: 'create' | 'modify' | 'delete' | 'noChange';
   changes?: string[];
+  selected?: boolean; // For resource selection
+  resourceId?: string; // Full Azure resource ID
 }
 
 export interface WorkflowStatus {

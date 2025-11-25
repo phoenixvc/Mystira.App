@@ -216,6 +216,358 @@ async fn infrastructure_deploy(workflow_file: String, repository: String) -> Res
     execute_devhub_cli("infrastructure.deploy".to_string(), args).await
 }
 
+// Direct Azure CLI deployment commands
+#[tauri::command]
+async fn azure_deploy_infrastructure(
+    repo_root: String,
+    environment: String,
+    resource_group: Option<String>,
+    location: Option<String>,
+    deploy_storage: Option<bool>,
+    deploy_cosmos: Option<bool>,
+    deploy_app_service: Option<bool>,
+) -> Result<CommandResponse, String> {
+    let env = environment.as_str();
+    let rg = resource_group.unwrap_or_else(|| {
+        match env {
+            "dev" => "dev-euw-rg-mystira-app".to_string(),
+            "prod" => "prod-euw-rg-mystira-app".to_string(),
+            _ => format!("{}-euw-rg-mystira-app", env),
+        }
+    });
+    let loc = location.unwrap_or_else(|| "westeurope".to_string());
+    let sub_id = "22f9eb18-6553-4b7d-9451-47d0195085fe"; // Phoenix Azure Sponsorship
+    
+    let deployment_path = format!(
+        "{}/src/Mystira.App.Infrastructure.Azure/Deployment/{}",
+        repo_root, env
+    );
+    
+    // Check if Azure CLI is available
+    let az_check = Command::new("az")
+        .arg("--version")
+        .output();
+    
+    if az_check.is_err() {
+        return Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some("Azure CLI not found. Please install Azure CLI first.".to_string()),
+        });
+    }
+    
+    // Check if logged in
+    let account_check = Command::new("az")
+        .arg("account")
+        .arg("show")
+        .output();
+    
+    if account_check.is_err() || !account_check.unwrap().status.success() {
+        return Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some("Not logged in to Azure. Please run 'az login' first.".to_string()),
+        });
+    }
+    
+    // Set subscription
+    let set_sub = Command::new("az")
+        .arg("account")
+        .arg("set")
+        .arg("--subscription")
+        .arg(sub_id)
+        .output();
+    
+    if set_sub.is_err() || !set_sub.unwrap().status.success() {
+        return Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some(format!("Failed to set subscription: {}", sub_id)),
+        });
+    }
+    
+    // Create resource group if it doesn't exist
+    let rg_create = Command::new("az")
+        .arg("group")
+        .arg("create")
+        .arg("--name")
+        .arg(&rg)
+        .arg("--location")
+        .arg(&loc)
+        .arg("--output")
+        .arg("none")
+        .output();
+    
+    // Ignore errors if resource group already exists
+    
+    // Deploy using bicep
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let deployment_name = format!("mystira-app-{}-{}", env, timestamp);
+    
+    // Use explicit deployment flags from frontend (more reliable than name matching)
+    let deploy_storage = deploy_storage.unwrap_or(true);
+    let deploy_cosmos = deploy_cosmos.unwrap_or(true);
+    let deploy_app_service = deploy_app_service.unwrap_or(true);
+    
+    // Validate dependencies: App Service requires Cosmos and Storage
+    if deploy_app_service && (!deploy_cosmos || !deploy_storage) {
+        return Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some("App Service requires Cosmos DB and Storage Account to be deployed. Please select all dependencies.".to_string()),
+        });
+    }
+    
+    // Build parameters string
+    let params = format!("environment={} location={} deployStorage={} deployCosmos={} deployAppService={}", 
+        env, loc, deploy_storage, deploy_cosmos, deploy_app_service);
+    
+    // ⚠️ SAFETY: Always use Incremental mode to prevent accidental resource deletion
+    // Incremental mode only creates/updates resources in the template, never deletes existing ones
+    let deploy_output = Command::new("az")
+        .arg("deployment")
+        .arg("group")
+        .arg("create")
+        .arg("--resource-group")
+        .arg(&rg)
+        .arg("--template-file")
+        .arg(format!("{}/main.bicep", deployment_path))
+        .arg("--parameters")
+        .arg(&params)
+        .arg("--mode")
+        .arg("Incremental")
+        .arg("--name")
+        .arg(&deployment_name)
+        .current_dir(&deployment_path)
+        .output();
+    
+    match deploy_output {
+        Ok(output) => {
+            if output.status.success() {
+                // Get deployment outputs
+                let outputs = Command::new("az")
+                    .arg("deployment")
+                    .arg("group")
+                    .arg("show")
+                    .arg("--resource-group")
+                    .arg(&rg)
+                    .arg("--name")
+                    .arg(&deployment_name)
+                    .arg("--query")
+                    .arg("properties.outputs")
+                    .arg("--output")
+                    .arg("json")
+                    .output();
+                
+                let outputs_json = outputs
+                    .ok()
+                    .and_then(|o| String::from_utf8(o.stdout).ok())
+                    .and_then(|s| serde_json::from_str::<Value>(&s).ok());
+                
+                Ok(CommandResponse {
+                    success: true,
+                    result: Some(serde_json::json!({
+                        "deploymentName": deployment_name,
+                        "resourceGroup": rg,
+                        "environment": env,
+                        "outputs": outputs_json
+                    })),
+                    message: Some(format!("Infrastructure deployed successfully to {}", rg)),
+                    error: None,
+                })
+            } else {
+                let error_msg = String::from_utf8_lossy(&output.stderr);
+                Ok(CommandResponse {
+                    success: false,
+                    result: None,
+                    message: None,
+                    error: Some(format!("Deployment failed: {}", error_msg)),
+                })
+            }
+        }
+        Err(e) => Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some(format!("Failed to execute deployment: {}", e)),
+        }),
+    }
+}
+
+#[tauri::command]
+async fn azure_validate_infrastructure(
+    repo_root: String,
+    environment: String,
+    resource_group: Option<String>,
+) -> Result<CommandResponse, String> {
+    let env = environment.as_str();
+    let rg = resource_group.unwrap_or_else(|| {
+        match env {
+            "dev" => "dev-euw-rg-mystira-app".to_string(),
+            "prod" => "prod-euw-rg-mystira-app".to_string(),
+            _ => format!("{}-euw-rg-mystira-app", env),
+        }
+    });
+    let sub_id = "22f9eb18-6553-4b7d-9451-47d0195085fe";
+    
+    let deployment_path = format!(
+        "{}/src/Mystira.App.Infrastructure.Azure/Deployment/{}",
+        repo_root, env
+    );
+    
+    // Set subscription
+    let _ = Command::new("az")
+        .arg("account")
+        .arg("set")
+        .arg("--subscription")
+        .arg(sub_id)
+        .output();
+    
+    // Validate bicep
+    let validate_output = Command::new("az")
+        .arg("deployment")
+        .arg("group")
+        .arg("validate")
+        .arg("--resource-group")
+        .arg(&rg)
+        .arg("--template-file")
+        .arg(format!("{}/main.bicep", deployment_path))
+        .arg("--parameters")
+        .arg(format!("environment={} location=westeurope", env))
+        .current_dir(&deployment_path)
+        .output();
+    
+    match validate_output {
+        Ok(output) => {
+            if output.status.success() {
+                Ok(CommandResponse {
+                    success: true,
+                    result: Some(serde_json::json!({
+                        "message": "Bicep templates are valid"
+                    })),
+                    message: Some("Validation successful".to_string()),
+                    error: None,
+                })
+            } else {
+                let error_msg = String::from_utf8_lossy(&output.stderr);
+                Ok(CommandResponse {
+                    success: false,
+                    result: None,
+                    message: None,
+                    error: Some(format!("Validation failed: {}", error_msg)),
+                })
+            }
+        }
+        Err(e) => Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some(format!("Failed to validate: {}", e)),
+        }),
+    }
+}
+
+#[tauri::command]
+async fn azure_preview_infrastructure(
+    repo_root: String,
+    environment: String,
+    resource_group: Option<String>,
+) -> Result<CommandResponse, String> {
+    let env = environment.as_str();
+    let rg = resource_group.unwrap_or_else(|| {
+        match env {
+            "dev" => "dev-euw-rg-mystira-app".to_string(),
+            "prod" => "prod-euw-rg-mystira-app".to_string(),
+            _ => format!("{}-euw-rg-mystira-app", env),
+        }
+    });
+    let sub_id = "22f9eb18-6553-4b7d-9451-47d0195085fe";
+    
+    let deployment_path = format!(
+        "{}/src/Mystira.App.Infrastructure.Azure/Deployment/{}",
+        repo_root, env
+    );
+    
+    // Set subscription
+    let _ = Command::new("az")
+        .arg("account")
+        .arg("set")
+        .arg("--subscription")
+        .arg(sub_id)
+        .output();
+    
+    // Create resource group if it doesn't exist (needed for what-if)
+    let _ = Command::new("az")
+        .arg("group")
+        .arg("create")
+        .arg("--name")
+        .arg(&rg)
+        .arg("--location")
+        .arg("westeurope")
+        .arg("--output")
+        .arg("none")
+        .output();
+    
+    // Preview changes (what-if) - deploy all for preview
+    let preview_output = Command::new("az")
+        .arg("deployment")
+        .arg("group")
+        .arg("what-if")
+        .arg("--resource-group")
+        .arg(&rg)
+        .arg("--template-file")
+        .arg(format!("{}/main.bicep", deployment_path))
+        .arg("--parameters")
+        .arg(format!("environment={} location=westeurope deployStorage=true deployCosmos=true deployAppService=true", env))
+        .arg("--output")
+        .arg("json")
+        .current_dir(&deployment_path)
+        .output();
+    
+    match preview_output {
+        Ok(output) => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            
+            // Try to parse JSON output
+            let parsed_json: Option<Value> = serde_json::from_str(&stdout).ok();
+            
+            Ok(CommandResponse {
+                success: output.status.success(),
+                result: Some(serde_json::json!({
+                    "preview": stdout.to_string(),
+                    "parsed": parsed_json,
+                    "errors": if !output.status.success() { Some(stderr.to_string()) } else { None }
+                })),
+                message: if output.status.success() {
+                    Some("Preview generated successfully".to_string())
+                } else {
+                    None
+                },
+                error: if !output.status.success() {
+                    Some(stderr.to_string())
+                } else {
+                    None
+                },
+            })
+        }
+        Err(e) => Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some(format!("Failed to preview: {}", e)),
+        }),
+    }
+}
+
 #[tauri::command]
 async fn infrastructure_destroy(workflow_file: String, repository: String, confirm: bool) -> Result<CommandResponse, String> {
     let args = serde_json::json!({
@@ -945,6 +1297,9 @@ fn main() {
             infrastructure_deploy,
             infrastructure_destroy,
             infrastructure_status,
+            azure_deploy_infrastructure,
+            azure_validate_infrastructure,
+            azure_preview_infrastructure,
             get_azure_resources,
             get_github_deployments,
             test_connection,
