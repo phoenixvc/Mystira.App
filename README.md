@@ -20,8 +20,8 @@ The Mystira repository hosts the full suite of services, libraries, and client a
 | **Production** | API | [prod-wus-app-mystira-api.azurewebsites.net](https://prod-wus-app-mystira-api.azurewebsites.net) |
 | **Production** | Admin API | [prod-wus-app-mystira-api-admin.azurewebsites.net](https://prod-wus-app-mystira-api-admin.azurewebsites.net) |
 | **Development** | PWA | [mango-water-04fdb1c03.3.azurestaticapps.net](https://mango-water-04fdb1c03.3.azurestaticapps.net) |
-| **Development** | API | [mystira-app-dev-api.azurewebsites.net](https://mystira-app-dev-api.azurewebsites.net) |
-| **Development** | Admin API | [dev-euw-app-mystira-admin-api.azurewebsites.net](https://dev-euw-app-mystira-admin-api.azurewebsites.net) |
+| **Development** | API | [mystira-app-dev-api.azurewebsites.net/swagger](https://mystira-app-dev-api.azurewebsites.net/swagger) |
+| **Development** | Admin API | [dev-euw-app-mystira-admin-api.azurewebsites.net/swagger](https://dev-euw-app-mystira-admin-api.azurewebsites.net/swagger) |
 
 ## Contents
 
