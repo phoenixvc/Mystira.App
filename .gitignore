@@ -4,3 +4,7 @@ obj/
 riderModule.iml
 /_ReSharper.Caches/
 .aider*
+
+# Temporary files
+*.tar.gz
+find_dotnet.txt
