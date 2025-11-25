@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: 'Deployment action'
+        description: "Deployment action"
         required: true
         type: choice
         options:
@@ -12,17 +12,17 @@ on:
           - preview
           - deploy
       environment:
-        description: 'Environment'
+        description: "Environment"
         required: true
         type: choice
         options:
           - dev
-        default: 'dev'
+        default: "dev"
 
 env:
   ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
-  LOCATION: 'westeurope'
-  RESOURCE_GROUP: 'dev-euw-rg-mystira-app'
+  LOCATION: "westeurope"
+  RESOURCE_GROUP: "dev-euw-rg-mystira-app"
   SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
 jobs:
@@ -30,105 +30,104 @@ jobs:
     if: github.event.inputs.action == 'validate'
     runs-on: ubuntu-latest
     environment: development
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
-    - name: Set Azure Subscription
-      run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
-    
-    - name: Validate Bicep Templates
-      run: |
-        az deployment group validate \
-          --resource-group "${{ env.RESOURCE_GROUP }}" \
-          --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/dev/main.bicep' \
-          --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=dummy deployStorage=true deployCosmos=true deployAppService=true \
-          --output json
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set Azure Subscription
+        run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
+
+      - name: Validate Bicep Templates
+        run: |
+          az deployment group validate \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/dev/main.bicep' \
+            --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=dummy deployStorage=true deployCosmos=true deployAppService=true \
+            --output json
 
   preview:
     if: github.event.inputs.action == 'preview'
     runs-on: ubuntu-latest
     environment: development
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
-    - name: Set Azure Subscription
-      run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
-    
-    - name: Create Resource Group if not exists
-      run: |
-        az group create \
-          --name "${{ env.RESOURCE_GROUP }}" \
-          --location "${{ env.LOCATION }}" \
-          --output none || true
-    
-    - name: Preview Infrastructure Changes (What-If)
-      run: |
-        az deployment group what-if \
-          --resource-group "${{ env.RESOURCE_GROUP }}" \
-          --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/dev/main.bicep' \
-          --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} deployStorage=true deployCosmos=true deployAppService=true \
-          --output json > what-if-output.json
-        cat what-if-output.json
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set Azure Subscription
+        run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
+
+      - name: Create Resource Group if not exists
+        run: |
+          az group create \
+            --name "${{ env.RESOURCE_GROUP }}" \
+            --location "${{ env.LOCATION }}" \
+            --output none || true
+
+      - name: Preview Infrastructure Changes (What-If)
+        run: |
+          az deployment group what-if \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/dev/main.bicep' \
+            --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} deployStorage=true deployCosmos=true deployAppService=true \
+            --output json > what-if-output.json
+          cat what-if-output.json
 
   deploy:
     if: github.event.inputs.action == 'deploy'
     runs-on: ubuntu-latest
     environment: development
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
-    - name: Set Azure Subscription
-      run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
-    
-    - name: Create Resource Group if not exists
-      run: |
-        az group create \
-          --name "${{ env.RESOURCE_GROUP }}" \
-          --location "${{ env.LOCATION }}" \
-          --output none || true
-    
-    - name: Deploy Infrastructure (Incremental - Safe Mode)
-      run: |
-        # ⚠️ SAFETY: Using --mode Incremental to prevent accidental resource deletion
-        # Incremental mode only creates/updates resources in the template, never deletes existing ones
-        az deployment group create \
-          --resource-group "${{ env.RESOURCE_GROUP }}" \
-          --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/dev/main.bicep' \
-          --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} deployStorage=true deployCosmos=true deployAppService=true \
-          --mode Incremental \
-          --name "mystira-app-dev-$(date +%Y%m%d-%H%M%S)" \
-          --output json
-    
-    - name: Get Deployment Outputs
-      id: outputs
-      run: |
-        APP_SERVICE_URL=$(az deployment group show \
-          --resource-group "${{ env.RESOURCE_GROUP }}" \
-          --name "$(az deployment group list --resource-group ${{ env.RESOURCE_GROUP }} --query '[0].name' -o tsv)" \
-          --query "properties.outputs.appServiceUrl.value" -o tsv)
-        echo "appServiceUrl=$APP_SERVICE_URL" >> $GITHUB_OUTPUT
-    
-    - name: Deployment Summary
-      run: |
-        echo "✅ Infrastructure deployed successfully!"
-        echo "📊 Resource Group: ${{ env.RESOURCE_GROUP }}"
-        echo "🌐 App Service URL: ${{ steps.outputs.outputs.appServiceUrl }}"
 
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set Azure Subscription
+        run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
+
+      - name: Create Resource Group if not exists
+        run: |
+          az group create \
+            --name "${{ env.RESOURCE_GROUP }}" \
+            --location "${{ env.LOCATION }}" \
+            --output none || true
+
+      - name: Deploy Infrastructure (Incremental - Safe Mode)
+        run: |
+          # ⚠️ SAFETY: Using --mode Incremental to prevent accidental resource deletion
+          # Incremental mode only creates/updates resources in the template, never deletes existing ones
+          az deployment group create \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/dev/main.bicep' \
+            --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} deployStorage=true deployCosmos=true deployAppService=true \
+            --mode Incremental \
+            --name "mystira-app-dev-$(date +%Y%m%d-%H%M%S)" \
+            --output json
+
+      - name: Get Deployment Outputs
+        id: outputs
+        run: |
+          APP_SERVICE_URL=$(az deployment group show \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --name "$(az deployment group list --resource-group ${{ env.RESOURCE_GROUP }} --query '[0].name' -o tsv)" \
+            --query "properties.outputs.appServiceUrl.value" -o tsv)
+          echo "appServiceUrl=$APP_SERVICE_URL" >> $GITHUB_OUTPUT
+
+      - name: Deployment Summary
+        run: |
+          echo "✅ Infrastructure deployed successfully!"
+          echo "📊 Resource Group: ${{ env.RESOURCE_GROUP }}"
+          echo "🌐 App Service URL: ${{ steps.outputs.outputs.appServiceUrl }}"
