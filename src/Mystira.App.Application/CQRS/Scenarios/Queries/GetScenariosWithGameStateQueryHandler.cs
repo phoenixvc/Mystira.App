@@ -36,9 +36,9 @@ public class GetScenariosWithGameStateQueryHandler
             "Retrieving scenarios with game state for account: {AccountId}",
             request.AccountId);
 
-        // 1. Get all active scenarios using direct LINQ query
+        // 1. Get all scenarios (no IsActive property in Scenario model)
+        // TODO: Add IsActive property to Scenario model to enable filtering
         var scenarios = await _scenarioRepository.GetQueryable()
-            .Where(s => s.IsActive)
             .OrderBy(s => s.Title)
             .ToListAsync(cancellationToken);
 
@@ -55,31 +55,37 @@ public class GetScenariosWithGameStateQueryHandler
 
             var lastSession = sessions.FirstOrDefault();
             var completedCount = sessions.Count(gs => gs.Status == Domain.Models.SessionStatus.Completed);
+            var hasPlayed = sessions.Any();
+            var gameState = completedCount > 0
+                ? ScenarioGameState.Completed
+                : (hasPlayed ? ScenarioGameState.InProgress : ScenarioGameState.NotStarted);
 
             return new ScenarioWithGameState
             {
-                Scenario = scenario,
-                HasPlayed = sessions.Any(),
-                IsCompleted = completedCount > 0,
-                CompletedCount = completedCount,
+                ScenarioId = scenario.Id,
+                Title = scenario.Title,
+                Description = scenario.Description,
+                AgeGroup = scenario.AgeGroup,
+                Difficulty = scenario.Difficulty.ToString(),
+                SessionLength = scenario.SessionLength.ToString(),
+                CoreAxes = scenario.CoreAxes.Select(ca => ca.ToString()).ToList(),
+                Tags = scenario.Tags.ToArray(),
+                Archetypes = scenario.Archetypes.Select(a => a.ToString()).ToArray(),
+                GameState = gameState,
                 LastPlayedAt = lastSession?.StartTime,
-                LastSessionStatus = lastSession?.Status.ToString()
+                PlayCount = sessions.Count
             };
         }).ToList();
 
         var response = new ScenarioGameStateResponse
         {
             Scenarios = scenariosWithState,
-            TotalScenarios = scenarios.Count,
-            PlayedScenarios = scenariosWithState.Count(s => s.HasPlayed),
-            CompletedScenarios = scenariosWithState.Count(s => s.IsCompleted)
+            TotalCount = scenarios.Count
         };
 
         _logger.LogInformation(
-            "Retrieved {Total} scenarios: {Played} played, {Completed} completed for account {AccountId}",
-            response.TotalScenarios,
-            response.PlayedScenarios,
-            response.CompletedScenarios,
+            "Retrieved {Total} scenarios with game state for account {AccountId}",
+            response.TotalCount,
             request.AccountId);
 
         return response;
