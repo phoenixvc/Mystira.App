@@ -3,6 +3,21 @@ using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Services;
 
+/// <summary>
+/// DEPRECATED: This service violates hexagonal architecture.
+/// Controllers should use IMediator (CQRS pattern) instead.
+/// </summary>
+/// <remarks>
+/// Migration guide:
+/// - AwardBadgeAsync → AwardBadgeCommand
+/// - GetUserBadgesAsync → GetUserBadgesQuery
+/// - GetUserBadgesForAxisAsync → GetUserBadgesForAxisQuery
+/// - HasUserEarnedBadgeAsync → HasUserEarnedBadgeQuery
+/// - RemoveBadgeAsync → (Create RemoveBadgeCommand if needed)
+/// - GetBadgeStatisticsAsync → GetBadgeStatisticsQuery
+/// See ARCHITECTURAL_REFACTORING_PLAN.md for details.
+/// </remarks>
+[Obsolete("Use IMediator with CQRS queries/commands instead. See ARCHITECTURAL_REFACTORING_PLAN.md")]
 public interface IUserBadgeApiService
 {
     /// <summary>
