@@ -1,7 +1,8 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Infrastructure.Discord.Services;
-using Discord;
+using Mystira.App.Application.CQRS.Discord.Commands;
+using Mystira.App.Application.CQRS.Discord.Queries;
 
 namespace Mystira.App.Api.Controllers;
 
@@ -12,18 +13,15 @@ namespace Mystira.App.Api.Controllers;
 [Route("api/[controller]")]
 public class DiscordController : ControllerBase
 {
-    private readonly IDiscordBotService? _discordBotService;
+    private readonly IMediator _mediator;
     private readonly ILogger<DiscordController> _logger;
-    private readonly IConfiguration _configuration;
 
     public DiscordController(
-        ILogger<DiscordController> logger,
-        IConfiguration configuration,
-        IDiscordBotService? discordBotService = null)
+        IMediator mediator,
+        ILogger<DiscordController> logger)
     {
+        _mediator = mediator;
         _logger = logger;
-        _configuration = configuration;
-        _discordBotService = discordBotService;
     }
 
     /// <summary>
@@ -31,26 +29,18 @@ public class DiscordController : ControllerBase
     /// </summary>
     [HttpGet("status")]
     [AllowAnonymous]
-    public IActionResult GetStatus()
+    public async Task<IActionResult> GetStatus()
     {
-        var enabled = _configuration.GetValue<bool>("Discord:Enabled", false);
-        
-        if (!enabled || _discordBotService == null)
-        {
-            return Ok(new
-            {
-                enabled = false,
-                connected = false,
-                message = "Discord bot integration is disabled"
-            });
-        }
+        var query = new GetDiscordBotStatusQuery();
+        var status = await _mediator.Send(query);
 
         return Ok(new
         {
-            enabled = true,
-            connected = _discordBotService.IsConnected,
-            botUsername = _discordBotService.CurrentUser?.Username,
-            botId = _discordBotService.CurrentUser?.Id.ToString()
+            enabled = status.Enabled,
+            connected = status.Connected,
+            botUsername = status.BotUsername,
+            botId = status.BotId,
+            message = status.Message
         });
     }
 
@@ -61,32 +51,28 @@ public class DiscordController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> SendMessage([FromBody] SendMessageRequest request)
     {
-        if (_discordBotService == null)
-        {
-            return BadRequest(new { message = "Discord bot is not enabled" });
-        }
+        var command = new SendDiscordMessageCommand(request.ChannelId, request.Message);
+        var (success, message) = await _mediator.Send(command);
 
-        if (!_discordBotService.IsConnected)
+        if (!success)
         {
-            return ServiceUnavailable(new { message = "Discord bot is not connected" });
-        }
-
-        try
-        {
-            await _discordBotService.SendMessageAsync(request.ChannelId, request.Message);
-            
-            return Ok(new
+            if (message.Contains("not enabled"))
             {
-                success = true,
-                channelId = request.ChannelId,
-                message = "Message sent successfully"
-            });
+                return BadRequest(new { message });
+            }
+            if (message.Contains("not connected"))
+            {
+                return StatusCode(503, new { message });
+            }
+            return StatusCode(500, new { message });
         }
-        catch (Exception ex)
+
+        return Ok(new
         {
-            _logger.LogError(ex, "Error sending Discord message to channel {ChannelId}", request.ChannelId);
-            return StatusCode(500, new { message = $"Error sending message: {ex.Message}" });
-        }
+            success = true,
+            channelId = request.ChannelId,
+            message
+        });
     }
 
     /// <summary>
@@ -96,57 +82,42 @@ public class DiscordController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> SendEmbed([FromBody] SendEmbedRequest request)
     {
-        if (_discordBotService == null)
-        {
-            return BadRequest(new { message = "Discord bot is not enabled" });
-        }
+        // Map request fields to command fields
+        var commandFields = request.Fields?
+            .Select(f => new DiscordEmbedField(f.Name, f.Value, f.Inline))
+            .ToList();
 
-        if (!_discordBotService.IsConnected)
-        {
-            return ServiceUnavailable(new { message = "Discord bot is not connected" });
-        }
+        var command = new SendDiscordEmbedCommand(
+            request.ChannelId,
+            request.Title,
+            request.Description,
+            request.ColorRed,
+            request.ColorGreen,
+            request.ColorBlue,
+            request.Footer,
+            commandFields);
 
-        try
-        {
-            var embedBuilder = new EmbedBuilder()
-                .WithTitle(request.Title)
-                .WithDescription(request.Description)
-                .WithColor(new Color(request.ColorRed, request.ColorGreen, request.ColorBlue))
-                .WithTimestamp(DateTimeOffset.Now);
+        var (success, message) = await _mediator.Send(command);
 
-            if (!string.IsNullOrEmpty(request.Footer))
+        if (!success)
+        {
+            if (message.Contains("not enabled"))
             {
-                embedBuilder.WithFooter(request.Footer);
+                return BadRequest(new { message });
             }
-
-            if (request.Fields != null)
+            if (message.Contains("not connected"))
             {
-                foreach (var field in request.Fields)
-                {
-                    embedBuilder.AddField(field.Name, field.Value, field.Inline);
-                }
+                return StatusCode(503, new { message });
             }
-
-            var embed = embedBuilder.Build();
-            await _discordBotService.SendEmbedAsync(request.ChannelId, embed);
-
-            return Ok(new
-            {
-                success = true,
-                channelId = request.ChannelId,
-                message = "Embed sent successfully"
-            });
+            return StatusCode(500, new { message });
         }
-        catch (Exception ex)
+
+        return Ok(new
         {
-            _logger.LogError(ex, "Error sending Discord embed to channel {ChannelId}", request.ChannelId);
-            return StatusCode(500, new { message = $"Error sending embed: {ex.Message}" });
-        }
-    }
-
-    private ObjectResult ServiceUnavailable(object value)
-    {
-        return StatusCode(503, value);
+            success = true,
+            channelId = request.ChannelId,
+            message
+        });
     }
 }
 
