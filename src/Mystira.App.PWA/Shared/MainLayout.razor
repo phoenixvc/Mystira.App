@@ -1,11 +1,14 @@
 @using Mystira.App.PWA.Models
 @using Mystira.App.PWA.Services
+@using Mystira.App.PWA.Components
 @inherits LayoutComponentBase
 @implements IDisposable
 
+@inject IJSRuntime JSRuntime
+
 <div class="page">
     <!-- Offline Indicator -->
-    <div id="offline-indicator" class="offline-indicator" style="display: none;">
+    <div id="offline-indicator" class="offline-indicator">
         <i class="fas fa-wifi me-2"></i>
         You are currently offline. Some features may be limited.
     </div>
@@ -31,6 +34,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="fas fa-compass me-1"></i>
+                            Adventures
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="/about">
                             <i class="fas fa-info-circle me-1"></i>
                             About
@@ -39,9 +48,9 @@
                     @if (isAuthenticated)
                     {
                         <li class="nav-item">
-                            <a class="nav-link" href="/game">
-                                <i class="fas fa-compass me-1"></i>
-                                Adventures
+                            <a class="nav-link" href="/profiles">
+                                <i class="fas fa-users me-1"></i>
+                                Profiles
                             </a>
                         </li>
                     }
@@ -56,22 +65,34 @@
                     }
                     @if (isAuthenticated)
                     {
-                        <li class="nav-item dropdown">
+                        <li class="nav-item dropdown" @ref="profileMenuElement" id="profile-menu">
                             <button class="btn btn-link nav-link dropdown-toggle" 
                                     type="button"
-                                    @onclick="ToggleProfileMenu"
+                                    @onclick="ToggleSettingsMenu"
                                     @onclick:stopPropagation="true">
                                 <i class="fas fa-user-circle me-1"></i>
-                                @GetProfileDisplayName()
+                                @if (CurrentAccount != null)
+                                {
+                                    <span>@CurrentAccount.DisplayName</span>
+                                }
+                                else
+                                {
+                                    <span>Account</span>
+                                }
                             </button>
                             @if (isProfileMenuOpen)
                             {
-                                <div class="dropdown-menu show dropdown-menu-end" style="position: absolute; right: 0;">
-                                    <AccountInstallOption />
+                                <div class="dropdown-menu show dropdown-menu-end profile-menu-dropdown">
+                                    <h6 class="dropdown-header">
+                                        <i class="fas fa-user me-2"></i>
+                                        @(CurrentAccount?.DisplayName ?? "Account")
+                                    </h6>
+                                    <div class="dropdown-divider"></div>
                                     <a class="dropdown-item" href="/profiles">
                                         <i class="fas fa-users me-2"></i>
-                                        Manage Profiles
+                                        My Profiles
                                     </a>
+                                    <AccountInstallOption />
                                     <div class="dropdown-divider"></div>
                                     <button class="dropdown-item" @onclick="SignOutAsync">
                                         <i class="fas fa-sign-out-alt me-2"></i>
@@ -85,20 +106,17 @@
                     {
                         <li class="nav-item">
                             <a class="nav-link" href="/signin">
-                                <i class="fas fa-sign-in-alt me-1"></i>
                                 Sign In
                             </a>
                         </li>
-                        <li class="nav-item d-none d-md-flex align-items-center ms-md-3">
-                            <a class="btn btn-primary-custom px-3" href="/signup">
-                                <i class="fas fa-user-plus me-1"></i>
-                                Register
+                        <li class="nav-item d-none d-md-flex align-items-center ms-md-2">
+                            <a class="btn btn-primary-custom px-4 py-2" href="/signup">
+                                Get Started
                             </a>
                         </li>
-                        <li class="nav-item d-md-none mt-3">
-                            <a class="btn btn-outline-primary w-100" href="/signup">
-                                <i class="fas fa-user-plus me-1"></i>
-                                Register
+                        <li class="nav-item d-md-none mt-2">
+                            <a class="btn btn-primary-custom w-100" href="/signup">
+                                Get Started
                             </a>
                         </li>
                     }
@@ -115,15 +133,21 @@
     <!-- PWA Install Button -->
     <PwaInstallButton IsAuthenticated="isAuthenticated" />
 
+    <!-- Discord Widget -->
+    <DiscordWidget />
+
     <!-- Footer -->
     <footer class="bg-light py-3 mt-4">
         <div class="container-fluid text-center">
             <small class="text-muted">
-                Mystira v1.0 - 
+                Mystira v1.0 -
                 <span id="connection-status" class="text-success">Online</span>
             </small>
         </div>
     </footer>
+
+    <!-- Toast Notifications -->
+    <ToastContainer />
 </div>
 
 @code {
@@ -135,6 +159,8 @@
     private Account? CurrentAccount { get; set; }
     private bool isAuthenticated;
     private bool isProfileMenuOpen;
+    private ElementReference profileMenuElement;
+    private IJSObjectReference? outsideClickHandler;
 
     protected override async Task OnInitializedAsync()
     {
@@ -144,6 +170,17 @@
         AuthService.AuthenticationStateChanged += OnAuthenticationStateChanged;
 
         await LoadAuthenticationStateAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            outsideClickHandler = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "outsideClickHandler.initialize",
+                DotNetObjectReference.Create(this),
+                "profile-menu");
+        }
     }
 
     private async Task LoadAuthenticationStateAsync()
@@ -182,17 +219,17 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private string GetProfileDisplayName()
+    [JSInvokable]
+    public void HandleOutsideClick()
     {
-        if (!string.IsNullOrWhiteSpace(CurrentAccount?.DisplayName))
+        if (isProfileMenuOpen)
         {
-            return CurrentAccount!.DisplayName!;
+            isProfileMenuOpen = false;
+            StateHasChanged();
         }
-
-        return CurrentAccount?.Email ?? "Profile";
     }
 
-    private void ToggleProfileMenu()
+    private void ToggleSettingsMenu()
     {
         if (!isAuthenticated)
         {
@@ -200,15 +237,6 @@
         }
 
         isProfileMenuOpen = !isProfileMenuOpen;
-    }
-
-    private void CloseProfileMenu()
-    {
-        if (isProfileMenuOpen)
-        {
-            isProfileMenuOpen = false;
-            StateHasChanged();
-        }
     }
 
     private async Task SignOutAsync()
@@ -229,10 +257,16 @@
         }
     }
 
-    public new void Dispose()
+    public async void Dispose()
     {
         GameSessionService.GameSessionChanged -= OnGameSessionChanged;
         AuthService.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+
+        if (outsideClickHandler != null)
+        {
+            await outsideClickHandler.InvokeVoidAsync("dispose");
+            await outsideClickHandler.DisposeAsync();
+        }
     }
 }
 

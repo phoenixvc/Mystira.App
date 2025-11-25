@@ -1,11 +1,19 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Domain.Models;
-using Mystira.App.Admin.Api.Data;
+using Mystira.App.Infrastructure.Data;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.App.Contracts.Responses.Common;
+using Mystira.App.Contracts.Responses.Scenarios;
+using Mystira.App.Domain.Models;
+using Character = Mystira.App.Admin.Api.Models.Character;
 using CharacterMetadata = Mystira.App.Admin.Api.Models.CharacterMetadata;
+using CreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;
+using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
+using ScenarioQueryRequest = Mystira.App.Contracts.Requests.Scenarios.ScenarioQueryRequest;
+using ValidationErrorResponse = Mystira.App.Contracts.Responses.Common.ValidationErrorResponse;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
@@ -58,7 +66,7 @@ public class AdminController : Controller
         {
             return RedirectToAction("Dashboard");
         }
-        
+
         return View("Login");
     }
 
@@ -105,6 +113,24 @@ public class AdminController : Controller
     public IActionResult CharacterMediaMetadata()
     {
         return View("CharacterMediaMetadata");
+    }
+
+    /// <summary>
+    /// Content bundles management page
+    /// </summary>
+    [HttpGet("bundles")]
+    public IActionResult Bundles()
+    {
+        return View("Bundles");
+    }
+
+    /// <summary>
+    /// Avatar management page
+    /// </summary>
+    [HttpGet("avatars")]
+    public IActionResult AvatarManagement()
+    {
+        return View("AvatarManagement");
     }
 
     /// <summary>
@@ -234,7 +260,7 @@ public class AdminController : Controller
             // Ensure nullable strings are never null
             config.MaintenanceMessage ??= string.Empty;
             config.UpdateMessage ??= string.Empty;
-            
+
             await _appStatusService.UpdateAppStatusAsync(config);
             TempData["SuccessMessage"] = "App status configuration updated successfully.";
             return RedirectToAction("AppStatus");
@@ -268,7 +294,7 @@ public class AdminController : Controller
             // For now, return success - implement YAML parsing in the character map service
             using var stream = yamlFile.OpenReadStream();
             var characterMaps = await _characterMapService.ImportCharacterMapsFromYamlAsync(stream);
-            
+
             return Ok(new { success = true, message = $"Successfully imported {characterMaps.Count} character map(s)", count = characterMaps.Count });
         }
         catch (Exception ex)
@@ -340,13 +366,13 @@ public class AdminController : Controller
         {
             // Initialize sample characters
             await InitializeSampleCharacters();
-            
+
             // Initialize sample media metadata
             await InitializeSampleMediaMetadata();
-            
+
             // Initialize sample character media metadata
             await InitializeSampleCharacterMediaMetadata();
-            
+
             return Ok(new { success = true, message = "Sample data initialized successfully" });
         }
         catch (Exception ex)
@@ -378,19 +404,19 @@ public class AdminController : Controller
             }
 
             // Create fresh metadata files
-            var mediaMetadataFile = new MediaMetadataFile
+            var mediaMetadataFile = new Domain.Models.MediaMetadataFile
             {
                 Id = "media-metadata",
-                Entries = new List<MediaMetadataEntry>(),
+                Entries = new List<Domain.Models.MediaMetadataEntry>(),
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 Version = "1.0"
             };
 
-            var characterMediaMetadataFile = new CharacterMediaMetadataFile
+            var characterMediaMetadataFile = new Domain.Models.CharacterMediaMetadataFile
             {
                 Id = "character-media-metadata",
-                Entries = new List<CharacterMediaMetadataEntry>(),
+                Entries = new List<Domain.Models.CharacterMediaMetadataEntry>(),
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 Version = "1.0"
@@ -459,9 +485,9 @@ public class AdminController : Controller
 
     private async Task InitializeSampleMediaMetadata()
     {
-        var sampleEntries = new List<MediaMetadataEntry>
+        var sampleEntries = new List<Domain.Models.MediaMetadataEntry>
         {
-            new MediaMetadataEntry
+            new Domain.Models.MediaMetadataEntry
             {
                 Id = "image-1-a-frightened-friend-2-noticing-the-berries-93b7262c",
                 Title = "1. A Frightened Friend, 2. Noticing the Berries",
@@ -471,7 +497,7 @@ public class AdminController : Controller
                 AgeRating = 1,
                 Loopable = false
             },
-            new MediaMetadataEntry
+            new Domain.Models.MediaMetadataEntry
             {
                 Id = "image-a-cheerful-visit-10bb4a77",
                 Title = "A Cheerful Visit",
@@ -483,7 +509,7 @@ public class AdminController : Controller
                 Loopable = false
             },
             // Sample scenario media files
-            new MediaMetadataEntry
+            new Domain.Models.MediaMetadataEntry
             {
                 Id = "sea-monster-pearl",
                 Title = "Sea Monster Pearl",
@@ -493,7 +519,7 @@ public class AdminController : Controller
                 AgeRating = 1,
                 Loopable = false
             },
-            new MediaMetadataEntry
+            new Domain.Models.MediaMetadataEntry
             {
                 Id = "deep-ocean-sounds",
                 Title = "Deep Ocean Sounds",
@@ -503,7 +529,7 @@ public class AdminController : Controller
                 AgeRating = 1,
                 Loopable = true
             },
-            new MediaMetadataEntry
+            new Domain.Models.MediaMetadataEntry
             {
                 Id = "dragon-hoard-treasure",
                 Title = "Dragon Hoard Treasure",
@@ -513,7 +539,7 @@ public class AdminController : Controller
                 AgeRating = 1,
                 Loopable = false
             },
-            new MediaMetadataEntry
+            new Domain.Models.MediaMetadataEntry
             {
                 Id = "cave-ambience",
                 Title = "Cave Ambience",
@@ -523,7 +549,7 @@ public class AdminController : Controller
                 AgeRating = 1,
                 Loopable = true
             },
-            new MediaMetadataEntry
+            new Domain.Models.MediaMetadataEntry
             {
                 Id = "magical-forest",
                 Title = "Magical Forest",
@@ -533,7 +559,7 @@ public class AdminController : Controller
                 AgeRating = 1,
                 Loopable = false
             },
-            new MediaMetadataEntry
+            new Domain.Models.MediaMetadataEntry
             {
                 Id = "forest-sounds",
                 Title = "Forest Sounds",
@@ -551,9 +577,9 @@ public class AdminController : Controller
 
     private async Task InitializeSampleCharacterMediaMetadata()
     {
-        var sampleEntries = new List<CharacterMediaMetadataEntry>
+        var sampleEntries = new List<Domain.Models.CharacterMediaMetadataEntry>
         {
-            new CharacterMediaMetadataEntry
+            new Domain.Models.CharacterMediaMetadataEntry
             {
                 Id = "image-bear-maple-younger-kids--ede14750",
                 Title = "Bear Maple Younger Kids ",
@@ -564,7 +590,7 @@ public class AdminController : Controller
                 Tags = ["bear", "nature", "animal", "cartoon bear", "character", "3D render", "digital illustration", "animation", "storybook", "cute", "whimsical", "brown fur", "tan", "big eyes", "furry", "smiling", "full body", "standing", "front view", "isolated character", "drop shadow", "friendly", "happy", "adorable", "gentle", "innocent", "character design"],
                 Loopable = false
             },
-            new CharacterMediaMetadataEntry
+            new Domain.Models.CharacterMediaMetadataEntry
             {
                 Id = "image-fox-jinx-younger-kids-bf9d103d",
                 Title = "Fox Jinx Younger kids",
@@ -604,19 +630,20 @@ public class AdminController : Controller
                 .WithNamingConvention(YamlDotNet.Serialization.NamingConventions.CamelCaseNamingConvention.Instance)
                 .Build();
 
-            var scenarioData = (Dictionary<object, object>) deserializer.Deserialize<dynamic>(yamlContent);
+            var scenarioData = (Dictionary<object, object>)deserializer.Deserialize<dynamic>(yamlContent);
             var createRequest = ScenarioRequestCreator.Create(scenarioData);
 
             // Check for existing scenario with same title
             var existingScenarios = await _scenarioService.GetScenariosAsync(new ScenarioQueryRequest { PageSize = 1000 });
-            var existingScenario = existingScenarios.Scenarios.FirstOrDefault(s => 
+            var existingScenario = existingScenarios.Scenarios.FirstOrDefault(s =>
                 s.Title.Equals(createRequest.Title, StringComparison.OrdinalIgnoreCase));
 
-            Scenario scenario;
+            Scenario? scenario;
             if (existingScenario != null && !overwriteExisting)
             {
-                return BadRequest(new { 
-                    success = false, 
+                return BadRequest(new
+                {
+                    success = false,
                     message = $"Scenario with title '{createRequest.Title}' already exists. Set overwriteExisting=true to update it.",
                     existingScenarioId = existingScenario.Id
                 });
@@ -634,13 +661,24 @@ public class AdminController : Controller
             {
                 // Create new scenario
                 scenario = await _scenarioService.CreateScenarioAsync(createRequest);
+                if (scenario == null)
+                {
+                    return BadRequest(new { success = false, message = "Failed to create new scenario" });
+                }
             }
 
-            return Ok(new { 
-                success = true, 
-                message = "Scenario uploaded successfully", 
+            // Null check to satisfy compiler's nullable reference type analysis
+            if (scenario == null)
+            {
+                return BadRequest(new { success = false, message = "Failed to process scenario" });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                message = "Scenario uploaded successfully",
                 scenarioId = scenario.Id,
-                scenarioTitle = scenario.Title 
+                scenarioTitle = scenario.Title
             });
         }
         catch (Exception ex)

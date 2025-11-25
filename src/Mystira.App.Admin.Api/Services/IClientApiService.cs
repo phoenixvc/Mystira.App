@@ -1,4 +1,4 @@
-﻿using Mystira.App.Admin.Api.Models;
+using Mystira.App.Contracts.Responses.Media;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -14,27 +14,27 @@ public interface IClientApiService
     /// <param name="contentVersion">Current content bundle version (e.g., 2025-05-28)</param>
     /// <returns>Status information with version requirements and content updates</returns>
     Task<ClientStatusResponse> GetClientStatusAsync(string clientVersion, string contentVersion);
-    
+
     /// <summary>
     /// Build a content manifest with changes since the client's content version
     /// </summary>
     /// <param name="clientContentVersion">The client's current content version</param>
     /// <returns>A content manifest with added, updated, and removed items</returns>
     Task<ContentManifest> BuildContentManifestAsync(string clientContentVersion);
-    
+
     /// <summary>
     /// Check if a client version is below the minimum supported version
     /// </summary>
     /// <param name="clientVersion">The client version to check</param>
     /// <returns>True if an update is required, false otherwise</returns>
     Task<bool> IsUpdateRequiredAsync(string clientVersion);
-    
+
     /// <summary>
     /// Get the current bundle version for content
     /// </summary>
     /// <returns>The current content bundle version</returns>
     Task<string> GetCurrentBundleVersionAsync();
-    
+
     /// <summary>
     /// Get version information including minimum supported and latest versions
     /// </summary>

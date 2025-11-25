@@ -1,4 +1,5 @@
 using Mystira.App.Admin.Api.Models;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -19,7 +20,7 @@ public interface IMediaApiService
     /// </summary>
     /// <param name="mediaId">The media ID</param>
     /// <returns>The media asset or null if not found</returns>
-    Task<MediaAsset?> GetMediaByIdAsync(string mediaId);
+    Task<Domain.Models.MediaAsset?> GetMediaByIdAsync(string mediaId);
 
     /// <summary>
     /// Uploads a single media file
@@ -30,7 +31,7 @@ public interface IMediaApiService
     /// <param name="description">Optional description</param>
     /// <param name="tags">Optional tags</param>
     /// <returns>The created media asset</returns>
-    Task<MediaAsset> UploadMediaAsync(IFormFile file, string mediaId, string mediaType, string? description = null, List<string>? tags = null);
+    Task<Domain.Models.MediaAsset> UploadMediaAsync(IFormFile file, string mediaId, string mediaType, string? description = null, List<string>? tags = null);
 
     /// <summary>
     /// Uploads multiple media files
@@ -47,7 +48,7 @@ public interface IMediaApiService
     /// <param name="mediaId">The media ID</param>
     /// <param name="updateData">The updated media data</param>
     /// <returns>The updated media asset</returns>
-    Task<MediaAsset> UpdateMediaAsync(string mediaId, MediaUpdateRequest updateData);
+    Task<Domain.Models.MediaAsset> UpdateMediaAsync(string mediaId, MediaUpdateRequest updateData);
 
     /// <summary>
     /// Deletes a media asset
@@ -81,7 +82,7 @@ public interface IMediaApiService
     /// </summary>
     /// <param name="fileName">The filename to resolve</param>
     /// <returns>The media asset or null if not found</returns>
-    Task<MediaAsset?> GetMediaByFileNameAsync(string fileName);
+    Task<Domain.Models.MediaAsset?> GetMediaByFileNameAsync(string fileName);
 
     /// <summary>
     /// Gets the URL for a media asset by filename, resolving through metadata

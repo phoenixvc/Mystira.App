@@ -3,8 +3,16 @@ using Mystira.App.Api.Models;
 namespace Mystira.App.Api.Services;
 
 /// <summary>
-/// Service for managing the single character map file
+/// DEPRECATED: This service violates hexagonal architecture.
+/// Controllers should use IMediator (CQRS pattern) instead.
 /// </summary>
+/// <remarks>
+/// Migration guide:
+/// - GetCharacterAsync → GetCharacterQuery
+/// - Other methods → Create corresponding CQRS commands/queries as needed
+/// See ARCHITECTURAL_REFACTORING_PLAN.md for details.
+/// </remarks>
+[Obsolete("Use IMediator with CQRS queries/commands instead. See ARCHITECTURAL_REFACTORING_PLAN.md")]
 public interface ICharacterMapFileService
 {
     /// <summary>

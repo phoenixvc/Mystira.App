@@ -1,8 +1,23 @@
+using Mystira.App.Contracts.Requests.Badges;
 using Mystira.App.Domain.Models;
-using Mystira.App.Api.Models;
 
 namespace Mystira.App.Api.Services;
 
+/// <summary>
+/// DEPRECATED: This service violates hexagonal architecture.
+/// Controllers should use IMediator (CQRS pattern) instead.
+/// </summary>
+/// <remarks>
+/// Migration guide:
+/// - AwardBadgeAsync → AwardBadgeCommand
+/// - GetUserBadgesAsync → GetUserBadgesQuery
+/// - GetUserBadgesForAxisAsync → GetUserBadgesForAxisQuery
+/// - HasUserEarnedBadgeAsync → HasUserEarnedBadgeQuery
+/// - RemoveBadgeAsync → (Create RemoveBadgeCommand if needed)
+/// - GetBadgeStatisticsAsync → GetBadgeStatisticsQuery
+/// See ARCHITECTURAL_REFACTORING_PLAN.md for details.
+/// </remarks>
+[Obsolete("Use IMediator with CQRS queries/commands instead. See ARCHITECTURAL_REFACTORING_PLAN.md")]
 public interface IUserBadgeApiService
 {
     /// <summary>
@@ -11,14 +26,14 @@ public interface IUserBadgeApiService
     /// <param name="request">Badge award request</param>
     /// <returns>The awarded badge</returns>
     Task<UserBadge> AwardBadgeAsync(AwardBadgeRequest request);
-    
+
     /// <summary>
     /// Get all badges for a user profile
     /// </summary>
     /// <param name="userProfileId">The user profile ID</param>
     /// <returns>List of earned badges</returns>
     Task<List<UserBadge>> GetUserBadgesAsync(string userProfileId);
-    
+
     /// <summary>
     /// Get badges for a specific axis for a user profile
     /// </summary>
@@ -26,7 +41,7 @@ public interface IUserBadgeApiService
     /// <param name="axis">The compass axis</param>
     /// <returns>List of badges for the axis</returns>
     Task<List<UserBadge>> GetUserBadgesForAxisAsync(string userProfileId, string axis);
-    
+
     /// <summary>
     /// Check if a user has earned a specific badge
     /// </summary>
@@ -34,7 +49,7 @@ public interface IUserBadgeApiService
     /// <param name="badgeConfigurationId">The badge configuration ID</param>
     /// <returns>True if badge has been earned</returns>
     Task<bool> HasUserEarnedBadgeAsync(string userProfileId, string badgeConfigurationId);
-    
+
     /// <summary>
     /// Remove a badge from a user profile (admin function)
     /// </summary>
@@ -42,7 +57,7 @@ public interface IUserBadgeApiService
     /// <param name="badgeId">The badge ID to remove</param>
     /// <returns>True if badge was removed</returns>
     Task<bool> RemoveBadgeAsync(string userProfileId, string badgeId);
-    
+
     /// <summary>
     /// Get badge statistics for a user profile
     /// </summary>

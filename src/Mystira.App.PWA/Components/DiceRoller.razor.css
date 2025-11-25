@@ -1,5 +1,19 @@
 /* Component styles (consume global CSS vars; provide fallbacks) */
 
+.roll-dice {
+    font-size: 4rem;
+    color: var(--primary-color);
+    animation: rollAnimation 1s ease-in-out;
+}
+
+@keyframes rollAnimation {
+    0% { transform: rotate(0deg) scale(1); }
+    25% { transform: rotate(90deg) scale(1.2); }
+    50% { transform: rotate(180deg) scale(1.1); }
+    75% { transform: rotate(270deg) scale(1.2); }
+    100% { transform: rotate(360deg) scale(1); }
+}
+
 .dice-shell {
   display: grid;
   gap: 1rem;

@@ -1,8 +1,10 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Mystira.App.Domain.Models;
+using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Contracts.Responses.Common;
+using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
+using AdminCharacter = Mystira.App.Admin.Api.Models.Character;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
@@ -25,7 +27,7 @@ public class CharacterAdminController : ControllerBase
     /// Updates an existing character
     /// </summary>
     [HttpPut("{id}")]
-    public async Task<ActionResult<CharacterMapFile>> UpdateCharacter(string id, [FromBody] Character character)
+    public async Task<ActionResult<Mystira.App.Domain.Models.CharacterMapFile>> UpdateCharacter(string id, [FromBody] AdminCharacter character)
     {
         try
         {
@@ -34,8 +36,8 @@ public class CharacterAdminController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(new ErrorResponse 
-            { 
+            return NotFound(new ErrorResponse
+            {
                 Message = $"Character not found: {id}",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -43,8 +45,8 @@ public class CharacterAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating character: {CharacterId}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while updating character",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -55,7 +57,7 @@ public class CharacterAdminController : ControllerBase
     /// Removes a character
     /// </summary>
     [HttpDelete("{id}")]
-    public async Task<ActionResult<CharacterMapFile>> DeleteCharacter(string id)
+    public async Task<ActionResult<Domain.Models.CharacterMapFile>> DeleteCharacter(string id)
     {
         try
         {
@@ -64,8 +66,8 @@ public class CharacterAdminController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(new ErrorResponse 
-            { 
+            return NotFound(new ErrorResponse
+            {
                 Message = $"Character not found: {id}",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -73,8 +75,8 @@ public class CharacterAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting character: {CharacterId}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while deleting character",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -85,7 +87,7 @@ public class CharacterAdminController : ControllerBase
     /// Adds a new character
     /// </summary>
     [HttpPost]
-    public async Task<ActionResult<CharacterMapFile>> AddCharacter([FromBody] Character character)
+    public async Task<ActionResult<Mystira.App.Domain.Models.CharacterMapFile>> AddCharacter([FromBody] AdminCharacter character)
     {
         try
         {
@@ -94,8 +96,8 @@ public class CharacterAdminController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -103,8 +105,8 @@ public class CharacterAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error adding character: {CharacterId}", character.Id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while adding character",
                 TraceId = HttpContext.TraceIdentifier
             });

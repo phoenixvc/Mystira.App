@@ -1,4 +1,4 @@
-﻿namespace Mystira.App.PWA.Services;
+namespace Mystira.App.PWA.Services;
 
 public interface ITokenProvider
 {

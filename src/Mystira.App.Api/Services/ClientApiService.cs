@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
-using Mystira.App.Api.Models;
+using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.App.Contracts.Responses.Media;
 
 namespace Mystira.App.Api.Services;
 
@@ -33,7 +34,7 @@ public class ClientApiService : IClientApiService
     {
         try
         {
-            _logger.LogInformation("Building client status: client_version={ClientVersion}, content_version={ContentVersion}", 
+            _logger.LogInformation("Building client status: client_version={ClientVersion}, content_version={ContentVersion}",
                 clientVersion, contentVersion);
 
             // Validate client version format (semver)
@@ -46,7 +47,7 @@ public class ClientApiService : IClientApiService
             var versionInfo = await GetVersionInfoAsync();
             string minSupportedVersion = versionInfo.MinSupportedVersion;
             string latestVersion = versionInfo.LatestVersion;
-            
+
             // Get current bundle version
             string currentBundleVersion = await GetCurrentBundleVersionAsync();
 
@@ -59,7 +60,7 @@ public class ClientApiService : IClientApiService
 
             // Check app status for force refresh
             var appStatus = await _appStatusService.GetAppStatusAsync();
-            
+
             // Create response
             var response = new ClientStatusResponse
             {
@@ -151,7 +152,7 @@ public class ClientApiService : IClientApiService
     {
         var minSupportedVersion = await _appStatusService.GetMinSupportedVersionAsync();
         var latestVersion = await _appStatusService.GetLatestVersionAsync();
-        
+
         return (minSupportedVersion, latestVersion);
     }
 
@@ -183,14 +184,29 @@ public class ClientApiService : IClientApiService
             for (int i = 0; i < Math.Min(versionParts.Length, minVersionParts.Length); i++)
             {
                 if (versionParts[i] < minVersionParts[i])
+                {
                     return true;
+                }
+
                 if (versionParts[i] > minVersionParts[i])
+                {
                     return false;
+                }
             }
 
             return versionParts.Length < minVersionParts.Length;
         }
-        catch
+        catch (FormatException)
+        {
+            // If parsing fails, assume version is lower
+            return true;
+        }
+        catch (ArgumentNullException)
+        {
+            // If parsing fails, assume version is lower
+            return true;
+        }
+        catch (OverflowException)
         {
             // If parsing fails, assume version is lower
             return true;
@@ -210,14 +226,14 @@ public class ClientApiService : IClientApiService
             return "Application update required. Please update to the latest version.";
         }
 
-        bool hasScenarioChanges = 
-            (manifest.Scenarios?.Added?.Count > 0) || 
-            (manifest.Scenarios?.Updated?.Count > 0) || 
+        bool hasScenarioChanges =
+            (manifest.Scenarios?.Added?.Count > 0) ||
+            (manifest.Scenarios?.Updated?.Count > 0) ||
             (manifest.Scenarios?.Removed?.Count > 0);
 
-        bool hasMediaChanges = 
-            (manifest.Media?.Added?.Count > 0) || 
-            (manifest.Media?.Updated?.Count > 0) || 
+        bool hasMediaChanges =
+            (manifest.Media?.Added?.Count > 0) ||
+            (manifest.Media?.Updated?.Count > 0) ||
             (manifest.Media?.Removed?.Count > 0);
 
         if (hasScenarioChanges && hasMediaChanges)
@@ -244,10 +260,14 @@ public class ClientApiService : IClientApiService
     private DateTime? ParseContentVersion(string contentVersion)
     {
         if (string.IsNullOrEmpty(contentVersion))
+        {
             return null;
+        }
 
         if (DateTime.TryParse(contentVersion, out DateTime result))
+        {
             return result;
+        }
 
         return null;
     }
@@ -281,18 +301,18 @@ public class ClientApiService : IClientApiService
                 // For updated scenarios, we would need to track modification dates
                 // For now, we'll use a simple approach - if we don't have a ModifiedAt field,
                 // we can't determine updated scenarios accurately
-                
+
                 // In a real implementation, you would add a ModifiedAt field to Scenario
                 // and query for scenarios where ModifiedAt > sinceDate && CreatedAt <= sinceDate
-                
-                _logger.LogDebug("Found {AddedScenarios} new scenarios since {SinceDate}", 
+
+                _logger.LogDebug("Found {AddedScenarios} new scenarios since {SinceDate}",
                     changes.Added.Count, sinceDate.Value);
             }
             else
             {
                 // Client has no content version, send all scenarios
                 changes.Added = scenarios.Scenarios.Select(s => s.Id).ToList();
-                _logger.LogDebug("Client has no content version, sending all {TotalScenarios} scenarios", 
+                _logger.LogDebug("Client has no content version, sending all {TotalScenarios} scenarios",
                     changes.Added.Count);
             }
         }
@@ -309,7 +329,7 @@ public class ClientApiService : IClientApiService
     /// </summary>
     /// <param name="sinceDate">The date to check for changes since</param>
     /// <returns>Media changes since the date</returns>
-    private async Task<MediaChanges> GetMediaChangesSinceAsync(DateTime? sinceDate)
+    private Task<MediaChanges> GetMediaChangesSinceAsync(DateTime? sinceDate)
     {
         var changes = new MediaChanges
         {
@@ -322,8 +342,9 @@ public class ClientApiService : IClientApiService
         {
             // In a real implementation, you would query a media database table
             // For now, we'll return empty changes since we don't have a media service yet
-            // TODO: Implement once media management is added
-            
+            // TODO: Feature - Implement media management status check
+            // This should verify media files are accessible and metadata is synchronized
+
             _logger.LogDebug("Media changes query not yet implemented - returning empty changes");
         }
         catch (Exception ex)
@@ -331,6 +352,6 @@ public class ClientApiService : IClientApiService
             _logger.LogError(ex, "Error getting media changes since {SinceDate}", sinceDate);
         }
 
-        return changes;
+        return Task.FromResult(changes);
     }
 }

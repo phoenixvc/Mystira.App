@@ -1,0 +1,72 @@
+@* Empty State Component - Shows when no content matches filters *@
+
+<div class="empty-state">
+    <div class="empty-state-icon">
+        <i class="@IconClass"></i>
+    </div>
+    <h3 class="empty-state-title">@Title</h3>
+    <p class="empty-state-message">@Message</p>
+    
+    @if (ShowClearButton && OnClearFilters.HasDelegate)
+    {
+        <button class="btn-clear-filters" @onclick="OnClearClick">
+            <i class="fas fa-times-circle me-2"></i>Clear Filters
+        </button>
+    }
+    
+    @if (ShowRetryButton && OnRetry.HasDelegate)
+    {
+        <button class="btn-retry" @onclick="OnRetryClick">
+            <i class="fas fa-refresh me-2"></i>Try Again
+        </button>
+    }
+    
+    @if (ChildContent != null)
+    {
+        <div class="empty-state-actions">
+            @ChildContent
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string IconClass { get; set; } = "fas fa-search-minus fa-4x";
+    
+    [Parameter]
+    public string Title { get; set; } = "No Results Found";
+    
+    [Parameter]
+    public string Message { get; set; } = "Try adjusting your search or filters";
+    
+    [Parameter]
+    public bool ShowClearButton { get; set; } = true;
+    
+    [Parameter]
+    public bool ShowRetryButton { get; set; } = false;
+    
+    [Parameter]
+    public EventCallback OnClearFilters { get; set; }
+    
+    [Parameter]
+    public EventCallback OnRetry { get; set; }
+    
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+    
+    private async Task OnClearClick()
+    {
+        if (OnClearFilters.HasDelegate)
+        {
+            await OnClearFilters.InvokeAsync();
+        }
+    }
+    
+    private async Task OnRetryClick()
+    {
+        if (OnRetry.HasDelegate)
+        {
+            await OnRetry.InvokeAsync();
+        }
+    }
+}

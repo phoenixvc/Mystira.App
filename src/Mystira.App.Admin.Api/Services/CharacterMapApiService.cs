@@ -1,7 +1,7 @@
-using Mystira.App.Domain.Models;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Admin.Api.Data;
-using Mystira.App.Admin.Api.Models;
+using Mystira.App.Contracts.Requests.CharacterMaps;
+using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data;
 using YamlDotNet.Serialization;
 
 namespace Mystira.App.Admin.Api.Services;
@@ -20,14 +20,14 @@ public class CharacterMapApiService : ICharacterMapApiService
     public async Task<List<CharacterMap>> GetAllCharacterMapsAsync()
     {
         var characterMaps = await _context.CharacterMaps.ToListAsync();
-        
+
         // Initialize with default data if empty
         if (!characterMaps.Any())
         {
             await InitializeDefaultCharacterMapsAsync();
             characterMaps = await _context.CharacterMaps.ToListAsync();
         }
-        
+
         return characterMaps;
     }
 
@@ -155,7 +155,7 @@ public class CharacterMapApiService : ICharacterMapApiService
     public async Task<string> ExportCharacterMapsAsYamlAsync()
     {
         var characterMaps = await _context.CharacterMaps.ToListAsync();
-        
+
         var characterMapYaml = new CharacterMapYaml
         {
             Characters = characterMaps.Select(cm => new CharacterMapYamlEntry
@@ -186,7 +186,7 @@ public class CharacterMapApiService : ICharacterMapApiService
         var yamlContent = await reader.ReadToEndAsync();
 
         var characterMapYaml = deserializer.Deserialize<CharacterMapYaml>(yamlContent);
-        
+
         var importedCharacterMaps = new List<CharacterMap>();
 
         foreach (var yamlEntry in characterMapYaml.Characters)
@@ -208,7 +208,7 @@ public class CharacterMapApiService : ICharacterMapApiService
             {
                 _context.CharacterMaps.Remove(existing);
             }
-            
+
             _context.CharacterMaps.Add(characterMap);
             importedCharacterMaps.Add(characterMap);
         }

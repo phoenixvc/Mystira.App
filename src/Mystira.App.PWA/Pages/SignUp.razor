@@ -18,12 +18,13 @@
 
                     @if (!signupStep.HasValue || signupStep == SignupStep.Initial)
                     {
-                        <form @onsubmit="HandleRequestSignup">
+                        <form @onsubmit="HandleRequestSignup" autocomplete="on">
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email Address</label>
-                                <input type="email" class="form-control" id="email" 
+                                <input type="email" class="form-control" id="email"
                                        @bind="email" placeholder="your@email.com"
-                                       disabled="@isSubmitting" required />
+                                       disabled="@isSubmitting" required
+                                       autocomplete="email" />
                                 @if (!string.IsNullOrEmpty(emailError))
                                 {
                                     <div class="text-danger small mt-1">@emailError</div>
@@ -32,9 +33,10 @@
 
                             <div class="mb-4">
                                 <label for="displayName" class="form-label">Display Name</label>
-                                <input type="text" class="form-control" id="displayName" 
+                                <input type="text" class="form-control" id="displayName"
                                        @bind="displayName" placeholder="Your Name"
-                                       disabled="@isSubmitting" required />
+                                       disabled="@isSubmitting" required
+                                       autocomplete="name" />
                                 @if (!string.IsNullOrEmpty(displayNameError))
                                 {
                                     <div class="text-danger small mt-1">@displayNameError</div>
@@ -80,11 +82,10 @@
                         <form @onsubmit="HandleVerifyCode">
                             <div class="mb-3">
                                 <label for="code" class="form-label">Verification Code</label>
-                                <input type="text" class="form-control form-control-lg text-center" 
+                                <input type="text" class="form-control form-control-lg text-center verification-code-input" 
                                        id="code" @bind="verificationCode" 
                                        placeholder="000000" maxlength="6"
-                                       disabled="@isVerifying" required 
-                                       style="font-size: 1.5rem; letter-spacing: 0.5rem;" />
+                                       disabled="@isVerifying" required />
                                 <small class="form-text text-muted">Enter the 6-digit code from your email</small>
                                 @if (!string.IsNullOrEmpty(codeError))
                                 {

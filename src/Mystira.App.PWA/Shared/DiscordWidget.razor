@@ -1,0 +1,234 @@
+@inject IDiscordApiClient DiscordApi
+@inject IJSRuntime JS
+@implements IDisposable
+
+<!-- Floating Discord Widget -->
+<div class="discord-widget @(isExpanded ? "expanded" : "collapsed")" @onclick="ToggleWidget">
+    <div class="discord-widget-header">
+        <div class="discord-icon">
+            @if (isConnected)
+            {
+                <i class="fab fa-discord"></i>
+                <span class="status-indicator online"></span>
+            }
+            else if (isEnabled)
+            {
+                <i class="fab fa-discord"></i>
+                <span class="status-indicator offline"></span>
+            }
+            else
+            {
+                <i class="fab fa-discord text-muted"></i>
+            }
+        </div>
+        @if (isExpanded)
+        {
+            <span class="discord-title">Discord</span>
+            <button class="btn-close-widget" @onclick="CollapseWidget" @onclick:stopPropagation="true">
+                <i class="fas fa-times"></i>
+            </button>
+        }
+    </div>
+
+    @if (isExpanded)
+    {
+        <div class="discord-widget-body" @onclick:stopPropagation="true">
+            @if (!isEnabled)
+            {
+                <div class="status-message text-muted">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Discord integration is not enabled
+                </div>
+            }
+            else if (!isConnected)
+            {
+                <div class="status-message text-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Discord bot is offline
+                </div>
+            }
+            else
+            {
+                <div class="status-message text-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Connected as @botUsername
+                </div>
+
+                @if (showNotificationForm)
+                {
+                    <div class="notification-form">
+                        <div class="form-group mb-2">
+                            <label class="form-label small">Channel ID</label>
+                            <input type="number" class="form-control form-control-sm" 
+                                   @bind="channelId" 
+                                   placeholder="Discord Channel ID" />
+                        </div>
+                        <div class="form-group mb-2">
+                            <label class="form-label small">Message</label>
+                            <textarea class="form-control form-control-sm" 
+                                      @bind="message" 
+                                      rows="3"
+                                      placeholder="Enter your message..."></textarea>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary btn-sm flex-grow-1" 
+                                    @onclick="SendNotification"
+                                    disabled="@(string.IsNullOrWhiteSpace(message) || channelId == 0 || isSending)">
+                                @if (isSending)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                <i class="fas fa-paper-plane me-1"></i>
+                                Send
+                            </button>
+                            <button class="btn btn-secondary btn-sm" @onclick="HideNotificationForm">
+                                Cancel
+                            </button>
+                        </div>
+                        @if (!string.IsNullOrEmpty(sendResult))
+                        {
+                            <div class="alert alert-@(sendSuccess ? "success" : "danger") alert-sm mt-2 mb-0">
+                                @sendResult
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <button class="btn btn-discord btn-sm w-100" @onclick="ShowNotificationForm">
+                        <i class="fas fa-bell me-1"></i>
+                        Send Notification
+                    </button>
+                }
+            }
+
+            <div class="widget-footer mt-2">
+                <small class="text-muted">
+                    Last checked: @lastChecked?.ToString("HH:mm:ss")
+                </small>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool isExpanded;
+    private bool isEnabled;
+    private bool isConnected;
+    private string? botUsername;
+    private string? botId;
+    private DateTime? lastChecked;
+    private System.Threading.Timer? refreshTimer;
+    
+    private bool showNotificationForm;
+    private ulong channelId;
+    private string message = string.Empty;
+    private bool isSending;
+    private string? sendResult;
+    private bool sendSuccess;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshStatusAsync();
+
+        // Refresh status every 30 seconds
+        refreshTimer = new System.Threading.Timer(async _ =>
+        {
+            await RefreshStatusAsync();
+            await InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    private async Task RefreshStatusAsync()
+    {
+        try
+        {
+            var status = await DiscordApi.GetStatusAsync();
+            if (status != null)
+            {
+                isEnabled = status.Enabled;
+                isConnected = status.Connected;
+                botUsername = status.BotUsername;
+                botId = status.BotId;
+                lastChecked = DateTime.Now;
+            }
+        }
+        catch
+        {
+            isEnabled = false;
+            isConnected = false;
+        }
+    }
+
+    private void ToggleWidget()
+    {
+        if (!isExpanded)
+        {
+            isExpanded = true;
+        }
+    }
+
+    private void CollapseWidget()
+    {
+        isExpanded = false;
+        showNotificationForm = false;
+        ClearForm();
+    }
+
+    private void ShowNotificationForm()
+    {
+        showNotificationForm = true;
+        ClearForm();
+    }
+
+    private void HideNotificationForm()
+    {
+        showNotificationForm = false;
+        ClearForm();
+    }
+
+    private void ClearForm()
+    {
+        message = string.Empty;
+        sendResult = null;
+        sendSuccess = false;
+    }
+
+    private async Task SendNotification()
+    {
+        if (string.IsNullOrWhiteSpace(message) || channelId == 0)
+            return;
+
+        isSending = true;
+        sendResult = null;
+
+        try
+        {
+            var success = await DiscordApi.SendMessageAsync(channelId, message);
+            sendSuccess = success;
+            sendResult = success 
+                ? "✓ Message sent successfully!" 
+                : "✗ Failed to send message";
+
+            if (success)
+            {
+                await Task.Delay(2000); // Show success message
+                HideNotificationForm();
+            }
+        }
+        catch (Exception ex)
+        {
+            sendSuccess = false;
+            sendResult = $"✗ Error: {ex.Message}";
+        }
+        finally
+        {
+            isSending = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        refreshTimer?.Dispose();
+    }
+}

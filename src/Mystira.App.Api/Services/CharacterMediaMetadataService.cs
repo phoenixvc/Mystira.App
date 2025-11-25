@@ -1,8 +1,10 @@
-using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
-using Mystira.App.Api.Data;
 using Mystira.App.Api.Models;
+using Mystira.App.Application.Ports.Data;
+using Mystira.App.Contracts.Responses.Common;
+using Mystira.App.Domain.Models;
 using YamlDotNet.Serialization;
+using ApiModels = Mystira.App.Api.Models;
 
 namespace Mystira.App.Api.Services;
 
@@ -11,24 +13,29 @@ namespace Mystira.App.Api.Services;
 /// </summary>
 public class CharacterMediaMetadataService : ICharacterMediaMetadataService
 {
-    private readonly MystiraAppDbContext _context;
+    private readonly ICharacterMediaMetadataFileRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<CharacterMediaMetadataService> _logger;
 
-    public CharacterMediaMetadataService(MystiraAppDbContext context, ILogger<CharacterMediaMetadataService> logger)
+    public CharacterMediaMetadataService(
+        ICharacterMediaMetadataFileRepository repository,
+        IUnitOfWork unitOfWork,
+        ILogger<CharacterMediaMetadataService> logger)
     {
-        _context = context;
+        _repository = repository;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
     /// <summary>
     /// Gets the character media metadata file
     /// </summary>
-    public async Task<CharacterMediaMetadataFile> GetCharacterMediaMetadataFileAsync()
+    public async Task<ApiModels.CharacterMediaMetadataFile> GetCharacterMediaMetadataFileAsync()
     {
         try
         {
-            var metadataFile = await _context.CharacterMediaMetadataFiles.FirstOrDefaultAsync();
-            return metadataFile ?? new CharacterMediaMetadataFile();
+            var domainFile = await _repository.GetAsync();
+            return domainFile == null ? new ApiModels.CharacterMediaMetadataFile() : ConvertToApiModel(domainFile);
         }
         catch (Exception ex)
         {
@@ -40,25 +47,16 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
     /// <summary>
     /// Updates the character media metadata file
     /// </summary>
-    public async Task<CharacterMediaMetadataFile> UpdateCharacterMediaMetadataFileAsync(CharacterMediaMetadataFile metadataFile)
+    public async Task<ApiModels.CharacterMediaMetadataFile> UpdateCharacterMediaMetadataFileAsync(ApiModels.CharacterMediaMetadataFile metadataFile)
     {
         try
         {
-            metadataFile.UpdatedAt = DateTime.UtcNow;
-            
-            var existingFile = await _context.CharacterMediaMetadataFiles.FirstOrDefaultAsync();
-            if (existingFile != null)
-            {
-                _context.Entry(existingFile).CurrentValues.SetValues(metadataFile);
-                existingFile.Entries = metadataFile.Entries;
-            }
-            else
-            {
-                await _context.CharacterMediaMetadataFiles.AddAsync(metadataFile);
-            }
+            var domainFile = ConvertToDomainModel(metadataFile);
+            domainFile.UpdatedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
-            return metadataFile;
+            var result = await _repository.AddOrUpdateAsync(domainFile);
+            await _unitOfWork.SaveChangesAsync();
+            return ConvertToApiModel(result);
         }
         catch (Exception ex)
         {
@@ -70,12 +68,12 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
     /// <summary>
     /// Adds a new character media metadata entry
     /// </summary>
-    public async Task<CharacterMediaMetadataFile> AddCharacterMediaMetadataEntryAsync(CharacterMediaMetadataEntry entry)
+    public async Task<ApiModels.CharacterMediaMetadataFile> AddCharacterMediaMetadataEntryAsync(ApiModels.CharacterMediaMetadataEntry entry)
     {
         try
         {
             var metadataFile = await GetCharacterMediaMetadataFileAsync();
-            
+
             // Check if entry already exists
             var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entry.Id);
             if (existingEntry != null)
@@ -96,12 +94,12 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
     /// <summary>
     /// Updates an existing character media metadata entry
     /// </summary>
-    public async Task<CharacterMediaMetadataFile> UpdateCharacterMediaMetadataEntryAsync(string entryId, CharacterMediaMetadataEntry entry)
+    public async Task<ApiModels.CharacterMediaMetadataFile> UpdateCharacterMediaMetadataEntryAsync(string entryId, ApiModels.CharacterMediaMetadataEntry entry)
     {
         try
         {
             var metadataFile = await GetCharacterMediaMetadataFileAsync();
-            
+
             var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entryId);
             if (existingEntry == null)
             {
@@ -125,12 +123,12 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
     /// <summary>
     /// Removes a character media metadata entry
     /// </summary>
-    public async Task<CharacterMediaMetadataFile> RemoveCharacterMediaMetadataEntryAsync(string entryId)
+    public async Task<ApiModels.CharacterMediaMetadataFile> RemoveCharacterMediaMetadataEntryAsync(string entryId)
     {
         try
         {
             var metadataFile = await GetCharacterMediaMetadataFileAsync();
-            
+
             var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entryId);
             if (existingEntry == null)
             {
@@ -150,7 +148,7 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
     /// <summary>
     /// Gets a specific character media metadata entry by ID
     /// </summary>
-    public async Task<CharacterMediaMetadataEntry?> GetCharacterMediaMetadataEntryAsync(string entryId)
+    public async Task<ApiModels.CharacterMediaMetadataEntry?> GetCharacterMediaMetadataEntryAsync(string entryId)
     {
         try
         {
@@ -167,32 +165,32 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
     /// <summary>
     /// Imports character media metadata entries from JSON or YAML data
     /// </summary>
-    public async Task<CharacterMediaMetadataFile> ImportCharacterMediaMetadataEntriesAsync(string data, bool overwriteExisting = false)
+    public async Task<ApiModels.CharacterMediaMetadataFile> ImportCharacterMediaMetadataEntriesAsync(string data, bool overwriteExisting = false)
     {
         try
         {
-            List<CharacterMediaMetadataEntry> importedEntries;
-            
+            List<ApiModels.CharacterMediaMetadataEntry> importedEntries;
+
             // Try to determine if data is JSON or YAML
             if (data.TrimStart().StartsWith('[') || data.TrimStart().StartsWith('{'))
             {
                 // JSON format
-                importedEntries = JsonSerializer.Deserialize<List<CharacterMediaMetadataEntry>>(data);
+                importedEntries = JsonSerializer.Deserialize<List<ApiModels.CharacterMediaMetadataEntry>>(data) ?? new List<ApiModels.CharacterMediaMetadataEntry>();
             }
             else
             {
                 // YAML format
                 var deserializer = new DeserializerBuilder().Build();
-                importedEntries = deserializer.Deserialize<List<CharacterMediaMetadataEntry>>(data);
+                importedEntries = deserializer.Deserialize<List<ApiModels.CharacterMediaMetadataEntry>>(data) ?? new List<ApiModels.CharacterMediaMetadataEntry>();
             }
-            
+
             if (importedEntries == null || importedEntries.Count == 0)
             {
                 throw new ArgumentException("No valid character media metadata entries found in data");
             }
 
             var metadataFile = await GetCharacterMediaMetadataFileAsync();
-            
+
             foreach (var entry in importedEntries)
             {
                 var existingEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == entry.Id);
@@ -221,5 +219,59 @@ public class CharacterMediaMetadataService : ICharacterMediaMetadataService
             _logger.LogError(ex, "Error importing character media metadata entries");
             throw;
         }
+    }
+
+    private static Models.CharacterMediaMetadataFile ConvertToApiModel(Domain.Models.CharacterMediaMetadataFile domainFile)
+    {
+        return new Models.CharacterMediaMetadataFile
+        {
+            Id = domainFile.Id,
+            Entries = domainFile.Entries.Select(ConvertToApiEntry).ToList(),
+            CreatedAt = domainFile.CreatedAt,
+            UpdatedAt = domainFile.UpdatedAt,
+            Version = domainFile.Version
+        };
+    }
+
+    private static Domain.Models.CharacterMediaMetadataFile ConvertToDomainModel(Models.CharacterMediaMetadataFile apiFile)
+    {
+        return new Domain.Models.CharacterMediaMetadataFile
+        {
+            Id = apiFile.Id,
+            Entries = apiFile.Entries.Select(ConvertToDomainEntry).ToList(),
+            CreatedAt = apiFile.CreatedAt,
+            UpdatedAt = apiFile.UpdatedAt,
+            Version = apiFile.Version
+        };
+    }
+
+    private static Models.CharacterMediaMetadataEntry ConvertToApiEntry(Domain.Models.CharacterMediaMetadataEntry domainEntry)
+    {
+        return new Models.CharacterMediaMetadataEntry
+        {
+            Id = domainEntry.Id,
+            Title = domainEntry.Title,
+            FileName = domainEntry.FileName,
+            Type = domainEntry.Type,
+            Description = domainEntry.Description,
+            AgeRating = domainEntry.AgeRating,
+            Tags = domainEntry.Tags,
+            Loopable = domainEntry.Loopable
+        };
+    }
+
+    private static Domain.Models.CharacterMediaMetadataEntry ConvertToDomainEntry(Models.CharacterMediaMetadataEntry apiEntry)
+    {
+        return new Domain.Models.CharacterMediaMetadataEntry
+        {
+            Id = apiEntry.Id,
+            Title = apiEntry.Title,
+            FileName = apiEntry.FileName,
+            Type = apiEntry.Type,
+            Description = apiEntry.Description,
+            AgeRating = apiEntry.AgeRating,
+            Tags = apiEntry.Tags,
+            Loopable = apiEntry.Loopable
+        };
     }
 }

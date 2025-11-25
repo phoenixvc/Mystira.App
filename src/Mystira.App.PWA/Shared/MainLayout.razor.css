@@ -1,0 +1,24 @@
+/* Main Layout Styles */
+
+.page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Sticky navbar */
+.page .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1030; /* Bootstrap navbar z-index */
+}
+
+.offline-indicator {
+    display: none;
+}
+
+.profile-menu-dropdown {
+    position: absolute;
+    right: 0;
+}
+

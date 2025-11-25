@@ -1,0 +1,122 @@
+/* Empty State Scoped Styles */
+
+.empty-state {
+    text-align: center;
+    padding: 72px 28px;
+    max-width: 520px;
+    margin: 0 auto;
+    background: linear-gradient(135deg, #fdfcff 0%, #f5f0ff 100%);
+    border-radius: 24px;
+    border: 1px solid rgba(147, 51, 234, 0.08);
+    box-shadow: 0 4px 24px rgba(147, 51, 234, 0.05);
+}
+
+.empty-state-icon {
+    color: #c4b5fd;
+    margin-bottom: 28px;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.empty-state-icon i {
+    display: inline-block;
+    filter: drop-shadow(0 4px 8px rgba(147, 51, 234, 0.15));
+}
+
+.empty-state-title {
+    font-size: 1.625rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 14px;
+    animation: fadeIn 0.6s ease-in-out;
+    letter-spacing: -0.01em;
+}
+
+.empty-state-message {
+    font-size: 1.05rem;
+    color: #6b7280;
+    line-height: 1.7;
+    margin-bottom: 28px;
+    max-width: 380px;
+    margin-left: auto;
+    margin-right: auto;
+    animation: fadeIn 0.7s ease-in-out;
+}
+
+.btn-clear-filters,
+.btn-retry {
+    padding: 14px 36px;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 14px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: fadeIn 0.8s ease-in-out;
+    letter-spacing: 0.01em;
+}
+
+.btn-clear-filters {
+    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+    color: white;
+    box-shadow: 0 6px 20px rgba(147, 51, 234, 0.3);
+}
+
+.btn-clear-filters:hover {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(147, 51, 234, 0.4);
+}
+
+.btn-retry {
+    background: white;
+    color: #9333ea;
+    border: 2px solid #e9d5ff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.btn-retry:hover {
+    background: #faf5ff;
+    border-color: #c084fc;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(147, 51, 234, 0.15);
+}
+
+.empty-state-actions {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: center;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .empty-state {
+        padding: 60px 20px;
+    }
+    
+    .empty-state-title {
+        font-size: 1.25rem;
+    }
+    
+    .empty-state-message {
+        font-size: 0.9rem;
+    }
+    
+    .btn-clear-filters,
+    .btn-retry {
+        width: 100%;
+        max-width: 300px;
+    }
+}

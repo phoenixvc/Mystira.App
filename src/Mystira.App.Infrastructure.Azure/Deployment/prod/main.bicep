@@ -13,9 +13,23 @@ param shortLocation string = 'wus'
 @secure()
 param jwtSecretKey string = newGuid() // ⚠️ UPDATE: Provide your own secure JWT key for production
 
+@description('Object ID for Key Vault admin access')
+param keyVaultAdminObjectId string // ⚠️ REQUIRED: Provide the Object ID of the user/service principal for Key Vault access
+
 // Variables - ⚠️ UPDATE: Change 'mystira' to your app name
 var resourcePrefix = '${environment}-${shortLocation}-app-mystira' // ⚠️ UPDATE: Change 'mystira' prefix to your app name
 var cosmosDbName = replace('${resourcePrefix}cosmos', '-', '')  // Remove hyphens for Cosmos DB name
+
+// Deploy Key Vault for Story Protocol secrets
+module keyVault 'key-vault.bicep' = {
+  name: 'keyvault-deployment'
+  params: {
+    environment: environment
+    location: location
+    shortLocation: shortLocation
+    keyVaultAdminObjectId: keyVaultAdminObjectId
+  }
+}
 
 // Deploy Storage Account
 module storage 'storage.bicep' = {
@@ -47,6 +61,7 @@ module appService 'app-service.bicep' = {
     cosmosDbConnectionString: cosmosDb.outputs.cosmosDbConnectionString
     storageConnectionString: storage.outputs.storageConnectionString
     jwtSecretKey: jwtSecretKey
+    keyVaultName: keyVault.outputs.keyVaultName
   }
 }
 
@@ -54,4 +69,5 @@ module appService 'app-service.bicep' = {
 output appServiceUrl string = appService.outputs.appServiceUrl
 output storageAccountName string = storage.outputs.storageAccountName
 output cosmosDbAccountName string = cosmosDb.outputs.cosmosDbAccountName
-output mediaContainerUrl string = storage.outputs.mediaContainerUrl
+output mediaContainerUrl string = storage.outputs.mediaContainerUrloutput keyVaultName string = keyVault.outputs.keyVaultName
+output keyVaultUri string = keyVault.outputs.keyVaultUri

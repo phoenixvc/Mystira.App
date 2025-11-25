@@ -1,0 +1,186 @@
+@using Mystira.App.PWA.Models
+@inject IApiClient ApiClient
+@inject ILogger<AvatarCarousel> Logger
+
+<div class="avatar-carousel-container">
+    <div class="card">
+        <div class="card-body text-center">
+            <h5 class="card-title mb-4">Select an Avatar</h5>
+            
+            @if (isLoading)
+            {
+                <div class="avatar-display">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading avatars...</span>
+                    </div>
+                </div>
+            }
+            else if (avatarMediaIds == null || avatarMediaIds.Count == 0)
+            {
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    No avatars available for this age group.
+                </div>
+            }
+            else
+            {
+                <div class="d-flex flex-column align-items-center gap-3">
+                    <!-- Avatar Display -->
+                    <div class="avatar-display">
+                        <CachedMystiraImage 
+                            MediaId="@(currentAvatarMediaId)" 
+                            Alt="Avatar" 
+                            ImageClass="avatar-image"
+                            Width="200"
+                            Height="200" />
+                    </div>
+
+                    <!-- Navigation Controls -->
+                    <div class="avatar-controls d-flex gap-2 justify-content-center align-items-center">
+                        <button class="btn btn-outline-primary" 
+                                @onclick="PreviousAvatar"
+                                disabled="@(avatarMediaIds.Count <= 1)">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        
+                        <span class="avatar-counter">
+                            @(currentAvatarIndex + 1) / @(avatarMediaIds.Count)
+                        </span>
+                        
+                        <button class="btn btn-outline-primary" 
+                                @onclick="NextAvatar"
+                                disabled="@(avatarMediaIds.Count <= 1)">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+
+                    <!-- Avatar Thumbnails -->
+                    @if (avatarMediaIds.Count > 1)
+                    {
+                        <div class="avatar-thumbnails d-flex gap-2 flex-wrap justify-content-center">
+                            @for (int i = 0; i < avatarMediaIds.Count; i++)
+                            {
+                                var index = i;
+                                var mediaId = avatarMediaIds[i];
+                                var altText = $"Avatar {index + 1}";
+                                <button class="btn btn-sm avatar-thumbnail @(currentAvatarIndex == index ? "active" : "")"
+                                        @onclick="() => SelectAvatar(index)"
+                                        title="@($"Avatar {index + 1}")">
+                                    <CachedMystiraImage
+                                        MediaId="@mediaId"
+                                        Alt="@altText"
+                                        ImageClass="thumbnail-image"
+                                        Width="60"
+                                        Height="60" />
+                                </button>
+                            }
+                        </div>
+                    }
+
+                    <!-- Selection Button -->
+                    <button class="btn btn-primary-custom w-100" 
+                            @onclick="ConfirmSelection"
+                            disabled="@(string.IsNullOrEmpty(currentAvatarMediaId))">
+                        <i class="fas fa-check me-2"></i>
+                        Select This Avatar
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? AgeGroup { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnAvatarSelected { get; set; }
+
+    private List<string>? avatarMediaIds;
+    private int currentAvatarIndex = 0;
+    private string? currentAvatarMediaId;
+    private bool isLoading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(AgeGroup) && AgeGroup != "")
+        {
+            await LoadAvatarsForAgeGroup();
+        }
+    }
+
+    private async Task LoadAvatarsForAgeGroup()
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            if (string.IsNullOrEmpty(AgeGroup))
+            {
+                Logger.LogWarning("Age group is required to load avatars");
+                isLoading = false;
+                return;
+            }
+
+            avatarMediaIds = await ApiClient.GetAvatarsByAgeGroupAsync(AgeGroup);
+
+            if (avatarMediaIds != null && avatarMediaIds.Count > 0)
+            {
+                currentAvatarIndex = 0;
+                currentAvatarMediaId = avatarMediaIds[0];
+                Logger.LogInformation("Loaded {Count} avatars for age group {AgeGroup}", avatarMediaIds.Count, AgeGroup);
+            }
+            else
+            {
+                Logger.LogWarning("No avatars found for age group {AgeGroup}", AgeGroup);
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading avatars for age group {AgeGroup}", AgeGroup);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void NextAvatar()
+    {
+        if (avatarMediaIds != null && avatarMediaIds.Count > 0)
+        {
+            currentAvatarIndex = (currentAvatarIndex + 1) % avatarMediaIds.Count;
+            currentAvatarMediaId = avatarMediaIds[currentAvatarIndex];
+        }
+    }
+
+    private void PreviousAvatar()
+    {
+        if (avatarMediaIds != null && avatarMediaIds.Count > 0)
+        {
+            currentAvatarIndex = (currentAvatarIndex - 1 + avatarMediaIds.Count) % avatarMediaIds.Count;
+            currentAvatarMediaId = avatarMediaIds[currentAvatarIndex];
+        }
+    }
+
+    private void SelectAvatar(int index)
+    {
+        currentAvatarIndex = index;
+        if (avatarMediaIds != null && index >= 0 && index < avatarMediaIds.Count)
+        {
+            currentAvatarMediaId = avatarMediaIds[index];
+        }
+    }
+
+    private async Task ConfirmSelection()
+    {
+        if (!string.IsNullOrEmpty(currentAvatarMediaId))
+        {
+            await OnAvatarSelected.InvokeAsync(currentAvatarMediaId);
+        }
+    }
+}

@@ -24,6 +24,7 @@ Thumbs.db
 
 # Tauri specific
 src-tauri/target/
+# Note: Cargo.lock should be committed for applications
 
 # .NET projects (should not be in DevHub)
 Mystira.App.*/

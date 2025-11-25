@@ -5,10 +5,11 @@ using System.Threading.Tasks;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Logging;
+using Mystira.App.Application.Ports.Storage;
 
 namespace Mystira.App.Infrastructure.Azure.Services;
 
-public class AzureBlobService : IAzureBlobService
+public class AzureBlobService : IBlobService
 {
     private readonly BlobServiceClient _blobServiceClient;
     private readonly ILogger<AzureBlobService> _logger;
@@ -52,7 +53,7 @@ public class AzureBlobService : IAzureBlobService
         }
     }
 
-    public async Task<string> GetMediaUrlAsync(string blobName)
+    public Task<string> GetMediaUrlAsync(string blobName)
     {
         try
         {
@@ -60,7 +61,7 @@ public class AzureBlobService : IAzureBlobService
             var blobClient = containerClient.GetBlobClient(blobName);
 
             // For public containers, we can return the direct URL
-            return blobClient.Uri.ToString();
+            return Task.FromResult(blobClient.Uri.ToString());
         }
         catch (Exception ex)
         {
@@ -77,7 +78,7 @@ public class AzureBlobService : IAzureBlobService
             var blobClient = containerClient.GetBlobClient(blobName);
 
             var response = await blobClient.DeleteIfExistsAsync();
-            
+
             if (response.Value)
             {
                 _logger.LogInformation("Deleted media file: {BlobName}", blobName);
