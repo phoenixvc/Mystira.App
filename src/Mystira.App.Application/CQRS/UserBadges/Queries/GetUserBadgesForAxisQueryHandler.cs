@@ -31,7 +31,7 @@ public class GetUserBadgesForAxisQueryHandler
 
         var badges = await _repository.GetByUserProfileIdAsync(query.UserProfileId);
         var filteredBadges = badges
-            .Where(b => b.BadgeConfiguration?.Axis?.Equals(query.Axis, StringComparison.OrdinalIgnoreCase) == true)
+            .Where(b => b.BadgeConfiguration?.Axis?.Equals(query.Axis, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         _logger.LogInformation("Found {Count} badges for axis {Axis}", filteredBadges.Count, query.Axis);
