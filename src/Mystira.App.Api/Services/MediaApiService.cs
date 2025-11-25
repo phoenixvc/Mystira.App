@@ -11,6 +11,15 @@ namespace Mystira.App.Api.Services;
 /// NOTE: This service violates architectural rules (services should not exist in API layer).
 /// Controllers should call use cases directly. This is kept temporarily for backward compatibility.
 /// </summary>
+/// <remarks>
+/// DEPRECATED: Use IMediator with CQRS queries/commands instead.
+/// - GetMediaAssetQuery for metadata
+/// - GetMediaFileQuery for file downloads
+/// - UploadMediaCommand for uploads
+/// - ValidateMediaReferencesQuery for validation
+/// See ARCHITECTURAL_REFACTORING_PLAN.md for migration guide.
+/// </remarks>
+[Obsolete("Use IMediator with CQRS queries/commands instead. See ARCHITECTURAL_REFACTORING_PLAN.md")]
 public class MediaApiService : IMediaApiService
 {
     private readonly GetMediaUseCase _getMediaUseCase;

@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Api.Services;
 using Mystira.App.Application.CQRS.UserProfiles.Commands;
 using Mystira.App.Application.CQRS.UserProfiles.Queries;
 using Mystira.App.Contracts.Requests.UserProfiles;
@@ -10,25 +9,23 @@ using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;
 
+/// <summary>
+/// Controller for user profile management.
+/// Follows hexagonal architecture - uses only IMediator (CQRS pattern).
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class UserProfilesController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly IUserProfileApiService _profileService;
-    private readonly IAccountApiService _accountService;
     private readonly ILogger<UserProfilesController> _logger;
 
     public UserProfilesController(
         IMediator mediator,
-        IUserProfileApiService profileService,
-        IAccountApiService accountService,
         ILogger<UserProfilesController> logger)
     {
         _mediator = mediator;
-        _profileService = profileService;
-        _accountService = accountService;
         _logger = logger;
     }
 
@@ -328,7 +325,8 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-            var profiles = await _profileService.CreateMultipleProfilesAsync(request);
+            var command = new CreateMultipleProfilesCommand(request);
+            var profiles = await _mediator.Send(command);
             return Ok(profiles);
         }
         catch (Exception ex)
@@ -363,8 +361,11 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-            var success = await _profileService.AssignCharacterToProfileAsync(
-                request.ProfileId, request.CharacterId, request.IsNpcAssignment);
+            var command = new AssignCharacterToProfileCommand(
+                request.ProfileId,
+                request.CharacterId,
+                request.IsNpcAssignment);
+            var success = await _mediator.Send(command);
 
             if (!success)
             {
@@ -398,30 +399,15 @@ public class UserProfilesController : ControllerBase
     {
         try
         {
-            var profile = await _profileService.GetProfileByIdAsync(profileId);
-            if (profile == null)
+            var command = new RemoveProfileFromAccountCommand(profileId);
+            var success = await _mediator.Send(command);
+
+            if (!success)
             {
                 return NotFound(new ErrorResponse
                 {
                     Message = $"Profile with ID {profileId} not found",
                     TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            if (!string.IsNullOrEmpty(profile.AccountId))
-            {
-                // Remove profile from account
-                var account = await _accountService.GetAccountByIdAsync(profile.AccountId);
-                if (account != null)
-                {
-                    account.UserProfileIds.Remove(profileId);
-                    await _accountService.UpdateAccountAsync(account);
-                }
-
-                // Clear profile's account ID
-                await _profileService.UpdateProfileByIdAsync(profileId, new UpdateUserProfileRequest
-                {
-                    AccountId = null
                 });
             }
 

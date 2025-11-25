@@ -1,0 +1,98 @@
+@* ToastContainer.razor - Container for displaying toast notifications *@
+@implements IDisposable
+@inject ToastService ToastService
+
+<div class="toast-container" aria-live="polite" aria-atomic="true">
+    @foreach (var toast in _toasts)
+    {
+        <div class="toast toast-@toast.Type.ToString().ToLower()"
+             role="alert"
+             @key="toast.Id">
+            <div class="toast-icon">
+                @GetToastIcon(toast.Type)
+            </div>
+            <div class="toast-message">
+                @toast.Message
+            </div>
+            <button class="toast-close"
+                    @onclick="() => RemoveToast(toast.Id)"
+                    aria-label="Close notification">
+                ×
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    private readonly List<ToastMessage> _toasts = new();
+    private Dictionary<Guid, System.Threading.Timer> _timers = new();
+
+    protected override void OnInitialized()
+    {
+        ToastService.OnShow += HandleToastShow;
+        ToastService.OnClear += HandleToastClear;
+    }
+
+    private void HandleToastShow(ToastMessage toast)
+    {
+        _toasts.Add(toast);
+        StateHasChanged();
+
+        // Auto-remove after duration
+        var timer = new System.Threading.Timer(_ =>
+        {
+            InvokeAsync(() => RemoveToast(toast.Id));
+        }, null, toast.DurationMs, Timeout.Infinite);
+
+        _timers[toast.Id] = timer;
+    }
+
+    private void HandleToastClear()
+    {
+        foreach (var timer in _timers.Values)
+        {
+            timer.Dispose();
+        }
+        _timers.Clear();
+        _toasts.Clear();
+        StateHasChanged();
+    }
+
+    private void RemoveToast(Guid id)
+    {
+        var toast = _toasts.FirstOrDefault(t => t.Id == id);
+        if (toast != null)
+        {
+            _toasts.Remove(toast);
+
+            if (_timers.TryGetValue(id, out var timer))
+            {
+                timer.Dispose();
+                _timers.Remove(id);
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    private string GetToastIcon(ToastType type) => type switch
+    {
+        ToastType.Success => "✓",
+        ToastType.Error => "✕",
+        ToastType.Warning => "⚠",
+        ToastType.Info => "ℹ",
+        _ => "ℹ"
+    };
+
+    public void Dispose()
+    {
+        ToastService.OnShow -= HandleToastShow;
+        ToastService.OnClear -= HandleToastClear;
+
+        foreach (var timer in _timers.Values)
+        {
+            timer.Dispose();
+        }
+        _timers.Clear();
+    }
+}

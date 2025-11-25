@@ -3,8 +3,23 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Api.Services;
 
 /// <summary>
-/// Service for managing accounts in the API
+/// DEPRECATED: This service violates hexagonal architecture.
+/// Controllers should use IMediator (CQRS pattern) instead.
 /// </summary>
+/// <remarks>
+/// Migration guide:
+/// - GetAccountByEmailAsync → GetAccountByEmailQuery
+/// - GetAccountByIdAsync → GetAccountQuery
+/// - CreateAccountAsync → CreateAccountCommand
+/// - UpdateAccountAsync → UpdateAccountCommand
+/// - DeleteAccountAsync → DeleteAccountCommand
+/// - LinkUserProfilesToAccountAsync → LinkProfilesToAccountCommand
+/// - GetUserProfilesForAccountAsync → GetProfilesByAccountQuery
+/// - ValidateAccountAsync → ValidateAccountQuery
+/// - AddCompletedScenarioAsync → (Create AddCompletedScenarioCommand if needed)
+/// See ARCHITECTURAL_REFACTORING_PLAN.md for details.
+/// </remarks>
+[Obsolete("Use IMediator with CQRS queries/commands instead. See ARCHITECTURAL_REFACTORING_PLAN.md")]
 public interface IAccountApiService
 {
     /// <summary>

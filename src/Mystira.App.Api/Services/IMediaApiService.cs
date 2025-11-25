@@ -6,6 +6,13 @@ namespace Mystira.App.Api.Services;
 /// <summary>
 /// Service for managing media assets
 /// </summary>
+/// <remarks>
+/// DEPRECATED: This service violates hexagonal architecture.
+/// Controllers should use IMediator (CQRS pattern) instead.
+/// Use GetMediaAssetQuery, GetMediaFileQuery, UploadMediaCommand, etc.
+/// This interface will be removed in a future version.
+/// </remarks>
+[Obsolete("Use IMediator with CQRS queries/commands instead. See ARCHITECTURAL_REFACTORING_PLAN.md")]
 public interface IMediaApiService
 {
     /// <summary>

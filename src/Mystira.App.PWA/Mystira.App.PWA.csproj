@@ -10,8 +10,12 @@
   <PropertyGroup>
     <BlazorEnableCompression Condition="'$(Configuration)' == 'Release'">true</BlazorEnableCompression>
     <BlazorEnableCompression Condition="'$(Configuration)' != 'Release'">false</BlazorEnableCompression>
-    <BlazorWebAssemblyEnableLinking>false</BlazorWebAssemblyEnableLinking>
-    <RunAOTCompilation>false</RunAOTCompilation>
+    <!-- Enable IL Linking for production builds to reduce bundle size by 30-50% -->
+    <BlazorWebAssemblyEnableLinking Condition="'$(Configuration)' == 'Release'">true</BlazorWebAssemblyEnableLinking>
+    <BlazorWebAssemblyEnableLinking Condition="'$(Configuration)' != 'Release'">false</BlazorWebAssemblyEnableLinking>
+    <!-- Enable AOT compilation for production builds for better runtime performance -->
+    <RunAOTCompilation Condition="'$(Configuration)' == 'Release'">true</RunAOTCompilation>
+    <RunAOTCompilation Condition="'$(Configuration)' != 'Release'">false</RunAOTCompilation>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">

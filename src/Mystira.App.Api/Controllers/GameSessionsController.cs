@@ -1,7 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Api.Services;
+using Mystira.App.Application.CQRS.Accounts.Commands;
 using Mystira.App.Application.CQRS.GameSessions.Commands;
 using Mystira.App.Application.CQRS.GameSessions.Queries;
 using Mystira.App.Contracts.Requests.GameSessions;
@@ -12,22 +12,23 @@ using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;
 
+/// <summary>
+/// Controller for game session management.
+/// Follows hexagonal architecture - uses only IMediator (CQRS pattern).
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class GameSessionsController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly IAccountApiService _accountService;
     private readonly ILogger<GameSessionsController> _logger;
 
     public GameSessionsController(
         IMediator mediator,
-        IAccountApiService accountService,
         ILogger<GameSessionsController> logger)
     {
         _mediator = mediator;
-        _accountService = accountService;
         _logger = logger;
     }
 
@@ -454,7 +455,8 @@ public class GameSessionsController : ControllerBase
                 });
             }
 
-            var success = await _accountService.AddCompletedScenarioAsync(request.AccountId, request.ScenarioId);
+            var command = new AddCompletedScenarioCommand(request.AccountId, request.ScenarioId);
+            var success = await _mediator.Send(command);
             if (!success)
             {
                 return NotFound(new ErrorResponse

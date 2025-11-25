@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Api.Services;
 using Mystira.App.Application.CQRS.UserBadges.Commands;
 using Mystira.App.Application.CQRS.UserBadges.Queries;
 using Mystira.App.Contracts.Requests.Badges;
@@ -11,25 +10,23 @@ using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;
 
+/// <summary>
+/// Controller for user badge management.
+/// Follows hexagonal architecture - uses only IMediator (CQRS pattern).
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class UserBadgesController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly IUserBadgeApiService _badgeService;
-    private readonly IAccountApiService _accountService;
     private readonly ILogger<UserBadgesController> _logger;
 
     public UserBadgesController(
         IMediator mediator,
-        IUserBadgeApiService badgeService,
-        IAccountApiService accountService,
         ILogger<UserBadgesController> logger)
     {
         _mediator = mediator;
-        _badgeService = badgeService;
-        _accountService = accountService;
         _logger = logger;
     }
 
@@ -110,7 +107,8 @@ public class UserBadgesController : ControllerBase
     {
         try
         {
-            var badges = await _badgeService.GetUserBadgesForAxisAsync(userProfileId, axis);
+            var query = new GetUserBadgesForAxisQuery(userProfileId, axis);
+            var badges = await _mediator.Send(query);
             return Ok(badges);
         }
         catch (Exception ex)
@@ -133,7 +131,8 @@ public class UserBadgesController : ControllerBase
     {
         try
         {
-            var hasEarned = await _badgeService.HasUserEarnedBadgeAsync(userProfileId, badgeConfigurationId);
+            var query = new HasUserEarnedBadgeQuery(userProfileId, badgeConfigurationId);
+            var hasEarned = await _mediator.Send(query);
             return Ok(new { hasEarned });
         }
         catch (Exception ex)
@@ -156,7 +155,8 @@ public class UserBadgesController : ControllerBase
     {
         try
         {
-            var statistics = await _badgeService.GetBadgeStatisticsAsync(userProfileId);
+            var query = new GetBadgeStatisticsQuery(userProfileId);
+            var statistics = await _mediator.Send(query);
             return Ok(statistics);
         }
         catch (Exception ex)
@@ -178,26 +178,19 @@ public class UserBadgesController : ControllerBase
     {
         try
         {
-            var account = await _accountService.GetAccountByEmailAsync(email);
-            if (account == null)
+            var query = new GetBadgesForAccountByEmailQuery(email);
+            var badges = await _mediator.Send(query);
+
+            if (!badges.Any())
             {
                 return NotFound(new ErrorResponse
                 {
-                    Message = $"Account with email {email} not found",
+                    Message = $"Account with email {email} not found or has no badges",
                     TraceId = HttpContext.TraceIdentifier
                 });
             }
 
-            var allBadges = new List<UserBadge>();
-            var profiles = await _accountService.GetUserProfilesForAccountAsync(account.Id);
-
-            foreach (var profile in profiles)
-            {
-                var badges = await _badgeService.GetUserBadgesAsync(profile.Id);
-                allBadges.AddRange(badges);
-            }
-
-            return Ok(allBadges);
+            return Ok(badges);
         }
         catch (Exception ex)
         {
@@ -218,36 +211,10 @@ public class UserBadgesController : ControllerBase
     {
         try
         {
-            var account = await _accountService.GetAccountByEmailAsync(email);
-            if (account == null)
-            {
-                return NotFound(new ErrorResponse
-                {
-                    Message = $"Account with email {email} not found",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
+            var query = new GetBadgeStatisticsForAccountByEmailQuery(email);
+            var statistics = await _mediator.Send(query);
 
-            var combinedStatistics = new Dictionary<string, int>();
-            var profiles = await _accountService.GetUserProfilesForAccountAsync(account.Id);
-
-            foreach (var profile in profiles)
-            {
-                var profileStats = await _badgeService.GetBadgeStatisticsAsync(profile.Id);
-                foreach (var stat in profileStats)
-                {
-                    if (combinedStatistics.ContainsKey(stat.Key))
-                    {
-                        combinedStatistics[stat.Key] += stat.Value;
-                    }
-                    else
-                    {
-                        combinedStatistics[stat.Key] = stat.Value;
-                    }
-                }
-            }
-
-            return Ok(combinedStatistics);
+            return Ok(statistics);
         }
         catch (Exception ex)
         {

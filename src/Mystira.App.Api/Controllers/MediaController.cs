@@ -2,7 +2,6 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Api.Models;
-using Mystira.App.Api.Services;
 using Mystira.App.Application.CQRS.MediaAssets.Queries;
 using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Domain.Models;
@@ -16,13 +15,11 @@ namespace Mystira.App.Api.Controllers;
 public class MediaController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly IMediaApiService _mediaService;
     private readonly ILogger<MediaController> _logger;
 
-    public MediaController(IMediator mediator, IMediaApiService mediaService, ILogger<MediaController> logger)
+    public MediaController(IMediator mediator, ILogger<MediaController> logger)
     {
         _mediator = mediator;
-        _mediaService = mediaService;
         _logger = logger;
     }
 
@@ -67,7 +64,9 @@ public class MediaController : ControllerBase
     {
         try
         {
-            var result = await _mediaService.GetMediaFileAsync(mediaId);
+            var query = new GetMediaFileQuery(mediaId);
+            var result = await _mediator.Send(query);
+
             if (result == null)
             {
                 return NotFound(new ErrorResponse

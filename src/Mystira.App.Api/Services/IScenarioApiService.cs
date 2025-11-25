@@ -4,6 +4,22 @@ using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Services;
 
+/// <summary>
+/// DEPRECATED: This service violates hexagonal architecture.
+/// Controllers should use IMediator (CQRS pattern) instead.
+/// </summary>
+/// <remarks>
+/// Migration guide:
+/// - GetScenariosAsync → GetPaginatedScenariosQuery
+/// - GetScenarioByIdAsync → GetScenarioQuery
+/// - GetScenariosByAgeGroupAsync → GetScenariosByAgeGroupQuery
+/// - GetFeaturedScenariosAsync → GetFeaturedScenariosQuery
+/// - GetScenariosWithGameStateAsync → GetScenariosWithGameStateQuery
+/// - CreateScenarioAsync → CreateScenarioCommand
+/// - DeleteScenarioAsync → DeleteScenarioCommand
+/// See ARCHITECTURAL_REFACTORING_PLAN.md for details.
+/// </remarks>
+[Obsolete("Use IMediator with CQRS queries/commands instead. See ARCHITECTURAL_REFACTORING_PLAN.md")]
 public interface IScenarioApiService
 {
     Task<ScenarioListResponse> GetScenariosAsync(ScenarioQueryRequest request);
