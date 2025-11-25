@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
-using Mystira.App.Api.Services;
 using Mystira.App.Application.Interfaces;
+using Mystira.App.Application.Ports.Auth;
 using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Application.CQRS.Auth.Commands;

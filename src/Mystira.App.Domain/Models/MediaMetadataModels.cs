@@ -75,6 +75,17 @@ public class CharacterMediaMetadataFile
 }
 
 /// <summary>
+/// Individual character entry for API responses
+/// </summary>
+public class Character
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Image { get; set; } = string.Empty; // Media ID reference
+    public CharacterMetadata Metadata { get; set; } = new();
+}
+
+/// <summary>
 /// Character entry used in CharacterMapFile
 /// Note: This is different from CharacterMap - this is for file-based character storage
 /// </summary>

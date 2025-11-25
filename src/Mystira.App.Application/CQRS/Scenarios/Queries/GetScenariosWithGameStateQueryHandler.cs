@@ -36,9 +36,9 @@ public class GetScenariosWithGameStateQueryHandler
             "Retrieving scenarios with game state for account: {AccountId}",
             request.AccountId);
 
-        // 1. Get all scenarios (no IsActive property in Scenario model)
-        // TODO: Add IsActive property to Scenario model to enable filtering
+        // 1. Get all active scenarios using direct LINQ query
         var scenarios = await _scenarioRepository.GetQueryable()
+            .Where(s => s.IsActive)
             .OrderBy(s => s.Title)
             .ToListAsync(cancellationToken);
 
@@ -56,9 +56,12 @@ public class GetScenariosWithGameStateQueryHandler
             var lastSession = sessions.FirstOrDefault();
             var completedCount = sessions.Count(gs => gs.Status == Domain.Models.SessionStatus.Completed);
             var hasPlayed = sessions.Any();
-            var gameState = completedCount > 0
-                ? ScenarioGameState.Completed
-                : (hasPlayed ? ScenarioGameState.InProgress : ScenarioGameState.NotStarted);
+            var isCompleted = completedCount > 0;
+
+            // Determine game state enum
+            var gameState = !hasPlayed ? ScenarioGameState.NotStarted
+                : isCompleted ? ScenarioGameState.Completed
+                : ScenarioGameState.InProgress;
 
             return new ScenarioWithGameState
             {
@@ -68,9 +71,9 @@ public class GetScenariosWithGameStateQueryHandler
                 AgeGroup = scenario.AgeGroup,
                 Difficulty = scenario.Difficulty.ToString(),
                 SessionLength = scenario.SessionLength.ToString(),
-                CoreAxes = scenario.CoreAxes.Select(ca => ca.ToString()).ToList(),
-                Tags = scenario.Tags.ToArray(),
-                Archetypes = scenario.Archetypes.Select(a => a.ToString()).ToArray(),
+                CoreAxes = scenario.CoreAxes?.Select(a => a.Value).ToList() ?? new List<string>(),
+                Tags = scenario.Tags?.ToArray() ?? [],
+                Archetypes = scenario.Archetypes?.Select(a => a.ToString()).ToArray() ?? [],
                 GameState = gameState,
                 LastPlayedAt = lastSession?.StartTime,
                 PlayCount = sessions.Count
@@ -84,7 +87,7 @@ public class GetScenariosWithGameStateQueryHandler
         };
 
         _logger.LogInformation(
-            "Retrieved {Total} scenarios with game state for account {AccountId}",
+            "Retrieved {Total} scenarios for account {AccountId}",
             response.TotalCount,
             request.AccountId);
 

@@ -6,7 +6,8 @@
         "-y",
         "@modelcontextprotocol/server-filesystem",
         "."
-      ]
+      ],
+      "tools": ["*"]
     },
     "github": {
       "command": "npx",
@@ -15,8 +16,17 @@
         "@modelcontextprotocol/server-github"
       ],
       "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
-      }
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "COPILOT_MCP_GITHUB_TOKEN"
+      },
+      "tools": ["*"]
+    },
+    "git": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-git"
+      ],
+      "tools": ["*"]
     }
   }
 }

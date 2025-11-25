@@ -8,6 +8,7 @@ using Mystira.App.Contracts.Requests.Scenarios;
 using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Contracts.Responses.Scenarios;
 using Mystira.App.Domain.Models;
+using Character = Mystira.App.Admin.Api.Models.Character;
 using CharacterMetadata = Mystira.App.Admin.Api.Models.CharacterMetadata;
 using CreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;
 using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;

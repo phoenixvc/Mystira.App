@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Contracts.Responses.Common;
-using Mystira.App.Domain.Models;
 using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
+using AdminCharacter = Mystira.App.Admin.Api.Models.Character;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
@@ -27,7 +27,7 @@ public class CharacterAdminController : ControllerBase
     /// Updates an existing character
     /// </summary>
     [HttpPut("{id}")]
-    public async Task<ActionResult<Domain.Models.CharacterMapFile>> UpdateCharacter(string id, [FromBody] Character character)
+    public async Task<ActionResult<Mystira.App.Domain.Models.CharacterMapFile>> UpdateCharacter(string id, [FromBody] AdminCharacter character)
     {
         try
         {
@@ -87,7 +87,7 @@ public class CharacterAdminController : ControllerBase
     /// Adds a new character
     /// </summary>
     [HttpPost]
-    public async Task<ActionResult<Domain.Models.CharacterMapFile>> AddCharacter([FromBody] Character character)
+    public async Task<ActionResult<Mystira.App.Domain.Models.CharacterMapFile>> AddCharacter([FromBody] AdminCharacter character)
     {
         try
         {

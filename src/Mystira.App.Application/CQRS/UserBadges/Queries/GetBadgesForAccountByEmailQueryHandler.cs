@@ -46,12 +46,10 @@ public class GetBadgesForAccountByEmailQueryHandler
         var profiles = await _mediator.Send(profilesQuery, cancellationToken);
 
         // Get badges for all profiles in parallel
-        var badgeTasks = profiles
-            .Select(profile => _mediator.Send(new GetUserBadgesQuery(profile.Id), cancellationToken))
-            .ToList();
-
-        var badgeLists = await Task.WhenAll(badgeTasks);
-        var allBadges = badgeLists.SelectMany(b => b).ToList();
+        var badgeTasks = profiles.Select(profile =>
+            _mediator.Send(new GetUserBadgesQuery(profile.Id), cancellationToken));
+        var badgeResults = await Task.WhenAll(badgeTasks);
+        var allBadges = badgeResults.SelectMany(b => b).ToList();
 
         _logger.LogInformation("Found {Count} total badges for account {Email}",
             allBadges.Count, query.Email);

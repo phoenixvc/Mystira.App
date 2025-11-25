@@ -31,13 +31,13 @@ public class GetFeaturedScenariosQueryHandler
     {
         _logger.LogInformation("Retrieving featured scenarios");
 
-        // Get all scenarios (no IsFeatured or IsActive properties in Scenario model)
-        // TODO: Add IsFeatured and IsActive properties to Scenario model to enable filtering
+        // Get featured and active scenarios
         var scenarios = await _repository.GetQueryable()
+            .Where(s => s.IsFeatured && s.IsActive)
             .OrderBy(s => s.Title)
             .ToListAsync(cancellationToken);
 
-        _logger.LogInformation("Found {Count} scenarios", scenarios.Count);
+        _logger.LogInformation("Found {Count} featured scenarios", scenarios.Count);
 
         return scenarios;
     }

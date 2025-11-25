@@ -2,12 +2,6 @@
 
 This directory contains the Model Context Protocol (MCP) configuration for the Mystira.App repository. MCP is a standard that allows AI assistants to access tools, resources, and context about the repository.
 
-## Important: Configuration Required
-
-**The `config.json` file uses placeholder paths that you MUST replace with your local repository path before use.**
-
-Replace all instances of `/path/to/Mystira.App` with the absolute path to your local Mystira.App repository clone.
-
 ## What is MCP?
 
 Model Context Protocol (MCP) is an open protocol that enables AI assistants to:
@@ -28,46 +22,21 @@ The main MCP configuration file that defines:
 - **Tools**: Command-line tools for building, testing, and running the application
 - **Context**: Project metadata and architectural principles
 
+### `.github/mcp.json`
+
+The GitHub Copilot coding agent MCP configuration. This file is automatically used by GitHub Copilot's coding agent when working with this repository.
+
 ## Using MCP with AI Assistants
 
-### Claude Desktop
+### GitHub Copilot Coding Agent
 
-1. Install Claude Desktop
-2. Open the Claude Desktop configuration file:
-   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-   - Linux: `~/.config/Claude/claude_desktop_config.json`
+The `.github/mcp.json` file is automatically picked up by GitHub Copilot's coding agent. No additional configuration is needed.
 
-3. Add or merge the MCP configuration:
+**Adding MCP Secrets:**
 
-```json
-{
-  "mcpServers": {
-    "mystira-filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/path/to/Mystira.App"
-      ]
-    },
-    "mystira-github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "your-token-here"
-      }
-    }
-  }
-}
-```
-
-4. Replace `/path/to/Mystira.App` with the actual path to your local repository
-5. Replace `your-token-here` with your GitHub Personal Access Token
-
-### Other AI Assistants
-
-For AI assistants that support MCP, refer to their documentation on how to load MCP configurations. The `config.json` file follows the standard MCP schema and should be compatible with any MCP-compliant assistant.
+For servers that require authentication (like the GitHub server), add secrets in your repository settings:
+1. Go to Settings → Secrets and variables → Copilot
+2. Add secrets prefixed with `COPILOT_MCP_` (e.g., `COPILOT_MCP_GITHUB_TOKEN`)
 
 ## Available Tools
 

@@ -6,4 +6,9 @@ namespace Mystira.App.Application.CQRS.Scenarios.Queries;
 /// Query to retrieve paginated scenarios using Specification Pattern
 /// Demonstrates CQRS + Specification Pattern with pagination
 /// </summary>
-public record GetPaginatedScenariosQuery(int PageNumber, int PageSize) : IQuery<IEnumerable<Scenario>>;
+public record GetPaginatedScenariosQuery(
+    int PageNumber,
+    int PageSize,
+    string? Search = null,
+    string? AgeGroup = null,
+    string? Genre = null) : IQuery<IEnumerable<Scenario>>;

@@ -1,27 +1,23 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Interfaces;
-using Mystira.App.Infrastructure.Discord.Services;
+using Mystira.App.Application.Ports.Messaging;
 
 namespace Mystira.App.Application.CQRS.Discord.Queries;
 
 /// <summary>
 /// Handler for retrieving Discord bot status.
-/// Checks configuration and bot service state.
+/// Checks bot service state.
 /// </summary>
 public class GetDiscordBotStatusQueryHandler
     : IQueryHandler<GetDiscordBotStatusQuery, DiscordBotStatusResponse>
 {
     private readonly IDiscordBotService? _discordBotService;
-    private readonly IConfiguration _configuration;
     private readonly ILogger<GetDiscordBotStatusQueryHandler> _logger;
 
     public GetDiscordBotStatusQueryHandler(
-        IConfiguration configuration,
         ILogger<GetDiscordBotStatusQueryHandler> logger,
         IDiscordBotService? discordBotService = null)
     {
-        _configuration = configuration;
         _logger = logger;
         _discordBotService = discordBotService;
     }
@@ -30,9 +26,7 @@ public class GetDiscordBotStatusQueryHandler
         GetDiscordBotStatusQuery request,
         CancellationToken cancellationToken)
     {
-        var enabled = _configuration.GetValue<bool>("Discord:Enabled", false);
-
-        if (!enabled || _discordBotService == null)
+        if (_discordBotService == null)
         {
             _logger.LogDebug("Discord bot integration is disabled");
             return Task.FromResult(new DiscordBotStatusResponse(
@@ -44,18 +38,17 @@ public class GetDiscordBotStatusQueryHandler
             ));
         }
 
-        var isConnected = _discordBotService.IsConnected;
-        var currentUser = _discordBotService.CurrentUser;
+        var status = _discordBotService.GetStatus();
 
-        _logger.LogDebug("Discord bot status: Connected={Connected}, Username={Username}",
-            isConnected, currentUser?.Username);
+        _logger.LogDebug("Discord bot status: Enabled={Enabled}, Connected={Connected}, Username={Username}",
+            status.IsEnabled, status.IsConnected, status.BotName);
 
         return Task.FromResult(new DiscordBotStatusResponse(
-            Enabled: true,
-            Connected: isConnected,
-            BotUsername: currentUser?.Username,
-            BotId: currentUser?.Id.ToString(),
-            Message: isConnected ? "Discord bot is connected" : "Discord bot is not connected"
+            Enabled: status.IsEnabled,
+            Connected: status.IsConnected,
+            BotUsername: status.BotName,
+            BotId: null,
+            Message: status.IsConnected ? "Discord bot is connected" : "Discord bot is not connected"
         ));
     }
 }
