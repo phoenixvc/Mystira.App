@@ -24,7 +24,7 @@
 </div>
 
 @code {
-    private List<ToastMessage> _toasts = new();
+    private readonly List<ToastMessage> _toasts = new();
     private Dictionary<Guid, System.Threading.Timer> _timers = new();
 
     protected override void OnInitialized()
