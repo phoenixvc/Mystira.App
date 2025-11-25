@@ -55,31 +55,40 @@ public class GetScenariosWithGameStateQueryHandler
 
             var lastSession = sessions.FirstOrDefault();
             var completedCount = sessions.Count(gs => gs.Status == Domain.Models.SessionStatus.Completed);
+            var hasPlayed = sessions.Any();
+            var isCompleted = completedCount > 0;
+
+            // Determine game state enum
+            var gameState = !hasPlayed ? ScenarioGameState.NotStarted
+                : isCompleted ? ScenarioGameState.Completed
+                : ScenarioGameState.InProgress;
 
             return new ScenarioWithGameState
             {
-                Scenario = scenario,
-                HasPlayed = sessions.Any(),
-                IsCompleted = completedCount > 0,
-                CompletedCount = completedCount,
+                ScenarioId = scenario.Id,
+                Title = scenario.Title,
+                Description = scenario.Description,
+                AgeGroup = scenario.AgeGroup,
+                Difficulty = scenario.Difficulty.ToString(),
+                SessionLength = scenario.SessionLength.ToString(),
+                CoreAxes = scenario.CoreAxes?.Select(a => a.Value).ToList() ?? new List<string>(),
+                Tags = scenario.Tags?.ToArray() ?? [],
+                Archetypes = scenario.Archetypes?.Select(a => a.ToString()).ToArray() ?? [],
+                GameState = gameState,
                 LastPlayedAt = lastSession?.StartTime,
-                LastSessionStatus = lastSession?.Status.ToString()
+                PlayCount = sessions.Count
             };
         }).ToList();
 
         var response = new ScenarioGameStateResponse
         {
             Scenarios = scenariosWithState,
-            TotalScenarios = scenarios.Count,
-            PlayedScenarios = scenariosWithState.Count(s => s.HasPlayed),
-            CompletedScenarios = scenariosWithState.Count(s => s.IsCompleted)
+            TotalCount = scenarios.Count
         };
 
         _logger.LogInformation(
-            "Retrieved {Total} scenarios: {Played} played, {Completed} completed for account {AccountId}",
-            response.TotalScenarios,
-            response.PlayedScenarios,
-            response.CompletedScenarios,
+            "Retrieved {Total} scenarios for account {AccountId}",
+            response.TotalCount,
             request.AccountId);
 
         return response;

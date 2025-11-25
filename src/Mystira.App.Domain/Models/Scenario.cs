@@ -17,6 +17,16 @@ public class Scenario
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public StoryProtocolMetadata? StoryProtocol { get; set; }
 
+    /// <summary>
+    /// Indicates whether this scenario is currently active and available for play.
+    /// </summary>
+    public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// Indicates whether this scenario should be featured/highlighted in the UI.
+    /// </summary>
+    public bool IsFeatured { get; set; } = false;
+
     public bool Validate(out List<string> errors)
     {
         errors = new List<string>();

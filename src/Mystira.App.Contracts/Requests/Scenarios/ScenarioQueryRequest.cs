@@ -4,6 +4,8 @@ namespace Mystira.App.Contracts.Requests.Scenarios;
 
 public class ScenarioQueryRequest
 {
+    public string? Search { get; set; }
+    public string? Genre { get; set; }
     public DifficultyLevel? Difficulty { get; set; }
     public SessionLength? SessionLength { get; set; }
     public int? MinimumAge { get; set; }
