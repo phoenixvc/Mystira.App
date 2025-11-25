@@ -1,30 +1,40 @@
 /* Filter Section Scoped Styles */
 
 .filter-card {
-    border-radius: 16px;
-    border: 1px solid #e5e7eb;
-    transition: box-shadow 0.2s ease;
-    background: white;
+    border-radius: 20px;
+    border: 1px solid rgba(147, 51, 234, 0.1);
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #ffffff 0%, #faf8ff 100%);
+    box-shadow: 0 4px 20px rgba(147, 51, 234, 0.06);
 }
 
 .filter-card:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+    box-shadow: 0 6px 24px rgba(147, 51, 234, 0.1) !important;
+    border-color: rgba(147, 51, 234, 0.15);
 }
 
 .filter-card .card-body {
-    padding: 24px;
+    padding: 28px;
 }
 
 .filter-title {
     color: #1f2937;
-    font-weight: 600;
-    font-size: 1.125rem;
+    font-weight: 700;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.filter-title i {
+    color: #9333ea;
+    font-size: 1.1rem;
 }
 
 .filter-card .card-title {
     color: #111827;
-    font-weight: 600;
-    font-size: 1rem;
+    font-weight: 700;
+    font-size: 1.125rem;
 }
 
 .filter-results-count .badge {
@@ -36,54 +46,60 @@
 
 /* Search Bar Styles */
 .input-group {
-    border-radius: 12px;
+    border-radius: 14px;
     overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease;
+    background: white;
 }
 
 .input-group:focus-within {
-    box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.1);
-    outline: 2px solid #9333ea;
+    box-shadow: 0 4px 16px rgba(147, 51, 234, 0.15);
+    transform: translateY(-1px);
 }
 
 .input-group-text {
-    background: white;
-    border: 2px solid #e5e7eb;
+    background: linear-gradient(135deg, #f9f5ff 0%, #f3e8ff 100%);
+    border: 2px solid #e9d5ff;
     border-right: none;
-    color: #6b7280;
-    padding: 12px 16px;
+    color: #9333ea;
+    padding: 14px 18px;
+    font-size: 1rem;
 }
 
 .input-group .form-control {
-    border: 2px solid #e5e7eb;
+    border: 2px solid #e9d5ff;
     border-left: none;
     border-right: none;
-    padding: 12px 16px;
-    font-size: 0.9375rem;
-    transition: all 0.2s ease;
+    padding: 14px 18px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background: white;
 }
 
 .input-group .form-control:focus {
-    border-color: #9333ea;
+    border-color: #c084fc;
     box-shadow: none;
+    background: white;
 }
 
 .input-group .form-control::placeholder {
-    color: #9ca3af;
-    font-style: italic;
+    color: #a78bfa;
+    font-style: normal;
+    font-weight: 400;
 }
 
 .input-group .btn-outline-secondary {
-    border: 2px solid #e5e7eb;
+    border: 2px solid #e9d5ff;
     border-left: none;
     background: white;
-    color: #6b7280;
+    color: #9333ea;
     transition: all 0.2s ease;
+    padding: 14px 16px;
 }
 
 .input-group .btn-outline-secondary:hover {
-    background: #fee2e2;
+    background: #fef2f2;
     color: #dc2626;
     border-color: #fecaca;
 }
@@ -179,13 +195,14 @@
 .age-filter-container {
     overflow-x: auto;
     scrollbar-width: thin;
-    scrollbar-color: #d1d5db transparent;
+    scrollbar-color: #c4b5fd transparent;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 4px;
+    padding-bottom: 6px;
+    margin-top: 4px;
 }
 
 .age-filter-container::-webkit-scrollbar {
-    height: 6px;
+    height: 5px;
 }
 
 .age-filter-container::-webkit-scrollbar-track {
@@ -193,75 +210,81 @@
 }
 
 .age-filter-container::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 3px;
+    background: #c4b5fd;
+    border-radius: 4px;
 }
 
 .btn-age-filter {
-    padding: 10px 18px;
-    font-size: 0.875rem;
+    padding: 12px 20px;
+    font-size: 0.9rem;
     font-weight: 600;
-    border-radius: 24px;
-    transition: all 0.2s ease;
+    border-radius: 28px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     white-space: nowrap;
     position: relative;
+    letter-spacing: 0.01em;
 }
 
 .btn-age-filter:not(.btn-primary-custom) {
     background: white;
-    border: 2px solid #e5e7eb;
-    color: #4b5563;
+    border: 2px solid #e9d5ff;
+    color: #6b7280;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
 }
 
 .btn-age-filter:not(.btn-primary-custom):hover {
-    border-color: #9333ea;
-    background: rgba(147, 51, 234, 0.05);
-    color: #9333ea;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(147, 51, 234, 0.15);
+    border-color: #a855f7;
+    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+    color: #7c3aed;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.18);
 }
 
 .btn-age-filter.btn-primary-custom {
-    background: #9333ea;
+    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
     border: 2px solid #9333ea;
     color: white;
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.25);
+    transform: scale(1.03);
+    box-shadow: 0 4px 16px rgba(147, 51, 234, 0.3);
 }
 
 .btn-age-filter.btn-primary-custom:hover {
-    background: #7c3aed;
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
     border-color: #7c3aed;
-    transform: scale(1.05) translateY(-1px);
+    transform: scale(1.03) translateY(-2px);
+    box-shadow: 0 6px 20px rgba(147, 51, 234, 0.35);
 }
 
 .badge-count {
-    background: rgba(255, 255, 255, 0.3);
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.7rem;
+    background: rgba(255, 255, 255, 0.25);
+    padding: 3px 10px;
+    border-radius: 14px;
+    font-size: 0.72rem;
     font-weight: 700;
+    backdrop-filter: blur(4px);
 }
 
 .btn-age-filter:not(.btn-primary-custom) .badge-count {
-    background: #f3f4f6;
-    color: #6b7280;
+    background: #f3e8ff;
+    color: #7c3aed;
 }
 
 .btn-outline-danger {
-    border: 2px solid #ef4444;
-    color: #ef4444;
-    background: white;
+    border: 2px solid #fca5a5;
+    color: #dc2626;
+    background: #fef2f2;
     font-weight: 600;
     transition: all 0.2s ease;
-    border-radius: 24px;
+    border-radius: 28px;
+    padding: 10px 18px;
 }
 
 .btn-outline-danger:hover {
-    background: #ef4444;
+    background: #dc2626;
+    border-color: #dc2626;
     color: white;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
 }
 
 /* Sort Options Styles */

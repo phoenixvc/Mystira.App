@@ -14,15 +14,15 @@
         mouseRadius: 150,
         particleSpeed: 0.3,
         colors: [
-            'rgba(147, 51, 234, 0.6)',   // Primary purple #9333ea
-            'rgba(139, 92, 246, 0.5)',   // Accent purple #8B5CF6
-            'rgba(124, 58, 237, 0.55)',  // Secondary #7C3AED
-            'rgba(109, 40, 217, 0.5)',   // Deeper purple #6D28D9
-            'rgba(167, 139, 250, 0.45)'  // Lighter purple for variety
+            'rgba(147, 51, 234, 0.35)',   // Primary purple #9333ea (lighter)
+            'rgba(139, 92, 246, 0.3)',    // Accent purple #8B5CF6 (lighter)
+            'rgba(124, 58, 237, 0.32)',   // Secondary #7C3AED (lighter)
+            'rgba(109, 40, 217, 0.3)',    // Deeper purple #6D28D9 (lighter)
+            'rgba(167, 139, 250, 0.28)'   // Lighter purple for variety (lighter)
         ],
-        minSize: 2,
-        maxSize: 5,
-        lineOpacity: 0.15
+        minSize: 1,
+        maxSize: 3,
+        lineOpacity: 0.08
     };
 
     class Particle {

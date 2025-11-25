@@ -8,7 +8,7 @@ let engagementTime = 0;
 let hasCheckedCriteria = false; // Flag to prevent redundant criteria checks
 let lastButtonState = null; // Track last button visibility state to reduce logging
 const mobilePattern = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
-const MIN_ENGAGEMENT_TIME = 30000; // 30 seconds of engagement before auto-prompt
+const MIN_ENGAGEMENT_TIME = 5000; // 5 seconds of engagement before auto-prompt
 
 function assignDeferredPrompt(value) {
     deferredPrompt = value ?? null;
