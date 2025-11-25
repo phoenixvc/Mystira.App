@@ -337,7 +337,7 @@ public class ErrorBoundaryWrapperTests : TestContext
         // Arrange
         var callbackInvoked = false;
 
-        var cut = RenderComponent<ErrorBoundaryWrapper>(parameters => parameters
+        RenderComponent<ErrorBoundaryWrapper>(parameters => parameters
             .Add(p => p.OnRecover, EventCallback.Factory.Create(this, () => callbackInvoked = true))
             .AddChildContent("<div>Content</div>"));
 

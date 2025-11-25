@@ -53,9 +53,9 @@ public class GetBadgeStatisticsForAccountByEmailQueryHandler
 
             foreach (var stat in profileStats)
             {
-                if (combinedStatistics.ContainsKey(stat.Key))
+                if (combinedStatistics.TryGetValue(stat.Key, out var existingValue))
                 {
-                    combinedStatistics[stat.Key] += stat.Value;
+                    combinedStatistics[stat.Key] = existingValue + stat.Value;
                 }
                 else
                 {

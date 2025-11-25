@@ -196,7 +196,7 @@ public class CreateScenarioCommandTests : CqrsIntegrationTestBase
 
         // Pre-populate cache with scenario list query
         var listQuery = new GetAllScenariosQuery();
-        var cachedResult = await Mediator.Send(listQuery);
+        await Mediator.Send(listQuery);
 
         // Act
         var newScenario = await Mediator.Send(command);
