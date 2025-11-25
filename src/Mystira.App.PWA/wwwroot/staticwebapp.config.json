@@ -5,201 +5,71 @@
   "navigationFallback": {
     "rewrite": "/index.html",
     "exclude": [
-      "*.{css,scss,gif,ico,jpg,jpeg,js,png,svg,webp,woff,woff2}",
-      "*.br",
-      "*.gz",
-      "/_framework/*"
+      "/_framework/*",
+      "/css/*",
+      "/js/*",
+      "/icons/*",
+      "*.{css,scss,gif,ico,jpg,jpeg,js,json,png,svg,webp,woff,woff2,wasm,br,gz,dll,pdb,dat}"
     ]
   },
   "mimeTypes": {
     ".wasm": "application/wasm",
     ".json": "application/json",
     ".woff": "font/woff",
-    ".woff2": "font/woff2"
-  },
-  "responseOverrides": {
-    "404": {
-      "rewrite": "/index.html",
-      "statusCode": 200
-    }
+    ".woff2": "font/woff2",
+    ".br": "application/octet-stream",
+    ".gz": "application/octet-stream",
+    ".dll": "application/octet-stream",
+    ".pdb": "application/octet-stream",
+    ".dat": "application/octet-stream"
   },
   "routes": [
     {
       "route": "/index.html",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous", "authenticated"],
       "headers": {
-        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
-        "Pragma": "no-cache",
-        "Expires": "0"
-      }
-    },
-    {
-      "route": "/*.html",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous", "authenticated"],
-      "headers": {
-        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
-        "Pragma": "no-cache",
-        "Expires": "0"
-      }
-    },
-    {
-      "route": "/*.html.br",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous", "authenticated"],
-      "headers": {
-        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
-        "Pragma": "no-cache",
-        "Expires": "0",
-        "Content-Encoding": "br"
-      }
-    },
-    {
-      "route": "/*.html.gz",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous", "authenticated"],
-      "headers": {
-        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
-        "Pragma": "no-cache",
-        "Expires": "0",
-        "Content-Encoding": "gzip"
-      }
-    },
-    {
-      "route": "/_framework/*.wasm",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous", "authenticated"],
-      "headers": {
-        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
-        "Pragma": "no-cache",
-        "Expires": "0",
-        "Cross-Origin-Embedder-Policy": "require-corp",
-        "Cross-Origin-Opener-Policy": "same-origin"
-      }
-    },
-    {
-      "route": "/_framework/*.wasm.br",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous", "authenticated"],
-      "headers": {
-        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
-        "Pragma": "no-cache",
-        "Expires": "0",
-        "Content-Encoding": "br",
-        "Cross-Origin-Embedder-Policy": "require-corp",
-        "Cross-Origin-Opener-Policy": "same-origin"
-      }
-    },
-    {
-      "route": "/_framework/*.wasm.gz",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous", "authenticated"],
-      "headers": {
-        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
-        "Pragma": "no-cache",
-        "Expires": "0",
-        "Content-Encoding": "gzip",
-        "Cross-Origin-Embedder-Policy": "require-corp",
-        "Cross-Origin-Opener-Policy": "same-origin"
-      }
-    },
-    {
-      "route": "/_framework/*.js",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous", "authenticated"],
-      "headers": {
-        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
-        "Pragma": "no-cache",
-        "Expires": "0"
-      }
-    },
-    {
-      "route": "/_framework/*.js.br",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous", "authenticated"],
-      "headers": {
-        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
-        "Pragma": "no-cache",
-        "Expires": "0",
-        "Content-Encoding": "br"
-      }
-    },
-    {
-      "route": "/_framework/*.js.gz",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous", "authenticated"],
-      "headers": {
-        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
-        "Pragma": "no-cache",
-        "Expires": "0",
-        "Content-Encoding": "gzip"
-      }
-    },
-    {
-      "route": "/_framework/*.dll.br",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous", "authenticated"],
-      "headers": {
-        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
-        "Pragma": "no-cache",
-        "Expires": "0",
-        "Content-Encoding": "br"
-      }
-    },
-    {
-      "route": "/_framework/*.dll.gz",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous", "authenticated"],
-      "headers": {
-        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
-        "Pragma": "no-cache",
-        "Expires": "0",
-        "Content-Encoding": "gzip"
-      }
-    },
-    {
-      "route": "/manifest.json",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous", "authenticated"],
-      "headers": {
-        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
-        "Pragma": "no-cache",
-        "Expires": "0",
-        "Content-Type": "application/json"
+        "Cache-Control": "no-cache, no-store, must-revalidate"
       }
     },
     {
       "route": "/service-worker.js",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous", "authenticated"],
       "headers": {
-        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
-        "Pragma": "no-cache",
-        "Expires": "0",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
         "Service-Worker-Allowed": "/"
       }
     },
     {
+      "route": "/service-worker.published.js",
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Service-Worker-Allowed": "/"
+      }
+    },
+    {
+      "route": "/_framework/blazor.boot.json",
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate"
+      }
+    },
+    {
+      "route": "/_framework/*",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
       "route": "/css/*",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous", "authenticated"],
       "headers": {
         "Cache-Control": "public, max-age=31536000, immutable"
       }
     },
     {
       "route": "/js/*",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous", "authenticated"],
       "headers": {
         "Cache-Control": "public, max-age=31536000, immutable"
       }
     },
     {
       "route": "/icons/*",
-      "methods": ["GET"],
-      "allowedRoles": ["anonymous", "authenticated"],
       "headers": {
         "Cache-Control": "public, max-age=31536000, immutable"
       }
