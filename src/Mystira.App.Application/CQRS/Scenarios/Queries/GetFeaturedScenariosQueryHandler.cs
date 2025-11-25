@@ -1,8 +1,8 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Interfaces;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Application.Specifications;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.Scenarios.Queries;
@@ -31,9 +31,11 @@ public class GetFeaturedScenariosQueryHandler
     {
         _logger.LogInformation("Retrieving featured scenarios");
 
-        // Use specification pattern to filter featured and active scenarios
-        var spec = new FeaturedScenariosSpecification();
-        var scenarios = await _repository.ListAsync(spec);
+        // Get featured and active scenarios using direct LINQ query
+        var scenarios = await _repository.GetQueryable()
+            .Where(s => s.IsFeatured && s.IsActive)
+            .OrderBy(s => s.Title)
+            .ToListAsync(cancellationToken);
 
         _logger.LogInformation("Found {Count} featured scenarios", scenarios.Count);
 

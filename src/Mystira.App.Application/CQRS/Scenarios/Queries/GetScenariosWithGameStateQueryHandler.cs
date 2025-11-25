@@ -1,8 +1,8 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Interfaces;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Application.Specifications;
 using Mystira.App.Contracts.Responses.Scenarios;
 
 namespace Mystira.App.Application.CQRS.Scenarios.Queries;
@@ -36,9 +36,11 @@ public class GetScenariosWithGameStateQueryHandler
             "Retrieving scenarios with game state for account: {AccountId}",
             request.AccountId);
 
-        // 1. Get all active scenarios
-        var spec = new ActiveScenariosSpecification();
-        var scenarios = await _scenarioRepository.ListAsync(spec);
+        // 1. Get all active scenarios using direct LINQ query
+        var scenarios = await _scenarioRepository.GetQueryable()
+            .Where(s => s.IsActive)
+            .OrderBy(s => s.Title)
+            .ToListAsync(cancellationToken);
 
         // 2. Get all game sessions for this account
         var gameSessions = await _gameSessionRepository.GetByAccountIdAsync(request.AccountId);
