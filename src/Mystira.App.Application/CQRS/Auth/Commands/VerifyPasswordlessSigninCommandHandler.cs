@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Mystira.App.Api.Services;
+using Mystira.App.Application.Ports.Auth;
 using Mystira.App.Application.Interfaces;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;

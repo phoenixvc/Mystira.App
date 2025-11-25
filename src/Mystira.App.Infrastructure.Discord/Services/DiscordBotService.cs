@@ -10,7 +10,7 @@ namespace Mystira.App.Infrastructure.Discord.Services;
 /// <summary>
 /// Implementation of Discord bot service using Discord.NET
 /// </summary>
-public class DiscordBotService : IMessagingService, IDiscordBotService, IDisposable
+public class DiscordBotService : IMessagingService, IDiscordBotService, Application.Ports.Messaging.IDiscordBotService, IDisposable
 {
     private readonly DiscordSocketClient _client;
     private readonly ILogger<DiscordBotService> _logger;

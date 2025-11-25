@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Interfaces;
-using Mystira.App.Infrastructure.Discord.Services;
+using Mystira.App.Application.Ports.Messaging;
 
 namespace Mystira.App.Application.CQRS.Discord.Commands;
 

@@ -1,26 +1,26 @@
 using System.Diagnostics;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Interfaces;
+using Mystira.App.Application.Ports.Health;
 
 namespace Mystira.App.Application.CQRS.Health.Queries;
 
 /// <summary>
 /// Handler for retrieving application health check status.
-/// Executes ASP.NET Core health checks and formats results.
+/// Executes health checks and formats results.
 /// </summary>
 public class GetHealthCheckQueryHandler
     : IQueryHandler<GetHealthCheckQuery, HealthCheckResult>
 {
-    private readonly IHealthCheckService _healthCheckService;
+    private readonly IHealthCheckPort _healthCheckPort;
     private readonly ILogger<GetHealthCheckQueryHandler> _logger;
 
     public GetHealthCheckQueryHandler(
-        IHealthCheckService healthCheckService,
-        ILogger<GetHealthCheckQueryHandler> _logger)
+        IHealthCheckPort healthCheckPort,
+        ILogger<GetHealthCheckQueryHandler> logger)
     {
-        _healthCheckService = healthCheckService;
-        this._logger = _logger;
+        _healthCheckPort = healthCheckPort;
+        _logger = logger;
     }
 
     public async Task<HealthCheckResult> Handle(
@@ -31,17 +31,17 @@ public class GetHealthCheckQueryHandler
 
         try
         {
-            var report = await _healthCheckService.CheckHealthAsync(cancellationToken);
+            var report = await _healthCheckPort.CheckHealthAsync(cancellationToken);
             stopwatch.Stop();
 
             var results = report.Entries.ToDictionary(
                 kvp => kvp.Key,
                 kvp => (object)new
                 {
-                    Status = kvp.Value.Status.ToString(),
+                    Status = kvp.Value.Status,
                     Description = kvp.Value.Description,
                     Duration = kvp.Value.Duration,
-                    Exception = kvp.Value.Exception?.Message,
+                    Exception = kvp.Value.Exception,
                     Data = kvp.Value.Data
                 }
             );
@@ -50,7 +50,7 @@ public class GetHealthCheckQueryHandler
                 report.Status, stopwatch.ElapsedMilliseconds);
 
             return new HealthCheckResult(
-                Status: report.Status.ToString(),
+                Status: report.Status,
                 Duration: stopwatch.Elapsed,
                 Results: results
             );

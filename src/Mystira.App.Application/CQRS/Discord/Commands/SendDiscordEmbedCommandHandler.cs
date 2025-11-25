@@ -1,7 +1,6 @@
-using Discord;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Interfaces;
-using Mystira.App.Infrastructure.Discord.Services;
+using Mystira.App.Application.Ports.Messaging;
 
 namespace Mystira.App.Application.CQRS.Discord.Commands;
 
@@ -41,28 +40,24 @@ public class SendDiscordEmbedCommandHandler
 
         try
         {
-            // Build Discord embed
-            var embedBuilder = new EmbedBuilder()
-                .WithTitle(command.Title)
-                .WithDescription(command.Description)
-                .WithColor(new Color(command.ColorRed, command.ColorGreen, command.ColorBlue))
-                .WithTimestamp(DateTimeOffset.Now);
-
-            if (!string.IsNullOrEmpty(command.Footer))
+            // Build platform-agnostic embed data
+            var embedData = new EmbedData
             {
-                embedBuilder.WithFooter(command.Footer);
-            }
-
-            if (command.Fields != null)
-            {
-                foreach (var field in command.Fields)
+                Title = command.Title,
+                Description = command.Description,
+                ColorRed = command.ColorRed,
+                ColorGreen = command.ColorGreen,
+                ColorBlue = command.ColorBlue,
+                Footer = command.Footer,
+                Fields = command.Fields?.Select(f => new EmbedFieldData
                 {
-                    embedBuilder.AddField(field.Name, field.Value, field.Inline);
-                }
-            }
+                    Name = f.Name,
+                    Value = f.Value,
+                    Inline = f.Inline
+                }).ToList()
+            };
 
-            var embed = embedBuilder.Build();
-            await _discordBotService.SendEmbedAsync(command.ChannelId, embed);
+            await _discordBotService.SendEmbedAsync(command.ChannelId, embedData);
 
             _logger.LogInformation("Successfully sent Discord embed to channel {ChannelId}", command.ChannelId);
             return (true, "Embed sent successfully");

@@ -36,7 +36,8 @@ public static class ServiceCollectionExtensions
         // Register as both IMessagingService (Application port) and IDiscordBotService (backwards compatibility)
         services.AddSingleton<DiscordBotService>();
         services.AddSingleton<IMessagingService>(sp => sp.GetRequiredService<DiscordBotService>());
-        services.AddSingleton<IDiscordBotService>(sp => sp.GetRequiredService<DiscordBotService>());
+        services.AddSingleton<Services.IDiscordBotService>(sp => sp.GetRequiredService<DiscordBotService>());
+        services.AddSingleton<Application.Ports.Messaging.IDiscordBotService>(sp => sp.GetRequiredService<DiscordBotService>());
 
         return services;
     }
