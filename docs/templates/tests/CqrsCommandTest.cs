@@ -197,6 +197,7 @@ public class CreateScenarioCommandTests : CqrsIntegrationTestBase
         // Pre-populate cache with scenario list query
         var listQuery = new GetAllScenariosQuery();
         var cachedResult = await Mediator.Send(listQuery);
+        var initialCount = cachedResult.Count();
 
         // Act
         var newScenario = await Mediator.Send(command);
@@ -205,6 +206,7 @@ public class CreateScenarioCommandTests : CqrsIntegrationTestBase
         var updatedResult = await Mediator.Send(listQuery);
 
         // Assert
+        updatedResult.Should().HaveCountGreaterThan(initialCount);
         updatedResult.Should().Contain(s => s.Id == newScenario.Id);
     }
 }

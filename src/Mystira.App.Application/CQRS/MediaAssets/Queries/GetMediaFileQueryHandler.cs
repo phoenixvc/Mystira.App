@@ -53,7 +53,7 @@ public class GetMediaFileQueryHandler
             // 3. Download file from blob storage
             // Extract blob name from URL (assuming URL format: https://.../container/blobname)
             var blobName = ExtractBlobNameFromUrl(mediaAsset.Url);
-            var stream = await _blobService.DownloadAsync(blobName, cancellationToken);
+            var stream = await _blobService.DownloadMediaAsync(blobName);
 
             if (stream == null)
             {
