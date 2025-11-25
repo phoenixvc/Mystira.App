@@ -24,3 +24,27 @@ Thumbs.db
 
 # Tauri specific
 src-tauri/target/
+
+# .NET projects (should not be in DevHub)
+Mystira.App.*/
+src/Mystira.App.*/
+*.sln
+global.json
+*.csproj
+*.cs
+*.razor
+*.cshtml
+
+# GitHub workflows (should be at repo root, not in DevHub)
+.github/
+
+# Aider AI editor files
+.aider.*
+.aider/
+
+# Documentation that might be misplaced
+docs/
+MEDIA_*.md
+PWA_*.md
+SRI_*.md
+tools/

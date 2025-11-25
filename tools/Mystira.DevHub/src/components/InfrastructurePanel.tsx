@@ -19,9 +19,27 @@ function InfrastructurePanel() {
   const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus | null>(null);
   const [whatIfChanges, setWhatIfChanges] = useState<WhatIfChange[]>([]);
   const [showDestroyConfirm, setShowDestroyConfirm] = useState(false);
+  const [deploymentMethod, setDeploymentMethod] = useState<'github' | 'azure-cli'>('azure-cli');
+  const [repoRoot, setRepoRoot] = useState<string>('');
+  const [environment, setEnvironment] = useState<string>('dev');
+  const [hasPreviewed, setHasPreviewed] = useState(false);
+  const [showDeployConfirm, setShowDeployConfirm] = useState(false);
 
   const workflowFile = 'infrastructure-deploy-dev.yml';
   const repository = 'phoenixvc/Mystira.App';
+
+  // Get repository root on mount
+  useEffect(() => {
+    const fetchRepoRoot = async () => {
+      try {
+        const root = await invoke<string>('get_repo_root');
+        setRepoRoot(root);
+      } catch (error) {
+        console.error('Failed to get repo root:', error);
+      }
+    };
+    fetchRepoRoot();
+  }, []);
 
   // Use stores instead of local state
   const {
@@ -59,62 +77,161 @@ function InfrastructurePanel() {
     try {
       let response: CommandResponse;
 
-      switch (action) {
-        case 'validate':
-          response = await invoke('infrastructure_validate', {
-            workflowFile,
-            repository,
-          });
-          break;
+      if (deploymentMethod === 'azure-cli' && repoRoot) {
+        // Use direct Azure CLI deployment
+        switch (action) {
+          case 'validate':
+            response = await invoke('azure_validate_infrastructure', {
+              repoRoot,
+              environment,
+            });
+            break;
 
-        case 'preview':
-          response = await invoke('infrastructure_preview', {
-            workflowFile,
-            repository,
-          });
-          // Mock what-if changes for demonstration
-          if (response.success) {
-            setWhatIfChanges([
-              {
-                resourceType: 'Microsoft.DocumentDB/databaseAccounts',
-                resourceName: 'dev-euw-cosmos-mystira',
-                changeType: 'modify',
-                changes: ['consistencyPolicy.defaultConsistencyLevel: BoundedStaleness → Session'],
-              },
-              {
-                resourceType: 'Microsoft.Storage/storageAccounts',
-                resourceName: 'deveuwstmystira',
-                changeType: 'noChange',
-              },
-            ]);
-          }
-          break;
+          case 'preview':
+            response = await invoke('azure_preview_infrastructure', {
+              repoRoot,
+              environment,
+            });
+            if (response.success && response.result) {
+              // Parse what-if output
+              const previewData = response.result as any;
+              let parsedChanges: WhatIfChange[] = [];
+              
+              if (previewData.parsed && previewData.parsed.changes) {
+                // Use parsed JSON if available
+                parsedChanges = parseWhatIfOutput(JSON.stringify(previewData.parsed));
+              } else if (previewData.preview) {
+                // Try to parse from preview text/JSON
+                parsedChanges = parseWhatIfOutput(previewData.preview);
+              } else if (previewData.changes) {
+                // Already parsed
+                parsedChanges = previewData.changes;
+              }
+              
+              if (parsedChanges.length > 0) {
+                setWhatIfChanges(parsedChanges);
+                setHasPreviewed(true);
+              }
+            }
+            break;
 
-        case 'deploy':
-          const confirmDeploy = confirm(
-            'Are you sure you want to deploy infrastructure? This will create or update Azure resources.'
-          );
-          if (!confirmDeploy) {
+          case 'deploy':
+            // Require preview first
+            if (!hasPreviewed || whatIfChanges.length === 0) {
+              setLastResponse({
+                success: false,
+                error: 'Please run Preview first to see what will be deployed before deploying.',
+              });
+              setLoading(false);
+              return;
+            }
+            
+            // Get selected resources with their types
+            const selectedResources = whatIfChanges
+              .filter(c => c.selected !== false)
+              .map(c => ({
+                name: c.resourceName,
+                type: c.resourceType,
+                module: getModuleFromResourceType(c.resourceType),
+              }));
+            
+            if (selectedResources.length === 0) {
+              setLastResponse({
+                success: false,
+                error: 'Please select at least one resource to deploy.',
+              });
+              setLoading(false);
+              return;
+            }
+            
+            // Validate dependencies: App Service requires Cosmos and Storage
+            const selectedModules = new Set(selectedResources.map(r => r.module).filter(Boolean));
+            if (selectedModules.has('appservice')) {
+              if (!selectedModules.has('cosmos') || !selectedModules.has('storage')) {
+                setLastResponse({
+                  success: false,
+                  error: 'App Service requires Cosmos DB and Storage Account to be selected. Please select all dependencies.',
+                });
+                setLoading(false);
+                return;
+              }
+            }
+            
+            // Show confirmation dialog
+            setShowDeployConfirm(true);
             setLoading(false);
             return;
-          }
-          response = await invoke('infrastructure_deploy', {
-            workflowFile,
-            repository,
-          });
-          break;
 
-        case 'destroy':
-          // This should not be reached directly - destroy should go through confirmation dialog
-          response = await invoke('infrastructure_destroy', {
-            workflowFile,
-            repository,
-            confirm: true,
-          });
-          break;
+          case 'destroy':
+            // Destroy not implemented for direct Azure CLI yet
+            response = {
+              success: false,
+              error: 'Destroy action not available for direct Azure CLI deployment. Use GitHub Actions workflow instead.',
+            };
+            break;
 
-        default:
-          throw new Error(`Unknown action: ${action}`);
+          default:
+            throw new Error(`Unknown action: ${action}`);
+        }
+      } else {
+        // Use GitHub Actions workflow
+        switch (action) {
+          case 'validate':
+            response = await invoke('infrastructure_validate', {
+              workflowFile,
+              repository,
+            });
+            break;
+
+          case 'preview':
+            response = await invoke('infrastructure_preview', {
+              workflowFile,
+              repository,
+            });
+            // Mock what-if changes for demonstration
+            if (response.success) {
+              setWhatIfChanges([
+                {
+                  resourceType: 'Microsoft.DocumentDB/databaseAccounts',
+                  resourceName: 'dev-euw-cosmos-mystira',
+                  changeType: 'modify',
+                  changes: ['consistencyPolicy.defaultConsistencyLevel: BoundedStaleness → Session'],
+                },
+                {
+                  resourceType: 'Microsoft.Storage/storageAccounts',
+                  resourceName: 'deveuwstmystira',
+                  changeType: 'noChange',
+                },
+              ]);
+            }
+            break;
+
+          case 'deploy':
+            const confirmDeploy = confirm(
+              'Are you sure you want to deploy infrastructure? This will create or update Azure resources.'
+            );
+            if (!confirmDeploy) {
+              setLoading(false);
+              return;
+            }
+            response = await invoke('infrastructure_deploy', {
+              workflowFile,
+              repository,
+            });
+            break;
+
+          case 'destroy':
+            // This should not be reached directly - destroy should go through confirmation dialog
+            response = await invoke('infrastructure_destroy', {
+              workflowFile,
+              repository,
+              confirm: true,
+            });
+            break;
+
+          default:
+            throw new Error(`Unknown action: ${action}`);
+        }
       }
 
       setLastResponse(response);
@@ -131,6 +248,55 @@ function InfrastructurePanel() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Map Azure resource type to our module identifier (exact matching for reliability)
+  const getModuleFromResourceType = (resourceType: string): 'storage' | 'cosmos' | 'appservice' | null => {
+    const normalized = resourceType.toLowerCase().trim();
+    
+    // Exact type matching for reliability (Azure resource types are standardized)
+    const storageTypes = [
+      'microsoft.storage/storageaccounts',
+      'microsoft.storage/storageaccounts/blobservices',
+      'microsoft.storage/storageaccounts/blobservices/containers',
+    ];
+    
+    const cosmosTypes = [
+      'microsoft.documentdb/databaseaccounts',
+      'microsoft.documentdb/databaseaccounts/sqldatabases',
+      'microsoft.documentdb/databaseaccounts/sqldatabases/containers',
+      'microsoft.documentdb/databaseaccounts/sqlroleassignments',
+    ];
+    
+    const appServiceTypes = [
+      'microsoft.web/sites',
+      'microsoft.web/serverfarms',
+      'microsoft.web/sites/config',
+    ];
+    
+    // Check exact matches first
+    if (storageTypes.some(type => normalized === type || normalized.startsWith(type + '/'))) {
+      return 'storage';
+    }
+    if (cosmosTypes.some(type => normalized === type || normalized.startsWith(type + '/'))) {
+      return 'cosmos';
+    }
+    if (appServiceTypes.some(type => normalized === type || normalized.startsWith(type + '/'))) {
+      return 'appservice';
+    }
+    
+    // Fallback to substring matching for edge cases
+    if (normalized.includes('storage') && normalized.includes('account')) {
+      return 'storage';
+    }
+    if (normalized.includes('documentdb') || normalized.includes('cosmos')) {
+      return 'cosmos';
+    }
+    if (normalized.includes('web/sites') || normalized.includes('web/serverfarms')) {
+      return 'appservice';
+    }
+    
+    return null;
   };
 
   const fetchWorkflowStatus = async () => {
@@ -153,6 +319,161 @@ function InfrastructurePanel() {
     await handleAction('destroy');
   };
 
+  const handleDeployConfirm = async () => {
+    setShowDeployConfirm(false);
+    setLoading(true);
+    
+    try {
+      // Get selected resources with module mapping
+      const selectedResources = whatIfChanges
+        .filter(c => c.selected !== false)
+        .map(c => ({
+          name: c.resourceName,
+          type: c.resourceType,
+          module: getModuleFromResourceType(c.resourceType),
+        }));
+      
+      // Extract module flags
+      const selectedModules = new Set(selectedResources.map(r => r.module).filter(Boolean));
+      const deployStorage = selectedModules.has('storage');
+      const deployCosmos = selectedModules.has('cosmos');
+      const deployAppService = selectedModules.has('appservice');
+      
+      const response = await invoke('azure_deploy_infrastructure', {
+        repoRoot,
+        environment,
+        deployStorage,
+        deployCosmos,
+        deployAppService,
+      });
+      
+      setLastResponse(response);
+      
+      if (response.success) {
+        setTimeout(() => fetchWorkflowStatus(), 2000);
+        setHasPreviewed(false); // Reset preview after successful deployment
+        setWhatIfChanges([]);
+      }
+    } catch (error) {
+      setLastResponse({
+        success: false,
+        error: String(error),
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Parse Azure what-if JSON output (handles multiple Azure output formats)
+  const parseWhatIfOutput = (whatIfJson: string): WhatIfChange[] => {
+    try {
+      const parsed = typeof whatIfJson === 'string' ? JSON.parse(whatIfJson) : whatIfJson;
+      const changes: WhatIfChange[] = [];
+      
+      // Azure what-if output can have different structures:
+      // Format 1: { status, changes: [...] }
+      // Format 2: { status, resourceChanges: [...] }
+      // Format 3: Direct array of changes
+      // Format 4: { properties: { changes: [...] } }
+      let changesArray: any[] = [];
+      
+      if (Array.isArray(parsed)) {
+        changesArray = parsed;
+      } else if (parsed.changes && Array.isArray(parsed.changes)) {
+        changesArray = parsed.changes;
+      } else if (parsed.resourceChanges && Array.isArray(parsed.resourceChanges)) {
+        changesArray = parsed.resourceChanges;
+      } else if (parsed.properties?.changes && Array.isArray(parsed.properties.changes)) {
+        changesArray = parsed.properties.changes;
+      } else if (parsed.properties?.resourceChanges && Array.isArray(parsed.properties.resourceChanges)) {
+        changesArray = parsed.properties.resourceChanges;
+      }
+      
+      if (changesArray.length > 0) {
+        changesArray.forEach((change: any) => {
+          if (!change.resourceId && !change.targetResource?.id) {
+            return; // Skip invalid entries
+          }
+          
+          const resourceId = change.resourceId || change.targetResource?.id || '';
+          const resourceIdParts = resourceId.split('/');
+          const resourceName = resourceIdParts[resourceIdParts.length - 1] || resourceId;
+          
+          // Extract resource type from multiple possible locations
+          let resourceType = change.resourceType || 
+                            change.targetResource?.type ||
+                            change.resource?.type ||
+                            (resourceIdParts.length >= 8 ? `${resourceIdParts[6]}/${resourceIdParts[7]}` : 'Unknown');
+          
+          // Normalize resource type format
+          if (resourceType && resourceType !== 'Unknown') {
+            resourceType = resourceType.replace(/^microsoft\./i, 'Microsoft.');
+          }
+          
+          // Map Azure change types to our types
+          let changeType: 'create' | 'modify' | 'delete' | 'noChange' = 'noChange';
+          const azChangeType = (change.changeType || change.action || '').toLowerCase().trim();
+          
+          if (azChangeType === 'create' || azChangeType === 'deploy' || azChangeType === 'new') {
+            changeType = 'create';
+          } else if (azChangeType === 'modify' || azChangeType === 'update' || azChangeType === 'change') {
+            changeType = 'modify';
+          } else if (azChangeType === 'delete' || azChangeType === 'remove' || azChangeType === 'destroy') {
+            changeType = 'delete';
+          } else if (azChangeType === 'nochange' || azChangeType === 'ignore' || azChangeType === 'no-op') {
+            changeType = 'noChange';
+          }
+          
+          // Extract property changes from delta (handles multiple delta formats)
+          const propertyChanges: string[] = [];
+          const delta = change.delta || change.changes || change.properties;
+          
+          if (delta) {
+            if (Array.isArray(delta)) {
+              delta.forEach((d: any) => {
+                if (d.path || d.property) {
+                  const path = d.path || d.property;
+                  propertyChanges.push(`${path}: ${d.before || d.oldValue || 'null'} → ${d.after || d.newValue || 'null'}`);
+                }
+              });
+            } else if (typeof delta === 'object') {
+              Object.keys(delta).forEach((key: string) => {
+                const deltaValue = delta[key];
+                if (Array.isArray(deltaValue)) {
+                  deltaValue.forEach((d: any) => {
+                    if (d.path || d.property) {
+                      const path = d.path || d.property || key;
+                      propertyChanges.push(`${path}: ${d.before || d.oldValue || 'null'} → ${d.after || d.newValue || 'null'}`);
+                    }
+                  });
+                } else if (deltaValue && typeof deltaValue === 'object') {
+                  // Nested delta structure
+                  propertyChanges.push(`${key}: ${JSON.stringify(deltaValue)}`);
+                }
+              });
+            }
+          }
+          
+          changes.push({
+            resourceType: resourceType,
+            resourceName: resourceName,
+            changeType: changeType,
+            changes: propertyChanges.length > 0 ? propertyChanges : undefined,
+            selected: changeType !== 'noChange', // Auto-select resources that will change
+            resourceId: resourceId,
+          });
+        });
+      }
+      
+      return changes;
+    } catch (error) {
+      console.error('Failed to parse what-if output:', error);
+      console.error('Raw output:', whatIfJson);
+      // Fallback: return empty array
+      return [];
+    }
+  };
+
   return (
     <div className="p-8">
       <ConfirmDialog
@@ -165,6 +486,16 @@ function InfrastructurePanel() {
         requireTextMatch="DELETE"
         onConfirm={handleDestroyConfirm}
         onCancel={() => setShowDestroyConfirm(false)}
+      />
+      <ConfirmDialog
+        isOpen={showDeployConfirm}
+        title="🚀 Deploy Selected Resources"
+        message={`You are about to deploy ${whatIfChanges.filter(c => c.selected !== false).length} selected resource(s) to ${environment} environment. This will create or update Azure resources in resource group dev-euw-rg-mystira-app.`}
+        confirmText="Deploy Selected Resources"
+        cancelText="Cancel"
+        confirmButtonClass="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
+        onConfirm={handleDeployConfirm}
+        onCancel={() => setShowDeployConfirm(false)}
       />
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
@@ -253,13 +584,14 @@ function InfrastructurePanel() {
 
               <button
                 onClick={() => handleAction('deploy')}
-                disabled={loading}
+                disabled={loading || !hasPreviewed}
                 className="flex flex-col items-center p-6 bg-white dark:bg-gray-800 border-2 border-green-200 dark:border-green-800 rounded-lg hover:border-green-400 dark:hover:border-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                title={!hasPreviewed ? "Please run Preview first" : ""}
               >
                 <div className="text-4xl mb-2">🚀</div>
                 <div className="text-lg font-semibold text-gray-900 dark:text-white">Deploy</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
-                  Deploy infrastructure
+                  {hasPreviewed ? `Deploy selected (${whatIfChanges.filter(c => c.selected !== false).length})` : "Preview first"}
                 </div>
               </button>
 
@@ -339,7 +671,12 @@ function InfrastructurePanel() {
             {/* What-If Viewer */}
             {whatIfChanges.length > 0 && (
               <div className="mb-8">
-                <WhatIfViewer changes={whatIfChanges} />
+                <WhatIfViewer 
+                  changes={whatIfChanges} 
+                  loading={loading && activeTab === 'actions'}
+                  showSelection={hasPreviewed && deploymentMethod === 'azure-cli'}
+                  onSelectionChange={(updated) => setWhatIfChanges(updated)}
+                />
               </div>
             )}
 

@@ -145,7 +145,7 @@ Access health checks at: `/health`
 
 ```bash
 cd Deployment/
-./deploy.sh -g "dev-wus-rg-mystira-app" -e "dev" -l "westus"
+./deploy.sh -g "dev-euw-rg-mystira-app" -e "dev" -l "westeurope"
 ```
 
 ### Deployment Options
@@ -165,11 +165,11 @@ Options:
 
 ```bash
 # Create resource group
-az group create --name "dev-wus-rg-mystira-app" --location "westus"
+az group create --name "dev-euw-rg-mystira-app" --location "westeurope"
 
 # Deploy infrastructure
 az deployment group create \
-  --resource-group "dev-wus-rg-mystira-app" \
+  --resource-group "dev-euw-rg-mystira-app" \
   --template-file "main.bicep" \
   --parameters environment="dev"
 ```

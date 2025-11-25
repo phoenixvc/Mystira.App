@@ -1,5 +1,5 @@
 @description('Name of the App Service')
-param appServiceName string = 'dev-wus-app-mystira'
+param appServiceName string = 'dev-euw-app-mystira-api'
 
 @description('Location for all resources')
 param location string = resourceGroup().location
@@ -9,11 +9,11 @@ param sku string = 'B1'
 
 @description('Cosmos DB connection string')
 @secure()
-param cosmosDbConnectionString string
+param cosmosDbConnectionString string = ''
 
 @description('Azure Storage connection string')
 @secure()
-param storageConnectionString string
+param storageConnectionString string = ''
 
 @description('JWT secret key')
 @secure()
