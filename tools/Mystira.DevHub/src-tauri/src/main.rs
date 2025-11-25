@@ -403,6 +403,120 @@ async fn azure_deploy_infrastructure(
 }
 
 #[tauri::command]
+async fn check_infrastructure_exists(
+    environment: String,
+    resource_group: Option<String>,
+) -> Result<CommandResponse, String> {
+    let rg = resource_group.unwrap_or_else(|| format!("{}-euw-rg-mystira-app", environment));
+    
+    // Check if resource group exists and has resources
+    let check_rg = Command::new("az")
+        .arg("group")
+        .arg("exists")
+        .arg("--name")
+        .arg(&rg)
+        .output();
+    
+    match check_rg {
+        Ok(output) => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let exists = stdout.trim().to_lowercase() == "true";
+            
+            if !exists {
+                return Ok(CommandResponse {
+                    success: true,
+                    result: Some(serde_json::json!({
+                        "exists": false,
+                        "resourceGroup": rg,
+                        "message": "Resource group does not exist"
+                    })),
+                    message: Some("Infrastructure not found".to_string()),
+                    error: None,
+                });
+            }
+            
+            // Check for key resources (App Service, Cosmos DB, Storage)
+            let check_resources = Command::new("az")
+                .arg("resource")
+                .arg("list")
+                .arg("--resource-group")
+                .arg(&rg)
+                .arg("--output")
+                .arg("json")
+                .output();
+            
+            match check_resources {
+                Ok(output) => {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let resources: Result<Vec<Value>, _> = serde_json::from_str(&stdout);
+                    
+                    if let Ok(resources) = resources {
+                        let has_app_service = resources.iter().any(|r| {
+                            r.get("type").and_then(|t| t.as_str())
+                                .map(|t| t.contains("Microsoft.Web/sites"))
+                                .unwrap_or(false)
+                        });
+                        let has_cosmos = resources.iter().any(|r| {
+                            r.get("type").and_then(|t| t.as_str())
+                                .map(|t| t.contains("Microsoft.DocumentDB"))
+                                .unwrap_or(false)
+                        });
+                        let has_storage = resources.iter().any(|r| {
+                            r.get("type").and_then(|t| t.as_str())
+                                .map(|t| t.contains("Microsoft.Storage"))
+                                .unwrap_or(false)
+                        });
+                        
+                        let exists = has_app_service || has_cosmos || has_storage;
+                        
+                        Ok(CommandResponse {
+                            success: true,
+                            result: Some(serde_json::json!({
+                                "exists": exists,
+                                "resourceGroup": rg,
+                                "hasAppService": has_app_service,
+                                "hasCosmos": has_cosmos,
+                                "hasStorage": has_storage,
+                                "resourceCount": resources.len()
+                            })),
+                            message: if exists {
+                                Some("Infrastructure exists".to_string())
+                            } else {
+                                Some("Resource group exists but no infrastructure resources found".to_string())
+                            },
+                            error: None,
+                        })
+                    } else {
+                        Ok(CommandResponse {
+                            success: true,
+                            result: Some(serde_json::json!({
+                                "exists": false,
+                                "resourceGroup": rg,
+                                "message": "Could not parse resource list"
+                            })),
+                            message: Some("Infrastructure status unknown".to_string()),
+                            error: None,
+                        })
+                    }
+                }
+                Err(e) => Ok(CommandResponse {
+                    success: false,
+                    result: None,
+                    message: None,
+                    error: Some(format!("Failed to check resources: {}", e)),
+                }),
+            }
+        }
+        Err(e) => Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some(format!("Failed to check resource group: {}", e)),
+        }),
+    }
+}
+
+#[tauri::command]
 async fn azure_validate_infrastructure(
     repo_root: String,
     environment: String,
@@ -1300,6 +1414,7 @@ fn main() {
             azure_deploy_infrastructure,
             azure_validate_infrastructure,
             azure_preview_infrastructure,
+            check_infrastructure_exists,
             get_azure_resources,
             get_github_deployments,
             test_connection,

@@ -44,6 +44,18 @@ function App() {
   const handleNavigate = (view: string) => {
     setCurrentView(view as View);
   };
+
+  // Listen for infrastructure navigation requests
+  useEffect(() => {
+    const handleNavigateToInfrastructure = () => {
+      setCurrentView('infrastructure');
+    };
+    
+    window.addEventListener('navigate-to-infrastructure', handleNavigateToInfrastructure);
+    return () => {
+      window.removeEventListener('navigate-to-infrastructure', handleNavigateToInfrastructure);
+    };
+  }, []);
   
   const serviceConfigs = currentView === 'services' ? getServiceConfigs({}, serviceEnvironments, getEnvironmentUrls) : [];
   
