@@ -1,23 +1,28 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Api.Services;
+using Mystira.App.Application.CQRS.CharacterMaps.Queries;
 using Mystira.App.Contracts.Requests.CharacterMaps;
 using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;
 
+/// <summary>
+/// Controller for character map management.
+/// Follows hexagonal architecture - uses only IMediator (CQRS pattern).
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class CharacterMapsController : ControllerBase
 {
-    private readonly ICharacterMapApiService _characterMapService;
+    private readonly IMediator _mediator;
     private readonly ILogger<CharacterMapsController> _logger;
 
-    public CharacterMapsController(ICharacterMapApiService characterMapService, ILogger<CharacterMapsController> logger)
+    public CharacterMapsController(IMediator mediator, ILogger<CharacterMapsController> logger)
     {
-        _characterMapService = characterMapService;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -29,7 +34,8 @@ public class CharacterMapsController : ControllerBase
     {
         try
         {
-            var characterMaps = await _characterMapService.GetAllCharacterMapsAsync();
+            var query = new GetAllCharacterMapsQuery();
+            var characterMaps = await _mediator.Send(query);
             return Ok(characterMaps);
         }
         catch (Exception ex)
@@ -51,7 +57,8 @@ public class CharacterMapsController : ControllerBase
     {
         try
         {
-            var characterMap = await _characterMapService.GetCharacterMapAsync(id);
+            var query = new GetCharacterMapQuery(id);
+            var characterMap = await _mediator.Send(query);
             if (characterMap == null)
             {
                 return NotFound(new ErrorResponse
