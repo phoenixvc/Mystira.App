@@ -19,9 +19,9 @@ function InfrastructurePanel() {
   const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus | null>(null);
   const [whatIfChanges, setWhatIfChanges] = useState<WhatIfChange[]>([]);
   const [showDestroyConfirm, setShowDestroyConfirm] = useState(false);
-  const [deploymentMethod, setDeploymentMethod] = useState<'github' | 'azure-cli'>('azure-cli');
+  const deploymentMethod: 'github' | 'azure-cli' = 'azure-cli'; // Always use Azure CLI for now
   const [repoRoot, setRepoRoot] = useState<string>('');
-  const [environment, setEnvironment] = useState<string>('dev');
+  const environment = 'dev'; // Always use dev for now
   const [hasPreviewed, setHasPreviewed] = useState(false);
   const [showDeployConfirm, setShowDeployConfirm] = useState(false);
 
@@ -339,7 +339,7 @@ function InfrastructurePanel() {
       const deployCosmos = selectedModules.has('cosmos');
       const deployAppService = selectedModules.has('appservice');
       
-      const response = await invoke('azure_deploy_infrastructure', {
+      const response = await invoke<CommandResponse>('azure_deploy_infrastructure', {
         repoRoot,
         environment,
         deployStorage,
