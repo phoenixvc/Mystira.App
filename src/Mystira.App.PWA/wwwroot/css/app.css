@@ -11,7 +11,7 @@
     --light-color: #F9FAFB;
     --dark-color: #111827;
 
-    /* dice colors */
+    /* Light theme colors (default) */
     --bg: #f8fafc;
     --fg: #111827;
     --muted: #6b7280;
@@ -26,11 +26,66 @@
     --pip: #111827;
 }
 
+/* Dark mode using prefers-color-scheme */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #0f172a;
+        --fg: #f1f5f9;
+        --muted: #94a3b8;
+        --card: rgba(30, 41, 59, 0.85);
+        --border: rgba(148, 163, 184, 0.1);
+        --glow: rgba(134, 239, 172, 0.25);
+        --accent: #34d399;
+
+        --die-grad1: #334155;
+        --die-grad2: #1e293b;
+        --pip: #f1f5f9;
+
+        --light-color: #1e293b;
+        --dark-color: #f1f5f9;
+    }
+}
+
+/* Manual dark mode toggle (can be set via JavaScript on html element) */
+html[data-theme="dark"] {
+    --bg: #0f172a;
+    --fg: #f1f5f9;
+    --muted: #94a3b8;
+    --card: rgba(30, 41, 59, 0.85);
+    --border: rgba(148, 163, 184, 0.1);
+    --glow: rgba(134, 239, 172, 0.25);
+    --accent: #34d399;
+
+    --die-grad1: #334155;
+    --die-grad2: #1e293b;
+    --pip: #f1f5f9;
+
+    --light-color: #1e293b;
+    --dark-color: #f1f5f9;
+}
+
+html[data-theme="light"] {
+    --bg: #f8fafc;
+    --fg: #111827;
+    --muted: #6b7280;
+    --card: rgba(255,255,255,0.85);
+    --border: rgba(17,24,39,0.08);
+    --glow: rgba(52,211,153,0.35);
+    --accent: #22c55e;
+
+    --die-grad1: #ffffff;
+    --die-grad2: #d4d4d8;
+    --pip: #111827;
+}
+
 html, body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     height: 100%;
     margin: 0;
     padding: 0;
+    background-color: var(--bg);
+    color: var(--fg);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Global Utility Classes */
