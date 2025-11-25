@@ -3,5 +3,8 @@
     "autopr.autoMode": false,
     "autopr.showNotifications": true,
     "autopr.notificationLevel": "warnings",
-    "autopr.initialized": true
+    "autopr.initialized": true,
+    "cSpell.words": [
+        "devhub"
+    ]
 }

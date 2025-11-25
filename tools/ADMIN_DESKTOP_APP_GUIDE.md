@@ -23,7 +23,7 @@ This document outlines the architecture for a standalone React/Tauri desktop app
                   ▼
 ┌─────────────────────────────────────────────────────────────┐
 │              Mystira Admin API (Azure App Service)           │
-│                 https://dev-euw-app-mystira-admin-api        │
+│              https://dev-euw-app-mystora-admin-api           │
 ├─────────────────────────────────────────────────────────────┤
 │  ├─ Authentication (JWT)                                     │
 │  ├─ Infrastructure Management                                │
@@ -181,7 +181,7 @@ pub fn delete_auth_token() -> Result<(), String> {
 import axios, { AxiosInstance } from 'axios';
 import { invoke } from '@tauri-apps/api/tauri';
 
-const API_BASE_URL = 'https://dev-euw-app-mystira-admin-api.azurewebsites.net';
+const API_BASE_URL = 'https://dev-euw-app-mystora-admin-api.azurewebsites.net';  // Note: "mystora" is the actual Azure resource name
 
 class ApiClient {
   private client: AxiosInstance;
@@ -610,7 +610,7 @@ export const Migration: React.FC = () => {
         "all": false,
         "request": true,
         "scope": [
-          "https://dev-euw-app-mystira-admin-api.azurewebsites.net/**",
+          "https://dev-euw-app-mystora-admin-api.azurewebsites.net/**",
           "https://prod-wus-app-mystira-api.azurewebsites.net/**"
         ]
       },
@@ -644,7 +644,7 @@ export const Migration: React.FC = () => {
       }
     },
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' https://dev-euw-app-mystira-admin-api.azurewebsites.net https://prod-wus-app-mystira-api.azurewebsites.net; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+      "csp": "default-src 'self'; connect-src 'self' https://dev-euw-app-mystora-admin-api.azurewebsites.net https://prod-wus-app-mystira-api.azurewebsites.net; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
     },
     "updater": {
       "active": false

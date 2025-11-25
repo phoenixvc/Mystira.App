@@ -40,7 +40,7 @@ public class StoryProtocolService : IStoryProtocolService
         }
     }
 
-    public async Task<StoryProtocolMetadata> RegisterIpAssetAsync(
+    public Task<StoryProtocolMetadata> RegisterIpAssetAsync(
         string contentId,
         string contentTitle,
         List<Contributor> contributors,
@@ -87,7 +87,7 @@ public class StoryProtocolService : IStoryProtocolService
         }
     }
 
-    public async Task<bool> IsRegisteredAsync(string contentId)
+    public Task<bool> IsRegisteredAsync(string contentId)
     {
         _logger.LogInformation("Checking registration status for content {ContentId}", contentId);
 
@@ -103,7 +103,7 @@ public class StoryProtocolService : IStoryProtocolService
         }
     }
 
-    public async Task<StoryProtocolMetadata?> GetRoyaltyConfigurationAsync(string ipAssetId)
+    public Task<StoryProtocolMetadata?> GetRoyaltyConfigurationAsync(string ipAssetId)
     {
         _logger.LogInformation("Getting royalty configuration for IP Asset {IpAssetId}", ipAssetId);
 
@@ -119,7 +119,7 @@ public class StoryProtocolService : IStoryProtocolService
         }
     }
 
-    public async Task<StoryProtocolMetadata> UpdateRoyaltySplitAsync(string ipAssetId, List<Contributor> contributors)
+    public Task<StoryProtocolMetadata> UpdateRoyaltySplitAsync(string ipAssetId, List<Contributor> contributors)
     {
         _logger.LogInformation(
             "Updating royalty split for IP Asset {IpAssetId} with {ContributorCount} contributors",
