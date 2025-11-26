@@ -378,6 +378,7 @@ async fn azure_deploy_infrastructure(
     }
     
     // Set subscription
+    let sub_id_for_error = sub_id.clone();
     let set_sub = if use_direct_path {
         Command::new("powershell")
             .arg("-NoProfile")
@@ -389,7 +390,7 @@ async fn azure_deploy_infrastructure(
             .arg("account")
             .arg("set")
             .arg("--subscription")
-            .arg(sub_id)
+            .arg(&sub_id)
             .output()
     };
     
@@ -398,7 +399,7 @@ async fn azure_deploy_infrastructure(
             success: false,
             result: None,
             message: None,
-            error: Some(format!("Failed to set subscription: {}", sub_id)),
+            error: Some(format!("Failed to set subscription: {}", sub_id_for_error)),
         });
     }
     
@@ -730,7 +731,7 @@ async fn azure_validate_infrastructure(
             .arg("account")
             .arg("set")
             .arg("--subscription")
-            .arg(sub_id)
+            .arg(&sub_id)
             .output()
     };
     
@@ -914,7 +915,7 @@ async fn azure_preview_infrastructure(
             .arg("account")
             .arg("set")
             .arg("--subscription")
-            .arg(sub_id)
+            .arg(&sub_id)
             .output()
     };
     
@@ -1527,7 +1528,7 @@ async fn check_infrastructure_status(
             .arg("account")
             .arg("set")
             .arg("--subscription")
-            .arg(sub_id)
+            .arg(&sub_id)
             .output()
     };
 
