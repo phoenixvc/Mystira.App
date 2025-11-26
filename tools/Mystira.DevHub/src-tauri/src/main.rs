@@ -50,19 +50,61 @@ type ServiceManager = Arc<Mutex<HashMap<String, ServiceInfo>>>;
 
 // Get the path to the built .NET CLI executable
 fn get_cli_executable_path() -> Result<PathBuf, String> {
-    // Try to find the executable relative to the Tauri app
-    let base_path = env::current_dir()
-        .map_err(|e| format!("Failed to get current directory: {}", e))?;
+    // Try multiple base paths to find the executable
+    let mut base_paths = Vec::new();
+    
+    // Try current directory
+    if let Ok(current_dir) = env::current_dir() {
+        base_paths.push(current_dir);
+    }
+    
+    // Try parent directories (in case we're in src-tauri or a subdirectory)
+    if let Ok(current_dir) = env::current_dir() {
+        if let Some(parent) = current_dir.parent() {
+            base_paths.push(parent.to_path_buf());
+        }
+        if let Some(grandparent) = current_dir.parent().and_then(|p| p.parent()) {
+            base_paths.push(grandparent.to_path_buf());
+        }
+        if let Some(great_grandparent) = current_dir.parent()
+            .and_then(|p| p.parent())
+            .and_then(|p| p.parent()) {
+            base_paths.push(great_grandparent.to_path_buf());
+        }
+    }
+    
+    // Try to find repo root and add it
+    if let Ok(current_dir) = env::current_dir() {
+        let mut check_dir = current_dir.clone();
+        for _ in 0..5 {
+            if check_dir.join(".git").exists() || check_dir.join("Mystira.App.sln").exists() {
+                base_paths.push(check_dir.clone());
+            }
+            if let Some(parent) = check_dir.parent() {
+                check_dir = parent.to_path_buf();
+            } else {
+                break;
+            }
+        }
+    }
 
-    // Check for pre-built executable in multiple locations
-    let possible_paths = vec![
-        // Development: relative to Tauri project
-        base_path.join("../../Mystira.DevHub.CLI/bin/Debug/net9.0/Mystira.DevHub.CLI"),
-        base_path.join("../../Mystira.DevHub.CLI/bin/Release/net9.0/Mystira.DevHub.CLI"),
-        // Production: bundled with app
-        base_path.join("Mystira.DevHub.CLI"),
-        base_path.join("bin/Mystira.DevHub.CLI"),
-    ];
+    // Check for pre-built executable in multiple locations relative to each base path
+    let mut possible_paths = Vec::new();
+    for base_path in &base_paths {
+        possible_paths.extend(vec![
+            // Development: relative to Tauri project (src-tauri -> tools/Mystira.DevHub -> tools/Mystira.DevHub.CLI)
+            base_path.join("tools/Mystira.DevHub.CLI/bin/Debug/net9.0/Mystira.DevHub.CLI"),
+            base_path.join("tools/Mystira.DevHub.CLI/bin/Release/net9.0/Mystira.DevHub.CLI"),
+            base_path.join("../../Mystira.DevHub.CLI/bin/Debug/net9.0/Mystira.DevHub.CLI"),
+            base_path.join("../../Mystira.DevHub.CLI/bin/Release/net9.0/Mystira.DevHub.CLI"),
+            // Alternative: from repo root
+            base_path.join("../../../Mystira.DevHub.CLI/bin/Debug/net9.0/Mystira.DevHub.CLI"),
+            base_path.join("../../../Mystira.DevHub.CLI/bin/Release/net9.0/Mystira.DevHub.CLI"),
+            // Production: bundled with app
+            base_path.join("Mystira.DevHub.CLI"),
+            base_path.join("bin/Mystira.DevHub.CLI"),
+        ]);
+    }
 
     // Add .exe extension on Windows
     #[cfg(target_os = "windows")]
@@ -71,8 +113,16 @@ fn get_cli_executable_path() -> Result<PathBuf, String> {
         .map(|p| p.with_extension("exe"))
         .collect();
 
-    // Find the first path that exists
+    // Remove duplicates
+    let mut unique_paths: Vec<PathBuf> = Vec::new();
     for path in &possible_paths {
+        if !unique_paths.contains(path) {
+            unique_paths.push(path.clone());
+        }
+    }
+
+    // Find the first path that exists
+    for path in &unique_paths {
         if path.exists() {
             return Ok(path.clone());
         }
@@ -80,16 +130,16 @@ fn get_cli_executable_path() -> Result<PathBuf, String> {
 
     // If no built executable found, provide helpful error
     Err(format!(
-        "Could not find Mystira.DevHub.CLI executable. Please build it first:\n\
-         cd tools/Mystira.DevHub.CLI\n\
-         dotnet build\n\
-         \n\
-         Searched in:\n{}",
-        possible_paths
-            .iter()
-            .map(|p| format!("  - {}", p.display()))
-            .collect::<Vec<_>>()
-            .join("\n")
+        "Could not find Mystira.DevHub.CLI executable.\n\n\
+         Please build the CLI first:\n\
+         1. Open a terminal\n\
+         2. Navigate to: tools/Mystira.DevHub.CLI\n\
+         3. Run: dotnet build\n\n\
+         The executable should be at:\n\
+         tools/Mystira.DevHub.CLI/bin/Debug/net9.0/Mystira.DevHub.CLI.exe\n\n\
+         Searched in {} locations (checked {} unique paths).",
+        base_paths.len(),
+        unique_paths.len()
     ))
 }
 
@@ -112,7 +162,22 @@ async fn execute_devhub_cli(command: String, args: serde_json::Value) -> Result<
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| format!("Failed to spawn process at {}: {}", cli_exe_path.display(), e))?;
+        .map_err(|e| {
+            let error_msg = if e.kind() == std::io::ErrorKind::NotFound {
+                format!(
+                    "Program not found: {}\n\n\
+                     The Mystira.DevHub.CLI executable was not found at the expected location.\n\
+                     Please build the CLI first:\n\
+                     1. Open a terminal\n\
+                     2. Navigate to: tools/Mystira.DevHub.CLI\n\
+                     3. Run: dotnet build",
+                    cli_exe_path.display()
+                )
+            } else {
+                format!("Failed to spawn process at {}: {}", cli_exe_path.display(), e)
+            };
+            error_msg
+        })?;
 
     // Write JSON to stdin
     if let Some(mut stdin) = child.stdin.take() {
@@ -290,7 +355,7 @@ async fn azure_deploy_infrastructure(
     }
     
     // Create resource group if it doesn't exist
-    let rg_create = Command::new("az")
+    let _rg_create = Command::new("az")
         .arg("group")
         .arg("create")
         .arg("--name")
@@ -766,17 +831,17 @@ async fn prebuild_service(
     }
     
     // Stop all running services
-    for (svc_name, pid_opt, port) in services_to_stop {
+    for (svc_name, pid_opt, port) in &services_to_stop {
         // Remove from services map first
         {
             let mut services_guard = services.lock().map_err(|e| format!("Lock error: {}", e))?;
-            services_guard.remove(&svc_name);
+            services_guard.remove(svc_name);
         }
         
         // Kill the process
         #[cfg(target_os = "windows")]
         {
-            if let Some(pid_val) = pid_opt {
+            if let Some(pid_val) = *pid_opt {
                 let _ = Command::new("taskkill")
                     .args(&["/F", "/PID", &pid_val.to_string()])
                     .output();
@@ -800,7 +865,7 @@ async fn prebuild_service(
                 let _ = Command::new("powershell")
                     .args(&[
                         "-Command",
-                        &format!("Get-NetTCPConnection -LocalPort {} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object {{ Stop-Process -Id $_ -Force }}", port)
+                        &format!("Get-NetTCPConnection -LocalPort {} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object {{ Stop-Process -Id $_ -Force }}", *port)
                     ])
                     .output();
                 tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
@@ -809,7 +874,7 @@ async fn prebuild_service(
         
         #[cfg(not(target_os = "windows"))]
         {
-            if let Some(pid_val) = pid_opt {
+            if let Some(pid_val) = *pid_opt {
                 let _ = Command::new("kill")
                     .args(&["-9", &pid_val.to_string()])
                     .output();

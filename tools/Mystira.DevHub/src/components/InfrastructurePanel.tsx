@@ -241,9 +241,16 @@ function InfrastructurePanel() {
         setTimeout(() => fetchWorkflowStatus(), 2000);
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isCliNotFound = errorMessage.includes('program not found') || 
+                            errorMessage.includes('Could not find Mystira.DevHub.CLI') ||
+                            errorMessage.includes('Failed to spawn process');
+      
       setLastResponse({
         success: false,
-        error: String(error),
+        error: isCliNotFound
+          ? `❌ Program Not Found\n\n${errorMessage}\n\nPlease build the CLI executable first:\n1. Open a terminal\n2. Navigate to: tools/Mystira.DevHub.CLI\n3. Run: dotnet build`
+          : errorMessage,
       });
     } finally {
       setLoading(false);

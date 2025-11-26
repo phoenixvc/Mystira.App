@@ -6,10 +6,14 @@ using Microsoft.OpenApi.Models;
 using Mystira.App.Api.Adapters;
 using Mystira.App.Api.Services;
 using Mystira.App.Infrastructure.Data;
+using Mystira.App.Application.Ports;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Ports.Media;
 using Mystira.App.Application.Ports.Auth;
 using Mystira.App.Application.Ports.Health;
+using Mystira.App.Application.CQRS;
+using Mystira.App.Application.Behaviors;
+using Mystira.App.Application.Services;
 using Mystira.App.Application.UseCases.Accounts;
 using Mystira.App.Application.UseCases.GameSessions;
 using Mystira.App.Application.UseCases.Media;
@@ -19,6 +23,7 @@ using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
 using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Data.Services;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
 using Mystira.App.Infrastructure.Discord;
 using Mystira.App.Shared.Middleware;
@@ -117,7 +122,7 @@ builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<MystiraAppDbCo
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 builder.Services.Configure<AudioTranscodingOptions>(builder.Configuration.GetSection(AudioTranscodingOptions.SectionName));
 // Register Application.Ports.Media.IAudioTranscodingService for use cases
-builder.Services.AddSingleton<Mystira.App.Application.Ports.Media.IAudioTranscodingService, FfmpegAudioTranscodingService>();
+builder.Services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingService>();
 // Configure JWT Authentication - Load from secure configuration only
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];
 var jwtAudience = builder.Configuration["JwtSettings:Audience"];
@@ -299,13 +304,14 @@ builder.Services.AddScoped<DownloadMediaUseCase>();
 // Register application services
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
 builder.Services.AddScoped<IAppStatusService, AppStatusService>();
-builder.Services.AddScoped<IEmailService, AzureEmailService>();
-builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<Mystira.App.Api.Services.IEmailService, AzureEmailService>();
+builder.Services.AddScoped<Mystira.App.Api.Services.IJwtService, JwtService>();
 
 // Register Application.Ports adapters for CQRS handlers
 builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, JwtServiceAdapter>();
 builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IEmailService, EmailServiceAdapter>();
-builder.Services.AddScoped<Mystira.App.Application.Ports.Health.IHealthCheckPort, HealthCheckPortAdapter>();
+builder.Services.AddScoped<IHealthCheckPort, HealthCheckPortAdapter>();
+builder.Services.AddScoped<IMediaMetadataService, MediaMetadataService>();
 
 // Configure Memory Cache for query caching
 builder.Services.AddMemoryCache(options =>
@@ -321,12 +327,11 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(Mystira.App.Application.CQRS.ICommand<>).Assembly);
 
     // Add query caching pipeline behavior
-    cfg.AddOpenBehavior(typeof(Mystira.App.Application.Behaviors.QueryCachingBehavior<,>));
+    cfg.AddOpenBehavior(typeof(QueryCachingBehavior<,>));
 });
 
 // Register query cache invalidation service
-builder.Services.AddSingleton<Mystira.App.Application.Services.IQueryCacheInvalidationService,
-    Mystira.App.Application.Services.QueryCacheInvalidationService>();
+builder.Services.AddSingleton<IQueryCacheInvalidationService, QueryCacheInvalidationService>();
 
 // Configure Health Checks
 builder.Services.AddHealthChecks()
