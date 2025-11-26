@@ -737,6 +737,7 @@ async fn prebuild_service(
     service_name: String,
     repo_root: String,
     app_handle: tauri::AppHandle,
+    services: State<'_, ServiceManager>,
 ) -> Result<(), String> {
     // Validate repo_root is not empty
     if repo_root.is_empty() {
@@ -747,6 +748,78 @@ async fn prebuild_service(
     let repo_path = PathBuf::from(&repo_root);
     if !repo_path.exists() {
         return Err(format!("Repository root does not exist: {}", repo_root));
+    }
+    
+    // Stop ALL services before building to avoid file locks on shared DLLs (like Domain.dll)
+    // All services share Domain.dll, so we need to stop all of them before building any
+    let all_services = vec!["api", "admin-api", "pwa"];
+    let mut services_to_stop: Vec<(String, Option<u32>, u16)> = Vec::new();
+    
+    // Collect all running services that need to be stopped
+    {
+        let services_guard = services.lock().map_err(|e| format!("Lock error: {}", e))?;
+        for svc_name in &all_services {
+            if let Some(info) = services_guard.get(*svc_name) {
+                services_to_stop.push((svc_name.to_string(), info.pid, info.port));
+            }
+        }
+    }
+    
+    // Stop all running services
+    for (svc_name, pid_opt, port) in services_to_stop {
+        // Remove from services map first
+        {
+            let mut services_guard = services.lock().map_err(|e| format!("Lock error: {}", e))?;
+            services_guard.remove(&svc_name);
+        }
+        
+        // Kill the process
+        #[cfg(target_os = "windows")]
+        {
+            if let Some(pid_val) = pid_opt {
+                let _ = Command::new("taskkill")
+                    .args(&["/F", "/PID", &pid_val.to_string()])
+                    .output();
+                
+                // Wait for process to terminate (up to 5 seconds)
+                for _ in 0..50 {
+                    let check = Command::new("tasklist")
+                        .args(&["/FI", &format!("PID eq {}", pid_val)])
+                        .output();
+                    
+                    if let Ok(output) = check {
+                        let output_str = String::from_utf8_lossy(&output.stdout);
+                        if !output_str.contains(&pid_val.to_string()) {
+                            break;
+                        }
+                    }
+                    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                }
+            } else {
+                // Fallback: kill by port
+                let _ = Command::new("powershell")
+                    .args(&[
+                        "-Command",
+                        &format!("Get-NetTCPConnection -LocalPort {} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object {{ Stop-Process -Id $_ -Force }}", port)
+                    ])
+                    .output();
+                tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+            }
+        }
+        
+        #[cfg(not(target_os = "windows"))]
+        {
+            if let Some(pid_val) = pid_opt {
+                let _ = Command::new("kill")
+                    .args(&["-9", &pid_val.to_string()])
+                    .output();
+            }
+        }
+    }
+    
+    // Wait longer for all file handles to release (especially important for shared DLLs)
+    if !services_to_stop.is_empty() {
+        tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
     }
     
     let (project_path, _port, _url) = match service_name.as_str() {
@@ -775,6 +848,9 @@ async fn prebuild_service(
     
     // Convert PathBuf to string for current_dir
     let project_path_str = project_path.to_string_lossy().to_string();
+    
+    // Additional wait for any remaining file handles to release
+    tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
 
     // Build with streaming output
     let mut build_child = TokioCommand::new("dotnet")
