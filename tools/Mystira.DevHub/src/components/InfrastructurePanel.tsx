@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/tauri';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDeploymentsStore } from '../stores/deploymentsStore';
 import { useResourcesStore } from '../stores/resourcesStore';
 import type { CommandResponse, WhatIfChange, WorkflowStatus } from '../types';
@@ -9,6 +9,7 @@ import DeploymentHistory from './DeploymentHistory';
 import { DestroyButton } from './DestroyButton';
 import ResourceGrid from './ResourceGrid';
 import WhatIfViewer from './WhatIfViewer';
+import { formatTimeSince } from './services/utils/serviceUtils';
 
 type Tab = 'actions' | 'bicep' | 'resources' | 'history';
 
@@ -25,7 +26,7 @@ function InfrastructurePanel() {
   const [hasPreviewed, setHasPreviewed] = useState(false);
   const [showDeployConfirm, setShowDeployConfirm] = useState(false);
 
-  const workflowFile = 'infrastructure-deploy-dev.yml';
+  const workflowFile = '.start-infrastructure-deploy-dev.yml';
   const repository = 'phoenixvc/Mystira.App';
 
   // Get repository root on mount
@@ -56,6 +57,39 @@ function InfrastructurePanel() {
     fetchDeployments,
   } = useDeploymentsStore();
 
+  const [isBuildingCli, setIsBuildingCli] = useState(false);
+  const [cliBuildTime, setCliBuildTime] = useState<number | null>(null);
+  const [cliBuildLogs, setCliBuildLogs] = useState<string[]>([]);
+  const [showCliBuildLogs, setShowCliBuildLogs] = useState(false);
+  const cliLogsEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch workflow status on mount to show last build time
+  useEffect(() => {
+    fetchWorkflowStatus();
+  }, []);
+
+  // Fetch CLI build time on mount and after building
+  useEffect(() => {
+    const fetchCliBuildTime = async () => {
+      try {
+        const buildTime = await invoke<number | null>('get_cli_build_time');
+        setCliBuildTime(buildTime);
+      } catch (error) {
+        console.error('Failed to get CLI build time:', error);
+        setCliBuildTime(null);
+      }
+    };
+    fetchCliBuildTime();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBuildingCli]);
+
+  // Auto-scroll CLI logs to bottom
+  useEffect(() => {
+    if (cliLogsEndRef.current && (isBuildingCli || cliBuildLogs.length > 0)) {
+      cliLogsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [cliBuildLogs, isBuildingCli]);
+
   // Fetch resources when switching to resources tab
   useEffect(() => {
     if (activeTab === 'resources') {
@@ -69,6 +103,26 @@ function InfrastructurePanel() {
       fetchDeployments();
     }
   }, [activeTab, fetchDeployments]);
+
+  // Fetch workflow status on mount to show last build time
+  useEffect(() => {
+    const loadWorkflowStatus = async () => {
+      try {
+        const response: CommandResponse<WorkflowStatus> = await invoke('infrastructure_status', {
+          workflowFile,
+          repository,
+        });
+
+        if (response.success && response.result) {
+          setWorkflowStatus(response.result);
+        }
+      } catch (error) {
+        console.error('Failed to fetch workflow status:', error);
+      }
+    };
+    loadWorkflowStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAction = async (action: 'validate' | 'preview' | 'deploy' | 'destroy') => {
     setLoading(true);
@@ -506,13 +560,149 @@ function InfrastructurePanel() {
       />
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Infrastructure Control Panel
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            Manage Bicep infrastructure deployments via GitHub Actions
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                Infrastructure Control Panel
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                Manage Bicep infrastructure deployments via GitHub Actions
+              </p>
+            </div>
+            {/* Last Build Time Indicators */}
+            <div className="flex flex-col items-end gap-2">
+              {workflowStatus?.updatedAt && (
+                <div className="flex flex-col items-end">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Last Workflow Build</div>
+                  <div className="px-3 py-1.5 rounded-lg bg-blue-900/20 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-mono font-semibold text-sm" 
+                       title={`Last workflow build: ${new Date(workflowStatus.updatedAt).toLocaleString()}`}>
+                    {formatTimeSince(new Date(workflowStatus.updatedAt).getTime()) || 'Unknown'}
+                  </div>
+                </div>
+              )}
+              {cliBuildTime ? (
+                <div className="flex flex-col items-end">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Last CLI Build</div>
+                  <div className="px-3 py-1.5 rounded-lg bg-green-900/20 dark:bg-green-900/30 text-green-600 dark:text-green-400 font-mono font-semibold text-sm" 
+                       title={`Last CLI build: ${new Date(cliBuildTime).toLocaleString()}`}>
+                    {formatTimeSince(cliBuildTime) || 'Unknown'}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-end">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">CLI Status</div>
+                  <div className="flex items-center gap-2">
+                    <div className="px-3 py-1.5 rounded-lg bg-red-900/20 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-mono font-semibold text-sm">
+                      Not Built
+                    </div>
+                    <button
+                      onClick={async () => {
+                        setIsBuildingCli(true);
+                        setShowCliBuildLogs(true);
+                        setCliBuildLogs([]);
+                        try {
+                          const response = await invoke<CommandResponse>('build_cli');
+                          // Parse output from result
+                          if (response.result && typeof response.result === 'object' && 'output' in response.result) {
+                            const output = (response.result as any).output as string;
+                            const lines = output.split('\n').filter(line => line.trim().length > 0);
+                            setCliBuildLogs(lines);
+                          }
+                          if (response.success) {
+                            // Get build time from response if available, otherwise fetch it
+                            if (response.result && typeof response.result === 'object' && 'buildTime' in response.result) {
+                              const buildTime = (response.result as any).buildTime as number | null;
+                              if (buildTime) {
+                                setCliBuildTime(buildTime);
+                              } else {
+                                // Fallback: try to get it after a short delay
+                                setTimeout(async () => {
+                                  try {
+                                    const buildTime = await invoke<number | null>('get_cli_build_time');
+                                    setCliBuildTime(buildTime);
+                                  } catch (error) {
+                                    console.error('Failed to get CLI build time:', error);
+                                  }
+                                }, 1000);
+                              }
+                            } else {
+                              // Fallback: fetch build time
+                              setTimeout(async () => {
+                                try {
+                                  const buildTime = await invoke<number | null>('get_cli_build_time');
+                                  setCliBuildTime(buildTime);
+                                } catch (error) {
+                                  console.error('Failed to get CLI build time:', error);
+                                }
+                              }, 1000);
+                            }
+                          } else {
+                            // Keep logs visible on failure
+                            console.error('Build failed:', response.error);
+                          }
+                        } catch (error) {
+                          setCliBuildLogs([`Error: ${error}`]);
+                          console.error('Failed to build CLI:', error);
+                        } finally {
+                          setIsBuildingCli(false);
+                        }
+                      }}
+                      disabled={isBuildingCli}
+                      className="px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-1.5"
+                      title="Build the CLI executable"
+                    >
+                      {isBuildingCli ? (
+                        <>
+                          <span className="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-white"></span>
+                          Building...
+                        </>
+                      ) : (
+                        <>
+                          🔨 Build CLI
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
+
+        {/* CLI Build Logs Viewer */}
+        {(showCliBuildLogs && (isBuildingCli || cliBuildLogs.length > 0)) && (
+          <div className="mb-6 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <div className="bg-gray-50 dark:bg-gray-800 px-4 py-2 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-gray-900 dark:text-white">CLI Build Logs</h3>
+                {isBuildingCli && (
+                  <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></span>
+                )}
+              </div>
+              <button
+                onClick={() => setShowCliBuildLogs(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                title="Close logs"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="bg-gray-900 text-green-400 font-mono text-sm p-4 max-h-96 overflow-y-auto">
+              {cliBuildLogs.length === 0 ? (
+                <div className="text-gray-500">Waiting for build output...</div>
+              ) : (
+                <>
+                  {cliBuildLogs.map((line, index) => (
+                    <div key={index} className="whitespace-pre-wrap">
+                      {line}
+                    </div>
+                  ))}
+                  <div ref={cliLogsEndRef} />
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="mb-6">
@@ -776,13 +966,81 @@ function InfrastructurePanel() {
             {resourcesError && (
               <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-4">
                 <h3 className="text-lg font-semibold text-red-900 dark:text-red-300 mb-2">❌ Failed to Load Resources</h3>
-                <p className="text-red-800 dark:text-red-200 mb-3">{resourcesError}</p>
-                <button
-                  onClick={() => fetchResources(true)}
-                  className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
-                >
-                  Retry
-                </button>
+                <p className="text-red-800 dark:text-red-200 mb-3 whitespace-pre-wrap">{resourcesError}</p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => fetchResources(true)}
+                    className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
+                  >
+                    Retry
+                  </button>
+                  {(resourcesError.includes('Could not find Mystira.DevHub.CLI') ||
+                    resourcesError.includes('Program not found') ||
+                    resourcesError.includes('Failed to spawn process')) && (
+                    <button
+                      onClick={async () => {
+                        setIsBuildingCli(true);
+                        setShowCliBuildLogs(true);
+                        setCliBuildLogs([]);
+                        try {
+                          const response = await invoke<CommandResponse>('build_cli');
+                          // Parse output from result
+                          if (response.result && typeof response.result === 'object' && 'output' in response.result) {
+                            const output = (response.result as any).output as string;
+                            const lines = output.split('\n').filter(line => line.trim().length > 0);
+                            setCliBuildLogs(lines);
+                          }
+                          if (response.success) {
+                            // Get build time from response if available, otherwise fetch it
+                            if (response.result && typeof response.result === 'object' && 'buildTime' in response.result) {
+                              const buildTime = (response.result as any).buildTime as number | null;
+                              if (buildTime) {
+                                setCliBuildTime(buildTime);
+                              } else {
+                                setTimeout(async () => {
+                                  try {
+                                    const buildTime = await invoke<number | null>('get_cli_build_time');
+                                    setCliBuildTime(buildTime);
+                                  } catch (error) {
+                                    console.error('Failed to get CLI build time:', error);
+                                  }
+                                }, 1000);
+                              }
+                            } else {
+                              setTimeout(async () => {
+                                try {
+                                  const buildTime = await invoke<number | null>('get_cli_build_time');
+                                  setCliBuildTime(buildTime);
+                                } catch (error) {
+                                  console.error('Failed to get CLI build time:', error);
+                                }
+                              }, 1000);
+                            }
+                            setTimeout(() => {
+                              fetchResources(true);
+                            }, 1000);
+                          }
+                        } catch (error) {
+                          setCliBuildLogs([`Error: ${error}`]);
+                          console.error('Failed to build CLI:', error);
+                        } finally {
+                          setIsBuildingCli(false);
+                        }
+                      }}
+                      disabled={isBuildingCli}
+                      className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isBuildingCli ? (
+                        <>
+                          <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                          Building...
+                        </>
+                      ) : (
+                        '🔨 Rebuild CLI'
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -805,13 +1063,81 @@ function InfrastructurePanel() {
             {deploymentsError && (
               <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-4">
                 <h3 className="text-lg font-semibold text-red-900 dark:text-red-300 mb-2">❌ Failed to Load Deployments</h3>
-                <p className="text-red-800 dark:text-red-200 mb-3">{deploymentsError}</p>
-                <button
-                  onClick={() => fetchDeployments(true)}
-                  className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
-                >
-                  Retry
-                </button>
+                <p className="text-red-800 dark:text-red-200 mb-3 whitespace-pre-wrap">{deploymentsError}</p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => fetchDeployments(true)}
+                    className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
+                  >
+                    Retry
+                  </button>
+                  {(deploymentsError.includes('Could not find Mystira.DevHub.CLI') ||
+                    deploymentsError.includes('Program not found') ||
+                    deploymentsError.includes('Failed to spawn process')) && (
+                    <button
+                      onClick={async () => {
+                        setIsBuildingCli(true);
+                        setShowCliBuildLogs(true);
+                        setCliBuildLogs([]);
+                        try {
+                          const response = await invoke<CommandResponse>('build_cli');
+                          // Parse output from result
+                          if (response.result && typeof response.result === 'object' && 'output' in response.result) {
+                            const output = (response.result as any).output as string;
+                            const lines = output.split('\n').filter(line => line.trim().length > 0);
+                            setCliBuildLogs(lines);
+                          }
+                          if (response.success) {
+                            // Get build time from response if available, otherwise fetch it
+                            if (response.result && typeof response.result === 'object' && 'buildTime' in response.result) {
+                              const buildTime = (response.result as any).buildTime as number | null;
+                              if (buildTime) {
+                                setCliBuildTime(buildTime);
+                              } else {
+                                setTimeout(async () => {
+                                  try {
+                                    const buildTime = await invoke<number | null>('get_cli_build_time');
+                                    setCliBuildTime(buildTime);
+                                  } catch (error) {
+                                    console.error('Failed to get CLI build time:', error);
+                                  }
+                                }, 1000);
+                              }
+                            } else {
+                              setTimeout(async () => {
+                                try {
+                                  const buildTime = await invoke<number | null>('get_cli_build_time');
+                                  setCliBuildTime(buildTime);
+                                } catch (error) {
+                                  console.error('Failed to get CLI build time:', error);
+                                }
+                              }, 1000);
+                            }
+                            setTimeout(() => {
+                              fetchDeployments(true);
+                            }, 1000);
+                          }
+                        } catch (error) {
+                          setCliBuildLogs([`Error: ${error}`]);
+                          console.error('Failed to build CLI:', error);
+                        } finally {
+                          setIsBuildingCli(false);
+                        }
+                      }}
+                      disabled={isBuildingCli}
+                      className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isBuildingCli ? (
+                        <>
+                          <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                          Building...
+                        </>
+                      ) : (
+                        '🔨 Rebuild CLI'
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 

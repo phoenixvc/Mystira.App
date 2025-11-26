@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
-import { readTextFile } from '@tauri-apps/api/fs';
+import { invoke } from '@tauri-apps/api/tauri';
+import { useEffect, useState } from 'react';
 
 interface BicepFile {
   name: string;
@@ -78,7 +78,7 @@ function BicepViewer() {
     setLoading(true);
     setError(null);
     try {
-      const content = await readTextFile(filePath);
+      const content = await invoke<string>('read_bicep_file', { relativePath: filePath });
       setFileContent(content);
     } catch (err) {
       setError(`Failed to load file: ${err}`);

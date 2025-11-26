@@ -1368,15 +1368,14 @@ async fn check_service_health(url: String) -> Result<bool, String> {
     }
 }
 
-#[tauri::command]
-async fn get_repo_root() -> Result<String, String> {
-    // Get the current working directory (where DevHub is running from)
+// Helper function to find repository root
+fn find_repo_root() -> Result<PathBuf, String> {
     let current_dir = env::current_dir()
         .map_err(|e| format!("Failed to get current directory: {}", e))?;
     
-    // Check if current directory is the repo root (has .git or solution file)
+    // Check if current directory is the repo root
     if current_dir.join(".git").exists() || current_dir.join("Mystira.App.sln").exists() {
-        return Ok(current_dir.to_string_lossy().to_string());
+        return Ok(current_dir);
     }
     
     // If we're in tools/Mystira.DevHub, go up two levels
@@ -1384,26 +1383,173 @@ async fn get_repo_root() -> Result<String, String> {
         if let Some(repo_root) = current_dir.parent()
             .and_then(|p| p.parent()) {
             if repo_root.join(".git").exists() || repo_root.join("Mystira.App.sln").exists() {
-                return Ok(repo_root.to_string_lossy().to_string());
+                return Ok(repo_root.to_path_buf());
             }
         }
     }
     
-    // Fallback: try to find the repo root by walking up the directory tree
-    let mut dir = current_dir.clone();
-    loop {
-        if dir.join(".git").exists() || dir.join("Mystira.App.sln").exists() {
-            return Ok(dir.to_string_lossy().to_string());
+    // Try walking up the directory tree
+    let mut check_dir = current_dir.clone();
+    for _ in 0..5 {
+        if check_dir.join(".git").exists() || check_dir.join("Mystira.App.sln").exists() {
+            return Ok(check_dir);
         }
-        match dir.parent() {
-            Some(parent) => dir = parent.to_path_buf(),
-            None => {
-                // If we can't find the repo root, return the current directory as fallback
-                // This allows users to set it manually
-                return Ok(current_dir.to_string_lossy().to_string());
-            }
+        if let Some(parent) = check_dir.parent() {
+            check_dir = parent.to_path_buf();
+        } else {
+            break;
         }
     }
+    
+    Err("Could not find repository root. Please ensure you're running from within the repository.".to_string())
+}
+
+#[tauri::command]
+async fn get_cli_build_time() -> Result<Option<i64>, String> {
+    // Try to find the CLI executable
+    match get_cli_executable_path() {
+        Ok(path) => {
+            // Get file metadata to find last modified time
+            match std::fs::metadata(&path) {
+                Ok(metadata) => {
+                    if let Ok(modified) = metadata.modified() {
+                        // Convert to timestamp (milliseconds since epoch)
+                        let timestamp = modified
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .map_err(|e| format!("Failed to calculate timestamp: {}", e))?
+                            .as_millis() as i64;
+                        Ok(Some(timestamp))
+                    } else {
+                        Ok(None)
+                    }
+                }
+                Err(e) => Err(format!("Failed to get file metadata: {}", e)),
+            }
+        }
+        Err(_) => Ok(None), // CLI not found, return None
+    }
+}
+
+#[tauri::command]
+async fn build_cli() -> Result<CommandResponse, String> {
+    // Find repo root
+    let repo_root = find_repo_root()?;
+    
+    // Path to CLI project
+    let cli_project_path = repo_root.join("tools/Mystira.DevHub.CLI/Mystira.DevHub.CLI.csproj");
+    
+    if !cli_project_path.exists() {
+        return Err(format!(
+            "CLI project not found at: {}\n\nPlease ensure you're running from the repository root.",
+            cli_project_path.display()
+        ));
+    }
+    
+    // Build the CLI using dotnet build
+    let output = Command::new("dotnet")
+        .arg("build")
+        .arg(&cli_project_path)
+        .arg("--configuration")
+        .arg("Debug")
+        .arg("--no-incremental")
+        .current_dir(repo_root.join("tools/Mystira.DevHub.CLI"))
+        .output()
+        .map_err(|e| format!("Failed to execute dotnet build: {}", e))?;
+    
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    
+    // Combine stdout and stderr for full build output
+    let full_output = if stderr.is_empty() {
+        stdout.to_string()
+    } else if stdout.is_empty() {
+        stderr.to_string()
+    } else {
+        format!("{}\n{}", stdout, stderr)
+    };
+    
+    if output.status.success() {
+        // After successful build, try to get the build time immediately
+        // The executable should be at: tools/Mystira.DevHub.CLI/bin/Debug/net9.0/Mystira.DevHub.CLI.exe
+        let expected_path = repo_root.join("tools/Mystira.DevHub.CLI/bin/Debug/net9.0/Mystira.DevHub.CLI");
+        #[cfg(target_os = "windows")]
+        let expected_path = expected_path.with_extension("exe");
+        
+        // Wait a moment for file system to sync
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        
+        let build_time = if expected_path.exists() {
+            if let Ok(metadata) = std::fs::metadata(&expected_path) {
+                if let Ok(modified) = metadata.modified() {
+                    Some(modified
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_millis() as i64)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        
+        Ok(CommandResponse {
+            success: true,
+            message: Some(format!("CLI built successfully!")),
+            result: Some(serde_json::json!({ 
+                "output": full_output,
+                "buildTime": build_time
+            })),
+            error: None,
+        })
+    } else {
+        Ok(CommandResponse {
+            success: false,
+            message: None,
+            result: Some(serde_json::json!({ "output": full_output })),
+            error: Some(format!(
+                "Build failed with exit code: {:?}",
+                output.status.code()
+            )),
+        })
+    }
+}
+
+#[tauri::command]
+async fn read_bicep_file(relative_path: String) -> Result<String, String> {
+    // Find repo root
+    let repo_root = find_repo_root()?;
+    
+    // Resolve the file path relative to repo root
+    let file_path = repo_root.join(&relative_path);
+    
+    // Security: Ensure the path is within the repo root (prevent directory traversal)
+    // Normalize paths to handle different separators and symlinks
+    let repo_root_canonical = repo_root.canonicalize()
+        .map_err(|e| format!("Failed to canonicalize repo root: {}", e))?;
+    let file_path_canonical = file_path.canonicalize()
+        .map_err(|e| format!("Failed to canonicalize file path: {}", e))?;
+    
+    if !file_path_canonical.starts_with(&repo_root_canonical) {
+        return Err(format!("Invalid path: path must be within repository root"));
+    }
+    
+    // Check if file exists
+    if !file_path.exists() {
+        return Err(format!("File not found: {}", relative_path));
+    }
+    
+    // Read the file
+    fs::read_to_string(&file_path)
+        .map_err(|e| format!("Failed to read file {}: {}", relative_path, e))
+}
+
+#[tauri::command]
+async fn get_repo_root() -> Result<String, String> {
+    find_repo_root()
+        .map(|p| p.to_string_lossy().to_string())
 }
 
 #[tauri::command]
@@ -1564,6 +1710,9 @@ fn main() {
             stop_service,
             get_service_status,
             get_repo_root,
+            read_bicep_file,
+            build_cli,
+            get_cli_build_time,
             get_current_branch,
             create_webview_window,
             check_port_available,
