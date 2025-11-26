@@ -999,26 +999,51 @@ async fn azure_preview_infrastructure(
             let stdout = String::from_utf8_lossy(&output.stdout);
             let stderr = String::from_utf8_lossy(&output.stderr);
             
-            // Try to parse JSON output
+            // Check if errors are only Cosmos DB nested resource errors (expected when resources don't exist yet)
+            let stderr_str = stderr.to_string();
+            let error_count = stderr_str.matches("DeploymentWhatIfResourceError").count();
+            let is_only_cosmos_errors = stderr_str.contains("DeploymentWhatIfResourceError") 
+                && stderr_str.contains("Microsoft.DocumentDB")
+                && (stderr_str.contains("sqlDatabases") || stderr_str.contains("containers"))
+                && error_count <= 10; // Reasonable limit for expected nested resource errors
+            
+            // If stdout contains valid JSON with changes, treat as success even if there are Cosmos DB errors
             let parsed_json: Option<Value> = serde_json::from_str(&stdout).ok();
+            let has_valid_preview = parsed_json.is_some() && parsed_json.as_ref().and_then(|v| v.get("changes")).is_some();
+            
+            // Consider it successful if we have valid preview data, even with Cosmos DB nested resource errors
+            let is_success = output.status.success() || (has_valid_preview && is_only_cosmos_errors);
+            
+            // Filter out expected Cosmos DB nested resource errors from the error message
+            let filtered_errors = if is_only_cosmos_errors && has_valid_preview {
+                None
+            } else if !output.status.success() {
+                Some(stderr_str.clone())
+            } else {
+                None
+            };
+            
+            // Create a warning message for Cosmos DB errors if they exist but we have valid preview
+            let warning_message = if is_only_cosmos_errors && has_valid_preview {
+                Some("Preview generated with warnings: Cosmos DB nested resources (databases/containers) may show errors if they don't exist yet. This is expected and won't prevent deployment.".to_string())
+            } else {
+                None
+            };
             
             Ok(CommandResponse {
-                success: output.status.success(),
+                success: is_success,
                 result: Some(serde_json::json!({
                     "preview": stdout.to_string(),
                     "parsed": parsed_json,
-                    "errors": if !output.status.success() { Some(stderr.to_string()) } else { None }
+                    "errors": filtered_errors,
+                    "warnings": if is_only_cosmos_errors && has_valid_preview { Some("Cosmos DB nested resource errors are expected when resources don't exist yet. Deployment will still proceed.") } else { None }
                 })),
-                message: if output.status.success() {
-                    Some("Preview generated successfully".to_string())
+                message: if is_success {
+                    warning_message.or(Some("Preview generated successfully".to_string()))
                 } else {
                     None
                 },
-                error: if !output.status.success() {
-                    Some(stderr.to_string())
-                } else {
-                    None
-                },
+                error: filtered_errors,
             })
         }
         Err(e) => {

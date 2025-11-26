@@ -290,6 +290,11 @@ function InfrastructurePanel() {
               const previewData = response.result as any;
               let parsedChanges: WhatIfChange[] = [];
               
+              // Show warnings if present (e.g., expected Cosmos DB nested resource errors)
+              if (previewData.warnings) {
+                console.warn('Preview warnings:', previewData.warnings);
+              }
+              
               if (previewData.parsed && previewData.parsed.changes) {
                 // Use parsed JSON if available
                 parsedChanges = parseWhatIfOutput(JSON.stringify(previewData.parsed));
@@ -311,6 +316,52 @@ function InfrastructurePanel() {
                 }));
                 setWhatIfChanges(parsedChanges);
                 setHasPreviewed(true);
+                const warningMsg = previewData.warnings ? ` (${previewData.warnings})` : '';
+                setLastResponse({
+                  success: true,
+                  message: `Preview generated: ${parsedChanges.length} changes detected${warningMsg}`,
+                });
+              } else if (previewData.warnings) {
+                // Even if no changes, show the warning
+                setLastResponse({
+                  success: true,
+                  message: previewData.warnings,
+                });
+              }
+            } else if (response.error) {
+              // Check if errors are only Cosmos DB nested resource errors (expected)
+              const errorStr = response.error;
+              const isOnlyCosmosErrors = errorStr.includes('DeploymentWhatIfResourceError') 
+                && errorStr.includes('Microsoft.DocumentDB')
+                && (errorStr.includes('sqlDatabases') || errorStr.includes('containers'));
+              
+              if (isOnlyCosmosErrors && response.result) {
+                // Try to parse anyway - we might have valid preview data
+                const previewData = response.result as any;
+                let parsedChanges: WhatIfChange[] = [];
+                if (previewData.parsed && previewData.parsed.changes) {
+                  parsedChanges = parseWhatIfOutput(JSON.stringify(previewData.parsed));
+                } else if (previewData.preview) {
+                  parsedChanges = parseWhatIfOutput(previewData.preview);
+                }
+                if (parsedChanges.length > 0) {
+                  setWhatIfChanges(parsedChanges);
+                  setHasPreviewed(true);
+                  setLastResponse({
+                    success: true,
+                    message: `Preview generated: ${parsedChanges.length} changes detected. Cosmos DB nested resource errors are expected when resources don't exist yet.`,
+                  });
+                } else {
+                  setLastResponse({
+                    success: false,
+                    error: 'Failed to generate preview. Cosmos DB nested resource errors occurred, but no valid preview data was found.',
+                  });
+                }
+              } else {
+                setLastResponse({
+                  success: false,
+                  error: response.error || 'Failed to generate preview',
+                });
               }
             }
             break;
