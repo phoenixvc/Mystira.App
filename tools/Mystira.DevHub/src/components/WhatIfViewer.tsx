@@ -1,32 +1,40 @@
-import { useState } from 'react';
-
-interface WhatIfChange {
-  resourceType: string;
-  resourceName: string;
-  changeType: 'create' | 'modify' | 'delete' | 'noChange';
-  changes?: string[];
-  selected?: boolean;
-  resourceId?: string;
-}
+import { useEffect, useState } from 'react';
+import type { WhatIfChange } from '../types';
 
 interface WhatIfViewerProps {
   changes?: WhatIfChange[];
   loading?: boolean;
   onSelectionChange?: (changes: WhatIfChange[]) => void;
   showSelection?: boolean;
+  defaultResourceGroup?: string;
+  resourceGroupMappings?: Record<string, string>;
 }
 
-function WhatIfViewer({ changes, loading, onSelectionChange, showSelection = false }: WhatIfViewerProps) {
+function WhatIfViewer({ 
+  changes, 
+  loading, 
+  onSelectionChange, 
+  showSelection = false,
+  defaultResourceGroup = 'dev-euw-rg-mystira-app',
+  resourceGroupMappings = {}
+}: WhatIfViewerProps) {
   const [expandedResources, setExpandedResources] = useState<Set<string>>(new Set());
   const [localChanges, setLocalChanges] = useState<WhatIfChange[]>(changes || []);
+  const [editingResourceGroup, setEditingResourceGroup] = useState<string | null>(null);
+  const [tempResourceGroup, setTempResourceGroup] = useState<string>('');
   
-  // Sync local changes with props
-  useState(() => {
+  // Sync local changes with props and apply resource group mappings
+  useEffect(() => {
     if (changes) {
-      const withSelection = changes.map(c => ({ ...c, selected: c.selected !== false }));
+      const withSelection = changes.map(c => {
+        const resourceGroup = c.resourceGroup || 
+          resourceGroupMappings[c.resourceType] || 
+          defaultResourceGroup;
+        return { ...c, selected: c.selected !== false, resourceGroup };
+      });
       setLocalChanges(withSelection);
     }
-  });
+  }, [changes, defaultResourceGroup, resourceGroupMappings]);
   
   const toggleResourceSelection = (resourceName: string) => {
     const updated = localChanges.map(change => 
@@ -39,6 +47,20 @@ function WhatIfViewer({ changes, loading, onSelectionChange, showSelection = fal
       onSelectionChange(updated);
     }
   };
+
+  const updateResourceGroup = (resourceName: string, resourceGroup: string) => {
+    const updated = localChanges.map(change => 
+      change.resourceName === resourceName 
+        ? { ...change, resourceGroup }
+        : change
+    );
+    setLocalChanges(updated);
+    setEditingResourceGroup(null);
+    if (onSelectionChange) {
+      onSelectionChange(updated);
+    }
+  };
+
   
   const selectAll = () => {
     const updated = localChanges.map(change => ({ ...change, selected: true }));
@@ -218,6 +240,7 @@ function WhatIfViewer({ changes, loading, onSelectionChange, showSelection = fal
                       onChange={() => toggleResourceSelection(change.resourceName)}
                       className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       onClick={(e) => e.stopPropagation()}
+                      aria-label={`Select ${change.resourceName} for deployment`}
                     />
                   </div>
                 )}
@@ -233,6 +256,57 @@ function WhatIfViewer({ changes, loading, onSelectionChange, showSelection = fal
                       <div>
                         <div className="font-medium">{change.resourceName}</div>
                         <div className="text-sm opacity-75">{change.resourceType}</div>
+                        {showSelection && (
+                          <div className="text-xs mt-1 flex items-center gap-2">
+                            <span className="text-gray-600 dark:text-gray-400">Resource Group:</span>
+                            {editingResourceGroup === change.resourceName ? (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="text"
+                                  value={tempResourceGroup}
+                                  onChange={(e) => setTempResourceGroup(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      updateResourceGroup(change.resourceName, tempResourceGroup);
+                                    }
+                                    if (e.key === 'Escape') {
+                                      setEditingResourceGroup(null);
+                                    }
+                                  }}
+                                  className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white font-mono"
+                                  aria-label={`Edit resource group for ${change.resourceName}`}
+                                  placeholder="Resource group name"
+                                />
+                                <button
+                                  onClick={() => updateResourceGroup(change.resourceName, tempResourceGroup)}
+                                  className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300"
+                                  title="Save resource group"
+                                >
+                                  ✓
+                                </button>
+                                <button
+                                  onClick={() => setEditingResourceGroup(null)}
+                                  className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                                  title="Cancel editing"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ) : (
+                              <span
+                                className="ml-2 font-mono cursor-pointer hover:underline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingResourceGroup(change.resourceName);
+                                  setTempResourceGroup(change.resourceGroup || '');
+                                }}
+                                title="Click to edit resource group"
+                              >
+                                {change.resourceGroup || 'Not set'}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">

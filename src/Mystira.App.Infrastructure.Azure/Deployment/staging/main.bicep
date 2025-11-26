@@ -1,7 +1,7 @@
 // ⚠️ CONFIGURATION REQUIRED: Update parameters for your deployment
 
 @description('Environment name (dev, staging, prod)')
-param environment string = 'dev' // ⚠️ UPDATE: Set to 'dev', 'staging', or 'prod'
+param environment string = 'staging' // ⚠️ UPDATE: Set to 'dev', 'staging', or 'prod'
 
 @description('Location for all resources') 
 param location string = resourceGroup().location // ⚠️ UPDATE: Set your preferred Azure region (e.g., 'East US', 'West Europe')

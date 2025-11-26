@@ -110,7 +110,83 @@ export interface WhatIfChange {
   changes?: string[];
   selected?: boolean; // For resource selection
   resourceId?: string; // Full Azure resource ID
+  resourceGroup?: string; // Target resource group for this resource
 }
+
+export interface ResourceGroupConvention {
+  pattern: string; // e.g., "{env}-euw-rg-{resource}"
+  defaultResourceGroup: string; // e.g., "dev-euw-rg-mystira-app"
+  resourceTypeMappings?: Record<string, string>; // e.g., { "Microsoft.Storage/storageAccounts": "dev-euw-rg-storage" }
+  environment?: string; // e.g., "dev", "prod"
+  region?: string; // e.g., "euw", "eus"
+  projectName?: string; // e.g., "mystira-app"
+}
+
+export interface TemplateConfig {
+  id: string;
+  name: string;
+  file: string;
+  description: string;
+  selected: boolean;
+  resourceGroup: string;
+  parameters: Record<string, any>;
+}
+
+export interface ProjectInfo {
+  id: string;
+  name: string;
+  type: 'api' | 'admin-api' | 'pwa' | 'service';
+  description: string;
+  infrastructure: {
+    storage: boolean;
+    cosmos: boolean;
+    appService: boolean;
+    keyVault: boolean;
+  };
+  templateIds: string[];
+}
+
+export const DEFAULT_PROJECTS: ProjectInfo[] = [
+  {
+    id: 'mystira-api',
+    name: 'Mystira.App.Api',
+    type: 'api',
+    description: 'Main REST API for client applications',
+    infrastructure: {
+      storage: true,
+      cosmos: true,
+      appService: true,
+      keyVault: false,
+    },
+    templateIds: ['storage', 'cosmos', 'appservice'],
+  },
+  {
+    id: 'mystira-admin-api',
+    name: 'Mystira.App.Admin.Api',
+    type: 'admin-api',
+    description: 'Administrative API for content management',
+    infrastructure: {
+      storage: true,
+      cosmos: true,
+      appService: true,
+      keyVault: false,
+    },
+    templateIds: ['storage', 'cosmos', 'appservice'],
+  },
+  {
+    id: 'mystira-pwa',
+    name: 'Mystira.App.PWA',
+    type: 'pwa',
+    description: 'Progressive Web Application frontend',
+    infrastructure: {
+      storage: false,
+      cosmos: false,
+      appService: true,
+      keyVault: false,
+    },
+    templateIds: ['appservice'],
+  },
+];
 
 export interface WorkflowStatus {
   status: string;

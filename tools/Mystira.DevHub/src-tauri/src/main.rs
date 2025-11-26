@@ -14,6 +14,47 @@ use tokio::process::Command as TokioCommand;
 use tokio::io::{AsyncBufReadExt, BufReader as TokioBufReader};
 use std::fs;
 
+// Helper function to get current Azure subscription ID from CLI
+fn get_azure_subscription_id() -> Result<String, String> {
+    let program_files = env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
+    let az_path = format!("{}\\Microsoft SDKs\\Azure\\CLI2\\wbin\\az.cmd", program_files);
+    let az_path_buf = PathBuf::from(&az_path);
+    let use_direct_path = az_path_buf.exists();
+    
+    let output = if use_direct_path {
+        Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg(format!("& '{}' account show --query id --output tsv", az_path.replace("'", "''")))
+            .output()
+    } else {
+        Command::new("az")
+            .arg("account")
+            .arg("show")
+            .arg("--query")
+            .arg("id")
+            .arg("--output")
+            .arg("tsv")
+            .output()
+    };
+    
+    match output {
+        Ok(result) => {
+            if result.status.success() {
+                let sub_id = String::from_utf8_lossy(&result.stdout).trim().to_string();
+                if !sub_id.is_empty() {
+                    Ok(sub_id)
+                } else {
+                    Err("No subscription ID found in Azure CLI output".to_string())
+                }
+            } else {
+                Err("Failed to get subscription ID from Azure CLI".to_string())
+            }
+        }
+        Err(e) => Err(format!("Failed to execute Azure CLI: {}", e)),
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct CommandRequest {
     command: String,
@@ -50,85 +91,46 @@ type ServiceManager = Arc<Mutex<HashMap<String, ServiceInfo>>>;
 
 // Get the path to the built .NET CLI executable
 fn get_cli_executable_path() -> Result<PathBuf, String> {
-    // Try multiple base paths to find the executable
-    let mut base_paths = Vec::new();
+    // First, find the repo root using the same logic as find_repo_root()
+    let repo_root = find_repo_root()?;
     
-    // Try current directory
-    if let Ok(current_dir) = env::current_dir() {
-        base_paths.push(current_dir);
+    // Build the expected paths relative to repo root - use the exact path we know exists
+    let expected_exe = repo_root.join("tools").join("Mystira.DevHub.CLI").join("bin").join("Debug").join("net9.0").join("Mystira.DevHub.CLI.exe");
+    let expected_dll = repo_root.join("tools").join("Mystira.DevHub.CLI").join("bin").join("Debug").join("net9.0").join("Mystira.DevHub.CLI.dll");
+    
+    // Check the primary location first
+    if expected_exe.exists() {
+        return Ok(expected_exe);
     }
-    
-    // Try parent directories (in case we're in src-tauri or a subdirectory)
-    if let Ok(current_dir) = env::current_dir() {
-        if let Some(parent) = current_dir.parent() {
-            base_paths.push(parent.to_path_buf());
-        }
-        if let Some(grandparent) = current_dir.parent().and_then(|p| p.parent()) {
-            base_paths.push(grandparent.to_path_buf());
-        }
-        if let Some(great_grandparent) = current_dir.parent()
-            .and_then(|p| p.parent())
-            .and_then(|p| p.parent()) {
-            base_paths.push(great_grandparent.to_path_buf());
-        }
+    if expected_dll.exists() {
+        return Ok(expected_dll);
     }
     
-    // Try to find repo root and add it
+    // Also try Release configuration
+    let release_exe = repo_root.join("tools").join("Mystira.DevHub.CLI").join("bin").join("Release").join("net9.0").join("Mystira.DevHub.CLI.exe");
+    let release_dll = repo_root.join("tools").join("Mystira.DevHub.CLI").join("bin").join("Release").join("net9.0").join("Mystira.DevHub.CLI.dll");
+    
+    if release_exe.exists() {
+        return Ok(release_exe);
+    }
+    if release_dll.exists() {
+        return Ok(release_dll);
+    }
+    
+    // Fallback: try relative to current directory
     if let Ok(current_dir) = env::current_dir() {
-        let mut check_dir = current_dir.clone();
-        for _ in 0..5 {
-            if check_dir.join(".git").exists() || check_dir.join("Mystira.App.sln").exists() {
-                base_paths.push(check_dir.clone());
-            }
-            if let Some(parent) = check_dir.parent() {
-                check_dir = parent.to_path_buf();
-            } else {
-                break;
-            }
+        let current_exe = current_dir.join("tools").join("Mystira.DevHub.CLI").join("bin").join("Debug").join("net9.0").join("Mystira.DevHub.CLI.exe");
+        let current_dll = current_dir.join("tools").join("Mystira.DevHub.CLI").join("bin").join("Debug").join("net9.0").join("Mystira.DevHub.CLI.dll");
+        
+        if current_exe.exists() {
+            return Ok(current_exe);
+        }
+        if current_dll.exists() {
+            return Ok(current_dll);
         }
     }
 
-    // Check for pre-built executable in multiple locations relative to each base path
-    let mut possible_paths = Vec::new();
-    for base_path in &base_paths {
-        possible_paths.extend(vec![
-            // Development: relative to Tauri project (src-tauri -> tools/Mystira.DevHub -> tools/Mystira.DevHub.CLI)
-            base_path.join("tools/Mystira.DevHub.CLI/bin/Debug/net9.0/Mystira.DevHub.CLI"),
-            base_path.join("tools/Mystira.DevHub.CLI/bin/Release/net9.0/Mystira.DevHub.CLI"),
-            base_path.join("../../Mystira.DevHub.CLI/bin/Debug/net9.0/Mystira.DevHub.CLI"),
-            base_path.join("../../Mystira.DevHub.CLI/bin/Release/net9.0/Mystira.DevHub.CLI"),
-            // Alternative: from repo root
-            base_path.join("../../../Mystira.DevHub.CLI/bin/Debug/net9.0/Mystira.DevHub.CLI"),
-            base_path.join("../../../Mystira.DevHub.CLI/bin/Release/net9.0/Mystira.DevHub.CLI"),
-            // Production: bundled with app
-            base_path.join("Mystira.DevHub.CLI"),
-            base_path.join("bin/Mystira.DevHub.CLI"),
-        ]);
-    }
-
-    // Add .exe extension on Windows
-    #[cfg(target_os = "windows")]
-    let possible_paths: Vec<PathBuf> = possible_paths
-        .iter()
-        .map(|p| p.with_extension("exe"))
-        .collect();
-
-    // Remove duplicates
-    let mut unique_paths: Vec<PathBuf> = Vec::new();
-    for path in &possible_paths {
-        if !unique_paths.contains(path) {
-            unique_paths.push(path.clone());
-        }
-    }
-
-    // Find the first path that exists
-    for path in &unique_paths {
-        if path.exists() {
-            return Ok(path.clone());
-        }
-    }
-
-    // If no built executable found, provide helpful error
+    // If no built executable found, provide helpful error with the exact path we checked
     Err(format!(
         "Could not find Mystira.DevHub.CLI executable.\n\n\
          Please build the CLI first:\n\
@@ -136,25 +138,43 @@ fn get_cli_executable_path() -> Result<PathBuf, String> {
          2. Navigate to: tools/Mystira.DevHub.CLI\n\
          3. Run: dotnet build\n\n\
          The executable should be at:\n\
-         tools/Mystira.DevHub.CLI/bin/Debug/net9.0/Mystira.DevHub.CLI.exe\n\n\
-         Searched in {} locations (checked {} unique paths).",
-        base_paths.len(),
-        unique_paths.len()
+         {}\n\n\
+         Repo root: {}",
+        expected_exe.display(),
+        repo_root.display()
     ))
 }
 
 // Execute .NET CLI wrapper and return response
 async fn execute_devhub_cli(command: String, args: serde_json::Value) -> Result<CommandResponse, String> {
+    // Validate command is not empty
+    let command_trimmed = command.trim();
+    if command_trimmed.is_empty() {
+        return Err(format!("Command cannot be empty. Received command: '{}'", command));
+    }
+
     let request = CommandRequest {
-        command: command.clone(),
+        command: command_trimmed.to_string(),
         args,
     };
 
     let request_json = serde_json::to_string(&request)
-        .map_err(|e| format!("Failed to serialize request: {}", e))?;
+        .map_err(|e| format!("Failed to serialize request: {}. Command was: '{}'", e, command_trimmed))?;
 
     // Get the CLI executable path
     let cli_exe_path = get_cli_executable_path()?;
+    
+    // Validate the executable exists
+    if !cli_exe_path.exists() {
+        return Err(format!(
+            "CLI executable not found at: {}\n\n\
+             Please build the CLI first:\n\
+             1. Open a terminal\n\
+             2. Navigate to: tools/Mystira.DevHub.CLI\n\
+             3. Run: dotnet build",
+            cli_exe_path.display()
+        ));
+    }
 
     // Spawn the .NET process
     let mut child = Command::new(&cli_exe_path)
@@ -301,32 +321,52 @@ async fn azure_deploy_infrastructure(
         }
     });
     let loc = location.unwrap_or_else(|| "westeurope".to_string());
-    let sub_id = "22f9eb18-6553-4b7d-9451-47d0195085fe"; // Phoenix Azure Sponsorship
+    // Get subscription ID from Azure CLI (fallback to hardcoded if not available)
+    let sub_id = get_azure_subscription_id().unwrap_or_else(|_| "22f9eb18-6553-4b7d-9451-47d0195085fe".to_string());
     
     let deployment_path = format!(
         "{}/src/Mystira.App.Infrastructure.Azure/Deployment/{}",
         repo_root, env
     );
     
-    // Check if Azure CLI is available
-    let az_check = Command::new("az")
-        .arg("--version")
-        .output();
-    
-    if az_check.is_err() {
+    // Check if Azure CLI is installed
+    if !check_azure_cli_installed() {
+        let winget_available = check_winget_available();
+        let error_msg = if winget_available {
+            "Azure CLI is not installed. You can install it automatically using winget.".to_string()
+        } else {
+            "Azure CLI is not installed. Please install it manually from https://aka.ms/installazurecliwindows".to_string()
+        };
         return Ok(CommandResponse {
             success: false,
-            result: None,
+            result: Some(serde_json::json!({
+                "azureCliMissing": true,
+                "wingetAvailable": winget_available,
+            })),
             message: None,
-            error: Some("Azure CLI not found. Please install Azure CLI first.".to_string()),
+            error: Some(error_msg),
         });
     }
+
+    // Get the Azure CLI path
+    let program_files = env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
+    let az_path = format!("{}\\Microsoft SDKs\\Azure\\CLI2\\wbin\\az.cmd", program_files);
+    let az_path_buf = PathBuf::from(&az_path);
+    let use_direct_path = az_path_buf.exists();
     
     // Check if logged in
-    let account_check = Command::new("az")
-        .arg("account")
-        .arg("show")
-        .output();
+    let account_check = if use_direct_path {
+        Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg(format!("& '{}' account show", az_path.replace("'", "''")))
+            .output()
+    } else {
+        Command::new("az")
+            .arg("account")
+            .arg("show")
+            .output()
+    };
     
     if account_check.is_err() || !account_check.unwrap().status.success() {
         return Ok(CommandResponse {
@@ -338,12 +378,20 @@ async fn azure_deploy_infrastructure(
     }
     
     // Set subscription
-    let set_sub = Command::new("az")
-        .arg("account")
-        .arg("set")
-        .arg("--subscription")
-        .arg(sub_id)
-        .output();
+    let set_sub = if use_direct_path {
+        Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg(format!("& '{}' account set --subscription '{}'", az_path.replace("'", "''"), sub_id.replace("'", "''")))
+            .output()
+    } else {
+        Command::new("az")
+            .arg("account")
+            .arg("set")
+            .arg("--subscription")
+            .arg(sub_id)
+            .output()
+    };
     
     if set_sub.is_err() || !set_sub.unwrap().status.success() {
         return Ok(CommandResponse {
@@ -355,16 +403,24 @@ async fn azure_deploy_infrastructure(
     }
     
     // Create resource group if it doesn't exist
-    let _rg_create = Command::new("az")
-        .arg("group")
-        .arg("create")
-        .arg("--name")
-        .arg(&rg)
-        .arg("--location")
-        .arg(&loc)
-        .arg("--output")
-        .arg("none")
-        .output();
+    let _rg_create = if use_direct_path {
+        Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg(format!("& '{}' group create --name '{}' --location '{}' --output 'none'", az_path.replace("'", "''"), rg.replace("'", "''"), loc.replace("'", "''")))
+            .output()
+    } else {
+        Command::new("az")
+            .arg("group")
+            .arg("create")
+            .arg("--name")
+            .arg(&rg)
+            .arg("--location")
+            .arg(&loc)
+            .arg("--output")
+            .arg("none")
+            .output()
+    };
     
     // Ignore errors if resource group already exists
     
@@ -391,46 +447,78 @@ async fn azure_deploy_infrastructure(
         });
     }
     
-    // Build parameters string
-    let params = format!("environment={} location={} deployStorage={} deployCosmos={} deployAppService={}", 
+    // Build parameters JSON string and write to temp file
+    let params_json = format!(r#"{{"environment":{{"value":"{}"}},"location":{{"value":"{}"}},"deployStorage":{{"value":{}}},"deployCosmos":{{"value":{}}},"deployAppService":{{"value":{}}}}}"#, 
         env, loc, deploy_storage, deploy_cosmos, deploy_app_service);
+    let params_file = format!("{}/params-deploy.json", deployment_path);
+    
+    // Write parameters to file
+    if let Err(e) = fs::write(&params_file, &params_json) {
+        return Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some(format!("Failed to write parameters file: {}", e)),
+        });
+    }
     
     // ⚠️ SAFETY: Always use Incremental mode to prevent accidental resource deletion
     // Incremental mode only creates/updates resources in the template, never deletes existing ones
-    let deploy_output = Command::new("az")
-        .arg("deployment")
-        .arg("group")
-        .arg("create")
-        .arg("--resource-group")
-        .arg(&rg)
-        .arg("--template-file")
-        .arg(format!("{}/main.bicep", deployment_path))
-        .arg("--parameters")
-        .arg(&params)
-        .arg("--mode")
-        .arg("Incremental")
-        .arg("--name")
-        .arg(&deployment_name)
-        .current_dir(&deployment_path)
-        .output();
+    let deploy_output = if use_direct_path {
+        Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg(format!("Set-Location '{}'; & '{}' deployment group create --resource-group '{}' --template-file 'main.bicep' --parameters '@params-deploy.json' --mode 'Incremental' --name '{}'", 
+                deployment_path.replace("'", "''"), az_path.replace("'", "''"), rg.replace("'", "''"), deployment_name.replace("'", "''")))
+            .output()
+    } else {
+        Command::new("az")
+            .arg("deployment")
+            .arg("group")
+            .arg("create")
+            .arg("--resource-group")
+            .arg(&rg)
+            .arg("--template-file")
+            .arg(format!("{}/main.bicep", deployment_path))
+            .arg("--parameters")
+            .arg("@params-deploy.json")
+            .arg("--mode")
+            .arg("Incremental")
+            .arg("--name")
+            .arg(&deployment_name)
+            .current_dir(&deployment_path)
+            .output()
+    };
+    
+    // Clean up temp file
+    let _ = fs::remove_file(&params_file);
     
     match deploy_output {
         Ok(output) => {
             if output.status.success() {
                 // Get deployment outputs
-                let outputs = Command::new("az")
-                    .arg("deployment")
-                    .arg("group")
-                    .arg("show")
-                    .arg("--resource-group")
-                    .arg(&rg)
-                    .arg("--name")
-                    .arg(&deployment_name)
-                    .arg("--query")
-                    .arg("properties.outputs")
-                    .arg("--output")
-                    .arg("json")
-                    .output();
+                let outputs = if use_direct_path {
+                    Command::new("powershell")
+                        .arg("-NoProfile")
+                        .arg("-Command")
+                        .arg(format!("& '{}' deployment group show --resource-group '{}' --name '{}' --query 'properties.outputs' --output 'json'", 
+                            az_path.replace("'", "''"), rg.replace("'", "''"), deployment_name.replace("'", "''")))
+                        .output()
+                } else {
+                    Command::new("az")
+                        .arg("deployment")
+                        .arg("group")
+                        .arg("show")
+                        .arg("--resource-group")
+                        .arg(&rg)
+                        .arg("--name")
+                        .arg(&deployment_name)
+                        .arg("--query")
+                        .arg("properties.outputs")
+                        .arg("--output")
+                        .arg("json")
+                        .output()
+                };
                 
                 let outputs_json = outputs
                     .ok()
@@ -586,6 +674,9 @@ async fn azure_validate_infrastructure(
     repo_root: String,
     environment: String,
     resource_group: Option<String>,
+    deploy_storage: Option<bool>,
+    deploy_cosmos: Option<bool>,
+    deploy_app_service: Option<bool>,
 ) -> Result<CommandResponse, String> {
     let env = environment.as_str();
     let rg = resource_group.unwrap_or_else(|| {
@@ -602,41 +693,142 @@ async fn azure_validate_infrastructure(
         repo_root, env
     );
     
-    // Set subscription
-    let _ = Command::new("az")
-        .arg("account")
-        .arg("set")
-        .arg("--subscription")
-        .arg(sub_id)
-        .output();
+    // Check if Azure CLI is installed
+    if !check_azure_cli_installed() {
+        let winget_available = check_winget_available();
+        let error_msg = if winget_available {
+            "Azure CLI is not installed. You can install it automatically using winget.".to_string()
+        } else {
+            "Azure CLI is not installed. Please install it manually from https://aka.ms/installazurecliwindows".to_string()
+        };
+        return Ok(CommandResponse {
+            success: false,
+            result: Some(serde_json::json!({
+                "azureCliMissing": true,
+                "wingetAvailable": winget_available,
+            })),
+            message: None,
+            error: Some(error_msg),
+        });
+    }
+
+    // Get the Azure CLI path
+    let program_files = env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
+    let az_path = format!("{}\\Microsoft SDKs\\Azure\\CLI2\\wbin\\az.cmd", program_files);
+    let az_path_buf = PathBuf::from(&az_path);
+    let use_direct_path = az_path_buf.exists();
     
-    // Validate bicep
-    let validate_output = Command::new("az")
-        .arg("deployment")
-        .arg("group")
-        .arg("validate")
-        .arg("--resource-group")
-        .arg(&rg)
-        .arg("--template-file")
-        .arg(format!("{}/main.bicep", deployment_path))
-        .arg("--parameters")
-        .arg(format!("environment={} location=westeurope", env))
-        .current_dir(&deployment_path)
-        .output();
+    // Set subscription
+    let _ = if use_direct_path {
+        Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg(format!("& '{}' account set --subscription '{}'", az_path.replace("'", "''"), sub_id.replace("'", "''")))
+            .output()
+    } else {
+        Command::new("az")
+            .arg("account")
+            .arg("set")
+            .arg("--subscription")
+            .arg(sub_id)
+            .output()
+    };
+    
+    // Create resource group if it doesn't exist (needed for validation)
+    let _ = if use_direct_path {
+        Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg(format!("& '{}' group create --name '{}' --location 'westeurope' --output 'none'", az_path.replace("'", "''"), rg.replace("'", "''")))
+            .output()
+    } else {
+        Command::new("az")
+            .arg("group")
+            .arg("create")
+            .arg("--name")
+            .arg(&rg)
+            .arg("--location")
+            .arg("westeurope")
+            .arg("--output")
+            .arg("none")
+            .output()
+    };
+    
+    // Validate bicep - write parameters to temp file to avoid PowerShell escaping issues
+    let deploy_storage_val = deploy_storage.unwrap_or(true);
+    let deploy_cosmos_val = deploy_cosmos.unwrap_or(true);
+    let deploy_app_service_val = deploy_app_service.unwrap_or(true);
+    let params_json = format!(r#"{{"environment":{{"value":"{}"}},"location":{{"value":"westeurope"}},"deployStorage":{{"value":{}}},"deployCosmos":{{"value":{}}},"deployAppService":{{"value":{}}}}}"#, 
+        env, deploy_storage_val, deploy_cosmos_val, deploy_app_service_val);
+    let params_file = format!("{}/params-validate.json", deployment_path);
+    
+    // Write parameters to file
+    if let Err(e) = fs::write(&params_file, &params_json) {
+        return Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some(format!("Failed to write parameters file: {}", e)),
+        });
+    }
+    
+    let validate_output = if use_direct_path {
+        Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg(format!("Set-Location '{}'; & '{}' deployment group validate --resource-group '{}' --template-file 'main.bicep' --parameters '@params-validate.json'", 
+                deployment_path.replace("'", "''"), az_path.replace("'", "''"), rg.replace("'", "''")))
+            .output()
+    } else {
+        Command::new("az")
+            .arg("deployment")
+            .arg("group")
+            .arg("validate")
+            .arg("--resource-group")
+            .arg(&rg)
+            .arg("--template-file")
+            .arg(format!("{}/main.bicep", deployment_path))
+            .arg("--parameters")
+            .arg("@params-validate.json")
+            .current_dir(&deployment_path)
+            .output()
+    };
+    
+    // Clean up temp file
+    let _ = fs::remove_file(&params_file);
     
     match validate_output {
         Ok(output) => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            
+            // Check if validation succeeded (exit code 0)
             if output.status.success() {
+                // Even on success, there might be warnings - check stderr for warnings
+                let warnings = if !stderr.trim().is_empty() {
+                    Some(stderr.to_string())
+                } else {
+                    None
+                };
+                
                 Ok(CommandResponse {
                     success: true,
                     result: Some(serde_json::json!({
-                        "message": "Bicep templates are valid"
+                        "message": "Bicep templates are valid",
+                        "warnings": warnings,
+                        "output": stdout.to_string()
                     })),
                     message: Some("Validation successful".to_string()),
-                    error: None,
+                    error: warnings,
                 })
             } else {
-                let error_msg = String::from_utf8_lossy(&output.stderr);
+                // Validation failed - combine stdout and stderr for full error message
+                let error_msg = if !stderr.trim().is_empty() {
+                    format!("{}\n{}", stderr, stdout)
+                } else {
+                    stdout.to_string()
+                };
+                
                 Ok(CommandResponse {
                     success: false,
                     result: None,
@@ -645,12 +837,19 @@ async fn azure_validate_infrastructure(
                 })
             }
         }
-        Err(e) => Ok(CommandResponse {
+        Err(e) => {
+            let error_msg = if e.kind() == std::io::ErrorKind::NotFound {
+                "Azure CLI not found. Please install Azure CLI first. Visit https://aka.ms/installazurecliwindows for installation instructions.".to_string()
+            } else {
+                format!("Failed to validate: {}. Make sure Azure CLI is installed and accessible in your PATH.", e)
+            };
+            Ok(CommandResponse {
             success: false,
             result: None,
             message: None,
-            error: Some(format!("Failed to validate: {}", e)),
-        }),
+                error: Some(error_msg),
+            })
+        },
     }
 }
 
@@ -659,6 +858,9 @@ async fn azure_preview_infrastructure(
     repo_root: String,
     environment: String,
     resource_group: Option<String>,
+    deploy_storage: Option<bool>,
+    deploy_cosmos: Option<bool>,
+    deploy_app_service: Option<bool>,
 ) -> Result<CommandResponse, String> {
     let env = environment.as_str();
     let rg = resource_group.unwrap_or_else(|| {
@@ -675,41 +877,111 @@ async fn azure_preview_infrastructure(
         repo_root, env
     );
     
+    // Check if Azure CLI is installed
+    if !check_azure_cli_installed() {
+        let winget_available = check_winget_available();
+        let error_msg = if winget_available {
+            "Azure CLI is not installed. You can install it automatically using winget.".to_string()
+        } else {
+            "Azure CLI is not installed. Please install it manually from https://aka.ms/installazurecliwindows".to_string()
+        };
+        return Ok(CommandResponse {
+            success: false,
+            result: Some(serde_json::json!({
+                "azureCliMissing": true,
+                "wingetAvailable": winget_available,
+            })),
+            message: None,
+            error: Some(error_msg),
+        });
+    }
+
+    // Get the Azure CLI path
+    let program_files = env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
+    let az_path = format!("{}\\Microsoft SDKs\\Azure\\CLI2\\wbin\\az.cmd", program_files);
+    let az_path_buf = PathBuf::from(&az_path);
+    let use_direct_path = az_path_buf.exists();
+    
     // Set subscription
-    let _ = Command::new("az")
-        .arg("account")
-        .arg("set")
-        .arg("--subscription")
-        .arg(sub_id)
-        .output();
+    let _ = if use_direct_path {
+        Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg(format!("& '{}' account set --subscription '{}'", az_path.replace("'", "''"), sub_id.replace("'", "''")))
+            .output()
+    } else {
+        Command::new("az")
+            .arg("account")
+            .arg("set")
+            .arg("--subscription")
+            .arg(sub_id)
+            .output()
+    };
     
     // Create resource group if it doesn't exist (needed for what-if)
-    let _ = Command::new("az")
-        .arg("group")
-        .arg("create")
-        .arg("--name")
-        .arg(&rg)
-        .arg("--location")
-        .arg("westeurope")
-        .arg("--output")
-        .arg("none")
-        .output();
+    let _ = if use_direct_path {
+        Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg(format!("& '{}' group create --name '{}' --location 'westeurope' --output 'none'", az_path.replace("'", "''"), rg.replace("'", "''")))
+            .output()
+    } else {
+        Command::new("az")
+            .arg("group")
+            .arg("create")
+            .arg("--name")
+            .arg(&rg)
+            .arg("--location")
+            .arg("westeurope")
+            .arg("--output")
+            .arg("none")
+            .output()
+    };
     
-    // Preview changes (what-if) - deploy all for preview
-    let preview_output = Command::new("az")
-        .arg("deployment")
-        .arg("group")
-        .arg("what-if")
-        .arg("--resource-group")
-        .arg(&rg)
-        .arg("--template-file")
-        .arg(format!("{}/main.bicep", deployment_path))
-        .arg("--parameters")
-        .arg(format!("environment={} location=westeurope deployStorage=true deployCosmos=true deployAppService=true", env))
-        .arg("--output")
-        .arg("json")
-        .current_dir(&deployment_path)
-        .output();
+    // Preview changes (what-if) - write parameters to temp file
+    let deploy_storage_val = deploy_storage.unwrap_or(true);
+    let deploy_cosmos_val = deploy_cosmos.unwrap_or(true);
+    let deploy_app_service_val = deploy_app_service.unwrap_or(true);
+    let preview_params_json = format!(r#"{{"environment":{{"value":"{}"}},"location":{{"value":"westeurope"}},"deployStorage":{{"value":{}}},"deployCosmos":{{"value":{}}},"deployAppService":{{"value":{}}}}}"#, 
+        env, deploy_storage_val, deploy_cosmos_val, deploy_app_service_val);
+    let preview_params_file = format!("{}/params-preview.json", deployment_path);
+    
+    // Write parameters to file
+    if let Err(e) = fs::write(&preview_params_file, &preview_params_json) {
+        return Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some(format!("Failed to write parameters file: {}", e)),
+        });
+    }
+    
+    let preview_output = if use_direct_path {
+        Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg(format!("Set-Location '{}'; & '{}' deployment group what-if --resource-group '{}' --template-file 'main.bicep' --parameters '@params-preview.json' --output 'json'", 
+                deployment_path.replace("'", "''"), az_path.replace("'", "''"), rg.replace("'", "''")))
+            .output()
+    } else {
+        Command::new("az")
+            .arg("deployment")
+            .arg("group")
+            .arg("what-if")
+            .arg("--resource-group")
+            .arg(&rg)
+            .arg("--template-file")
+            .arg(format!("{}/main.bicep", deployment_path))
+            .arg("--parameters")
+            .arg("@params-preview.json")
+            .arg("--output")
+            .arg("json")
+            .current_dir(&deployment_path)
+            .output()
+    };
+    
+    // Clean up temp file
+    let _ = fs::remove_file(&preview_params_file);
     
     match preview_output {
         Ok(output) => {
@@ -738,12 +1010,19 @@ async fn azure_preview_infrastructure(
                 },
             })
         }
-        Err(e) => Ok(CommandResponse {
+        Err(e) => {
+            let error_msg = if e.kind() == std::io::ErrorKind::NotFound {
+                "Azure CLI not found. Please install Azure CLI first. Visit https://aka.ms/installazurecliwindows for installation instructions.".to_string()
+            } else {
+                format!("Failed to preview: {}. Make sure Azure CLI is installed and accessible in your PATH.", e)
+            };
+            Ok(CommandResponse {
             success: false,
             result: None,
             message: None,
-            error: Some(format!("Failed to preview: {}", e)),
-        }),
+                error: Some(error_msg),
+            })
+        },
     }
 }
 
@@ -768,14 +1047,668 @@ async fn infrastructure_status(workflow_file: String, repository: String) -> Res
 
 // New commands for Wave 1: Real integrations
 
+// Helper function to check if Azure CLI is installed
+fn check_azure_cli_installed() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        // Method 1: Use 'where' command to find az in PATH (most reliable on Windows)
+        let where_check = Command::new("where")
+            .arg("az")
+            .output();
+        
+        if let Ok(output) = where_check {
+            if output.status.success() {
+                let path = String::from_utf8_lossy(&output.stdout);
+                if !path.trim().is_empty() {
+                    // Found az in PATH, verify it works
+                    if Command::new("az")
+                        .arg("--version")
+                        .output()
+                        .is_ok()
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        // Method 2: Use PowerShell Get-Command which checks system PATH
+        let ps_check = Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg("try { $null = Get-Command az -ErrorAction Stop; exit 0 } catch { exit 1 }")
+            .output();
+        
+        if let Ok(output) = ps_check {
+            if output.status.success() {
+                // Verify it actually works
+                if Command::new("az")
+                    .arg("--version")
+                    .output()
+                    .is_ok()
+                {
+                    return true;
+                }
+            }
+        }
+        
+        // Method 3: Check common installation locations directly - CHECK THIS FIRST since we know it's installed here
+        let program_files = env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
+        let known_path = format!("{}\\Microsoft SDKs\\Azure\\CLI2\\wbin\\az.cmd", program_files);
+        let path = PathBuf::from(&known_path);
+        
+        if path.exists() {
+            // Use PowerShell to execute it - we know this works
+            let check = Command::new("powershell")
+                .arg("-NoProfile")
+                .arg("-Command")
+                .arg(format!("& '{}' --version; if ($?) {{ exit 0 }} else {{ exit 1 }}", known_path.replace("'", "''")))
+                .output();
+            
+            if let Ok(output) = check {
+                if output.status.success() {
+                    return true;
+                }
+            }
+        }
+        
+        // Check other common locations
+        let program_files_x86 = env::var("ProgramFiles(x86)").unwrap_or_else(|_| "C:\\Program Files (x86)".to_string());
+        let common_paths = vec![
+            format!("{}\\Microsoft SDKs\\Azure\\CLI2\\wbin\\az.cmd", program_files_x86),
+            "C:\\Program Files (x86)\\Microsoft SDKs\\Azure\\CLI2\\wbin\\az.cmd".to_string(),
+        ];
+        
+        for path_str in common_paths {
+            let path = PathBuf::from(&path_str);
+            if path.exists() {
+                let check = Command::new("powershell")
+                    .arg("-NoProfile")
+                    .arg("-Command")
+                    .arg(format!("& '{}' --version; if ($?) {{ exit 0 }} else {{ exit 1 }}", path_str.replace("'", "''")))
+                    .output();
+                
+                if let Ok(output) = check {
+                    if output.status.success() {
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        // Method 4: Check user's local AppData location
+        if let Ok(local_appdata) = env::var("LOCALAPPDATA") {
+            let user_path = format!("{}\\Microsoft\\AzureCLI2\\wbin\\az.cmd", local_appdata);
+            let path = PathBuf::from(&user_path);
+            if path.exists() {
+                let check = Command::new("powershell")
+                    .arg("-NoProfile")
+                    .arg("-Command")
+                    .arg(format!("& '{}' --version; if ($?) {{ exit 0 }} else {{ exit 1 }}", user_path.replace("'", "''")))
+                    .output();
+                
+                if let Ok(output) = check {
+                    if output.status.success() {
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        // Method 5: Try running az directly - sometimes it works even if not in visible PATH
+        if Command::new("az")
+            .arg("--version")
+            .output()
+            .is_ok()
+        {
+            return true;
+        }
+    }
+    
+    #[cfg(not(target_os = "windows"))]
+    {
+        // On non-Windows, just check PATH
+        if Command::new("az")
+            .arg("--version")
+            .output()
+            .is_ok()
+        {
+            return true;
+        }
+    }
+    
+    false
+}
+
+// Helper function to check if winget is available
+fn check_winget_available() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("winget")
+            .arg("--version")
+            .output()
+            .is_ok()
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        false
+    }
+}
+
+#[tauri::command]
+async fn check_azure_cli() -> Result<CommandResponse, String> {
+    let is_installed = check_azure_cli_installed();
+    let winget_available = check_winget_available();
+    
+    Ok(CommandResponse {
+        success: is_installed,
+        result: Some(serde_json::json!({
+            "installed": is_installed,
+            "wingetAvailable": winget_available,
+        })),
+        message: if is_installed {
+            Some("Azure CLI is installed".to_string())
+        } else {
+            Some("Azure CLI is not installed".to_string())
+        },
+        error: None,
+    })
+}
+
+#[tauri::command]
+async fn install_azure_cli() -> Result<CommandResponse, String> {
+    #[cfg(target_os = "windows")]
+    {
+        // Check if winget is available
+        if !check_winget_available() {
+            return Ok(CommandResponse {
+                success: false,
+                result: None,
+                message: None,
+                error: Some("winget is not available. Please install Azure CLI manually from https://aka.ms/installazurecliwindows".to_string()),
+            });
+        }
+        
+        // Install Azure CLI via winget in a visible terminal window
+        // Use cmd /c start to open a new visible PowerShell window that stays open
+        let spawn_result = Command::new("cmd")
+            .arg("/c")
+            .arg("start")
+            .arg("PowerShell")
+            .arg("-NoExit")
+            .arg("-Command")
+            .arg("winget install Microsoft.AzureCLI --accept-package-agreements --accept-source-agreements; Write-Host 'Installation complete. You can close this window.'; pause")
+            .spawn();
+        
+        match spawn_result {
+            Ok(_) => {
+                Ok(CommandResponse {
+                    success: true,
+                    result: Some(serde_json::json!({
+                        "message": "A terminal window has opened to install Azure CLI. After installation completes, please RESTART the application for Azure CLI to be detected.",
+                        "requiresRestart": true
+                    })),
+                    message: Some("Azure CLI installation window opened. Please restart the app after installation.".to_string()),
+                    error: None,
+                })
+            }
+            Err(e) => Ok(CommandResponse {
+                success: false,
+                result: None,
+                message: None,
+                error: Some(format!("Failed to open installation window: {}. Please install Azure CLI manually from https://aka.ms/installazurecliwindows", e)),
+            }),
+        }
+    }
+    
+    #[cfg(not(target_os = "windows"))]
+    {
+        Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some("Automatic installation is only available on Windows. Please install Azure CLI manually: https://docs.microsoft.com/cli/azure/install-azure-cli".to_string()),
+        })
+    }
+}
+
+#[tauri::command]
+async fn delete_azure_resource(resource_id: String) -> Result<CommandResponse, String> {
+    // Check if Azure CLI is installed first
+    if !check_azure_cli_installed() {
+        let winget_available = check_winget_available();
+        let install_message = if winget_available {
+            "Azure CLI is not installed. You can install it automatically using the 'Install Azure CLI' button, or manually from https://aka.ms/installazurecliwindows"
+        } else {
+            "Azure CLI is not installed. Please install it from https://aka.ms/installazurecliwindows"
+        };
+        
+        return Ok(CommandResponse {
+            success: false,
+            result: Some(serde_json::json!({
+                "azureCliMissing": true,
+                "wingetAvailable": winget_available,
+            })),
+            message: None,
+            error: Some(install_message.to_string()),
+        });
+    }
+
+    // Extract resource group and resource name from resource ID
+    // Format: /subscriptions/{sub}/resourceGroups/{rg}/providers/{type}/{name}
+    let parts: Vec<&str> = resource_id.split('/').collect();
+    let mut resource_group = String::new();
+    let mut resource_name = String::new();
+    
+    for (i, part) in parts.iter().enumerate() {
+        if part == &"resourceGroups" && i + 1 < parts.len() {
+            resource_group = parts[i + 1].to_string();
+        }
+        if i > 0 && parts[i - 1] == "providers" && i < parts.len() {
+            // Resource name is typically the last part after providers/{type}/
+            if i + 1 < parts.len() {
+                resource_name = parts[i + 1].to_string();
+            }
+        }
+    }
+
+    if resource_group.is_empty() || resource_name.is_empty() {
+        return Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some(format!("Invalid resource ID format: {}", resource_id)),
+        });
+    }
+
+    // Get the Azure CLI path
+    let program_files = env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
+    let az_path = format!("{}\\Microsoft SDKs\\Azure\\CLI2\\wbin\\az.cmd", program_files);
+    let az_path_buf = PathBuf::from(&az_path);
+    let use_direct_path = az_path_buf.exists();
+
+    // Delete resource using Azure CLI
+    let delete_output = if use_direct_path {
+        Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg(format!("& '{}' resource delete --ids '{}' --yes", az_path.replace("'", "''"), resource_id.replace("'", "''")))
+            .output()
+    } else {
+        Command::new("az")
+            .arg("resource")
+            .arg("delete")
+            .arg("--ids")
+            .arg(&resource_id)
+            .arg("--yes")
+            .output()
+    };
+
+    match delete_output {
+        Ok(output) => {
+            if output.status.success() {
+                Ok(CommandResponse {
+                    success: true,
+                    result: Some(serde_json::json!({
+                        "message": format!("Resource {} deleted successfully", resource_name)
+                    })),
+                    message: Some(format!("Resource deleted successfully")),
+                    error: None,
+                })
+            } else {
+                let error_msg = String::from_utf8_lossy(&output.stderr);
+                Ok(CommandResponse {
+                    success: false,
+                    result: None,
+                    message: None,
+                    error: Some(format!("Failed to delete resource: {}", error_msg)),
+                })
+            }
+        }
+        Err(e) => Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some(format!("Failed to delete resource: {}", e)),
+        }),
+    }
+}
+
 #[tauri::command]
 async fn get_azure_resources(subscription_id: Option<String>) -> Result<CommandResponse, String> {
-    let args = if let Some(sub_id) = subscription_id {
-        serde_json::json!({ "subscriptionId": sub_id })
+    // Check if Azure CLI is installed first
+    if !check_azure_cli_installed() {
+        let winget_available = check_winget_available();
+        let install_message = if winget_available {
+            "Azure CLI is not installed. You can install it automatically using the 'Install Azure CLI' button, or manually from https://aka.ms/installazurecliwindows"
+        } else {
+            "Azure CLI is not installed. Please install it from https://aka.ms/installazurecliwindows"
+        };
+        
+        return Ok(CommandResponse {
+            success: false,
+            result: Some(serde_json::json!({
+                "azureCliMissing": true,
+                "wingetAvailable": winget_available,
+            })),
+            message: None,
+            error: Some(install_message.to_string()),
+        });
+    }
+
+    // Get the Azure CLI path
+    let program_files = env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
+    let az_path = format!("{}\\Microsoft SDKs\\Azure\\CLI2\\wbin\\az.cmd", program_files);
+    let az_path_buf = PathBuf::from(&az_path);
+    let use_direct_path = az_path_buf.exists();
+
+    // Set subscription if provided
+    if let Some(sub_id) = subscription_id {
+        let _ = if use_direct_path {
+            Command::new("powershell")
+                .arg("-NoProfile")
+                .arg("-Command")
+                .arg(format!("& '{}' account set --subscription '{}'", az_path.replace("'", "''"), sub_id.replace("'", "''")))
+                .output()
+        } else {
+            Command::new("az")
+                .arg("account")
+                .arg("set")
+                .arg("--subscription")
+                .arg(&sub_id)
+                .output()
+        };
+    }
+
+    // List resources using Azure CLI directly
+    let output = if use_direct_path {
+        Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg(format!("& '{}' resource list --output json", az_path.replace("'", "''")))
+            .output()
     } else {
-        serde_json::json!({})
+        Command::new("az")
+            .arg("resource")
+            .arg("list")
+            .arg("--output")
+            .arg("json")
+            .output()
     };
-    execute_devhub_cli("azure.list-resources".to_string(), args).await
+
+    match output {
+        Ok(result) => {
+            if result.status.success() {
+                let stdout = String::from_utf8_lossy(&result.stdout);
+                
+                // Parse JSON response
+                let resources: Result<Vec<serde_json::Value>, _> = serde_json::from_str(&stdout);
+                
+                match resources {
+                    Ok(resources_vec) => {
+                        // Transform to expected format
+                        let transformed: Vec<serde_json::Value> = resources_vec.iter().map(|r| {
+                            serde_json::json!({
+                                "id": r.get("id").and_then(|v| v.as_str()).unwrap_or(""),
+                                "name": r.get("name").and_then(|v| v.as_str()).unwrap_or(""),
+                                "type": r.get("type").and_then(|v| v.as_str()).unwrap_or(""),
+                                "location": r.get("location").and_then(|v| v.as_str()),
+                                "resourceGroup": r.get("resourceGroup").and_then(|v| v.as_str()),
+                                "sku": r.get("sku"),
+                                "kind": r.get("kind").and_then(|v| v.as_str()),
+                            })
+                        }).collect();
+
+                        Ok(CommandResponse {
+                            success: true,
+                            result: Some(serde_json::json!(transformed)),
+                            message: Some(format!("Found {} resources", transformed.len())),
+                            error: None,
+                        })
+                    }
+                    Err(e) => Ok(CommandResponse {
+                        success: false,
+                        result: None,
+                        message: None,
+                        error: Some(format!("Failed to parse Azure CLI response: {}. Output: {}", e, stdout)),
+                    }),
+                }
+            } else {
+                let stderr = String::from_utf8_lossy(&result.stderr);
+                let stdout = String::from_utf8_lossy(&result.stdout);
+                Ok(CommandResponse {
+                    success: false,
+                    result: None,
+                    message: None,
+                    error: Some(format!("Azure CLI error: {}\n{}", stderr, stdout)),
+                })
+            }
+        }
+        Err(e) => Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some(format!("Failed to execute Azure CLI: {}", e)),
+        }),
+    }
+}
+
+#[tauri::command]
+async fn check_infrastructure_status(
+    _environment: String,
+    resource_group: String,
+) -> Result<CommandResponse, String> {
+    // Check if Azure CLI is installed
+    if !check_azure_cli_installed() {
+        return Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some("Azure CLI is not installed".to_string()),
+        });
+    }
+
+    let program_files = env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
+    let az_path = format!("{}\\Microsoft SDKs\\Azure\\CLI2\\wbin\\az.cmd", program_files);
+    let az_path_buf = PathBuf::from(&az_path);
+    let use_direct_path = az_path_buf.exists();
+
+    // Set subscription (required for resource queries)
+    // Get subscription ID from Azure CLI (fallback to hardcoded if not available)
+    let sub_id = get_azure_subscription_id().unwrap_or_else(|_| "22f9eb18-6553-4b7d-9451-47d0195085fe".to_string());
+    let _ = if use_direct_path {
+        Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg(format!("& '{}' account set --subscription '{}'", az_path.replace("'", "''"), sub_id.replace("'", "''")))
+            .output()
+    } else {
+        Command::new("az")
+            .arg("account")
+            .arg("set")
+            .arg("--subscription")
+            .arg(sub_id)
+            .output()
+    };
+
+    // Get resources in the resource group
+    let output = if use_direct_path {
+        Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg(format!("& '{}' resource list --resource-group '{}' --output json", az_path.replace("'", "''"), resource_group.replace("'", "''")))
+            .output()
+    } else {
+        Command::new("az")
+            .arg("resource")
+            .arg("list")
+            .arg("--resource-group")
+            .arg(&resource_group)
+            .arg("--output")
+            .arg("json")
+            .output()
+    };
+
+    match output {
+        Ok(result) => {
+            if result.status.success() {
+                let stdout = String::from_utf8_lossy(&result.stdout);
+                let resources: Result<Vec<serde_json::Value>, _> = serde_json::from_str(&stdout);
+                
+                match resources {
+                    Ok(resources_vec) => {
+                        // Check for specific resource types
+                        let mut status = serde_json::json!({
+                            "available": resources_vec.len() > 0,
+                            "resources": {
+                                "storage": { "exists": false, "health": "unknown", "instances": [] },
+                                "cosmos": { "exists": false, "health": "unknown", "instances": [] },
+                                "appService": { "exists": false, "health": "unknown", "instances": [] },
+                                "keyVault": { "exists": false, "health": "unknown", "instances": [] }
+                            },
+                            "lastChecked": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() * 1000,
+                            "resourceGroup": resource_group
+                        });
+
+                        // Track all instances of each resource type
+                        let mut storage_instances: Vec<serde_json::Value> = Vec::new();
+                        let mut cosmos_instances: Vec<serde_json::Value> = Vec::new();
+                        let mut appservice_instances: Vec<serde_json::Value> = Vec::new();
+                        let mut keyvault_instances: Vec<serde_json::Value> = Vec::new();
+
+                        for resource in &resources_vec {
+                            let resource_type = resource.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                            let resource_name = resource.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                            let resource_location = resource.get("location").and_then(|v| v.as_str()).unwrap_or("");
+                            let provisioning_state = resource.get("properties")
+                                .and_then(|p| p.get("provisioningState"))
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("");
+                            
+                            // Get actual runtime status for App Service
+                            let mut runtime_status = "unknown".to_string();
+                            let mut runtime_health = "unknown".to_string();
+                            
+                            if resource_type == "Microsoft.Web/sites" {
+                                // Try to get site state
+                                if let Some(properties) = resource.get("properties") {
+                                    if let Some(state) = properties.get("state") {
+                                        runtime_status = state.as_str().unwrap_or("unknown").to_string();
+                                    }
+                                }
+                                // Health check: Running = healthy, Stopped = unhealthy, etc.
+                                runtime_health = match runtime_status.as_str() {
+                                    "Running" => "healthy",
+                                    "Stopped" => "unhealthy",
+                                    "Starting" | "Stopping" => "degraded",
+                                    _ => "unknown"
+                                }.to_string();
+                            }
+                            
+                            // Determine health based on provisioning state and runtime status
+                            let health = if resource_type == "Microsoft.Web/sites" && runtime_health != "unknown" {
+                                runtime_health.as_str()
+                            } else if provisioning_state == "Succeeded" {
+                                "healthy"
+                            } else if provisioning_state == "Failed" || provisioning_state == "Canceled" {
+                                "unhealthy"
+                            } else if provisioning_state == "Updating" || provisioning_state == "Creating" {
+                                "degraded"
+                            } else {
+                                "unknown"
+                            };
+                            
+                            let instance = serde_json::json!({
+                                "name": resource_name,
+                                "health": health,
+                                "location": resource_location,
+                                "status": if resource_type == "Microsoft.Web/sites" { runtime_status } else { provisioning_state.to_string() }
+                            });
+                            
+                            // Match exact resource types (not just contains) to avoid false positives
+                            if resource_type == "Microsoft.Storage/storageAccounts" {
+                                storage_instances.push(instance);
+                                status["resources"]["storage"]["exists"] = serde_json::json!(true);
+                                // Use first instance name for backward compatibility
+                                if storage_instances.len() == 1 {
+                                    status["resources"]["storage"]["name"] = serde_json::json!(resource_name);
+                                    status["resources"]["storage"]["health"] = serde_json::json!(health);
+                                }
+                            } else if resource_type == "Microsoft.DocumentDB/databaseAccounts" {
+                                cosmos_instances.push(instance);
+                                status["resources"]["cosmos"]["exists"] = serde_json::json!(true);
+                                if cosmos_instances.len() == 1 {
+                                    status["resources"]["cosmos"]["name"] = serde_json::json!(resource_name);
+                                    status["resources"]["cosmos"]["health"] = serde_json::json!(health);
+                                }
+                            } else if resource_type == "Microsoft.Web/sites" {
+                                // For App Service, we already have runtime status from properties
+                                // The health endpoint check can be done separately via check_resource_health_endpoint
+                                appservice_instances.push(instance);
+                                status["resources"]["appService"]["exists"] = serde_json::json!(true);
+                                if appservice_instances.len() == 1 {
+                                    status["resources"]["appService"]["name"] = serde_json::json!(resource_name);
+                                    status["resources"]["appService"]["health"] = serde_json::json!(health);
+                                }
+                            } else if resource_type == "Microsoft.KeyVault/vaults" {
+                                keyvault_instances.push(instance);
+                                status["resources"]["keyVault"]["exists"] = serde_json::json!(true);
+                                if keyvault_instances.len() == 1 {
+                                    status["resources"]["keyVault"]["name"] = serde_json::json!(resource_name);
+                                    status["resources"]["keyVault"]["health"] = serde_json::json!(health);
+                                }
+                            }
+                        }
+                        
+                        // Set instances arrays
+                        status["resources"]["storage"]["instances"] = serde_json::json!(storage_instances);
+                        status["resources"]["cosmos"]["instances"] = serde_json::json!(cosmos_instances);
+                        status["resources"]["appService"]["instances"] = serde_json::json!(appservice_instances);
+                        status["resources"]["keyVault"]["instances"] = serde_json::json!(keyvault_instances);
+
+                        Ok(CommandResponse {
+                            success: true,
+                            result: Some(status),
+                            message: None,
+                            error: None,
+                        })
+                    }
+                    Err(e) => Ok(CommandResponse {
+                        success: false,
+                        result: None,
+                        message: None,
+                        error: Some(format!("Failed to parse resources: {}", e)),
+                    }),
+                }
+            } else {
+                // Resource group might not exist - return empty status
+                let status = serde_json::json!({
+                    "available": false,
+                    "resources": {
+                        "storage": { "exists": false, "health": "unknown" },
+                        "cosmos": { "exists": false, "health": "unknown" },
+                        "appService": { "exists": false, "health": "unknown" },
+                        "keyVault": { "exists": false, "health": "unknown" }
+                    },
+                    "lastChecked": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() * 1000,
+                    "resourceGroup": resource_group
+                });
+
+                Ok(CommandResponse {
+                    success: true,
+                    result: Some(status),
+                    message: None,
+                    error: None,
+                })
+            }
+        }
+        Err(e) => Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some(format!("Failed to check infrastructure: {}", e)),
+        }),
+    }
 }
 
 #[tauri::command]
@@ -785,6 +1718,31 @@ async fn get_github_deployments(repository: String, limit: Option<i32>) -> Resul
         "limit": limit.unwrap_or(10)
     });
     execute_devhub_cli("github.list-deployments".to_string(), args).await
+}
+
+#[tauri::command]
+async fn github_dispatch_workflow(workflow_file: String, inputs: Option<serde_json::Value>) -> Result<CommandResponse, String> {
+    let args = serde_json::json!({
+        "workflowFile": workflow_file,
+        "inputs": inputs.unwrap_or(serde_json::json!({}))
+    });
+    execute_devhub_cli("github.dispatch-workflow".to_string(), args).await
+}
+
+#[tauri::command]
+async fn github_workflow_status(run_id: i64) -> Result<CommandResponse, String> {
+    let args = serde_json::json!({
+        "runId": run_id
+    });
+    execute_devhub_cli("github.workflow-status".to_string(), args).await
+}
+
+#[tauri::command]
+async fn github_workflow_logs(run_id: i64) -> Result<CommandResponse, String> {
+    let args = serde_json::json!({
+        "runId": run_id
+    });
+    execute_devhub_cli("github.workflow-logs".to_string(), args).await
 }
 
 #[tauri::command]
@@ -1370,34 +2328,72 @@ async fn check_service_health(url: String) -> Result<bool, String> {
 
 // Helper function to find repository root
 fn find_repo_root() -> Result<PathBuf, String> {
-    let current_dir = env::current_dir()
-        .map_err(|e| format!("Failed to get current directory: {}", e))?;
+    // Try to get the executable's directory first (more reliable in Tauri apps)
+    let mut start_dirs = Vec::new();
     
-    // Check if current directory is the repo root
-    if current_dir.join(".git").exists() || current_dir.join("Mystira.App.sln").exists() {
-        return Ok(current_dir);
-    }
-    
-    // If we're in tools/Mystira.DevHub, go up two levels
-    if current_dir.ends_with("tools/Mystira.DevHub") || current_dir.ends_with("tools\\Mystira.DevHub") {
-        if let Some(repo_root) = current_dir.parent()
-            .and_then(|p| p.parent()) {
-            if repo_root.join(".git").exists() || repo_root.join("Mystira.App.sln").exists() {
-                return Ok(repo_root.to_path_buf());
+    // Try using std::env::current_exe() which works in Tauri apps
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            start_dirs.push(exe_dir.to_path_buf());
+            // Also try parent directories of the executable
+            if let Some(parent) = exe_dir.parent() {
+                start_dirs.push(parent.to_path_buf());
+            }
+            if let Some(grandparent) = exe_dir.parent().and_then(|p| p.parent()) {
+                start_dirs.push(grandparent.to_path_buf());
             }
         }
     }
     
-    // Try walking up the directory tree
-    let mut check_dir = current_dir.clone();
-    for _ in 0..5 {
-        if check_dir.join(".git").exists() || check_dir.join("Mystira.App.sln").exists() {
-            return Ok(check_dir);
+    // Also try current working directory
+    if let Ok(current_dir) = env::current_dir() {
+        start_dirs.push(current_dir);
+    }
+    
+    // Try each starting directory
+    for start_dir in &start_dirs {
+        // Check if this directory is the repo root
+        if start_dir.join(".git").exists() || start_dir.join("Mystira.App.sln").exists() {
+            return Ok(start_dir.clone());
         }
-        if let Some(parent) = check_dir.parent() {
-            check_dir = parent.to_path_buf();
-        } else {
-            break;
+        
+        // If we're in tools/Mystira.DevHub/src-tauri, go up to repo root
+        let start_str = start_dir.to_string_lossy().to_string();
+        if start_str.contains("src-tauri") {
+            let mut check_dir = start_dir.clone();
+            for _ in 0..4 {
+                if check_dir.join(".git").exists() || check_dir.join("Mystira.App.sln").exists() {
+                    return Ok(check_dir);
+                }
+                if let Some(parent) = check_dir.parent() {
+                    check_dir = parent.to_path_buf();
+                } else {
+                    break;
+                }
+            }
+    }
+    
+    // If we're in tools/Mystira.DevHub, go up two levels
+        if start_str.ends_with("tools/Mystira.DevHub") || start_str.ends_with("tools\\Mystira.DevHub") {
+            if let Some(repo_root) = start_dir.parent()
+            .and_then(|p| p.parent()) {
+            if repo_root.join(".git").exists() || repo_root.join("Mystira.App.sln").exists() {
+                    return Ok(repo_root.to_path_buf());
+                }
+            }
+        }
+        
+        // Try walking up the directory tree
+        let mut check_dir = start_dir.clone();
+        for _ in 0..10 {
+            if check_dir.join(".git").exists() || check_dir.join("Mystira.App.sln").exists() {
+                return Ok(check_dir);
+            }
+            if let Some(parent) = check_dir.parent() {
+                check_dir = parent.to_path_buf();
+            } else {
+                break;
+            }
         }
     }
     
@@ -1469,31 +2465,55 @@ async fn build_cli() -> Result<CommandResponse, String> {
     };
     
     if output.status.success() {
-        // After successful build, try to get the build time immediately
-        // The executable should be at: tools/Mystira.DevHub.CLI/bin/Debug/net9.0/Mystira.DevHub.CLI.exe
-        let expected_path = repo_root.join("tools/Mystira.DevHub.CLI/bin/Debug/net9.0/Mystira.DevHub.CLI");
-        #[cfg(target_os = "windows")]
-        let expected_path = expected_path.with_extension("exe");
+        // After successful build, get the build time from the file we just built
+        // Use the repo_root we already found - the file is at:
+        // repo_root/tools/Mystira.DevHub.CLI/bin/Debug/net9.0/Mystira.DevHub.CLI.exe (or .dll)
+        let exe_path = repo_root.join("tools/Mystira.DevHub.CLI/bin/Debug/net9.0/Mystira.DevHub.CLI.exe");
+        let dll_path = repo_root.join("tools/Mystira.DevHub.CLI/bin/Debug/net9.0/Mystira.DevHub.CLI.dll");
         
         // Wait a moment for file system to sync
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
         
-        let build_time = if expected_path.exists() {
-            if let Ok(metadata) = std::fs::metadata(&expected_path) {
-                if let Ok(modified) = metadata.modified() {
-                    Some(modified
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .as_millis() as i64)
-                } else {
-                    None
+        // Try multiple times in case file system is slow
+        let mut build_time = None;
+        for attempt in 0..5 {
+            // Try .exe first, then .dll
+            for path in &[&exe_path, &dll_path] {
+                if path.exists() {
+                    if let Ok(metadata) = std::fs::metadata(path) {
+                        if let Ok(modified) = metadata.modified() {
+                            build_time = Some(modified
+                                .duration_since(std::time::UNIX_EPOCH)
+                                .unwrap_or_default()
+                                .as_millis() as i64);
+                            break;
+                        }
+                    }
                 }
-            } else {
-                None
             }
-        } else {
-            None
-        };
+            
+            if build_time.is_some() {
+                break;
+            }
+            
+            if attempt < 4 {
+                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+            }
+        }
+        
+        // Final fallback: use get_cli_executable_path if we still haven't found it
+        if build_time.is_none() {
+            if let Ok(found_path) = get_cli_executable_path() {
+                if let Ok(metadata) = std::fs::metadata(&found_path) {
+                    if let Ok(modified) = metadata.modified() {
+                        build_time = Some(modified
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_millis() as i64);
+                    }
+                }
+            }
+        }
         
         Ok(CommandResponse {
             success: true,
@@ -1661,6 +2681,224 @@ async fn find_available_port(start_port: u16) -> Result<u16, String> {
 }
 
 #[tauri::command]
+async fn list_github_workflows(environment: Option<String>) -> Result<CommandResponse, String> {
+    let repo_root = find_repo_root()?;
+    let workflows_path = repo_root.join(".github").join("workflows");
+    
+    if !workflows_path.exists() {
+        return Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some(format!("Workflows directory not found: {}", workflows_path.display())),
+        });
+    }
+    
+    let mut workflows: Vec<String> = Vec::new();
+    
+    match fs::read_dir(&workflows_path) {
+        Ok(entries) => {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    let path = entry.path();
+                    if path.is_file() {
+                        if let Some(ext) = path.extension() {
+                            if ext == "yml" || ext == "yaml" {
+                                if let Some(file_name) = path.file_name() {
+                                    let file_name_str = file_name.to_string_lossy().to_string();
+                                    
+                                    // Filter by environment if provided
+                                    // Match patterns like: mystira-app-api-cicd-{env}.yml or infrastructure-deploy-{env}.yml
+                                    // Use case-insensitive matching
+                                    if let Some(env) = &environment {
+                                        let file_name_lower = file_name_str.to_lowercase();
+                                        let env_lower = env.to_lowercase();
+                                        
+                                        // More precise matching: environment should be surrounded by - or at end of filename
+                                        let env_pattern = format!("-{}-", env_lower);
+                                        let env_pattern_end = format!("-{}.yml", env_lower);
+                                        let env_pattern_end_yaml = format!("-{}.yaml", env_lower);
+                                        
+                                        if file_name_lower.contains(&env_pattern) || 
+                                           file_name_lower.ends_with(&env_pattern_end) ||
+                                           file_name_lower.ends_with(&env_pattern_end_yaml) {
+                                            workflows.push(file_name_str);
+                                        }
+                                    } else {
+                                        workflows.push(file_name_str);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            return Ok(CommandResponse {
+                success: false,
+                result: None,
+                message: None,
+                error: Some(format!("Failed to read workflows directory: {}", e)),
+            });
+        }
+    }
+    
+    workflows.sort();
+    
+    Ok(CommandResponse {
+        success: true,
+        result: Some(serde_json::json!(workflows)),
+        message: None,
+        error: None,
+    })
+}
+
+#[tauri::command]
+async fn check_resource_health_endpoint(
+    resource_type: String,
+    resource_name: String,
+    resource_group: String,
+) -> Result<CommandResponse, String> {
+    if !check_azure_cli_installed() {
+        return Ok(CommandResponse {
+            success: false,
+            result: None,
+            message: None,
+            error: Some("Azure CLI is not installed".to_string()),
+        });
+    }
+    
+    let program_files = env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".to_string());
+    let az_path = format!("{}\\Microsoft SDKs\\Azure\\CLI2\\wbin\\az.cmd", program_files);
+    let az_path_buf = PathBuf::from(&az_path);
+    let use_direct_path = az_path_buf.exists();
+    
+    let mut health_status = "unknown".to_string();
+    let mut health_details = serde_json::json!({});
+    
+    // Check App Service health endpoint
+    if resource_type == "Microsoft.Web/sites" {
+        // Get App Service URL
+        let output = if use_direct_path {
+            Command::new("powershell")
+                .arg("-NoProfile")
+                .arg("-Command")
+                .arg(format!(
+                    "& '{}' webapp show --name '{}' --resource-group '{}' --query defaultHostName --output tsv",
+                    az_path.replace("'", "''"),
+                    resource_name.replace("'", "''"),
+                    resource_group.replace("'", "''")
+                ))
+                .output()
+        } else {
+            Command::new("az")
+                .arg("webapp")
+                .arg("show")
+                .arg("--name")
+                .arg(&resource_name)
+                .arg("--resource-group")
+                .arg(&resource_group)
+                .arg("--query")
+                .arg("defaultHostName")
+                .arg("--output")
+                .arg("tsv")
+                .output()
+        };
+        
+        match output {
+            Ok(result) => {
+                if result.status.success() {
+                    let hostname = String::from_utf8_lossy(&result.stdout).trim().to_string();
+                    if hostname.is_empty() {
+                        return Ok(CommandResponse {
+                            success: false,
+                            result: None,
+                            message: None,
+                            error: Some("Failed to get App Service hostname: hostname is empty".to_string()),
+                        });
+                    }
+                    
+                    // Validate hostname format (basic check - must contain a dot)
+                    if !hostname.contains('.') {
+                        return Ok(CommandResponse {
+                            success: false,
+                            result: None,
+                            message: None,
+                            error: Some(format!("Invalid hostname format: {}", hostname)),
+                        });
+                    }
+                    
+                    let health_url = format!("https://{}/health", hostname);
+                    
+                    // Try to make HTTP request to health endpoint
+                    let health_check = reqwest::Client::builder()
+                        .timeout(std::time::Duration::from_secs(10))
+                        .build();
+                    
+                    if let Ok(client) = health_check {
+                        match client.get(&health_url).send().await {
+                            Ok(response) => {
+                                let status_code = response.status().as_u16();
+                                if status_code == 200 {
+                                    health_status = "healthy".to_string();
+                                    if let Ok(body) = response.text().await {
+                                        health_details = serde_json::json!({
+                                            "statusCode": status_code,
+                                            "response": body
+                                        });
+                                    }
+                                } else if status_code >= 500 {
+                                    health_status = "unhealthy".to_string();
+                                } else {
+                                    health_status = "degraded".to_string();
+                                }
+                                health_details["statusCode"] = serde_json::json!(status_code);
+                            }
+                            Err(e) => {
+                                health_status = "unhealthy".to_string();
+                                health_details = serde_json::json!({
+                                    "error": format!("Failed to reach health endpoint: {}", e)
+                                });
+                            }
+                        }
+                    }
+                } else {
+                    let stderr = String::from_utf8_lossy(&result.stderr);
+                    return Ok(CommandResponse {
+                        success: false,
+                        result: None,
+                        message: None,
+                        error: Some(format!("Failed to get App Service hostname: {}", stderr)),
+                    });
+                }
+            }
+            Err(e) => {
+                return Ok(CommandResponse {
+                    success: false,
+                    result: None,
+                    message: None,
+                    error: Some(format!("Failed to get App Service hostname: {}", e)),
+                });
+            }
+        }
+    }
+    
+    // For other resource types, we could add more checks here
+    // For now, return the health status
+    
+    Ok(CommandResponse {
+        success: true,
+        result: Some(serde_json::json!({
+            "health": health_status,
+            "details": health_details
+        })),
+        message: None,
+        error: None,
+    })
+}
+
+#[tauri::command]
 async fn create_webview_window(
     url: String,
     title: String,
@@ -1702,8 +2940,15 @@ fn main() {
             azure_validate_infrastructure,
             azure_preview_infrastructure,
             check_infrastructure_exists,
+            check_infrastructure_status,
             get_azure_resources,
+            delete_azure_resource,
+            check_azure_cli,
+            install_azure_cli,
             get_github_deployments,
+            github_dispatch_workflow,
+            github_workflow_status,
+            github_workflow_logs,
             test_connection,
             prebuild_service,
             start_service,
@@ -1720,6 +2965,8 @@ fn main() {
             get_service_port,
             update_service_port,
             find_available_port,
+            list_github_workflows,
+            check_resource_health_endpoint,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
