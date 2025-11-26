@@ -149,6 +149,7 @@ export function ServiceCard({
     maxLogs,
     onFilterChange,
     onAutoScrollChange,
+    onClearLogs,
     onMaxLogsChange,
   };
 

@@ -391,6 +391,38 @@ function ServiceManager() {
     }
   };
 
+  const checkInfrastructureStatus = async (environment: 'dev' | 'prod') => {
+    setInfrastructureStatus(prev => ({
+      ...prev,
+      [environment]: { ...prev[environment], checking: true },
+    }));
+    
+    try {
+      const response = await invoke<{ success: boolean; result?: { exists: boolean } }>(
+        'check_infrastructure_exists',
+        { environment, resourceGroup: null }
+      );
+      
+      if (response.success && response.result) {
+        setInfrastructureStatus(prev => ({
+          ...prev,
+          [environment]: { exists: response.result!.exists, checking: false },
+        }));
+      } else {
+        setInfrastructureStatus(prev => ({
+          ...prev,
+          [environment]: { exists: false, checking: false },
+        }));
+      }
+    } catch (error) {
+      console.error(`Failed to check ${environment} infrastructure:`, error);
+      setInfrastructureStatus(prev => ({
+        ...prev,
+        [environment]: { exists: false, checking: false },
+      }));
+    }
+  };
+
   useEffect(() => {
     const initialize = async () => {
       try {

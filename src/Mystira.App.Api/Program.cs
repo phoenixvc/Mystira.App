@@ -7,6 +7,8 @@ using Mystira.App.Api.Adapters;
 using Mystira.App.Api.Services;
 using Mystira.App.Infrastructure.Data;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Ports.Media;
+using Mystira.App.Application.UseCases.Accounts;
 using Mystira.App.Application.UseCases.GameSessions;
 using Mystira.App.Application.UseCases.Media;
 using Mystira.App.Application.UseCases.Scenarios;
@@ -112,7 +114,8 @@ builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<MystiraAppDbCo
 // Add Azure Infrastructure Services
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 builder.Services.Configure<AudioTranscodingOptions>(builder.Configuration.GetSection(AudioTranscodingOptions.SectionName));
-builder.Services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingService>();
+// Register Application.Ports.Media.IAudioTranscodingService for use cases
+builder.Services.AddSingleton<Mystira.App.Application.Ports.Media.IAudioTranscodingService, FfmpegAudioTranscodingService>();
 // Configure JWT Authentication - Load from secure configuration only
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];
 var jwtAudience = builder.Configuration["JwtSettings:Audience"];
@@ -267,6 +270,15 @@ builder.Services.AddScoped<GetSessionStatsUseCase>();
 builder.Services.AddScoped<CheckAchievementsUseCase>();
 builder.Services.AddScoped<DeleteGameSessionUseCase>();
 
+// Account Use Cases
+builder.Services.AddScoped<GetAccountByEmailUseCase>();
+builder.Services.AddScoped<GetAccountUseCase>();
+builder.Services.AddScoped<CreateAccountUseCase>();
+builder.Services.AddScoped<UpdateAccountUseCase>();
+builder.Services.AddScoped<AddUserProfileToAccountUseCase>();
+builder.Services.AddScoped<RemoveUserProfileFromAccountUseCase>();
+builder.Services.AddScoped<AddCompletedScenarioUseCase>();
+
 // UserProfile Use Cases
 builder.Services.AddScoped<CreateUserProfileUseCase>();
 builder.Services.AddScoped<UpdateUserProfileUseCase>();
@@ -306,6 +318,11 @@ builder.Services.AddScoped<IAvatarApiService, AvatarApiService>();
 builder.Services.AddScoped<IPasswordlessAuthService, PasswordlessAuthService>();
 builder.Services.AddScoped<IEmailService, AzureEmailService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+
+// Register Application.Ports adapters for CQRS handlers
+builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, JwtServiceAdapter>();
+builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IEmailService, EmailServiceAdapter>();
+builder.Services.AddScoped<Mystira.App.Application.Ports.Health.IHealthCheckPort, HealthCheckPortAdapter>();
 
 // Configure Memory Cache for query caching
 builder.Services.AddMemoryCache(options =>

@@ -6,6 +6,7 @@ using Mystira.App.Admin.Api.Adapters;
 using Mystira.App.Infrastructure.Data;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Ports.Media;
 using Mystira.App.Application.UseCases.Contributors;
 using Mystira.App.Application.UseCases.GameSessions;
 using Mystira.App.Application.UseCases.Media;
@@ -109,7 +110,8 @@ builder.Services.AddScoped<Microsoft.EntityFrameworkCore.DbContext>(sp => sp.Get
 // Add Azure Infrastructure Services
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 builder.Services.Configure<AudioTranscodingOptions>(builder.Configuration.GetSection(AudioTranscodingOptions.SectionName));
-builder.Services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingService>();
+// Register Application.Ports.Media.IAudioTranscodingService for use cases
+builder.Services.AddSingleton<Mystira.App.Application.Ports.Media.IAudioTranscodingService, FfmpegAudioTranscodingService>();
 
 // Add Story Protocol Services
 builder.Services.AddStoryProtocolServices(builder.Configuration);
@@ -169,6 +171,8 @@ builder.Services.AddScoped<IMediaApiService, MediaApiService>();
 builder.Services.AddScoped<IAvatarApiService, AvatarApiService>();
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
 builder.Services.AddScoped<IEmailService, AzureEmailService>();
+// Register Application.Ports.IMediaMetadataService for use cases
+builder.Services.AddScoped<Mystira.App.Application.Ports.IMediaMetadataService, MediaMetadataServiceAdapter>();
 // Register repositories
 builder.Services.AddScoped<IRepository<Mystira.App.Domain.Models.GameSession>, Repository<Mystira.App.Domain.Models.GameSession>>();
 builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();
