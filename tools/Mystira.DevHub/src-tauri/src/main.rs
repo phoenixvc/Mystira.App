@@ -605,20 +605,30 @@ async fn check_infrastructure_exists(
                     let resources: Result<Vec<Value>, _> = serde_json::from_str(&stdout);
                     
                     if let Ok(resources) = resources {
+                        // Only count resources that are fully provisioned (Succeeded state)
                         let has_app_service = resources.iter().any(|r| {
-                            r.get("type").and_then(|t| t.as_str())
-                                .map(|t| t.contains("Microsoft.Web/sites"))
-                                .unwrap_or(false)
+                            let resource_type = r.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                            let provisioning_state = r.get("properties")
+                                .and_then(|p| p.get("provisioningState"))
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("");
+                            resource_type.contains("Microsoft.Web/sites") && provisioning_state == "Succeeded"
                         });
                         let has_cosmos = resources.iter().any(|r| {
-                            r.get("type").and_then(|t| t.as_str())
-                                .map(|t| t.contains("Microsoft.DocumentDB"))
-                                .unwrap_or(false)
+                            let resource_type = r.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                            let provisioning_state = r.get("properties")
+                                .and_then(|p| p.get("provisioningState"))
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("");
+                            resource_type.contains("Microsoft.DocumentDB") && provisioning_state == "Succeeded"
                         });
                         let has_storage = resources.iter().any(|r| {
-                            r.get("type").and_then(|t| t.as_str())
-                                .map(|t| t.contains("Microsoft.Storage"))
-                                .unwrap_or(false)
+                            let resource_type = r.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                            let provisioning_state = r.get("properties")
+                                .and_then(|p| p.get("provisioningState"))
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("");
+                            resource_type.contains("Microsoft.Storage") && provisioning_state == "Succeeded"
                         });
                         
                         let exists = has_app_service || has_cosmos || has_storage;
@@ -1560,7 +1570,7 @@ async fn check_infrastructure_status(
                     Ok(resources_vec) => {
                         // Check for specific resource types
                         let mut status = serde_json::json!({
-                            "available": resources_vec.len() > 0,
+                            "available": false, // Will be set to true only if required resources exist
                             "resources": {
                                 "storage": { "exists": false, "health": "unknown", "instances": [] },
                                 "cosmos": { "exists": false, "health": "unknown", "instances": [] },
@@ -1626,8 +1636,12 @@ async fn check_infrastructure_status(
                                 "status": if resource_type == "Microsoft.Web/sites" { runtime_status } else { provisioning_state.to_string() }
                             });
                             
+                            // Only mark resources as existing if provisioning state is Succeeded
+                            // This prevents false positives from resources that are still being created or failed
+                            let is_provisioned = provisioning_state == "Succeeded";
+                            
                             // Match exact resource types (not just contains) to avoid false positives
-                            if resource_type == "Microsoft.Storage/storageAccounts" {
+                            if resource_type == "Microsoft.Storage/storageAccounts" && is_provisioned {
                                 storage_instances.push(instance);
                                 status["resources"]["storage"]["exists"] = serde_json::json!(true);
                                 // Use first instance name for backward compatibility
@@ -1635,14 +1649,14 @@ async fn check_infrastructure_status(
                                     status["resources"]["storage"]["name"] = serde_json::json!(resource_name);
                                     status["resources"]["storage"]["health"] = serde_json::json!(health);
                                 }
-                            } else if resource_type == "Microsoft.DocumentDB/databaseAccounts" {
+                            } else if resource_type == "Microsoft.DocumentDB/databaseAccounts" && is_provisioned {
                                 cosmos_instances.push(instance);
                                 status["resources"]["cosmos"]["exists"] = serde_json::json!(true);
                                 if cosmos_instances.len() == 1 {
                                     status["resources"]["cosmos"]["name"] = serde_json::json!(resource_name);
                                     status["resources"]["cosmos"]["health"] = serde_json::json!(health);
                                 }
-                            } else if resource_type == "Microsoft.Web/sites" {
+                            } else if resource_type == "Microsoft.Web/sites" && is_provisioned {
                                 // For App Service, we already have runtime status from properties
                                 // The health endpoint check can be done separately via check_resource_health_endpoint
                                 appservice_instances.push(instance);
@@ -1651,7 +1665,7 @@ async fn check_infrastructure_status(
                                     status["resources"]["appService"]["name"] = serde_json::json!(resource_name);
                                     status["resources"]["appService"]["health"] = serde_json::json!(health);
                                 }
-                            } else if resource_type == "Microsoft.KeyVault/vaults" {
+                            } else if resource_type == "Microsoft.KeyVault/vaults" && is_provisioned {
                                 keyvault_instances.push(instance);
                                 status["resources"]["keyVault"]["exists"] = serde_json::json!(true);
                                 if keyvault_instances.len() == 1 {
@@ -1666,6 +1680,13 @@ async fn check_infrastructure_status(
                         status["resources"]["cosmos"]["instances"] = serde_json::json!(cosmos_instances);
                         status["resources"]["appService"]["instances"] = serde_json::json!(appservice_instances);
                         status["resources"]["keyVault"]["instances"] = serde_json::json!(keyvault_instances);
+
+                        // Set available to true only if at least one required resource exists and is provisioned
+                        // Required resources are: storage, cosmos, or appService
+                        let has_storage = status["resources"]["storage"]["exists"].as_bool().unwrap_or(false);
+                        let has_cosmos = status["resources"]["cosmos"]["exists"].as_bool().unwrap_or(false);
+                        let has_app_service = status["resources"]["appService"]["exists"].as_bool().unwrap_or(false);
+                        status["available"] = serde_json::json!(has_storage || has_cosmos || has_app_service);
 
                         Ok(CommandResponse {
                             success: true,
