@@ -8,6 +8,8 @@ using Mystira.App.Api.Services;
 using Mystira.App.Infrastructure.Data;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Ports.Media;
+using Mystira.App.Application.Ports.Auth;
+using Mystira.App.Application.Ports.Health;
 using Mystira.App.Application.UseCases.Accounts;
 using Mystira.App.Application.UseCases.GameSessions;
 using Mystira.App.Application.UseCases.Media;
@@ -294,28 +296,9 @@ builder.Services.AddScoped<UpdateMediaMetadataUseCase>();
 builder.Services.AddScoped<DeleteMediaUseCase>();
 builder.Services.AddScoped<DownloadMediaUseCase>();
 
-// Register Media services (split from MediaApiService)
-builder.Services.AddScoped<IMediaUploadService, MediaUploadService>();
-builder.Services.AddScoped<IMediaQueryService, MediaQueryService>();
-
 // Register application services
-builder.Services.AddScoped<IScenarioApiService, ScenarioApiService>();
-builder.Services.AddScoped<IUserProfileApiService, UserProfileApiService>();
-builder.Services.AddScoped<IUserBadgeApiService, UserBadgeApiService>();
-builder.Services.AddScoped<IAccountApiService, AccountApiService>();
-builder.Services.AddScoped<ICharacterMapApiService, CharacterMapApiService>();
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
-builder.Services.AddScoped<IClientApiService, ClientApiService>();
 builder.Services.AddScoped<IAppStatusService, AppStatusService>();
-builder.Services.AddScoped<IMediaApiService, MediaApiService>();
-builder.Services.AddScoped<IMediaMetadataService, MediaMetadataService>();
-// Register Application.Ports.IMediaMetadataService for use cases
-builder.Services.AddScoped<Mystira.App.Application.Ports.IMediaMetadataService, MediaMetadataServiceAdapter>();
-builder.Services.AddScoped<ICharacterMediaMetadataService, CharacterMediaMetadataService>();
-builder.Services.AddScoped<IBundleService, BundleService>();
-builder.Services.AddScoped<ICharacterMapFileService, CharacterMapFileService>();
-builder.Services.AddScoped<IAvatarApiService, AvatarApiService>();
-builder.Services.AddScoped<IPasswordlessAuthService, PasswordlessAuthService>();
 builder.Services.AddScoped<IEmailService, AzureEmailService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 
