@@ -26,7 +26,7 @@ function ServiceManager() {
   });
   const [services, setServices] = useState<ServiceStatus[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [infrastructureStatus, setInfrastructureStatus] = useState<{
+  const [infrastructureStatus] = useState<{
     dev: { exists: boolean; checking: boolean };
     prod: { exists: boolean; checking: boolean };
   }>({
