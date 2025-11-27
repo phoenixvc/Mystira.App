@@ -145,6 +145,7 @@ export function ButtonGroup({ children, className = '' }: ButtonGroupProps) {
 // =============================================================================
 
 export interface ActionCardProps {
+  id?: string;
   icon: ReactNode;
   label: string;
   description?: string;
@@ -219,7 +220,7 @@ export function ActionCardGrid({ actions, columns = 4, compact = false }: Action
       style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
     >
       {actions.map((action, index) => (
-        <ActionCard key={index} {...action} compact={compact} />
+        <ActionCard key={action.id || index} {...action} compact={compact} />
       ))}
     </div>
   );

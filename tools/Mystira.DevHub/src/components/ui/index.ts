@@ -24,6 +24,8 @@ export {
   ToastContainer,
   useToast,
   ProgressBar,
+  ErrorDisplay,
+  SuccessDisplay,
   type AlertProps,
   type FeedbackType,
   type StatusBadgeProps,
@@ -33,6 +35,8 @@ export {
   type Toast,
   type ToastContainerProps,
   type ProgressBarProps,
+  type ErrorDisplayProps,
+  type SuccessDisplayProps,
 } from './Feedback';
 
 // Loading components

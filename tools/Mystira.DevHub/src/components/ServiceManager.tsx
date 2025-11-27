@@ -2,7 +2,7 @@ import { open } from '@tauri-apps/api/shell';
 import { invoke } from '@tauri-apps/api/tauri';
 import { useEffect, useState } from 'react';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcut';
-import { Toast, ToastContainer, useToast } from './Toast';
+import { ToastContainer, useToast, type Toast } from './ui';
 import {
   EnvironmentPresetSelector,
   ServiceList,
@@ -25,7 +25,7 @@ function ServiceManager() {
     return saved ? JSON.parse(saved) : {};
   });
   const [services, setServices] = useState<ServiceStatus[]>([]);
-  const [toasts, setToasts] = useState<Toast[]>([]);
+  const { toasts, showToast, dismissToast } = useToast();
   const [infrastructureStatus, setInfrastructureStatus] = useState<{
     dev: { exists: boolean; checking: boolean };
     prod: { exists: boolean; checking: boolean };
@@ -50,11 +50,9 @@ function ServiceManager() {
       }));
     }, 1000);
   };
-  const { showToast } = useToast();
 
   const addToast = (message: string, type: Toast['type'] = 'info', duration: number = 5000) => {
-    const toast = showToast(message, type, duration);
-    setToasts((prev) => [...prev, toast]);
+    showToast(message, type, { duration });
   };
 
   const { repoRoot, currentBranch, useCurrentBranch, setRepoRoot, setUseCurrentBranch } = useRepositoryConfig();
@@ -73,9 +71,6 @@ function ServiceManager() {
     setShowLogs(prev => ({ ...prev, [serviceName]: show }));
   };
 
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
 
   const refreshServices = async () => {
     try {
@@ -485,7 +480,7 @@ function ServiceManager() {
 
   return (
     <div className="p-8">
-      <ToastContainer toasts={toasts} onClose={removeToast} />
+      <ToastContainer toasts={toasts} onClose={dismissToast} />
       
       {/* Combined Title and Repository Config */}
       <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">

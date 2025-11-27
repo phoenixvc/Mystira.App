@@ -3,12 +3,11 @@ import { useEffect, useState } from 'react';
 import { useDeploymentsStore } from '../stores/deploymentsStore';
 import { useResourcesStore } from '../stores/resourcesStore';
 import type { CommandResponse, WhatIfChange, WorkflowStatus } from '../types';
-import { ActionCardGrid } from './ActionToolbar';
 import BicepViewer from './BicepViewer';
 import { ConfirmDialog } from './ConfirmDialog';
 import DeploymentHistory from './DeploymentHistory';
 import ResourceGrid from './ResourceGrid';
-import { ErrorDisplay, SuccessDisplay } from './ResizableOutputPanel';
+import { ActionCardGrid, ErrorDisplay, SuccessDisplay } from './ui';
 import WhatIfViewer from './WhatIfViewer';
 
 type Tab = 'actions' | 'bicep' | 'resources' | 'history';
