@@ -17,13 +17,15 @@ interface ResourceGridProps {
   onRefresh?: () => void;
   compact?: boolean;
   viewMode?: 'grid' | 'table';
+  onDelete?: (resourceId: string) => Promise<void>;
 }
 
-function ResourceGrid({ resources, loading, onRefresh, compact = false, viewMode = 'grid' }: ResourceGridProps) {
+function ResourceGrid({ resources, loading, onRefresh, compact = false, viewMode = 'grid', onDelete }: ResourceGridProps) {
   const [expandedResource, setExpandedResource] = useState<string | null>(null);
   const [localViewMode, setLocalViewMode] = useState<'grid' | 'table'>(viewMode);
   const [groupByType, setGroupByType] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [deletingResource, setDeletingResource] = useState<string | null>(null);
 
   // Group resources by type
   const groupedResources = useMemo(() => {
@@ -116,12 +118,36 @@ function ResourceGrid({ resources, loading, onRefresh, compact = false, viewMode
     alert(`Would open Azure Portal for resource: ${resourceId}`);
   };
 
+  const handleDelete = async (resourceId: string, resourceName: string) => {
+    const confirmDelete = confirm(
+      `⚠️ WARNING: Delete Resource\n\n` +
+      `Are you sure you want to delete this resource?\n\n` +
+      `Name: ${resourceName}\n` +
+      `ID: ${resourceId}\n\n` +
+      `This action cannot be undone!`
+    );
+
+    if (!confirmDelete || !onDelete) return;
+
+    setDeletingResource(resourceId);
+    try {
+      await onDelete(resourceId);
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (error) {
+      alert(`Failed to delete resource: ${error}`);
+    } finally {
+      setDeletingResource(null);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="border border-gray-200 rounded-lg p-8">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-8 bg-white dark:bg-gray-800">
         <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mr-4"></div>
-          <div className="text-gray-700">Loading Azure resources...</div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mr-4"></div>
+          <div className="text-gray-700 dark:text-gray-300">Loading Azure resources...</div>
         </div>
       </div>
     );
@@ -129,10 +155,10 @@ function ResourceGrid({ resources, loading, onRefresh, compact = false, viewMode
 
   if (!resources || resources.length === 0) {
     return (
-      <div className="border border-gray-200 rounded-lg p-8 text-center">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-8 text-center bg-white dark:bg-gray-800">
         <div className="text-4xl mb-3">☁️</div>
-        <div className="text-gray-700 font-medium mb-2">No Resources Found</div>
-        <div className="text-gray-500 text-sm mb-4">
+        <div className="text-gray-700 dark:text-gray-300 font-medium mb-2">No Resources Found</div>
+        <div className="text-gray-500 dark:text-gray-400 text-sm mb-4">
           Deploy infrastructure or check your Azure connection
         </div>
         {onRefresh && (
@@ -187,13 +213,25 @@ function ResourceGrid({ resources, loading, onRefresh, compact = false, viewMode
                 </td>
               )}
               <td className="px-3 py-2 text-right">
-                <button
-                  onClick={() => openInPortal(resource.id)}
-                  className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-                  title="View in Azure Portal"
-                >
-                  🔗
-                </button>
+                <div className="flex items-center justify-end gap-1">
+                  <button
+                    onClick={() => openInPortal(resource.id)}
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+                    title="View in Azure Portal"
+                  >
+                    🔗
+                  </button>
+                  {onDelete && (
+                    <button
+                      onClick={() => handleDelete(resource.id, resource.name)}
+                      disabled={deletingResource === resource.id}
+                      className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Delete resource"
+                    >
+                      {deletingResource === resource.id ? '⏳' : '🗑️'}
+                    </button>
+                  )}
+                </div>
               </td>
             </tr>
           ))}
@@ -274,6 +312,16 @@ function ResourceGrid({ resources, loading, onRefresh, compact = false, viewMode
                     {isExpanded ? 'Hide' : 'Details'}
                   </button>
                 )}
+                {onDelete && (
+                  <button
+                    onClick={() => handleDelete(resource.id, resource.name)}
+                    disabled={deletingResource === resource.id}
+                    className={`${compact ? 'text-[10px] px-2 py-1' : 'text-xs px-3 py-2'} bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
+                    title="Delete resource"
+                  >
+                    {deletingResource === resource.id ? '⏳' : '🗑️'}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -348,6 +396,16 @@ function ResourceGrid({ resources, loading, onRefresh, compact = false, viewMode
                 className="text-xs px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               >
                 {isExpanded ? 'Hide' : 'Details'}
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={() => handleDelete(resource.id, resource.name)}
+                disabled={deletingResource === resource.id}
+                className={`${isCompact ? 'text-[10px] px-2 py-1' : 'text-xs px-3 py-2'} bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
+                title="Delete resource"
+              >
+                {deletingResource === resource.id ? '⏳' : '🗑️'}
               </button>
             )}
           </div>

@@ -16,6 +16,7 @@ interface LogsViewerProps {
   onFilterChange: (filter: LogFilter) => void;
   onAutoScrollChange: (enabled: boolean) => void;
   onMaxLogsChange?: (limit: number) => void;
+  onClearLogs?: () => void;
 }
 
 export function LogsViewer({
@@ -30,6 +31,7 @@ export function LogsViewer({
   onFilterChange,
   onAutoScrollChange,
   onMaxLogsChange,
+  onClearLogs,
 }: LogsViewerProps) {
   const logEndRef = useRef<HTMLDivElement>(null);
   const logLineRefs = useRef<Map<number, HTMLDivElement>>(new Map());
@@ -230,6 +232,7 @@ export function LogsViewer({
             onCopyAll={handleCopyAll}
             onNavigateError={navigateError}
             onApplyPreset={applyPreset}
+            onClearLogs={onClearLogs}
           />
       
       <div
@@ -310,7 +313,7 @@ export function LogsViewer({
                           [{formatTimestampHelper(log.timestamp)}]
                         </span>
                         {isBuildLog && (
-                          <span className="text-yellow-400 font-semibold ml-1 text-[10px] flex-shrink-0">
+                          <span className="text-cyan-400 font-semibold ml-1 text-[10px] flex-shrink-0">
                             [BUILD]
                           </span>
                         )}

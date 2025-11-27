@@ -1,0 +1,195 @@
+name: Infrastructure Deploy - Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Deployment action'
+        required: true
+        type: choice
+        options:
+          - validate
+          - preview
+          - deploy
+      environment:
+        description: 'Environment'
+        required: true
+        type: choice
+        options:
+          - staging
+        default: 'staging'
+  pull_request:
+    paths:
+      - 'src/Mystira.App.Infrastructure.Azure/Deployment/staging/**'
+    branches:
+      - staging
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ENVIRONMENT: ${{ github.event.inputs.environment || 'staging' }}
+  LOCATION: 'westeurope'
+  RESOURCE_GROUP: 'staging-euw-rg-mystira-app'
+  SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+jobs:
+  check-secrets:
+    runs-on: ubuntu-latest
+    name: Check Required Secrets
+    outputs:
+      has-azure-secrets: ${{ steps.check.outputs.has-azure-secrets }}
+      has-jwt-secret: ${{ steps.check.outputs.has-jwt-secret }}
+    steps:
+      - name: Check secrets availability
+        id: check
+        run: |
+          echo "has-azure-secrets=${{ secrets.AZURE_CREDENTIALS != '' }}" >> $GITHUB_OUTPUT
+          echo "has-jwt-secret=${{ secrets.JWT_SECRET_KEY != '' }}" >> $GITHUB_OUTPUT
+
+  validate:
+    if: |
+      github.event.inputs.action == 'validate' &&
+      needs.check-secrets.outputs.has-azure-secrets == 'true' &&
+      needs.check-secrets.outputs.has-jwt-secret == 'true'
+    runs-on: ubuntu-latest
+    needs: [check-secrets]
+    environment: staging
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Set Azure Subscription
+      run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
+    
+    - name: Validate Bicep Templates
+      run: |
+        az deployment group validate \
+          --resource-group "${{ env.RESOURCE_GROUP }}" \
+          --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/staging/main.bicep' \
+          --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=dummy deployStorage=true deployCosmos=true deployAppService=true \
+          --output json
+
+  preview:
+    if: |
+      (github.event.inputs.action == 'preview' || github.event_name == 'pull_request') &&
+      needs.check-secrets.outputs.has-azure-secrets == 'true' &&
+      needs.check-secrets.outputs.has-jwt-secret == 'true'
+    runs-on: ubuntu-latest
+    needs: [check-secrets]
+    environment: staging
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Set Azure Subscription
+      run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
+    
+    - name: Create Resource Group if not exists
+      run: |
+        az group create \
+          --name "${{ env.RESOURCE_GROUP }}" \
+          --location "${{ env.LOCATION }}" \
+          --output none || true
+    
+    - name: Preview Infrastructure Changes (What-If)
+      id: whatif
+      run: |
+        az deployment group what-if \
+          --resource-group "${{ env.RESOURCE_GROUP }}" \
+          --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/staging/main.bicep' \
+          --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} deployStorage=true deployCosmos=true deployAppService=true \
+          --output json > what-if-output.json
+        cat what-if-output.json
+    
+    - name: Comment PR with What-If Results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const whatIfOutput = fs.readFileSync('what-if-output.json', 'utf8');
+          const output = `#### Infrastructure What-If Analysis 🔍
+          
+          <details><summary>Show What-If Results</summary>
+          
+          \`\`\`json
+          ${whatIfOutput}
+          \`\`\`
+          
+          </details>
+          
+          *Workflow: \`${{ github.workflow }}\`, Run: [\`${{ github.run_number }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          });
+
+  deploy:
+    if: |
+      github.event.inputs.action == 'deploy' &&
+      needs.check-secrets.outputs.has-azure-secrets == 'true' &&
+      needs.check-secrets.outputs.has-jwt-secret == 'true'
+    runs-on: ubuntu-latest
+    needs: [check-secrets, validate]
+    environment: staging
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Set Azure Subscription
+      run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
+    
+    - name: Create Resource Group if not exists
+      run: |
+        az group create \
+          --name "${{ env.RESOURCE_GROUP }}" \
+          --location "${{ env.LOCATION }}" \
+          --output none || true
+    
+    - name: Deploy Infrastructure (Incremental - Safe Mode)
+      id: deploy
+      run: |
+        az deployment group create \
+          --resource-group "${{ env.RESOURCE_GROUP }}" \
+          --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/staging/main.bicep' \
+          --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} deployStorage=true deployCosmos=true deployAppService=true \
+          --mode Incremental \
+          --name "mystira-app-staging-$(date +%Y%m%d-%H%M%S)" \
+          --output json
+    
+    - name: Get Deployment Outputs
+      id: outputs
+      run: |
+        APP_SERVICE_URL=$(az deployment group show \
+          --resource-group "${{ env.RESOURCE_GROUP }}" \
+          --name "$(az deployment group list --resource-group ${{ env.RESOURCE_GROUP }} --query '[0].name' -o tsv)" \
+          --query "properties.outputs.appServiceUrl.value" -o tsv)
+        echo "appServiceUrl=$APP_SERVICE_URL" >> $GITHUB_OUTPUT
+    
+    - name: Deployment Summary
+      run: |
+        echo "✅ Infrastructure deployed successfully!"
+        echo "📊 Resource Group: ${{ env.RESOURCE_GROUP }}"
+        echo "🌐 App Service URL: ${{ steps.outputs.outputs.appServiceUrl }}"
+

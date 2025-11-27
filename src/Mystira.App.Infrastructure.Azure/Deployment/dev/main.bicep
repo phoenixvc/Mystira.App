@@ -66,17 +66,18 @@ module appService 'app-service.bicep' = if (deployAppService) {
     appServiceName: appServiceName
     location: location
     sku: environment == 'prod' ? 'P1v3' : 'B1'
-    cosmosDbConnectionString: deployCosmos ? cosmosDb.outputs.cosmosDbConnectionString : ''
-    storageConnectionString: deployStorage ? storage.outputs.storageConnectionString : ''
+    cosmosDbConnectionString: deployCosmos ? cosmosDb!.outputs.cosmosDbConnectionString : ''
+    storageConnectionString: deployStorage ? storage!.outputs.storageConnectionString : ''
     jwtSecretKey: jwtSecretKey
-    keyVaultName: keyVaultAdminObjectId != '' ? keyVault.outputs.keyVaultName : ''
+    keyVaultName: (keyVaultAdminObjectId != '') ? keyVault!.outputs.keyVaultName : ''
   }
 }
 
 // Outputs (conditional based on what was deployed)
-output appServiceUrl string = deployAppService ? appService.outputs.appServiceUrl : ''
-output storageAccountName string = deployStorage ? storage.outputs.storageAccountName : ''
-output cosmosDbAccountName string = deployCosmos ? cosmosDb.outputs.cosmosDbAccountName : ''
-output mediaContainerUrl string = deployStorage ? storage.outputs.mediaContainerUrl : ''
-output keyVaultName string = keyVaultAdminObjectId != '' ? keyVault.outputs.keyVaultName : ''
-output keyVaultUri string = keyVaultAdminObjectId != '' ? keyVault.outputs.keyVaultUri : ''
+// Use null-forgiving operator (!) since we check the condition before accessing
+output appServiceUrl string = deployAppService ? appService!.outputs.appServiceUrl : ''
+output storageAccountName string = deployStorage ? storage!.outputs.storageAccountName : ''
+output cosmosDbAccountName string = deployCosmos ? cosmosDb!.outputs.cosmosDbAccountName : ''
+output mediaContainerUrl string = deployStorage ? storage!.outputs.mediaContainerUrl : ''
+output keyVaultName string = (keyVaultAdminObjectId != '') ? keyVault!.outputs.keyVaultName : ''
+output keyVaultUri string = (keyVaultAdminObjectId != '') ? keyVault!.outputs.keyVaultUri : ''

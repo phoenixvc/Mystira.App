@@ -9,6 +9,11 @@ export function useServiceLogs() {
     type: 'all' | 'stdout' | 'stderr';
     source?: 'all' | 'build' | 'run';
     severity?: 'all' | 'errors' | 'warnings' | 'info';
+    severityEnabled?: {
+      errors: boolean;
+      warnings: boolean;
+      info: boolean;
+    };
   }>>({});
   const [autoScroll, setAutoScroll] = useState<Record<string, boolean>>({});
   const [maxLogs, setMaxLogs] = useState<number>(() => {
@@ -78,7 +83,13 @@ export function useServiceLogs() {
 
   const getServiceLogs = (serviceName: string): ServiceLog[] => {
     const serviceLogs = logs[serviceName] || [];
-    const filter = logFilters[serviceName] || { search: '', type: 'all', source: 'all', severity: 'all' };
+    const filter = logFilters[serviceName] || { 
+      search: '', 
+      type: 'all', 
+      source: 'all', 
+      severity: 'all',
+      severityEnabled: { errors: true, warnings: true, info: true } // Default: show all
+    };
     
     return serviceLogs.filter(log => {
       const matchesSearch = !filter.search || 
@@ -88,8 +99,39 @@ export function useServiceLogs() {
       
       // Severity filter: detect errors and warnings in log messages
       let matchesSeverity = true;
-      if (filter.severity && filter.severity !== 'all') {
-        const messageLower = log.message.toLowerCase();
+      const messageLower = log.message.toLowerCase();
+      
+      // Check if using new checkbox-based severity filter
+      if (filter.severityEnabled) {
+        const hasErrors = filter.severityEnabled.errors;
+        const hasWarnings = filter.severityEnabled.warnings;
+        const hasInfo = filter.severityEnabled.info;
+        
+        // If none are enabled, show all (no filter)
+        if (!hasErrors && !hasWarnings && !hasInfo) {
+          matchesSeverity = true;
+        } else {
+          // Check if log matches any enabled severity
+          const isError = log.type === 'stderr' || 
+            messageLower.includes('error') || 
+            messageLower.includes('failed') ||
+            messageLower.includes('exception') ||
+            messageLower.includes('fatal');
+          const isWarning = messageLower.includes('warning') || 
+            messageLower.includes('warn') ||
+            messageLower.includes('deprecated');
+          const isInfo = log.type === 'stdout' && 
+            !messageLower.includes('error') && 
+            !messageLower.includes('warning') &&
+            !messageLower.includes('failed') &&
+            !messageLower.includes('warn');
+          
+          matchesSeverity = (hasErrors && isError) || 
+            (hasWarnings && isWarning) || 
+            (hasInfo && isInfo);
+        }
+      } else if (filter.severity && filter.severity !== 'all') {
+        // Legacy single-selection filter
         if (filter.severity === 'errors') {
           matchesSeverity = log.type === 'stderr' || 
             messageLower.includes('error') || 

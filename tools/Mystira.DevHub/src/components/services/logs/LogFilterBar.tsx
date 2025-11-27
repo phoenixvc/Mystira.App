@@ -26,6 +26,7 @@ interface LogFilterBarProps {
   onCopyAll: () => void;
   onNavigateError: (direction: 'next' | 'prev') => void;
   onApplyPreset: (preset: 'build-errors' | 'runtime-warnings' | 'all-errors' | 'build-only' | 'runtime-only') => void;
+  onClearLogs?: () => void;
 }
 
 export function LogFilterBar({
@@ -54,6 +55,7 @@ export function LogFilterBar({
   onCopyAll,
   onNavigateError,
   onApplyPreset,
+  onClearLogs,
 }: LogFilterBarProps) {
   const stats = {
     errorCount: filteredLogs.filter(log => {
@@ -105,31 +107,64 @@ export function LogFilterBar({
       
       {/* Filter Group */}
       <div className="flex gap-1 items-center">
-        {/* Severity Filter */}
-        <div className="flex gap-0.5 border border-gray-300 dark:border-gray-600 rounded overflow-hidden">
-          <button
-            onClick={() => onFilterChange({ ...filter, severity: filter.severity === 'errors' ? 'all' : 'errors' })}
-            className={`px-2 py-1 text-xs font-medium transition-colors ${
-              filter.severity === 'errors'
-                ? 'bg-red-500 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20'
-            }`}
-            title="Show errors only"
-          >
-            🔴 Errors
-          </button>
-          <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
-          <button
-            onClick={() => onFilterChange({ ...filter, severity: filter.severity === 'warnings' ? 'all' : 'warnings' })}
-            className={`px-2 py-1 text-xs font-medium transition-colors ${
-              filter.severity === 'warnings'
-                ? 'bg-yellow-500 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
-            }`}
-            title="Show warnings only"
-          >
-            ⚠️ Warnings
-          </button>
+        {/* Severity Filter - Checkboxes */}
+        <div className="flex gap-2 items-center border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800">
+          <label className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filter.severityEnabled?.errors !== false}
+              onChange={(e) => {
+                const current = filter.severityEnabled || { errors: true, warnings: true, info: true };
+                onFilterChange({ 
+                  ...filter, 
+                  severityEnabled: { 
+                    ...current, 
+                    errors: e.target.checked 
+                  }
+                });
+              }}
+              className="rounded border-gray-300 dark:border-gray-600 w-3.5 h-3.5 text-red-500 focus:ring-red-500"
+            />
+            <span className="text-red-600 dark:text-red-400">🔴 Errors</span>
+          </label>
+          <div className="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
+          <label className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filter.severityEnabled?.warnings !== false}
+              onChange={(e) => {
+                const current = filter.severityEnabled || { errors: true, warnings: true, info: true };
+                onFilterChange({ 
+                  ...filter, 
+                  severityEnabled: { 
+                    ...current, 
+                    warnings: e.target.checked 
+                  }
+                });
+              }}
+              className="rounded border-gray-300 dark:border-gray-600 w-3.5 h-3.5 text-yellow-500 focus:ring-yellow-500"
+            />
+            <span className="text-yellow-600 dark:text-yellow-400">⚠️ Warnings</span>
+          </label>
+          <div className="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
+          <label className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filter.severityEnabled?.info !== false}
+              onChange={(e) => {
+                const current = filter.severityEnabled || { errors: true, warnings: true, info: true };
+                onFilterChange({ 
+                  ...filter, 
+                  severityEnabled: { 
+                    ...current, 
+                    info: e.target.checked 
+                  }
+                });
+              }}
+              className="rounded border-gray-300 dark:border-gray-600 w-3.5 h-3.5 text-blue-500 focus:ring-blue-500"
+            />
+            <span className="text-blue-600 dark:text-blue-400">ℹ️ Info</span>
+          </label>
         </div>
 
         {/* Source Filter */}
@@ -238,7 +273,7 @@ export function LogFilterBar({
         </div>
       )}
 
-      {/* Copy and Export Buttons */}
+      {/* Copy, Export, and Clear Buttons */}
       <div className="flex gap-1 items-center border-l border-gray-300 dark:border-gray-600 pl-2">
         {filteredLogs.length > 0 && (
           <>
@@ -266,6 +301,15 @@ export function LogFilterBar({
               💾 Export
             </button>
           </>
+        )}
+        {onClearLogs && logs.length > 0 && (
+          <button
+            onClick={onClearLogs}
+            className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            title="Clear all logs"
+          >
+            🗑️ Clear
+          </button>
         )}
       </div>
 

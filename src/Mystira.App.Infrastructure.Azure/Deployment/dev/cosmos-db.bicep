@@ -137,6 +137,11 @@ resource compassTrackingsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDat
   }
 }
 
-// Output connection string
-output cosmosDbConnectionString string = listConnectionStrings(cosmosDbAccount.id, cosmosDbAccount.apiVersion).connectionStrings[0].connectionString
+// Outputs
 output cosmosDbAccountName string = cosmosDbAccount.name
+output cosmosDbAccountId string = cosmosDbAccount.id
+output cosmosDbResourceGroup string = resourceGroup().name
+output cosmosDbEndpoint string = cosmosDbAccount.properties.documentEndpoint
+output databaseName string = databaseName
+#disable-next-line outputs-should-not-contain-secrets use-resource-symbol-reference
+output cosmosDbConnectionString string = cosmosDbAccount.listConnectionStrings().connectionStrings[0].connectionString

@@ -2,7 +2,6 @@ import { open } from '@tauri-apps/api/shell';
 import { invoke } from '@tauri-apps/api/tauri';
 import { useEffect, useState } from 'react';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcut';
-import { ToastContainer, useToast, type Toast } from './ui';
 import {
   EnvironmentPresetSelector,
   ServiceList,
@@ -18,6 +17,7 @@ import {
   type ServiceConfig,
   type ServiceStatus,
 } from './services';
+import { ToastContainer, useToast, type Toast } from './ui';
 
 function ServiceManager() {
   const [serviceEnvironments, setServiceEnvironments] = useState<Record<string, 'local' | 'dev' | 'prod'>>(() => {
@@ -400,6 +400,38 @@ function ServiceManager() {
       console.error('Failed to create Tauri window:', error);
       addToast('Failed to open Tauri window, opening in external browser instead', 'warning');
       await openInBrowser(url);
+    }
+  };
+
+  const checkInfrastructureStatus = async (environment: 'dev' | 'prod') => {
+    setInfrastructureStatus(prev => ({
+      ...prev,
+      [environment]: { ...prev[environment], checking: true },
+    }));
+    
+    try {
+      const response = await invoke<{ success: boolean; result?: { exists: boolean } }>(
+        'check_infrastructure_exists',
+        { environment, resourceGroup: null }
+      );
+      
+      if (response.success && response.result) {
+        setInfrastructureStatus(prev => ({
+          ...prev,
+          [environment]: { exists: response.result!.exists, checking: false },
+        }));
+      } else {
+        setInfrastructureStatus(prev => ({
+          ...prev,
+          [environment]: { exists: false, checking: false },
+        }));
+      }
+    } catch (error) {
+      console.error(`Failed to check ${environment} infrastructure:`, error);
+      setInfrastructureStatus(prev => ({
+        ...prev,
+        [environment]: { exists: false, checking: false },
+      }));
     }
   };
 
