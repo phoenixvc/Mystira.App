@@ -7,8 +7,9 @@ import { ActionCardGrid } from './ActionToolbar';
 import BicepViewer from './BicepViewer';
 import { ConfirmDialog } from './ConfirmDialog';
 import DeploymentHistory from './DeploymentHistory';
+import { DockableLayout, type DockablePanelConfig, TabbedPanel } from './DockableInfrastructurePanel';
 import ResourceGrid from './ResourceGrid';
-import { ErrorDisplay, ResizableOutputPanel, SuccessDisplay } from './ResizableOutputPanel';
+import { ErrorDisplay, SuccessDisplay } from './ResizableOutputPanel';
 import WhatIfViewer from './WhatIfViewer';
 
 type Tab = 'actions' | 'bicep' | 'resources' | 'history';
@@ -475,120 +476,6 @@ function InfrastructurePanel() {
     }
   };
 
-  // Prepare output panel tabs
-  const outputTabs = [
-    {
-      id: 'output',
-      label: 'Output',
-      icon: '📋',
-      badge: lastResponse ? (lastResponse.success ? '✓' : '✕') : undefined,
-      badgeColor: lastResponse ? (lastResponse.success ? 'green' as const : 'red' as const) : undefined,
-      content: (
-        <div className="h-full overflow-auto">
-          {loading && (
-            <div className="p-3 flex items-center gap-2 text-blue-600 dark:text-blue-400 text-xs">
-              <span className="animate-spin">⟳</span>
-              <span>Executing command...</span>
-            </div>
-          )}
-          {lastResponse && (
-            lastResponse.success ? (
-              <SuccessDisplay message={lastResponse.message || 'Operation completed successfully'} details={lastResponse.result as Record<string, unknown> | null} />
-            ) : (
-              <ErrorDisplay error={lastResponse.error || 'An error occurred'} details={lastResponse.result as Record<string, unknown> | null} />
-            )
-          )}
-          {!loading && !lastResponse && (
-            <div className="p-3 text-xs text-gray-500 dark:text-gray-400">
-              No output yet. Run an action to see results here.
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      id: 'whatif',
-      label: 'Preview Changes',
-      icon: '🔍',
-      badge: whatIfChanges.length > 0 ? whatIfChanges.filter(c => c.selected !== false).length : undefined,
-      badgeColor: 'blue' as const,
-      content: (
-        <div className="h-full overflow-auto">
-          {whatIfChanges.length > 0 ? (
-            <div className="p-2">
-              <WhatIfViewer
-                changes={whatIfChanges}
-                loading={loading && activeTab === 'actions'}
-                showSelection={hasPreviewed && deploymentMethod === 'azure-cli'}
-                onSelectionChange={(updated) => setWhatIfChanges(updated)}
-                compact
-              />
-            </div>
-          ) : (
-            <div className="p-3 text-xs text-gray-500 dark:text-gray-400">
-              No preview changes. Run Preview to see what will be deployed.
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      id: 'workflow',
-      label: 'Workflow Status',
-      icon: '⚙️',
-      content: (
-        <div className="h-full overflow-auto p-3 text-xs">
-          {workflowStatus ? (
-            <div className="space-y-2">
-              <div className="grid grid-cols-4 gap-3">
-                <div>
-                  <div className="text-gray-500 dark:text-gray-400">Status</div>
-                  <div className="font-semibold text-gray-900 dark:text-white">{workflowStatus.status || 'Unknown'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 dark:text-gray-400">Conclusion</div>
-                  <div className="font-semibold text-gray-900 dark:text-white">{workflowStatus.conclusion || 'N/A'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 dark:text-gray-400">Workflow</div>
-                  <div className="font-semibold text-gray-900 dark:text-white">{workflowStatus.workflowName || 'N/A'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 dark:text-gray-400">Updated</div>
-                  <div className="font-semibold text-gray-900 dark:text-white">
-                    {workflowStatus.updatedAt ? new Date(workflowStatus.updatedAt).toLocaleTimeString() : 'N/A'}
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-2 mt-2">
-                {workflowStatus.htmlUrl && (
-                  <a
-                    href={workflowStatus.htmlUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
-                  >
-                    View in GitHub →
-                  </a>
-                )}
-                <button
-                  onClick={fetchWorkflowStatus}
-                  className="px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700 transition-colors"
-                >
-                  Refresh
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="text-gray-500 dark:text-gray-400">
-              No workflow status available. Run an action to see workflow status.
-            </div>
-          )}
-        </div>
-      ),
-    },
-  ];
-
   // Prepare action buttons config
   const actionButtons = [
     {
@@ -633,8 +520,296 @@ function InfrastructurePanel() {
     },
   ];
 
+  // Build output content for right panel with tabs
+  const outputPanelContent = (
+    <TabbedPanel
+      storageKey="infraOutputTabs"
+      tabs={[
+        {
+          id: 'output',
+          label: 'Output',
+          icon: '📋',
+          badge: lastResponse ? (lastResponse.success ? '✓' : '✕') : undefined,
+          content: (
+            <div className="h-full overflow-auto">
+              {loading && (
+                <div className="p-3 flex items-center gap-2 text-blue-600 dark:text-blue-400 text-xs">
+                  <span className="animate-spin">⟳</span>
+                  <span>Executing command...</span>
+                </div>
+              )}
+              {lastResponse && (
+                lastResponse.success ? (
+                  <SuccessDisplay message={lastResponse.message || 'Operation completed successfully'} details={lastResponse.result as Record<string, unknown> | null} />
+                ) : (
+                  <ErrorDisplay error={lastResponse.error || 'An error occurred'} details={lastResponse.result as Record<string, unknown> | null} />
+                )
+              )}
+              {!loading && !lastResponse && (
+                <div className="p-3 text-xs text-gray-500 dark:text-gray-400">
+                  No output yet. Run an action to see results here.
+                </div>
+              )}
+            </div>
+          ),
+        },
+        {
+          id: 'whatif',
+          label: 'Preview',
+          icon: '🔍',
+          badge: whatIfChanges.length > 0 ? whatIfChanges.filter(c => c.selected !== false).length : undefined,
+          content: (
+            <div className="h-full overflow-auto">
+              {whatIfChanges.length > 0 ? (
+                <div className="p-2">
+                  <WhatIfViewer
+                    changes={whatIfChanges}
+                    loading={loading && activeTab === 'actions'}
+                    showSelection={hasPreviewed && deploymentMethod === 'azure-cli'}
+                    onSelectionChange={(updated) => setWhatIfChanges(updated)}
+                    compact
+                  />
+                </div>
+              ) : (
+                <div className="p-3 text-xs text-gray-500 dark:text-gray-400">
+                  No preview. Run Preview to see changes.
+                </div>
+              )}
+            </div>
+          ),
+        },
+        {
+          id: 'workflow',
+          label: 'Workflow',
+          icon: '⚙️',
+          content: (
+            <div className="h-full overflow-auto p-3 text-xs">
+              {workflowStatus ? (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <div className="text-gray-500 dark:text-gray-400">Status</div>
+                      <div className="font-semibold text-gray-900 dark:text-white">{workflowStatus.status || 'Unknown'}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500 dark:text-gray-400">Conclusion</div>
+                      <div className="font-semibold text-gray-900 dark:text-white">{workflowStatus.conclusion || 'N/A'}</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    {workflowStatus.htmlUrl && (
+                      <a
+                        href={workflowStatus.htmlUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
+                      >
+                        GitHub →
+                      </a>
+                    )}
+                    <button
+                      onClick={fetchWorkflowStatus}
+                      className="px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700 transition-colors"
+                    >
+                      Refresh
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-gray-500 dark:text-gray-400">
+                  No workflow status available.
+                </div>
+              )}
+            </div>
+          ),
+        },
+      ]}
+    />
+  );
+
+  // Main content panel
+  const mainContent = (
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Header - Compact */}
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-800/50">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+            Infrastructure Control
+          </h2>
+          <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            <span>📁 {workflowFile}</span>
+            <span>🌍 {environment}</span>
+          </div>
+        </div>
+        <ActionCardGrid actions={actionButtons} columns={4} />
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200 dark:border-gray-700">
+        <nav className="flex space-x-1 px-4">
+          <button
+            onClick={() => setActiveTab('actions')}
+            className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 ${
+              activeTab === 'actions'
+                ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+            }`}
+          >
+            ⚡ Actions
+          </button>
+          <button
+            onClick={() => setActiveTab('bicep')}
+            className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 ${
+              activeTab === 'bicep'
+                ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+            }`}
+          >
+            📄 Bicep
+          </button>
+          <button
+            onClick={() => setActiveTab('resources')}
+            className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 ${
+              activeTab === 'resources'
+                ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+            }`}
+          >
+            ☁️ Resources
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 ${
+              activeTab === 'history'
+                ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
+            }`}
+          >
+            📜 History
+          </button>
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      <div className="flex-1 overflow-auto p-4">
+        {activeTab === 'actions' && (
+          <div className="space-y-4">
+            {loading && (
+              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-xs bg-blue-50 dark:bg-blue-900/30 px-3 py-2 rounded">
+                <span className="animate-spin">⟳</span>
+                <span>Running command...</span>
+              </div>
+            )}
+            {whatIfChanges.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+                  <h3 className="text-xs font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    🔍 Preview Changes
+                    <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full">
+                      {whatIfChanges.filter(c => c.selected !== false).length} selected
+                    </span>
+                  </h3>
+                </div>
+                <div className="p-2">
+                  <WhatIfViewer
+                    changes={whatIfChanges}
+                    loading={loading}
+                    showSelection={hasPreviewed && deploymentMethod === 'azure-cli'}
+                    onSelectionChange={(updated) => setWhatIfChanges(updated)}
+                    compact
+                  />
+                </div>
+              </div>
+            )}
+            {!loading && whatIfChanges.length === 0 && (
+              <div className="text-center text-gray-500 dark:text-gray-400 py-8 text-sm">
+                <p className="mb-2">Ready to manage infrastructure</p>
+                <p className="text-xs">Click <strong>Validate</strong> to check templates, or <strong>Preview</strong> to see changes</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'bicep' && <BicepViewer />}
+
+        {activeTab === 'resources' && (
+          <div>
+            {resourcesLoading && (
+              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-6 text-center">
+                <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 dark:border-blue-400 mb-2"></div>
+                <p className="text-blue-800 dark:text-blue-200 text-sm">Loading resources...</p>
+              </div>
+            )}
+            {resourcesError && (
+              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+                <h3 className="text-sm font-semibold text-red-900 dark:text-red-300 mb-1">❌ Failed to Load</h3>
+                <p className="text-red-800 dark:text-red-200 text-xs mb-2">{resourcesError}</p>
+                <button
+                  onClick={() => fetchResources(true)}
+                  className="px-3 py-1 bg-red-600 dark:bg-red-500 text-white rounded text-xs hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+            {!resourcesLoading && !resourcesError && (
+              <ResourceGrid resources={resources} onRefresh={() => fetchResources(true)} compact />
+            )}
+          </div>
+        )}
+
+        {activeTab === 'history' && (
+          <div>
+            {deploymentsLoading && (
+              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-6 text-center">
+                <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 dark:border-blue-400 mb-2"></div>
+                <p className="text-blue-800 dark:text-blue-200 text-sm">Loading history...</p>
+              </div>
+            )}
+            {deploymentsError && (
+              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+                <h3 className="text-sm font-semibold text-red-900 dark:text-red-300 mb-1">❌ Failed to Load</h3>
+                <p className="text-red-800 dark:text-red-200 text-xs mb-2">{deploymentsError}</p>
+                <button
+                  onClick={() => fetchDeployments(true)}
+                  className="px-3 py-1 bg-red-600 dark:bg-red-500 text-white rounded-lg text-xs hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+            {!deploymentsLoading && !deploymentsError && (
+              <DeploymentHistory events={deployments} />
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // Define dockable panels configuration
+  const dockablePanels: DockablePanelConfig[] = [
+    {
+      id: 'main-content',
+      title: 'Infrastructure',
+      content: mainContent,
+      defaultPosition: 'center',
+    },
+    {
+      id: 'output-panel',
+      title: 'Output',
+      icon: '📋',
+      content: outputPanelContent,
+      defaultPosition: 'right',
+      defaultSize: { width: 350 },
+      minSize: { width: 250 },
+      collapsible: true,
+      defaultCollapsed: false,
+    },
+  ];
+
   return (
-    <div className="h-[calc(100vh-120px)] flex flex-col">
+    <div className="h-[calc(100vh-120px)]">
       <ConfirmDialog
         isOpen={showDestroyConfirm}
         title="⚠️ Destroy Infrastructure"
@@ -657,188 +832,9 @@ function InfrastructurePanel() {
         onCancel={() => setShowDeployConfirm(false)}
       />
 
-      {/* Main Content Area - Scrollable */}
-      <div className="flex-1 overflow-auto px-6 py-4">
-        <div className="max-w-7xl mx-auto">
-          {/* Header - More compact */}
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Infrastructure Control Panel
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Manage Bicep infrastructure deployments via GitHub Actions
-              </p>
-            </div>
-            {/* Compact action toolbar in header */}
-            <ActionCardGrid actions={actionButtons} columns={4} />
-          </div>
-
-        {/* Tabs */}
-        <div className="mb-6">
-          <nav className="flex space-x-1 border-b border-gray-200 dark:border-gray-700">
-            <button
-              onClick={() => setActiveTab('actions')}
-              className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
-                activeTab === 'actions'
-                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-            >
-              ⚡ Actions
-            </button>
-            <button
-              onClick={() => setActiveTab('bicep')}
-              className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
-                activeTab === 'bicep'
-                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-            >
-              📄 Bicep Templates
-            </button>
-            <button
-              onClick={() => setActiveTab('resources')}
-              className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
-                activeTab === 'resources'
-                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
-            >
-              ☁️ Azure Resources
-            </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
-                activeTab === 'history'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-              }`}
-            >
-              📜 History
-            </button>
-          </nav>
-        </div>
-
-        {/* Tab Content: Actions */}
-        {activeTab === 'actions' && (
-          <div className="space-y-4">
-            {/* Quick Info Bar */}
-            <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 rounded-lg px-4 py-2 text-xs">
-              <div className="flex items-center gap-4 text-gray-600 dark:text-gray-400">
-                <span>📁 {workflowFile}</span>
-                <span>📦 {repository}</span>
-                <span>🌍 {environment}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {loading && (
-                  <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
-                    <span className="animate-spin">⟳</span>
-                    Running...
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* What-If Preview - Show inline when available */}
-            {whatIfChanges.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-                <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    🔍 Preview Changes
-                    <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full">
-                      {whatIfChanges.filter(c => c.selected !== false).length} selected
-                    </span>
-                  </h3>
-                </div>
-                <div className="p-2">
-                  <WhatIfViewer
-                    changes={whatIfChanges}
-                    loading={loading}
-                    showSelection={hasPreviewed && deploymentMethod === 'azure-cli'}
-                    onSelectionChange={(updated) => setWhatIfChanges(updated)}
-                    compact
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tab Content: Bicep Viewer */}
-        {activeTab === 'bicep' && (
-          <div>
-            <BicepViewer />
-          </div>
-        )}
-
-        {/* Tab Content: Azure Resources */}
-        {activeTab === 'resources' && (
-          <div>
-            {resourcesLoading && (
-              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-8 text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mb-3"></div>
-                <p className="text-blue-800 dark:text-blue-200">Loading Azure resources...</p>
-              </div>
-            )}
-
-            {resourcesError && (
-              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-4">
-                <h3 className="text-lg font-semibold text-red-900 dark:text-red-300 mb-2">❌ Failed to Load Resources</h3>
-                <p className="text-red-800 dark:text-red-200 mb-3">{resourcesError}</p>
-                <button
-                  onClick={() => fetchResources(true)}
-                  className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-
-            {!resourcesLoading && !resourcesError && (
-              <ResourceGrid resources={resources} onRefresh={() => fetchResources(true)} />
-            )}
-          </div>
-        )}
-
-        {/* Tab Content: Deployment History */}
-        {activeTab === 'history' && (
-          <div>
-            {deploymentsLoading && (
-              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-8 text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mb-3"></div>
-                <p className="text-blue-800 dark:text-blue-200">Loading deployment history...</p>
-              </div>
-            )}
-
-            {deploymentsError && (
-              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-4">
-                <h3 className="text-lg font-semibold text-red-900 dark:text-red-300 mb-2">❌ Failed to Load Deployments</h3>
-                <p className="text-red-800 dark:text-red-200 mb-3">{deploymentsError}</p>
-                <button
-                  onClick={() => fetchDeployments(true)}
-                  className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-
-            {!deploymentsLoading && !deploymentsError && (
-              <DeploymentHistory events={deployments} />
-            )}
-          </div>
-        )}
-        </div>
-      </div>
-
-      {/* Resizable Output Panel at Bottom */}
-      <ResizableOutputPanel
-        tabs={outputTabs}
-        defaultHeight={200}
-        minHeight={80}
-        maxHeight={500}
-        storageKey="infrastructureOutputPanel"
+      <DockableLayout
+        panels={dockablePanels}
+        storageKey="infraPanelLayout"
       />
     </div>
   );
