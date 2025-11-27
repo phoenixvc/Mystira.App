@@ -103,7 +103,6 @@ function InfrastructureStatus({ environment, resourceGroup, onStatusChange, refr
     };
     
     // Debounce: wait 500ms after prop changes before checking
-    if (timeoutId) clearTimeout(timeoutId);
     timeoutId = setTimeout(() => {
       if (mounted) {
         checkAndSetInterval();
