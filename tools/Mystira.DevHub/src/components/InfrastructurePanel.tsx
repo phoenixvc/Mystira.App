@@ -3,11 +3,12 @@ import { useEffect, useState } from 'react';
 import { useDeploymentsStore } from '../stores/deploymentsStore';
 import { useResourcesStore } from '../stores/resourcesStore';
 import type { CommandResponse, WhatIfChange, WorkflowStatus } from '../types';
+import { ActionCardGrid } from './ActionToolbar';
 import BicepViewer from './BicepViewer';
 import { ConfirmDialog } from './ConfirmDialog';
 import DeploymentHistory from './DeploymentHistory';
-import { DestroyButton } from './DestroyButton';
 import ResourceGrid from './ResourceGrid';
+import { ErrorDisplay, ResizableOutputPanel, SuccessDisplay } from './ResizableOutputPanel';
 import WhatIfViewer from './WhatIfViewer';
 
 type Tab = 'actions' | 'bicep' | 'resources' | 'history';
@@ -474,8 +475,166 @@ function InfrastructurePanel() {
     }
   };
 
+  // Prepare output panel tabs
+  const outputTabs = [
+    {
+      id: 'output',
+      label: 'Output',
+      icon: '📋',
+      badge: lastResponse ? (lastResponse.success ? '✓' : '✕') : undefined,
+      badgeColor: lastResponse ? (lastResponse.success ? 'green' as const : 'red' as const) : undefined,
+      content: (
+        <div className="h-full overflow-auto">
+          {loading && (
+            <div className="p-3 flex items-center gap-2 text-blue-600 dark:text-blue-400 text-xs">
+              <span className="animate-spin">⟳</span>
+              <span>Executing command...</span>
+            </div>
+          )}
+          {lastResponse && (
+            lastResponse.success ? (
+              <SuccessDisplay message={lastResponse.message || 'Operation completed successfully'} details={lastResponse.result as Record<string, unknown> | null} />
+            ) : (
+              <ErrorDisplay error={lastResponse.error || 'An error occurred'} details={lastResponse.result as Record<string, unknown> | null} />
+            )
+          )}
+          {!loading && !lastResponse && (
+            <div className="p-3 text-xs text-gray-500 dark:text-gray-400">
+              No output yet. Run an action to see results here.
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'whatif',
+      label: 'Preview Changes',
+      icon: '🔍',
+      badge: whatIfChanges.length > 0 ? whatIfChanges.filter(c => c.selected !== false).length : undefined,
+      badgeColor: 'blue' as const,
+      content: (
+        <div className="h-full overflow-auto">
+          {whatIfChanges.length > 0 ? (
+            <div className="p-2">
+              <WhatIfViewer
+                changes={whatIfChanges}
+                loading={loading && activeTab === 'actions'}
+                showSelection={hasPreviewed && deploymentMethod === 'azure-cli'}
+                onSelectionChange={(updated) => setWhatIfChanges(updated)}
+                compact
+              />
+            </div>
+          ) : (
+            <div className="p-3 text-xs text-gray-500 dark:text-gray-400">
+              No preview changes. Run Preview to see what will be deployed.
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'workflow',
+      label: 'Workflow Status',
+      icon: '⚙️',
+      content: (
+        <div className="h-full overflow-auto p-3 text-xs">
+          {workflowStatus ? (
+            <div className="space-y-2">
+              <div className="grid grid-cols-4 gap-3">
+                <div>
+                  <div className="text-gray-500 dark:text-gray-400">Status</div>
+                  <div className="font-semibold text-gray-900 dark:text-white">{workflowStatus.status || 'Unknown'}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500 dark:text-gray-400">Conclusion</div>
+                  <div className="font-semibold text-gray-900 dark:text-white">{workflowStatus.conclusion || 'N/A'}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500 dark:text-gray-400">Workflow</div>
+                  <div className="font-semibold text-gray-900 dark:text-white">{workflowStatus.workflowName || 'N/A'}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500 dark:text-gray-400">Updated</div>
+                  <div className="font-semibold text-gray-900 dark:text-white">
+                    {workflowStatus.updatedAt ? new Date(workflowStatus.updatedAt).toLocaleTimeString() : 'N/A'}
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-2">
+                {workflowStatus.htmlUrl && (
+                  <a
+                    href={workflowStatus.htmlUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
+                  >
+                    View in GitHub →
+                  </a>
+                )}
+                <button
+                  onClick={fetchWorkflowStatus}
+                  className="px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700 transition-colors"
+                >
+                  Refresh
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-gray-500 dark:text-gray-400">
+              No workflow status available. Run an action to see workflow status.
+            </div>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  // Prepare action buttons config
+  const actionButtons = [
+    {
+      id: 'validate',
+      icon: '🔍',
+      label: 'Validate',
+      description: 'Check Bicep',
+      onClick: () => handleAction('validate'),
+      disabled: loading,
+      loading: loading,
+      variant: 'primary' as const,
+    },
+    {
+      id: 'preview',
+      icon: '👁️',
+      label: 'Preview',
+      description: 'What-if',
+      onClick: () => handleAction('preview'),
+      disabled: loading,
+      loading: loading,
+      variant: 'warning' as const,
+    },
+    {
+      id: 'deploy',
+      icon: '🚀',
+      label: 'Deploy',
+      description: hasPreviewed ? `${whatIfChanges.filter(c => c.selected !== false).length} selected` : 'Preview first',
+      onClick: () => handleAction('deploy'),
+      disabled: loading || !hasPreviewed,
+      loading: loading,
+      variant: 'success' as const,
+    },
+    {
+      id: 'destroy',
+      icon: '🗑️',
+      label: 'Destroy',
+      description: 'Delete all',
+      onClick: () => setShowDestroyConfirm(true),
+      disabled: loading,
+      loading: loading,
+      variant: 'danger' as const,
+    },
+  ];
+
   return (
-    <div className="p-8">
+    <div className="h-[calc(100vh-120px)] flex flex-col">
       <ConfirmDialog
         isOpen={showDestroyConfirm}
         title="⚠️ Destroy Infrastructure"
@@ -497,15 +656,23 @@ function InfrastructurePanel() {
         onConfirm={handleDeployConfirm}
         onCancel={() => setShowDeployConfirm(false)}
       />
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Infrastructure Control Panel
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            Manage Bicep infrastructure deployments via GitHub Actions
-          </p>
-        </div>
+
+      {/* Main Content Area - Scrollable */}
+      <div className="flex-1 overflow-auto px-6 py-4">
+        <div className="max-w-7xl mx-auto">
+          {/* Header - More compact */}
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Infrastructure Control Panel
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Manage Bicep infrastructure deployments via GitHub Actions
+              </p>
+            </div>
+            {/* Compact action toolbar in header */}
+            <ActionCardGrid actions={actionButtons} columns={4} />
+          </div>
 
         {/* Tabs */}
         <div className="mb-6">
@@ -555,197 +722,46 @@ function InfrastructurePanel() {
 
         {/* Tab Content: Actions */}
         {activeTab === 'actions' && (
-          <div>
-            {/* Action Buttons */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <button
-                onClick={() => handleAction('validate')}
-                disabled={loading}
-                className="flex flex-col items-center p-6 bg-white dark:bg-gray-800 border-2 border-blue-200 dark:border-blue-800 rounded-lg hover:border-blue-400 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="text-4xl mb-2">🔍</div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">Validate</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
-                  Check Bicep templates
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleAction('preview')}
-                disabled={loading}
-                className="flex flex-col items-center p-6 bg-white dark:bg-gray-800 border-2 border-yellow-200 dark:border-yellow-800 rounded-lg hover:border-yellow-400 dark:hover:border-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="text-4xl mb-2">👁️</div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">Preview</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
-                  What-if analysis
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleAction('deploy')}
-                disabled={loading || !hasPreviewed}
-                className="flex flex-col items-center p-6 bg-white dark:bg-gray-800 border-2 border-green-200 dark:border-green-800 rounded-lg hover:border-green-400 dark:hover:border-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                title={!hasPreviewed ? "Please run Preview first" : ""}
-              >
-                <div className="text-4xl mb-2">🚀</div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">Deploy</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
-                  {hasPreviewed ? `Deploy selected (${whatIfChanges.filter(c => c.selected !== false).length})` : "Preview first"}
-                </div>
-              </button>
-
-              <DestroyButton
-                onClick={() => setShowDestroyConfirm(true)}
-                disabled={loading}
-                loading={loading}
-              />
+          <div className="space-y-4">
+            {/* Quick Info Bar */}
+            <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/50 rounded-lg px-4 py-2 text-xs">
+              <div className="flex items-center gap-4 text-gray-600 dark:text-gray-400">
+                <span>📁 {workflowFile}</span>
+                <span>📦 {repository}</span>
+                <span>🌍 {environment}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {loading && (
+                  <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                    <span className="animate-spin">⟳</span>
+                    Running...
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* Loading State */}
-            {loading && (
-              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-8">
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 dark:border-blue-400 mr-3"></div>
-                  <span className="text-blue-800 dark:text-blue-200">Executing command...</span>
-                </div>
-              </div>
-            )}
-
-            {/* Response Display */}
-            {lastResponse && (
-              <div
-                className={`rounded-lg p-6 mb-8 ${
-                  lastResponse.success
-                    ? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800'
-                    : 'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800'
-                }`}
-              >
-                <h3
-                  className={`text-lg font-semibold mb-2 ${
-                    lastResponse.success ? 'text-green-900 dark:text-green-300' : 'text-red-900 dark:text-red-300'
-                  }`}
-                >
-                  {lastResponse.success ? '✅ Success' : '❌ Error'}
-                </h3>
-
-                {lastResponse.message && (
-                  <p
-                    className={`mb-3 ${
-                      lastResponse.success ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'
-                    }`}
-                  >
-                    {lastResponse.message}
-                  </p>
-                )}
-
-                {lastResponse.error && (
-                  <pre className="bg-red-100 dark:bg-red-900/50 p-3 rounded text-sm text-red-900 dark:text-red-200 overflow-auto">
-                    {lastResponse.error}
-                  </pre>
-                )}
-
-                {lastResponse.result !== undefined && lastResponse.result !== null && (
-                  <details className="mt-3">
-                    <summary
-                      className={`cursor-pointer font-medium ${
-                        lastResponse.success ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
-                      }`}
-                    >
-                      View Details
-                    </summary>
-                    <pre
-                      className={`mt-2 p-3 rounded text-sm overflow-auto ${
-                        lastResponse.success
-                          ? 'bg-green-100 dark:bg-green-900/50 text-green-900 dark:text-green-200'
-                          : 'bg-red-100 dark:bg-red-900/50 text-red-900 dark:text-red-200'
-                      }`}
-                    >
-                      {JSON.stringify(lastResponse.result, null, 2) || 'No details available'}
-                    </pre>
-                  </details>
-                )}
-              </div>
-            )}
-
-            {/* What-If Viewer */}
+            {/* What-If Preview - Show inline when available */}
             {whatIfChanges.length > 0 && (
-              <div className="mb-8">
-                <WhatIfViewer 
-                  changes={whatIfChanges} 
-                  loading={loading && activeTab === 'actions'}
-                  showSelection={hasPreviewed && deploymentMethod === 'azure-cli'}
-                  onSelectionChange={(updated) => setWhatIfChanges(updated)}
-                />
-              </div>
-            )}
-
-            {/* Workflow Status */}
-            {workflowStatus && (
-              <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                  Workflow Status
-                </h3>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div>
-                    <div className="text-sm text-gray-500">Status</div>
-                    <div className="text-lg font-semibold">
-                      {workflowStatus.status || 'Unknown'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500">Conclusion</div>
-                    <div className="text-lg font-semibold">
-                      {workflowStatus.conclusion || 'N/A'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500">Workflow</div>
-                    <div className="text-lg font-semibold">
-                      {workflowStatus.workflowName || 'N/A'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500">Updated</div>
-                    <div className="text-lg font-semibold">
-                      {workflowStatus.updatedAt
-                        ? new Date(workflowStatus.updatedAt).toLocaleTimeString()
-                        : 'N/A'}
-                    </div>
-                  </div>
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    🔍 Preview Changes
+                    <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full">
+                      {whatIfChanges.filter(c => c.selected !== false).length} selected
+                    </span>
+                  </h3>
                 </div>
-
-                {workflowStatus.htmlUrl && (
-                  <a
-                    href={workflowStatus.htmlUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    View in GitHub →
-                  </a>
-                )}
-
-                <button
-                  onClick={fetchWorkflowStatus}
-                  className="ml-3 inline-block px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                >
-                  Refresh Status
-                </button>
+                <div className="p-2">
+                  <WhatIfViewer
+                    changes={whatIfChanges}
+                    loading={loading}
+                    showSelection={hasPreviewed && deploymentMethod === 'azure-cli'}
+                    onSelectionChange={(updated) => setWhatIfChanges(updated)}
+                    compact
+                  />
+                </div>
               </div>
             )}
-
-            {/* Info Box */}
-            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">ℹ️ Information</h4>
-              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
-                <li>Workflow: {workflowFile}</li>
-                <li>Repository: {repository}</li>
-                <li>All actions trigger GitHub Actions workflows</li>
-                <li>Requires GitHub CLI to be authenticated</li>
-              </ul>
-            </div>
           </div>
         )}
 
@@ -813,7 +829,17 @@ function InfrastructurePanel() {
             )}
           </div>
         )}
+        </div>
       </div>
+
+      {/* Resizable Output Panel at Bottom */}
+      <ResizableOutputPanel
+        tabs={outputTabs}
+        defaultHeight={200}
+        minHeight={80}
+        maxHeight={500}
+        storageKey="infrastructureOutputPanel"
+      />
     </div>
   );
 }
