@@ -49,7 +49,12 @@ export interface LogFilter {
   search: string;
   type: 'all' | 'stdout' | 'stderr';
   source?: 'all' | 'build' | 'run'; // Filter by log source
-  severity?: 'all' | 'errors' | 'warnings' | 'info'; // Filter by log severity
+  severity?: 'all' | 'errors' | 'warnings' | 'info'; // Filter by log severity (legacy - kept for backward compatibility)
+  severityEnabled?: {
+    errors: boolean;
+    warnings: boolean;
+    info: boolean;
+  }; // Checkbox states for severity filters - if all false or undefined, show all
   timestampFormat?: 'time' | 'full' | 'relative'; // Timestamp display format
 }
 

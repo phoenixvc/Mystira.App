@@ -1,6 +1,6 @@
-import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/tauri';
-import type { CommandResponse, AzureResource, AzureResourceMapped } from '../types';
+import { create } from 'zustand';
+import type { AzureResource, AzureResourceMapped, CommandResponse } from '../types';
 
 interface ResourcesState {
   resources: AzureResourceMapped[];
@@ -44,7 +44,6 @@ export const useResourcesStore = create<ResourcesState>((set, get) => ({
     try {
       const response = await invoke<CommandResponse<AzureResource[]>>('get_azure_resources', {
         subscriptionId: null,
-        resourceGroup: null,
       });
 
       if (response.success && response.result) {
@@ -72,6 +71,35 @@ export const useResourcesStore = create<ResourcesState>((set, get) => ({
           cacheValidUntil: new Date(now.getTime() + CACHE_DURATION_MS),
         });
       } else {
+        // Check if Azure CLI is missing and prompt for installation
+        if (response.result && typeof response.result === 'object') {
+          const result = response.result as any;
+          if (result.azureCliMissing && result.wingetAvailable) {
+            const shouldInstall = confirm(
+              'Azure CLI is not installed. Would you like to install it now using winget?\n\n' +
+              'This will open a terminal window to install Azure CLI. After installation, please restart the application.'
+            );
+            
+            if (shouldInstall) {
+              try {
+                const installResponse = await invoke<CommandResponse>('install_azure_cli');
+                if (installResponse.success) {
+                  const result = installResponse.result as any;
+                  if (result?.requiresRestart) {
+                    alert('A terminal window has opened to install Azure CLI. After installation completes in that window, please RESTART the application for Azure CLI to be detected.\n\nNote: If Azure CLI was already installed, you may need to restart the app for it to be detected in the PATH.');
+                  } else {
+                    alert('A terminal window has opened to install Azure CLI. Please wait for installation to complete in that window, then restart the application.');
+                  }
+                } else {
+                  alert(`Failed to install Azure CLI: ${installResponse.error || 'Unknown error'}\n\nPlease install manually from https://aka.ms/installazurecliwindows`);
+                }
+              } catch (error) {
+                alert(`Error installing Azure CLI: ${error}\n\nPlease install manually from https://aka.ms/installazurecliwindows`);
+              }
+            }
+          }
+        }
+        
         set({
           isLoading: false,
           error: response.error || 'Failed to fetch Azure resources',

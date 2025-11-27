@@ -70,7 +70,7 @@ export function LogDisplay({
                   [{formatTimestamp(log.timestamp)}]
                 </span>
                 {isBuildLog && (
-                  <span className="text-yellow-400 font-semibold ml-1 text-[10px]">
+                  <span className="text-cyan-400 font-semibold ml-1 text-[10px]">
                     [BUILD]
                   </span>
                 )}
