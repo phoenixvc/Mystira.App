@@ -1,13 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
-  ResourceCard,
   ResourceTableView,
   ResourceGridView,
   ResourceGroupedView,
   ResourceGridHeader,
   ResourceGridSummary,
 } from './resource-grid/components';
-import { openInPortal } from './resource-grid/utils';
 
 interface AzureResource {
   id: string;
