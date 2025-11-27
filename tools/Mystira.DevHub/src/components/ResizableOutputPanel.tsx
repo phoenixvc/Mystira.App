@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { JsonViewer } from './JsonViewer';
 
 export interface OutputPanelTab {
   id: string;
@@ -182,7 +183,6 @@ interface ErrorDisplayProps {
 }
 
 export function ErrorDisplay({ error, details, onCopy }: ErrorDisplayProps) {
-  const [showDetails, setShowDetails] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -220,18 +220,12 @@ export function ErrorDisplay({ error, details, onCopy }: ErrorDisplayProps) {
       {/* Details section */}
       {details && (
         <div className="mt-3">
-          <button
-            onClick={() => setShowDetails(!showDetails)}
-            className="flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-          >
-            <span className="text-[10px]">{showDetails ? '▼' : '▶'}</span>
-            <span>View Details</span>
-          </button>
-          {showDetails && (
-            <pre className="mt-2 whitespace-pre-wrap break-words text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 p-3 rounded border border-gray-200 dark:border-gray-700 overflow-x-auto max-h-64">
-              {JSON.stringify(details, null, 2)}
-            </pre>
-          )}
+          <JsonViewer
+            data={details}
+            collapsed
+            maxHeight="256px"
+            compact
+          />
         </div>
       )}
     </div>
@@ -245,8 +239,6 @@ interface SuccessDisplayProps {
 }
 
 export function SuccessDisplay({ message, details }: SuccessDisplayProps) {
-  const [showDetails, setShowDetails] = useState(false);
-
   if (!message) return null;
 
   return (
@@ -262,18 +254,12 @@ export function SuccessDisplay({ message, details }: SuccessDisplayProps) {
 
       {details && (
         <div className="mt-3">
-          <button
-            onClick={() => setShowDetails(!showDetails)}
-            className="flex items-center gap-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-          >
-            <span className="text-[10px]">{showDetails ? '▼' : '▶'}</span>
-            <span>View Details</span>
-          </button>
-          {showDetails && (
-            <pre className="mt-2 whitespace-pre-wrap break-words text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 p-3 rounded border border-gray-200 dark:border-gray-700 overflow-x-auto max-h-64">
-              {JSON.stringify(details, null, 2)}
-            </pre>
-          )}
+          <JsonViewer
+            data={details}
+            collapsed
+            maxHeight="256px"
+            compact
+          />
         </div>
       )}
     </div>
