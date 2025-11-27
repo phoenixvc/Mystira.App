@@ -164,47 +164,47 @@ export function ServiceCard({
   };
 
   return (
-    <div className={`border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-900 shadow-sm transition-all font-mono relative ${
-      currentEnv === 'prod' 
-        ? 'border-l-4 border-red-500 bg-red-950/20 dark:bg-red-950/30' 
-        : currentEnv === 'dev' 
-        ? 'border-l-4 border-blue-500 bg-blue-950/20 dark:bg-blue-950/30' 
+    <div className={`border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-900 shadow-sm transition-all font-mono relative ${
+      currentEnv === 'prod'
+        ? 'border-l-4 border-red-500 bg-red-950/20 dark:bg-red-950/30'
+        : currentEnv === 'dev'
+        ? 'border-l-4 border-blue-500 bg-blue-950/20 dark:bg-blue-950/30'
         : 'border-l-4 border-green-500 bg-green-950/10 dark:bg-green-950/20'
     }`}>
       {/* Build Status Indicator - Always visible if building, failed, or has last build time */}
       {build && (build.status === 'building' || build.status === 'failed' || build.lastBuildTime) && (
         <BuildStatusIndicator build={build} formatTimeSince={formatTimeSince} />
       )}
-      
+
       {/* Drag Handle */}
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gray-400 dark:bg-gray-600 hover:bg-blue-500 dark:hover:bg-blue-400 cursor-move opacity-0 hover:opacity-100 transition-opacity" 
+      <div className="absolute left-0 top-0 bottom-0 w-1 bg-gray-400 dark:bg-gray-600 hover:bg-blue-500 dark:hover:bg-blue-400 cursor-move opacity-0 hover:opacity-100 transition-opacity"
            title="Drag to reorder" />
-      
-      <div className="p-3">
+
+      <div className="p-2">
         {/* Top Row: Service Name + Environment Badge | Start/Stop Button */}
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-2">
           <button
             onClick={toggleCollapse}
-            className="flex items-center gap-2 flex-1 text-left hover:opacity-80 transition-opacity group"
+            className="flex items-center gap-1.5 flex-1 text-left hover:opacity-80 transition-opacity group"
             title={isCollapsed ? 'Expand service details' : 'Collapse service details'}
           >
-            <span className="text-gray-500 dark:text-gray-400 text-xs group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors">
+            <span className="text-gray-500 dark:text-gray-400 text-[10px] group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors">
               {isCollapsed ? '▶' : '▼'}
             </span>
-            <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 tracking-tight">
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 tracking-tight">
                 {config.displayName}
               </h3>
               {/* Log Activity Indicator - Show in collapsed state when logs are being processed */}
               {isCollapsed && (isBuilding || buildFailed || logs.length > 0) && (
                 <span className="relative">
-                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
-                  <span className="w-2 h-2 bg-blue-500/50 rounded-full animate-ping"></span>
+                  <span className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
+                  <span className="w-1.5 h-1.5 bg-blue-500/50 rounded-full animate-ping"></span>
                 </span>
               )}
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-              currentEnv === 'local' 
-                ? 'bg-green-600 text-white' 
+            <span className={`px-1 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+              currentEnv === 'local'
+                ? 'bg-green-600 text-white'
                 : currentEnv === 'dev'
                 ? 'bg-blue-600 text-white'
                 : 'bg-red-600 text-white'
@@ -212,16 +212,16 @@ export function ServiceCard({
               {currentEnv === 'local' ? 'LOCAL' : currentEnv === 'dev' ? 'DEV' : 'PROD'}
             </span>
               {currentEnv !== 'local' && environmentStatus && (
-                <span className="text-xs" title={`Environment status: ${environmentStatus[currentEnv] || 'unknown'}`}>
-                  {environmentStatus[currentEnv] === 'online' ? '🟢' : 
-                   environmentStatus[currentEnv] === 'offline' ? '🔴' : 
+                <span className="text-[10px]" title={`Environment status: ${environmentStatus[currentEnv] || 'unknown'}`}>
+                  {environmentStatus[currentEnv] === 'online' ? '🟢' :
+                   environmentStatus[currentEnv] === 'offline' ? '🔴' :
                    environmentStatus[currentEnv] === 'checking' ? '🟡' : '⚪'}
                 </span>
               )}
             </div>
           </button>
           {/* Start/Stop/Rebuild Buttons - Right Aligned */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             {onRebuild && (
               <button
                 onClick={(e) => {
@@ -229,7 +229,7 @@ export function ServiceCard({
                   onRebuild();
                 }}
                 disabled={isLoading || isBuilding}
-                className="px-2 py-1 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-1.5 py-0.5 bg-blue-600 text-white rounded text-[10px] font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 title="Rebuild service"
               >
                 🔨
@@ -242,9 +242,9 @@ export function ServiceCard({
                   onStop();
                 }}
                 disabled={isLoading}
-                className="px-2.5 py-1 bg-red-600 text-white rounded text-xs font-bold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors uppercase"
+                className="px-2 py-0.5 bg-red-600 text-white rounded text-[10px] font-bold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors uppercase"
               >
-                {isLoading ? 'STOPPING' : 'STOP'}
+                {isLoading ? 'STOP...' : 'STOP'}
               </button>
             ) : (
               <button
@@ -253,16 +253,16 @@ export function ServiceCard({
                   onStart();
                 }}
                 disabled={isLoading || status?.portConflict || isBuilding}
-                className="px-2.5 py-1 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors uppercase"
+                className="px-2 py-0.5 bg-green-600 text-white rounded text-[10px] font-bold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors uppercase"
                 title={
-                  isBuilding 
-                    ? 'Service is currently building. Please wait for the build to complete.' 
-                    : status?.portConflict 
-                    ? `Port ${config.port} is already in use` 
+                  isBuilding
+                    ? 'Service is currently building. Please wait for the build to complete.'
+                    : status?.portConflict
+                    ? `Port ${config.port} is already in use`
                     : ''
                 }
               >
-                {isLoading ? (statusMsg || 'STARTING') : isBuilding ? 'BUILDING...' : 'START'}
+                {isLoading ? (statusMsg || 'START...') : isBuilding ? 'BUILD...' : 'START'}
               </button>
             )}
           </div>
@@ -270,10 +270,10 @@ export function ServiceCard({
 
         {/* Collapsed View - Show only when collapsed */}
         {isCollapsed && (
-          <div className="mt-1.5 pt-1.5 border-t border-gray-300 dark:border-gray-600 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 font-mono flex-wrap">
+          <div className="mt-1 pt-1 border-t border-gray-300 dark:border-gray-600 flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-mono flex-wrap">
             {/* Status Badge */}
             <span
-              className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+              className={`px-1 py-0.5 rounded text-[9px] font-bold uppercase ${
                 isRunning
                   ? 'bg-green-600 text-white'
                   : isLoading && statusMsg
@@ -285,7 +285,7 @@ export function ServiceCard({
             </span>
             {/* Health Indicator */}
             {isRunning && status?.health && (
-              <span title={`Service is ${status.health}`} className="text-base">
+              <span title={`Service is ${status.health}`} className="text-sm">
                 {getHealthIndicator(status.health)}
               </span>
             )}
@@ -295,41 +295,41 @@ export function ServiceCard({
             )}
             {/* Port Conflict */}
             {status?.portConflict && (
-              <span className="text-yellow-500 dark:text-yellow-400 text-[10px]">⚠ CONFLICT</span>
+              <span className="text-yellow-500 dark:text-yellow-400 text-[9px]">⚠ CONFLICT</span>
             )}
             {/* Build Status */}
             {build && build.status === 'building' && (
-              <span className="text-blue-500 dark:text-blue-400 text-[10px] animate-pulse">
+              <span className="text-blue-500 dark:text-blue-400 text-[9px] animate-pulse">
                 {build.isManual ? '[REBUILDING]' : '[BUILDING]'}
               </span>
             )}
             {build && build.status === 'failed' && (
-              <span className="text-red-500 dark:text-red-400 text-[10px]">
+              <span className="text-red-500 dark:text-red-400 text-[9px]">
                 {build.isManual ? '[REBUILD FAIL]' : '[FAILED]'}
               </span>
             )}
             {/* Last Build Time */}
             {build && build.lastBuildTime && (
-              <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-900/20 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold" title={`Last build: ${new Date(build.lastBuildTime).toLocaleString()}`}>
+              <span className="px-1 py-0.5 rounded text-[9px] bg-blue-900/20 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold" title={`Last build: ${new Date(build.lastBuildTime).toLocaleString()}`}>
                 Built: {formatTimeSince(build.lastBuildTime)}
               </span>
             )}
-            {/* Log Activity Indicator - Prominent when logs are being processed */}
+            {/* Log Activity Indicator */}
             {(isBuilding || buildFailed || logs.length > 0) && (
-              <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-900/30 dark:bg-blue-900/40 text-blue-400 dark:text-blue-300 font-semibold flex items-center gap-1 animate-pulse" title="Logs available - Click to expand">
-                <span className="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
-                {isBuilding ? (build?.isManual ? 'REBUILDING' : 'BUILDING') : buildFailed ? (build?.isManual ? 'REBUILD FAIL' : 'FAILED') : logs.length > 0 ? `${logs.length} logs` : ''}
+              <span className="px-1 py-0.5 rounded text-[9px] bg-blue-900/30 dark:bg-blue-900/40 text-blue-400 dark:text-blue-300 font-semibold flex items-center gap-0.5 animate-pulse" title="Logs available - Click to expand">
+                <span className="w-1 h-1 bg-blue-400 rounded-full"></span>
+                {isBuilding ? (build?.isManual ? 'REBUILD' : 'BUILD') : buildFailed ? 'FAIL' : logs.length > 0 ? `${logs.length}` : ''}
               </span>
             )}
             {/* Error/Warning Counts */}
             {errorCount > 0 && (
-              <span className="text-red-500 dark:text-red-400 text-[10px] font-bold" title="Error count">
-                🔴 {errorCount}
+              <span className="text-red-500 dark:text-red-400 text-[9px] font-bold" title="Error count">
+                🔴{errorCount}
               </span>
             )}
             {warningCount > 0 && (
-              <span className="text-yellow-500 dark:text-yellow-400 text-[10px] font-bold" title="Warning count">
-                ⚠️ {warningCount}
+              <span className="text-yellow-500 dark:text-yellow-400 text-[9px] font-bold" title="Warning count">
+                ⚠️{warningCount}
               </span>
             )}
           </div>
@@ -339,11 +339,11 @@ export function ServiceCard({
         {!isCollapsed && (
           <>
             {/* Second Row: Status & Port | Environment Switcher */}
-            <div className="flex items-center justify-between gap-4 flex-wrap mt-3">
-          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center justify-between gap-2 flex-wrap mt-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Status Badge */}
             <span
-              className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+              className={`px-1 py-0.5 rounded text-[9px] font-bold uppercase ${
                 isRunning
                   ? 'bg-green-600 text-white'
                   : isLoading && statusMsg
@@ -353,39 +353,39 @@ export function ServiceCard({
             >
               {isRunning ? 'RUN' : isLoading && statusMsg ? statusMsg.toUpperCase().substring(0, 6) : 'STOP'}
             </span>
-            {/* Build Info - More prominent */}
+            {/* Build Info */}
             {build && build.lastBuildTime && (
-              <span className="px-2 py-0.5 rounded text-[10px] bg-blue-900/20 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-mono font-semibold" title={`Last build: ${new Date(build.lastBuildTime).toLocaleString()}`}>
-                Last build: {formatTimeSince(build.lastBuildTime)}
+              <span className="px-1.5 py-0.5 rounded text-[9px] bg-blue-900/20 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-mono font-semibold" title={`Last build: ${new Date(build.lastBuildTime).toLocaleString()}`}>
+                Built: {formatTimeSince(build.lastBuildTime)}
               </span>
             )}
             {/* Error/Warning Counts */}
             {errorCount > 0 && (
-              <span className="text-[10px] text-red-500 dark:text-red-400 font-mono" title="Error count">
-                🔴 {errorCount}
+              <span className="text-[9px] text-red-500 dark:text-red-400 font-mono" title="Error count">
+                🔴{errorCount}
               </span>
             )}
             {warningCount > 0 && (
-              <span className="text-[10px] text-yellow-500 dark:text-yellow-400 font-mono" title="Warning count">
-                ⚠️ {warningCount}
+              <span className="text-[9px] text-yellow-500 dark:text-yellow-400 font-mono" title="Warning count">
+                ⚠️{warningCount}
               </span>
             )}
             {/* Health Indicator */}
             {isRunning && (
-              <span className="text-lg" title={`Service is ${status?.health || 'unknown'}`}>
+              <span className="text-sm" title={`Service is ${status?.health || 'unknown'}`}>
                 {getHealthIndicator(status?.health)}
               </span>
             )}
             {/* Port Conflict Warning */}
             {status?.portConflict && (
-              <span className="px-2 py-1 rounded text-sm bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300" title="Port conflict detected">
+              <span className="px-1.5 py-0.5 rounded text-[9px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300" title="Port conflict detected">
                 ⚠ Port {config.port} in use
               </span>
             )}
             {/* Port Input */}
             {config.port && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-gray-500 dark:text-gray-400">:</span>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-gray-500 dark:text-gray-400">:</span>
                 <input
                   type="number"
                   min="1"
@@ -404,7 +404,7 @@ export function ServiceCard({
                     }
                   }}
                   disabled={isRunning}
-                  className="w-16 px-1.5 py-0.5 text-xs border border-gray-400 dark:border-gray-500 rounded bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-14 px-1 py-0.5 text-[10px] border border-gray-400 dark:border-gray-500 rounded bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-blue-500"
                   title={isRunning ? "Stop the service to change port" : "Edit port number"}
                 />
               </div>
@@ -425,24 +425,24 @@ export function ServiceCard({
 
         {/* URL and Deployment Info Row (for non-local environments) */}
         {currentEnv !== 'local' && config.url && (
-          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-1">
-            <div className="flex items-center gap-2 text-sm">
+          <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 space-y-1">
+            <div className="flex items-center gap-1.5 text-[10px]">
               <span className="text-gray-600 dark:text-gray-400 font-medium">URL:</span>
-              <code className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-800 dark:text-gray-200 font-mono">
+              <code className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-800 dark:text-gray-200 font-mono truncate max-w-[200px]" title={config.url}>
                 {config.url}
               </code>
               <button
                 onClick={() => navigator.clipboard.writeText(config.url || '')}
-                className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
                 title="Copy URL to clipboard"
               >
-                📋 Copy
+                📋
               </button>
             </div>
             {deploymentInfo && (() => {
               const info = formatDeploymentInfo(deploymentInfo);
               return (
-                <div className="flex items-center gap-2 text-xs">
+                <div className="flex items-center gap-1.5 text-[10px]">
                   <span className={`${info.statusColor}`} title={info.tooltip}>
                     {info.text}
                   </span>
@@ -454,7 +454,7 @@ export function ServiceCard({
                       className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                       title="View deployment in GitHub Actions"
                     >
-                      🔗 View Deployment
+                      🔗
                     </a>
                   )}
                 </div>
@@ -462,7 +462,7 @@ export function ServiceCard({
             })()}
           </div>
         )}
-        
+
         {/* Show ViewModeSelector during builds or when running */}
         {((isBuilding || buildFailed) || (isRunning && config.url)) && (
           <ViewModeSelector
