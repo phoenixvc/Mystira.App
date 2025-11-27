@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { WhatIfChange } from '../../../types';
 import { getChangeTypeColor, getChangeTypeIcon } from '../utils/whatIfUtils';
 
