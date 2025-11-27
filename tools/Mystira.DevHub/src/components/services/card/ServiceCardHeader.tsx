@@ -1,9 +1,7 @@
-import { BuildStatus, ServiceConfig, ServiceStatus } from '../types';
+import { ServiceConfig } from '../types';
 
 interface ServiceCardHeaderProps {
   config: ServiceConfig;
-  status?: ServiceStatus;
-  build?: BuildStatus;
   isCollapsed: boolean;
   isBuilding: boolean;
   buildFailed: boolean;
@@ -18,8 +16,6 @@ interface ServiceCardHeaderProps {
 
 export function ServiceCardHeader({
   config,
-  status,
-  build,
   isCollapsed,
   isBuilding,
   buildFailed,

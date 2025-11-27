@@ -10,9 +10,6 @@ interface ServiceCardStatusRowProps {
   statusMsg?: string;
   errorCount: number;
   warningCount: number;
-  isBuilding: boolean;
-  buildFailed: boolean;
-  logsCount: number;
   onPortChange: (port: number) => void;
 }
 
@@ -25,9 +22,6 @@ export function ServiceCardStatusRow({
   statusMsg,
   errorCount,
   warningCount,
-  isBuilding,
-  buildFailed,
-  logsCount,
   onPortChange,
 }: ServiceCardStatusRowProps) {
   return (

@@ -13,7 +13,6 @@ export function useServiceCardResize(serviceName: string) {
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!resizeHandleRef.current) return;
-      const rect = resizeHandleRef.current.getBoundingClientRect();
       const newHeight = window.innerHeight - e.clientY;
       const minHeight = 100;
       const maxHeight = window.innerHeight * 0.8;
