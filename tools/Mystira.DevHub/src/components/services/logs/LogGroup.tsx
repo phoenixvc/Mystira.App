@@ -1,6 +1,5 @@
 import { ServiceLog } from '../types';
 import { LogLine } from './LogLine';
-import { useLogGrouping } from './useLogGrouping';
 
 interface LogGroupProps {
   group: { logs: ServiceLog[] };

@@ -34,23 +34,6 @@ function ServiceManager() {
     prod: { exists: false, checking: false },
   });
 
-  // Check infrastructure status for a given environment
-  const checkInfrastructureStatus = async (env: 'dev' | 'prod') => {
-    setInfrastructureStatus(prev => ({
-      ...prev,
-      [env]: { ...prev[env], checking: true },
-    }));
-
-    // TODO: Implement actual infrastructure status check via Tauri/Azure
-    // For now, just mark as not checking after a delay
-    setTimeout(() => {
-      setInfrastructureStatus(prev => ({
-        ...prev,
-        [env]: { exists: false, checking: false },
-      }));
-    }, 1000);
-  };
-
   const addToast = (message: string, type: Toast['type'] = 'info', duration: number = 5000) => {
     showToast(message, type, { duration });
   };
