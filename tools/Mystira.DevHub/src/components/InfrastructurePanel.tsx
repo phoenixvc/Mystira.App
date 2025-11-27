@@ -1,16 +1,19 @@
 import { invoke } from '@tauri-apps/api/tauri';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDeploymentsStore } from '../stores/deploymentsStore';
 import { useResourcesStore } from '../stores/resourcesStore';
 import type { CommandResponse, WhatIfChange, WorkflowStatus } from '../types';
-import BicepViewer from './BicepViewer';
+import { DEFAULT_PROJECTS, type ProjectInfo } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
-import DeploymentHistory from './DeploymentHistory';
-import { DestroyButton } from './DestroyButton';
-import ResourceGrid from './ResourceGrid';
+import InfrastructureStatus, { type InfrastructureStatus as InfrastructureStatusType } from './InfrastructureStatus';
+import ProjectDeploymentPlanner from './ProjectDeploymentPlanner';
+import ResourceGroupConfig from './ResourceGroupConfig';
+import TemplateEditor from './TemplateEditor';
 import WhatIfViewer from './WhatIfViewer';
+import { formatTimeSince } from './services/utils/serviceUtils';
+import { ErrorDisplay, SuccessDisplay } from './ui';
 
-type Tab = 'actions' | 'bicep' | 'resources' | 'history';
+type Tab = 'actions' | 'templates' | 'resources' | 'history';
 
 function InfrastructurePanel() {
   const [activeTab, setActiveTab] = useState<Tab>('actions');
@@ -19,13 +22,65 @@ function InfrastructurePanel() {
   const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus | null>(null);
   const [whatIfChanges, setWhatIfChanges] = useState<WhatIfChange[]>([]);
   const [showDestroyConfirm, setShowDestroyConfirm] = useState(false);
-  const deploymentMethod: 'github' | 'azure-cli' = 'azure-cli'; // Always use Azure CLI for now
+  const deploymentMethod: 'github' | 'azure-cli' = 'azure-cli';
   const [repoRoot, setRepoRoot] = useState<string>('');
-  const environment = 'dev'; // Always use dev for now
+  const [environment, setEnvironment] = useState<string>('dev');
+  const [showProdConfirm, setShowProdConfirm] = useState(false);
+  const [pendingEnvironment, setPendingEnvironment] = useState<string>('dev');
+  const [hasValidated, setHasValidated] = useState(false);
   const [hasPreviewed, setHasPreviewed] = useState(false);
+  const [hasDeployedInfrastructure, setHasDeployedInfrastructure] = useState(false);
+  const [projects] = useState<ProjectInfo[]>(DEFAULT_PROJECTS);
   const [showDeployConfirm, setShowDeployConfirm] = useState(false);
+  const [showOutputPanel, setShowOutputPanel] = useState(false);
+  const [showDestroySelect, setShowDestroySelect] = useState(false);
+  const [showResourceGroupConfig, setShowResourceGroupConfig] = useState(false);
+  const [resourceGroupConfig, setResourceGroupConfig] = useState<ResourceGroupConvention>({
+    pattern: '{env}-euw-rg-{resource}',
+    defaultResourceGroup: 'dev-euw-rg-mystira-app',
+    resourceTypeMappings: {},
+  });
+  const [templates, setTemplates] = useState<TemplateConfig[]>([
+    {
+      id: 'storage',
+      name: 'Storage Account',
+      file: 'storage.bicep',
+      description: 'Azure Storage Account with blob services and containers',
+      selected: true,
+      resourceGroup: '',
+      parameters: { sku: 'Standard_LRS' },
+    },
+    {
+      id: 'cosmos',
+      name: 'Cosmos DB',
+      file: 'cosmos-db.bicep',
+      description: 'Azure Cosmos DB account with database and containers',
+      selected: true,
+      resourceGroup: '',
+      parameters: { databaseName: 'MystiraAppDb' },
+    },
+    {
+      id: 'appservice',
+      name: 'App Service',
+      file: 'app-service.bicep',
+      description: 'Azure App Service with Linux runtime',
+      selected: true,
+      resourceGroup: '',
+      parameters: { sku: 'B1' },
+    },
+    {
+      id: 'keyvault',
+      name: 'Key Vault',
+      file: 'key-vault.bicep',
+      description: 'Azure Key Vault for secrets management',
+      selected: false,
+      resourceGroup: '',
+      parameters: {},
+    },
+  ]);
+  const [editingTemplate, setEditingTemplate] = useState<TemplateConfig | null>(null);
 
-  const workflowFile = 'infrastructure-deploy-dev.yml';
+  const workflowFile = '.start-infrastructure-deploy-dev.yml';
   const repository = 'phoenixvc/Mystira.App';
 
   // Get repository root on mount
@@ -41,7 +96,38 @@ function InfrastructurePanel() {
     fetchRepoRoot();
   }, []);
 
-  // Use stores instead of local state
+  // Load resource group config on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(`resourceGroupConfig_${environment}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setResourceGroupConfig(parsed);
+      } catch (e) {
+        console.error('Failed to parse saved resource group config:', e);
+      }
+    }
+  }, [environment]);
+
+  // Load saved templates on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(`templates_${environment}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setTemplates(parsed);
+      } catch (e) {
+        console.error('Failed to parse saved templates:', e);
+      }
+    }
+  }, [environment]);
+
+  // Save templates when they change
+  useEffect(() => {
+    localStorage.setItem(`templates_${environment}`, JSON.stringify(templates));
+  }, [templates, environment]);
+
+  // Use stores
   const {
     resources,
     isLoading: resourcesLoading,
@@ -55,6 +141,39 @@ function InfrastructurePanel() {
     error: deploymentsError,
     fetchDeployments,
   } = useDeploymentsStore();
+
+  const [isBuildingCli, setIsBuildingCli] = useState(false);
+  const [cliBuildTime, setCliBuildTime] = useState<number | null>(null);
+  const [cliBuildLogs, setCliBuildLogs] = useState<string[]>([]);
+  const [showCliBuildLogs, setShowCliBuildLogs] = useState(false);
+  const cliLogsEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch workflow status on mount to show last build time
+  useEffect(() => {
+    fetchWorkflowStatus();
+  }, []);
+
+  // Fetch CLI build time on mount and after building
+  useEffect(() => {
+    const fetchCliBuildTime = async () => {
+      try {
+        const buildTime = await invoke<number | null>('get_cli_build_time');
+        setCliBuildTime(buildTime);
+      } catch (error) {
+        console.error('Failed to get CLI build time:', error);
+        setCliBuildTime(null);
+      }
+    };
+    fetchCliBuildTime();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBuildingCli]);
+
+  // Auto-scroll CLI logs to bottom
+  useEffect(() => {
+    if (cliLogsEndRef.current && (isBuildingCli || cliBuildLogs.length > 0)) {
+      cliLogsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [cliBuildLogs, isBuildingCli]);
 
   // Fetch resources when switching to resources tab
   useEffect(() => {
@@ -70,52 +189,179 @@ function InfrastructurePanel() {
     }
   }, [activeTab, fetchDeployments]);
 
+  // Fetch workflow status on mount to show last build time
+  useEffect(() => {
+    const loadWorkflowStatus = async () => {
+      try {
+        const response: CommandResponse<WorkflowStatus> = await invoke('infrastructure_status', {
+          workflowFile,
+          repository,
+        });
+
+        if (response.success && response.result) {
+          setWorkflowStatus(response.result);
+        }
+      } catch (error) {
+        console.error('Failed to fetch workflow status:', error);
+      }
+    };
+    loadWorkflowStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleAction = async (action: 'validate' | 'preview' | 'deploy' | 'destroy') => {
+    // Check if templates are selected (except for destroy)
+    if (action !== 'destroy') {
+      const selectedTemplates = templates.filter(t => t.selected);
+      if (selectedTemplates.length === 0) {
+        setLastResponse({
+          success: false,
+          error: 'Please select at least one template in Step 1 before proceeding.',
+        });
+        setLoading(false);
+        return;
+      }
+    }
+
     setLoading(true);
     setLastResponse(null);
+    setShowOutputPanel(true);
 
     try {
       let response: CommandResponse;
 
-      if (deploymentMethod === 'azure-cli' && repoRoot) {
+      if (deploymentMethod === 'azure-cli') {
+        // Check if repoRoot is available
+        if (!repoRoot || repoRoot.trim() === '') {
+          setLastResponse({
+            success: false,
+            error: 'Repository root not available. Please wait for it to be detected, or use GitHub Actions workflow instead.',
+          });
+          setLoading(false);
+          return;
+        }
+        
         // Use direct Azure CLI deployment
         switch (action) {
-          case 'validate':
+          case 'validate': {
+            const selectedTemplates = templates.filter(t => t.selected);
+            const deployStorage = selectedTemplates.some(t => t.id === 'storage');
+            const deployCosmos = selectedTemplates.some(t => t.id === 'cosmos');
+            const deployAppService = selectedTemplates.some(t => t.id === 'appservice');
+            
             response = await invoke('azure_validate_infrastructure', {
               repoRoot,
               environment,
+              deployStorage,
+              deployCosmos,
+              deployAppService,
             });
+            if (response.success) {
+              setHasValidated(true);
+            }
             break;
+          }
 
-          case 'preview':
+          case 'preview': {
+            if (!hasValidated) {
+              setLastResponse({
+                success: false,
+                error: 'Please run Validate first before previewing changes.',
+              });
+              setLoading(false);
+              return;
+            }
+            const selectedTemplates = templates.filter(t => t.selected);
+            const deployStorage = selectedTemplates.some(t => t.id === 'storage');
+            const deployCosmos = selectedTemplates.some(t => t.id === 'cosmos');
+            const deployAppService = selectedTemplates.some(t => t.id === 'appservice');
+            
             response = await invoke('azure_preview_infrastructure', {
               repoRoot,
               environment,
+              deployStorage,
+              deployCosmos,
+              deployAppService,
             });
             if (response.success && response.result) {
-              // Parse what-if output
               const previewData = response.result as any;
               let parsedChanges: WhatIfChange[] = [];
               
+              // Show warnings if present (e.g., expected Cosmos DB nested resource errors)
+              if (previewData.warnings) {
+                console.warn('Preview warnings:', previewData.warnings);
+              }
+              
               if (previewData.parsed && previewData.parsed.changes) {
-                // Use parsed JSON if available
                 parsedChanges = parseWhatIfOutput(JSON.stringify(previewData.parsed));
               } else if (previewData.preview) {
-                // Try to parse from preview text/JSON
                 parsedChanges = parseWhatIfOutput(previewData.preview);
               } else if (previewData.changes) {
-                // Already parsed
                 parsedChanges = previewData.changes;
               }
               
+              // Apply resource group mappings to parsed changes
               if (parsedChanges.length > 0) {
+                parsedChanges = parsedChanges.map(change => ({
+                  ...change,
+                  resourceGroup: change.resourceGroup || 
+                    resourceGroupConfig.resourceTypeMappings?.[change.resourceType] || 
+                    resourceGroupConfig.defaultResourceGroup,
+                }));
                 setWhatIfChanges(parsedChanges);
                 setHasPreviewed(true);
+                const warningMsg = previewData.warnings ? ` (${previewData.warnings})` : '';
+                setLastResponse({
+                  success: true,
+                  message: `Preview generated: ${parsedChanges.length} changes detected${warningMsg}`,
+                });
+              } else if (previewData.warnings) {
+                // Even if no changes, show the warning
+                setLastResponse({
+                  success: true,
+                  message: previewData.warnings,
+                });
+              }
+            } else if (response.error) {
+              // Check if errors are only Cosmos DB nested resource errors (expected)
+              const errorStr = response.error;
+              const isOnlyCosmosErrors = errorStr.includes('DeploymentWhatIfResourceError') 
+                && errorStr.includes('Microsoft.DocumentDB')
+                && (errorStr.includes('sqlDatabases') || errorStr.includes('containers'));
+              
+              if (isOnlyCosmosErrors && response.result) {
+                // Try to parse anyway - we might have valid preview data
+                const previewData = response.result as any;
+                let parsedChanges: WhatIfChange[] = [];
+                if (previewData.parsed && previewData.parsed.changes) {
+                  parsedChanges = parseWhatIfOutput(JSON.stringify(previewData.parsed));
+                } else if (previewData.preview) {
+                  parsedChanges = parseWhatIfOutput(previewData.preview);
+                }
+                if (parsedChanges.length > 0) {
+                  setWhatIfChanges(parsedChanges);
+                  setHasPreviewed(true);
+                  setLastResponse({
+                    success: true,
+                    message: `Preview generated: ${parsedChanges.length} changes detected. Cosmos DB nested resource errors are expected when resources don't exist yet.`,
+                  });
+                } else {
+                  setLastResponse({
+                    success: false,
+                    error: 'Failed to generate preview. Cosmos DB nested resource errors occurred, but no valid preview data was found.',
+                  });
+                }
+              } else {
+                setLastResponse({
+                  success: false,
+                  error: response.error || 'Failed to generate preview',
+                });
               }
             }
             break;
+          }
 
-          case 'deploy':
+          case 'deploy': {
             // Require preview first
             if (!hasPreviewed || whatIfChanges.length === 0) {
               setLastResponse({
@@ -125,8 +371,7 @@ function InfrastructurePanel() {
               setLoading(false);
               return;
             }
-            
-            // Get selected resources with their types
+
             const selectedResources = whatIfChanges
               .filter(c => c.selected !== false)
               .map(c => ({
@@ -134,7 +379,7 @@ function InfrastructurePanel() {
                 type: c.resourceType,
                 module: getModuleFromResourceType(c.resourceType),
               }));
-            
+
             if (selectedResources.length === 0) {
               setLastResponse({
                 success: false,
@@ -143,38 +388,37 @@ function InfrastructurePanel() {
               setLoading(false);
               return;
             }
-            
-            // Validate dependencies: App Service requires Cosmos and Storage
+
             const selectedModules = new Set(selectedResources.map(r => r.module).filter(Boolean));
             if (selectedModules.has('appservice')) {
               if (!selectedModules.has('cosmos') || !selectedModules.has('storage')) {
                 setLastResponse({
                   success: false,
-                  error: 'App Service requires Cosmos DB and Storage Account to be selected. Please select all dependencies.',
+                  error: 'App Service requires Cosmos DB and Storage Account to be selected.',
                 });
                 setLoading(false);
                 return;
               }
             }
-            
-            // Show confirmation dialog
+
             setShowDeployConfirm(true);
             setLoading(false);
             return;
+          }
 
-          case 'destroy':
+          case 'destroy': {
             // Destroy not implemented for direct Azure CLI yet
             response = {
               success: false,
-              error: 'Destroy action not available for direct Azure CLI deployment. Use GitHub Actions workflow instead.',
+              error: 'Destroy action not available for direct Azure CLI deployment.',
             };
             break;
+          }
 
           default:
             throw new Error(`Unknown action: ${action}`);
         }
       } else {
-        // Use GitHub Actions workflow
         switch (action) {
           case 'validate':
             response = await invoke('infrastructure_validate', {
@@ -188,7 +432,6 @@ function InfrastructurePanel() {
               workflowFile,
               repository,
             });
-            // Mock what-if changes for demonstration
             if (response.success) {
               setWhatIfChanges([
                 {
@@ -208,7 +451,7 @@ function InfrastructurePanel() {
 
           case 'deploy':
             const confirmDeploy = confirm(
-              'Are you sure you want to deploy infrastructure? This will create or update Azure resources.'
+              'Are you sure you want to deploy infrastructure?'
             );
             if (!confirmDeploy) {
               setLoading(false);
@@ -221,7 +464,6 @@ function InfrastructurePanel() {
             break;
 
           case 'destroy':
-            // This should not be reached directly - destroy should go through confirmation dialog
             response = await invoke('infrastructure_destroy', {
               workflowFile,
               repository,
@@ -234,47 +476,79 @@ function InfrastructurePanel() {
         }
       }
 
+      // Check if Azure CLI is missing and prompt for installation
+      if (!response.success && response.result && typeof response.result === 'object') {
+        const result = response.result as any;
+        if (result.azureCliMissing && result.wingetAvailable) {
+          const shouldInstall = confirm(
+            'Azure CLI is not installed. Would you like to install it now using winget?\n\n' +
+            'This will open a terminal window to install Azure CLI. After installation, please restart the application.'
+          );
+          
+          if (shouldInstall) {
+            try {
+              const installResponse = await invoke<CommandResponse>('install_azure_cli');
+              if (installResponse.success) {
+                const result = installResponse.result as any;
+                if (result?.requiresRestart) {
+                  alert('A terminal window has opened to install Azure CLI. After installation completes in that window, please RESTART the application for Azure CLI to be detected.\n\nNote: If Azure CLI was already installed, you may need to restart the app for it to be detected in the PATH.');
+                } else {
+                  alert('A terminal window has opened to install Azure CLI. Please wait for installation to complete in that window, then restart the application.');
+                }
+              } else {
+                alert(`Failed to install Azure CLI: ${installResponse.error || 'Unknown error'}\n\nPlease install manually from https://aka.ms/installazurecliwindows`);
+              }
+            } catch (error) {
+              alert(`Error installing Azure CLI: ${error}\n\nPlease install manually from https://aka.ms/installazurecliwindows`);
+            }
+          }
+        }
+      }
+
       setLastResponse(response);
 
-      // If successful, fetch the workflow status
       if (response.success) {
         setTimeout(() => fetchWorkflowStatus(), 2000);
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isCliNotFound = errorMessage.includes('program not found') || 
+                            errorMessage.includes('Could not find Mystira.DevHub.CLI') ||
+                            errorMessage.includes('Failed to spawn process');
+      
       setLastResponse({
         success: false,
-        error: String(error),
+        error: isCliNotFound
+          ? `❌ Program Not Found\n\n${errorMessage}\n\nPlease build the CLI executable first:\n1. Open a terminal\n2. Navigate to: tools/Mystira.DevHub.CLI\n3. Run: dotnet build`
+          : errorMessage,
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // Map Azure resource type to our module identifier (exact matching for reliability)
   const getModuleFromResourceType = (resourceType: string): 'storage' | 'cosmos' | 'appservice' | null => {
     const normalized = resourceType.toLowerCase().trim();
-    
-    // Exact type matching for reliability (Azure resource types are standardized)
+
     const storageTypes = [
       'microsoft.storage/storageaccounts',
       'microsoft.storage/storageaccounts/blobservices',
       'microsoft.storage/storageaccounts/blobservices/containers',
     ];
-    
+
     const cosmosTypes = [
       'microsoft.documentdb/databaseaccounts',
       'microsoft.documentdb/databaseaccounts/sqldatabases',
       'microsoft.documentdb/databaseaccounts/sqldatabases/containers',
       'microsoft.documentdb/databaseaccounts/sqlroleassignments',
     ];
-    
+
     const appServiceTypes = [
       'microsoft.web/sites',
       'microsoft.web/serverfarms',
       'microsoft.web/sites/config',
     ];
-    
-    // Check exact matches first
+
     if (storageTypes.some(type => normalized === type || normalized.startsWith(type + '/'))) {
       return 'storage';
     }
@@ -284,8 +558,7 @@ function InfrastructurePanel() {
     if (appServiceTypes.some(type => normalized === type || normalized.startsWith(type + '/'))) {
       return 'appservice';
     }
-    
-    // Fallback to substring matching for edge cases
+
     if (normalized.includes('storage') && normalized.includes('account')) {
       return 'storage';
     }
@@ -295,7 +568,7 @@ function InfrastructurePanel() {
     if (normalized.includes('web/sites') || normalized.includes('web/serverfarms')) {
       return 'appservice';
     }
-    
+
     return null;
   };
 
@@ -316,42 +589,169 @@ function InfrastructurePanel() {
 
   const handleDestroyConfirm = async () => {
     setShowDestroyConfirm(false);
-    await handleAction('destroy');
+    setShowDestroySelect(false);
+    setLoading(true);
+    
+    try {
+      // Get selected resources for destruction (only those with changeType 'delete' or selected)
+      const resourcesToDestroy = whatIfChanges
+        .filter(c => c.selected !== false && (c.changeType === 'delete' || c.selected === true))
+        .map(c => ({
+          resourceId: c.resourceId || '',
+          resourceName: c.resourceName,
+          resourceType: c.resourceType,
+        }));
+      
+      if (resourcesToDestroy.length === 0 && showDestroySelect) {
+        setLastResponse({
+          success: false,
+          error: 'Please select at least one resource to destroy.',
+        });
+        setLoading(false);
+        return;
+      }
+      
+      // If no preview or no selected resources, destroy all (fallback to old behavior)
+      if (!showDestroySelect || resourcesToDestroy.length === 0) {
+        await handleAction('destroy');
+        return;
+      }
+      
+      // Destroy selected resources individually
+      const destroyResults = [];
+      for (const resource of resourcesToDestroy) {
+        if (resource.resourceId) {
+          const result = await invoke<CommandResponse>('delete_azure_resource', {
+            resourceId: resource.resourceId,
+          });
+          destroyResults.push({ resource: resource.resourceName, success: result.success, error: result.error });
+        }
+      }
+      
+      const allSuccess = destroyResults.every(r => r.success);
+      const errors = destroyResults.filter(r => !r.success).map(r => `${r.resource}: ${r.error}`).join('\n');
+      
+      setLastResponse({
+        success: allSuccess,
+        result: { destroyed: destroyResults.length, results: destroyResults },
+        message: allSuccess ? `Successfully destroyed ${destroyResults.length} resource(s)` : undefined,
+        error: allSuccess ? undefined : `Some resources failed to destroy:\n${errors}`,
+      });
+      
+      if (allSuccess) {
+        // Refresh resources and reset preview
+        setTimeout(() => {
+          fetchWorkflowStatus();
+          setHasPreviewed(false);
+          setWhatIfChanges([]);
+        }, 2000);
+      }
+    } catch (error) {
+      setLastResponse({
+        success: false,
+        error: String(error),
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeployConfirm = async () => {
     setShowDeployConfirm(false);
     setLoading(true);
-    
+
     try {
-      // Get selected resources with module mapping
+      // Get selected resources with module mapping and resource groups
       const selectedResources = whatIfChanges
         .filter(c => c.selected !== false)
         .map(c => ({
           name: c.resourceName,
           type: c.resourceType,
           module: getModuleFromResourceType(c.resourceType),
+          resourceGroup: c.resourceGroup || 
+            resourceGroupConfig.resourceTypeMappings?.[c.resourceType] || 
+            resourceGroupConfig.defaultResourceGroup,
         }));
       
-      // Extract module flags
-      const selectedModules = new Set(selectedResources.map(r => r.module).filter(Boolean));
-      const deployStorage = selectedModules.has('storage');
-      const deployCosmos = selectedModules.has('cosmos');
-      const deployAppService = selectedModules.has('appservice');
+      // Group resources by resource group
+      const resourcesByGroup = selectedResources.reduce((acc, resource) => {
+        const rg = resource.resourceGroup || resourceGroupConfig.defaultResourceGroup;
+        if (!acc[rg]) {
+          acc[rg] = [];
+        }
+        acc[rg].push(resource);
+        return acc;
+      }, {} as Record<string, typeof selectedResources>);
       
-      const response = await invoke<CommandResponse>('azure_deploy_infrastructure', {
-        repoRoot,
-        environment,
-        deployStorage,
-        deployCosmos,
-        deployAppService,
-      });
+      // Deploy to each resource group separately
+      const resourceGroups = Object.keys(resourcesByGroup);
+      const deploymentResults = [];
+      
+      for (const resourceGroup of resourceGroups) {
+        const resourcesInGroup = resourcesByGroup[resourceGroup];
+        
+        // Extract module flags for resources in this group
+        const selectedModules = new Set(resourcesInGroup.map(r => r.module).filter(Boolean));
+        const deployStorage = selectedModules.has('storage');
+        const deployCosmos = selectedModules.has('cosmos');
+        const deployAppService = selectedModules.has('appservice');
+        
+        // Skip if no modules to deploy
+        if (!deployStorage && !deployCosmos && !deployAppService) {
+          continue;
+        }
+        
+        const response = await invoke<CommandResponse>('azure_deploy_infrastructure', {
+          repoRoot,
+          environment,
+          resourceGroup,
+          deployStorage,
+          deployCosmos,
+          deployAppService,
+        });
+        
+        deploymentResults.push({
+          resourceGroup,
+          success: response.success,
+          error: response.error,
+          message: response.message,
+        });
+      }
+      
+      // Combine results
+      const allSuccess = deploymentResults.every(r => r.success);
+      const errors = deploymentResults.filter(r => !r.success).map(r => `${r.resourceGroup}: ${r.error}`).join('\n');
+      
+      const response: CommandResponse = {
+        success: allSuccess,
+        result: { deployments: deploymentResults },
+        message: allSuccess ? `Successfully deployed to ${deploymentResults.length} resource group(s)` : undefined,
+        error: allSuccess ? undefined : `Some deployments failed:\n${errors}`,
+      };
       
       setLastResponse(response);
-      
+
       if (response.success) {
+        // Refresh infrastructure status after deployment
+        setTimeout(async () => {
+          try {
+            const resourceGroup = resourceGroupConfig.defaultResourceGroup || `dev-euw-rg-mystira-app`;
+            const statusResponse = await invoke<any>('check_infrastructure_status', {
+              environment,
+              resourceGroup,
+            });
+            if (statusResponse.success && statusResponse.result) {
+              const status = statusResponse.result as InfrastructureStatusType;
+              // Update deployment status based on infrastructure availability
+              setHasDeployedInfrastructure(status.available);
+              setHasDeployedInfrastructure(status.available);
+            }
+          } catch (error) {
+            console.error('Failed to refresh infrastructure status:', error);
+          }
+        }, 3000);
         setTimeout(() => fetchWorkflowStatus(), 2000);
-        setHasPreviewed(false); // Reset preview after successful deployment
+        setHasPreviewed(false);
         setWhatIfChanges([]);
       }
     } catch (error) {
@@ -364,19 +764,13 @@ function InfrastructurePanel() {
     }
   };
 
-  // Parse Azure what-if JSON output (handles multiple Azure output formats)
   const parseWhatIfOutput = (whatIfJson: string): WhatIfChange[] => {
     try {
       const parsed = typeof whatIfJson === 'string' ? JSON.parse(whatIfJson) : whatIfJson;
       const changes: WhatIfChange[] = [];
-      
-      // Azure what-if output can have different structures:
-      // Format 1: { status, changes: [...] }
-      // Format 2: { status, resourceChanges: [...] }
-      // Format 3: Direct array of changes
-      // Format 4: { properties: { changes: [...] } }
+
       let changesArray: any[] = [];
-      
+
       if (Array.isArray(parsed)) {
         changesArray = parsed;
       } else if (parsed.changes && Array.isArray(parsed.changes)) {
@@ -388,32 +782,29 @@ function InfrastructurePanel() {
       } else if (parsed.properties?.resourceChanges && Array.isArray(parsed.properties.resourceChanges)) {
         changesArray = parsed.properties.resourceChanges;
       }
-      
+
       if (changesArray.length > 0) {
         changesArray.forEach((change: any) => {
           if (!change.resourceId && !change.targetResource?.id) {
-            return; // Skip invalid entries
+            return;
           }
-          
+
           const resourceId = change.resourceId || change.targetResource?.id || '';
           const resourceIdParts = resourceId.split('/');
           const resourceName = resourceIdParts[resourceIdParts.length - 1] || resourceId;
-          
-          // Extract resource type from multiple possible locations
-          let resourceType = change.resourceType || 
+
+          let resourceType = change.resourceType ||
                             change.targetResource?.type ||
                             change.resource?.type ||
                             (resourceIdParts.length >= 8 ? `${resourceIdParts[6]}/${resourceIdParts[7]}` : 'Unknown');
-          
-          // Normalize resource type format
+
           if (resourceType && resourceType !== 'Unknown') {
             resourceType = resourceType.replace(/^microsoft\./i, 'Microsoft.');
           }
-          
-          // Map Azure change types to our types
+
           let changeType: 'create' | 'modify' | 'delete' | 'noChange' = 'noChange';
           const azChangeType = (change.changeType || change.action || '').toLowerCase().trim();
-          
+
           if (azChangeType === 'create' || azChangeType === 'deploy' || azChangeType === 'new') {
             changeType = 'create';
           } else if (azChangeType === 'modify' || azChangeType === 'update' || azChangeType === 'change') {
@@ -423,11 +814,10 @@ function InfrastructurePanel() {
           } else if (azChangeType === 'nochange' || azChangeType === 'ignore' || azChangeType === 'no-op') {
             changeType = 'noChange';
           }
-          
-          // Extract property changes from delta (handles multiple delta formats)
+
           const propertyChanges: string[] = [];
           const delta = change.delta || change.changes || change.properties;
-          
+
           if (delta) {
             if (Array.isArray(delta)) {
               delta.forEach((d: any) => {
@@ -447,65 +837,381 @@ function InfrastructurePanel() {
                     }
                   });
                 } else if (deltaValue && typeof deltaValue === 'object') {
-                  // Nested delta structure
                   propertyChanges.push(`${key}: ${JSON.stringify(deltaValue)}`);
                 }
               });
             }
           }
-          
+
           changes.push({
             resourceType: resourceType,
             resourceName: resourceName,
             changeType: changeType,
             changes: propertyChanges.length > 0 ? propertyChanges : undefined,
-            selected: changeType !== 'noChange', // Auto-select resources that will change
+            selected: changeType !== 'noChange',
             resourceId: resourceId,
           });
         });
       }
-      
+
       return changes;
     } catch (error) {
       console.error('Failed to parse what-if output:', error);
-      console.error('Raw output:', whatIfJson);
-      // Fallback: return empty array
       return [];
     }
   };
 
+  const actionButtons = [
+    {
+      id: 'validate',
+      icon: '🔍',
+      label: 'Validate',
+      description: 'Check Bicep',
+      onClick: () => handleAction('validate'),
+      disabled: loading,
+      loading: loading,
+      variant: 'primary' as const,
+    },
+    {
+      id: 'preview',
+      icon: '👁️',
+      label: 'Preview',
+      description: 'What-if',
+      onClick: () => handleAction('preview'),
+      disabled: loading,
+      loading: loading,
+      variant: 'warning' as const,
+    },
+    {
+      id: 'deploy',
+      icon: '🚀',
+      label: 'Deploy',
+      description: hasPreviewed ? `${whatIfChanges.filter(c => c.selected !== false).length} selected` : 'Preview first',
+      onClick: () => handleAction('deploy'),
+      disabled: loading || !hasPreviewed,
+      loading: loading,
+      variant: 'success' as const,
+    },
+    {
+      id: 'destroy',
+      icon: '🗑️',
+      label: 'Destroy',
+      description: 'Delete all',
+      onClick: () => setShowDestroyConfirm(true),
+      disabled: loading,
+      loading: loading,
+      variant: 'danger' as const,
+    },
+  ];
+
   return (
-    <div className="p-8">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
       <ConfirmDialog
-        isOpen={showDestroyConfirm}
-        title="⚠️ Destroy Infrastructure"
+        isOpen={showDestroyConfirm && !showDestroySelect}
+        title="⚠️ Destroy All Infrastructure"
         message="This will permanently delete ALL infrastructure resources. This action cannot be undone!"
         confirmText="Yes, Destroy Everything"
         cancelText="Cancel"
-        confirmButtonClass="bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+        confirmButtonClass="bg-red-600 hover:bg-red-700"
         requireTextMatch="DELETE"
         onConfirm={handleDestroyConfirm}
         onCancel={() => setShowDestroyConfirm(false)}
       />
       <ConfirmDialog
+        isOpen={showDestroySelect}
+        title="💥 Destroy Selected Resources"
+        message={`You are about to permanently delete ${whatIfChanges.filter(c => c.selected !== false && (c.changeType === 'delete' || c.selected === true)).length} selected resource(s). This action cannot be undone!`}
+        confirmText="Yes, Destroy Selected"
+        cancelText="Cancel"
+        confirmButtonClass="bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+        requireTextMatch="DELETE"
+        onConfirm={handleDestroyConfirm}
+        onCancel={() => setShowDestroySelect(false)}
+      />
+      <ConfirmDialog
+        isOpen={showProdConfirm}
+        title="⚠️ Production Environment Warning"
+        message="You are about to switch to the PRODUCTION environment. All operations (validate, preview, deploy, destroy) will affect production resources. This is a critical environment with real users and data. Are you absolutely sure you want to proceed?"
+        confirmText="Yes, Switch to Production"
+        cancelText="Cancel"
+        confirmButtonClass="bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+        requireTextMatch="PRODUCTION"
+        onConfirm={() => {
+          setEnvironment(pendingEnvironment);
+          setShowProdConfirm(false);
+          setHasValidated(false);
+          setHasPreviewed(false);
+          setWhatIfChanges([]);
+        }}
+        onCancel={() => {
+          setShowProdConfirm(false);
+          setPendingEnvironment(environment);
+        }}
+      />
+      <ConfirmDialog
+        isOpen={showDestroySelect}
+        title="💥 Destroy Selected Resources"
+        message={`You are about to permanently delete ${whatIfChanges.filter(c => c.selected !== false && (c.changeType === 'delete' || c.selected === true)).length} selected resource(s). This action cannot be undone!`}
+        confirmText="Yes, Destroy Selected"
+        cancelText="Cancel"
+        confirmButtonClass="bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+        requireTextMatch="DELETE"
+        onConfirm={handleDestroyConfirm}
+        onCancel={() => setShowDestroySelect(false)}
+      />
+      <ConfirmDialog
         isOpen={showDeployConfirm}
         title="🚀 Deploy Selected Resources"
-        message={`You are about to deploy ${whatIfChanges.filter(c => c.selected !== false).length} selected resource(s) to ${environment} environment. This will create or update Azure resources in resource group dev-euw-rg-mystira-app.`}
+        message={`You are about to deploy ${whatIfChanges.filter(c => c.selected !== false).length} selected resource(s) to ${environment} environment.`}
         confirmText="Deploy Selected Resources"
         cancelText="Cancel"
-        confirmButtonClass="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
+        confirmButtonClass="bg-green-600 hover:bg-green-700"
         onConfirm={handleDeployConfirm}
         onCancel={() => setShowDeployConfirm(false)}
       />
-      <div className="max-w-7xl mx-auto">
+      <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-7xl mx-auto flex-1 flex flex-col min-h-0">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Infrastructure Control Panel
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            Manage Bicep infrastructure deployments via GitHub Actions
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                Infrastructure Control Panel
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                Manage Bicep infrastructure deployments via GitHub Actions
+              </p>
+            </div>
+            {/* Last Build Time Indicators */}
+            <div className="flex flex-col items-end gap-2">
+              {workflowStatus?.updatedAt && (
+                <div className="flex flex-col items-end">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Last Workflow Build</div>
+                  <div className="px-3 py-1.5 rounded-lg bg-blue-900/20 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-mono font-semibold text-sm" 
+                       title={`Last workflow build: ${new Date(workflowStatus.updatedAt).toLocaleString()}`}>
+                    {formatTimeSince(new Date(workflowStatus.updatedAt).getTime()) || 'Unknown'}
+                  </div>
+                </div>
+              )}
+              {cliBuildTime ? (
+                <div className="flex flex-col items-end">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Last CLI Build</div>
+                  <div className="flex items-center gap-2">
+                    <div className="px-3 py-1.5 rounded-lg bg-green-900/20 dark:bg-green-900/30 text-green-600 dark:text-green-400 font-mono font-semibold text-sm" 
+                         title={`Last CLI build: ${new Date(cliBuildTime).toLocaleString()}`}>
+                      {formatTimeSince(cliBuildTime) || 'Unknown'}
+                    </div>
+                    <button
+                      onClick={async () => {
+                        setIsBuildingCli(true);
+                        setShowCliBuildLogs(true);
+                        setCliBuildLogs([]);
+                        try {
+                          const response = await invoke<CommandResponse>('build_cli');
+                          // Parse output from result
+                          if (response.result && typeof response.result === 'object' && 'output' in response.result) {
+                            const output = (response.result as any).output as string;
+                            const lines = output.split('\n').filter(line => line.trim().length > 0);
+                            setCliBuildLogs(lines);
+                          }
+                          if (response.success) {
+                            // Get build time from response if available
+                            if (response.result && typeof response.result === 'object' && 'buildTime' in response.result) {
+                              const buildTime = (response.result as any).buildTime as number | null;
+                              if (buildTime) {
+                                setCliBuildTime(buildTime);
+                              } else {
+                                // Build time not in response, fetch it with retries
+                                const fetchWithRetry = async (retries = 3) => {
+                                  for (let i = 0; i < retries; i++) {
+                                    await new Promise(resolve => setTimeout(resolve, 1000 + i * 500));
+                                    try {
+                                      const buildTime = await invoke<number | null>('get_cli_build_time');
+                                      if (buildTime) {
+                                        setCliBuildTime(buildTime);
+                                        return;
+                                      }
+                                    } catch (error) {
+                                      console.error(`Failed to get CLI build time (attempt ${i + 1}):`, error);
+                                    }
+                                  }
+                                };
+                                fetchWithRetry();
+                              }
+                            } else {
+                              // No buildTime in response, fetch it with retries
+                              const fetchWithRetry = async (retries = 3) => {
+                                for (let i = 0; i < retries; i++) {
+                                  await new Promise(resolve => setTimeout(resolve, 1000 + i * 500));
+                                  try {
+                                    const buildTime = await invoke<number | null>('get_cli_build_time');
+                                    if (buildTime) {
+                                      setCliBuildTime(buildTime);
+                                      return;
+                                    }
+                                  } catch (error) {
+                                    console.error(`Failed to get CLI build time (attempt ${i + 1}):`, error);
+                                  }
+                                }
+                              };
+                              fetchWithRetry();
+                            }
+                          } else {
+                            // Keep logs visible on failure
+                            console.error('Build failed:', response.error);
+                          }
+                        } catch (error) {
+                          setCliBuildLogs([`Error: ${error}`]);
+                          console.error('Failed to build CLI:', error);
+                        } finally {
+                          setIsBuildingCli(false);
+                        }
+                      }}
+                      disabled={isBuildingCli}
+                      className="px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-1.5"
+                      title="Rebuild the CLI executable"
+                    >
+                      {isBuildingCli ? (
+                        <>
+                          <span className="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-white"></span>
+                          Building...
+                        </>
+                      ) : (
+                        <>
+                          🔨 Rebuild
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-end">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">CLI Status</div>
+                  <div className="flex items-center gap-2">
+                    <div className="px-3 py-1.5 rounded-lg bg-red-900/20 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-mono font-semibold text-sm">
+                      Not Built
+                    </div>
+                    <button
+                      onClick={async () => {
+                        setIsBuildingCli(true);
+                        setShowCliBuildLogs(true);
+                        setCliBuildLogs([]);
+                        try {
+                          const response = await invoke<CommandResponse>('build_cli');
+                          // Parse output from result
+                          if (response.result && typeof response.result === 'object' && 'output' in response.result) {
+                            const output = (response.result as any).output as string;
+                            const lines = output.split('\n').filter(line => line.trim().length > 0);
+                            setCliBuildLogs(lines);
+                          }
+                          if (response.success) {
+                            // Get build time from response if available
+                            if (response.result && typeof response.result === 'object' && 'buildTime' in response.result) {
+                              const buildTime = (response.result as any).buildTime as number | null;
+                              if (buildTime) {
+                                setCliBuildTime(buildTime);
+                              } else {
+                                // Build time not in response, fetch it with retries
+                                const fetchWithRetry = async (retries = 3) => {
+                                  for (let i = 0; i < retries; i++) {
+                                    await new Promise(resolve => setTimeout(resolve, 1000 + i * 500));
+                                    try {
+                                      const buildTime = await invoke<number | null>('get_cli_build_time');
+                                      if (buildTime) {
+                                        setCliBuildTime(buildTime);
+                                        return;
+                                      }
+                                    } catch (error) {
+                                      console.error(`Failed to get CLI build time (attempt ${i + 1}):`, error);
+                                    }
+                                  }
+                                };
+                                fetchWithRetry();
+                              }
+                            } else {
+                              // No buildTime in response, fetch it with retries
+                              const fetchWithRetry = async (retries = 3) => {
+                                for (let i = 0; i < retries; i++) {
+                                  await new Promise(resolve => setTimeout(resolve, 1000 + i * 500));
+                                  try {
+                                    const buildTime = await invoke<number | null>('get_cli_build_time');
+                                    if (buildTime) {
+                                      setCliBuildTime(buildTime);
+                                      return;
+                                    }
+                                  } catch (error) {
+                                    console.error(`Failed to get CLI build time (attempt ${i + 1}):`, error);
+                                  }
+                                }
+                              };
+                              fetchWithRetry();
+                            }
+                          } else {
+                            // Keep logs visible on failure
+                            console.error('Build failed:', response.error);
+                          }
+                        } catch (error) {
+                          setCliBuildLogs([`Error: ${error}`]);
+                          console.error('Failed to build CLI:', error);
+                        } finally {
+                          setIsBuildingCli(false);
+                        }
+                      }}
+                      disabled={isBuildingCli}
+                      className="px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-1.5"
+                      title="Build the CLI executable"
+                    >
+                      {isBuildingCli ? (
+                        <>
+                          <span className="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-white"></span>
+                          Building...
+                        </>
+                      ) : (
+                        <>
+                          🔨 Build CLI
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
+
+        {/* CLI Build Logs Viewer */}
+        {(showCliBuildLogs && (isBuildingCli || cliBuildLogs.length > 0)) && (
+          <div className="mb-6 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <div className="bg-gray-50 dark:bg-gray-800 px-4 py-2 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-gray-900 dark:text-white">CLI Build Logs</h3>
+                {isBuildingCli && (
+                  <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></span>
+                )}
+              </div>
+              <button
+                onClick={() => setShowCliBuildLogs(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                title="Close logs"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="bg-gray-900 text-green-400 font-mono text-sm p-4 max-h-96 overflow-y-auto">
+              {cliBuildLogs.length === 0 ? (
+                <div className="text-gray-500">Waiting for build output...</div>
+              ) : (
+                <>
+                  {cliBuildLogs.map((line, index) => (
+                    <div key={index} className="whitespace-pre-wrap">
+                      {line}
+                    </div>
+                  ))}
+                  <div ref={cliLogsEndRef} />
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="mb-6">
@@ -521,14 +1227,14 @@ function InfrastructurePanel() {
               ⚡ Actions
             </button>
             <button
-              onClick={() => setActiveTab('bicep')}
+              onClick={() => setActiveTab('templates')}
               className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
-                activeTab === 'bicep'
+                activeTab === 'templates'
                   ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
                   : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
-              📄 Bicep Templates
+              📄 Templates & Resources
             </button>
             <button
               onClick={() => setActiveTab('resources')}
@@ -556,62 +1262,126 @@ function InfrastructurePanel() {
         {/* Tab Content: Actions */}
         {activeTab === 'actions' && (
           <div>
-            {/* Action Buttons */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <button
-                onClick={() => handleAction('validate')}
-                disabled={loading}
-                className="flex flex-col items-center p-6 bg-white dark:bg-gray-800 border-2 border-blue-200 dark:border-blue-800 rounded-lg hover:border-blue-400 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="text-4xl mb-2">🔍</div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">Validate</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
-                  Check Bicep templates
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleAction('preview')}
-                disabled={loading}
-                className="flex flex-col items-center p-6 bg-white dark:bg-gray-800 border-2 border-yellow-200 dark:border-yellow-800 rounded-lg hover:border-yellow-400 dark:hover:border-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="text-4xl mb-2">👁️</div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">Preview</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
-                  What-if analysis
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleAction('deploy')}
-                disabled={loading || !hasPreviewed}
-                className="flex flex-col items-center p-6 bg-white dark:bg-gray-800 border-2 border-green-200 dark:border-green-800 rounded-lg hover:border-green-400 dark:hover:border-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                title={!hasPreviewed ? "Please run Preview first" : ""}
-              >
-                <div className="text-4xl mb-2">🚀</div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">Deploy</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
-                  {hasPreviewed ? `Deploy selected (${whatIfChanges.filter(c => c.selected !== false).length})` : "Preview first"}
-                </div>
-              </button>
-
-              <DestroyButton
-                onClick={() => setShowDestroyConfirm(true)}
-                disabled={loading}
-                loading={loading}
+            {/* Infrastructure Status Dashboard */}
+            <div className="mb-6">
+              <InfrastructureStatus
+                environment={environment}
+                resourceGroup={resourceGroupConfig.defaultResourceGroup || `dev-euw-rg-mystira-app`}
+                onStatusChange={(status) => {
+                  // Update deployment status based on infrastructure availability
+              setHasDeployedInfrastructure(status.available);
+                  setHasDeployedInfrastructure(status.available);
+                }}
               />
             </div>
 
-            {/* Loading State */}
-            {loading && (
-              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-8">
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 dark:border-blue-400 mr-3"></div>
-                  <span className="text-blue-800 dark:text-blue-200">Executing command...</span>
+            {/* Project Deployment Planner - Step 1 */}
+            <ProjectDeploymentPlanner
+              environment={environment}
+              resourceGroupConfig={resourceGroupConfig}
+              templates={templates}
+              onTemplatesChange={setTemplates}
+              onEditTemplate={setEditingTemplate}
+              region={resourceGroupConfig.region || 'euw'}
+              projectName={resourceGroupConfig.projectName || 'mystira-app'}
+            />
+
+            {/* Action Buttons - Step 2 */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Infrastructure Actions</h3>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600 dark:text-gray-400">Environment:</label>
+                  <select
+                    value={environment}
+                    aria-label="Select environment"
+                    onChange={(e) => {
+                      const newEnv = e.target.value;
+                      if (newEnv === 'prod') {
+                        setPendingEnvironment(newEnv);
+                        setShowProdConfirm(true);
+                      } else {
+                        setEnvironment(newEnv);
+                        setHasValidated(false);
+                        setHasPreviewed(false);
+                        setWhatIfChanges([]);
+                      }
+                    }}
+                    className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="dev">dev</option>
+                    <option value="staging">staging</option>
+                    <option value="prod">prod</option>
+                  </select>
                 </div>
               </div>
-            )}
+              <button
+                onClick={() => setShowResourceGroupConfig(true)}
+                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium"
+                title="Configure resource group naming conventions"
+              >
+                ⚙️ Resource Groups
+              </button>
+            </div>
+            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Output</span>
+              <button
+                onClick={() => setShowOutputPanel(false)}
+                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-3 text-xs">
+              {loading && (
+                <div className="flex items-center gap-2 text-blue-600">
+                  <span className="animate-spin">⟳</span>
+                  <span>Executing...</span>
+                </div>
+              )}
+              {lastResponse && (
+                lastResponse.success ? (
+                  <SuccessDisplay message={lastResponse.message || 'Success'} details={lastResponse.result as Record<string, unknown> | null} />
+                ) : (
+                  <ErrorDisplay error={lastResponse.error || 'Error'} details={lastResponse.result as Record<string, unknown> | null} />
+                )
+              )}
+              {!loading && !lastResponse && (
+                <div className="text-gray-500">No output yet.</div>
+              )}
 
+              {/* Workflow Status */}
+              {workflowStatus && (
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                  <div className="text-[10px] font-semibold text-gray-500 uppercase mb-2">Workflow</div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <div className="text-gray-400">Status</div>
+                      <div className="font-medium text-gray-900 dark:text-white">{workflowStatus.status || 'Unknown'}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-400">Conclusion</div>
+                      <div className="font-medium text-gray-900 dark:text-white">{workflowStatus.conclusion || 'N/A'}</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    {workflowStatus.htmlUrl && (
+                      <a
+                        href={workflowStatus.htmlUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2 py-1 bg-blue-600 text-white rounded text-[10px] hover:bg-blue-700"
+                      >
+                        GitHub →
+                      </a>
+                    )}
+                    <button
+                      onClick={fetchWorkflowStatus}
+                      className="px-2 py-1 bg-gray-600 text-white rounded text-[10px] hover:bg-gray-700"
+                    >
+                      Refresh
+                    </button>
+=======
             {/* Response Display */}
             {lastResponse && (
               <div
@@ -640,9 +1410,31 @@ function InfrastructurePanel() {
                 )}
 
                 {lastResponse.error && (
-                  <pre className="bg-red-100 dark:bg-red-900/50 p-3 rounded text-sm text-red-900 dark:text-red-200 overflow-auto">
-                    {lastResponse.error}
-                  </pre>
+                  <div>
+                    <pre className="bg-red-100 dark:bg-red-900/50 p-3 rounded text-sm text-red-900 dark:text-red-200 overflow-auto mb-3">
+                      {lastResponse.error}
+                    </pre>
+                    {(lastResponse.error.includes('Azure CLI is not installed') ||
+                      lastResponse.error.includes('Azure CLI not found')) && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const response = await invoke<CommandResponse>('install_azure_cli');
+                            if (response.success) {
+                              alert('Azure CLI installation started. Please restart the application after installation completes.');
+                            } else {
+                              alert(`Failed to install Azure CLI: ${response.error || 'Unknown error'}`);
+                            }
+                          } catch (error) {
+                            alert(`Error installing Azure CLI: ${error}`);
+                          }
+                        }}
+                        className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors"
+                      >
+                        📦 Install Azure CLI
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {lastResponse.result !== undefined && lastResponse.result !== null && (
@@ -671,13 +1463,79 @@ function InfrastructurePanel() {
             {/* What-If Viewer */}
             {whatIfChanges.length > 0 && (
               <div className="mb-8">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Resource Changes Preview
+                  </h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        const updated = whatIfChanges.map(c => ({ ...c, selected: true }));
+                        setWhatIfChanges(updated);
+                      }}
+                      className="px-3 py-1.5 text-xs bg-blue-100 dark:bg-blue-900 hover:bg-blue-200 dark:hover:bg-blue-800 text-blue-700 dark:text-blue-300 rounded"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      onClick={() => {
+                        const updated = whatIfChanges.map(c => ({ ...c, selected: false }));
+                        setWhatIfChanges(updated);
+                      }}
+                      className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                </div>
                 <WhatIfViewer 
                   changes={whatIfChanges} 
                   loading={loading && activeTab === 'actions'}
                   showSelection={hasPreviewed && deploymentMethod === 'azure-cli'}
                   onSelectionChange={(updated) => setWhatIfChanges(updated)}
+                  defaultResourceGroup={resourceGroupConfig.defaultResourceGroup}
+                  resourceGroupMappings={resourceGroupConfig.resourceTypeMappings || {}}
                 />
               </div>
+            )}
+
+            {/* Resource Group Config Modal */}
+            {showResourceGroupConfig && (
+              <ResourceGroupConfig
+                environment={environment}
+                onSave={(config) => {
+                  setResourceGroupConfig(config);
+                  // Update existing whatIfChanges with new resource groups
+                  const updated = whatIfChanges.map(change => ({
+                    ...change,
+                    resourceGroup: change.resourceGroup || 
+                      config.resourceTypeMappings?.[change.resourceType] || 
+                      config.defaultResourceGroup,
+                  }));
+                  setWhatIfChanges(updated);
+                }}
+                onClose={() => setShowResourceGroupConfig(false)}
+              />
+            )}
+
+            {/* Template Editor Modal */}
+            {editingTemplate && (
+              <TemplateEditor
+                template={editingTemplate}
+                onSave={(template, saveAsNew) => {
+                  if (saveAsNew) {
+                    // Add as new template
+                    const newTemplate = { ...template, id: `${template.id}-${Date.now()}` };
+                    setTemplates([...templates, newTemplate]);
+                  } else {
+                    // Update existing template
+                    const updated = templates.map(t => t.id === template.id ? template : t);
+                    setTemplates(updated);
+                  }
+                  setEditingTemplate(null);
+                }}
+                onClose={() => setEditingTemplate(null)}
+              />
             )}
 
             {/* Workflow Status */}
@@ -715,44 +1573,15 @@ function InfrastructurePanel() {
                     </div>
                   </div>
                 </div>
-
-                {workflowStatus.htmlUrl && (
-                  <a
-                    href={workflowStatus.htmlUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    View in GitHub →
-                  </a>
-                )}
-
-                <button
-                  onClick={fetchWorkflowStatus}
-                  className="ml-3 inline-block px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                >
-                  Refresh Status
-                </button>
-              </div>
-            )}
-
-            {/* Info Box */}
-            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">ℹ️ Information</h4>
-              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
-                <li>Workflow: {workflowFile}</li>
-                <li>Repository: {repository}</li>
-                <li>All actions trigger GitHub Actions workflows</li>
-                <li>Requires GitHub CLI to be authenticated</li>
-              </ul>
+              )}
             </div>
           </div>
         )}
 
         {/* Tab Content: Bicep Viewer */}
-        {activeTab === 'bicep' && (
-          <div>
-            <BicepViewer />
+        {activeTab === 'templates' && (
+          <div className="h-full">
+            <TemplateInspector environment={environment} />
           </div>
         )}
 
@@ -769,18 +1598,140 @@ function InfrastructurePanel() {
             {resourcesError && (
               <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-4">
                 <h3 className="text-lg font-semibold text-red-900 dark:text-red-300 mb-2">❌ Failed to Load Resources</h3>
-                <p className="text-red-800 dark:text-red-200 mb-3">{resourcesError}</p>
-                <button
-                  onClick={() => fetchResources(true)}
-                  className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
-                >
-                  Retry
-                </button>
+                <p className="text-red-800 dark:text-red-200 mb-3 whitespace-pre-wrap">{resourcesError}</p>
+                <div className="flex gap-3 flex-wrap">
+                  <button
+                    onClick={() => fetchResources(true)}
+                    className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
+                  >
+                    Retry
+                  </button>
+                  {(resourcesError.includes('Azure CLI is not installed') ||
+                    resourcesError.includes('Azure CLI not found')) && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const response = await invoke<CommandResponse>('install_azure_cli');
+                          if (response.success) {
+                            alert('Azure CLI installation started. Please restart the application after installation completes.');
+                          } else {
+                            alert(`Failed to install Azure CLI: ${response.error || 'Unknown error'}`);
+                          }
+                        } catch (error) {
+                          alert(`Error installing Azure CLI: ${error}`);
+                        }
+                      }}
+                      className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors"
+                    >
+                      📦 Install Azure CLI
+                    </button>
+                  )}
+                  {(resourcesError.includes('Could not find Mystira.DevHub.CLI') ||
+                    resourcesError.includes('Program not found') ||
+                    resourcesError.includes('Failed to spawn process')) && (
+                    <button
+                      onClick={async () => {
+                        setIsBuildingCli(true);
+                        setShowCliBuildLogs(true);
+                        setCliBuildLogs([]);
+                        try {
+                          const response = await invoke<CommandResponse>('build_cli');
+                          // Parse output from result
+                          if (response.result && typeof response.result === 'object' && 'output' in response.result) {
+                            const output = (response.result as any).output as string;
+                            const lines = output.split('\n').filter(line => line.trim().length > 0);
+                            setCliBuildLogs(lines);
+                          }
+                          if (response.success) {
+                            // Get build time from response if available
+                            if (response.result && typeof response.result === 'object' && 'buildTime' in response.result) {
+                              const buildTime = (response.result as any).buildTime as number | null;
+                              if (buildTime) {
+                                setCliBuildTime(buildTime);
+                              } else {
+                                // Build time not in response, fetch it with retries
+                                const fetchWithRetry = async (retries = 3) => {
+                                  for (let i = 0; i < retries; i++) {
+                                    await new Promise(resolve => setTimeout(resolve, 1000 + i * 500));
+                                    try {
+                                      const buildTime = await invoke<number | null>('get_cli_build_time');
+                                      if (buildTime) {
+                                        setCliBuildTime(buildTime);
+                                        return;
+                                      }
+                                    } catch (error) {
+                                      console.error(`Failed to get CLI build time (attempt ${i + 1}):`, error);
+                                    }
+                                  }
+                                };
+                                fetchWithRetry();
+                              }
+                            } else {
+                              // No buildTime in response, fetch it with retries
+                              const fetchWithRetry = async (retries = 3) => {
+                                for (let i = 0; i < retries; i++) {
+                                  await new Promise(resolve => setTimeout(resolve, 1000 + i * 500));
+                                  try {
+                                    const buildTime = await invoke<number | null>('get_cli_build_time');
+                                    if (buildTime) {
+                                      setCliBuildTime(buildTime);
+                                      return;
+                                    }
+                                  } catch (error) {
+                                    console.error(`Failed to get CLI build time (attempt ${i + 1}):`, error);
+                                  }
+                                }
+                              };
+                              fetchWithRetry();
+                            }
+                            setTimeout(() => {
+                              fetchResources(true);
+                            }, 1000);
+                          }
+                        } catch (error) {
+                          setCliBuildLogs([`Error: ${error}`]);
+                          console.error('Failed to build CLI:', error);
+                        } finally {
+                          setIsBuildingCli(false);
+                        }
+                      }}
+                      disabled={isBuildingCli}
+                      className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isBuildingCli ? (
+                        <>
+                          <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                          Building...
+                        </>
+                      ) : (
+                        '🔨 Rebuild CLI'
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
             {!resourcesLoading && !resourcesError && (
-              <ResourceGrid resources={resources} onRefresh={() => fetchResources(true)} />
+              <ResourceGrid 
+                resources={resources} 
+                onRefresh={() => fetchResources(true)}
+                onDelete={async (resourceId: string) => {
+                  try {
+                    const response = await invoke<CommandResponse>('delete_azure_resource', {
+                      resourceId,
+                    });
+                    if (response.success) {
+                      // Refresh resources after successful deletion
+                      fetchResources(true);
+                    } else {
+                      throw new Error(response.error || 'Failed to delete resource');
+                    }
+                  } catch (error) {
+                    throw error;
+                  }
+                }}
+              />
             )}
           </div>
         )}
@@ -798,13 +1749,97 @@ function InfrastructurePanel() {
             {deploymentsError && (
               <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-4">
                 <h3 className="text-lg font-semibold text-red-900 dark:text-red-300 mb-2">❌ Failed to Load Deployments</h3>
-                <p className="text-red-800 dark:text-red-200 mb-3">{deploymentsError}</p>
-                <button
-                  onClick={() => fetchDeployments(true)}
-                  className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
-                >
-                  Retry
-                </button>
+                <p className="text-red-800 dark:text-red-200 mb-3 whitespace-pre-wrap">{deploymentsError}</p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => fetchDeployments(true)}
+                    className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
+                  >
+                    Retry
+                  </button>
+                  {(deploymentsError.includes('Could not find Mystira.DevHub.CLI') ||
+                    deploymentsError.includes('Program not found') ||
+                    deploymentsError.includes('Failed to spawn process')) && (
+                    <button
+                      onClick={async () => {
+                        setIsBuildingCli(true);
+                        setShowCliBuildLogs(true);
+                        setCliBuildLogs([]);
+                        try {
+                          const response = await invoke<CommandResponse>('build_cli');
+                          // Parse output from result
+                          if (response.result && typeof response.result === 'object' && 'output' in response.result) {
+                            const output = (response.result as any).output as string;
+                            const lines = output.split('\n').filter(line => line.trim().length > 0);
+                            setCliBuildLogs(lines);
+                          }
+                          if (response.success) {
+                            // Get build time from response if available
+                            if (response.result && typeof response.result === 'object' && 'buildTime' in response.result) {
+                              const buildTime = (response.result as any).buildTime as number | null;
+                              if (buildTime) {
+                                setCliBuildTime(buildTime);
+                              } else {
+                                // Build time not in response, fetch it with retries
+                                const fetchWithRetry = async (retries = 3) => {
+                                  for (let i = 0; i < retries; i++) {
+                                    await new Promise(resolve => setTimeout(resolve, 1000 + i * 500));
+                                    try {
+                                      const buildTime = await invoke<number | null>('get_cli_build_time');
+                                      if (buildTime) {
+                                        setCliBuildTime(buildTime);
+                                        return;
+                                      }
+                                    } catch (error) {
+                                      console.error(`Failed to get CLI build time (attempt ${i + 1}):`, error);
+                                    }
+                                  }
+                                };
+                                fetchWithRetry();
+                              }
+                            } else {
+                              // No buildTime in response, fetch it with retries
+                              const fetchWithRetry = async (retries = 3) => {
+                                for (let i = 0; i < retries; i++) {
+                                  await new Promise(resolve => setTimeout(resolve, 1000 + i * 500));
+                                  try {
+                                    const buildTime = await invoke<number | null>('get_cli_build_time');
+                                    if (buildTime) {
+                                      setCliBuildTime(buildTime);
+                                      return;
+                                    }
+                                  } catch (error) {
+                                    console.error(`Failed to get CLI build time (attempt ${i + 1}):`, error);
+                                  }
+                                }
+                              };
+                              fetchWithRetry();
+                            }
+                            setTimeout(() => {
+                              fetchDeployments(true);
+                            }, 1000);
+                          }
+                        } catch (error) {
+                          setCliBuildLogs([`Error: ${error}`]);
+                          console.error('Failed to build CLI:', error);
+                        } finally {
+                          setIsBuildingCli(false);
+                        }
+                      }}
+                      disabled={isBuildingCli}
+                      className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isBuildingCli ? (
+                        <>
+                          <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                          Building...
+                        </>
+                      ) : (
+                        '🔨 Rebuild CLI'
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -814,6 +1849,26 @@ function InfrastructurePanel() {
           </div>
         )}
       </div>
+
+      {/* Bottom bar with output toggle */}
+      {!showOutputPanel && lastResponse && (
+        <button
+          onClick={() => setShowOutputPanel(true)}
+          className={`px-4 py-2 text-xs border-t border-gray-200 dark:border-gray-700 flex items-center gap-2 ${
+            lastResponse.success
+              ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+              : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+          }`}
+        >
+          <span>{lastResponse.success ? '✓' : '✕'}</span>
+          <span>
+            {lastResponse.success
+              ? (lastResponse.message || 'Operation completed')
+              : (lastResponse.error || 'Operation failed')}
+          </span>
+          <span className="ml-auto text-gray-400">Click to expand</span>
+        </button>
+      )}
     </div>
   );
 }

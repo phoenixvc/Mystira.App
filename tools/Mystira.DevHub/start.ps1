@@ -36,6 +36,25 @@ try {
         Set-Location ".."
     }
 
+    # Build CLI first (required for Tauri commands)
+    Write-Host "Building DevHub CLI..." -ForegroundColor Yellow
+    $cliPath = Join-Path $scriptDir "..\Mystira.DevHub.CLI"
+    if (Test-Path $cliPath) {
+        Push-Location $cliPath
+        try {
+            dotnet build
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "CLI build failed! Exiting." -ForegroundColor Red
+                exit $LASTEXITCODE
+            }
+        }
+        finally {
+            Pop-Location
+        }
+    } else {
+        Write-Host "Warning: Mystira.DevHub.CLI not found at $cliPath" -ForegroundColor Yellow
+    }
+
     # Build TypeScript and frontend before running
     Write-Host "Building DevHub frontend..." -ForegroundColor Yellow
     npm run build

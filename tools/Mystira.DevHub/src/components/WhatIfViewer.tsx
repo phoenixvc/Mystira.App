@@ -1,32 +1,42 @@
-import { useState } from 'react';
-
-interface WhatIfChange {
-  resourceType: string;
-  resourceName: string;
-  changeType: 'create' | 'modify' | 'delete' | 'noChange';
-  changes?: string[];
-  selected?: boolean;
-  resourceId?: string;
-}
+import { useEffect, useState } from 'react';
+import type { WhatIfChange } from '../types';
 
 interface WhatIfViewerProps {
   changes?: WhatIfChange[];
   loading?: boolean;
   onSelectionChange?: (changes: WhatIfChange[]) => void;
   showSelection?: boolean;
+  compact?: boolean;
+  defaultResourceGroup?: string;
+  resourceGroupMappings?: Record<string, string>;
 }
 
-function WhatIfViewer({ changes, loading, onSelectionChange, showSelection = false }: WhatIfViewerProps) {
+function WhatIfViewer({ 
+  changes, 
+  loading, 
+  onSelectionChange, 
+  showSelection = false,
+  compact = false,
+  defaultResourceGroup = 'dev-euw-rg-mystira-app',
+  resourceGroupMappings = {}
+}: WhatIfViewerProps) {
   const [expandedResources, setExpandedResources] = useState<Set<string>>(new Set());
   const [localChanges, setLocalChanges] = useState<WhatIfChange[]>(changes || []);
+  const [editingResourceGroup, setEditingResourceGroup] = useState<string | null>(null);
+  const [tempResourceGroup, setTempResourceGroup] = useState<string>('');
   
-  // Sync local changes with props
-  useState(() => {
+  // Sync local changes with props and apply resource group mappings
+  useEffect(() => {
     if (changes) {
-      const withSelection = changes.map(c => ({ ...c, selected: c.selected !== false }));
+      const withSelection = changes.map(c => {
+        const resourceGroup = c.resourceGroup || 
+          resourceGroupMappings[c.resourceType] || 
+          defaultResourceGroup;
+        return { ...c, selected: c.selected !== false, resourceGroup };
+      });
       setLocalChanges(withSelection);
     }
-  });
+  }, [changes, defaultResourceGroup, resourceGroupMappings]);
   
   const toggleResourceSelection = (resourceName: string) => {
     const updated = localChanges.map(change => 
@@ -39,6 +49,20 @@ function WhatIfViewer({ changes, loading, onSelectionChange, showSelection = fal
       onSelectionChange(updated);
     }
   };
+
+  const updateResourceGroup = (resourceName: string, resourceGroup: string) => {
+    const updated = localChanges.map(change => 
+      change.resourceName === resourceName 
+        ? { ...change, resourceGroup }
+        : change
+    );
+    setLocalChanges(updated);
+    setEditingResourceGroup(null);
+    if (onSelectionChange) {
+      onSelectionChange(updated);
+    }
+  };
+
   
   const selectAll = () => {
     const updated = localChanges.map(change => ({ ...change, selected: true }));
@@ -117,10 +141,10 @@ function WhatIfViewer({ changes, loading, onSelectionChange, showSelection = fal
 
   if (loading) {
     return (
-      <div className="border border-gray-200 rounded-lg p-8">
+      <div className={`border border-gray-200 dark:border-gray-700 rounded-lg ${compact ? 'p-4' : 'p-8'}`}>
         <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mr-4"></div>
-          <div className="text-gray-700">Analyzing infrastructure changes...</div>
+          <div className={`animate-spin rounded-full ${compact ? 'h-6 w-6' : 'h-12 w-12'} border-b-2 border-blue-600 dark:border-blue-400 mr-3`}></div>
+          <div className={`text-gray-700 dark:text-gray-300 ${compact ? 'text-xs' : ''}`}>Analyzing infrastructure changes...</div>
         </div>
       </div>
     );
@@ -128,10 +152,10 @@ function WhatIfViewer({ changes, loading, onSelectionChange, showSelection = fal
 
   if (!changes || changes.length === 0) {
     return (
-      <div className="border border-gray-200 rounded-lg p-8 text-center">
-        <div className="text-4xl mb-3">🔍</div>
-        <div className="text-gray-700 font-medium mb-2">No Changes Preview Available</div>
-        <div className="text-gray-500 text-sm">
+      <div className={`border border-gray-200 dark:border-gray-700 rounded-lg ${compact ? 'p-4' : 'p-8'} text-center`}>
+        <div className={`${compact ? 'text-2xl mb-2' : 'text-4xl mb-3'}`}>🔍</div>
+        <div className={`text-gray-700 dark:text-gray-300 font-medium ${compact ? 'text-xs mb-1' : 'mb-2'}`}>No Changes Preview Available</div>
+        <div className={`text-gray-500 dark:text-gray-400 ${compact ? 'text-[10px]' : 'text-sm'}`}>
           Run "Preview Changes" to see what will be deployed
         </div>
       </div>
@@ -144,61 +168,63 @@ function WhatIfViewer({ changes, loading, onSelectionChange, showSelection = fal
   const noChangeCount = changes.filter((c) => c.changeType === 'noChange').length;
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
       {/* Summary Header */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-gray-900">Infrastructure Changes Preview</h3>
+      <div className={`bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border-b border-gray-200 dark:border-gray-700 ${compact ? 'p-2' : 'p-4'}`}>
+        <div className={`flex items-center justify-between ${compact ? 'mb-2' : 'mb-3'}`}>
+          <h3 className={`font-semibold text-gray-900 dark:text-white ${compact ? 'text-xs' : ''}`}>
+            {compact ? 'Changes' : 'Infrastructure Changes Preview'}
+          </h3>
           {showSelection && (
             <div className="flex items-center gap-2">
               <button
                 onClick={selectAll}
-                className="text-xs px-2 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50"
+                className={`${compact ? 'text-[10px] px-1.5 py-0.5' : 'text-xs px-2 py-1'} bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300`}
               >
-                Select All
+                All
               </button>
               <button
                 onClick={deselectAll}
-                className="text-xs px-2 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50"
+                className={`${compact ? 'text-[10px] px-1.5 py-0.5' : 'text-xs px-2 py-1'} bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300`}
               >
-                Deselect All
+                None
               </button>
-              <span className="text-xs text-gray-600">
-                {selectedCount} of {localChanges.length} selected
+              <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-gray-600 dark:text-gray-400`}>
+                {selectedCount}/{localChanges.length}
               </span>
             </div>
           )}
         </div>
-        <div className="grid grid-cols-4 gap-3">
+        <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-3'}`}>
           {createCount > 0 && (
-            <div className="bg-white border border-green-200 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-green-700">{createCount}</div>
-              <div className="text-xs text-green-600 font-medium mt-1">To Create</div>
+            <div className={`bg-white dark:bg-gray-800 border border-green-200 dark:border-green-800 rounded ${compact ? 'px-2 py-1' : 'p-3'} text-center flex items-center gap-1`}>
+              <span className={`${compact ? 'text-sm' : 'text-2xl'} font-bold text-green-700 dark:text-green-400`}>{createCount}</span>
+              <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-green-600 dark:text-green-500 font-medium`}>Create</span>
             </div>
           )}
           {modifyCount > 0 && (
-            <div className="bg-white border border-yellow-200 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-yellow-700">{modifyCount}</div>
-              <div className="text-xs text-yellow-600 font-medium mt-1">To Modify</div>
+            <div className={`bg-white dark:bg-gray-800 border border-yellow-200 dark:border-yellow-800 rounded ${compact ? 'px-2 py-1' : 'p-3'} text-center flex items-center gap-1`}>
+              <span className={`${compact ? 'text-sm' : 'text-2xl'} font-bold text-yellow-700 dark:text-yellow-400`}>{modifyCount}</span>
+              <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-yellow-600 dark:text-yellow-500 font-medium`}>Modify</span>
             </div>
           )}
           {deleteCount > 0 && (
-            <div className="bg-white border border-red-200 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-red-700">{deleteCount}</div>
-              <div className="text-xs text-red-600 font-medium mt-1">To Delete</div>
+            <div className={`bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800 rounded ${compact ? 'px-2 py-1' : 'p-3'} text-center flex items-center gap-1`}>
+              <span className={`${compact ? 'text-sm' : 'text-2xl'} font-bold text-red-700 dark:text-red-400`}>{deleteCount}</span>
+              <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-red-600 dark:text-red-500 font-medium`}>Delete</span>
             </div>
           )}
           {noChangeCount > 0 && (
-            <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-gray-700">{noChangeCount}</div>
-              <div className="text-xs text-gray-600 font-medium mt-1">No Change</div>
+            <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded ${compact ? 'px-2 py-1' : 'p-3'} text-center flex items-center gap-1`}>
+              <span className={`${compact ? 'text-sm' : 'text-2xl'} font-bold text-gray-700 dark:text-gray-400`}>{noChangeCount}</span>
+              <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-gray-600 dark:text-gray-500 font-medium`}>No Change</span>
             </div>
           )}
         </div>
       </div>
 
       {/* Changes List */}
-      <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+      <div className={`divide-y divide-gray-200 dark:divide-gray-700 ${compact ? 'max-h-48' : 'max-h-96'} overflow-y-auto`}>
         {localChanges.map((change, index) => {
           const isExpanded = expandedResources.has(change.resourceName);
           const hasDetails = change.changes && change.changes.length > 0;
@@ -211,36 +237,88 @@ function WhatIfViewer({ changes, loading, onSelectionChange, showSelection = fal
             >
               <div className="flex items-start">
                 {showSelection && (
-                  <div className="px-3 py-3 flex items-center">
+                  <div className={`${compact ? 'px-2 py-1.5' : 'px-3 py-3'} flex items-center`}>
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => toggleResourceSelection(change.resourceName)}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className={`${compact ? 'w-3 h-3' : 'w-4 h-4'} text-blue-600 border-gray-300 rounded focus:ring-blue-500`}
                       onClick={(e) => e.stopPropagation()}
+                      aria-label={`Select ${change.resourceName} for deployment`}
                     />
                   </div>
                 )}
                 <button
                   onClick={() => hasDetails && toggleResource(change.resourceName)}
-                  className="flex-1 px-4 py-3 text-left hover:bg-opacity-75 transition-colors"
+                  className={`flex-1 ${compact ? 'px-2 py-1.5' : 'px-4 py-3'} text-left hover:bg-opacity-75 transition-colors`}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <span className="font-mono text-lg font-bold">
+                    <div className="flex items-center space-x-2">
+                      <span className={`font-mono ${compact ? 'text-sm' : 'text-lg'} font-bold`}>
                         {getChangeTypeIcon(change.changeType)}
                       </span>
-                      <div>
-                        <div className="font-medium">{change.resourceName}</div>
-                        <div className="text-sm opacity-75">{change.resourceType}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className={`font-medium ${compact ? 'text-xs truncate' : ''}`} title={change.resourceName}>{change.resourceName}</div>
+                        <div className={`${compact ? 'text-[10px]' : 'text-sm'} opacity-75 truncate`} title={change.resourceType}>{change.resourceType}</div>
+                        {showSelection && !compact && (
+                          <div className="text-xs mt-1 flex items-center gap-2">
+                            <span className="text-gray-600 dark:text-gray-400">Resource Group:</span>
+                            {editingResourceGroup === change.resourceName ? (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="text"
+                                  value={tempResourceGroup}
+                                  onChange={(e) => setTempResourceGroup(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      updateResourceGroup(change.resourceName, tempResourceGroup);
+                                    }
+                                    if (e.key === 'Escape') {
+                                      setEditingResourceGroup(null);
+                                    }
+                                  }}
+                                  className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white font-mono"
+                                  aria-label={`Edit resource group for ${change.resourceName}`}
+                                  placeholder="Resource group name"
+                                />
+                                <button
+                                  onClick={() => updateResourceGroup(change.resourceName, tempResourceGroup)}
+                                  className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300"
+                                  title="Save resource group"
+                                >
+                                  ✓
+                                </button>
+                                <button
+                                  onClick={() => setEditingResourceGroup(null)}
+                                  className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                                  title="Cancel editing"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ) : (
+                              <span
+                                className="ml-2 font-mono cursor-pointer hover:underline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingResourceGroup(change.resourceName);
+                                  setTempResourceGroup(change.resourceGroup || '');
+                                }}
+                                title="Click to edit resource group"
+                              >
+                                {change.resourceGroup || 'Not set'}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs font-semibold px-2 py-1 rounded">
+                    <div className="flex items-center space-x-2 flex-shrink-0">
+                      <span className={`${compact ? 'text-[10px] px-1.5 py-0.5' : 'text-xs px-2 py-1'} font-semibold rounded`}>
                         {getChangeTypeLabel(change.changeType)}
                       </span>
                       {hasDetails && (
-                        <span className="text-sm">
+                        <span className={compact ? 'text-xs' : 'text-sm'}>
                           {isExpanded ? '▼' : '▶'}
                         </span>
                       )}
@@ -251,12 +329,12 @@ function WhatIfViewer({ changes, loading, onSelectionChange, showSelection = fal
 
               {/* Expanded Details */}
               {isExpanded && hasDetails && (
-                <div className="px-4 pb-3 pt-1">
-                  <div className="bg-white bg-opacity-50 rounded p-3 text-sm">
-                    <div className="font-medium mb-2">Property Changes:</div>
-                    <ul className="space-y-1">
+                <div className={compact ? 'px-2 pb-2 pt-1' : 'px-4 pb-3 pt-1'}>
+                  <div className={`bg-white dark:bg-gray-900 bg-opacity-50 rounded ${compact ? 'p-2 text-[10px]' : 'p-3 text-sm'}`}>
+                    <div className={`font-medium ${compact ? 'mb-1' : 'mb-2'}`}>Property Changes:</div>
+                    <ul className="space-y-0.5">
                       {change.changes!.map((changeDetail, idx) => (
-                        <li key={idx} className="font-mono text-xs pl-4">
+                        <li key={idx} className={`font-mono ${compact ? 'text-[10px] pl-2' : 'text-xs pl-4'} break-all`}>
                           • {changeDetail}
                         </li>
                       ))}
@@ -271,14 +349,13 @@ function WhatIfViewer({ changes, loading, onSelectionChange, showSelection = fal
 
       {/* Warning for destructive changes */}
       {deleteCount > 0 && (
-        <div className="bg-red-50 border-t border-red-200 p-4">
+        <div className={`bg-red-50 dark:bg-red-900/30 border-t border-red-200 dark:border-red-800 ${compact ? 'p-2' : 'p-4'}`}>
           <div className="flex items-start">
-            <span className="text-2xl mr-3">⚠️</span>
+            <span className={compact ? 'text-sm mr-2' : 'text-2xl mr-3'}>⚠️</span>
             <div>
-              <div className="font-semibold text-red-900 mb-1">Warning: Destructive Changes</div>
-              <div className="text-sm text-red-800">
+              <div className={`font-semibold text-red-900 dark:text-red-300 ${compact ? 'text-xs' : 'mb-1'}`}>Warning: Destructive Changes</div>
+              <div className={`${compact ? 'text-[10px]' : 'text-sm'} text-red-800 dark:text-red-400`}>
                 {deleteCount} resource{deleteCount > 1 ? 's' : ''} will be deleted. This action cannot be undone.
-                Please review carefully before deploying.
               </div>
             </div>
           </div>
@@ -299,26 +376,25 @@ function WhatIfViewer({ changes, loading, onSelectionChange, showSelection = fal
             })
             .filter(Boolean)
         );
-        
+
         const hasAppService = selectedModules.has('appservice');
         const hasCosmos = selectedModules.has('cosmos');
         const hasStorage = selectedModules.has('storage');
         const missingDeps: string[] = [];
-        
+
         if (hasAppService) {
           if (!hasCosmos) missingDeps.push('Cosmos DB');
           if (!hasStorage) missingDeps.push('Storage Account');
         }
-        
+
         return missingDeps.length > 0 ? (
-          <div className="bg-yellow-50 border-t border-yellow-200 p-4">
+          <div className={`bg-yellow-50 dark:bg-yellow-900/30 border-t border-yellow-200 dark:border-yellow-800 ${compact ? 'p-2' : 'p-4'}`}>
             <div className="flex items-start">
-              <span className="text-2xl mr-3">⚠️</span>
+              <span className={compact ? 'text-sm mr-2' : 'text-2xl mr-3'}>⚠️</span>
               <div>
-                <div className="font-semibold text-yellow-900 mb-1">Dependency Warning</div>
-                <div className="text-sm text-yellow-800">
-                  App Service is selected but {missingDeps.join(' and ')} {missingDeps.length === 1 ? 'is' : 'are'} not selected.
-                  App Service requires these dependencies to function. Please select {missingDeps.join(' and ')} before deploying.
+                <div className={`font-semibold text-yellow-900 dark:text-yellow-300 ${compact ? 'text-xs' : 'mb-1'}`}>Dependency Warning</div>
+                <div className={`${compact ? 'text-[10px]' : 'text-sm'} text-yellow-800 dark:text-yellow-400`}>
+                  App Service needs {missingDeps.join(' and ')} selected.
                 </div>
               </div>
             </div>

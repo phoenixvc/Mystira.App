@@ -47,9 +47,9 @@ public class ConnectionCommands
             return CommandResponse.Ok(new
             {
                 connected = true,
-                accountName = response.Resource.Id,
-                consistencyLevel = response.Resource.Consistency.DefaultConsistencyLevel.ToString(),
-                regions = response.Resource.ReadableRegions.Select(r => r.Name).ToList()
+                accountName = response.Id,
+                consistencyLevel = response.Consistency.DefaultConsistencyLevel.ToString(),
+                regions = response.ReadableRegions.Select(r => r.Name).ToList()
             }, "Cosmos DB connection successful");
         }
         catch (Exception ex)
@@ -74,7 +74,7 @@ public class ConnectionCommands
             {
                 connected = true,
                 accountName = serviceClient.AccountName,
-                sku = properties.Value.SkuName
+                // BlobServiceProperties doesn't expose SKU directly, but connection is successful
             }, "Storage connection successful");
         }
         catch (Exception ex)

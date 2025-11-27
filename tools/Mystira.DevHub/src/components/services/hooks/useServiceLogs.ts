@@ -9,6 +9,11 @@ export function useServiceLogs() {
     type: 'all' | 'stdout' | 'stderr';
     source?: 'all' | 'build' | 'run';
     severity?: 'all' | 'errors' | 'warnings' | 'info';
+    severityEnabled?: {
+      errors: boolean;
+      warnings: boolean;
+      info: boolean;
+    };
   }>>({});
   const [autoScroll, setAutoScroll] = useState<Record<string, boolean>>({});
   const [maxLogs, setMaxLogs] = useState<number>(() => {

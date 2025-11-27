@@ -8,7 +8,7 @@ param location string = resourceGroup().location
 param sku string = 'Standard_LRS'
 
 // Storage Account (Azure Cloud Storage)
-resource storageAccount 'Microsoft.Storage/storageAccounts@2024-01-01' = {
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: storageAccountName
   location: location
   sku: {
@@ -35,7 +35,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2024-01-01' = {
 }
 
 // Blob Service (Azure Cloud Storage)
-resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2024-01-01' = {
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
   parent: storageAccount
   name: 'default'
   properties: {
@@ -54,7 +54,7 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2024-01-01'
 }
 
 // Media Container (Azure Cloud Storage)
-resource mediaContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2024-01-01' = {
+resource mediaContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
   parent: blobService
   name: 'mystira-app-media'
   properties: {
@@ -62,7 +62,11 @@ resource mediaContainer 'Microsoft.Storage/storageAccounts/blobServices/containe
   }
 }
 
-// Output connection string
-output storageConnectionString string = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
+// Outputs
 output storageAccountName string = storageAccount.name
+output storageAccountId string = storageAccount.id
+output storageAccountResourceGroup string = resourceGroup().name
 output mediaContainerUrl string = '${storageAccount.properties.primaryEndpoints.blob}mystira-app-media/'
+output blobEndpoint string = storageAccount.properties.primaryEndpoints.blob
+#disable-next-line outputs-should-not-contain-secrets
+output storageConnectionString string = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
