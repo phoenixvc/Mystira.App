@@ -8,6 +8,7 @@ interface LogFilterBarProps {
   autoScrollToErrors: boolean;
   showLineNumbers: boolean;
   collapseSimilar: boolean;
+  wordWrap: boolean;
   timestampFormat: 'time' | 'full' | 'relative';
   maxLogs?: number;
   errorIndices: number[];
@@ -17,6 +18,7 @@ interface LogFilterBarProps {
   onAutoScrollToErrorsChange: (enabled: boolean) => void;
   onShowLineNumbersChange: (enabled: boolean) => void;
   onCollapseSimilarChange: (enabled: boolean) => void;
+  onWordWrapChange: (enabled: boolean) => void;
   onTimestampFormatChange: (format: 'time' | 'full' | 'relative') => void;
   onMaxLogsChange?: (limit: number) => void;
   onExport: () => void;
@@ -34,6 +36,7 @@ export function LogFilterBar({
   autoScrollToErrors,
   showLineNumbers,
   collapseSimilar,
+  wordWrap,
   timestampFormat,
   maxLogs,
   errorIndices,
@@ -43,6 +46,7 @@ export function LogFilterBar({
   onAutoScrollToErrorsChange,
   onShowLineNumbersChange,
   onCollapseSimilarChange,
+  onWordWrapChange,
   onTimestampFormatChange,
   onMaxLogsChange,
   onExport,
@@ -178,6 +182,15 @@ export function LogFilterBar({
             className="rounded border-gray-300 dark:border-gray-600 w-3 h-3"
           />
           <span>#</span>
+        </label>
+        <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300" title="Wrap long lines">
+          <input
+            type="checkbox"
+            checked={wordWrap}
+            onChange={(e) => onWordWrapChange(e.target.checked)}
+            className="rounded border-gray-300 dark:border-gray-600 w-3 h-3"
+          />
+          <span>Wrap</span>
         </label>
         <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300" title="Collapse similar consecutive logs">
           <input
