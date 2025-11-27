@@ -146,7 +146,7 @@ export function JsonViewer({
             {isCollapsed ? '▶' : '▼'}
           </button>
           <span className="text-xs text-gray-500 dark:text-gray-400">
-            {typeof data === 'object' && data !== null
+            {typeof data === 'object'
               ? Array.isArray(data)
                 ? `Array[${data.length}]`
                 : `Object{${Object.keys(data).length}}`
