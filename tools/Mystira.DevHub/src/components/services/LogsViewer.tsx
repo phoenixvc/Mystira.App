@@ -38,6 +38,7 @@ export function LogsViewer({
   const [autoScrollToErrors, setAutoScrollToErrors] = useState(false);
   const [showLineNumbers, setShowLineNumbers] = useState(true);
   const [collapseSimilar, setCollapseSimilar] = useState(false);
+  const [wordWrap, setWordWrap] = useState(true);
   const [timestampFormat, setTimestampFormat] = useState<'time' | 'full' | 'relative'>('time');
   const [currentErrorIndex, setCurrentErrorIndex] = useState<number>(-1);
 
@@ -213,6 +214,7 @@ export function LogsViewer({
             autoScrollToErrors={autoScrollToErrors}
             showLineNumbers={showLineNumbers}
             collapseSimilar={collapseSimilar}
+            wordWrap={wordWrap}
             timestampFormat={timestampFormat}
             maxLogs={maxLogs}
             errorIndices={errorIndices}
@@ -222,6 +224,7 @@ export function LogsViewer({
             onAutoScrollToErrorsChange={setAutoScrollToErrors}
             onShowLineNumbersChange={setShowLineNumbers}
             onCollapseSimilarChange={setCollapseSimilar}
+            onWordWrapChange={setWordWrap}
             onTimestampFormatChange={setTimestampFormat}
             onMaxLogsChange={onMaxLogsChange}
             onExport={handleExportLogs}
@@ -232,9 +235,10 @@ export function LogsViewer({
             onClearLogs={onClearLogs}
           />
       
-      <div 
+      <div
         ref={logContainerRef}
-        className={`bg-black text-green-400 font-mono text-xs p-4 overflow-y-auto flex-1 relative ${isMaximized ? 'h-full' : ''}`}
+        className={`bg-black text-green-400 font-mono text-xs p-4 overflow-y-auto flex-1 relative ${isMaximized ? 'h-full' : ''} ${wordWrap ? '' : 'overflow-x-auto'}`}
+        style={wordWrap ? {} : { whiteSpace: 'nowrap' }}
       >
         {/* Small scroll-to-bottom button - unobtrusive */}
         {filteredLogs.length > 0 && (
@@ -297,32 +301,32 @@ export function LogsViewer({
                         onClick={() => handleCopyLog(log)}
                         className={`${textColor} ${isBuildLog ? 'opacity-90' : ''} hover:bg-gray-900/50 px-1 py-0.5 rounded transition-colors cursor-pointer ${
                           actualIndex === errorIndices[currentErrorIndex] ? 'ring-2 ring-red-500' : ''
-                        }`}
+                        } ${wordWrap ? 'break-words whitespace-pre-wrap' : ''}`}
                         title={`Click to copy | Line ${actualIndex + 1} - ${isErrorMsg ? 'Error' : isWarning ? 'Warning' : 'Info'}`}
                       >
                         {showLineNumbers && (
-                          <span className="text-gray-600 dark:text-gray-500 mr-2 text-[10px]">
+                          <span className="text-gray-600 dark:text-gray-500 mr-2 text-[10px] flex-shrink-0">
                             {actualIndex + 1}
                           </span>
                         )}
-                        <span className="text-gray-500 text-[10px]">
+                        <span className="text-gray-500 text-[10px] flex-shrink-0">
                           [{formatTimestampHelper(log.timestamp)}]
                         </span>
                         {isBuildLog && (
-                          <span className="text-cyan-400 font-semibold ml-1 text-[10px]">
+                          <span className="text-cyan-400 font-semibold ml-1 text-[10px] flex-shrink-0">
                             [BUILD]
                           </span>
                         )}
-                        <span className="text-gray-500 ml-1 text-[10px]">
+                        <span className="text-gray-500 ml-1 text-[10px] flex-shrink-0">
                           [{log.service}]
                         </span>
                         {isErrorMsg && (
-                          <span className="text-red-500 ml-1 font-bold">⚠</span>
+                          <span className="text-red-500 ml-1 font-bold flex-shrink-0">⚠</span>
                         )}
                         {isWarning && !isErrorMsg && (
-                          <span className="text-yellow-500 ml-1">⚠</span>
+                          <span className="text-yellow-500 ml-1 flex-shrink-0">⚠</span>
                         )}
-                        <span className="ml-1">
+                        <span className={`ml-1 ${wordWrap ? 'break-words' : ''}`}>
                           {highlightSearch(log.message, filter.search)}
                         </span>
                       </div>

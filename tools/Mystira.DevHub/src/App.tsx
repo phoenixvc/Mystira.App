@@ -5,25 +5,36 @@ import Dashboard from './components/Dashboard';
 import InfrastructurePanel from './components/InfrastructurePanel';
 import MigrationManager from './components/MigrationManager';
 import ServiceManager from './components/ServiceManager';
-import { Sidebar, type View } from './components/Sidebar';
+import { VSCodeLayout, type BottomPanelTab } from './components/VSCodeLayout';
 import { getServiceConfigs } from './components/services';
-import { EnvironmentBanner } from './components/services/EnvironmentBanner';
 import { useEnvironmentManagement } from './components/services/hooks/useEnvironmentManagement';
 import { useDarkMode } from './hooks/useDarkMode';
 
+type View = 'services' | 'dashboard' | 'cosmos' | 'migration' | 'infrastructure';
+
+// Activity bar items for main navigation
+const ACTIVITY_BAR_ITEMS = [
+  { id: 'services', icon: '⚡', title: 'Services' },
+  { id: 'dashboard', icon: '📊', title: 'Dashboard' },
+  { id: 'cosmos', icon: '🔮', title: 'Cosmos Explorer' },
+  { id: 'migration', icon: '🔄', title: 'Migration Manager' },
+  { id: 'infrastructure', icon: '☁️', title: 'Infrastructure' },
+];
+
 function App() {
   const [currentView, setCurrentView] = useState<View>('services');
-  const [sidebarPosition, setSidebarPosition] = useState<'left' | 'right'>('left');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { isDark, toggleDarkMode } = useDarkMode();
-  
+
+  // Global logs state for bottom panel
+  const [globalLogs, setGlobalLogs] = useState<Array<{ timestamp: Date; message: string; type: 'info' | 'error' | 'warn' }>>([]);
+
   // Environment status for header (only when on services view)
   const [serviceEnvironments, setServiceEnvironments] = useState<Record<string, 'local' | 'dev' | 'prod'>>(() => {
     const saved = localStorage.getItem('serviceEnvironments');
     return saved ? JSON.parse(saved) : {};
   });
-  const { environmentStatus, getEnvironmentUrls } = useEnvironmentManagement();
-  
+  const { getEnvironmentUrls } = useEnvironmentManagement();
+
   // Listen for environment changes
   useEffect(() => {
     const handleStorageChange = () => {
@@ -50,91 +61,252 @@ function App() {
     const handleNavigateToInfrastructure = () => {
       setCurrentView('infrastructure');
     };
-    
+
     window.addEventListener('navigate-to-infrastructure', handleNavigateToInfrastructure);
     return () => {
       window.removeEventListener('navigate-to-infrastructure', handleNavigateToInfrastructure);
     };
   }, []);
-  
-  const serviceConfigs = currentView === 'services' ? getServiceConfigs({}, serviceEnvironments, getEnvironmentUrls) : [];
-  
-  const getEnvironmentInfo = (serviceName: string) => {
-    const env = serviceEnvironments[serviceName] || 'local';
-    const config = serviceConfigs.find((c) => c.name === serviceName);
-    return { 
-      environment: env, 
-      url: config?.url || '', 
+
+  // Listen for global log events
+  useEffect(() => {
+    const handleGlobalLog = (event: CustomEvent<{ message: string; type: 'info' | 'error' | 'warn' }>) => {
+      setGlobalLogs(prev => [...prev.slice(-500), { timestamp: new Date(), ...event.detail }]);
     };
+
+    window.addEventListener('global-log' as any, handleGlobalLog);
+    return () => {
+      window.removeEventListener('global-log' as any, handleGlobalLog);
+    };
+  }, []);
+
+  const serviceConfigs = getServiceConfigs({}, serviceEnvironments, getEnvironmentUrls);
+
+  // Calculate environment summary for status bar
+  const getEnvironmentSummary = () => {
+    const localCount = Object.values(serviceEnvironments).filter(e => e === 'local' || !e).length;
+    const devCount = Object.values(serviceEnvironments).filter(e => e === 'dev').length;
+    const prodCount = Object.values(serviceEnvironments).filter(e => e === 'prod').length;
+
+    const parts: string[] = [];
+    if (localCount > 0) parts.push(`${localCount} Local`);
+    if (devCount > 0) parts.push(`${devCount} Dev`);
+    if (prodCount > 0) parts.push(`${prodCount} Prod`);
+
+    return parts.length > 0 ? parts.join(' | ') : 'All Local';
   };
-  
-  const handleResetAll = () => {
-    if (window.confirm('Switch all services to Local environment?\n\nThis will disconnect from deployed environments.')) {
-      const updated: Record<string, 'local' | 'dev' | 'prod'> = { ...serviceEnvironments };
-      serviceConfigs.forEach((config) => {
-        if (serviceEnvironments[config.name] && serviceEnvironments[config.name] !== 'local') {
-          updated[config.name] = 'local';
-        }
-      });
-      setServiceEnvironments(updated);
-      localStorage.setItem('serviceEnvironments', JSON.stringify(updated));
+
+  // Render the main content based on current view
+  const renderContent = () => {
+    switch (currentView) {
+      case 'services':
+        return <ServiceManager />;
+      case 'dashboard':
+        return <Dashboard onNavigate={handleNavigate} />;
+      case 'cosmos':
+        return <CosmosExplorer />;
+      case 'migration':
+        return <MigrationManager />;
+      case 'infrastructure':
+        return <InfrastructurePanel />;
+      default:
+        return <ServiceManager />;
     }
   };
 
-  return (
-    <div className="h-screen bg-gray-50 dark:bg-gray-900 flex">
-      {/* Sidebar */}
-      <Sidebar
-        currentView={currentView}
-        onViewChange={setCurrentView}
-        onPositionChange={setSidebarPosition}
-        onCollapsedChange={setSidebarCollapsed}
-      />
-
-      {/* Main Content */}
-      <main
-        className={`flex-1 overflow-auto transition-all duration-300 ${
-          sidebarPosition === 'left' 
-            ? (sidebarCollapsed ? 'ml-12' : 'ml-56')
-            : (sidebarCollapsed ? 'mr-12' : 'mr-56')
-        }`}
-      >
-        {/* Top Bar */}
-        <div className="sticky top-0 z-30 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-600 px-4 py-2 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 flex-1 min-w-0">
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white font-mono">MYSTIRA DEVHUB</h1>
-            <span className="text-xs text-gray-500 dark:text-gray-400">Development Operations</span>
-            {currentView === 'services' && serviceConfigs.length > 0 && (
-              <div className="flex-1 flex items-center justify-center min-w-0">
-                <EnvironmentBanner
-                  serviceConfigs={serviceConfigs}
-                  serviceEnvironments={serviceEnvironments}
-                  environmentStatus={environmentStatus}
-                  getEnvironmentInfo={getEnvironmentInfo}
-                  onResetAll={handleResetAll}
-                />
+  // Build bottom panel tabs
+  const bottomPanelTabs: BottomPanelTab[] = [
+    {
+      id: 'output',
+      title: 'Output',
+      icon: '📋',
+      badge: globalLogs.length > 0 ? globalLogs.length : undefined,
+      content: (
+        <div className="h-full overflow-auto p-2 font-mono text-xs bg-gray-900 text-gray-300">
+          {globalLogs.length === 0 ? (
+            <div className="text-gray-500 italic">No output messages</div>
+          ) : (
+            globalLogs.map((log, i) => (
+              <div
+                key={i}
+                className={`py-0.5 ${
+                  log.type === 'error' ? 'text-red-400' :
+                  log.type === 'warn' ? 'text-yellow-400' :
+                  'text-gray-300'
+                }`}
+              >
+                <span className="text-gray-500">[{log.timestamp.toLocaleTimeString()}]</span>{' '}
+                {log.message}
               </div>
+            ))
+          )}
+        </div>
+      ),
+    },
+    {
+      id: 'problems',
+      title: 'Problems',
+      icon: '⚠️',
+      content: (
+        <div className="h-full overflow-auto p-2 text-xs bg-gray-900 text-gray-300">
+          <div className="text-gray-500 italic">No problems detected</div>
+        </div>
+      ),
+    },
+    {
+      id: 'terminal',
+      title: 'Terminal',
+      icon: '▸',
+      content: (
+        <div className="h-full overflow-auto p-2 font-mono text-xs bg-gray-900 text-gray-300">
+          <div className="text-gray-500 italic">Terminal not available in this context</div>
+        </div>
+      ),
+    },
+  ];
+
+  // Primary sidebar content - contextual based on view
+  const renderPrimarySidebar = () => {
+    return (
+      <div className="text-xs text-gray-300">
+        {/* View-specific sidebar content */}
+        <div className="p-3 border-b border-gray-700">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-lg">{ACTIVITY_BAR_ITEMS.find(a => a.id === currentView)?.icon}</span>
+            <span className="font-semibold text-white uppercase tracking-wide">
+              {ACTIVITY_BAR_ITEMS.find(a => a.id === currentView)?.title}
+            </span>
+          </div>
+          <p className="text-gray-400 text-[10px]">
+            {currentView === 'services' && 'Manage local and deployed services'}
+            {currentView === 'dashboard' && 'Overview and quick actions'}
+            {currentView === 'cosmos' && 'Explore Azure Cosmos DB'}
+            {currentView === 'migration' && 'Database migration tools'}
+            {currentView === 'infrastructure' && 'Deploy and manage Azure resources'}
+          </p>
+        </div>
+
+        {/* Quick actions */}
+        <div className="p-3">
+          <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Quick Actions</div>
+          <div className="space-y-1">
+            {currentView === 'services' && (
+              <>
+                <button className="w-full text-left px-2 py-1 rounded hover:bg-gray-700 text-gray-300 flex items-center gap-2">
+                  <span>▶</span> Start All Services
+                </button>
+                <button className="w-full text-left px-2 py-1 rounded hover:bg-gray-700 text-gray-300 flex items-center gap-2">
+                  <span>⏹</span> Stop All Services
+                </button>
+                <button className="w-full text-left px-2 py-1 rounded hover:bg-gray-700 text-gray-300 flex items-center gap-2">
+                  <span>🔄</span> Refresh Status
+                </button>
+              </>
+            )}
+            {currentView === 'infrastructure' && (
+              <>
+                <button className="w-full text-left px-2 py-1 rounded hover:bg-gray-700 text-gray-300 flex items-center gap-2">
+                  <span>☁️</span> Deploy to Azure
+                </button>
+                <button className="w-full text-left px-2 py-1 rounded hover:bg-gray-700 text-gray-300 flex items-center gap-2">
+                  <span>🔍</span> View Resources
+                </button>
+              </>
+            )}
+            {currentView === 'cosmos' && (
+              <>
+                <button className="w-full text-left px-2 py-1 rounded hover:bg-gray-700 text-gray-300 flex items-center gap-2">
+                  <span>🔌</span> Connect Database
+                </button>
+                <button className="w-full text-left px-2 py-1 rounded hover:bg-gray-700 text-gray-300 flex items-center gap-2">
+                  <span>📝</span> New Query
+                </button>
+              </>
+            )}
+            {currentView === 'migration' && (
+              <>
+                <button className="w-full text-left px-2 py-1 rounded hover:bg-gray-700 text-gray-300 flex items-center gap-2">
+                  <span>➕</span> New Migration
+                </button>
+                <button className="w-full text-left px-2 py-1 rounded hover:bg-gray-700 text-gray-300 flex items-center gap-2">
+                  <span>▶</span> Run Pending
+                </button>
+              </>
+            )}
+            {currentView === 'dashboard' && (
+              <>
+                <button className="w-full text-left px-2 py-1 rounded hover:bg-gray-700 text-gray-300 flex items-center gap-2">
+                  <span>🔄</span> Refresh Data
+                </button>
+              </>
             )}
           </div>
+        </div>
+
+        {/* Service list (only on services view) */}
+        {currentView === 'services' && serviceConfigs.length > 0 && (
+          <div className="p-3 border-t border-gray-700">
+            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Services</div>
+            <div className="space-y-0.5">
+              {serviceConfigs.map((config) => {
+                const env = serviceEnvironments[config.name] || 'local';
+                return (
+                  <div
+                    key={config.name}
+                    className="flex items-center justify-between px-2 py-1 rounded hover:bg-gray-700"
+                  >
+                    <span className="truncate">{config.displayName || config.name}</span>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded ${
+                      env === 'prod' ? 'bg-red-900/50 text-red-300' :
+                      env === 'dev' ? 'bg-blue-900/50 text-blue-300' :
+                      'bg-gray-700 text-gray-400'
+                    }`}>
+                      {env.toUpperCase()}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <VSCodeLayout
+      activityBarItems={ACTIVITY_BAR_ITEMS}
+      activeActivityId={currentView}
+      onActivityChange={(id) => setCurrentView(id as View)}
+      primarySidebar={renderPrimarySidebar()}
+      primarySidebarTitle={ACTIVITY_BAR_ITEMS.find(a => a.id === currentView)?.title}
+      bottomPanelTabs={bottomPanelTabs}
+      defaultBottomTab="output"
+      statusBarLeft={
+        <>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+            <span>MYSTIRA DEVHUB</span>
+          </span>
+          <span className="text-blue-200">{getEnvironmentSummary()}</span>
+        </>
+      }
+      statusBarRight={
+        <>
           <button
             onClick={toggleDarkMode}
-            className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300 flex-shrink-0"
+            className="hover:bg-blue-500 px-1 rounded transition-colors"
             title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {isDark ? '☀️' : '🌙'}
           </button>
-        </div>
-
-        {/* Content Area */}
-        <div className="p-4">
-          {currentView === 'services' && <ServiceManager />}
-          {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
-          {currentView === 'cosmos' && <CosmosExplorer />}
-          {currentView === 'migration' && <MigrationManager />}
-          {currentView === 'infrastructure' && <InfrastructurePanel />}
-        </div>
-      </main>
-    </div>
+          <span>v1.0.0</span>
+        </>
+      }
+      storageKey="devhubLayout"
+    >
+      {renderContent()}
+    </VSCodeLayout>
   );
 }
 

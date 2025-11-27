@@ -2,7 +2,6 @@ import { open } from '@tauri-apps/api/shell';
 import { invoke } from '@tauri-apps/api/tauri';
 import { useEffect, useState } from 'react';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcut';
-import { Toast, ToastContainer, useToast } from './Toast';
 import {
   EnvironmentPresetSelector,
   ServiceList,
@@ -18,6 +17,7 @@ import {
   type ServiceConfig,
   type ServiceStatus,
 } from './services';
+import { ToastContainer, useToast, type Toast } from './ui';
 
 function ServiceManager() {
   const [serviceEnvironments, setServiceEnvironments] = useState<Record<string, 'local' | 'dev' | 'prod'>>(() => {
@@ -25,7 +25,7 @@ function ServiceManager() {
     return saved ? JSON.parse(saved) : {};
   });
   const [services, setServices] = useState<ServiceStatus[]>([]);
-  const [toasts, setToasts] = useState<Toast[]>([]);
+  const { toasts, showToast, dismissToast } = useToast();
   const [infrastructureStatus, setInfrastructureStatus] = useState<{
     dev: { exists: boolean; checking: boolean };
     prod: { exists: boolean; checking: boolean };
@@ -33,11 +33,26 @@ function ServiceManager() {
     dev: { exists: false, checking: false },
     prod: { exists: false, checking: false },
   });
-  const { showToast } = useToast();
+
+  // Check infrastructure status for a given environment
+  const checkInfrastructureStatus = async (env: 'dev' | 'prod') => {
+    setInfrastructureStatus(prev => ({
+      ...prev,
+      [env]: { ...prev[env], checking: true },
+    }));
+
+    // TODO: Implement actual infrastructure status check via Tauri/Azure
+    // For now, just mark as not checking after a delay
+    setTimeout(() => {
+      setInfrastructureStatus(prev => ({
+        ...prev,
+        [env]: { exists: false, checking: false },
+      }));
+    }, 1000);
+  };
 
   const addToast = (message: string, type: Toast['type'] = 'info', duration: number = 5000) => {
-    const toast = showToast(message, type, duration);
-    setToasts((prev) => [...prev, toast]);
+    showToast(message, type, { duration });
   };
 
   const { repoRoot, currentBranch, useCurrentBranch, setRepoRoot, setUseCurrentBranch } = useRepositoryConfig();
@@ -56,9 +71,6 @@ function ServiceManager() {
     setShowLogs(prev => ({ ...prev, [serviceName]: show }));
   };
 
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
 
   const refreshServices = async () => {
     try {
@@ -500,7 +512,7 @@ function ServiceManager() {
 
   return (
     <div className="p-8">
-      <ToastContainer toasts={toasts} onClose={removeToast} />
+      <ToastContainer toasts={toasts} onClose={dismissToast} />
       
       {/* Combined Title and Repository Config */}
       <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">

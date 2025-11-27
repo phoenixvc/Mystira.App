@@ -2,20 +2,16 @@ import { invoke } from '@tauri-apps/api/tauri';
 import { useEffect, useRef, useState } from 'react';
 import { useDeploymentsStore } from '../stores/deploymentsStore';
 import { useResourcesStore } from '../stores/resourcesStore';
-import type { CommandResponse, ResourceGroupConvention, WhatIfChange, WorkflowStatus } from '../types';
+import type { CommandResponse, WhatIfChange, WorkflowStatus } from '../types';
 import { DEFAULT_PROJECTS, type ProjectInfo } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
-import DeploymentHistory from './DeploymentHistory';
 import InfrastructureStatus, { type InfrastructureStatus as InfrastructureStatusType } from './InfrastructureStatus';
-import ProjectDeployment from './ProjectDeployment';
 import ProjectDeploymentPlanner from './ProjectDeploymentPlanner';
-import ResourceGrid from './ResourceGrid';
 import ResourceGroupConfig from './ResourceGroupConfig';
 import TemplateEditor from './TemplateEditor';
-import TemplateInspector from './TemplateInspector';
-import { type TemplateConfig } from './TemplateSelector';
 import WhatIfViewer from './WhatIfViewer';
 import { formatTimeSince } from './services/utils/serviceUtils';
+import { ErrorDisplay, SuccessDisplay } from './ui';
 
 type Tab = 'actions' | 'templates' | 'resources' | 'history';
 
@@ -26,7 +22,7 @@ function InfrastructurePanel() {
   const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus | null>(null);
   const [whatIfChanges, setWhatIfChanges] = useState<WhatIfChange[]>([]);
   const [showDestroyConfirm, setShowDestroyConfirm] = useState(false);
-  const deploymentMethod: 'github' | 'azure-cli' = 'azure-cli'; // Always use Azure CLI for now
+  const deploymentMethod: 'github' | 'azure-cli' = 'azure-cli';
   const [repoRoot, setRepoRoot] = useState<string>('');
   const [environment, setEnvironment] = useState<string>('dev');
   const [showProdConfirm, setShowProdConfirm] = useState(false);
@@ -36,6 +32,7 @@ function InfrastructurePanel() {
   const [hasDeployedInfrastructure, setHasDeployedInfrastructure] = useState(false);
   const [projects] = useState<ProjectInfo[]>(DEFAULT_PROJECTS);
   const [showDeployConfirm, setShowDeployConfirm] = useState(false);
+  const [showOutputPanel, setShowOutputPanel] = useState(false);
   const [showDestroySelect, setShowDestroySelect] = useState(false);
   const [showResourceGroupConfig, setShowResourceGroupConfig] = useState(false);
   const [resourceGroupConfig, setResourceGroupConfig] = useState<ResourceGroupConvention>({
@@ -130,7 +127,7 @@ function InfrastructurePanel() {
     localStorage.setItem(`templates_${environment}`, JSON.stringify(templates));
   }, [templates, environment]);
 
-  // Use stores instead of local state
+  // Use stores
   const {
     resources,
     isLoading: resourcesLoading,
@@ -228,6 +225,7 @@ function InfrastructurePanel() {
 
     setLoading(true);
     setLastResponse(null);
+    setShowOutputPanel(true);
 
     try {
       let response: CommandResponse;
@@ -286,7 +284,6 @@ function InfrastructurePanel() {
               deployAppService,
             });
             if (response.success && response.result) {
-              // Parse what-if output
               const previewData = response.result as any;
               let parsedChanges: WhatIfChange[] = [];
               
@@ -296,13 +293,10 @@ function InfrastructurePanel() {
               }
               
               if (previewData.parsed && previewData.parsed.changes) {
-                // Use parsed JSON if available
                 parsedChanges = parseWhatIfOutput(JSON.stringify(previewData.parsed));
               } else if (previewData.preview) {
-                // Try to parse from preview text/JSON
                 parsedChanges = parseWhatIfOutput(previewData.preview);
               } else if (previewData.changes) {
-                // Already parsed
                 parsedChanges = previewData.changes;
               }
               
@@ -377,8 +371,7 @@ function InfrastructurePanel() {
               setLoading(false);
               return;
             }
-            
-            // Get selected resources with their types
+
             const selectedResources = whatIfChanges
               .filter(c => c.selected !== false)
               .map(c => ({
@@ -386,7 +379,7 @@ function InfrastructurePanel() {
                 type: c.resourceType,
                 module: getModuleFromResourceType(c.resourceType),
               }));
-            
+
             if (selectedResources.length === 0) {
               setLastResponse({
                 success: false,
@@ -395,21 +388,19 @@ function InfrastructurePanel() {
               setLoading(false);
               return;
             }
-            
-            // Validate dependencies: App Service requires Cosmos and Storage
+
             const selectedModules = new Set(selectedResources.map(r => r.module).filter(Boolean));
             if (selectedModules.has('appservice')) {
               if (!selectedModules.has('cosmos') || !selectedModules.has('storage')) {
                 setLastResponse({
                   success: false,
-                  error: 'App Service requires Cosmos DB and Storage Account to be selected. Please select all dependencies.',
+                  error: 'App Service requires Cosmos DB and Storage Account to be selected.',
                 });
                 setLoading(false);
                 return;
               }
             }
-            
-            // Show confirmation dialog
+
             setShowDeployConfirm(true);
             setLoading(false);
             return;
@@ -419,7 +410,7 @@ function InfrastructurePanel() {
             // Destroy not implemented for direct Azure CLI yet
             response = {
               success: false,
-              error: 'Destroy action not available for direct Azure CLI deployment. Use GitHub Actions workflow instead.',
+              error: 'Destroy action not available for direct Azure CLI deployment.',
             };
             break;
           }
@@ -428,7 +419,6 @@ function InfrastructurePanel() {
             throw new Error(`Unknown action: ${action}`);
         }
       } else {
-        // Use GitHub Actions workflow
         switch (action) {
           case 'validate':
             response = await invoke('infrastructure_validate', {
@@ -442,7 +432,6 @@ function InfrastructurePanel() {
               workflowFile,
               repository,
             });
-            // Mock what-if changes for demonstration
             if (response.success) {
               setWhatIfChanges([
                 {
@@ -462,7 +451,7 @@ function InfrastructurePanel() {
 
           case 'deploy':
             const confirmDeploy = confirm(
-              'Are you sure you want to deploy infrastructure? This will create or update Azure resources.'
+              'Are you sure you want to deploy infrastructure?'
             );
             if (!confirmDeploy) {
               setLoading(false);
@@ -475,7 +464,6 @@ function InfrastructurePanel() {
             break;
 
           case 'destroy':
-            // This should not be reached directly - destroy should go through confirmation dialog
             response = await invoke('infrastructure_destroy', {
               workflowFile,
               repository,
@@ -519,7 +507,6 @@ function InfrastructurePanel() {
 
       setLastResponse(response);
 
-      // If successful, fetch the workflow status
       if (response.success) {
         setTimeout(() => fetchWorkflowStatus(), 2000);
       }
@@ -540,31 +527,28 @@ function InfrastructurePanel() {
     }
   };
 
-  // Map Azure resource type to our module identifier (exact matching for reliability)
   const getModuleFromResourceType = (resourceType: string): 'storage' | 'cosmos' | 'appservice' | null => {
     const normalized = resourceType.toLowerCase().trim();
-    
-    // Exact type matching for reliability (Azure resource types are standardized)
+
     const storageTypes = [
       'microsoft.storage/storageaccounts',
       'microsoft.storage/storageaccounts/blobservices',
       'microsoft.storage/storageaccounts/blobservices/containers',
     ];
-    
+
     const cosmosTypes = [
       'microsoft.documentdb/databaseaccounts',
       'microsoft.documentdb/databaseaccounts/sqldatabases',
       'microsoft.documentdb/databaseaccounts/sqldatabases/containers',
       'microsoft.documentdb/databaseaccounts/sqlroleassignments',
     ];
-    
+
     const appServiceTypes = [
       'microsoft.web/sites',
       'microsoft.web/serverfarms',
       'microsoft.web/sites/config',
     ];
-    
-    // Check exact matches first
+
     if (storageTypes.some(type => normalized === type || normalized.startsWith(type + '/'))) {
       return 'storage';
     }
@@ -574,8 +558,7 @@ function InfrastructurePanel() {
     if (appServiceTypes.some(type => normalized === type || normalized.startsWith(type + '/'))) {
       return 'appservice';
     }
-    
-    // Fallback to substring matching for edge cases
+
     if (normalized.includes('storage') && normalized.includes('account')) {
       return 'storage';
     }
@@ -585,7 +568,7 @@ function InfrastructurePanel() {
     if (normalized.includes('web/sites') || normalized.includes('web/serverfarms')) {
       return 'appservice';
     }
-    
+
     return null;
   };
 
@@ -676,7 +659,7 @@ function InfrastructurePanel() {
   const handleDeployConfirm = async () => {
     setShowDeployConfirm(false);
     setLoading(true);
-    
+
     try {
       // Get selected resources with module mapping and resource groups
       const selectedResources = whatIfChanges
@@ -747,7 +730,7 @@ function InfrastructurePanel() {
       };
       
       setLastResponse(response);
-      
+
       if (response.success) {
         // Refresh infrastructure status after deployment
         setTimeout(async () => {
@@ -768,7 +751,7 @@ function InfrastructurePanel() {
           }
         }, 3000);
         setTimeout(() => fetchWorkflowStatus(), 2000);
-        setHasPreviewed(false); // Reset preview after successful deployment
+        setHasPreviewed(false);
         setWhatIfChanges([]);
       }
     } catch (error) {
@@ -781,19 +764,13 @@ function InfrastructurePanel() {
     }
   };
 
-  // Parse Azure what-if JSON output (handles multiple Azure output formats)
   const parseWhatIfOutput = (whatIfJson: string): WhatIfChange[] => {
     try {
       const parsed = typeof whatIfJson === 'string' ? JSON.parse(whatIfJson) : whatIfJson;
       const changes: WhatIfChange[] = [];
-      
-      // Azure what-if output can have different structures:
-      // Format 1: { status, changes: [...] }
-      // Format 2: { status, resourceChanges: [...] }
-      // Format 3: Direct array of changes
-      // Format 4: { properties: { changes: [...] } }
+
       let changesArray: any[] = [];
-      
+
       if (Array.isArray(parsed)) {
         changesArray = parsed;
       } else if (parsed.changes && Array.isArray(parsed.changes)) {
@@ -805,32 +782,29 @@ function InfrastructurePanel() {
       } else if (parsed.properties?.resourceChanges && Array.isArray(parsed.properties.resourceChanges)) {
         changesArray = parsed.properties.resourceChanges;
       }
-      
+
       if (changesArray.length > 0) {
         changesArray.forEach((change: any) => {
           if (!change.resourceId && !change.targetResource?.id) {
-            return; // Skip invalid entries
+            return;
           }
-          
+
           const resourceId = change.resourceId || change.targetResource?.id || '';
           const resourceIdParts = resourceId.split('/');
           const resourceName = resourceIdParts[resourceIdParts.length - 1] || resourceId;
-          
-          // Extract resource type from multiple possible locations
-          let resourceType = change.resourceType || 
+
+          let resourceType = change.resourceType ||
                             change.targetResource?.type ||
                             change.resource?.type ||
                             (resourceIdParts.length >= 8 ? `${resourceIdParts[6]}/${resourceIdParts[7]}` : 'Unknown');
-          
-          // Normalize resource type format
+
           if (resourceType && resourceType !== 'Unknown') {
             resourceType = resourceType.replace(/^microsoft\./i, 'Microsoft.');
           }
-          
-          // Map Azure change types to our types
+
           let changeType: 'create' | 'modify' | 'delete' | 'noChange' = 'noChange';
           const azChangeType = (change.changeType || change.action || '').toLowerCase().trim();
-          
+
           if (azChangeType === 'create' || azChangeType === 'deploy' || azChangeType === 'new') {
             changeType = 'create';
           } else if (azChangeType === 'modify' || azChangeType === 'update' || azChangeType === 'change') {
@@ -840,11 +814,10 @@ function InfrastructurePanel() {
           } else if (azChangeType === 'nochange' || azChangeType === 'ignore' || azChangeType === 'no-op') {
             changeType = 'noChange';
           }
-          
-          // Extract property changes from delta (handles multiple delta formats)
+
           const propertyChanges: string[] = [];
           const delta = change.delta || change.changes || change.properties;
-          
+
           if (delta) {
             if (Array.isArray(delta)) {
               delta.forEach((d: any) => {
@@ -864,42 +837,82 @@ function InfrastructurePanel() {
                     }
                   });
                 } else if (deltaValue && typeof deltaValue === 'object') {
-                  // Nested delta structure
                   propertyChanges.push(`${key}: ${JSON.stringify(deltaValue)}`);
                 }
               });
             }
           }
-          
+
           changes.push({
             resourceType: resourceType,
             resourceName: resourceName,
             changeType: changeType,
             changes: propertyChanges.length > 0 ? propertyChanges : undefined,
-            selected: changeType !== 'noChange', // Auto-select resources that will change
+            selected: changeType !== 'noChange',
             resourceId: resourceId,
           });
         });
       }
-      
+
       return changes;
     } catch (error) {
       console.error('Failed to parse what-if output:', error);
-      console.error('Raw output:', whatIfJson);
-      // Fallback: return empty array
       return [];
     }
   };
 
+  const actionButtons = [
+    {
+      id: 'validate',
+      icon: '🔍',
+      label: 'Validate',
+      description: 'Check Bicep',
+      onClick: () => handleAction('validate'),
+      disabled: loading,
+      loading: loading,
+      variant: 'primary' as const,
+    },
+    {
+      id: 'preview',
+      icon: '👁️',
+      label: 'Preview',
+      description: 'What-if',
+      onClick: () => handleAction('preview'),
+      disabled: loading,
+      loading: loading,
+      variant: 'warning' as const,
+    },
+    {
+      id: 'deploy',
+      icon: '🚀',
+      label: 'Deploy',
+      description: hasPreviewed ? `${whatIfChanges.filter(c => c.selected !== false).length} selected` : 'Preview first',
+      onClick: () => handleAction('deploy'),
+      disabled: loading || !hasPreviewed,
+      loading: loading,
+      variant: 'success' as const,
+    },
+    {
+      id: 'destroy',
+      icon: '🗑️',
+      label: 'Destroy',
+      description: 'Delete all',
+      onClick: () => setShowDestroyConfirm(true),
+      disabled: loading,
+      loading: loading,
+      variant: 'danger' as const,
+    },
+  ];
+
   return (
-    <div className="p-8">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
       <ConfirmDialog
         isOpen={showDestroyConfirm && !showDestroySelect}
         title="⚠️ Destroy All Infrastructure"
         message="This will permanently delete ALL infrastructure resources. This action cannot be undone!"
         confirmText="Yes, Destroy Everything"
         cancelText="Cancel"
-        confirmButtonClass="bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+        confirmButtonClass="bg-red-600 hover:bg-red-700"
         requireTextMatch="DELETE"
         onConfirm={handleDestroyConfirm}
         onCancel={() => setShowDestroyConfirm(false)}
@@ -949,14 +962,15 @@ function InfrastructurePanel() {
       <ConfirmDialog
         isOpen={showDeployConfirm}
         title="🚀 Deploy Selected Resources"
-        message={`You are about to deploy ${whatIfChanges.filter(c => c.selected !== false).length} selected resource(s) to ${environment} environment. This will create or update Azure resources in resource group dev-euw-rg-mystira-app.`}
+        message={`You are about to deploy ${whatIfChanges.filter(c => c.selected !== false).length} selected resource(s) to ${environment} environment.`}
         confirmText="Deploy Selected Resources"
         cancelText="Cancel"
-        confirmButtonClass="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600"
+        confirmButtonClass="bg-green-600 hover:bg-green-700"
         onConfirm={handleDeployConfirm}
         onCancel={() => setShowDeployConfirm(false)}
       />
-      <div className="max-w-7xl mx-auto">
+      <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-7xl mx-auto flex-1 flex flex-col min-h-0">
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <div>
@@ -1309,103 +1323,65 @@ function InfrastructurePanel() {
                 ⚙️ Resource Groups
               </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Output</span>
               <button
-                onClick={() => handleAction('validate')}
-                disabled={loading}
-                className="flex flex-col items-center p-6 bg-white dark:bg-gray-800 border-2 border-blue-200 dark:border-blue-800 rounded-lg hover:border-blue-400 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => setShowOutputPanel(false)}
+                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
               >
-                <div className="text-4xl mb-2">🔍</div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">Validate</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
-                  Check Bicep templates
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleAction('preview')}
-                disabled={loading || !hasValidated}
-                className="flex flex-col items-center p-6 bg-white dark:bg-gray-800 border-2 border-yellow-200 dark:border-yellow-800 rounded-lg hover:border-yellow-400 dark:hover:border-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                title={!hasValidated ? "Please run Validate first" : ""}
-              >
-                <div className="text-4xl mb-2">👁️</div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">Preview</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
-                  {hasValidated ? "What-if analysis" : "Validate first"}
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleAction('deploy')}
-                disabled={loading || !hasPreviewed}
-                className="deploy-button-animated flex flex-col items-center p-6 bg-white dark:bg-gray-800 border-2 border-green-500 dark:border-green-600 rounded-lg hover:border-green-600 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md relative overflow-hidden"
-                title={!hasPreviewed ? "Please run Preview first" : ""}
-              >
-                {/* Animated background gradient */}
-                {hasPreviewed && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-green-400/20 via-green-500/30 to-green-400/20 animate-gradient-x"></div>
-                )}
-                {/* Floating particles */}
-                {hasPreviewed && (
-                  <>
-                    <div className="absolute top-2 left-4 w-2 h-2 bg-green-400 rounded-full animate-float-1 opacity-60"></div>
-                    <div className="absolute top-6 right-6 w-1.5 h-1.5 bg-green-300 rounded-full animate-float-2 opacity-50"></div>
-                    <div className="absolute bottom-4 left-8 w-1 h-1 bg-green-500 rounded-full animate-float-3 opacity-70"></div>
-                    <div className="absolute bottom-6 right-4 w-2 h-2 bg-green-400 rounded-full animate-float-4 opacity-60"></div>
-                  </>
-                )}
-                <div className="relative z-10 text-4xl mb-2 transform transition-transform hover:scale-110">🚀</div>
-                <div className="relative z-10 text-lg font-semibold text-gray-900 dark:text-white">Deploy Infrastructure</div>
-                <div className="relative z-10 text-sm text-gray-500 dark:text-gray-400 text-center mt-1">
-                  {hasPreviewed ? `Deploy selected (${whatIfChanges.filter(c => c.selected !== false).length})` : "Preview first"}
-                </div>
+                ✕
               </button>
             </div>
-
-            {/* Project Deployment - Step 3 */}
-            <ProjectDeployment
-              environment={environment}
-              projects={projects}
-              hasDeployedInfrastructure={hasDeployedInfrastructure}
-            />
-            
-            {/* Destroy button - separate section */}
-            <div className="mb-8 p-4 bg-red-50 dark:bg-red-900/10 border-l-4 border-red-500 rounded-r-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-sm font-semibold text-red-900 dark:text-red-300 mb-1">⚠️ Destructive Actions</h4>
-                  <p className="text-xs text-red-700 dark:text-red-400">
-                    {hasPreviewed && whatIfChanges.length > 0 
-                      ? "Select resources in the preview above to delete specific resources"
-                      : "Delete infrastructure resources. Use Preview first to select specific resources."}
-                  </p>
+            <div className="flex-1 overflow-auto p-3 text-xs">
+              {loading && (
+                <div className="flex items-center gap-2 text-blue-600">
+                  <span className="animate-spin">⟳</span>
+                  <span>Executing...</span>
                 </div>
-                <button
-                  onClick={() => {
-                    if (hasPreviewed && whatIfChanges.length > 0) {
-                      setShowDestroySelect(true);
-                    } else {
-                      setShowDestroyConfirm(true);
-                    }
-                  }}
-                  disabled={loading}
-                  className="px-6 py-3 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  💥 Destroy Resources
-                </button>
-              </div>
-            </div>
+              )}
+              {lastResponse && (
+                lastResponse.success ? (
+                  <SuccessDisplay message={lastResponse.message || 'Success'} details={lastResponse.result as Record<string, unknown> | null} />
+                ) : (
+                  <ErrorDisplay error={lastResponse.error || 'Error'} details={lastResponse.result as Record<string, unknown> | null} />
+                )
+              )}
+              {!loading && !lastResponse && (
+                <div className="text-gray-500">No output yet.</div>
+              )}
 
-            {/* Loading State */}
-            {loading && (
-              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-8">
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 dark:border-blue-400 mr-3"></div>
-                  <span className="text-blue-800 dark:text-blue-200">Executing command...</span>
-                </div>
-              </div>
-            )}
-
+              {/* Workflow Status */}
+              {workflowStatus && (
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                  <div className="text-[10px] font-semibold text-gray-500 uppercase mb-2">Workflow</div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <div className="text-gray-400">Status</div>
+                      <div className="font-medium text-gray-900 dark:text-white">{workflowStatus.status || 'Unknown'}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-400">Conclusion</div>
+                      <div className="font-medium text-gray-900 dark:text-white">{workflowStatus.conclusion || 'N/A'}</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-2">
+                    {workflowStatus.htmlUrl && (
+                      <a
+                        href={workflowStatus.htmlUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2 py-1 bg-blue-600 text-white rounded text-[10px] hover:bg-blue-700"
+                      >
+                        GitHub →
+                      </a>
+                    )}
+                    <button
+                      onClick={fetchWorkflowStatus}
+                      className="px-2 py-1 bg-gray-600 text-white rounded text-[10px] hover:bg-gray-700"
+                    >
+                      Refresh
+                    </button>
+=======
             {/* Response Display */}
             {lastResponse && (
               <div
@@ -1597,36 +1573,7 @@ function InfrastructurePanel() {
                     </div>
                   </div>
                 </div>
-
-                {workflowStatus.htmlUrl && (
-                  <a
-                    href={workflowStatus.htmlUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    View in GitHub →
-                  </a>
-                )}
-
-                <button
-                  onClick={fetchWorkflowStatus}
-                  className="ml-3 inline-block px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                >
-                  Refresh Status
-                </button>
-              </div>
-            )}
-
-            {/* Info Box */}
-            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">ℹ️ Information</h4>
-              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
-                <li>Workflow: {workflowFile}</li>
-                <li>Repository: {repository}</li>
-                <li>All actions trigger GitHub Actions workflows</li>
-                <li>Requires GitHub CLI to be authenticated</li>
-              </ul>
+              )}
             </div>
           </div>
         )}
@@ -1902,6 +1849,26 @@ function InfrastructurePanel() {
           </div>
         )}
       </div>
+
+      {/* Bottom bar with output toggle */}
+      {!showOutputPanel && lastResponse && (
+        <button
+          onClick={() => setShowOutputPanel(true)}
+          className={`px-4 py-2 text-xs border-t border-gray-200 dark:border-gray-700 flex items-center gap-2 ${
+            lastResponse.success
+              ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+              : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+          }`}
+        >
+          <span>{lastResponse.success ? '✓' : '✕'}</span>
+          <span>
+            {lastResponse.success
+              ? (lastResponse.message || 'Operation completed')
+              : (lastResponse.error || 'Operation failed')}
+          </span>
+          <span className="ml-auto text-gray-400">Click to expand</span>
+        </button>
+      )}
     </div>
   );
 }

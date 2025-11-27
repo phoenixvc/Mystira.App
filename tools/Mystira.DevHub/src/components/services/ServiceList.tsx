@@ -118,7 +118,7 @@ export function ServiceList({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {orderedServices.map((config, index) => {
         const status = services.find(s => s.name === config.name);
         const isRunning = status?.running || false;
