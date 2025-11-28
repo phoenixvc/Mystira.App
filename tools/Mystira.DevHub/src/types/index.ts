@@ -211,6 +211,7 @@ export interface StorageAccountConflictWarning {
   message: string;
   details: string;
   storageAccountName: string;
+  currentResourceGroup?: string;  // The resource group where the account currently exists
   dismissed: boolean;
 }
 

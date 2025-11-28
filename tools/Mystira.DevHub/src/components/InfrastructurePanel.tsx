@@ -88,6 +88,8 @@ function InfrastructurePanel() {
   const [cosmosWarning, setCosmosWarning] = useState<CosmosWarning | null>(null);
   const [storageAccountConflict, setStorageAccountConflict] = useState<StorageAccountConflictWarning | null>(null);
   const [deletingStorageAccount, setDeletingStorageAccount] = useState(false);
+  const [showDeleteStorageConfirm, setShowDeleteStorageConfirm] = useState(false);
+  const [autoRetryAfterDelete, setAutoRetryAfterDelete] = useState(false);
 
   const workflowFile = '.start-infrastructure-deploy-dev.yml';
   const repository = 'phoenixvc/Mystira.App';
@@ -217,6 +219,99 @@ function InfrastructurePanel() {
     loadWorkflowStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Helper: Validate storage account name (Azure naming rules: 3-24 lowercase alphanumeric)
+  const isValidStorageAccountName = (name: string): boolean => {
+    return /^[a-z0-9]{3,24}$/.test(name);
+  };
+
+  // Helper: Extract storage account name from Azure error message with multiple patterns
+  const extractStorageAccountName = (errorStr: string): string | null => {
+    // Pattern 1: JSON format "target": "accountname"
+    const jsonMatch = errorStr.match(/"target"\s*:\s*"([a-z0-9]{3,24})"/i);
+    if (jsonMatch?.[1]) return jsonMatch[1].toLowerCase();
+
+    // Pattern 2: "account <name> is already in another resource group"
+    const proseMatch = errorStr.match(/account\s+([a-z0-9]{3,24})\s+is/i);
+    if (proseMatch?.[1]) return proseMatch[1].toLowerCase();
+
+    // Pattern 3: StorageAccountInAnotherResourceGroup with target
+    const targetMatch = errorStr.match(/target["\s:]+([a-z0-9]{3,24})/i);
+    if (targetMatch?.[1]) return targetMatch[1].toLowerCase();
+
+    return null;
+  };
+
+  // Helper: Query Azure for the storage account's current resource group
+  const fetchStorageAccountResourceGroup = async (accountName: string): Promise<string | null> => {
+    try {
+      const result = await invoke<CommandResponse>('execute_azure_cli', {
+        command: `storage account show --name ${accountName} --query resourceGroup --output tsv`,
+      });
+      if (result.success && result.result) {
+        return String(result.result).trim();
+      }
+    } catch (error) {
+      console.error('Failed to fetch storage account resource group:', error);
+    }
+    return null;
+  };
+
+  // Helper: Handle storage account deletion
+  const handleDeleteStorageAccount = async () => {
+    if (!storageAccountConflict) return;
+
+    const accountName = storageAccountConflict.storageAccountName;
+
+    // Validate account name before using in command
+    if (!isValidStorageAccountName(accountName)) {
+      setLastResponse({
+        success: false,
+        error: `Invalid storage account name format: "${accountName}". Expected 3-24 lowercase alphanumeric characters.`,
+      });
+      setShowDeleteStorageConfirm(false);
+      return;
+    }
+
+    setDeletingStorageAccount(true);
+    setShowDeleteStorageConfirm(false);
+
+    try {
+      const result = await invoke<CommandResponse>('execute_azure_cli', {
+        command: `storage account delete --name ${accountName} --yes`,
+      });
+
+      if (result.success) {
+        const deletedAccountName = accountName;
+        setStorageAccountConflict(null);
+        setLastResponse({
+          success: true,
+          message: `Storage account "${deletedAccountName}" deleted successfully.${autoRetryAfterDelete ? ' Retrying preview...' : ' You can now retry the preview.'}`,
+        });
+
+        // Auto-retry preview if enabled
+        if (autoRetryAfterDelete) {
+          setAutoRetryAfterDelete(false);
+          // Small delay to let user see the success message
+          setTimeout(() => {
+            handleAction('preview');
+          }, 1000);
+        }
+      } else {
+        setLastResponse({
+          success: false,
+          error: result.error || 'Failed to delete storage account',
+        });
+      }
+    } catch (error) {
+      setLastResponse({
+        success: false,
+        error: `Failed to delete storage account: ${error}`,
+      });
+    } finally {
+      setDeletingStorageAccount(false);
+    }
+  };
 
   const handleAction = async (action: 'validate' | 'preview' | 'deploy' | 'destroy') => {
     // Check if templates are selected (except for destroy)
@@ -443,23 +538,34 @@ function InfrastructurePanel() {
                   message: `Preview completed with warnings. ${affectedResources.length} Cosmos DB resources reported errors (this is expected for new deployments).`,
                 });
               } else if (errorStr.includes('StorageAccountInAnotherResourceGroup')) {
-                // Extract storage account name from error message
-                const storageAccountMatch = errorStr.match(/target\s*"([^"]+)"|account\s+(\w+)\s+is/i);
-                const storageAccountName = storageAccountMatch?.[1] || storageAccountMatch?.[2] || 'unknown';
+                // Extract storage account name using improved helper function
+                const storageAccountName = extractStorageAccountName(errorStr);
 
-                setStorageAccountConflict({
-                  type: 'storage-account-conflict',
-                  message: 'Storage account exists in another resource group',
-                  details: errorStr,
-                  storageAccountName,
-                  dismissed: false,
-                });
+                if (storageAccountName && isValidStorageAccountName(storageAccountName)) {
+                  // Fetch the current resource group asynchronously
+                  fetchStorageAccountResourceGroup(storageAccountName).then(currentResourceGroup => {
+                    setStorageAccountConflict({
+                      type: 'storage-account-conflict',
+                      message: 'Storage account exists in another resource group',
+                      details: errorStr,
+                      storageAccountName,
+                      currentResourceGroup: currentResourceGroup || undefined,
+                      dismissed: false,
+                    });
+                  });
 
-                setLastResponse({
-                  success: false,
-                  error: undefined,
-                  message: `Deployment blocked: Storage account "${storageAccountName}" already exists in a different resource group.`,
-                });
+                  setLastResponse({
+                    success: false,
+                    error: undefined,
+                    message: `Deployment blocked: Storage account "${storageAccountName}" already exists in a different resource group.`,
+                  });
+                } else {
+                  // Could not extract valid storage account name
+                  setLastResponse({
+                    success: false,
+                    error: `Storage account conflict detected but could not extract account name from error. Details: ${errorStr.substring(0, 200)}...`,
+                  });
+                }
               } else {
                 setLastResponse({
                   success: false,
@@ -1782,10 +1888,17 @@ function InfrastructurePanel() {
                       </h4>
                       <p className="text-xs text-red-700 dark:text-red-300 mb-2">
                         The storage account <strong>{storageAccountConflict.storageAccountName}</strong> already
-                        exists in a different resource group within this subscription. You can delete the existing
-                        storage account to proceed with deployment, or dismiss this warning if you want to use a
-                        different name.
+                        exists{storageAccountConflict.currentResourceGroup && (
+                          <> in resource group <strong>{storageAccountConflict.currentResourceGroup}</strong></>
+                        )}. You can delete the existing storage account to proceed with deployment, or dismiss
+                        this warning if you want to use a different name.
                       </p>
+                      {storageAccountConflict.currentResourceGroup && (
+                        <div className="text-xs text-red-600 dark:text-red-400 mb-2 flex items-center gap-1">
+                          <span>📍</span>
+                          <span>Current location: <code className="bg-red-100 dark:bg-red-900/50 px-1 rounded">{storageAccountConflict.currentResourceGroup}</code></span>
+                        </div>
+                      )}
                       <details className="text-xs">
                         <summary className="cursor-pointer text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200">
                           View full error details
@@ -1796,55 +1909,50 @@ function InfrastructurePanel() {
                       </details>
                     </div>
                   </div>
-                  <div className="flex gap-2 ml-4">
-                    <button
-                      onClick={async () => {
-                        if (!confirm(`Are you sure you want to delete the storage account "${storageAccountConflict.storageAccountName}"? This action cannot be undone and will delete all data in the account.`)) {
-                          return;
-                        }
-                        setDeletingStorageAccount(true);
-                        try {
-                          const result = await invoke<CommandResponse>('execute_azure_cli', {
-                            command: `storage account delete --name ${storageAccountConflict.storageAccountName} --yes`,
-                          });
-                          if (result.success) {
-                            setStorageAccountConflict(null);
-                            setLastResponse({
-                              success: true,
-                              message: `Storage account "${storageAccountConflict.storageAccountName}" deleted successfully. You can now retry the preview.`,
-                            });
-                          } else {
-                            setLastResponse({
-                              success: false,
-                              error: result.error || 'Failed to delete storage account',
-                            });
-                          }
-                        } catch (error) {
-                          setLastResponse({
-                            success: false,
-                            error: `Failed to delete storage account: ${error}`,
-                          });
-                        } finally {
-                          setDeletingStorageAccount(false);
-                        }
-                      }}
-                      disabled={deletingStorageAccount}
-                      className="px-3 py-1.5 text-xs font-medium bg-red-100 dark:bg-red-800 hover:bg-red-200 dark:hover:bg-red-700 text-red-700 dark:text-red-200 rounded-md transition-colors whitespace-nowrap disabled:opacity-50"
-                    >
-                      {deletingStorageAccount ? 'Deleting...' : '🗑️ Delete & Retry'}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setStorageAccountConflict({ ...storageAccountConflict, dismissed: true });
-                      }}
-                      className="px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md transition-colors whitespace-nowrap"
-                    >
-                      Dismiss
-                    </button>
+                  <div className="flex flex-col gap-2 ml-4">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setShowDeleteStorageConfirm(true)}
+                        disabled={deletingStorageAccount}
+                        className="px-3 py-1.5 text-xs font-medium bg-red-100 dark:bg-red-800 hover:bg-red-200 dark:hover:bg-red-700 text-red-700 dark:text-red-200 rounded-md transition-colors whitespace-nowrap disabled:opacity-50"
+                      >
+                        {deletingStorageAccount ? 'Deleting...' : '🗑️ Delete'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setStorageAccountConflict({ ...storageAccountConflict, dismissed: true });
+                        }}
+                        className="px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md transition-colors whitespace-nowrap"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                    <label className="flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={autoRetryAfterDelete}
+                        onChange={(e) => setAutoRetryAfterDelete(e.target.checked)}
+                        className="w-3 h-3 rounded border-red-300 dark:border-red-600 text-red-600 focus:ring-red-500"
+                      />
+                      <span>Auto-retry preview after delete</span>
+                    </label>
                   </div>
                 </div>
               </div>
             )}
+
+            {/* Storage Account Delete Confirmation Dialog */}
+            <ConfirmDialog
+              isOpen={showDeleteStorageConfirm}
+              title="Delete Storage Account"
+              message={`This will permanently delete the storage account "${storageAccountConflict?.storageAccountName || ''}"${storageAccountConflict?.currentResourceGroup ? ` from resource group "${storageAccountConflict.currentResourceGroup}"` : ''}. All data in the account will be lost. This action cannot be undone.`}
+              confirmText="Delete Storage Account"
+              cancelText="Cancel"
+              confirmButtonClass="bg-red-600 hover:bg-red-700"
+              requireTextMatch={storageAccountConflict?.storageAccountName}
+              onConfirm={handleDeleteStorageAccount}
+              onCancel={() => setShowDeleteStorageConfirm(false)}
+            />
 
             {/* What-If Viewer */}
             {whatIfChanges.length > 0 && (
