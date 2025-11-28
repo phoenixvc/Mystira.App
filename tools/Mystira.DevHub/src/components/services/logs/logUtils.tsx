@@ -39,18 +39,48 @@ export function highlightSearch(text: string, search: string): JSX.Element {
   );
 }
 
+export function isStackTraceLine(message: string): boolean {
+  const msg = message.trim();
+  // Stack trace patterns: "at Class.Method", "--->", "System.", file paths, etc.
+  return (
+    msg.startsWith('at ') ||
+    msg.startsWith('--->') ||
+    msg.startsWith('System.') ||
+    msg.startsWith('Microsoft.') ||
+    msg.includes(' at ') ||
+    (msg.includes('\\') && (msg.includes('.cs') || msg.includes('.dll'))) ||
+    msg.match(/^\s+at\s+/) !== null
+  );
+}
+
+export function isErrorMessage(message: string): boolean {
+  const msg = message.toLowerCase();
+  // Exclude messages that are about error counts themselves
+  if (msg.match(/^\d+\s+error\(s\)/i) || msg.match(/^\d+\s+warning\(s\)/i) || msg.match(/^\d+\s+errors/i) || msg.match(/^\d+\s+warnings/i)) {
+    return false;
+  }
+  return (
+    msg.includes('error') || 
+    msg.includes('failed') || 
+    msg.includes('exception') || 
+    msg.includes('fatal') ||
+    msg.includes('unhandled')
+  );
+}
+
 export function findErrorIndices(logs: ServiceLog[]): number[] {
-  return logs
-    .map((log, index) => {
-      const msg = log.message.toLowerCase();
-      const isError = log.type === 'stderr' || 
-        msg.includes('error') || 
-        msg.includes('failed') || 
-        msg.includes('exception') || 
-        msg.includes('fatal');
-      return isError ? index : -1;
-    })
-    .filter(index => index !== -1);
+  const errorIndices: number[] = [];
+  
+  logs.forEach((log, index) => {
+    // Check if it's an error message (not a count message)
+    const isError = log.type === 'stderr' || isErrorMessage(log.message);
+    
+    if (isError) {
+      errorIndices.push(index);
+    }
+  });
+  
+  return errorIndices;
 }
 
 export function formatLogsForCopy(

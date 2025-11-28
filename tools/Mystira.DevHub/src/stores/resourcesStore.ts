@@ -10,7 +10,7 @@ interface ResourcesState {
   cacheValidUntil: Date | null;
 
   // Actions
-  fetchResources: (forceRefresh?: boolean) => Promise<void>;
+  fetchResources: (forceRefresh?: boolean, environment?: string) => Promise<void>;
   clearCache: () => void;
   reset: () => void;
 }
@@ -24,7 +24,7 @@ export const useResourcesStore = create<ResourcesState>((set, get) => ({
   lastFetched: null,
   cacheValidUntil: null,
 
-  fetchResources: async (forceRefresh = false) => {
+  fetchResources: async (forceRefresh = false, environment?: string) => {
     const { cacheValidUntil, isLoading } = get();
 
     // Check if cache is still valid
@@ -44,6 +44,7 @@ export const useResourcesStore = create<ResourcesState>((set, get) => ({
     try {
       const response = await invoke<CommandResponse<AzureResource[]>>('get_azure_resources', {
         subscriptionId: null,
+        environment: environment || null,
       });
 
       if (response.success && response.result) {

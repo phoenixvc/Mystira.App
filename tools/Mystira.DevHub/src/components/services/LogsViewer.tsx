@@ -237,7 +237,7 @@ export function LogsViewer({
       
       <div
         ref={logContainerRef}
-        className={`bg-black text-green-400 font-mono text-xs p-4 overflow-y-auto flex-1 relative ${isMaximized ? 'h-full' : ''} ${wordWrap ? '' : 'overflow-x-auto'}`}
+        className={`bg-black text-green-400 font-mono text-xs overflow-y-auto flex-1 relative ${isMaximized ? 'h-full' : ''} ${wordWrap ? '' : 'overflow-x-auto'}`}
         style={wordWrap ? {} : { whiteSpace: 'nowrap' }}
       >
         {/* Small scroll-to-bottom button - unobtrusive */}
