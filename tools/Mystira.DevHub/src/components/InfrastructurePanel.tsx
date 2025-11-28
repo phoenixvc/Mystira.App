@@ -48,6 +48,11 @@ function InfrastructurePanel() {
   const [infrastructureLoading, setInfrastructureLoading] = useState(true);
   const [cosmosWarning, setCosmosWarning] = useState<CosmosWarning | null>(null);
   const [fetchingResourceGroup, setFetchingResourceGroup] = useState(false);
+  const [storageAccountConflict] = useState<StorageAccountConflictWarning | null>(null);
+  const [deletingStorageAccount, setDeletingStorageAccount] = useState(false);
+  const [showDeleteStorageConfirm, setShowDeleteStorageConfirm] = useState(false);
+  const [autoRetryAfterDelete, setAutoRetryAfterDelete] = useState(false);
+  const [fetchingResourceGroup] = useState(false);
 
   const workflowFile = '.start-infrastructure-deploy-dev.yml';
   const repository = 'phoenixvc/Mystira.App';
