@@ -39,9 +39,6 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
 resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-05-15' = {
   parent: cosmosDbAccount
   name: databaseName
-  dependsOn: [
-    cosmosDbAccount
-  ]
   properties: {
     resource: {
       id: databaseName
@@ -53,9 +50,6 @@ resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024
 resource userProfilesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'UserProfiles'
-  dependsOn: [
-    cosmosDatabase
-  ]
   properties: {
     resource: {
       id: 'UserProfiles'
@@ -79,9 +73,6 @@ resource userProfilesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabas
 resource scenariosContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'Scenarios'
-  dependsOn: [
-    cosmosDatabase
-  ]
   properties: {
     resource: {
       id: 'Scenarios'
@@ -105,9 +96,6 @@ resource scenariosContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/
 resource gameSessionsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'GameSessions'
-  dependsOn: [
-    cosmosDatabase
-  ]
   properties: {
     resource: {
       id: 'GameSessions'
@@ -131,9 +119,6 @@ resource gameSessionsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabas
 resource compassTrackingsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'CompassTrackings'
-  dependsOn: [
-    cosmosDatabase
-  ]
   properties: {
     resource: {
       id: 'CompassTrackings'
