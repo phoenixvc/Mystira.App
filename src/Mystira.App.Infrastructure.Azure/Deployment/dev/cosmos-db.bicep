@@ -8,7 +8,8 @@ param location string = resourceGroup().location
 param databaseName string = 'MystiraAppDb'
 
 // Cosmos DB Account (Azure Cloud Database)
-resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2022-08-15' = {
+// Using 2024-05-15 API version to improve what-if deployment preview compatibility
+resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   name: cosmosDbAccountName
   location: location
   kind: 'GlobalDocumentDB'
@@ -35,9 +36,12 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2022-08-15' = {
 }
 
 // Cosmos DB Database (Azure Cloud Database)
-resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2022-08-15' = {
+resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-05-15' = {
   parent: cosmosDbAccount
   name: databaseName
+  dependsOn: [
+    cosmosDbAccount
+  ]
   properties: {
     resource: {
       id: databaseName
@@ -46,9 +50,12 @@ resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2022
 }
 
 // User Profiles Container (Azure Cloud Database)
-resource userProfilesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-08-15' = {
+resource userProfilesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'UserProfiles'
+  dependsOn: [
+    cosmosDatabase
+  ]
   properties: {
     resource: {
       id: 'UserProfiles'
@@ -69,9 +76,12 @@ resource userProfilesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabas
 }
 
 // Scenarios Container (Azure Cloud Database)
-resource scenariosContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-08-15' = {
+resource scenariosContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'Scenarios'
+  dependsOn: [
+    cosmosDatabase
+  ]
   properties: {
     resource: {
       id: 'Scenarios'
@@ -92,9 +102,12 @@ resource scenariosContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/
 }
 
 // Game Sessions Container (Azure Cloud Database)
-resource gameSessionsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-08-15' = {
+resource gameSessionsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'GameSessions'
+  dependsOn: [
+    cosmosDatabase
+  ]
   properties: {
     resource: {
       id: 'GameSessions'
@@ -115,9 +128,12 @@ resource gameSessionsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabas
 }
 
 // Compass Trackings Container (Azure Cloud Database)
-resource compassTrackingsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2022-08-15' = {
+resource compassTrackingsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'CompassTrackings'
+  dependsOn: [
+    cosmosDatabase
+  ]
   properties: {
     resource: {
       id: 'CompassTrackings'
