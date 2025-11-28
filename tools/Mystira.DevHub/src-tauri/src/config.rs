@@ -270,11 +270,13 @@ impl AppConfig {
     }
     
     /// Get an environment variable with a default value
+    #[allow(dead_code)]
     pub fn env_var_or(key: &str, default: &str) -> String {
         env::var(key).unwrap_or_else(|_| default.to_string())
     }
     
     /// Get an optional environment variable
+    #[allow(dead_code)]
     pub fn env_var_opt(key: &str) -> Option<String> {
         env::var(key).ok()
     }

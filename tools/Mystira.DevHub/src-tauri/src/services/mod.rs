@@ -11,8 +11,6 @@ pub mod status;
 pub mod ports;
 pub mod helpers;
 
-// Re-export all public functions
-pub use lifecycle::{prebuild_service, start_service, stop_service};
-pub use status::{get_service_status, check_service_health};
-pub use ports::{check_port_available, get_service_port, update_service_port, find_available_port};
+// Note: Functions are imported directly from sub-modules in main.rs
+// Re-exports are not needed since main.rs imports from specific paths
 

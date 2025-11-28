@@ -26,14 +26,20 @@ interface InfrastructureStatusProps {
   environment: string;
   resourceGroup: string;
   onStatusChange?: (status: InfrastructureStatus) => void;
+  onLoadingChange?: (loading: boolean) => void;
   refreshInterval?: number; // Configurable refresh interval in milliseconds (default: 30000)
 }
 
-function InfrastructureStatus({ environment, resourceGroup, onStatusChange, refreshInterval = 30000 }: InfrastructureStatusProps) {
+function InfrastructureStatus({ environment, resourceGroup, onStatusChange, onLoadingChange, refreshInterval = 30000 }: InfrastructureStatusProps) {
   const [status, setStatus] = useState<InfrastructureStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const checkingRef = useRef(false);
+  
+  // Notify parent of loading state changes
+  useEffect(() => {
+    onLoadingChange?.(loading);
+  }, [loading, onLoadingChange]);
 
   const checkInfrastructureStatus = async () => {
     // Prevent concurrent checks

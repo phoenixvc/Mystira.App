@@ -79,6 +79,9 @@ function InfrastructurePanel() {
     },
   ]);
   const [editingTemplate, setEditingTemplate] = useState<TemplateConfig | null>(null);
+  const [step1Collapsed, setStep1Collapsed] = useState(false);
+  const [showStep2, setShowStep2] = useState(false);
+  const [infrastructureLoading, setInfrastructureLoading] = useState(true);
 
   const workflowFile = '.start-infrastructure-deploy-dev.yml';
   const repository = 'phoenixvc/Mystira.App';
@@ -316,10 +319,29 @@ function InfrastructurePanel() {
                   message: `Preview generated: ${parsedChanges.length} changes detected${warningMsg}`,
                 });
               } else if (previewData.warnings) {
-                // Even if no changes, show the warning
+                // Even if no parsed changes, if we have warnings about Cosmos DB nested resources,
+                // this is expected and we should allow deployment to proceed
+                const isCosmosWarning = previewData.warnings.includes('Cosmos DB nested resource');
+                if (isCosmosWarning) {
+                  // Cosmos DB nested resource errors are expected - allow deployment
+                  setWhatIfChanges([]); // Empty changes, but preview is considered successful
+                  setHasPreviewed(true);
+                  setLastResponse({
+                    success: true,
+                    message: previewData.warnings + ' Deployment can proceed.',
+                  });
+                } else {
+                  // Other warnings - show but don't allow deployment without changes
+                  setLastResponse({
+                    success: true,
+                    message: previewData.warnings,
+                  });
+                }
+              } else {
+                // No changes and no warnings - this shouldn't happen with success=true
                 setLastResponse({
                   success: true,
-                  message: previewData.warnings,
+                  message: 'Preview completed but no changes detected.',
                 });
               }
             } else if (response.error) {
@@ -362,12 +384,32 @@ function InfrastructurePanel() {
           }
 
           case 'deploy': {
-            // Require preview first
-            if (!hasPreviewed || whatIfChanges.length === 0) {
+            // Require preview first (but allow empty changes if Cosmos DB warnings were shown)
+            if (!hasPreviewed) {
               setLastResponse({
                 success: false,
                 error: 'Please run Preview first to see what will be deployed before deploying.',
               });
+              setLoading(false);
+              return;
+            }
+            
+            // If preview was successful but no changes (e.g., Cosmos DB nested resource scenario),
+            // we can still deploy - the preview succeeded, just couldn't show nested resource details
+            // In this case, deploy based on selected templates instead of whatIfChanges
+            if (whatIfChanges.length === 0 && hasPreviewed) {
+              // Preview succeeded but couldn't parse nested resources - deploy based on templates
+              const selectedTemplates = templates.filter(t => t.selected);
+              if (selectedTemplates.length === 0) {
+                setLastResponse({
+                  success: false,
+                  error: 'Please select at least one template to deploy.',
+                });
+                setLoading(false);
+                return;
+              }
+              // Proceed with deployment using templates (bypass resource selection)
+              setShowDeployConfirm(true);
               setLoading(false);
               return;
             }
@@ -1274,6 +1316,83 @@ function InfrastructurePanel() {
         {/* Tab Content: Actions */}
         {activeTab === 'actions' && (
           <div>
+            {/* Progress Stepper */}
+            <div className="mb-6 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4 flex-1">
+                  {/* Step 1 */}
+                  <div className="flex items-center gap-2">
+                    <div className={`flex items-center justify-center w-8 h-8 rounded-full font-semibold text-sm ${
+                      templates.some(t => t.selected) 
+                        ? 'bg-blue-600 dark:bg-blue-500 text-white' 
+                        : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                    }`}>
+                      {templates.some(t => t.selected) ? '✓' : '1'}
+                    </div>
+                    <span className={`text-sm font-medium ${
+                      templates.some(t => t.selected)
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-gray-600 dark:text-gray-400'
+                    }`}>
+                      Plan Deployment
+                    </span>
+                  </div>
+                  
+                  {/* Connector - only show when Step 2 is visible */}
+                  {showStep2 && (
+                    <>
+                      <div className={`flex-1 h-0.5 ${
+                        templates.some(t => t.selected)
+                          ? 'bg-blue-600 dark:bg-blue-500'
+                          : 'bg-gray-300 dark:bg-gray-600'
+                      }`} />
+                      
+                      {/* Step 2 */}
+                    <div className="flex items-center gap-2">
+                      <div className={`flex items-center justify-center w-8 h-8 rounded-full font-semibold text-sm ${
+                        hasValidated 
+                          ? 'bg-purple-600 dark:bg-purple-500 text-white' 
+                          : templates.some(t => t.selected)
+                          ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                          : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                      }`}>
+                        {hasPreviewed ? '✓' : '2'}
+                      </div>
+                      <span className={`text-sm font-medium ${
+                        hasValidated || templates.some(t => t.selected)
+                          ? 'text-blue-600 dark:text-blue-400'
+                          : 'text-gray-600 dark:text-gray-400'
+                      }`}>
+                        Infrastructure Actions
+                      </span>
+                    </div>
+                    </>
+                  )}
+                </div>
+                
+                {/* Collapse Toggle */}
+                {showStep2 && templates.some(t => t.selected) && (
+                  <button
+                    onClick={() => setStep1Collapsed(!step1Collapsed)}
+                    className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md border border-gray-300 dark:border-gray-600 transition-colors flex items-center gap-1.5"
+                    title={step1Collapsed ? 'Expand Step 1' : 'Collapse Step 1'}
+                  >
+                    {step1Collapsed ? (
+                      <>
+                        <span>▼</span>
+                        <span>Show Step 1</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>▲</span>
+                        <span>Hide Step 1</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Infrastructure Status Dashboard */}
             <div className="mb-6">
               <InfrastructureStatus
@@ -1284,23 +1403,132 @@ function InfrastructurePanel() {
               setHasDeployedInfrastructure(status.available);
                   setHasDeployedInfrastructure(status.available);
                 }}
+                onLoadingChange={(loading) => setInfrastructureLoading(loading)}
               />
             </div>
 
             {/* Project Deployment Planner - Step 1 */}
-            <ProjectDeploymentPlanner
-              environment={environment}
-              resourceGroupConfig={resourceGroupConfig}
-              templates={templates}
-              onTemplatesChange={setTemplates}
-              onEditTemplate={setEditingTemplate}
-              region={resourceGroupConfig.region || 'euw'}
-              projectName={resourceGroupConfig.projectName || 'mystira-app'}
-            />
+            {!step1Collapsed && (
+              <div className="mb-6">
+                <ProjectDeploymentPlanner
+                  environment={environment}
+                  resourceGroupConfig={resourceGroupConfig}
+                  templates={templates}
+                  onTemplatesChange={setTemplates}
+                  onEditTemplate={setEditingTemplate}
+                  region={resourceGroupConfig.region || 'euw'}
+                  projectName={resourceGroupConfig.projectName || 'mystira-app'}
+                  onProceedToStep2={() => setShowStep2(true)}
+                  infrastructureLoading={infrastructureLoading}
+                />
+              </div>
+            )}
+
+            {/* Visual Separator */}
+            {showStep2 && templates.some(t => t.selected) && (
+              <div className="mb-6 relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="px-4 py-1 bg-gray-50 dark:bg-gray-800 text-xs font-medium text-gray-500 dark:text-gray-400 rounded-full border border-gray-300 dark:border-gray-600">
+                    Ready for Step 2
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Action Buttons - Step 2 */}
-            <div id="step-2-infrastructure-actions" className="mb-4">
+            {showStep2 && (
+              <div id="step-2-infrastructure-actions" className="mb-4">
+              <div className={`mb-4 ${templates.some(t => t.selected) ? 'sticky top-0 z-10 bg-white dark:bg-gray-900 pb-4 pt-2 -mt-2 border-b border-gray-200 dark:border-gray-700 mb-6' : ''}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Step 2: Infrastructure Actions
+                  </h3>
+                  {step1Collapsed && (
+                    <button
+                      onClick={() => setStep1Collapsed(false)}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                    >
+                      ← Back to Step 1
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <button
+                    onClick={() => handleAction('validate')}
+                    disabled={loading}
+                    className="px-4 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    title="Validate infrastructure templates"
+                  >
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <>
+                        <span>🔍</span>
+                        <span>Validate</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleAction('preview')}
+                    disabled={loading || !hasValidated}
+                    className="px-4 py-3 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    title={!hasValidated ? 'Please validate first' : 'Preview infrastructure changes'}
+                  >
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <>
+                        <span>👁️</span>
+                        <span>Preview</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleAction('deploy')}
+                    disabled={loading || !hasPreviewed}
+                    className="px-4 py-3 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    title={!hasPreviewed ? 'Please preview first' : 'Deploy infrastructure'}
+                  >
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <>
+                        <span>🚀</span>
+                        <span>Deploy</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (whatIfChanges.length > 0 && deploymentMethod === 'azure-cli') {
+                        setShowDestroySelect(true);
+                      } else {
+                        handleAction('destroy');
+                      }
+                    }}
+                    disabled={loading}
+                    className="px-4 py-3 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    title="Destroy infrastructure resources"
+                  >
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <>
+                        <span>💥</span>
+                        <span>Destroy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+                  Workflow: Validate → Preview → Deploy (or Destroy)
+                </p>
+              </div>
             </div>
+            )}
 
             {/* Response Display */}
             {lastResponse && (

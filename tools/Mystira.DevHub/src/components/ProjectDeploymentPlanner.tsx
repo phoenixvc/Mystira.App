@@ -29,6 +29,8 @@ interface ProjectDeploymentPlannerProps {
   region?: string;
   projectName?: string;
   onReadyToProceed?: (ready: boolean, reason?: string) => void;
+  onProceedToStep2?: () => void;
+  infrastructureLoading?: boolean;
 }
 
 function ProjectDeploymentPlanner({
@@ -37,6 +39,8 @@ function ProjectDeploymentPlanner({
   templates,
   onTemplatesChange,
   onReadyToProceed,
+  onProceedToStep2,
+  infrastructureLoading = false,
 }: ProjectDeploymentPlannerProps) {
   const [projects] = useState<ProjectInfo[]>(DEFAULT_PROJECTS);
 
@@ -58,10 +62,15 @@ function ProjectDeploymentPlanner({
       onReadyToProceed?.(false, 'Please select at least one infrastructure template to deploy.');
       return;
     }
+    
+    if (infrastructureLoading || loadingStatus) {
+      onReadyToProceed?.(false, 'Please wait for infrastructure status to finish loading...');
+      return;
+    }
 
     // All validations passed
     onReadyToProceed?.(true);
-  }, [templates, onReadyToProceed]);
+  }, [templates, onReadyToProceed, infrastructureLoading, loadingStatus]);
 
   const loadDeploymentStatus = async () => {
     setLoadingStatus(true);
@@ -194,7 +203,7 @@ function ProjectDeploymentPlanner({
 
   const selectedTemplates = templates.filter(t => t.selected);
   const hasSelectedTemplates = selectedTemplates.length > 0;
-  const readyToProceed = hasSelectedTemplates;
+  const readyToProceed = hasSelectedTemplates && !infrastructureLoading && !loadingStatus;
 
   return (
     <div className="mb-8">
@@ -470,16 +479,33 @@ function ProjectDeploymentPlanner({
             disabled={!readyToProceed}
             onClick={() => {
               if (readyToProceed) {
-                // Scroll to Step 2 section
-                const step2Element = document.getElementById('step-2-infrastructure-actions');
-                if (step2Element) {
-                  step2Element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                  // Highlight briefly
-                  step2Element.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
-                  setTimeout(() => {
-                    step2Element.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
-                  }, 2000);
-                }
+                // Notify parent to show Step 2
+                onProceedToStep2?.();
+                
+                // Scroll to Step 2 section with offset for sticky header
+                // Use a small delay to ensure Step 2 is rendered
+                setTimeout(() => {
+                  const step2Element = document.getElementById('step-2-infrastructure-actions');
+                  if (step2Element) {
+                    // Use requestAnimationFrame to ensure DOM is ready
+                    requestAnimationFrame(() => {
+                      // Get the element's position and account for sticky header
+                      const elementPosition = step2Element.getBoundingClientRect().top;
+                      const offsetPosition = elementPosition + window.pageYOffset - 20; // 20px offset for spacing
+                      
+                      window.scrollTo({
+                        top: offsetPosition,
+                        behavior: 'smooth'
+                      });
+                      
+                      // Highlight briefly
+                      step2Element.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2', 'rounded-lg');
+                      setTimeout(() => {
+                        step2Element.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2', 'rounded-lg');
+                      }, 2000);
+                    });
+                  }
+                }, 100);
               }
             }}
             className={`px-6 py-2 text-sm font-medium rounded-lg transition-colors ${
@@ -487,7 +513,7 @@ function ProjectDeploymentPlanner({
                 ? 'bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600'
                 : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
             }`}
-            title={!readyToProceed ? 'Select at least one infrastructure template to continue' : 'Continue to Step 2: Infrastructure Actions'}
+            title={!readyToProceed ? (infrastructureLoading || loadingStatus ? 'Please wait for infrastructure status to finish loading...' : 'Select at least one infrastructure template to continue') : 'Continue to Step 2: Infrastructure Actions'}
           >
             Continue to Step 2 →
           </button>

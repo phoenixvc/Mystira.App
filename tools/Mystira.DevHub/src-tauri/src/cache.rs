@@ -86,6 +86,7 @@ impl StringCache {
         }
     }
     
+    #[allow(dead_code)] // Available for future use when cache needs to be manually cleared
     pub fn clear(&self) {
         let mut entries = self.entries.lock().unwrap();
         entries.clear();

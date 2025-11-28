@@ -10,6 +10,7 @@ use tokio::time::sleep;
 
 /// Retry policy configuration
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Available for future use with custom retry policies
 pub struct RetryPolicy {
     pub max_retries: u32,
     pub initial_backoff_ms: u64,
@@ -30,6 +31,7 @@ impl Default for RetryPolicy {
 }
 
 /// Execute a function with retry logic
+#[allow(dead_code)] // Available for future use with custom retry operations
 pub async fn retry_with_backoff<F, Fut, T, E>(
     operation: F,
     policy: Option<RetryPolicy>,
@@ -79,6 +81,7 @@ where
 }
 
 /// Check if an error is retryable (transient)
+#[allow(dead_code)] // Available for future use in error handling
 pub fn is_retryable_error(error_msg: &str) -> bool {
     let retryable_patterns = [
         "network",
@@ -97,6 +100,7 @@ pub fn is_retryable_error(error_msg: &str) -> bool {
 }
 
 /// Execute with retry, but only retry on retryable errors
+#[allow(dead_code)] // Available for future use with retryable error detection
 pub async fn retry_on_retryable_error<F, Fut, T>(
     operation: F,
     policy: Option<RetryPolicy>,

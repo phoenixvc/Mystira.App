@@ -175,23 +175,26 @@ pub async fn read_bicep_file(relative_path: String) -> Result<String, String> {
     // Find repo root
     let repo_root = find_repo_root()?;
     
+    // Normalize path separators (handle both / and \)
+    let normalized_path = relative_path.replace('/', std::path::MAIN_SEPARATOR.to_string().as_str());
+    
     // Resolve the file path relative to repo root
-    let file_path = repo_root.join(&relative_path);
+    let file_path = repo_root.join(&normalized_path);
+    
+    // Check if file exists first (before canonicalizing)
+    if !file_path.exists() {
+        return Err(format!("File not found: {} (resolved to: {})", relative_path, file_path.display()));
+    }
     
     // Security: Ensure the path is within the repo root (prevent directory traversal)
     // Normalize paths to handle different separators and symlinks
     let repo_root_canonical = repo_root.canonicalize()
         .map_err(|e| format!("Failed to canonicalize repo root: {}", e))?;
     let file_path_canonical = file_path.canonicalize()
-        .map_err(|e| format!("Failed to canonicalize file path: {}", e))?;
+        .map_err(|e| format!("Failed to canonicalize file path: {} - {}", file_path.display(), e))?;
     
     if !file_path_canonical.starts_with(&repo_root_canonical) {
         return Err(format!("Invalid path: path must be within repository root"));
-    }
-    
-    // Check if file exists
-    if !file_path.exists() {
-        return Err(format!("File not found: {}", relative_path));
     }
     
     // Read the file

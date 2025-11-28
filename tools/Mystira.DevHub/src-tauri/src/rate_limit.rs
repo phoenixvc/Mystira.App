@@ -86,12 +86,14 @@ impl RateLimiter {
     }
     
     /// Reset rate limiter for a service
+    #[allow(dead_code)] // Available for future use when rate limiters need to be manually reset
     pub fn reset(&self, service: &str) {
         let mut requests = self.requests.lock().unwrap();
         requests.remove(service);
     }
     
     /// Reset all rate limiters
+    #[allow(dead_code)] // Available for future use when all rate limiters need to be reset
     pub fn reset_all(&self) {
         let mut requests = self.requests.lock().unwrap();
         requests.clear();

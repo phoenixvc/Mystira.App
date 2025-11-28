@@ -35,7 +35,7 @@ function TemplateContentViewer({ filePath }: { filePath: string }) {
   const loadFile = async () => {
     setLoading(true);
     try {
-      const fileContent = await invoke<string>('read_bicep_file', { filePath });
+      const fileContent = await invoke<string>('read_bicep_file', { relativePath: filePath });
       setContent(fileContent);
     } catch (error) {
       console.error('Failed to load file:', error);
@@ -83,7 +83,8 @@ function TemplateInspector({ environment }: TemplateInspectorProps) {
   const loadTemplates = async () => {
     setLoading(true);
     try {
-      const basePath = `infrastructure/${environment}`;
+      // Use the actual deployment path structure
+      const basePath = `src/Mystira.App.Infrastructure.Azure/Deployment/${environment}`;
       const templateFiles: TemplateFile[] = [
         {
           name: 'main.bicep',
@@ -139,7 +140,7 @@ function TemplateInspector({ environment }: TemplateInspectorProps) {
 
   const handleCopyTemplate = async (template: TemplateFile) => {
     try {
-      const content = await invoke<string>('read_bicep_file', { filePath: template.path });
+      const content = await invoke<string>('read_bicep_file', { relativePath: template.path });
       await navigator.clipboard.writeText(content);
       alert(`Template ${template.name} copied to clipboard!`);
     } catch (error) {
