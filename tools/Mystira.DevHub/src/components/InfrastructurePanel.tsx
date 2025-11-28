@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/tauri';
 import { useEffect, useRef, useState } from 'react';
 import { useDeploymentsStore } from '../stores/deploymentsStore';
 import { useResourcesStore } from '../stores/resourcesStore';
-import type { CommandResponse, ResourceGroupConvention, TemplateConfig, WhatIfChange, WorkflowStatus } from '../types';
+import type { CommandResponse, CosmosWarning, ResourceGroupConvention, TemplateConfig, WhatIfChange, WorkflowStatus } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
 import DeploymentHistory from './DeploymentHistory';
 import InfrastructureStatus, { type InfrastructureStatus as InfrastructureStatusType } from './InfrastructureStatus';
@@ -82,6 +82,7 @@ function InfrastructurePanel() {
   const [step1Collapsed, setStep1Collapsed] = useState(false);
   const [showStep2, setShowStep2] = useState(false);
   const [infrastructureLoading, setInfrastructureLoading] = useState(true);
+  const [cosmosWarning, setCosmosWarning] = useState<CosmosWarning | null>(null);
 
   const workflowFile = '.start-infrastructure-deploy-dev.yml';
   const repository = 'phoenixvc/Mystira.App';
@@ -274,11 +275,13 @@ function InfrastructurePanel() {
               setLoading(false);
               return;
             }
+            // Reset cosmos warning on new preview
+            setCosmosWarning(null);
             const selectedTemplates = templates.filter(t => t.selected);
             const deployStorage = selectedTemplates.some(t => t.id === 'storage');
             const deployCosmos = selectedTemplates.some(t => t.id === 'cosmos');
             const deployAppService = selectedTemplates.some(t => t.id === 'appservice');
-            
+
             response = await invoke('azure_preview_infrastructure', {
               repoRoot,
               environment,
@@ -290,7 +293,19 @@ function InfrastructurePanel() {
               const previewData = response.result as any;
               let parsedChanges: WhatIfChange[] = [];
               
-              // Show warnings if present (e.g., expected Cosmos DB nested resource errors)
+              // Extract warning text (can be string or array)
+              const warningText = typeof previewData.warnings === 'string' 
+                ? previewData.warnings 
+                : Array.isArray(previewData.warnings) 
+                  ? previewData.warnings.join(' ') 
+                  : '';
+              
+              // Check for Cosmos DB warnings
+              const hasCosmosWarning = previewData.warnings && (
+                warningText.includes('Cosmos DB nested resource') ||
+                warningText.includes('nested resource errors are expected')
+              );
+              
               if (previewData.warnings) {
                 console.warn('Preview warnings:', previewData.warnings);
               }
@@ -313,30 +328,52 @@ function InfrastructurePanel() {
                 }));
                 setWhatIfChanges(parsedChanges);
                 setHasPreviewed(true);
-                const warningMsg = previewData.warnings ? ` (${previewData.warnings})` : '';
+                const warningMsg = warningText ? ` (${warningText})` : '';
                 setLastResponse({
                   success: true,
                   message: `Preview generated: ${parsedChanges.length} changes detected${warningMsg}`,
                 });
-              } else if (previewData.warnings) {
-                // Even if no parsed changes, if we have warnings about Cosmos DB nested resources,
-                // this is expected and we should allow deployment to proceed
-                const isCosmosWarning = previewData.warnings.includes('Cosmos DB nested resource');
-                if (isCosmosWarning) {
-                  // Cosmos DB nested resource errors are expected - allow deployment
-                  setWhatIfChanges([]); // Empty changes, but preview is considered successful
-                  setHasPreviewed(true);
-                  setLastResponse({
-                    success: true,
-                    message: previewData.warnings + ' Deployment can proceed.',
-                  });
-                } else {
-                  // Other warnings - show but don't allow deployment without changes
-                  setLastResponse({
-                    success: true,
-                    message: previewData.warnings,
-                  });
+              } else if (hasCosmosWarning) {
+                // Cosmos DB nested resource errors are expected - extract affected resources and show warning banner
+                // Check all possible places where error details might be stored
+                const errorStr = response.error || 
+                  (typeof previewData.errors === 'string' ? previewData.errors : null) ||
+                  (typeof previewData.errors === 'object' && previewData.errors ? JSON.stringify(previewData.errors) : null) ||
+                  '';
+                
+                // Extract affected resources from error string or warning text
+                const affectedResources: string[] = [];
+                const searchText = errorStr || warningText || '';
+                if (searchText) {
+                  const resourceMatches = searchText.matchAll(/containers\/(\w+)|sqlDatabases\/(\w+)/g);
+                  for (const match of resourceMatches) {
+                    const resource = match[1] || match[2];
+                    if (resource && !affectedResources.includes(resource)) {
+                      affectedResources.push(resource);
+                    }
+                  }
                 }
+                
+                setCosmosWarning({
+                  type: 'cosmos-whatif',
+                  message: 'Cosmos DB nested resource errors detected during preview',
+                  details: errorStr || warningText || 'Cosmos DB nested resource preview limitations',
+                  affectedResources,
+                  dismissed: false,
+                });
+                
+                // Don't mark as previewed yet - wait for user to dismiss warning
+                setWhatIfChanges([]);
+                setLastResponse({
+                  success: true,
+                  message: `Preview completed with Cosmos DB warnings. ${affectedResources.length > 0 ? affectedResources.length + ' resources affected. ' : ''}These errors are expected and won't prevent deployment.`,
+                });
+              } else if (previewData.warnings) {
+                // Other warnings - show but don't allow deployment without changes
+                setLastResponse({
+                  success: true,
+                  message: previewData.warnings,
+                });
               } else {
                 // No changes and no warnings - this shouldn't happen with success=true
                 setLastResponse({
@@ -347,32 +384,58 @@ function InfrastructurePanel() {
             } else if (response.error) {
               // Check if errors are only Cosmos DB nested resource errors (expected)
               const errorStr = response.error;
-              const isOnlyCosmosErrors = errorStr.includes('DeploymentWhatIfResourceError') 
+              const isOnlyCosmosErrors = errorStr.includes('DeploymentWhatIfResourceError')
                 && errorStr.includes('Microsoft.DocumentDB')
                 && (errorStr.includes('sqlDatabases') || errorStr.includes('containers'));
-              
-              if (isOnlyCosmosErrors && response.result) {
-                // Try to parse anyway - we might have valid preview data
-                const previewData = response.result as any;
+
+              if (isOnlyCosmosErrors) {
+                // Extract affected resources from error message
+                const affectedResources: string[] = [];
+                const resourceMatches = errorStr.matchAll(/containers\/(\w+)|sqlDatabases\/(\w+)/g);
+                for (const match of resourceMatches) {
+                  const resource = match[1] || match[2];
+                  if (resource && !affectedResources.includes(resource)) {
+                    affectedResources.push(resource);
+                  }
+                }
+
+                // Try to parse preview data if available
                 let parsedChanges: WhatIfChange[] = [];
-                if (previewData.parsed && previewData.parsed.changes) {
-                  parsedChanges = parseWhatIfOutput(JSON.stringify(previewData.parsed));
-                } else if (previewData.preview) {
-                  parsedChanges = parseWhatIfOutput(previewData.preview);
+                if (response.result) {
+                  const previewData = response.result as any;
+                  if (previewData.parsed && previewData.parsed.changes) {
+                    parsedChanges = parseWhatIfOutput(JSON.stringify(previewData.parsed));
+                  } else if (previewData.preview) {
+                    parsedChanges = parseWhatIfOutput(previewData.preview);
+                  }
                 }
+
+                // Set warning state - user can dismiss to continue
+                setCosmosWarning({
+                  type: 'cosmos-whatif',
+                  message: 'Cosmos DB nested resource errors detected during preview',
+                  details: errorStr,
+                  affectedResources,
+                  dismissed: false,
+                });
+
                 if (parsedChanges.length > 0) {
+                  // Apply resource group mappings
+                  parsedChanges = parsedChanges.map(change => ({
+                    ...change,
+                    resourceGroup: change.resourceGroup ||
+                      resourceGroupConfig.resourceTypeMappings?.[change.resourceType] ||
+                      resourceGroupConfig.defaultResourceGroup,
+                  }));
                   setWhatIfChanges(parsedChanges);
-                  setHasPreviewed(true);
-                  setLastResponse({
-                    success: true,
-                    message: `Preview generated: ${parsedChanges.length} changes detected. Cosmos DB nested resource errors are expected when resources don't exist yet.`,
-                  });
-                } else {
-                  setLastResponse({
-                    success: false,
-                    error: 'Failed to generate preview. Cosmos DB nested resource errors occurred, but no valid preview data was found.',
-                  });
                 }
+
+                // Don't mark as previewed yet - wait for user to dismiss warning
+                setLastResponse({
+                  success: false,
+                  error: undefined,
+                  message: `Preview completed with warnings. ${affectedResources.length} Cosmos DB resources reported errors (this is expected for new deployments).`,
+                });
               } else {
                 setLastResponse({
                   success: false,
@@ -384,7 +447,16 @@ function InfrastructurePanel() {
           }
 
           case 'deploy': {
-            // Require preview first (but allow empty changes if Cosmos DB warnings were shown)
+            // Require preview first - also check if cosmos warning needs to be dismissed
+            if (cosmosWarning && !cosmosWarning.dismissed) {
+              setLastResponse({
+                success: false,
+                error: 'Please dismiss the Cosmos DB warnings before deploying.',
+              });
+              setLoading(false);
+              return;
+            }
+            
             if (!hasPreviewed) {
               setLastResponse({
                 success: false,
@@ -1605,6 +1677,54 @@ function InfrastructurePanel() {
                     </pre>
                   </details>
                 )}
+              </div>
+            )}
+
+            {/* Cosmos DB Warning Banner - Dismissible */}
+            {cosmosWarning && !cosmosWarning.dismissed && (
+              <div className="rounded-lg p-4 mb-6 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <span className="text-amber-500 text-xl">⚠️</span>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-1">
+                        Expected Cosmos DB Preview Warnings
+                      </h4>
+                      <p className="text-xs text-amber-700 dark:text-amber-300 mb-2">
+                        Azure's what-if preview cannot predict changes for nested Cosmos DB resources
+                        (databases and containers) that don't exist yet. This is a known Azure limitation
+                        and does not affect actual deployments.
+                      </p>
+                      {cosmosWarning.affectedResources.length > 0 && (
+                        <div className="text-xs text-amber-600 dark:text-amber-400 mb-2">
+                          <span className="font-medium">Affected resources:</span>{' '}
+                          {cosmosWarning.affectedResources.join(', ')}
+                        </div>
+                      )}
+                      <details className="text-xs">
+                        <summary className="cursor-pointer text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200">
+                          View full error details
+                        </summary>
+                        <pre className="mt-2 p-2 bg-amber-100 dark:bg-amber-900/50 rounded text-[10px] overflow-auto max-h-32 text-amber-800 dark:text-amber-200">
+                          {cosmosWarning.details}
+                        </pre>
+                      </details>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setCosmosWarning({ ...cosmosWarning, dismissed: true });
+                      setHasPreviewed(true);
+                      setLastResponse({
+                        success: true,
+                        message: `Preview completed. ${whatIfChanges.length} resource changes ready for deployment.`,
+                      });
+                    }}
+                    className="ml-4 px-3 py-1.5 text-xs font-medium bg-amber-100 dark:bg-amber-800 hover:bg-amber-200 dark:hover:bg-amber-700 text-amber-700 dark:text-amber-200 rounded-md transition-colors whitespace-nowrap"
+                  >
+                    Dismiss & Continue
+                  </button>
+                </div>
               </div>
             )}
 

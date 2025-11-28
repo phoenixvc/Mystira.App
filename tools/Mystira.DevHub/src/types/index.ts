@@ -196,6 +196,15 @@ export interface WorkflowStatus {
   htmlUrl: string;
 }
 
+// Cosmos DB What-If Warning - these are expected errors that can be dismissed
+export interface CosmosWarning {
+  type: 'cosmos-whatif';
+  message: string;
+  details: string;
+  affectedResources: string[];
+  dismissed: boolean;
+}
+
 // Settings Types
 export interface Settings {
   theme: 'light' | 'dark' | 'auto';
