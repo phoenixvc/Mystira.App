@@ -469,7 +469,7 @@ function InfrastructurePanel() {
             // If preview was successful but no changes (e.g., Cosmos DB nested resource scenario),
             // we can still deploy - the preview succeeded, just couldn't show nested resource details
             // In this case, deploy based on selected templates instead of whatIfChanges
-            if (whatIfChanges.length === 0 && hasPreviewed) {
+            if (whatIfChanges.length === 0) {
               // Preview succeeded but couldn't parse nested resources - deploy based on templates
               const selectedTemplates = templates.filter(t => t.selected);
               if (selectedTemplates.length === 0) {
