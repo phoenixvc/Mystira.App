@@ -12,63 +12,43 @@ public static class BranchParser
         var branch = new Branch();
 
         // Parse required Choice field (replaces Text field)
-        if (branchDict.TryGetValue("choice", out var choiceObj) ||
-            branchDict.TryGetValue("text", out choiceObj) ||
-            branchDict.TryGetValue("option", out choiceObj))
+        var choiceFound = branchDict.TryGetValue("choice", out var choiceObj) ||
+                          branchDict.TryGetValue("text", out choiceObj) ||
+                          branchDict.TryGetValue("option", out choiceObj);
+
+        if (!choiceFound || choiceObj == null)
         {
-            if (choiceObj != null)
-            {
-                branch.Choice = choiceObj.ToString() ?? string.Empty;
-            }
-            else
-            {
-                throw new ArgumentException("Required field 'choice'/'text' is missing or null in branch data");
-            }
+            throw new ArgumentException("Required field 'choice'/'text' is missing or null in branch data");
         }
-        else
-        {
-            throw new ArgumentException("Required field 'choice'/'text' is missing in branch data");
-        }
+        branch.Choice = choiceObj.ToString() ?? string.Empty;
 
         // Parse required NextSceneId field
-        if (branchDict.TryGetValue("nextSceneId", out var nextSceneObj) ||
-            branchDict.TryGetValue("next_scene_id", out nextSceneObj) ||
-            branchDict.TryGetValue("next_scene", out nextSceneObj))
+        var nextSceneFound = branchDict.TryGetValue("nextSceneId", out var nextSceneObj) ||
+                             branchDict.TryGetValue("next_scene_id", out nextSceneObj) ||
+                             branchDict.TryGetValue("next_scene", out nextSceneObj);
+
+        if (!nextSceneFound || nextSceneObj == null)
         {
-            if (nextSceneObj != null)
-            {
-                var nextScene = nextSceneObj.ToString();
-                branch.NextSceneId = string.IsNullOrWhiteSpace(nextScene) ? string.Empty : nextScene;
-            }
-            else
-            {
-                throw new ArgumentException("Required field 'nextSceneId'/'next_scene' is missing or null in branch data");
-            }
+            throw new ArgumentException("Required field 'nextSceneId'/'next_scene' is missing or null in branch data");
         }
-        else
-        {
-            throw new ArgumentException("Required field 'nextSceneId'/'next_scene' is missing in branch data");
-        }
+        var nextScene = nextSceneObj.ToString();
+        branch.NextSceneId = string.IsNullOrWhiteSpace(nextScene) ? string.Empty : nextScene;
 
         // Parse EchoLog if available
-        if (branchDict.TryGetValue("echoLog", out var echoLogObj) ||
-            branchDict.TryGetValue("echo_log", out echoLogObj))
+        if ((branchDict.TryGetValue("echoLog", out var echoLogObj) ||
+             branchDict.TryGetValue("echo_log", out echoLogObj)) &&
+            echoLogObj is IDictionary<object, object> echoLogDict)
         {
-            if (echoLogObj is IDictionary<object, object> echoLogDict)
-            {
-                branch.EchoLog = EchoLogParser.Parse(echoLogDict);
-            }
+            branch.EchoLog = EchoLogParser.Parse(echoLogDict);
         }
 
         // Parse CompassChange if available
-        if (branchDict.TryGetValue("compassChange", out var compassChangeObj) ||
-            branchDict.TryGetValue("compass_change", out compassChangeObj) ||
-            branchDict.TryGetValue("compass_impact", out compassChangeObj))
+        if ((branchDict.TryGetValue("compassChange", out var compassChangeObj) ||
+             branchDict.TryGetValue("compass_change", out compassChangeObj) ||
+             branchDict.TryGetValue("compass_impact", out compassChangeObj)) &&
+            compassChangeObj is IDictionary<object, object> compassChangeDict)
         {
-            if (compassChangeObj is IDictionary<object, object> compassChangeDict)
-            {
-                branch.CompassChange = CompassChangeParser.Parse(compassChangeDict);
-            }
+            branch.CompassChange = CompassChangeParser.Parse(compassChangeDict);
         }
 
         return branch;

@@ -15,85 +15,51 @@ public static class EchoLogParser
         };
 
         // Parse EchoType (required)
-        if (echoLogDict.TryGetValue("echoType", out var echoTypeObj) ||
-            echoLogDict.TryGetValue("echo_type", out echoTypeObj) ||
-            echoLogDict.TryGetValue("type", out echoTypeObj))
-        {
-            if (echoTypeObj != null)
-            {
-                var parsed = EchoType.Parse(echoTypeObj.ToString());
-                if (parsed == null)
-                {
-                    throw new ArgumentException($"Invalid EchoType: {echoTypeObj}");
-                }
+        var echoTypeFound = echoLogDict.TryGetValue("echoType", out var echoTypeObj) ||
+                            echoLogDict.TryGetValue("echo_type", out echoTypeObj) ||
+                            echoLogDict.TryGetValue("type", out echoTypeObj);
 
-                echoLog.EchoType = parsed;
-            }
-            else
-            {
-                throw new ArgumentException("Required field 'echoType'/'type' is missing or null in echo log data");
-            }
-        }
-        else
+        if (!echoTypeFound || echoTypeObj == null)
         {
-            throw new ArgumentException("Required field 'echoType'/'type' is missing in echo log data");
+            throw new ArgumentException("Required field 'echoType'/'type' is missing or null in echo log data");
         }
+
+        var parsed = EchoType.Parse(echoTypeObj.ToString())
+            ?? throw new ArgumentException($"Invalid EchoType: {echoTypeObj}");
+        echoLog.EchoType = parsed;
 
         // Parse Description (required)
-        if (echoLogDict.TryGetValue("description", out var descObj) ||
-            echoLogDict.TryGetValue("message", out descObj) ||
-            echoLogDict.TryGetValue("text", out descObj))
-        {
-            if (descObj != null)
-            {
-                echoLog.Description = descObj.ToString() ?? string.Empty;
-            }
-            else
-            {
-                throw new ArgumentException("Required field 'description'/'message' is missing or null in echo log data");
-            }
-        }
-        else
-        {
-            throw new ArgumentException("Required field 'description'/'message' is missing in echo log data");
-        }
+        var descFound = echoLogDict.TryGetValue("description", out var descObj) ||
+                        echoLogDict.TryGetValue("message", out descObj) ||
+                        echoLogDict.TryGetValue("text", out descObj);
 
-        // Parse Strength (with validation)
-        if (echoLogDict.TryGetValue("strength", out var strengthObj) ||
-            echoLogDict.TryGetValue("power", out strengthObj) ||
-            echoLogDict.TryGetValue("intensity", out strengthObj))
+        if (!descFound || descObj == null)
         {
-            if (strengthObj != null &&
-                double.TryParse(strengthObj.ToString(), out double strength))
-            {
-                // Validate strength is between 0.1 and 1.0
-                echoLog.Strength = Math.Clamp(strength, 0.1, 1.0);
-            }
-            else
-            {
-                // Default to mid-range if not specified or invalid
-                echoLog.Strength = 0.5;
-            }
+            throw new ArgumentException("Required field 'description'/'message' is missing or null in echo log data");
         }
-        else
-        {
-            // Default to mid-range if not specified
-            echoLog.Strength = 0.5;
-        }
+        echoLog.Description = descObj.ToString() ?? string.Empty;
+
+        // Parse Strength (with validation, default 0.5)
+        var strengthFound = echoLogDict.TryGetValue("strength", out var strengthObj) ||
+                            echoLogDict.TryGetValue("power", out strengthObj) ||
+                            echoLogDict.TryGetValue("intensity", out strengthObj);
+
+        echoLog.Strength = strengthFound && strengthObj != null &&
+                           double.TryParse(strengthObj.ToString(), out double strength)
+            ? Math.Clamp(strength, 0.1, 1.0)
+            : 0.5;
 
         // Parse Timestamp if provided (otherwise use default UTC now)
-        if (echoLogDict.TryGetValue("timestamp", out var timestampObj) ||
-            echoLogDict.TryGetValue("time", out timestampObj) ||
-            echoLogDict.TryGetValue("date", out timestampObj))
+        if ((echoLogDict.TryGetValue("timestamp", out var timestampObj) ||
+             echoLogDict.TryGetValue("time", out timestampObj) ||
+             echoLogDict.TryGetValue("date", out timestampObj)) &&
+            timestampObj != null)
         {
-            if (timestampObj != null)
+            var timestampStr = timestampObj.ToString();
+            if (!string.IsNullOrEmpty(timestampStr) &&
+                DateTime.TryParse(timestampStr, out DateTime timestamp))
             {
-                var timestampStr = timestampObj.ToString();
-                if (!string.IsNullOrEmpty(timestampStr) &&
-                    DateTime.TryParse(timestampStr, out DateTime timestamp))
-                {
-                    echoLog.Timestamp = timestamp;
-                }
+                echoLog.Timestamp = timestamp;
             }
         }
 
