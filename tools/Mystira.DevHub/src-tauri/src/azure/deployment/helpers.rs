@@ -15,9 +15,9 @@ use std::process::Command;
 /// Get resource group name from environment
 pub fn get_resource_group_name(environment: &str) -> String {
     match environment {
-        "dev" => "dev-euw-rg-mystira-app".to_string(),
-        "prod" => "prod-euw-rg-mystira-app".to_string(),
-        _ => format!("{}-euw-rg-mystira-app", environment),
+        "dev" => "dev-san-rg-mystira-app".to_string(),
+        "prod" => "prod-san-rg-mystira-app".to_string(),
+        _ => format!("{}-san-rg-mystira-app", environment),
     }
 }
 
@@ -79,6 +79,36 @@ pub fn set_azure_subscription(sub_id: &str) -> Result<(), String> {
             }
         }
         Err(e) => Err(format!("Failed to set subscription: {}", e)),
+    }
+}
+
+/// Check if resource group exists
+pub fn check_resource_group_exists(resource_group: &str) -> Result<bool, String> {
+    let (az_path, use_direct_path) = get_azure_cli_path();
+    
+    let result = if use_direct_path {
+        Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg(format!("& '{}' group exists --name '{}' --output 'tsv'", az_path.replace("'", "''"), resource_group.replace("'", "''")))
+            .output()
+    } else {
+        Command::new("az")
+            .arg("group")
+            .arg("exists")
+            .arg("--name")
+            .arg(resource_group)
+            .arg("--output")
+            .arg("tsv")
+            .output()
+    };
+
+    match result {
+        Ok(output) => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            Ok(stdout.trim().to_lowercase() == "true")
+        }
+        Err(e) => Err(format!("Failed to check resource group: {}", e))
     }
 }
 

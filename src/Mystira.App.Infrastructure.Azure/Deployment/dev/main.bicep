@@ -21,11 +21,11 @@ param deployAppService bool = true
 param keyVaultAdminObjectId string = ''
 
 @description('Location short name')
-param shortLocation string = 'euw'
+param shortLocation string = 'san'
 
 // Variables - Standardized naming: {env}-{location}-app-{name}
-var resourcePrefix = '${environment}-euw-app-mystira' // Standardized format: {env}-{location}-app-{name}
-var cosmosDbName = replace('${resourcePrefix}cosmos', '-', '')  // Remove hyphens for Cosmos DB name
+var resourcePrefix = '${environment}-san-app-mystira' // Standardized format: {env}-{location}-app-{name}
+var cosmosDbName = replace('${resourcePrefix}-cosmos', '-', '')  // Cosmos DB names cannot contain dashes
 var appServiceName = '${resourcePrefix}-api' // App Service name with -api suffix
 
 // Deploy Key Vault for Story Protocol secrets (conditional - only if keyVaultAdminObjectId is provided)
@@ -43,9 +43,9 @@ module keyVault 'key-vault.bicep' = if (keyVaultAdminObjectId != '') {
 module storage 'storage.bicep' = if (deployStorage) {
   name: 'storage-deployment'
   params: {
-    storageAccountName: '${replace(resourcePrefix, '-', '')}storage'
+    storageAccountName: replace('${resourcePrefix}-storage', '-', '')  // Storage account names cannot contain dashes
     location: location
-    sku: environment == 'prod' ? 'Standard_GRS' : 'Standard_LRS'
+    sku: 'Standard_LRS' // Always use cheapest option (LRS)
   }
 }
 

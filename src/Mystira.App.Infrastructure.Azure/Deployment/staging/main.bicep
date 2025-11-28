@@ -21,10 +21,10 @@ param deployAppService bool = true
 param keyVaultAdminObjectId string = ''
 
 @description('Location short name')
-param shortLocation string = 'euw'
+param shortLocation string = 'san'
 
 // Variables - Standardized naming: {env}-{location}-app-{name}
-var resourcePrefix = '${environment}-euw-app-mystira' // Standardized format: {env}-{location}-app-{name}
+var resourcePrefix = '${environment}-san-app-mystira' // Standardized format: {env}-{location}-app-{name}
 var cosmosDbName = replace('${resourcePrefix}cosmos', '-', '')  // Remove hyphens for Cosmos DB name
 var appServiceName = '${resourcePrefix}-api' // App Service name with -api suffix
 
