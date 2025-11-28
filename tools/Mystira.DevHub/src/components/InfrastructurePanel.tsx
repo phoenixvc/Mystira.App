@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/tauri';
 import { useEffect, useRef, useState } from 'react';
 import { useDeploymentsStore } from '../stores/deploymentsStore';
 import { useResourcesStore } from '../stores/resourcesStore';
-import type { CommandResponse, ResourceGroupConvention, TemplateConfig, WhatIfChange, WorkflowStatus } from '../types';
+import type { CommandResponse, CosmosWarning, ResourceGroupConvention, TemplateConfig, WhatIfChange, WorkflowStatus } from '../types';
 import { DEFAULT_PROJECTS, type ProjectInfo } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
 import DeploymentHistory from './DeploymentHistory';
@@ -83,6 +83,9 @@ function InfrastructurePanel() {
     },
   ]);
   const [editingTemplate, setEditingTemplate] = useState<TemplateConfig | null>(null);
+  const [_step1Collapsed, _setStep1Collapsed] = useState(false);
+  const [_showStep2, _setShowStep2] = useState(false);
+  const [cosmosWarning, setCosmosWarning] = useState<CosmosWarning | null>(null);
 
   const workflowFile = '.start-infrastructure-deploy-dev.yml';
   const repository = 'phoenixvc/Mystira.App';
@@ -275,11 +278,13 @@ function InfrastructurePanel() {
               setLoading(false);
               return;
             }
+            // Reset cosmos warning on new preview
+            setCosmosWarning(null);
             const selectedTemplates = templates.filter(t => t.selected);
             const deployStorage = selectedTemplates.some(t => t.id === 'storage');
             const deployCosmos = selectedTemplates.some(t => t.id === 'cosmos');
             const deployAppService = selectedTemplates.some(t => t.id === 'appservice');
-            
+
             response = await invoke('azure_preview_infrastructure', {
               repoRoot,
               environment,
@@ -290,12 +295,49 @@ function InfrastructurePanel() {
             if (response.success && response.result) {
               const previewData = response.result as any;
               let parsedChanges: WhatIfChange[] = [];
-              
-              // Show warnings if present (e.g., expected Cosmos DB nested resource errors)
+
+              // Extract warning text (can be string or array)
+              const warningText = typeof previewData.warnings === 'string'
+                ? previewData.warnings
+                : Array.isArray(previewData.warnings)
+                  ? previewData.warnings.join(' ')
+                  : '';
+
+              // Check for Cosmos DB warnings and set dismissible warning
+              const hasCosmosWarning = previewData.warnings && (
+                warningText.includes('Cosmos DB nested resource') ||
+                warningText.includes('nested resource errors are expected')
+              );
+
+              if (hasCosmosWarning) {
+                // Extract affected resources from warning text
+                const affectedResources: string[] = [];
+                const containerMatches = warningText.match(/containers\/([a-zA-Z]+)/g);
+                if (containerMatches) {
+                  containerMatches.forEach((match: string) => {
+                    const name = match.replace('containers/', '');
+                    if (!affectedResources.includes(name)) affectedResources.push(name);
+                  });
+                }
+                if (warningText.includes('MystiraAppDb') && !affectedResources.includes('MystiraAppDb')) {
+                  affectedResources.unshift('MystiraAppDb');
+                }
+
+                setCosmosWarning({
+                  type: 'cosmos-whatif',
+                  message: 'Azure what-if preview cannot evaluate nested Cosmos DB resources',
+                  details: warningText,
+                  affectedResources: affectedResources.length > 0
+                    ? affectedResources
+                    : ['MystiraAppDb', 'UserProfiles', 'Scenarios', 'GameSessions', 'CompassTrackings'],
+                  dismissed: false,
+                });
+              }
+
               if (previewData.warnings) {
                 console.warn('Preview warnings:', previewData.warnings);
               }
-              
+
               if (previewData.parsed && previewData.parsed.changes) {
                 parsedChanges = parseWhatIfOutput(JSON.stringify(previewData.parsed));
               } else if (previewData.preview) {
@@ -303,13 +345,13 @@ function InfrastructurePanel() {
               } else if (previewData.changes) {
                 parsedChanges = previewData.changes;
               }
-              
+
               // Apply resource group mappings to parsed changes
               if (parsedChanges.length > 0) {
                 parsedChanges = parsedChanges.map(change => ({
                   ...change,
-                  resourceGroup: change.resourceGroup || 
-                    resourceGroupConfig.resourceTypeMappings?.[change.resourceType] || 
+                  resourceGroup: change.resourceGroup ||
+                    resourceGroupConfig.resourceTypeMappings?.[change.resourceType] ||
                     resourceGroupConfig.defaultResourceGroup,
                 }));
                 setWhatIfChanges(parsedChanges);
@@ -320,7 +362,8 @@ function InfrastructurePanel() {
                   message: `Preview generated: ${parsedChanges.length} changes detected${warningMsg}`,
                 });
               } else if (previewData.warnings) {
-                // Even if no changes, show the warning
+                // Even if no changes, show the warning and allow proceeding
+                setHasPreviewed(true);
                 setLastResponse({
                   success: true,
                   message: previewData.warnings,
@@ -329,10 +372,35 @@ function InfrastructurePanel() {
             } else if (response.error) {
               // Check if errors are only Cosmos DB nested resource errors (expected)
               const errorStr = response.error;
-              const isOnlyCosmosErrors = errorStr.includes('DeploymentWhatIfResourceError') 
+              const isOnlyCosmosErrors = errorStr.includes('DeploymentWhatIfResourceError')
                 && errorStr.includes('Microsoft.DocumentDB')
                 && (errorStr.includes('sqlDatabases') || errorStr.includes('containers'));
-              
+
+              if (isOnlyCosmosErrors) {
+                // Extract affected resources
+                const affectedResources: string[] = [];
+                const containerMatches = errorStr.match(/containers\/([a-zA-Z]+)/g);
+                if (containerMatches) {
+                  containerMatches.forEach((match: string) => {
+                    const name = match.replace('containers/', '');
+                    if (!affectedResources.includes(name)) affectedResources.push(name);
+                  });
+                }
+                if (errorStr.includes('MystiraAppDb') && !affectedResources.includes('MystiraAppDb')) {
+                  affectedResources.unshift('MystiraAppDb');
+                }
+
+                setCosmosWarning({
+                  type: 'cosmos-whatif',
+                  message: 'Azure what-if preview cannot evaluate nested Cosmos DB resources',
+                  details: 'This is a known Azure limitation. The Cosmos DB account, database, and containers will still be created correctly during deployment.',
+                  affectedResources: affectedResources.length > 0
+                    ? affectedResources
+                    : ['MystiraAppDb', 'UserProfiles', 'Scenarios', 'GameSessions', 'CompassTrackings'],
+                  dismissed: false,
+                });
+              }
+
               if (isOnlyCosmosErrors && response.result) {
                 // Try to parse anyway - we might have valid preview data
                 const previewData = response.result as any;
@@ -371,6 +439,16 @@ function InfrastructurePanel() {
               setLastResponse({
                 success: false,
                 error: 'Please run Preview first to see what will be deployed before deploying.',
+              });
+              setLoading(false);
+              return;
+            }
+
+            // Require Cosmos warning to be dismissed before deploying
+            if (cosmosWarning && !cosmosWarning.dismissed) {
+              setLastResponse({
+                success: false,
+                error: 'Please review and acknowledge the Cosmos DB preview warning before deploying. The warning indicates that some nested resources could not be evaluated by Azure what-if preview.',
               });
               setLoading(false);
               return;
@@ -1359,8 +1437,40 @@ function InfrastructurePanel() {
                     </button>
                   </div>
                 </div>
-                <WhatIfViewer 
-                  changes={whatIfChanges} 
+
+                {/* Dismissible Cosmos DB Warning */}
+                {cosmosWarning && !cosmosWarning.dismissed && (
+                  <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">⚠️</span>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-amber-900 dark:text-amber-200 mb-1">
+                          {cosmosWarning.message}
+                        </h4>
+                        <p className="text-sm text-amber-800 dark:text-amber-300 mb-2">
+                          This is a known Azure limitation. The following nested resources could not be evaluated:
+                        </p>
+                        <ul className="text-sm text-amber-700 dark:text-amber-400 mb-3 list-disc list-inside">
+                          {cosmosWarning.affectedResources.map((resource) => (
+                            <li key={resource}>{resource}</li>
+                          ))}
+                        </ul>
+                        <p className="text-xs text-amber-600 dark:text-amber-500 mb-3">
+                          These resources will still be created/updated during deployment. The preview error is informational only.
+                        </p>
+                        <button
+                          onClick={() => setCosmosWarning({ ...cosmosWarning, dismissed: true })}
+                          className="px-3 py-1.5 text-sm bg-amber-600 hover:bg-amber-700 text-white rounded transition-colors"
+                        >
+                          I understand, proceed with deployment
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <WhatIfViewer
+                  changes={whatIfChanges}
                   loading={loading && activeTab === 'actions'}
                   showSelection={hasPreviewed && deploymentMethod === 'azure-cli'}
                   onSelectionChange={(updated) => setWhatIfChanges(updated)}
