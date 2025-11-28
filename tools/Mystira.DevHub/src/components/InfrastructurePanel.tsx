@@ -48,7 +48,7 @@ function InfrastructurePanel() {
   const [showStep2, setShowStep2] = useState(false);
   const [infrastructureLoading, setInfrastructureLoading] = useState(true);
   const [cosmosWarning, setCosmosWarning] = useState<CosmosWarning | null>(null);
-  const [storageAccountConflict, setStorageAccountConflict] = useState<StorageAccountConflictWarning | null>(null);
+  const [storageAccountConflict] = useState<StorageAccountConflictWarning | null>(null);
   const [deletingStorageAccount, setDeletingStorageAccount] = useState(false);
   const [showDeleteStorageConfirm, setShowDeleteStorageConfirm] = useState(false);
   const [autoRetryAfterDelete, setAutoRetryAfterDelete] = useState(false);
