@@ -1,11 +1,21 @@
 import { invoke } from '@tauri-apps/api/tauri';
-import type { CommandResponse } from '../../../types';
+import type { CommandResponse, CosmosWarning, WhatIfChange } from '../../../types';
 
 interface InfrastructureResponseDisplayProps {
-  response: CommandResponse;
+  response: CommandResponse | null;
+  cosmosWarning?: CosmosWarning | null;
+  onCosmosWarningChange?: (warning: CosmosWarning | null) => void;
+  whatIfChanges?: WhatIfChange[];
+  onLastResponseChange?: (response: CommandResponse | null) => void;
 }
 
-export function InfrastructureResponseDisplay({ response }: InfrastructureResponseDisplayProps) {
+export function InfrastructureResponseDisplay({ 
+  response,
+  cosmosWarning,
+  onCosmosWarningChange,
+  whatIfChanges = [],
+  onLastResponseChange,
+}: InfrastructureResponseDisplayProps) {
   const handleInstallAzureCli = async () => {
     try {
       const installResponse = await invoke<CommandResponse>('install_azure_cli');
@@ -19,12 +29,17 @@ export function InfrastructureResponseDisplay({ response }: InfrastructureRespon
     }
   };
 
+  if (!response) {
+    return null;
+  }
+
   const hasAzureCliError = response.error && (
     response.error.includes('Azure CLI is not installed') ||
     response.error.includes('Azure CLI not found')
   );
 
   return (
+    <>
     <div
       className={`rounded-lg p-6 mb-8 ${
         response.success
@@ -87,6 +102,58 @@ export function InfrastructureResponseDisplay({ response }: InfrastructureRespon
         </details>
       )}
     </div>
+    
+    {/* Cosmos DB Warning Banner - Dismissible */}
+    {cosmosWarning && !cosmosWarning.dismissed && (
+      <div className="rounded-lg p-4 mb-6 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-3">
+            <span className="text-amber-500 text-xl">⚠️</span>
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-1">
+                Expected Cosmos DB Preview Warnings
+              </h4>
+              <p className="text-xs text-amber-700 dark:text-amber-300 mb-2">
+                Azure's what-if preview cannot predict changes for nested Cosmos DB resources
+                (databases and containers) that don't exist yet. This is a known Azure limitation
+                and does not affect actual deployments.
+              </p>
+              {cosmosWarning.affectedResources.length > 0 && (
+                <div className="text-xs text-amber-600 dark:text-amber-400 mb-2">
+                  <span className="font-medium">Affected resources:</span>{' '}
+                  {cosmosWarning.affectedResources.join(', ')}
+                </div>
+              )}
+              <details className="text-xs">
+                <summary className="cursor-pointer text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200">
+                  View full error details
+                </summary>
+                <pre className="mt-2 p-2 bg-amber-100 dark:bg-amber-900/50 rounded text-[10px] overflow-auto max-h-32 text-amber-800 dark:text-amber-200">
+                  {cosmosWarning.details}
+                </pre>
+              </details>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              if (onCosmosWarningChange) {
+                onCosmosWarningChange({ ...cosmosWarning, dismissed: true });
+              }
+              if (onLastResponseChange) {
+                onLastResponseChange({
+                  success: true,
+                  message: `Preview completed. ${whatIfChanges.length} resource changes ready for deployment.`,
+                });
+              }
+            }}
+            className="ml-4 px-3 py-1.5 text-xs font-medium bg-amber-100 dark:bg-amber-800 hover:bg-amber-200 dark:hover:bg-amber-700 text-amber-700 dark:text-amber-200 rounded-md transition-colors whitespace-nowrap"
+          >
+            Dismiss & Continue
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 
