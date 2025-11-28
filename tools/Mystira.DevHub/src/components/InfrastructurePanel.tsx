@@ -52,7 +52,7 @@ function InfrastructurePanel() {
   const [deletingStorageAccount, setDeletingStorageAccount] = useState(false);
   const [showDeleteStorageConfirm, setShowDeleteStorageConfirm] = useState(false);
   const [autoRetryAfterDelete, setAutoRetryAfterDelete] = useState(false);
-  const [fetchingResourceGroup, setFetchingResourceGroup] = useState(false);
+  const [fetchingResourceGroup] = useState(false);
 
   const workflowFile = '.start-infrastructure-deploy-dev.yml';
   const repository = 'phoenixvc/Mystira.App';
