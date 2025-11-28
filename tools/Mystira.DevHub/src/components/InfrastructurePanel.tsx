@@ -6,6 +6,8 @@ import type { CommandResponse, ResourceGroupConvention, TemplateConfig, WhatIfCh
 import { DEFAULT_PROJECTS, type ProjectInfo } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
 import DeploymentHistory from './DeploymentHistory';
+import { ActionButtons, ResponseDisplay } from './infrastructure';
+import type { ActionButton } from './infrastructure';
 import InfrastructureStatus, { type InfrastructureStatus as InfrastructureStatusType } from './InfrastructureStatus';
 import ProjectDeploymentPlanner from './ProjectDeploymentPlanner';
 import ResourceGrid from './ResourceGrid';
@@ -863,7 +865,9 @@ function InfrastructurePanel() {
     }
   };
 
-  const actionButtons = [
+  const selectedResourceCount = whatIfChanges.filter(c => c.selected !== false).length;
+
+  const actionButtons: ActionButton[] = [
     {
       id: 'validate',
       icon: '🔍',
@@ -872,7 +876,7 @@ function InfrastructurePanel() {
       onClick: () => handleAction('validate'),
       disabled: loading,
       loading: loading,
-      variant: 'primary' as const,
+      variant: 'primary',
     },
     {
       id: 'preview',
@@ -882,21 +886,21 @@ function InfrastructurePanel() {
       onClick: () => handleAction('preview'),
       disabled: loading,
       loading: loading,
-      variant: 'warning' as const,
+      variant: 'warning',
     },
     {
       id: 'deploy',
       icon: '🚀',
       label: 'Deploy',
       description: hasPreviewed
-        ? whatIfChanges.filter(c => c.selected !== false).length > 0
-          ? `${whatIfChanges.filter(c => c.selected !== false).length} selected`
+        ? selectedResourceCount > 0
+          ? `${selectedResourceCount} selected`
           : 'Select resources first'
         : 'Preview first',
       onClick: () => handleAction('deploy'),
-      disabled: loading || !hasPreviewed || whatIfChanges.filter(c => c.selected !== false).length === 0,
+      disabled: loading || !hasPreviewed || selectedResourceCount === 0,
       loading: loading,
-      variant: 'success' as const,
+      variant: 'success',
     },
     {
       id: 'destroy',
@@ -906,7 +910,7 @@ function InfrastructurePanel() {
       onClick: () => setShowDestroyConfirm(true),
       disabled: loading,
       loading: loading,
-      variant: 'danger' as const,
+      variant: 'danger',
     },
   ];
 
@@ -958,8 +962,8 @@ function InfrastructurePanel() {
         isOpen={showDeployConfirm}
         title="🚀 Deploy Selected Resources"
         message={
-          whatIfChanges.filter(c => c.selected !== false).length > 0
-            ? `You are about to deploy ${whatIfChanges.filter(c => c.selected !== false).length} selected resource(s) to ${environment} environment.`
+          selectedResourceCount > 0
+            ? `You are about to deploy ${selectedResourceCount} selected resource(s) to ${environment} environment.`
             : `You are about to deploy the selected templates to ${environment} environment.`
         }
         confirmText="Deploy Selected Resources"
@@ -1323,112 +1327,9 @@ function InfrastructurePanel() {
             </div>
 
             {/* Action Buttons Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              {actionButtons.map((button) => (
-                <button
-                  key={button.id}
-                  onClick={button.onClick}
-                  disabled={button.disabled}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    button.disabled
-                      ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-                      : button.variant === 'primary'
-                        ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50'
-                        : button.variant === 'warning'
-                          ? 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800 hover:bg-yellow-100 dark:hover:bg-yellow-900/50'
-                          : button.variant === 'success'
-                            ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/50'
-                            : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/50'
-                  }`}
-                >
-                  <div className="text-2xl mb-2">{button.icon}</div>
-                  <div className="font-semibold text-gray-900 dark:text-white">{button.label}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{button.description}</div>
-                  {button.loading && loading && (
-                    <div className="mt-2">
-                      <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-current"></span>
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
+            <ActionButtons buttons={actionButtons} loading={loading} />
             {/* Response Display */}
-            {lastResponse && (
-              <div
-                className={`rounded-lg p-6 mb-8 ${
-                  lastResponse.success
-                    ? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800'
-                    : 'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800'
-                }`}
-              >
-                <h3
-                  className={`text-lg font-semibold mb-2 ${
-                    lastResponse.success ? 'text-green-900 dark:text-green-300' : 'text-red-900 dark:text-red-300'
-                  }`}
-                >
-                  {lastResponse.success ? '✅ Success' : '❌ Error'}
-                </h3>
-
-                {lastResponse.message && (
-                  <p
-                    className={`mb-3 ${
-                      lastResponse.success ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'
-                    }`}
-                  >
-                    {lastResponse.message}
-                  </p>
-                )}
-
-                {lastResponse.error && (
-                  <div>
-                    <pre className="bg-red-100 dark:bg-red-900/50 p-3 rounded text-sm text-red-900 dark:text-red-200 overflow-auto mb-3">
-                      {lastResponse.error}
-                    </pre>
-                    {(lastResponse.error.includes('Azure CLI is not installed') ||
-                      lastResponse.error.includes('Azure CLI not found')) && (
-                      <button
-                        onClick={async () => {
-                          try {
-                            const response = await invoke<CommandResponse>('install_azure_cli');
-                            if (response.success) {
-                              alert('Azure CLI installation started. Please restart the application after installation completes.');
-                            } else {
-                              alert(`Failed to install Azure CLI: ${response.error || 'Unknown error'}`);
-                            }
-                          } catch (error) {
-                            alert(`Error installing Azure CLI: ${error}`);
-                          }
-                        }}
-                        className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors"
-                      >
-                        📦 Install Azure CLI
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {lastResponse.result !== undefined && lastResponse.result !== null && (
-                  <details className="mt-3">
-                    <summary
-                      className={`cursor-pointer font-medium ${
-                        lastResponse.success ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
-                      }`}
-                    >
-                      View Details
-                    </summary>
-                    <pre
-                      className={`mt-2 p-3 rounded text-sm overflow-auto ${
-                        lastResponse.success
-                          ? 'bg-green-100 dark:bg-green-900/50 text-green-900 dark:text-green-200'
-                          : 'bg-red-100 dark:bg-red-900/50 text-red-900 dark:text-red-200'
-                      }`}
-                    >
-                      {JSON.stringify(lastResponse.result, null, 2) || 'No details available'}
-                    </pre>
-                  </details>
-                )}
-              </div>
-            )}
+            <ResponseDisplay response={lastResponse} />
 
             {/* What-If Viewer */}
             {whatIfChanges.length > 0 && (
