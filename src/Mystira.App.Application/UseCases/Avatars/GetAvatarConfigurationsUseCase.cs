@@ -34,10 +34,7 @@ public class GetAvatarConfigurationsUseCase
         var allAgeGroups = AgeGroup.ValueMap.Values.Select(a => a.Value).ToList();
         foreach (var ageGroup in allAgeGroups)
         {
-            if (!response.AgeGroupAvatars.ContainsKey(ageGroup))
-            {
-                response.AgeGroupAvatars[ageGroup] = new List<string>();
-            }
+            response.AgeGroupAvatars.TryAdd(ageGroup, new List<string>());
         }
 
         _logger.LogInformation("Retrieved avatar configurations for {Count} age groups", response.AgeGroupAvatars.Count);

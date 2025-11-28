@@ -209,12 +209,11 @@ public class CharacterMapFileService : ICharacterMapFileService
                 PropertyNameCaseInsensitive = true
             });
 
-            if (importData == null || !importData.ContainsKey("characters"))
+            if (importData == null || !importData.TryGetValue("characters", out var importedCharacters))
             {
                 throw new ArgumentException("Invalid JSON format. Expected 'characters' array");
             }
 
-            var importedCharacters = importData["characters"];
             if (importedCharacters == null || importedCharacters.Count == 0)
             {
                 throw new ArgumentException("No valid characters found in JSON data");

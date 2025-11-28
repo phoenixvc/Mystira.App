@@ -183,7 +183,7 @@ builder.Services.AddAuthentication(options =>
             validationParameters.IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>
             {
                 // This will automatically fetch keys from the JWKS endpoint
-                var client = new HttpClient();
+                using var client = new HttpClient();
                 var response = client.GetStringAsync(jwksEndpoint).Result;
                 var keys = new JsonWebKeySet(response);
                 return keys.Keys;

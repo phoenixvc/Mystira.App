@@ -37,9 +37,9 @@ public class GetAvatarsQueryHandler : IQueryHandler<GetAvatarsQuery, AvatarRespo
         };
 
         // Ensure all age groups are present
-        foreach (var ageGroup in AgeGroupConstants.AllAgeGroups.Where(ag => !response.AgeGroupAvatars.ContainsKey(ag)))
+        foreach (var ageGroup in AgeGroupConstants.AllAgeGroups)
         {
-            response.AgeGroupAvatars[ageGroup] = new List<string>();
+            response.AgeGroupAvatars.TryAdd(ageGroup, new List<string>());
         }
 
         _logger.LogInformation("Retrieved avatars for {Count} age groups", response.AgeGroupAvatars.Count);

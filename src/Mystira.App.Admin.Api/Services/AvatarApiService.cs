@@ -39,10 +39,7 @@ public class AvatarApiService : IAvatarApiService
             // Ensure all age groups are present
             foreach (var ageGroup in AgeGroupConstants.AllAgeGroups)
             {
-                if (!response.AgeGroupAvatars.ContainsKey(ageGroup))
-                {
-                    response.AgeGroupAvatars[ageGroup] = new List<string>();
-                }
+                response.AgeGroupAvatars.TryAdd(ageGroup, new List<string>());
             }
 
             return response;
@@ -194,14 +191,15 @@ public class AvatarApiService : IAvatarApiService
                 configFile.AgeGroupAvatars = new Dictionary<string, List<string>>();
             }
 
-            if (!configFile.AgeGroupAvatars.ContainsKey(ageGroup))
+            if (!configFile.AgeGroupAvatars.TryGetValue(ageGroup, out var avatars))
             {
-                configFile.AgeGroupAvatars[ageGroup] = new List<string>();
+                avatars = new List<string>();
+                configFile.AgeGroupAvatars[ageGroup] = avatars;
             }
 
-            if (!configFile.AgeGroupAvatars[ageGroup].Contains(mediaId))
+            if (!avatars.Contains(mediaId))
             {
-                configFile.AgeGroupAvatars[ageGroup].Add(mediaId);
+                avatars.Add(mediaId);
                 _logger.LogInformation("Added avatar {MediaId} to age group: {AgeGroup}", mediaId, ageGroup);
             }
             else
