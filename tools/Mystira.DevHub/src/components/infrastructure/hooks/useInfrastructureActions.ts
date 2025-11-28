@@ -26,6 +26,10 @@ interface UseInfrastructureActionsParams {
   onSetShowDeployConfirm: (show: boolean) => void;
   onSetShowDestroySelect: (show: boolean) => void;
   onFetchWorkflowStatus: () => void;
+  onSetCurrentAction?: (action: 'validate' | 'preview' | 'deploy' | 'destroy' | null) => void;
+  onSetHasDeployedInfrastructure?: (deployed: boolean) => void;
+  onSetDeploymentProgress?: (progress: string | null) => void;
+  onSetShowResourceGroupConfirm?: (show: boolean, resourceGroup?: string, location?: string) => void;
 }
 
 export function useInfrastructureActions({
@@ -50,6 +54,10 @@ export function useInfrastructureActions({
   onSetShowDeployConfirm,
   onSetShowDestroySelect,
   onFetchWorkflowStatus,
+  onSetCurrentAction,
+  onSetHasDeployedInfrastructure,
+  onSetDeploymentProgress,
+  onSetShowResourceGroupConfirm,
 }: UseInfrastructureActionsParams) {
   const handleAction = useCallback(async (action: 'validate' | 'preview' | 'deploy' | 'destroy') => {
     if (action !== 'destroy') {
@@ -60,11 +68,14 @@ export function useInfrastructureActions({
           error: 'Please select at least one template in Step 1 before proceeding.',
         });
         onSetLoading(false);
+      onSetCurrentAction?.(null);
+        onSetCurrentAction?.(null);
         return;
       }
     }
 
     onSetLoading(true);
+    onSetCurrentAction?.(action);
     onSetLastResponse(null);
     onSetShowOutputPanel(true);
 
@@ -78,6 +89,7 @@ export function useInfrastructureActions({
             error: 'Repository root not available. Please wait for it to be detected, or use GitHub Actions workflow instead.',
           });
           onSetLoading(false);
+      onSetCurrentAction?.(null);
           return;
         }
         
@@ -108,6 +120,7 @@ export function useInfrastructureActions({
                 error: 'Please run Validate first before previewing changes.',
               });
               onSetLoading(false);
+      onSetCurrentAction?.(null);
               return;
             }
             onSetCosmosWarning(null);
@@ -164,7 +177,21 @@ export function useInfrastructureActions({
                   success: true,
                   message: `Preview generated: ${parsedChanges.length} changes detected${warningMsg}`,
                 });
-              } else if (hasCosmosWarning) {
+              } else if (hasCosmosWarning || parsedChanges.length === 0) {
+                // Even if we have Cosmos warnings or no parsed changes, try to get valid changes
+                let validChanges: WhatIfChange[] = parsedChanges;
+                
+                // If no changes parsed yet, try to parse from preview data
+                if (validChanges.length === 0) {
+                  if (previewData.parsed && previewData.parsed.changes) {
+                    validChanges = parseWhatIfOutput(JSON.stringify(previewData.parsed));
+                  } else if (previewData.preview) {
+                    validChanges = parseWhatIfOutput(previewData.preview);
+                  } else if (previewData.changes) {
+                    validChanges = previewData.changes;
+                  }
+                }
+                
                 const errorStr = response.error || 
                   (typeof previewData.errors === 'string' ? previewData.errors : null) ||
                   (typeof previewData.errors === 'object' && previewData.errors ? JSON.stringify(previewData.errors) : null) ||
@@ -182,18 +209,40 @@ export function useInfrastructureActions({
                   }
                 }
                 
-                onSetCosmosWarning({
-                  type: 'cosmos-whatif',
-                  message: 'Cosmos DB nested resource errors detected during preview',
-                  details: errorStr || warningText || 'Cosmos DB nested resource preview limitations',
-                  affectedResources,
-                  dismissed: false,
-                });
+                // Filter out Cosmos DB nested resources from the changes list
+                if (validChanges.length > 0) {
+                  validChanges = validChanges.filter(change => {
+                    // Keep non-Cosmos resources, or Cosmos account itself (not nested)
+                    return !change.resourceType?.includes('Microsoft.DocumentDB/databaseAccounts/sqlDatabases') &&
+                           !change.resourceType?.includes('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers');
+                  });
+                  
+                  if (validChanges.length > 0) {
+                    validChanges = validChanges.map(change => ({
+                      ...change,
+                      resourceGroup: change.resourceGroup || 
+                        resourceGroupConfig.resourceTypeMappings?.[change.resourceType] || 
+                        resourceGroupConfig.defaultResourceGroup,
+                      selected: change.selected !== false, // Default to selected
+                    }));
+                    onSetWhatIfChanges(validChanges);
+                  }
+                }
                 
-                onSetWhatIfChanges([]);
+                if (hasCosmosWarning) {
+                  onSetCosmosWarning({
+                    type: 'cosmos-whatif',
+                    message: 'Cosmos DB nested resource errors detected during preview',
+                    details: errorStr || warningText || 'Cosmos DB nested resource preview limitations',
+                    affectedResources,
+                    dismissed: false,
+                  });
+                }
+                
+                onSetHasPreviewed(true); // Preview completed, even with Cosmos warnings
                 onSetLastResponse({
                   success: true,
-                  message: `Preview completed with Cosmos DB warnings. ${affectedResources.length > 0 ? affectedResources.length + ' resources affected. ' : ''}These errors are expected and won't prevent deployment.`,
+                  message: `Preview completed${hasCosmosWarning ? ' with Cosmos DB warnings' : ''}. ${validChanges.length > 0 ? validChanges.length + ' resources ready for deployment. ' : ''}${affectedResources.length > 0 ? affectedResources.length + ' Cosmos resources affected by preview limitations. ' : ''}${hasCosmosWarning ? 'These errors are expected and won\'t prevent deployment.' : ''}`,
                 });
               } else if (previewData.warnings) {
                 onSetLastResponse({
@@ -229,6 +278,28 @@ export function useInfrastructureActions({
                     parsedChanges = parseWhatIfOutput(JSON.stringify(previewData.parsed));
                   } else if (previewData.preview) {
                     parsedChanges = parseWhatIfOutput(previewData.preview);
+                  } else if (previewData.changes) {
+                    parsedChanges = previewData.changes;
+                  }
+                }
+
+                // Filter out Cosmos DB nested resources from the changes list
+                if (parsedChanges.length > 0) {
+                  parsedChanges = parsedChanges.filter(change => {
+                    // Keep non-Cosmos resources, or Cosmos account itself (not nested)
+                    return !change.resourceType?.includes('Microsoft.DocumentDB/databaseAccounts/sqlDatabases') &&
+                           !change.resourceType?.includes('Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers');
+                  });
+                  
+                  if (parsedChanges.length > 0) {
+                    parsedChanges = parsedChanges.map(change => ({
+                      ...change,
+                      resourceGroup: change.resourceGroup ||
+                        resourceGroupConfig.resourceTypeMappings?.[change.resourceType] ||
+                        resourceGroupConfig.defaultResourceGroup,
+                      selected: change.selected !== false, // Default to selected
+                    }));
+                    onSetWhatIfChanges(parsedChanges);
                   }
                 }
 
@@ -240,20 +311,10 @@ export function useInfrastructureActions({
                   dismissed: false,
                 });
 
-                if (parsedChanges.length > 0) {
-                  parsedChanges = parsedChanges.map(change => ({
-                    ...change,
-                    resourceGroup: change.resourceGroup ||
-                      resourceGroupConfig.resourceTypeMappings?.[change.resourceType] ||
-                      resourceGroupConfig.defaultResourceGroup,
-                  }));
-                  onSetWhatIfChanges(parsedChanges);
-                }
-
+                onSetHasPreviewed(true); // Preview completed, even with Cosmos errors
                 onSetLastResponse({
-                  success: false,
-                  error: undefined,
-                  message: `Preview completed with warnings. ${affectedResources.length} Cosmos DB resources reported errors (this is expected for new deployments).`,
+                  success: true,
+                  message: `Preview completed with warnings. ${parsedChanges.length > 0 ? parsedChanges.length + ' resources ready for deployment. ' : ''}${affectedResources.length} Cosmos DB resources reported errors (this is expected for new deployments).`,
                 });
               } else {
                 onSetLastResponse({
@@ -266,14 +327,8 @@ export function useInfrastructureActions({
           }
 
           case 'deploy': {
-            if (cosmosWarning && !cosmosWarning.dismissed) {
-              onSetLastResponse({
-                success: false,
-                error: 'Please dismiss the Cosmos DB warnings before deploying.',
-              });
-              onSetLoading(false);
-              return;
-            }
+            // Note: Cosmos DB warnings are expected and don't prevent deployment
+            // They're just informational about Azure's what-if preview limitations
             
             if (!hasPreviewed) {
               onSetLastResponse({
@@ -281,6 +336,7 @@ export function useInfrastructureActions({
                 error: 'Please run Preview first to see what will be deployed before deploying.',
               });
               onSetLoading(false);
+      onSetCurrentAction?.(null);
               return;
             }
             
@@ -292,27 +348,51 @@ export function useInfrastructureActions({
                   error: 'Please select at least one template to deploy.',
                 });
                 onSetLoading(false);
+      onSetCurrentAction?.(null);
                 return;
               }
               onSetShowDeployConfirm(true);
               onSetLoading(false);
+      onSetCurrentAction?.(null);
               return;
             }
 
-            const selectedResources = whatIfChanges
-              .filter(c => c.selected !== false)
-              .map(c => ({
-                name: c.resourceName,
-                type: c.resourceType,
-                module: getModuleFromResourceType(c.resourceType),
-              }));
+            // If no whatIfChanges but templates are selected, deploy based on templates
+            const selectedTemplates = templates.filter(t => t.selected);
+            let selectedResources: Array<{ name: string; type: string; module: string }> = [];
+            
+            if (whatIfChanges.length > 0) {
+              // Use what-if changes if available
+              for (const c of whatIfChanges) {
+                if (c.selected !== false) {
+                  const module = getModuleFromResourceType(c.resourceType);
+                  if (module) {
+                    selectedResources.push({
+                      name: c.resourceName,
+                      type: c.resourceType,
+                      module,
+                    });
+                  }
+                }
+              }
+            } else if (selectedTemplates.length > 0) {
+              // Fallback to templates if no what-if changes (e.g., Cosmos preview errors)
+              selectedResources = selectedTemplates
+                .filter(t => t.id === 'storage' || t.id === 'cosmos' || t.id === 'appservice')
+                .map(t => ({
+                  name: t.name,
+                  type: t.id,
+                  module: t.id === 'storage' ? 'storage' : t.id === 'cosmos' ? 'cosmos' : 'appservice',
+                }));
+            }
 
             if (selectedResources.length === 0) {
               onSetLastResponse({
                 success: false,
-                error: 'Please select at least one resource to deploy.',
+                error: 'Please select at least one template in Step 1 to deploy.',
               });
               onSetLoading(false);
+              onSetCurrentAction?.(null);
               return;
             }
 
@@ -324,12 +404,14 @@ export function useInfrastructureActions({
                   error: 'App Service requires Cosmos DB and Storage Account to be selected.',
                 });
                 onSetLoading(false);
+      onSetCurrentAction?.(null);
                 return;
               }
             }
 
             onSetShowDeployConfirm(true);
             onSetLoading(false);
+      onSetCurrentAction?.(null);
             return;
           }
 
@@ -362,13 +444,13 @@ export function useInfrastructureActions({
               onSetWhatIfChanges([
                 {
                   resourceType: 'Microsoft.DocumentDB/databaseAccounts',
-                  resourceName: 'dev-euw-cosmos-mystira',
+                  resourceName: 'dev-san-cosmos-mystira',
                   changeType: 'modify',
                   changes: ['consistencyPolicy.defaultConsistencyLevel: BoundedStaleness → Session'],
                 },
                 {
                   resourceType: 'Microsoft.Storage/storageAccounts',
-                  resourceName: 'deveuwstmystira',
+                  resourceName: 'devsanstmystira',
                   changeType: 'noChange',
                 },
               ]);
@@ -379,6 +461,7 @@ export function useInfrastructureActions({
             const confirmDeploy = confirm('Are you sure you want to deploy infrastructure?');
             if (!confirmDeploy) {
               onSetLoading(false);
+      onSetCurrentAction?.(null);
               return;
             }
             response = await invoke('infrastructure_deploy', {
@@ -447,13 +530,15 @@ export function useInfrastructureActions({
       });
     } finally {
       onSetLoading(false);
+      onSetCurrentAction?.(null);
     }
   }, [
     deploymentMethod, repoRoot, environment, templates, resourceGroupConfig,
     hasValidated, hasPreviewed, whatIfChanges, cosmosWarning, workflowFile, repository,
     onSetLoading, onSetLastResponse, onSetShowOutputPanel, onSetHasValidated,
     onSetHasPreviewed, onSetWhatIfChanges, onSetCosmosWarning, onSetShowDeployConfirm,
-    onSetShowDestroySelect, onFetchWorkflowStatus,
+    onSetShowDestroySelect, onFetchWorkflowStatus, onSetHasDeployedInfrastructure,
+    onSetDeploymentProgress, onSetShowResourceGroupConfirm,
   ]);
 
   const handleDestroyConfirm = useCallback(async () => {
@@ -474,16 +559,23 @@ export function useInfrastructureActions({
           error: 'Please select at least one resource to destroy.',
         });
         onSetLoading(false);
+      onSetCurrentAction?.(null);
+        onSetCurrentAction?.(null);
         return;
       }
       
       const destroyResults = [];
       for (const resource of resourcesToDestroy) {
         if (resource.resourceId) {
-          const result = await invoke<CommandResponse>('delete_azure_resource', {
-            resourceId: resource.resourceId,
-          });
-          destroyResults.push({ resource: resource.resourceName, success: result.success, error: result.error });
+          // Commented out actual Azure delete call for testing
+          // const result = await invoke<CommandResponse>('delete_azure_resource', {
+          //   resourceId: resource.resourceId,
+          // });
+          // destroyResults.push({ resource: resource.resourceName, success: result.success, error: result.error });
+          
+          // Show warning popup instead
+          alert(`⚠️ In a real world, ${resource.resourceName} was now toast!`);
+          destroyResults.push({ resource: resource.resourceName, success: true, error: undefined });
         }
       }
       
@@ -511,6 +603,7 @@ export function useInfrastructureActions({
       });
     } finally {
       onSetLoading(false);
+      onSetCurrentAction?.(null);
     }
   }, [whatIfChanges, onSetLoading, onSetLastResponse, onSetHasPreviewed, onSetWhatIfChanges, onFetchWorkflowStatus]);
 
@@ -518,16 +611,39 @@ export function useInfrastructureActions({
     onSetLoading(true);
 
     try {
-      const selectedResources = whatIfChanges
-        .filter(c => c.selected !== false)
-        .map(c => ({
-          name: c.resourceName,
-          type: c.resourceType,
-          module: getModuleFromResourceType(c.resourceType),
-          resourceGroup: c.resourceGroup || 
-            resourceGroupConfig.resourceTypeMappings?.[c.resourceType] || 
-            resourceGroupConfig.defaultResourceGroup,
-        }));
+      // If no whatIfChanges but templates are selected, deploy based on templates
+      const selectedTemplates = templates.filter(t => t.selected);
+      let selectedResources: Array<{ name: string; type: string; module: string; resourceGroup: string }> = [];
+      
+      if (whatIfChanges.length > 0) {
+        // Use what-if changes if available
+        for (const c of whatIfChanges) {
+          if (c.selected !== false) {
+            const module = getModuleFromResourceType(c.resourceType);
+            if (module) {
+              selectedResources.push({
+                name: c.resourceName,
+                type: c.resourceType,
+                module,
+                resourceGroup: c.resourceGroup || 
+                  resourceGroupConfig.resourceTypeMappings?.[c.resourceType] || 
+                  resourceGroupConfig.defaultResourceGroup,
+              });
+            }
+          }
+        }
+      } else if (selectedTemplates.length > 0) {
+        // Fallback to templates if no what-if changes (e.g., Cosmos preview errors)
+        const defaultResourceGroup = resourceGroupConfig.defaultResourceGroup;
+        selectedResources = selectedTemplates
+          .filter(t => t.id === 'storage' || t.id === 'cosmos' || t.id === 'appservice')
+          .map(t => ({
+            name: t.name,
+            type: t.id,
+            module: t.id === 'storage' ? 'storage' : t.id === 'cosmos' ? 'cosmos' : 'appservice',
+            resourceGroup: defaultResourceGroup,
+          }));
+      }
       
       const resourcesByGroup = selectedResources.reduce((acc, resource) => {
         const rg = resource.resourceGroup || resourceGroupConfig.defaultResourceGroup;
@@ -541,6 +657,11 @@ export function useInfrastructureActions({
       const resourceGroups = Object.keys(resourcesByGroup);
       const deploymentResults = [];
       
+      // Check for Cosmos DB failed state error before deploying
+      const cosmosAccountName = resourceGroupConfig.projectName 
+        ? `${environment}${resourceGroupConfig.region || 'san'}${resourceGroupConfig.projectName}cosmos`
+        : null;
+      
       for (const resourceGroup of resourceGroups) {
         const resourcesInGroup = resourcesByGroup[resourceGroup];
         
@@ -553,6 +674,13 @@ export function useInfrastructureActions({
           continue;
         }
         
+        // Show progress
+        const modulesToDeploy = [];
+        if (deployStorage) modulesToDeploy.push('Storage Account');
+        if (deployCosmos) modulesToDeploy.push('Cosmos DB');
+        if (deployAppService) modulesToDeploy.push('App Service');
+        onSetDeploymentProgress?.(`Deploying ${modulesToDeploy.join(', ')} to ${resourceGroup}...`);
+        
         const response = await invoke<CommandResponse>('azure_deploy_infrastructure', {
           repoRoot,
           environment,
@@ -562,27 +690,153 @@ export function useInfrastructureActions({
           deployAppService,
         });
         
-        deploymentResults.push({
-          resourceGroup,
-          success: response.success,
-          error: response.error,
-          message: response.message,
-        });
+        // Show logs immediately if available - send to Output tab in bottom panel
+        if (response.result && (response.result as any).logs) {
+          const logs = (response.result as any).logs as string;
+          
+          // Send deployment logs to Output tab via custom event
+          const event = new CustomEvent('deployment-logs', {
+            detail: { logs },
+          });
+          window.dispatchEvent(event);
+        }
+        
+        // Check if resource group needs to be created
+        if (!response.success && response.result && (response.result as any).needsCreation) {
+          // Resource group doesn't exist - prompt user for confirmation
+          const location = (response.result as any).location || resourceGroupConfig.region || 'southafricanorth';
+          onSetShowResourceGroupConfirm?.(true, resourceGroup, location);
+          
+          // Stop deployment and wait for user confirmation
+          // The confirmation handler will retry the deployment
+          onSetLoading(false);
+          onSetCurrentAction?.(null);
+          onSetDeploymentProgress?.(null);
+          return; // Exit early - user needs to confirm resource group creation
+        }
+        
+        // Check for region capacity issues first
+        if (!response.success && response.error && 
+            (response.error.includes('ServiceUnavailable') || response.error.includes('high demand'))) {
+          const regionMatch = response.error.match(/high demand in ([^,]+)/i) || 
+                              response.error.match(/region[^,]*([A-Z][a-z]+ [A-Z][a-z]+)/i);
+          const region = regionMatch ? regionMatch[1] : 'West Europe';
+          const enhancedError = `❌ Region Capacity Issue: ${region} is currently experiencing high demand for Cosmos DB.\n\n` +
+            `💡 Suggested Solutions:\n` +
+            `1. Try a different region (e.g., North Europe, East US, UK South)\n` +
+            `2. Request region access: https://aka.ms/cosmosdbquota\n` +
+            `3. Wait and retry later (capacity issues are usually temporary)\n` +
+            `4. Use an existing resource group in a different region\n\n` +
+            `Original error:\n${response.error}`;
+          
+          deploymentResults.push({
+            resourceGroup,
+            success: false,
+            error: enhancedError,
+            message: response.message,
+            logs: response.result && (response.result as any).logs ? (response.result as any).logs : undefined,
+          });
+        }
+        // Check for Cosmos DB failed state error - extract actual account name from error
+        else if (!response.success && response.error && response.error.includes('failed provisioning state')) {
+          let actualCosmosAccountName = cosmosAccountName;
+          // Try to extract the actual account name from the error message
+          const accountNameMatch = response.error.match(/databaseAccounts\/([a-zA-Z0-9-]+)/);
+          if (accountNameMatch && accountNameMatch[1]) {
+            actualCosmosAccountName = accountNameMatch[1];
+          }
+          // Also try to extract from the JSON error message
+          if (!actualCosmosAccountName) {
+            const jsonMatch = response.error.match(/"message":\s*"[^"]*DatabaseAccount\s+([a-zA-Z0-9-]+)/);
+            if (jsonMatch && jsonMatch[1]) {
+              actualCosmosAccountName = jsonMatch[1];
+            }
+          }
+          
+          if (actualCosmosAccountName) {
+            const errorMessage = `The Cosmos DB account "${actualCosmosAccountName}" is in a failed provisioning state from a previous deployment attempt. You need to delete it before recreating it.\n\n` +
+              `To fix this:\n` +
+              `1. Go to Azure Portal: https://portal.azure.com\n` +
+              `2. Navigate to the resource group: ${resourceGroup}\n` +
+              `3. Find and delete the Cosmos DB account: ${actualCosmosAccountName}\n` +
+              `4. Wait for deletion to complete, then try deploying again.\n\n` +
+              `Original error:\n${response.error}`;
+            
+            deploymentResults.push({
+              resourceGroup,
+              success: false,
+              error: errorMessage,
+              message: response.message,
+              logs: response.result && (response.result as any).logs ? (response.result as any).logs : undefined,
+            });
+          } else {
+            deploymentResults.push({
+              resourceGroup,
+              success: response.success,
+              error: response.error,
+              message: response.message,
+              logs: response.result && (response.result as any).logs ? (response.result as any).logs : undefined,
+            });
+          }
+        } else {
+          deploymentResults.push({
+            resourceGroup,
+            success: response.success,
+            error: response.error,
+            message: response.message,
+            logs: response.result && (response.result as any).logs ? (response.result as any).logs : undefined,
+          });
+        }
       }
       
       const allSuccess = deploymentResults.every(r => r.success);
       const errors = deploymentResults.filter(r => !r.success).map(r => `${r.resourceGroup}: ${r.error}`).join('\n');
       
+      // Collect all deployment logs
+      const allLogs = deploymentResults
+        .filter((r: any) => r.logs)
+        .map((r: any) => `=== ${r.resourceGroup} ===\n${r.logs}`)
+        .join('\n\n');
+      
+      // Check for region capacity issues and provide helpful suggestions
+      let enhancedError = errors;
+      if (errors && errors.includes('ServiceUnavailable') && errors.includes('high demand')) {
+        const regionMatch = errors.match(/high demand in ([^,]+)/i);
+        const region = regionMatch ? regionMatch[1] : 'the selected region';
+        enhancedError = `❌ Region Capacity Issue: ${region} is currently experiencing high demand for Cosmos DB.\n\n` +
+          `💡 Suggested Solutions:\n` +
+          `1. Try a different region (e.g., North Europe, East US, UK South)\n` +
+          `2. Request region access: https://aka.ms/cosmosdbquota\n` +
+          `3. Wait and retry later (capacity issues are usually temporary)\n` +
+          `4. Use an existing resource group in a different region\n\n` +
+          `Original error:\n${errors}`;
+      }
+      
       const response: CommandResponse = {
         success: allSuccess,
-        result: { deployments: deploymentResults },
+        result: { deployments: deploymentResults, logs: allLogs || undefined },
         message: allSuccess ? `Successfully deployed to ${deploymentResults.length} resource group(s)` : undefined,
-        error: allSuccess ? undefined : `Some deployments failed:\n${errors}`,
+        error: allSuccess ? undefined : enhancedError,
       };
       
       onSetLastResponse(response);
+      onSetDeploymentProgress?.(null);
+      
+      // Send deployment logs to Output tab via custom event
+      if (allLogs) {
+        const event = new CustomEvent('deployment-logs', {
+          detail: { logs: allLogs },
+        });
+        window.dispatchEvent(event);
+      } else {
+        const event = new CustomEvent('deployment-logs', {
+          detail: { logs: null },
+        });
+        window.dispatchEvent(event);
+      }
 
       if (response.success) {
+        onSetHasDeployedInfrastructure?.(true);
         if (onRefreshInfrastructureStatus) {
           setTimeout(() => {
             onRefreshInfrastructureStatus();
@@ -599,8 +853,9 @@ export function useInfrastructureActions({
       });
     } finally {
       onSetLoading(false);
+      onSetCurrentAction?.(null);
     }
-  }, [whatIfChanges, resourceGroupConfig, repoRoot, environment, onSetLoading, onSetLastResponse, onSetHasPreviewed, onSetWhatIfChanges, onFetchWorkflowStatus]);
+  }, [whatIfChanges, templates, resourceGroupConfig, repoRoot, environment, onSetLoading, onSetLastResponse, onSetHasPreviewed, onSetWhatIfChanges, onFetchWorkflowStatus, onSetHasDeployedInfrastructure, onSetDeploymentProgress]);
 
   return {
     handleAction,

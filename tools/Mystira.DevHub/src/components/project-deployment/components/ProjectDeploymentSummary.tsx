@@ -32,9 +32,9 @@ export function ProjectDeploymentSummary({
             behavior: 'smooth'
           });
           
-          step2Element.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2', 'rounded-lg');
+          step2Element.classList.add('ring-2', 'ring-blue-500', 'rounded-lg');
           setTimeout(() => {
-            step2Element.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2', 'rounded-lg');
+            step2Element.classList.remove('ring-2', 'ring-blue-500', 'rounded-lg');
           }, 2000);
         });
       }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './App.css';
 import CosmosExplorer from './components/CosmosExplorer';
 import Dashboard from './components/Dashboard';
@@ -7,7 +7,9 @@ import MigrationManager from './components/MigrationManager';
 import ServiceManager from './components/ServiceManager';
 import { VSCodeLayout, type BottomPanelTab } from './components/VSCodeLayout';
 import { getServiceConfigs } from './components/services';
+import { LogsViewer } from './components/services/LogsViewer';
 import { useEnvironmentManagement } from './components/services/hooks/useEnvironmentManagement';
+import type { LogFilter, ServiceLog } from './components/services/types';
 import { useDarkMode } from './hooks/useDarkMode';
 
 type View = 'services' | 'dashboard' | 'cosmos' | 'migration' | 'infrastructure';
@@ -27,6 +29,28 @@ function App() {
 
   // Global logs state for bottom panel
   const [globalLogs, setGlobalLogs] = useState<Array<{ timestamp: Date; message: string; type: 'info' | 'error' | 'warn' }>>([]);
+  
+  // Deployment logs state (separate from global logs for infrastructure deployments)
+  const [deploymentLogs, setDeploymentLogs] = useState<string | null>(null);
+  
+  // LogsViewer state
+  const [logFilter, setLogFilter] = useState<LogFilter>({
+    search: '',
+    type: 'all',
+    source: 'all',
+    severity: 'all',
+  });
+  const [isAutoScroll, setIsAutoScroll] = useState(true);
+  
+  // Global problems state for bottom panel
+  const [problems, setProblems] = useState<Array<{ 
+    id: string; 
+    timestamp: Date; 
+    severity: 'error' | 'warning' | 'info'; 
+    message: string; 
+    source?: string; 
+    details?: string;
+  }>>([]);
 
   // Environment status for header (only when on services view)
   const [serviceEnvironments, setServiceEnvironments] = useState<Record<string, 'local' | 'dev' | 'prod'>>(() => {
@@ -80,6 +104,52 @@ function App() {
     };
   }, []);
 
+  // Listen for deployment logs
+  useEffect(() => {
+    const handleDeploymentLogs = (event: CustomEvent<{ logs: string }>) => {
+      setDeploymentLogs(event.detail.logs);
+    };
+
+    window.addEventListener('deployment-logs' as any, handleDeploymentLogs);
+    return () => {
+      window.removeEventListener('deployment-logs' as any, handleDeploymentLogs);
+    };
+  }, []);
+
+  // Listen for infrastructure problems
+  useEffect(() => {
+    const handleInfrastructureProblem = (event: CustomEvent<{ 
+      severity: 'error' | 'warning' | 'info'; 
+      message: string; 
+      source?: string; 
+      details?: string;
+      clear?: boolean;
+    }>) => {
+      if (event.detail.clear) {
+        setProblems([]);
+      } else {
+        const problem = {
+          id: `problem-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          timestamp: new Date(),
+          severity: event.detail.severity,
+          message: event.detail.message,
+          source: event.detail.source || 'Infrastructure',
+          details: event.detail.details,
+        };
+        setProblems(prev => {
+          // Remove duplicates with same message
+          const filtered = prev.filter(p => p.message !== problem.message);
+          return [...filtered, problem].slice(-100); // Keep last 100 problems
+        });
+      }
+    };
+
+    window.addEventListener('infrastructure-problem' as any, handleInfrastructureProblem);
+    return () => {
+      window.removeEventListener('infrastructure-problem' as any, handleInfrastructureProblem);
+    };
+  }, []);
+
   const serviceConfigs = getServiceConfigs({}, serviceEnvironments, getEnvironmentUrls);
 
   // Calculate environment summary for status bar
@@ -114,43 +184,114 @@ function App() {
     }
   };
 
+  // Convert logs and problems to ServiceLog format for LogsViewer
+  const allLogs = useMemo<ServiceLog[]>(() => {
+    const logs: ServiceLog[] = [];
+    
+    // Add deployment logs
+    if (deploymentLogs) {
+      const lines = deploymentLogs.split('\n');
+      lines.forEach((line, index) => {
+        if (line.trim()) {
+          const isError = line.toLowerCase().includes('error') || line.toLowerCase().includes('failed');
+          logs.push({
+            service: 'Infrastructure',
+            type: isError ? 'stderr' : 'stdout',
+            source: 'run',
+            message: line,
+            timestamp: Date.now() - (lines.length - index) * 1000, // Stagger timestamps slightly
+          });
+        }
+      });
+    }
+    
+    // Add global logs
+    globalLogs.forEach((log) => {
+      logs.push({
+        service: 'System',
+        type: log.type === 'error' ? 'stderr' : 'stdout',
+        source: 'run',
+        message: log.message,
+        timestamp: log.timestamp.getTime(),
+      });
+    });
+    
+    // Add problems as logs (errors/warnings)
+    problems.forEach((problem) => {
+      logs.push({
+        service: problem.source || 'Infrastructure',
+        type: problem.severity === 'error' ? 'stderr' : 'stdout',
+        source: 'run',
+        message: `[${problem.severity.toUpperCase()}] ${problem.message}${problem.details ? '\n' + problem.details : ''}`,
+        timestamp: problem.timestamp.getTime(),
+      });
+    });
+    
+    return logs;
+  }, [globalLogs, deploymentLogs, problems]);
+
+  // Filter logs based on current filter
+  const filteredLogs = useMemo<ServiceLog[]>(() => {
+    let filtered = allLogs;
+
+    // Filter by search
+    if (logFilter.search) {
+      const searchLower = logFilter.search.toLowerCase();
+      filtered = filtered.filter(log => 
+        log.message.toLowerCase().includes(searchLower) ||
+        log.service.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Filter by type
+    if (logFilter.type !== 'all') {
+      filtered = filtered.filter(log => log.type === logFilter.type);
+    }
+
+    // Filter by source
+    if (logFilter.source && logFilter.source !== 'all') {
+      filtered = filtered.filter(log => log.source === logFilter.source);
+    }
+
+    // Filter by severity
+    if (logFilter.severity && logFilter.severity !== 'all') {
+      filtered = filtered.filter(log => {
+        const msgLower = log.message.toLowerCase();
+        if (logFilter.severity === 'errors') {
+          return log.type === 'stderr' || msgLower.includes('error') || msgLower.includes('failed');
+        } else if (logFilter.severity === 'warnings') {
+          return msgLower.includes('warning') || msgLower.includes('warn');
+        }
+        return true;
+      });
+    }
+
+    return filtered;
+  }, [allLogs, logFilter]);
+
   // Build bottom panel tabs
   const bottomPanelTabs: BottomPanelTab[] = [
     {
       id: 'output',
       title: 'Output',
       icon: '📋',
-      badge: globalLogs.length > 0 ? globalLogs.length : undefined,
+      badge: (allLogs.length > 0 || problems.length > 0) ? (allLogs.length + problems.length) : undefined,
       content: (
-        <div className="h-full overflow-auto p-2 font-mono text-xs bg-gray-900 text-gray-300">
-          {globalLogs.length === 0 ? (
-            <div className="text-gray-500 italic">No output messages</div>
-          ) : (
-            globalLogs.map((log, i) => (
-              <div
-                key={i}
-                className={`py-0.5 ${
-                  log.type === 'error' ? 'text-red-400' :
-                  log.type === 'warn' ? 'text-yellow-400' :
-                  'text-gray-300'
-                }`}
-              >
-                <span className="text-gray-500">[{log.timestamp.toLocaleTimeString()}]</span>{' '}
-                {log.message}
-              </div>
-            ))
-          )}
-        </div>
-      ),
-    },
-    {
-      id: 'problems',
-      title: 'Problems',
-      icon: '⚠️',
-      content: (
-        <div className="h-full overflow-auto p-2 text-xs bg-gray-900 text-gray-300">
-          <div className="text-gray-500 italic">No problems detected</div>
-        </div>
+        <LogsViewer
+          serviceName="Output"
+          logs={allLogs}
+          filteredLogs={filteredLogs}
+          filter={logFilter}
+          isAutoScroll={isAutoScroll}
+          isMaximized={true}
+          containerClass="h-full"
+          onFilterChange={setLogFilter}
+          onAutoScrollChange={setIsAutoScroll}
+          onClearLogs={() => {
+            setGlobalLogs([]);
+            setDeploymentLogs(null);
+          }}
+        />
       ),
     },
     {

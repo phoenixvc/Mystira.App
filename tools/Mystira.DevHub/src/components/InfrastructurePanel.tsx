@@ -23,6 +23,7 @@ type Tab = 'actions' | 'templates' | 'resources' | 'history' | 'recommended-fixe
 function InfrastructurePanel() {
   const [activeTab, setActiveTab] = useState<Tab>('actions');
   const [loading, setLoading] = useState(false);
+  const [currentAction, setCurrentAction] = useState<'validate' | 'preview' | 'deploy' | 'destroy' | null>(null);
   const [lastResponse, setLastResponse] = useState<CommandResponse | null>(null);
   const [whatIfChanges, setWhatIfChanges] = useState<WhatIfChange[]>([]);
   const [showDestroyConfirm, setShowDestroyConfirm] = useState(false);
@@ -33,9 +34,12 @@ function InfrastructurePanel() {
   const [pendingEnvironment, setPendingEnvironment] = useState<string>('dev');
   const [hasValidated, setHasValidated] = useState(false);
   const [hasPreviewed, setHasPreviewed] = useState(false);
-  const [, setHasDeployedInfrastructure] = useState(false);
+  const [hasDeployedInfrastructure, setHasDeployedInfrastructure] = useState(false);
   const [showDeployConfirm, setShowDeployConfirm] = useState(false);
   const [showOutputPanel, setShowOutputPanel] = useState(false);
+  const [deploymentProgress, setDeploymentProgress] = useState<string | null>(null);
+  const [showResourceGroupConfirm, setShowResourceGroupConfirm] = useState(false);
+  const [pendingResourceGroup, setPendingResourceGroup] = useState<{ resourceGroup: string; location: string } | null>(null);
   const [showDestroySelect, setShowDestroySelect] = useState(false);
   const [showResourceGroupConfig, setShowResourceGroupConfig] = useState(false);
   const [step1Collapsed, setStep1Collapsed] = useState(false);
@@ -89,7 +93,7 @@ function InfrastructurePanel() {
     }
   }, [activeTab, fetchDeployments]);
 
-  const { handleAction, handleDestroyConfirm, handleDeployConfirm } = useInfrastructureActions({
+  const { handleAction: handleActionFromHook, handleDestroyConfirm, handleDeployConfirm } = useInfrastructureActions({
     deploymentMethod,
     repoRoot,
     environment,
@@ -111,13 +115,29 @@ function InfrastructurePanel() {
     onSetShowDeployConfirm: setShowDeployConfirm,
     onSetShowDestroySelect: setShowDestroySelect,
     onFetchWorkflowStatus: fetchWorkflowStatus,
+    onSetCurrentAction: setCurrentAction,
+    onSetHasDeployedInfrastructure: setHasDeployedInfrastructure,
+    onSetDeploymentProgress: setDeploymentProgress,
+    onSetShowResourceGroupConfirm: (show: boolean, resourceGroup?: string, location?: string) => {
+      if (show && resourceGroup && location) {
+        setPendingResourceGroup({ resourceGroup, location });
+        setShowResourceGroupConfirm(true);
+      } else {
+        setShowResourceGroupConfirm(false);
+        setPendingResourceGroup(null);
+      }
+    },
   });
+
+  const handleAction = async (action: 'validate' | 'preview' | 'deploy' | 'destroy') => {
+    await handleActionFromHook(action);
+  };
 
   const handleDeployConfirmWrapper = async () => {
     setShowDeployConfirm(false);
     await handleDeployConfirm(async () => {
       try {
-        const resourceGroup = resourceGroupConfig.defaultResourceGroup || `dev-euw-rg-mystira-app`;
+        const resourceGroup = resourceGroupConfig.defaultResourceGroup || `dev-san-rg-mystira-app`;
         const statusResponse = await invoke<any>('check_infrastructure_status', {
           environment,
           resourceGroup,
@@ -174,7 +194,7 @@ function InfrastructurePanel() {
       <ConfirmDialog
         isOpen={showDestroySelect}
         title="💥 Destroy Selected Resources"
-        message={`You are about to permanently delete ${whatIfChanges.filter(c => c.selected !== false && (c.changeType === 'delete' || c.selected === true)).length} selected resource(s). This action cannot be undone!`}
+        message={`⚠️ WARNING: You are about to permanently DELETE ${whatIfChanges.filter(c => c.selected !== false && (c.changeType === 'delete' || c.selected === true)).length} selected resource(s) from Azure.\n\nThis action CANNOT be undone and will permanently remove:\n${whatIfChanges.filter(c => c.selected !== false && (c.changeType === 'delete' || c.selected === true)).map(c => `  • ${c.resourceName} (${c.resourceType})`).join('\n')}\n\nType "DELETE" in the field below to confirm.`}
         confirmText="Yes, Destroy Selected"
         cancelText="Cancel"
         confirmButtonClass="bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
@@ -185,12 +205,70 @@ function InfrastructurePanel() {
       <ConfirmDialog
         isOpen={showDeployConfirm}
         title="🚀 Deploy Selected Resources"
-        message={`You are about to deploy ${whatIfChanges.filter(c => c.selected !== false).length} selected resource(s) to ${environment} environment.`}
+        message={`You are about to deploy ${whatIfChanges.length > 0 
+          ? whatIfChanges.filter(c => c.selected !== false).length 
+          : templates.filter(t => t.selected).length} ${whatIfChanges.length > 0 ? 'selected resource(s)' : 'template(s)'} to ${environment} environment.`}
         confirmText="Deploy Selected Resources"
         cancelText="Cancel"
         confirmButtonClass="bg-green-600 hover:bg-green-700"
         onConfirm={handleDeployConfirmWrapper}
         onCancel={() => setShowDeployConfirm(false)}
+      />
+      <ConfirmDialog
+        isOpen={showResourceGroupConfirm}
+        title="📦 Create Resource Group"
+        message={pendingResourceGroup 
+          ? `The resource group "${pendingResourceGroup.resourceGroup}" does not exist in location "${pendingResourceGroup.location}".\n\nWould you like to create it now? This is required before deploying infrastructure.`
+          : ''}
+        confirmText="Create Resource Group"
+        cancelText="Cancel"
+        confirmButtonClass="bg-blue-600 hover:bg-blue-700"
+        onConfirm={async () => {
+          if (pendingResourceGroup) {
+            setShowResourceGroupConfirm(false);
+            setLoading(true);
+            setCurrentAction('deploy');
+            setDeploymentProgress(`Creating resource group '${pendingResourceGroup.resourceGroup}'...`);
+            
+            try {
+              const { invoke } = await import('@tauri-apps/api/tauri');
+              const createRgResponse = await invoke<any>('azure_create_resource_group', {
+                resourceGroup: pendingResourceGroup.resourceGroup,
+                location: pendingResourceGroup.location,
+              });
+              
+              if (!createRgResponse.success) {
+                setLastResponse({
+                  success: false,
+                  error: createRgResponse.error || `Failed to create resource group '${pendingResourceGroup.resourceGroup}'`,
+                });
+                setLoading(false);
+                setCurrentAction(null);
+                setPendingResourceGroup(null);
+                return;
+              }
+              
+              // Retry deployment after creating resource group
+              setDeploymentProgress(`Deploying to ${pendingResourceGroup.resourceGroup}...`);
+              await handleDeployConfirmWrapper();
+            } catch (error) {
+              setLastResponse({
+                success: false,
+                error: `Failed to create resource group: ${String(error)}`,
+              });
+              setLoading(false);
+              setCurrentAction(null);
+            } finally {
+              setPendingResourceGroup(null);
+            }
+          }
+        }}
+        onCancel={() => {
+          setShowResourceGroupConfirm(false);
+          setPendingResourceGroup(null);
+          setLoading(false);
+          setCurrentAction(null);
+        }}
       />
       <div className="p-8 flex-1 flex flex-col min-h-0 w-full">
         <div className="mb-4">
@@ -342,6 +420,7 @@ function InfrastructurePanel() {
             hasValidated={hasValidated}
             hasPreviewed={hasPreviewed}
             loading={loading}
+            currentAction={currentAction}
             onAction={handleAction}
             lastResponse={lastResponse}
             whatIfChanges={whatIfChanges}
@@ -353,6 +432,8 @@ function InfrastructurePanel() {
             workflowStatus={workflowStatus}
             deploymentMethod={deploymentMethod}
             onShowDestroySelect={() => setShowDestroySelect(true)}
+            hasDeployedInfrastructure={hasDeployedInfrastructure}
+            deploymentProgress={deploymentProgress}
           />
         )}
 

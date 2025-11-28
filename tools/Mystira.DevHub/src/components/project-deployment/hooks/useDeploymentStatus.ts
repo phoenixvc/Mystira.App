@@ -24,7 +24,7 @@ export function useDeploymentStatus({
     setLoadingStatus(true);
     setError(null);
     try {
-      const resourceGroup = resourceGroupConfig.defaultResourceGroup || `dev-euw-rg-mystira-app`;
+      const resourceGroup = resourceGroupConfig.defaultResourceGroup || `dev-san-rg-mystira-app`;
       
       const response: CommandResponse<InfrastructureStatus> = await invoke('check_infrastructure_status', {
         environment,

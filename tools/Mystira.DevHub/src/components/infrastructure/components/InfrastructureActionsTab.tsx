@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { CommandResponse, CosmosWarning, ResourceGroupConvention, TemplateConfig, WhatIfChange, WorkflowStatus } from '../../../types';
+import { DEFAULT_PROJECTS } from '../../../types';
 import InfrastructureStatus from '../../InfrastructureStatus';
+import ProjectDeployment from '../../ProjectDeployment';
 import ProjectDeploymentPlanner from '../../ProjectDeploymentPlanner';
 import ResourceGroupConfig from '../../ResourceGroupConfig';
 import TemplateEditor from '../../TemplateEditor';
@@ -20,6 +22,7 @@ interface InfrastructureActionsTabProps {
   hasValidated: boolean;
   hasPreviewed: boolean;
   loading: boolean;
+  currentAction: 'validate' | 'preview' | 'deploy' | 'destroy' | null;
   onAction: (action: 'validate' | 'preview' | 'deploy' | 'destroy') => Promise<void>;
   lastResponse: CommandResponse | null;
   whatIfChanges: WhatIfChange[];
@@ -31,6 +34,8 @@ interface InfrastructureActionsTabProps {
   workflowStatus: WorkflowStatus | null;
   deploymentMethod: 'github' | 'azure-cli';
   onShowDestroySelect: () => void;
+  hasDeployedInfrastructure: boolean;
+  deploymentProgress: string | null;
 }
 
 export default function InfrastructureActionsTab({
@@ -46,6 +51,7 @@ export default function InfrastructureActionsTab({
   hasValidated,
   hasPreviewed,
   loading,
+  currentAction,
   onAction,
   lastResponse,
   whatIfChanges,
@@ -57,6 +63,8 @@ export default function InfrastructureActionsTab({
   workflowStatus,
   deploymentMethod,
   onShowDestroySelect,
+  hasDeployedInfrastructure,
+  deploymentProgress,
 }: InfrastructureActionsTabProps) {
   const [showResourceGroupConfig, setShowResourceGroupConfig] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TemplateConfig | null>(null);
@@ -144,7 +152,7 @@ export default function InfrastructureActionsTab({
       <div className="mb-6">
         <InfrastructureStatus
           environment={environment}
-          resourceGroup={resourceGroupConfig.defaultResourceGroup || `dev-euw-rg-mystira-app`}
+          resourceGroup={resourceGroupConfig.defaultResourceGroup || `dev-san-rg-mystira-app`}
           onStatusChange={() => {
             onInfrastructureLoadingChange(false);
           }}
@@ -161,7 +169,7 @@ export default function InfrastructureActionsTab({
             templates={templates}
             onTemplatesChange={onTemplatesChange}
             onEditTemplate={setEditingTemplate}
-            region={resourceGroupConfig.region || 'euw'}
+            region={resourceGroupConfig.region || 'san'}
             projectName={resourceGroupConfig.projectName || 'mystira-app'}
             onProceedToStep2={() => onShowStep2Change(true)}
             infrastructureLoading={infrastructureLoading}
@@ -186,7 +194,7 @@ export default function InfrastructureActionsTab({
       {/* Action Buttons - Step 2 */}
       {showStep2 && (
         <div id="step-2-infrastructure-actions" className="mb-4">
-          <div className={`mb-4 ${templates.some(t => t.selected) ? 'sticky top-0 z-10 bg-white dark:bg-gray-900 pb-4 pt-2 -mt-2 border-b border-gray-200 dark:border-gray-700 mb-6' : ''}`}>
+          <div className={`mb-4 ${templates.some(t => t.selected) ? 'sticky top-0 z-10 bg-white dark:bg-gray-900 pb-4 pt-2 -mt-2 border-b border-gray-200 dark:border-gray-700 mb-6 transition-all' : ''}`}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Step 2: Infrastructure Actions
@@ -207,14 +215,11 @@ export default function InfrastructureActionsTab({
                 className="px-4 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 title="Validate infrastructure templates"
               >
-                {loading ? (
+                <span>🔍</span>
+                {currentAction === 'validate' && (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                ) : (
-                  <>
-                    <span>🔍</span>
-                    <span>Validate</span>
-                  </>
                 )}
+                <span>Validate</span>
               </button>
               <button
                 onClick={() => onAction('preview')}
@@ -222,14 +227,11 @@ export default function InfrastructureActionsTab({
                 className="px-4 py-3 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 title={!hasValidated ? 'Please validate first' : 'Preview infrastructure changes'}
               >
-                {loading ? (
+                <span>👁️</span>
+                {currentAction === 'preview' && (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                ) : (
-                  <>
-                    <span>👁️</span>
-                    <span>Preview</span>
-                  </>
                 )}
+                <span>Preview</span>
               </button>
               <button
                 onClick={() => onAction('deploy')}
@@ -237,14 +239,11 @@ export default function InfrastructureActionsTab({
                 className="px-4 py-3 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 title={!hasPreviewed ? 'Please preview first' : 'Deploy infrastructure'}
               >
-                {loading ? (
+                <span>🚀</span>
+                {currentAction === 'deploy' && (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                ) : (
-                  <>
-                    <span>🚀</span>
-                    <span>Deploy</span>
-                  </>
                 )}
+                <span>Deploy</span>
               </button>
               <button
                 onClick={() => {
@@ -258,14 +257,11 @@ export default function InfrastructureActionsTab({
                 className="px-4 py-3 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 title="Destroy infrastructure resources"
               >
-                {loading ? (
+                <span>💥</span>
+                {currentAction === 'destroy' && (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                ) : (
-                  <>
-                    <span>💥</span>
-                    <span>Destroy</span>
-                  </>
                 )}
+                <span>Destroy</span>
               </button>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
@@ -326,6 +322,65 @@ export default function InfrastructureActionsTab({
             onSelectionChange={onWhatIfChangesChange}
             defaultResourceGroup={resourceGroupConfig.defaultResourceGroup}
             resourceGroupMappings={resourceGroupConfig.resourceTypeMappings || {}}
+          />
+        </div>
+      )}
+
+      {/* Deployment Info - Show when previewed but no changes (e.g., Cosmos errors only) */}
+      {hasPreviewed && whatIfChanges.length === 0 && templates.some(t => t.selected) && (
+        <div className="mb-8 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-200 mb-2">
+            Ready to Deploy
+          </h3>
+          <p className="text-sm text-blue-800 dark:text-blue-300 mb-3">
+            Preview completed. The following infrastructure will be deployed based on your selected templates:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {templates.filter(t => t.selected).map(template => (
+              <span
+                key={template.id}
+                className="px-3 py-1.5 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 rounded-md text-sm font-medium"
+              >
+                {template.name}
+              </span>
+            ))}
+          </div>
+          <p className="text-xs text-blue-700 dark:text-blue-400 mt-3">
+            Note: Cosmos DB nested resources (databases/containers) couldn't be previewed due to Azure limitations, but they will be deployed correctly.
+          </p>
+        </div>
+      )}
+
+      {/* Deployment Progress */}
+      {deploymentProgress && (
+        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 dark:border-blue-400"></div>
+            <p className="text-sm font-medium text-blue-900 dark:text-blue-200">
+              {deploymentProgress}
+            </p>
+          </div>
+        </div>
+      )}
+
+
+      {/* Step 3: Project Deployment - Show after successful infrastructure deployment */}
+      {hasDeployedInfrastructure && (
+        <div className="mb-8">
+          <div className="mb-4 relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+            </div>
+            <div className="relative flex justify-center">
+              <span className="px-4 py-1 bg-gray-50 dark:bg-gray-800 text-xs font-medium text-gray-500 dark:text-gray-400 rounded-full border border-gray-300 dark:border-gray-600">
+                Step 3: Deploy Projects
+              </span>
+            </div>
+          </div>
+          <ProjectDeployment
+            environment={environment}
+            projects={DEFAULT_PROJECTS}
+            hasDeployedInfrastructure={hasDeployedInfrastructure}
           />
         </div>
       )}

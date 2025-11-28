@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import type { ResourceGroupConvention } from '../../../types';
 
 const DEFAULT_CONFIG: ResourceGroupConvention = {
-  pattern: '{env}-euw-rg-{resource}',
-  defaultResourceGroup: 'dev-euw-rg-mystira-app',
+  pattern: '{env}-san-rg-{resource}',
+  defaultResourceGroup: 'dev-san-rg-mystira-app',
   resourceTypeMappings: {},
 };
 

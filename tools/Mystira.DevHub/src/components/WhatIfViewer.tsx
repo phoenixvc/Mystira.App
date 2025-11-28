@@ -18,7 +18,7 @@ function WhatIfViewer({
   onSelectionChange,
   showSelection = false,
   compact = false,
-  defaultResourceGroup = 'dev-euw-rg-mystira-app',
+  defaultResourceGroup = 'dev-san-rg-mystira-app',
   resourceGroupMappings = {},
 }: WhatIfViewerProps) {
   const [expandedResources, setExpandedResources] = useState<Set<string>>(new Set());

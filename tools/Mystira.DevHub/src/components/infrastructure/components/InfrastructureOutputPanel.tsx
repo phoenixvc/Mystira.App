@@ -5,16 +5,20 @@ interface InfrastructureOutputPanelProps {
   loading: boolean;
   response: CommandResponse | null;
   workflowStatus: WorkflowStatus | null;
+  deploymentLogs: string | null;
   onClose: () => void;
   onRefreshWorkflow: () => void;
+  onClearLogs: () => void;
 }
 
 export function InfrastructureOutputPanel({
   loading,
   response,
   workflowStatus,
+  deploymentLogs,
   onClose,
   onRefreshWorkflow,
+  onClearLogs,
 }: InfrastructureOutputPanelProps) {
   return (
     <div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col">
@@ -27,7 +31,7 @@ export function InfrastructureOutputPanel({
           ✕
         </button>
       </div>
-      <div className="flex-1 overflow-auto p-3 text-xs">
+      <div className="flex-1 overflow-auto p-3 text-xs flex flex-col">
         {loading && (
           <div className="flex items-center gap-2 text-blue-600">
             <span className="animate-spin">⟳</span>
@@ -41,8 +45,28 @@ export function InfrastructureOutputPanel({
             <ErrorDisplay error={response.error || 'Error'} details={response.result as Record<string, unknown> | null} />
           )
         )}
-        {!loading && !response && (
+        {!loading && !response && !deploymentLogs && (
           <div className="text-gray-500">No output yet.</div>
+        )}
+        
+        {deploymentLogs && (
+          <div className="mt-4 flex-1 flex flex-col min-h-0">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
+                Deployment Logs ({deploymentLogs.split('\n').length} lines)
+              </span>
+              <button
+                onClick={onClearLogs}
+                className="px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                title="Clear logs"
+              >
+                🗑️ Clear
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto bg-gray-900 text-green-400 font-mono text-xs p-3 rounded border border-gray-700">
+              <pre className="whitespace-pre-wrap">{deploymentLogs}</pre>
+            </div>
+          </div>
         )}
 
         {workflowStatus && (
