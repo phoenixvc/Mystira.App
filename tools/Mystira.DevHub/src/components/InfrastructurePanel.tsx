@@ -14,6 +14,7 @@ import TemplateEditor from './TemplateEditor';
 import TemplateInspector from './TemplateInspector';
 import WhatIfViewer from './WhatIfViewer';
 import { formatTimeSince } from './services/utils/serviceUtils';
+import { extractStorageAccountName, isValidStorageAccountName, parseAzureDeleteError } from './infrastructure/utils/storageAccountUtils';
 
 type Tab = 'actions' | 'templates' | 'resources' | 'history' | 'recommended-fixes';
 
@@ -90,6 +91,7 @@ function InfrastructurePanel() {
   const [deletingStorageAccount, setDeletingStorageAccount] = useState(false);
   const [showDeleteStorageConfirm, setShowDeleteStorageConfirm] = useState(false);
   const [autoRetryAfterDelete, setAutoRetryAfterDelete] = useState(false);
+  const [fetchingResourceGroup, setFetchingResourceGroup] = useState(false);
 
   const workflowFile = '.start-infrastructure-deploy-dev.yml';
   const repository = 'phoenixvc/Mystira.App';
@@ -220,28 +222,6 @@ function InfrastructurePanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Helper: Validate storage account name (Azure naming rules: 3-24 lowercase alphanumeric)
-  const isValidStorageAccountName = (name: string): boolean => {
-    return /^[a-z0-9]{3,24}$/.test(name);
-  };
-
-  // Helper: Extract storage account name from Azure error message with multiple patterns
-  const extractStorageAccountName = (errorStr: string): string | null => {
-    // Pattern 1: JSON format "target": "accountname"
-    const jsonMatch = errorStr.match(/"target"\s*:\s*"([a-z0-9]{3,24})"/i);
-    if (jsonMatch?.[1]) return jsonMatch[1].toLowerCase();
-
-    // Pattern 2: "account <name> is already in another resource group"
-    const proseMatch = errorStr.match(/account\s+([a-z0-9]{3,24})\s+is/i);
-    if (proseMatch?.[1]) return proseMatch[1].toLowerCase();
-
-    // Pattern 3: StorageAccountInAnotherResourceGroup with target
-    const targetMatch = errorStr.match(/target["\s:]+([a-z0-9]{3,24})/i);
-    if (targetMatch?.[1]) return targetMatch[1].toLowerCase();
-
-    return null;
-  };
-
   // Helper: Query Azure for the storage account's current resource group
   const fetchStorageAccountResourceGroup = async (accountName: string): Promise<string | null> => {
     try {
@@ -298,15 +278,27 @@ function InfrastructurePanel() {
           }, 1000);
         }
       } else {
+        // Parse error for user-friendly message
+        const friendlyError = parseAzureDeleteError(result.error);
+        const isAlreadyDeleted = friendlyError.includes('no longer exists');
+
         setLastResponse({
-          success: false,
-          error: result.error || 'Failed to delete storage account',
+          success: isAlreadyDeleted, // Treat "already deleted" as success
+          message: isAlreadyDeleted ? friendlyError : undefined,
+          error: isAlreadyDeleted ? undefined : friendlyError,
         });
+
+        // If already deleted, clear the conflict
+        if (isAlreadyDeleted) {
+          setStorageAccountConflict(null);
+        }
       }
     } catch (error) {
+      const errorStr = String(error);
+      const friendlyError = parseAzureDeleteError(errorStr);
       setLastResponse({
         success: false,
-        error: `Failed to delete storage account: ${error}`,
+        error: friendlyError,
       });
     } finally {
       setDeletingStorageAccount(false);
@@ -542,16 +534,14 @@ function InfrastructurePanel() {
                 const storageAccountName = extractStorageAccountName(errorStr);
 
                 if (storageAccountName && isValidStorageAccountName(storageAccountName)) {
-                  // Fetch the current resource group asynchronously
-                  fetchStorageAccountResourceGroup(storageAccountName).then(currentResourceGroup => {
-                    setStorageAccountConflict({
-                      type: 'storage-account-conflict',
-                      message: 'Storage account exists in another resource group',
-                      details: errorStr,
-                      storageAccountName,
-                      currentResourceGroup: currentResourceGroup || undefined,
-                      dismissed: false,
-                    });
+                  // Show banner IMMEDIATELY without resource group info
+                  setStorageAccountConflict({
+                    type: 'storage-account-conflict',
+                    message: 'Storage account exists in another resource group',
+                    details: errorStr,
+                    storageAccountName,
+                    currentResourceGroup: undefined, // Will be fetched async
+                    dismissed: false,
                   });
 
                   setLastResponse({
@@ -559,6 +549,24 @@ function InfrastructurePanel() {
                     error: undefined,
                     message: `Deployment blocked: Storage account "${storageAccountName}" already exists in a different resource group.`,
                   });
+
+                  // Fetch resource group info asynchronously and update the banner
+                  setFetchingResourceGroup(true);
+                  fetchStorageAccountResourceGroup(storageAccountName)
+                    .then(currentResourceGroup => {
+                      // Update existing warning with resource group info
+                      setStorageAccountConflict(prev => prev ? {
+                        ...prev,
+                        currentResourceGroup: currentResourceGroup || undefined,
+                      } : null);
+                    })
+                    .catch(err => {
+                      console.error('Failed to fetch resource group:', err);
+                      // Banner still shows, just without resource group info
+                    })
+                    .finally(() => {
+                      setFetchingResourceGroup(false);
+                    });
                 } else {
                   // Could not extract valid storage account name
                   setLastResponse({
@@ -1893,12 +1901,17 @@ function InfrastructurePanel() {
                         )}. You can delete the existing storage account to proceed with deployment, or dismiss
                         this warning if you want to use a different name.
                       </p>
-                      {storageAccountConflict.currentResourceGroup && (
+                      {storageAccountConflict.currentResourceGroup ? (
                         <div className="text-xs text-red-600 dark:text-red-400 mb-2 flex items-center gap-1">
                           <span>📍</span>
                           <span>Current location: <code className="bg-red-100 dark:bg-red-900/50 px-1 rounded">{storageAccountConflict.currentResourceGroup}</code></span>
                         </div>
-                      )}
+                      ) : fetchingResourceGroup ? (
+                        <div className="text-xs text-red-600 dark:text-red-400 mb-2 flex items-center gap-1">
+                          <span className="animate-spin">⏳</span>
+                          <span>Looking up resource group...</span>
+                        </div>
+                      ) : null}
                       <details className="text-xs">
                         <summary className="cursor-pointer text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200">
                           View full error details
