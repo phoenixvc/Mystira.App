@@ -17,7 +17,7 @@ pub mod status;
 pub mod helpers;
 
 // Re-export all public functions
-pub use deploy::azure_deploy_infrastructure;
+pub use deploy::{azure_deploy_infrastructure, azure_create_resource_group};
 pub use validate::azure_validate_infrastructure;
 pub use preview::azure_preview_infrastructure;
 pub use status::{check_infrastructure_exists, check_infrastructure_status};

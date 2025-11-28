@@ -1,4 +1,4 @@
-type Tab = 'actions' | 'templates' | 'resources' | 'history';
+type Tab = 'actions' | 'templates' | 'resources' | 'history' | 'recommended-fixes';
 
 interface InfrastructureTabsProps {
   activeTab: Tab;
@@ -11,6 +11,7 @@ export function InfrastructureTabs({ activeTab, onTabChange }: InfrastructureTab
     { id: 'templates', icon: '📄', label: 'Templates & Resources' },
     { id: 'resources', icon: '☁️', label: 'Azure Resources' },
     { id: 'history', icon: '📜', label: 'History' },
+    { id: 'recommended-fixes', icon: '🔧', label: 'Recommended Fixes' },
   ];
 
   return (

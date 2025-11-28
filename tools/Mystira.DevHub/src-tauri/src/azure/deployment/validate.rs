@@ -36,12 +36,12 @@ pub async fn azure_validate_infrastructure(
     let _ = set_azure_subscription(sub_id);
     
     // Create resource group if it doesn't exist (needed for validation)
-    let _ = ensure_resource_group(&rg, "westeurope");
+    let _ = ensure_resource_group(&rg, "southafricanorth");
     
     let deploy_storage_val = deploy_storage.unwrap_or(true);
     let deploy_cosmos_val = deploy_cosmos.unwrap_or(true);
     let deploy_app_service_val = deploy_app_service.unwrap_or(true);
-    let params_json = build_parameters_json(env, "westeurope", deploy_storage_val, deploy_cosmos_val, deploy_app_service_val);
+    let params_json = build_parameters_json(env, "southafricanorth", deploy_storage_val, deploy_cosmos_val, deploy_app_service_val);
     let params_file = format!("{}/params-validate.json", deployment_path);
     
     if let Err(e) = fs::write(&params_file, &params_json) {
@@ -89,15 +89,43 @@ pub async fn azure_validate_infrastructure(
                     None
                 };
                 
+                // Parse output to check for diagnostics/warnings in the JSON
+                let mut diagnostic_warnings = warnings.clone();
+                if let Ok(output_json) = serde_json::from_str::<serde_json::Value>(&stdout) {
+                    if let Some(properties) = output_json.get("properties") {
+                        if let Some(diagnostics) = properties.get("diagnostics") {
+                            if let Some(diag_array) = diagnostics.as_array() {
+                                let diag_messages: Vec<String> = diag_array
+                                    .iter()
+                                    .filter_map(|d| {
+                                        d.get("message").and_then(|m| m.as_str()).map(|s| s.to_string())
+                                    })
+                                    .collect();
+                                if !diag_messages.is_empty() {
+                                    let diag_text = diag_messages.join("\n");
+                                    diagnostic_warnings = Some(match diagnostic_warnings {
+                                        Some(existing) => format!("{}\n{}", existing, diag_text),
+                                        None => diag_text,
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 Ok(CommandResponse {
                     success: true,
                     result: Some(serde_json::json!({
                         "message": "Bicep templates are valid",
-                        "warnings": warnings,
+                        "warnings": diagnostic_warnings,
                         "output": stdout.to_string()
                     })),
-                    message: Some("Validation successful".to_string()),
-                    error: warnings,
+                    message: Some(if let Some(ref w) = diagnostic_warnings {
+                        format!("Validation successful with warnings")
+                    } else {
+                        "Validation successful".to_string()
+                    }),
+                    error: None, // Warnings should not be in error field - they're in result.warnings
                 })
             } else {
                 let error_msg = if !stderr.trim().is_empty() {

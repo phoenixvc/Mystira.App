@@ -27,7 +27,7 @@ function TemplateSelector({
   templates,
   onTemplatesChange,
   onEditTemplate,
-  region = 'euw',
+  region = 'san',
   projectName = 'mystira-app',
 }: TemplateSelectorProps) {
   const [editingResourceGroup, setEditingResourceGroup] = useState<string | null>(null);
