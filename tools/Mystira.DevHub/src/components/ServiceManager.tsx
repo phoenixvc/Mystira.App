@@ -291,14 +291,14 @@ function ServiceManager() {
 
   const stopAllServices = async () => {
     const runningServices = services.filter(s => s.running);
-    
+
     if (runningServices.length === 0) {
       addToast('No services are running!', 'info');
       return;
     }
 
     try {
-      const stopPromises = runningServices.map(service => 
+      const stopPromises = runningServices.map(service =>
         invoke('stop_service', { serviceName: service.name }).catch(error => {
           console.error(`Failed to stop ${service.name}:`, error);
           return { service: service.name, error };
@@ -310,6 +310,73 @@ function ServiceManager() {
       addToast(`Stopped ${runningServices.length} service(s)`, 'info');
     } catch (error) {
       addToast(`Failed to stop services: ${error}`, 'error');
+    }
+  };
+
+  const buildAllServices = async () => {
+    const rootToUse = useCurrentBranch && currentBranch
+      ? `${repoRoot}\\..\\Mystira.App-${currentBranch}`
+      : repoRoot;
+
+    if (!rootToUse || rootToUse.trim() === '') {
+      addToast('Repository root is not set. Please configure it first.', 'error');
+      return;
+    }
+
+    // Get all local services that can be built
+    const servicesToBuild = getServiceConfigs(customPorts, serviceEnvironments, getEnvironmentUrls).filter((config: ServiceConfig) => {
+      const environment = serviceEnvironments[config.name] || 'local';
+      const currentBuild = buildStatus[config.name];
+      // Only build local services that aren't currently building
+      return environment === 'local' && currentBuild?.status !== 'building';
+    });
+
+    if (servicesToBuild.length === 0) {
+      const buildingServices = getServiceConfigs(customPorts, serviceEnvironments, getEnvironmentUrls).filter((config: ServiceConfig) => {
+        const currentBuild = buildStatus[config.name];
+        return currentBuild?.status === 'building';
+      });
+
+      if (buildingServices.length > 0) {
+        addToast(
+          `Cannot build: ${buildingServices.map(s => s.displayName).join(', ')} ${
+            buildingServices.length === 1 ? 'is' : 'are'
+          } currently building. Please wait for the build to complete.`,
+          'warning',
+          5000
+        );
+      } else {
+        addToast('No local services to build. All services are configured for remote environments.', 'info');
+      }
+      return;
+    }
+
+    addToast(`Building ${servicesToBuild.length} service(s)... This may take a few minutes.`, 'info', 10000);
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const service of servicesToBuild) {
+      try {
+        const success = await prebuildService(service.name, rootToUse, setViewModeForService, handleShowLogs, true);
+        if (success) {
+          successCount++;
+          addToast(`${service.displayName || service.name} built (${successCount}/${servicesToBuild.length})`, 'success', 3000);
+        } else {
+          failCount++;
+          addToast(`Failed to build ${service.displayName || service.name}`, 'error');
+        }
+      } catch (error) {
+        failCount++;
+        console.error(`Failed to build ${service.name}:`, error);
+        addToast(`Failed to build ${service.displayName || service.name}`, 'error');
+      }
+    }
+
+    if (failCount === 0) {
+      addToast(`All ${successCount} service(s) built successfully!`, 'success', 5000);
+    } else {
+      addToast(`Build complete: ${successCount} succeeded, ${failCount} failed`, failCount > 0 ? 'warning' : 'success', 5000);
     }
   };
 
@@ -484,6 +551,7 @@ function ServiceManager() {
   }, [serviceEnvironments]);
 
   useKeyboardShortcuts([
+    { key: 'b', ctrl: true, shift: true, action: buildAllServices, description: 'Build all services' },
     { key: 's', ctrl: true, shift: true, action: startAllServices, description: 'Start all services' },
     { key: 'x', ctrl: true, shift: true, action: stopAllServices, description: 'Stop all services' },
     { key: 'r', ctrl: true, action: refreshServices, description: 'Refresh services' },
@@ -492,6 +560,7 @@ function ServiceManager() {
   const serviceConfigs = getServiceConfigs(customPorts, serviceEnvironments, getEnvironmentUrls);
   const allRunning = services.length === serviceConfigs.length && services.every((s: ServiceStatus) => s.running);
   const anyRunning = services.some((s: ServiceStatus) => s.running);
+  const anyBuilding = Object.values(buildStatus).some((status: any) => status?.status === 'building');
 
   return (
     <div className="p-8">
@@ -503,7 +572,7 @@ function ServiceManager() {
           <div className="flex items-center gap-4 flex-1 min-w-0">
             <h1 className="text-xl font-bold text-gray-900 dark:text-white font-mono">SERVICE MANAGER</h1>
             <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
-              Ctrl+Shift+S (Start All) | Ctrl+Shift+X (Stop All) | Ctrl+R (Refresh)
+              Ctrl+Shift+B (Build) | Ctrl+Shift+S (Start) | Ctrl+Shift+X (Stop) | Ctrl+R (Refresh)
             </span>
             
             {/* Infrastructure Status Indicators */}
@@ -586,24 +655,32 @@ function ServiceManager() {
                   const confirmed = window.confirm('⚠️ WARNING: This preset includes PRODUCTION environments.\n\nAre you sure you want to apply this preset?');
                   if (!confirmed) return;
                 }
-                
+
                 setServiceEnvironments(preset.environments);
                 localStorage.setItem('serviceEnvironments', JSON.stringify(preset.environments));
-                
+
                 Object.entries(preset.environments).forEach(([serviceName, env]) => {
                   if (env !== 'local' && (env === 'dev' || env === 'prod')) {
                     checkEnvironmentHealth(serviceName, env as 'dev' | 'prod');
                   }
                 });
-                
+
                 addToast(`Applied preset: ${preset.name}`, 'success');
               }}
               onSaveCurrent={() => {}}
             />
+            <button
+              onClick={buildAllServices}
+              disabled={anyBuilding}
+              className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              title="Build all local services"
+            >
+              {anyBuilding ? 'Building...' : 'Build All'}
+            </button>
             {!allRunning && (
               <button
                 onClick={startAllServices}
-                disabled={anyRunning}
+                disabled={anyRunning || anyBuilding}
                 className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 Start All

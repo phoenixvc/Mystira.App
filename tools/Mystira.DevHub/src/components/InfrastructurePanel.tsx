@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useDeploymentsStore } from '../stores/deploymentsStore';
 import { useResourcesStore } from '../stores/resourcesStore';
 import type { CommandResponse, CosmosWarning, ResourceGroupConvention, TemplateConfig, WhatIfChange, WorkflowStatus } from '../types';
+import type { CommandResponse, ResourceGroupConvention, TemplateConfig, WhatIfChange, WorkflowStatus } from '../types';
+import { DEFAULT_PROJECTS, type ProjectInfo } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
 import DeploymentHistory from './DeploymentHistory';
 import InfrastructureStatus, { type InfrastructureStatus as InfrastructureStatusType } from './InfrastructureStatus';
@@ -31,6 +33,8 @@ function InfrastructurePanel() {
   const [hasValidated, setHasValidated] = useState(false);
   const [hasPreviewed, setHasPreviewed] = useState(false);
   const [, setHasDeployedInfrastructure] = useState(false);
+  const [_hasDeployedInfrastructure, setHasDeployedInfrastructure] = useState(false);
+  const [_projects] = useState<ProjectInfo[]>(DEFAULT_PROJECTS);
   const [showDeployConfirm, setShowDeployConfirm] = useState(false);
   const [showOutputPanel, setShowOutputPanel] = useState(false);
   const [showDestroySelect, setShowDestroySelect] = useState(false);
@@ -990,17 +994,6 @@ function InfrastructurePanel() {
         onCancel={() => setShowDestroyConfirm(false)}
       />
       <ConfirmDialog
-        isOpen={showDestroySelect}
-        title="💥 Destroy Selected Resources"
-        message={`You are about to permanently delete ${whatIfChanges.filter(c => c.selected !== false && (c.changeType === 'delete' || c.selected === true)).length} selected resource(s). This action cannot be undone!`}
-        confirmText="Yes, Destroy Selected"
-        cancelText="Cancel"
-        confirmButtonClass="bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
-        requireTextMatch="DELETE"
-        onConfirm={handleDestroyConfirm}
-        onCancel={() => setShowDestroySelect(false)}
-      />
-      <ConfirmDialog
         isOpen={showProdConfirm}
         title="⚠️ Production Environment Warning"
         message="You are about to switch to the PRODUCTION environment. All operations (validate, preview, deploy, destroy) will affect production resources. This is a critical environment with real users and data. Are you absolutely sure you want to proceed?"
@@ -1600,8 +1593,37 @@ function InfrastructurePanel() {
                 </p>
               </div>
             </div>
-            )}
 
+            {/* Action Buttons Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              {actionButtons.map((button) => (
+                <button
+                  key={button.id}
+                  onClick={button.onClick}
+                  disabled={button.disabled}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    button.disabled
+                      ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                      : button.variant === 'primary'
+                        ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50'
+                        : button.variant === 'warning'
+                          ? 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800 hover:bg-yellow-100 dark:hover:bg-yellow-900/50'
+                          : button.variant === 'success'
+                            ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/50'
+                            : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/50'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">{button.icon}</div>
+                  <div className="font-semibold text-gray-900 dark:text-white">{button.label}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{button.description}</div>
+                  {button.loading && loading && (
+                    <div className="mt-2">
+                      <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-current"></span>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
             {/* Response Display */}
             {lastResponse && (
               <div
@@ -1806,6 +1828,43 @@ function InfrastructurePanel() {
               />
             )}
 
+            {/* Workflow Status */}
+            {workflowStatus && (
+              <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                  Workflow Status
+                </h3>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <div className="text-sm text-gray-500">Status</div>
+                    <div className="text-lg font-semibold">
+                      {workflowStatus.status || 'Unknown'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500">Conclusion</div>
+                    <div className="text-lg font-semibold">
+                      {workflowStatus.conclusion || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500">Workflow</div>
+                    <div className="text-lg font-semibold">
+                      {workflowStatus.workflowName || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500">Updated</div>
+                    <div className="text-lg font-semibold">
+                      {workflowStatus.updatedAt
+                        ? new Date(workflowStatus.updatedAt).toLocaleTimeString()
+                        : 'N/A'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

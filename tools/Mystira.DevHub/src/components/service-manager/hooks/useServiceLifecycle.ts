@@ -222,12 +222,81 @@ export function useServiceLifecycle({
     }
   };
 
+  const buildAllServices = async () => {
+    const rootToUse = getRootToUse();
+    if (!rootToUse || rootToUse.trim() === '') {
+      addToast('Repository root is not set. Please configure it first.', 'error');
+      return;
+    }
+
+    // Get all local services that can be built
+    const servicesToBuild = getServiceConfigs(customPorts, serviceEnvironments, getEnvironmentUrls).filter(
+      (config: any) => {
+        const environment = serviceEnvironments[config.name] || 'local';
+        const currentBuild = buildStatus[config.name];
+        // Only build local services that aren't currently building
+        return environment === 'local' && currentBuild?.status !== 'building';
+      }
+    );
+
+    if (servicesToBuild.length === 0) {
+      const buildingServices = getServiceConfigs(customPorts, serviceEnvironments, getEnvironmentUrls).filter(
+        (config: any) => {
+          const currentBuild = buildStatus[config.name];
+          return currentBuild?.status === 'building';
+        }
+      );
+
+      if (buildingServices.length > 0) {
+        addToast(
+          `Cannot build: ${buildingServices.map((s: any) => s.displayName).join(', ')} ${
+            buildingServices.length === 1 ? 'is' : 'are'
+          } currently building. Please wait for the build to complete.`,
+          'warning',
+          5000
+        );
+      } else {
+        addToast('No local services to build. All services are configured for remote environments.', 'info');
+      }
+      return;
+    }
+
+    addToast(`Building ${servicesToBuild.length} service(s)... This may take a few minutes.`, 'info', 10000);
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const service of servicesToBuild) {
+      try {
+        const success = await prebuildService(service.name, rootToUse, setViewModeForService, handleShowLogs, true);
+        if (success) {
+          successCount++;
+          addToast(`${service.displayName || service.name} built (${successCount}/${servicesToBuild.length})`, 'success', 3000);
+        } else {
+          failCount++;
+          addToast(`Failed to build ${service.displayName || service.name}`, 'error');
+        }
+      } catch (error) {
+        failCount++;
+        console.error(`Failed to build ${service.name}:`, error);
+        addToast(`Failed to build ${service.displayName || service.name}`, 'error');
+      }
+    }
+
+    if (failCount === 0) {
+      addToast(`All ${successCount} service(s) built successfully!`, 'success', 5000);
+    } else {
+      addToast(`Build complete: ${successCount} succeeded, ${failCount} failed`, failCount > 0 ? 'warning' : 'success', 5000);
+    }
+  };
+
   return {
     startService,
     stopService,
     rebuildService,
     startAllServices,
     stopAllServices,
+    buildAllServices,
   };
 }
 
