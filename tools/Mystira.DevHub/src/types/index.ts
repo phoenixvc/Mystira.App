@@ -205,6 +205,15 @@ export interface CosmosWarning {
   dismissed: boolean;
 }
 
+// Storage Account Conflict Warning (resource exists in another resource group)
+export interface StorageAccountConflictWarning {
+  type: 'storage-account-conflict';
+  message: string;
+  details: string;
+  storageAccountName: string;
+  dismissed: boolean;
+}
+
 // Settings Types
 export interface Settings {
   theme: 'light' | 'dark' | 'auto';

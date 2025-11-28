@@ -2,8 +2,7 @@ import { invoke } from '@tauri-apps/api/tauri';
 import { useEffect, useRef, useState } from 'react';
 import { useDeploymentsStore } from '../stores/deploymentsStore';
 import { useResourcesStore } from '../stores/resourcesStore';
-import type { CommandResponse, CosmosWarning, ResourceGroupConvention, TemplateConfig, WhatIfChange, WorkflowStatus } from '../types';
-import type { CommandResponse, ResourceGroupConvention, TemplateConfig, WhatIfChange, WorkflowStatus } from '../types';
+import type { CommandResponse, CosmosWarning, ResourceGroupConvention, StorageAccountConflictWarning, TemplateConfig, WhatIfChange, WorkflowStatus } from '../types';
 import { DEFAULT_PROJECTS, type ProjectInfo } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
 import DeploymentHistory from './DeploymentHistory';
@@ -87,6 +86,8 @@ function InfrastructurePanel() {
   const [showStep2, setShowStep2] = useState(false);
   const [infrastructureLoading, setInfrastructureLoading] = useState(true);
   const [cosmosWarning, setCosmosWarning] = useState<CosmosWarning | null>(null);
+  const [storageAccountConflict, setStorageAccountConflict] = useState<StorageAccountConflictWarning | null>(null);
+  const [deletingStorageAccount, setDeletingStorageAccount] = useState(false);
 
   const workflowFile = '.start-infrastructure-deploy-dev.yml';
   const repository = 'phoenixvc/Mystira.App';
@@ -279,8 +280,9 @@ function InfrastructurePanel() {
               setLoading(false);
               return;
             }
-            // Reset cosmos warning on new preview
+            // Reset warnings on new preview
             setCosmosWarning(null);
+            setStorageAccountConflict(null);
             const selectedTemplates = templates.filter(t => t.selected);
             const deployStorage = selectedTemplates.some(t => t.id === 'storage');
             const deployCosmos = selectedTemplates.some(t => t.id === 'cosmos');
@@ -439,6 +441,24 @@ function InfrastructurePanel() {
                   success: false,
                   error: undefined,
                   message: `Preview completed with warnings. ${affectedResources.length} Cosmos DB resources reported errors (this is expected for new deployments).`,
+                });
+              } else if (errorStr.includes('StorageAccountInAnotherResourceGroup')) {
+                // Extract storage account name from error message
+                const storageAccountMatch = errorStr.match(/target\s*"([^"]+)"|account\s+(\w+)\s+is/i);
+                const storageAccountName = storageAccountMatch?.[1] || storageAccountMatch?.[2] || 'unknown';
+
+                setStorageAccountConflict({
+                  type: 'storage-account-conflict',
+                  message: 'Storage account exists in another resource group',
+                  details: errorStr,
+                  storageAccountName,
+                  dismissed: false,
+                });
+
+                setLastResponse({
+                  success: false,
+                  error: undefined,
+                  message: `Deployment blocked: Storage account "${storageAccountName}" already exists in a different resource group.`,
                 });
               } else {
                 setLastResponse({
@@ -1746,6 +1766,82 @@ function InfrastructurePanel() {
                   >
                     Dismiss & Continue
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* Storage Account Conflict Warning Banner */}
+            {storageAccountConflict && !storageAccountConflict.dismissed && (
+              <div className="rounded-lg p-4 mb-6 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <span className="text-red-500 text-xl">🗄️</span>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-red-800 dark:text-red-200 mb-1">
+                        Storage Account Conflict
+                      </h4>
+                      <p className="text-xs text-red-700 dark:text-red-300 mb-2">
+                        The storage account <strong>{storageAccountConflict.storageAccountName}</strong> already
+                        exists in a different resource group within this subscription. You can delete the existing
+                        storage account to proceed with deployment, or dismiss this warning if you want to use a
+                        different name.
+                      </p>
+                      <details className="text-xs">
+                        <summary className="cursor-pointer text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200">
+                          View full error details
+                        </summary>
+                        <pre className="mt-2 p-2 bg-red-100 dark:bg-red-900/50 rounded text-[10px] overflow-auto max-h-32 text-red-800 dark:text-red-200">
+                          {storageAccountConflict.details}
+                        </pre>
+                      </details>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 ml-4">
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`Are you sure you want to delete the storage account "${storageAccountConflict.storageAccountName}"? This action cannot be undone and will delete all data in the account.`)) {
+                          return;
+                        }
+                        setDeletingStorageAccount(true);
+                        try {
+                          const result = await invoke<CommandResponse>('execute_azure_cli', {
+                            command: `storage account delete --name ${storageAccountConflict.storageAccountName} --yes`,
+                          });
+                          if (result.success) {
+                            setStorageAccountConflict(null);
+                            setLastResponse({
+                              success: true,
+                              message: `Storage account "${storageAccountConflict.storageAccountName}" deleted successfully. You can now retry the preview.`,
+                            });
+                          } else {
+                            setLastResponse({
+                              success: false,
+                              error: result.error || 'Failed to delete storage account',
+                            });
+                          }
+                        } catch (error) {
+                          setLastResponse({
+                            success: false,
+                            error: `Failed to delete storage account: ${error}`,
+                          });
+                        } finally {
+                          setDeletingStorageAccount(false);
+                        }
+                      }}
+                      disabled={deletingStorageAccount}
+                      className="px-3 py-1.5 text-xs font-medium bg-red-100 dark:bg-red-800 hover:bg-red-200 dark:hover:bg-red-700 text-red-700 dark:text-red-200 rounded-md transition-colors whitespace-nowrap disabled:opacity-50"
+                    >
+                      {deletingStorageAccount ? 'Deleting...' : '🗑️ Delete & Retry'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setStorageAccountConflict({ ...storageAccountConflict, dismissed: true });
+                      }}
+                      className="px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md transition-colors whitespace-nowrap"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
