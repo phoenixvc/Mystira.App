@@ -182,7 +182,7 @@ function InfrastructurePanel() {
   // Fetch resources when switching to resources tab or environment changes
   useEffect(() => {
     if (activeTab === 'resources') {
-      fetchResources(false);
+      fetchResources(false, environment);
     }
   }, [activeTab, environment, fetchResources]);
 
@@ -1832,7 +1832,7 @@ function InfrastructurePanel() {
                 <p className="text-red-800 dark:text-red-200 mb-3 whitespace-pre-wrap">{resourcesError}</p>
                 <div className="flex gap-3 flex-wrap">
                   <button
-                    onClick={() => fetchResources(true)}
+                    onClick={() => fetchResources(true, environment)}
                     className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
                   >
                     Retry
@@ -1916,7 +1916,7 @@ function InfrastructurePanel() {
                               fetchWithRetry();
                             }
                             setTimeout(() => {
-                              fetchResources(true);
+                              fetchResources(true, environment);
                             }, 1000);
                           }
                         } catch (error) {
@@ -1946,7 +1946,7 @@ function InfrastructurePanel() {
             {!resourcesLoading && !resourcesError && (
               <ResourceGrid
                 resources={resources}
-                onRefresh={() => fetchResources(true)}
+                onRefresh={() => fetchResources(true, environment)}
                 onDelete={async (resourceId: string) => {
                   try {
                     const response = await invoke<CommandResponse>('delete_azure_resource', {
@@ -1954,7 +1954,7 @@ function InfrastructurePanel() {
                     });
                     if (response.success) {
                       // Refresh resources after successful deletion
-                      fetchResources(true);
+                      fetchResources(true, environment);
                     } else {
                       throw new Error(response.error || 'Failed to delete resource');
                     }

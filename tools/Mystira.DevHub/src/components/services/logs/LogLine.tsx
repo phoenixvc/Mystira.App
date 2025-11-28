@@ -13,6 +13,7 @@ interface LogLineProps {
   isBuildLog: boolean;
   isHighlighted: boolean;
   onCopy: (log: ServiceLog) => void;
+  isStackTrace?: boolean;
 }
 
 export function LogLine({
@@ -27,6 +28,7 @@ export function LogLine({
   isBuildLog,
   isHighlighted,
   onCopy,
+  isStackTrace = false,
 }: LogLineProps) {
   let textColor = 'text-green-400';
   if (isError) {
@@ -46,14 +48,25 @@ export function LogLine({
       {showLineNumbers && (
         <span className="text-gray-600 dark:text-gray-500 mr-2 text-[10px] flex-shrink-0">{index + 1}</span>
       )}
-      <span className="text-gray-500 text-[10px] flex-shrink-0">[{formatTimestamp(log.timestamp, timestampFormat)}]</span>
-      {isBuildLog && (
+      {/* Don't show timestamp for stack trace continuation lines */}
+      {!isStackTrace && (
+        <span className="text-gray-500 text-[10px] flex-shrink-0">[{formatTimestamp(log.timestamp, timestampFormat)}]</span>
+      )}
+      {isStackTrace && (
+        <span className="text-gray-700 text-[10px] flex-shrink-0 mr-1">   </span>
+      )}
+      {isBuildLog && !isStackTrace && (
         <span className="text-cyan-400 font-semibold ml-1 text-[10px] flex-shrink-0">[BUILD]</span>
       )}
-      <span className="text-gray-500 ml-1 text-[10px] flex-shrink-0">[{log.service}]</span>
-      {isError && <span className="text-red-500 ml-1 font-bold flex-shrink-0">⚠</span>}
-      {isWarning && !isError && <span className="text-yellow-500 ml-1 flex-shrink-0">⚠</span>}
-      <span className={`ml-1 ${wordWrap ? 'break-words' : ''}`}>{highlightSearch(log.message, filterSearch)}</span>
+      {!isStackTrace && (
+        <span className="text-gray-500 ml-1 text-[10px] flex-shrink-0">[{log.service}]</span>
+      )}
+      {isError && !isStackTrace && <span className="text-red-500 ml-1 font-bold flex-shrink-0">⚠</span>}
+      {isWarning && !isError && !isStackTrace && <span className="text-yellow-500 ml-1 flex-shrink-0">⚠</span>}
+      {/* Indent stack trace lines slightly */}
+      <span className={`${isStackTrace ? 'ml-6' : 'ml-1'} ${wordWrap ? 'break-words' : ''}`}>
+        {highlightSearch(log.message, filterSearch)}
+      </span>
     </div>
   );
 }
