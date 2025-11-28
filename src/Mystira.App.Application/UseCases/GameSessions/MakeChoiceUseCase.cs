@@ -86,9 +86,8 @@ public class MakeChoiceUseCase
         }
 
         // Process compass change if present
-        if (branch.CompassChange != null && session.CompassValues.ContainsKey(branch.CompassChange.Axis))
+        if (branch.CompassChange != null && session.CompassValues.TryGetValue(branch.CompassChange.Axis, out var tracking))
         {
-            var tracking = session.CompassValues[branch.CompassChange.Axis];
             tracking.CurrentValue += branch.CompassChange.Delta;
             tracking.CurrentValue = Math.Max(-2.0f, Math.Min(2.0f, tracking.CurrentValue)); // Clamp to [-2, 2]
 
