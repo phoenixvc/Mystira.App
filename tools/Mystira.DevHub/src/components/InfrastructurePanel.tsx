@@ -3,11 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useDeploymentsStore } from '../stores/deploymentsStore';
 import { useResourcesStore } from '../stores/resourcesStore';
 import type { CommandResponse, CosmosWarning, ResourceGroupConvention, TemplateConfig, WhatIfChange, WorkflowStatus } from '../types';
-import { DEFAULT_PROJECTS, type ProjectInfo } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
 import DeploymentHistory from './DeploymentHistory';
-import { ActionButtons, ResponseDisplay } from './infrastructure';
-import type { ActionButton } from './infrastructure';
 import InfrastructureStatus, { type InfrastructureStatus as InfrastructureStatusType } from './InfrastructureStatus';
 import ProjectDeploymentPlanner from './ProjectDeploymentPlanner';
 import ResourceGrid from './ResourceGrid';
@@ -17,7 +14,7 @@ import TemplateInspector from './TemplateInspector';
 import WhatIfViewer from './WhatIfViewer';
 import { formatTimeSince } from './services/utils/serviceUtils';
 
-type Tab = 'actions' | 'templates' | 'resources' | 'history';
+type Tab = 'actions' | 'templates' | 'resources' | 'history' | 'recommended-fixes';
 
 function InfrastructurePanel() {
   const [activeTab, setActiveTab] = useState<Tab>('actions');
@@ -33,8 +30,7 @@ function InfrastructurePanel() {
   const [pendingEnvironment, setPendingEnvironment] = useState<string>('dev');
   const [hasValidated, setHasValidated] = useState(false);
   const [hasPreviewed, setHasPreviewed] = useState(false);
-  const [_hasDeployedInfrastructure, setHasDeployedInfrastructure] = useState(false);
-  const [_projects] = useState<ProjectInfo[]>(DEFAULT_PROJECTS);
+  const [, setHasDeployedInfrastructure] = useState(false);
   const [showDeployConfirm, setShowDeployConfirm] = useState(false);
   const [showOutputPanel, setShowOutputPanel] = useState(false);
   const [showDestroySelect, setShowDestroySelect] = useState(false);
@@ -83,8 +79,9 @@ function InfrastructurePanel() {
     },
   ]);
   const [editingTemplate, setEditingTemplate] = useState<TemplateConfig | null>(null);
-  const [_step1Collapsed, _setStep1Collapsed] = useState(false);
-  const [_showStep2, _setShowStep2] = useState(false);
+  const [step1Collapsed, setStep1Collapsed] = useState(false);
+  const [showStep2, setShowStep2] = useState(false);
+  const [infrastructureLoading, setInfrastructureLoading] = useState(true);
   const [cosmosWarning, setCosmosWarning] = useState<CosmosWarning | null>(null);
 
   const workflowFile = '.start-infrastructure-deploy-dev.yml';
@@ -182,12 +179,12 @@ function InfrastructurePanel() {
     }
   }, [cliBuildLogs, isBuildingCli]);
 
-  // Fetch resources when switching to resources tab
+  // Fetch resources when switching to resources tab or environment changes
   useEffect(() => {
     if (activeTab === 'resources') {
-      fetchResources();
+      fetchResources(false);
     }
-  }, [activeTab, fetchResources]);
+  }, [activeTab, environment, fetchResources]);
 
   // Fetch deployments when switching to history tab
   useEffect(() => {
@@ -295,49 +292,24 @@ function InfrastructurePanel() {
             if (response.success && response.result) {
               const previewData = response.result as any;
               let parsedChanges: WhatIfChange[] = [];
-
+              
               // Extract warning text (can be string or array)
-              const warningText = typeof previewData.warnings === 'string'
-                ? previewData.warnings
-                : Array.isArray(previewData.warnings)
-                  ? previewData.warnings.join(' ')
+              const warningText = typeof previewData.warnings === 'string' 
+                ? previewData.warnings 
+                : Array.isArray(previewData.warnings) 
+                  ? previewData.warnings.join(' ') 
                   : '';
-
-              // Check for Cosmos DB warnings and set dismissible warning
+              
+              // Check for Cosmos DB warnings
               const hasCosmosWarning = previewData.warnings && (
                 warningText.includes('Cosmos DB nested resource') ||
                 warningText.includes('nested resource errors are expected')
               );
-
-              if (hasCosmosWarning) {
-                // Extract affected resources from warning text
-                const affectedResources: string[] = [];
-                const containerMatches = warningText.match(/containers\/([a-zA-Z]+)/g);
-                if (containerMatches) {
-                  containerMatches.forEach((match: string) => {
-                    const name = match.replace('containers/', '');
-                    if (!affectedResources.includes(name)) affectedResources.push(name);
-                  });
-                }
-                if (warningText.includes('MystiraAppDb') && !affectedResources.includes('MystiraAppDb')) {
-                  affectedResources.unshift('MystiraAppDb');
-                }
-
-                setCosmosWarning({
-                  type: 'cosmos-whatif',
-                  message: 'Azure what-if preview cannot evaluate nested Cosmos DB resources',
-                  details: warningText,
-                  affectedResources: affectedResources.length > 0
-                    ? affectedResources
-                    : ['MystiraAppDb', 'UserProfiles', 'Scenarios', 'GameSessions', 'CompassTrackings'],
-                  dismissed: false,
-                });
-              }
-
+              
               if (previewData.warnings) {
                 console.warn('Preview warnings:', previewData.warnings);
               }
-
+              
               if (previewData.parsed && previewData.parsed.changes) {
                 parsedChanges = parseWhatIfOutput(JSON.stringify(previewData.parsed));
               } else if (previewData.preview) {
@@ -345,28 +317,68 @@ function InfrastructurePanel() {
               } else if (previewData.changes) {
                 parsedChanges = previewData.changes;
               }
-
+              
               // Apply resource group mappings to parsed changes
               if (parsedChanges.length > 0) {
                 parsedChanges = parsedChanges.map(change => ({
                   ...change,
-                  resourceGroup: change.resourceGroup ||
-                    resourceGroupConfig.resourceTypeMappings?.[change.resourceType] ||
+                  resourceGroup: change.resourceGroup || 
+                    resourceGroupConfig.resourceTypeMappings?.[change.resourceType] || 
                     resourceGroupConfig.defaultResourceGroup,
                 }));
                 setWhatIfChanges(parsedChanges);
                 setHasPreviewed(true);
-                const warningMsg = previewData.warnings ? ` (${previewData.warnings})` : '';
+                const warningMsg = warningText ? ` (${warningText})` : '';
                 setLastResponse({
                   success: true,
                   message: `Preview generated: ${parsedChanges.length} changes detected${warningMsg}`,
                 });
+              } else if (hasCosmosWarning) {
+                // Cosmos DB nested resource errors are expected - extract affected resources and show warning banner
+                // Check all possible places where error details might be stored
+                const errorStr = response.error || 
+                  (typeof previewData.errors === 'string' ? previewData.errors : null) ||
+                  (typeof previewData.errors === 'object' && previewData.errors ? JSON.stringify(previewData.errors) : null) ||
+                  '';
+                
+                // Extract affected resources from error string or warning text
+                const affectedResources: string[] = [];
+                const searchText = errorStr || warningText || '';
+                if (searchText) {
+                  const resourceMatches = searchText.matchAll(/containers\/(\w+)|sqlDatabases\/(\w+)/g);
+                  for (const match of resourceMatches) {
+                    const resource = match[1] || match[2];
+                    if (resource && !affectedResources.includes(resource)) {
+                      affectedResources.push(resource);
+                    }
+                  }
+                }
+                
+                setCosmosWarning({
+                  type: 'cosmos-whatif',
+                  message: 'Cosmos DB nested resource errors detected during preview',
+                  details: errorStr || warningText || 'Cosmos DB nested resource preview limitations',
+                  affectedResources,
+                  dismissed: false,
+                });
+                
+                // Don't mark as previewed yet - wait for user to dismiss warning
+                setWhatIfChanges([]);
+                setLastResponse({
+                  success: true,
+                  message: `Preview completed with Cosmos DB warnings. ${affectedResources.length > 0 ? affectedResources.length + ' resources affected. ' : ''}These errors are expected and won't prevent deployment.`,
+                });
               } else if (previewData.warnings) {
-                // Even if no changes, show the warning and allow proceeding
-                setHasPreviewed(true);
+                // Other warnings - show but don't allow deployment without changes
                 setLastResponse({
                   success: true,
                   message: previewData.warnings,
+                });
+              } else {
+                // No changes and no warnings - this shouldn't happen with success=true
+                setLastResponse({
+                  success: true,
+                  message: 'Preview completed but no changes detected.',
                 });
               }
             } else if (response.error) {
@@ -377,52 +389,53 @@ function InfrastructurePanel() {
                 && (errorStr.includes('sqlDatabases') || errorStr.includes('containers'));
 
               if (isOnlyCosmosErrors) {
-                // Extract affected resources
+                // Extract affected resources from error message
                 const affectedResources: string[] = [];
-                const containerMatches = errorStr.match(/containers\/([a-zA-Z]+)/g);
-                if (containerMatches) {
-                  containerMatches.forEach((match: string) => {
-                    const name = match.replace('containers/', '');
-                    if (!affectedResources.includes(name)) affectedResources.push(name);
-                  });
-                }
-                if (errorStr.includes('MystiraAppDb') && !affectedResources.includes('MystiraAppDb')) {
-                  affectedResources.unshift('MystiraAppDb');
+                const resourceMatches = errorStr.matchAll(/containers\/(\w+)|sqlDatabases\/(\w+)/g);
+                for (const match of resourceMatches) {
+                  const resource = match[1] || match[2];
+                  if (resource && !affectedResources.includes(resource)) {
+                    affectedResources.push(resource);
+                  }
                 }
 
+                // Try to parse preview data if available
+                let parsedChanges: WhatIfChange[] = [];
+                if (response.result) {
+                  const previewData = response.result as any;
+                  if (previewData.parsed && previewData.parsed.changes) {
+                    parsedChanges = parseWhatIfOutput(JSON.stringify(previewData.parsed));
+                  } else if (previewData.preview) {
+                    parsedChanges = parseWhatIfOutput(previewData.preview);
+                  }
+                }
+
+                // Set warning state - user can dismiss to continue
                 setCosmosWarning({
                   type: 'cosmos-whatif',
-                  message: 'Azure what-if preview cannot evaluate nested Cosmos DB resources',
-                  details: 'This is a known Azure limitation. The Cosmos DB account, database, and containers will still be created correctly during deployment.',
-                  affectedResources: affectedResources.length > 0
-                    ? affectedResources
-                    : ['MystiraAppDb', 'UserProfiles', 'Scenarios', 'GameSessions', 'CompassTrackings'],
+                  message: 'Cosmos DB nested resource errors detected during preview',
+                  details: errorStr,
+                  affectedResources,
                   dismissed: false,
                 });
-              }
 
-              if (isOnlyCosmosErrors && response.result) {
-                // Try to parse anyway - we might have valid preview data
-                const previewData = response.result as any;
-                let parsedChanges: WhatIfChange[] = [];
-                if (previewData.parsed && previewData.parsed.changes) {
-                  parsedChanges = parseWhatIfOutput(JSON.stringify(previewData.parsed));
-                } else if (previewData.preview) {
-                  parsedChanges = parseWhatIfOutput(previewData.preview);
-                }
                 if (parsedChanges.length > 0) {
+                  // Apply resource group mappings
+                  parsedChanges = parsedChanges.map(change => ({
+                    ...change,
+                    resourceGroup: change.resourceGroup ||
+                      resourceGroupConfig.resourceTypeMappings?.[change.resourceType] ||
+                      resourceGroupConfig.defaultResourceGroup,
+                  }));
                   setWhatIfChanges(parsedChanges);
-                  setHasPreviewed(true);
-                  setLastResponse({
-                    success: true,
-                    message: `Preview generated: ${parsedChanges.length} changes detected. Cosmos DB nested resource errors are expected when resources don't exist yet.`,
-                  });
-                } else {
-                  setLastResponse({
-                    success: false,
-                    error: 'Failed to generate preview. Cosmos DB nested resource errors occurred, but no valid preview data was found.',
-                  });
                 }
+
+                // Don't mark as previewed yet - wait for user to dismiss warning
+                setLastResponse({
+                  success: false,
+                  error: undefined,
+                  message: `Preview completed with warnings. ${affectedResources.length} Cosmos DB resources reported errors (this is expected for new deployments).`,
+                });
               } else {
                 setLastResponse({
                   success: false,
@@ -434,8 +447,17 @@ function InfrastructurePanel() {
           }
 
           case 'deploy': {
-            // Require preview first
-            if (!hasPreviewed || whatIfChanges.length === 0) {
+            // Require preview first - also check if cosmos warning needs to be dismissed
+            if (cosmosWarning && !cosmosWarning.dismissed) {
+              setLastResponse({
+                success: false,
+                error: 'Please dismiss the Cosmos DB warnings before deploying.',
+              });
+              setLoading(false);
+              return;
+            }
+            
+            if (!hasPreviewed) {
               setLastResponse({
                 success: false,
                 error: 'Please run Preview first to see what will be deployed before deploying.',
@@ -443,13 +465,23 @@ function InfrastructurePanel() {
               setLoading(false);
               return;
             }
-
-            // Require Cosmos warning to be dismissed before deploying
-            if (cosmosWarning && !cosmosWarning.dismissed) {
-              setLastResponse({
-                success: false,
-                error: 'Please review and acknowledge the Cosmos DB preview warning before deploying. The warning indicates that some nested resources could not be evaluated by Azure what-if preview.',
-              });
+            
+            // If preview was successful but no changes (e.g., Cosmos DB nested resource scenario),
+            // we can still deploy - the preview succeeded, just couldn't show nested resource details
+            // In this case, deploy based on selected templates instead of whatIfChanges
+            if (whatIfChanges.length === 0) {
+              // Preview succeeded but couldn't parse nested resources - deploy based on templates
+              const selectedTemplates = templates.filter(t => t.selected);
+              if (selectedTemplates.length === 0) {
+                setLastResponse({
+                  success: false,
+                  error: 'Please select at least one template to deploy.',
+                });
+                setLoading(false);
+                return;
+              }
+              // Proceed with deployment using templates (bypass resource selection)
+              setShowDeployConfirm(true);
               setLoading(false);
               return;
             }
@@ -943,57 +975,9 @@ function InfrastructurePanel() {
     }
   };
 
-  const selectedResourceCount = whatIfChanges.filter(c => c.selected !== false).length;
-
-  const actionButtons: ActionButton[] = [
-    {
-      id: 'validate',
-      icon: '🔍',
-      label: 'Validate',
-      description: 'Check Bicep',
-      onClick: () => handleAction('validate'),
-      disabled: loading,
-      loading: loading,
-      variant: 'primary',
-    },
-    {
-      id: 'preview',
-      icon: '👁️',
-      label: 'Preview',
-      description: 'What-if',
-      onClick: () => handleAction('preview'),
-      disabled: loading,
-      loading: loading,
-      variant: 'warning',
-    },
-    {
-      id: 'deploy',
-      icon: '🚀',
-      label: 'Deploy',
-      description: hasPreviewed
-        ? selectedResourceCount > 0
-          ? `${selectedResourceCount} selected`
-          : 'Select resources first'
-        : 'Preview first',
-      onClick: () => handleAction('deploy'),
-      disabled: loading || !hasPreviewed || selectedResourceCount === 0,
-      loading: loading,
-      variant: 'success',
-    },
-    {
-      id: 'destroy',
-      icon: '🗑️',
-      label: 'Destroy',
-      description: 'Delete all',
-      onClick: () => setShowDestroyConfirm(true),
-      disabled: loading,
-      loading: loading,
-      variant: 'danger',
-    },
-  ];
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 p-0">
       <ConfirmDialog
         isOpen={showDestroyConfirm && !showDestroySelect}
         title="⚠️ Destroy All Infrastructure"
@@ -1004,6 +988,17 @@ function InfrastructurePanel() {
         requireTextMatch="DELETE"
         onConfirm={handleDestroyConfirm}
         onCancel={() => setShowDestroyConfirm(false)}
+      />
+      <ConfirmDialog
+        isOpen={showDestroySelect}
+        title="💥 Destroy Selected Resources"
+        message={`You are about to permanently delete ${whatIfChanges.filter(c => c.selected !== false && (c.changeType === 'delete' || c.selected === true)).length} selected resource(s). This action cannot be undone!`}
+        confirmText="Yes, Destroy Selected"
+        cancelText="Cancel"
+        confirmButtonClass="bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+        requireTextMatch="DELETE"
+        onConfirm={handleDestroyConfirm}
+        onCancel={() => setShowDestroySelect(false)}
       />
       <ConfirmDialog
         isOpen={showProdConfirm}
@@ -1039,27 +1034,68 @@ function InfrastructurePanel() {
       <ConfirmDialog
         isOpen={showDeployConfirm}
         title="🚀 Deploy Selected Resources"
-        message={
-          selectedResourceCount > 0
-            ? `You are about to deploy ${selectedResourceCount} selected resource(s) to ${environment} environment.`
-            : `You are about to deploy the selected templates to ${environment} environment.`
-        }
+        message={`You are about to deploy ${whatIfChanges.filter(c => c.selected !== false).length} selected resource(s) to ${environment} environment.`}
         confirmText="Deploy Selected Resources"
         cancelText="Cancel"
         confirmButtonClass="bg-green-600 hover:bg-green-700"
         onConfirm={handleDeployConfirm}
         onCancel={() => setShowDeployConfirm(false)}
       />
-      <div className="max-w-7xl mx-auto flex-1 flex flex-col min-h-0 p-6">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+      <div className="p-8 flex-1 flex flex-col min-h-0 w-full">
+        <div className="mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
                 Infrastructure Control Panel
               </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Manage Bicep infrastructure deployments via GitHub Actions
-              </p>
+              {/* Environment and Resource Groups Controls */}
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-600 dark:text-gray-400">Environment:</label>
+                <select
+                  value={environment}
+                  aria-label="Select environment"
+                  onChange={async (e) => {
+                    const newEnv = e.target.value;
+                    if (newEnv === 'prod') {
+                      // Check subscription owner role before allowing prod switch
+                      try {
+                        const ownerCheck = await invoke<CommandResponse<{ isOwner: boolean; userName: string }>>('check_subscription_owner');
+                        if (ownerCheck.success && ownerCheck.result?.isOwner) {
+                          setPendingEnvironment(newEnv);
+                          setShowProdConfirm(true);
+                        } else {
+                          alert('Access Denied: You must have Subscription Owner role to switch to production environment.\n\n' +
+                                `Current user: ${ownerCheck.result?.userName || 'Unknown'}\n` +
+                                'Please contact your subscription administrator.');
+                          // Reset dropdown to current environment
+                          e.target.value = environment;
+                        }
+                      } catch (error) {
+                        console.error('Failed to check subscription owner:', error);
+                        alert('Failed to verify subscription owner role. Cannot switch to production environment.');
+                        e.target.value = environment;
+                      }
+                    } else {
+                      setEnvironment(newEnv);
+                      setHasValidated(false);
+                      setHasPreviewed(false);
+                      setWhatIfChanges([]);
+                    }
+                  }}
+                  className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="dev">dev</option>
+                  <option value="staging">staging</option>
+                  <option value="prod">prod</option>
+                </select>
+                <button
+                  onClick={() => setShowResourceGroupConfig(true)}
+                  className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium"
+                  title="Configure resource group naming conventions"
+                >
+                  ⚙️ Resource Groups
+                </button>
+              </div>
             </div>
             {/* Last Build Time Indicators */}
             <div className="flex flex-col items-end gap-2">
@@ -1336,12 +1372,99 @@ function InfrastructurePanel() {
             >
               📜 History
             </button>
+            <button
+              onClick={() => setActiveTab('recommended-fixes')}
+              className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === 'recommended-fixes'
+                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+              }`}
+            >
+              🔧 Recommended Fixes
+            </button>
           </nav>
         </div>
 
         {/* Tab Content: Actions */}
         {activeTab === 'actions' && (
           <div>
+            {/* Progress Stepper */}
+            <div className="mb-6 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4 flex-1">
+                  {/* Step 1 */}
+                  <div className="flex items-center gap-2">
+                    <div className={`flex items-center justify-center w-8 h-8 rounded-full font-semibold text-sm ${
+                      templates.some(t => t.selected) 
+                        ? 'bg-blue-600 dark:bg-blue-500 text-white' 
+                        : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                    }`}>
+                      {templates.some(t => t.selected) ? '✓' : '1'}
+                    </div>
+                    <span className={`text-sm font-medium ${
+                      templates.some(t => t.selected)
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-gray-600 dark:text-gray-400'
+                    }`}>
+                      Plan Deployment
+                    </span>
+                  </div>
+                  
+                  {/* Connector - only show when Step 2 is visible */}
+                  {showStep2 && (
+                    <>
+                      <div className={`flex-1 h-0.5 ${
+                        templates.some(t => t.selected)
+                          ? 'bg-blue-600 dark:bg-blue-500'
+                          : 'bg-gray-300 dark:bg-gray-600'
+                      }`} />
+                      
+                      {/* Step 2 */}
+                    <div className="flex items-center gap-2">
+                      <div className={`flex items-center justify-center w-8 h-8 rounded-full font-semibold text-sm ${
+                        hasValidated 
+                          ? 'bg-purple-600 dark:bg-purple-500 text-white' 
+                          : templates.some(t => t.selected)
+                          ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                          : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                      }`}>
+                        {hasPreviewed ? '✓' : '2'}
+                      </div>
+                      <span className={`text-sm font-medium ${
+                        hasValidated || templates.some(t => t.selected)
+                          ? 'text-blue-600 dark:text-blue-400'
+                          : 'text-gray-600 dark:text-gray-400'
+                      }`}>
+                        Infrastructure Actions
+                      </span>
+                    </div>
+                    </>
+                  )}
+                </div>
+                
+                {/* Collapse Toggle */}
+                {showStep2 && templates.some(t => t.selected) && (
+                  <button
+                    onClick={() => setStep1Collapsed(!step1Collapsed)}
+                    className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md border border-gray-300 dark:border-gray-600 transition-colors flex items-center gap-1.5"
+                    title={step1Collapsed ? 'Expand Step 1' : 'Collapse Step 1'}
+                  >
+                    {step1Collapsed ? (
+                      <>
+                        <span>▼</span>
+                        <span>Show Step 1</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>▲</span>
+                        <span>Hide Step 1</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Infrastructure Status Dashboard */}
             <div className="mb-6">
               <InfrastructureStatus
@@ -1352,62 +1475,258 @@ function InfrastructurePanel() {
               setHasDeployedInfrastructure(status.available);
                   setHasDeployedInfrastructure(status.available);
                 }}
+                onLoadingChange={(loading) => setInfrastructureLoading(loading)}
               />
             </div>
 
             {/* Project Deployment Planner - Step 1 */}
-            <ProjectDeploymentPlanner
-              environment={environment}
-              resourceGroupConfig={resourceGroupConfig}
-              templates={templates}
-              onTemplatesChange={setTemplates}
-              onEditTemplate={setEditingTemplate}
-              region={resourceGroupConfig.region || 'euw'}
-              projectName={resourceGroupConfig.projectName || 'mystira-app'}
-            />
+            {!step1Collapsed && (
+              <div className="mb-6">
+                <ProjectDeploymentPlanner
+                  environment={environment}
+                  resourceGroupConfig={resourceGroupConfig}
+                  templates={templates}
+                  onTemplatesChange={setTemplates}
+                  onEditTemplate={setEditingTemplate}
+                  region={resourceGroupConfig.region || 'euw'}
+                  projectName={resourceGroupConfig.projectName || 'mystira-app'}
+                  onProceedToStep2={() => setShowStep2(true)}
+                  infrastructureLoading={infrastructureLoading}
+                />
+              </div>
+            )}
 
-            {/* Action Buttons - Step 2 */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Infrastructure Actions</h3>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-600 dark:text-gray-400">Environment:</label>
-                  <select
-                    value={environment}
-                    aria-label="Select environment"
-                    onChange={(e) => {
-                      const newEnv = e.target.value;
-                      if (newEnv === 'prod') {
-                        setPendingEnvironment(newEnv);
-                        setShowProdConfirm(true);
-                      } else {
-                        setEnvironment(newEnv);
-                        setHasValidated(false);
-                        setHasPreviewed(false);
-                        setWhatIfChanges([]);
-                      }
-                    }}
-                    className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="dev">dev</option>
-                    <option value="staging">staging</option>
-                    <option value="prod">prod</option>
-                  </select>
+            {/* Visual Separator */}
+            {showStep2 && templates.some(t => t.selected) && (
+              <div className="mb-6 relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="px-4 py-1 bg-gray-50 dark:bg-gray-800 text-xs font-medium text-gray-500 dark:text-gray-400 rounded-full border border-gray-300 dark:border-gray-600">
+                    Ready for Step 2
+                  </span>
                 </div>
               </div>
-              <button
-                onClick={() => setShowResourceGroupConfig(true)}
-                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium"
-                title="Configure resource group naming conventions"
-              >
-                ⚙️ Resource Groups
-              </button>
-            </div>
+            )}
 
-            {/* Action Buttons Grid */}
-            <ActionButtons buttons={actionButtons} loading={loading} />
+            {/* Action Buttons - Step 2 */}
+            {showStep2 && (
+              <div id="step-2-infrastructure-actions" className="mb-4">
+              <div className={`mb-4 ${templates.some(t => t.selected) ? 'sticky top-0 z-10 bg-white dark:bg-gray-900 pb-4 pt-2 -mt-2 border-b border-gray-200 dark:border-gray-700 mb-6' : ''}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Step 2: Infrastructure Actions
+                  </h3>
+                  {step1Collapsed && (
+                    <button
+                      onClick={() => setStep1Collapsed(false)}
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                    >
+                      ← Back to Step 1
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <button
+                    onClick={() => handleAction('validate')}
+                    disabled={loading}
+                    className="px-4 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    title="Validate infrastructure templates"
+                  >
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <>
+                        <span>🔍</span>
+                        <span>Validate</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleAction('preview')}
+                    disabled={loading || !hasValidated}
+                    className="px-4 py-3 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    title={!hasValidated ? 'Please validate first' : 'Preview infrastructure changes'}
+                  >
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <>
+                        <span>👁️</span>
+                        <span>Preview</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleAction('deploy')}
+                    disabled={loading || !hasPreviewed}
+                    className="px-4 py-3 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    title={!hasPreviewed ? 'Please preview first' : 'Deploy infrastructure'}
+                  >
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <>
+                        <span>🚀</span>
+                        <span>Deploy</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (whatIfChanges.length > 0 && deploymentMethod === 'azure-cli') {
+                        setShowDestroySelect(true);
+                      } else {
+                        handleAction('destroy');
+                      }
+                    }}
+                    disabled={loading}
+                    className="px-4 py-3 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    title="Destroy infrastructure resources"
+                  >
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <>
+                        <span>💥</span>
+                        <span>Destroy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+                  Workflow: Validate → Preview → Deploy (or Destroy)
+                </p>
+              </div>
+            </div>
+            )}
+
             {/* Response Display */}
-            <ResponseDisplay response={lastResponse} />
+            {lastResponse && (
+              <div
+                className={`rounded-lg p-6 mb-8 ${
+                  lastResponse.success
+                    ? 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800'
+                    : 'bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800'
+                }`}
+              >
+                <h3
+                  className={`text-lg font-semibold mb-2 ${
+                    lastResponse.success ? 'text-green-900 dark:text-green-300' : 'text-red-900 dark:text-red-300'
+                  }`}
+                >
+                  {lastResponse.success ? '✅ Success' : '❌ Error'}
+                </h3>
+
+                {lastResponse.message && (
+                  <p
+                    className={`mb-3 ${
+                      lastResponse.success ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'
+                    }`}
+                  >
+                    {lastResponse.message}
+                  </p>
+                )}
+
+                {lastResponse.error && (
+                  <div>
+                    <pre className="bg-red-100 dark:bg-red-900/50 p-3 rounded text-sm text-red-900 dark:text-red-200 overflow-auto mb-3">
+                      {lastResponse.error}
+                    </pre>
+                    {(lastResponse.error.includes('Azure CLI is not installed') ||
+                      lastResponse.error.includes('Azure CLI not found')) && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const response = await invoke<CommandResponse>('install_azure_cli');
+                            if (response.success) {
+                              alert('Azure CLI installation started. Please restart the application after installation completes.');
+                            } else {
+                              alert(`Failed to install Azure CLI: ${response.error || 'Unknown error'}`);
+                            }
+                          } catch (error) {
+                            alert(`Error installing Azure CLI: ${error}`);
+                          }
+                        }}
+                        className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors"
+                      >
+                        📦 Install Azure CLI
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {lastResponse.result !== undefined && lastResponse.result !== null && (
+                  <details className="mt-3">
+                    <summary
+                      className={`cursor-pointer font-medium ${
+                        lastResponse.success ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
+                      }`}
+                    >
+                      View Details
+                    </summary>
+                    <pre
+                      className={`mt-2 p-3 rounded text-sm overflow-auto ${
+                        lastResponse.success
+                          ? 'bg-green-100 dark:bg-green-900/50 text-green-900 dark:text-green-200'
+                          : 'bg-red-100 dark:bg-red-900/50 text-red-900 dark:text-red-200'
+                      }`}
+                    >
+                      {JSON.stringify(lastResponse.result, null, 2) || 'No details available'}
+                    </pre>
+                  </details>
+                )}
+              </div>
+            )}
+
+            {/* Cosmos DB Warning Banner - Dismissible */}
+            {cosmosWarning && !cosmosWarning.dismissed && (
+              <div className="rounded-lg p-4 mb-6 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <span className="text-amber-500 text-xl">⚠️</span>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-1">
+                        Expected Cosmos DB Preview Warnings
+                      </h4>
+                      <p className="text-xs text-amber-700 dark:text-amber-300 mb-2">
+                        Azure's what-if preview cannot predict changes for nested Cosmos DB resources
+                        (databases and containers) that don't exist yet. This is a known Azure limitation
+                        and does not affect actual deployments.
+                      </p>
+                      {cosmosWarning.affectedResources.length > 0 && (
+                        <div className="text-xs text-amber-600 dark:text-amber-400 mb-2">
+                          <span className="font-medium">Affected resources:</span>{' '}
+                          {cosmosWarning.affectedResources.join(', ')}
+                        </div>
+                      )}
+                      <details className="text-xs">
+                        <summary className="cursor-pointer text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200">
+                          View full error details
+                        </summary>
+                        <pre className="mt-2 p-2 bg-amber-100 dark:bg-amber-900/50 rounded text-[10px] overflow-auto max-h-32 text-amber-800 dark:text-amber-200">
+                          {cosmosWarning.details}
+                        </pre>
+                      </details>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setCosmosWarning({ ...cosmosWarning, dismissed: true });
+                      setHasPreviewed(true);
+                      setLastResponse({
+                        success: true,
+                        message: `Preview completed. ${whatIfChanges.length} resource changes ready for deployment.`,
+                      });
+                    }}
+                    className="ml-4 px-3 py-1.5 text-xs font-medium bg-amber-100 dark:bg-amber-800 hover:bg-amber-200 dark:hover:bg-amber-700 text-amber-700 dark:text-amber-200 rounded-md transition-colors whitespace-nowrap"
+                  >
+                    Dismiss & Continue
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* What-If Viewer */}
             {whatIfChanges.length > 0 && (
@@ -1437,40 +1756,8 @@ function InfrastructurePanel() {
                     </button>
                   </div>
                 </div>
-
-                {/* Dismissible Cosmos DB Warning */}
-                {cosmosWarning && !cosmosWarning.dismissed && (
-                  <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl">⚠️</span>
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-amber-900 dark:text-amber-200 mb-1">
-                          {cosmosWarning.message}
-                        </h4>
-                        <p className="text-sm text-amber-800 dark:text-amber-300 mb-2">
-                          This is a known Azure limitation. The following nested resources could not be evaluated:
-                        </p>
-                        <ul className="text-sm text-amber-700 dark:text-amber-400 mb-3 list-disc list-inside">
-                          {cosmosWarning.affectedResources.map((resource) => (
-                            <li key={resource}>{resource}</li>
-                          ))}
-                        </ul>
-                        <p className="text-xs text-amber-600 dark:text-amber-500 mb-3">
-                          These resources will still be created/updated during deployment. The preview error is informational only.
-                        </p>
-                        <button
-                          onClick={() => setCosmosWarning({ ...cosmosWarning, dismissed: true })}
-                          className="px-3 py-1.5 text-sm bg-amber-600 hover:bg-amber-700 text-white rounded transition-colors"
-                        >
-                          I understand, proceed with deployment
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <WhatIfViewer
-                  changes={whatIfChanges}
+                <WhatIfViewer 
+                  changes={whatIfChanges} 
                   loading={loading && activeTab === 'actions'}
                   showSelection={hasPreviewed && deploymentMethod === 'azure-cli'}
                   onSelectionChange={(updated) => setWhatIfChanges(updated)}
@@ -1519,43 +1806,6 @@ function InfrastructurePanel() {
               />
             )}
 
-            {/* Workflow Status */}
-            {workflowStatus && (
-              <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                  Workflow Status
-                </h3>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div>
-                    <div className="text-sm text-gray-500">Status</div>
-                    <div className="text-lg font-semibold">
-                      {workflowStatus.status || 'Unknown'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500">Conclusion</div>
-                    <div className="text-lg font-semibold">
-                      {workflowStatus.conclusion || 'N/A'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500">Workflow</div>
-                    <div className="text-lg font-semibold">
-                      {workflowStatus.workflowName || 'N/A'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500">Updated</div>
-                    <div className="text-lg font-semibold">
-                      {workflowStatus.updatedAt
-                        ? new Date(workflowStatus.updatedAt).toLocaleTimeString()
-                        : 'N/A'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -1694,8 +1944,8 @@ function InfrastructurePanel() {
             )}
 
             {!resourcesLoading && !resourcesError && (
-              <ResourceGrid 
-                resources={resources} 
+              <ResourceGrid
+                resources={resources}
                 onRefresh={() => fetchResources(true)}
                 onDelete={async (resourceId: string) => {
                   try {
@@ -1827,6 +2077,143 @@ function InfrastructurePanel() {
             {!deploymentsLoading && !deploymentsError && (
               <DeploymentHistory events={deployments} />
             )}
+          </div>
+        )}
+
+        {/* Tab Content: Recommended Fixes */}
+        {activeTab === 'recommended-fixes' && (
+          <div>
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                🔧 Recommended Fixes & Improvements
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Security and safety improvements to prevent accidental actions and improve resource management
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Delete Button Protection */}
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <span>🛡️</span>
+                  Delete Button Protection
+                </h4>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                  Add filters and confirmation requirements to prevent accidental deletion of resources
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Require resource name confirmation before delete</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Hide delete buttons by default (toggle to show)</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Filter by environment prefix before allowing delete</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Environment Switch Security */}
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <span>🔒</span>
+                  Environment Switch Security
+                </h4>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                  Require subscription owner permissions for production environment operations
+                </p>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={true}
+                      readOnly
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Require subscription owner role for prod-* resources</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Auto-detect subscription owner and validate before operations</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Resource Tagging */}
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <span>🏷️</span>
+                  Resource Tagging Script
+                </h4>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                  Automatically add required tags to Azure resources for better organization and compliance
+                </p>
+                <div className="space-y-3">
+                  <button
+                    onClick={async () => {
+                      try {
+                        const response = await invoke<CommandResponse>('run_resource_tagging_script', {
+                          environment: environment === 'prod' ? 'prod' : 'dev',
+                          dryRun: true,
+                        });
+                        if (response.success) {
+                          alert('Tagging script ready. Preview mode will show what tags would be added.');
+                        } else {
+                          alert(`Error: ${response.error}`);
+                        }
+                      } catch (error) {
+                        console.error('Failed to run tagging script:', error);
+                        alert('Tagging script feature is not yet implemented in the backend.');
+                      }
+                    }}
+                    className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-sm font-medium"
+                  >
+                    🔍 Preview Tags (Dry Run)
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`Are you sure you want to add tags to all ${environment} resources?`)) {
+                        return;
+                      }
+                      try {
+                        const response = await invoke<CommandResponse>('run_resource_tagging_script', {
+                          environment: environment === 'prod' ? 'prod' : 'dev',
+                          dryRun: false,
+                        });
+                        if (response.success) {
+                          alert('Tags have been successfully added to resources.');
+                        } else {
+                          alert(`Error: ${response.error}`);
+                        }
+                      } catch (error) {
+                        console.error('Failed to run tagging script:', error);
+                        alert('Tagging script feature is not yet implemented in the backend.');
+                      }
+                    }}
+                    className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-sm font-medium ml-2"
+                  >
+                    ✏️ Apply Tags to Resources
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

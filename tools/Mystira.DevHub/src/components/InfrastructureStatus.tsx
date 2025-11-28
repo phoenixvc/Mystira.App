@@ -26,14 +26,20 @@ interface InfrastructureStatusProps {
   environment: string;
   resourceGroup: string;
   onStatusChange?: (status: InfrastructureStatus) => void;
+  onLoadingChange?: (loading: boolean) => void;
   refreshInterval?: number; // Configurable refresh interval in milliseconds (default: 30000)
 }
 
-function InfrastructureStatus({ environment, resourceGroup, onStatusChange, refreshInterval = 30000 }: InfrastructureStatusProps) {
+function InfrastructureStatus({ environment, resourceGroup, onStatusChange, onLoadingChange, refreshInterval = 30000 }: InfrastructureStatusProps) {
   const [status, setStatus] = useState<InfrastructureStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const checkingRef = useRef(false);
+  
+  // Notify parent of loading state changes
+  useEffect(() => {
+    onLoadingChange?.(loading);
+  }, [loading, onLoadingChange]);
 
   const checkInfrastructureStatus = async () => {
     // Prevent concurrent checks
@@ -174,7 +180,12 @@ function InfrastructureStatus({ environment, resourceGroup, onStatusChange, refr
       {/* Infrastructure Availability */}
       <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Infrastructure Status</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Infrastructure Status</h3>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              Last checked: {formatTimeSince(status.lastChecked)} • Resource Group: {status.resourceGroup}
+            </span>
+          </div>
           <div className="flex items-center gap-2">
             <span className={`text-sm font-medium ${status.available ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
               {status.available ? '✅ Available' : '❌ Not Available'}
@@ -199,69 +210,69 @@ function InfrastructureStatus({ environment, resourceGroup, onStatusChange, refr
               <div key={key} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-medium text-gray-700 dark:text-gray-300 capitalize">{key}</span>
-                  <span className={getHealthColor(resource.health)}>{getHealthIcon(resource.health)}</span>
-                </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
                   {resource.exists ? (
-                    <>
-                      {hasMultiple ? (
-                        <div className="space-y-1">
-                          <div className="font-semibold">{instances.length} instance(s)</div>
-                          {instances.slice(0, 2).map((inst: ResourceInstance, idx: number) => (
-                            <div key={idx} className="flex items-center justify-between">
-                              <span className="font-mono truncate flex-1" title={inst.name}>{inst.name}</span>
-                              <span className={getHealthColor(inst.health)}>{getHealthIcon(inst.health)}</span>
-                            </div>
-                          ))}
-                          {instances.length > 2 && (
-                            <div className="text-gray-400">+{instances.length - 2} more</div>
-                          )}
-                        </div>
-                      ) : (
-                        <>
-                          <div className="font-mono truncate" title={resource.name}>{resource.name}</div>
-                          <div className="mt-1 flex items-center justify-between">
-                            <span>{resource.health || 'unknown'}</span>
-                            {isAppService && resource.name && (
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    const healthResponse = await invoke<CommandResponse<{ health: string; details: any }>>('check_resource_health_endpoint', {
-                                      resourceType: 'Microsoft.Web/sites',
-                                      resourceName: resource.name,
-                                      resourceGroup: status.resourceGroup,
-                                    });
-                                    if (healthResponse.success && healthResponse.result) {
-                                      const result = healthResponse.result;
-                                      alert(`Health Check Result:\nStatus: ${result.health}\nDetails: ${JSON.stringify(result.details, null, 2)}`);
-                                    } else {
-                                      alert(`Health check failed: ${healthResponse.error || 'Unknown error'}`);
-                                    }
-                                  } catch (err) {
-                                    console.error('Failed to check health endpoint:', err);
-                                    alert(`Failed to check health endpoint: ${err}`);
-                                  }
-                                }}
-                                className="ml-2 text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                                title="Check health endpoint"
-                              >
-                                🔍
-                              </button>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </>
+                    <span className={getHealthColor(resource.health)}>{getHealthIcon(resource.health)}</span>
                   ) : (
-                    <span className="text-gray-400">Not deployed</span>
+                    <span className="flex items-center gap-1 text-gray-400">
+                      <span className={getHealthColor(resource.health)}>{getHealthIcon(resource.health)}</span>
+                      <span className="text-xs">Not deployed</span>
+                    </span>
                   )}
                 </div>
+                {resource.exists && (
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    {hasMultiple ? (
+                      <div className="space-y-1">
+                        <div className="font-semibold">{instances.length} instance(s)</div>
+                        {instances.slice(0, 2).map((inst: ResourceInstance, idx: number) => (
+                          <div key={idx} className="flex items-center justify-between">
+                            <span className="font-mono truncate flex-1" title={inst.name}>{inst.name}</span>
+                            <span className={getHealthColor(inst.health)}>{getHealthIcon(inst.health)}</span>
+                          </div>
+                        ))}
+                        {instances.length > 2 && (
+                          <div className="text-gray-400">+{instances.length - 2} more</div>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="font-mono truncate" title={resource.name}>{resource.name}</div>
+                        <div className="mt-1 flex items-center justify-between">
+                          <span>{resource.health || 'unknown'}</span>
+                          {isAppService && resource.name && (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const healthResponse = await invoke<CommandResponse<{ health: string; details: any }>>('check_resource_health_endpoint', {
+                                    resourceType: 'Microsoft.Web/sites',
+                                    resourceName: resource.name,
+                                    resourceGroup: status.resourceGroup,
+                                  });
+                                  if (healthResponse.success && healthResponse.result) {
+                                    const result = healthResponse.result;
+                                    alert(`Health Check Result:\nStatus: ${result.health}\nDetails: ${JSON.stringify(result.details, null, 2)}`);
+                                  } else {
+                                    alert(`Health check failed: ${healthResponse.error || 'Unknown error'}`);
+                                  }
+                                } catch (err) {
+                                  console.error('Failed to check health endpoint:', err);
+                                  alert(`Failed to check health endpoint: ${err}`);
+                                }
+                              }}
+                              className="ml-2 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                              title="Check health endpoint"
+                            >
+                              🔍
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
-        </div>
-        <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-          Last checked: {formatTimeSince(status.lastChecked)} • Resource Group: {status.resourceGroup}
         </div>
       </div>
 
