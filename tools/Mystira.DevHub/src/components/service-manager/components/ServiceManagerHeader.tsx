@@ -13,9 +13,11 @@ interface ServiceManagerHeaderProps {
   };
   allRunning: boolean;
   anyRunning: boolean;
+  anyBuilding: boolean;
   onRepoRootChange: (root: string) => void;
   onUseCurrentBranchChange: (use: boolean) => void;
   onApplyPreset: (preset: EnvironmentPreset) => void;
+  onBuildAll: () => void;
   onStartAll: () => void;
   onStopAll: () => void;
 }
@@ -28,9 +30,11 @@ export function ServiceManagerHeader({
   infrastructureStatus,
   allRunning,
   anyRunning,
+  anyBuilding,
   onRepoRootChange,
   onUseCurrentBranchChange,
   onApplyPreset,
+  onBuildAll,
   onStartAll,
   onStopAll,
 }: ServiceManagerHeaderProps) {
@@ -53,10 +57,18 @@ export function ServiceManagerHeader({
             onApplyPreset={onApplyPreset}
             onSaveCurrent={() => {}}
           />
+          <button
+            onClick={onBuildAll}
+            disabled={anyBuilding}
+            className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            title="Build all local services"
+          >
+            {anyBuilding ? 'Building...' : 'Build All'}
+          </button>
           {!allRunning && (
             <button
               onClick={onStartAll}
-              disabled={anyRunning}
+              disabled={anyRunning || anyBuilding}
               className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               Start All
