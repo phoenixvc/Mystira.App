@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/tauri';
 import { useEffect, useState } from 'react';
 import { useDeploymentsStore } from '../stores/deploymentsStore';
 import { useResourcesStore } from '../stores/resourcesStore';
-import type { CommandResponse, CosmosWarning, ResourceGroupConvention, StorageAccountConflictWarning, TemplateConfig, WhatIfChange, WorkflowStatus } from '../types';
+import type { CommandResponse, CosmosWarning, ResourceGroupConvention, TemplateConfig, WhatIfChange, WorkflowStatus } from '../types';
 import { type ProjectInfo } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
 import { type InfrastructureStatus as InfrastructureStatusType } from './InfrastructureStatus';
@@ -18,7 +18,6 @@ import {
 } from './infrastructure/components';
 import { useCliBuild, useInfrastructureActions, useResourceGroupConfig, useTemplates, useWorkflowStatus } from './infrastructure/hooks';
 import { formatTimeSince } from './services/utils/serviceUtils';
-import { extractStorageAccountName, isValidStorageAccountName, parseAzureDeleteError } from './infrastructure/utils/storageAccountUtils';
 
 type Tab = 'actions' | 'templates' | 'resources' | 'history' | 'recommended-fixes';
 
@@ -48,6 +47,7 @@ function InfrastructurePanel() {
   const [showStep2, setShowStep2] = useState(false);
   const [infrastructureLoading, setInfrastructureLoading] = useState(true);
   const [cosmosWarning, setCosmosWarning] = useState<CosmosWarning | null>(null);
+  const [fetchingResourceGroup, setFetchingResourceGroup] = useState(false);
   const [storageAccountConflict] = useState<StorageAccountConflictWarning | null>(null);
   const [deletingStorageAccount, setDeletingStorageAccount] = useState(false);
   const [showDeleteStorageConfirm, setShowDeleteStorageConfirm] = useState(false);
