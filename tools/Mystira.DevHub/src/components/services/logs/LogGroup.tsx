@@ -1,5 +1,6 @@
 import { ServiceLog } from '../types';
 import { LogLine } from './LogLine';
+import { isErrorMessage, isStackTraceLine } from './logUtils';
 
 interface LogGroupProps {
   group: { logs: ServiceLog[] };
@@ -35,13 +36,14 @@ export function LogGroup({
   const firstLog = group.logs[0];
   const isBuildLog = firstLog.source === 'build';
   const messageLower = firstLog.message.toLowerCase();
-  const isWarning = messageLower.includes('warning') || messageLower.includes('warn') || messageLower.includes('deprecated');
-  const isErrorMsg =
-    firstLog.type === 'stderr' ||
-    messageLower.includes('error') ||
-    messageLower.includes('failed') ||
-    messageLower.includes('exception') ||
-    messageLower.includes('fatal');
+  
+  // Use proper error detection (excludes count messages)
+  const isErrorMsg = firstLog.type === 'stderr' || isErrorMessage(firstLog.message);
+  const isWarning = !isErrorMsg && (
+    messageLower.includes('warning') || 
+    messageLower.includes('warn') || 
+    messageLower.includes('deprecated')
+  );
 
   const isGroupCollapsed = collapsedGroups.has(groupIndex);
   const shouldShow = !isGroupCollapsed || group.logs.length === 1;
@@ -51,6 +53,13 @@ export function LogGroup({
     <div key={groupIndex}>
       {displayLogs.map((log, logIndex) => {
         const actualIndex = filteredLogs.indexOf(log);
+        // Check if this is a stack trace continuation line
+        const isStackTrace = isStackTraceLine(log.message);
+        // Stack trace lines should be treated as errors (red, no timestamp)
+        const logIsError = isErrorMsg || (isStackTrace && logIndex > 0 && isErrorMsg);
+        // Don't show warning status for stack traces
+        const logIsWarning = !logIsError && isWarning && !isStackTrace;
+        
         return (
           <div
             key={`${groupIndex}-${logIndex}`}
@@ -65,11 +74,12 @@ export function LogGroup({
               wordWrap={wordWrap}
               timestampFormat={timestampFormat}
               filterSearch={filterSearch}
-              isError={isErrorMsg}
-              isWarning={isWarning}
+              isError={logIsError}
+              isWarning={logIsWarning}
               isBuildLog={isBuildLog}
               isHighlighted={actualIndex === errorIndices[currentErrorIndex]}
               onCopy={onCopyLog}
+              isStackTrace={isStackTrace}
             />
           </div>
         );

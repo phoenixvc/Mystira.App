@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/tauri';
+import { create } from 'zustand';
 import type { CommandResponse, Deployment, GitHubWorkflowRun } from '../types';
 
 interface DeploymentsState {
@@ -27,7 +27,7 @@ export const useDeploymentsStore = create<DeploymentsState>((set, get) => ({
   cacheValidUntil: null,
   repository: 'phoenixvc/Mystira.App',
 
-  fetchDeployments: async (forceRefresh = false) => {
+  fetchDeployments: async (forceRefresh = false, limit?: number) => {
     const { cacheValidUntil, isLoading, repository } = get();
 
     // Check if cache is still valid
@@ -45,9 +45,10 @@ export const useDeploymentsStore = create<DeploymentsState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
+      // Try using the existing command first
       const response = await invoke<CommandResponse<GitHubWorkflowRun[]>>('get_github_deployments', {
         repository,
-        limit: 20,
+        limit: limit || 20,
       });
 
       if (response.success && response.result) {
@@ -103,10 +104,19 @@ export const useDeploymentsStore = create<DeploymentsState>((set, get) => ({
         });
       }
     } catch (error) {
-      set({
-        isLoading: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      // Check if it's an "Unknown command" error - the backend command might not be implemented yet
+      if (errorMessage.includes('Unknown command') || errorMessage.includes('command')) {
+        set({
+          isLoading: false,
+          error: 'Deployment history feature is not yet available. The backend command needs to be implemented.',
+        });
+      } else {
+        set({
+          isLoading: false,
+          error: errorMessage,
+        });
+      }
     }
   },
 

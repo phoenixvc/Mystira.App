@@ -12,7 +12,8 @@ param databaseName string = 'MystiraAppDb'
 param serverless bool = true
 
 // Cosmos DB Account
-resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-04-15' = {
+// Using 2024-05-15 API version to improve what-if deployment preview compatibility
+resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   name: cosmosDbAccountName
   location: location
   kind: 'GlobalDocumentDB'
@@ -39,9 +40,12 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2023-04-15' = {
 }
 
 // Cosmos DB Database
-resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2023-04-15' = {
+resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-05-15' = {
   parent: cosmosDbAccount
   name: databaseName
+  dependsOn: [
+    cosmosDbAccount
+  ]
   properties: {
     resource: {
       id: databaseName
@@ -50,9 +54,12 @@ resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2023
 }
 
 // User Profiles Container
-resource userProfilesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-04-15' = {
+resource userProfilesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'UserProfiles'
+  dependsOn: [
+    cosmosDatabase
+  ]
   properties: {
     resource: {
       id: 'UserProfiles'
@@ -73,9 +80,12 @@ resource userProfilesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabas
 }
 
 // Accounts Container
-resource accountsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-04-15' = {
+resource accountsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'Accounts'
+  dependsOn: [
+    cosmosDatabase
+  ]
   properties: {
     resource: {
       id: 'Accounts'
@@ -96,9 +106,12 @@ resource accountsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/c
 }
 
 // Scenarios Container
-resource scenariosContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-04-15' = {
+resource scenariosContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'Scenarios'
+  dependsOn: [
+    cosmosDatabase
+  ]
   properties: {
     resource: {
       id: 'Scenarios'
@@ -119,9 +132,12 @@ resource scenariosContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/
 }
 
 // Game Sessions Container
-resource gameSessionsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-04-15' = {
+resource gameSessionsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'GameSessions'
+  dependsOn: [
+    cosmosDatabase
+  ]
   properties: {
     resource: {
       id: 'GameSessions'
@@ -142,9 +158,12 @@ resource gameSessionsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabas
 }
 
 // Content Bundles Container
-resource contentBundlesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-04-15' = {
+resource contentBundlesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'ContentBundles'
+  dependsOn: [
+    cosmosDatabase
+  ]
   properties: {
     resource: {
       id: 'ContentBundles'
@@ -165,14 +184,43 @@ resource contentBundlesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatab
 }
 
 // Pending Signups Container
-resource pendingSignupsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2023-04-15' = {
+resource pendingSignupsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'PendingSignups'
+  dependsOn: [
+    cosmosDatabase
+  ]
   properties: {
     resource: {
       id: 'PendingSignups'
       partitionKey: {
         paths: ['/email']
+        kind: 'Hash'
+      }
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        includedPaths: [
+          {
+            path: '/*'
+          }
+        ]
+      }
+    }
+  }
+}
+
+// Compass Trackings Container
+resource compassTrackingsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
+  parent: cosmosDatabase
+  name: 'CompassTrackings'
+  dependsOn: [
+    cosmosDatabase
+  ]
+  properties: {
+    resource: {
+      id: 'CompassTrackings'
+      partitionKey: {
+        paths: ['/Axis']
         kind: 'Hash'
       }
       indexingPolicy: {

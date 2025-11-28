@@ -1,4 +1,5 @@
 import { LogFilter, ServiceLog } from '../types';
+import { isErrorMessage } from './logUtils';
 
 interface LogFilterBarProps {
   filter: LogFilter;
@@ -59,11 +60,14 @@ export function LogFilterBar({
 }: LogFilterBarProps) {
   const stats = {
     errorCount: filteredLogs.filter(log => {
-      const msg = log.message.toLowerCase();
-      return log.type === 'stderr' || msg.includes('error') || msg.includes('failed') || msg.includes('exception') || msg.includes('fatal');
+      return log.type === 'stderr' || isErrorMessage(log.message);
     }).length,
     warningCount: filteredLogs.filter(log => {
       const msg = log.message.toLowerCase();
+      // Exclude count messages
+      if (msg.match(/^\d+\s+warning\(s\)/i) || msg.match(/^\d+\s+warnings/i)) {
+        return false;
+      }
       return msg.includes('warning') || msg.includes('warn') || msg.includes('deprecated');
     }).length,
   };

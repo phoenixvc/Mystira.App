@@ -196,6 +196,15 @@ export interface WorkflowStatus {
   htmlUrl: string;
 }
 
+// Cosmos DB Warning Types (for Azure what-if preview limitations)
+export interface CosmosWarning {
+  type: 'cosmos-whatif';
+  message: string;
+  details: string;
+  affectedResources: string[];
+  dismissed: boolean;
+}
+
 // Settings Types
 export interface Settings {
   theme: 'light' | 'dark' | 'auto';
