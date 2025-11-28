@@ -12,32 +12,23 @@ public static class SceneParser
         var scene = new Scene();
 
         // Parse required string properties (non-nullable)
-        if (sceneDict.TryGetValue("id", out var idObj) && idObj != null)
-        {
-            scene.Id = idObj.ToString() ?? string.Empty;
-        }
-        else
+        if (!sceneDict.TryGetValue("id", out var idObj) || idObj == null)
         {
             throw new ArgumentException("Required field 'id' is missing or null in scene data");
         }
+        scene.Id = idObj.ToString() ?? string.Empty;
 
-        if (sceneDict.TryGetValue("title", out var titleObj) && titleObj != null)
-        {
-            scene.Title = titleObj.ToString() ?? string.Empty;
-        }
-        else
+        if (!sceneDict.TryGetValue("title", out var titleObj) || titleObj == null)
         {
             throw new ArgumentException("Required field 'title' is missing or null in scene data");
         }
+        scene.Title = titleObj.ToString() ?? string.Empty;
 
-        if (sceneDict.TryGetValue("description", out var descObj) && descObj != null)
-        {
-            scene.Description = descObj.ToString() ?? string.Empty;
-        }
-        else
+        if (!sceneDict.TryGetValue("description", out var descObj) || descObj == null)
         {
             throw new ArgumentException("Required field 'description' is missing or null in scene data");
         }
+        scene.Description = descObj.ToString() ?? string.Empty;
 
         // Parse next scene ID (nullable)
         if (sceneDict.TryGetValue("nextSceneId", out var nextSceneObj) ||
@@ -52,83 +43,58 @@ public static class SceneParser
         if (sceneDict.TryGetValue("type", out var typeObj) && typeObj != null)
         {
             var typeStr = typeObj.ToString();
-            if (Enum.TryParse<SceneType>(typeStr, true, out var sceneType))
-            {
-                scene.Type = sceneType;
-            }
-            else
+            if (!Enum.TryParse<SceneType>(typeStr, true, out var sceneType))
             {
                 throw new ArgumentException($"Invalid scene type: '{typeStr}'");
             }
+            scene.Type = sceneType;
         }
 
-        // Parse difficulty (non-nullable, but has default value)
-        if (sceneDict.TryGetValue("difficulty", out var difficultyObj) &&
-            difficultyObj != null && int.TryParse(difficultyObj.ToString(), out var difficulty))
-        {
-            scene.Difficulty = difficulty;
-        }
-        else
-        {
-            scene.Difficulty = null;
-        }
+        // Parse difficulty (nullable)
+        scene.Difficulty = sceneDict.TryGetValue("difficulty", out var difficultyObj) &&
+                           difficultyObj != null &&
+                           int.TryParse(difficultyObj.ToString(), out var difficulty)
+            ? difficulty
+            : null;
 
         // Parse media references (nullable)
         if (sceneDict.TryGetValue("media", out var mediaObj) && mediaObj is Dictionary<object, object> mediaDict)
         {
             var media = MediaReferencesParser.Parse(mediaDict);
-            if (!string.IsNullOrWhiteSpace(media.Image) || !string.IsNullOrWhiteSpace(media.Audio) || !string.IsNullOrWhiteSpace(media.Video))
-            {
-                scene.Media = media;
-            }
-            else
-            {
-                scene.Media = null;
-            }
+            scene.Media = !string.IsNullOrWhiteSpace(media.Image) ||
+                          !string.IsNullOrWhiteSpace(media.Audio) ||
+                          !string.IsNullOrWhiteSpace(media.Video)
+                ? media
+                : null;
         }
 
         // Parse branches (choices) - defaults to empty list if not found
-        if (sceneDict.TryGetValue("branches", out var branchesObj) && branchesObj is IList<object> branchesList)
+        var branchesList = sceneDict.TryGetValue("branches", out var branchesObj) && branchesObj is IList<object> bl
+            ? bl
+            : sceneDict.TryGetValue("choices", out var choicesObj) && choicesObj is IList<object> cl
+                ? cl
+                : null;
+
+        if (branchesList != null)
         {
-            foreach (var branchObj in branchesList)
+            foreach (var branchObj in branchesList.OfType<IDictionary<object, object>>())
             {
-                if (branchObj is IDictionary<object, object> branchDict)
-                {
-                    scene.Branches.Add(BranchParser.Parse(branchDict));
-                }
-            }
-        }
-        else if (sceneDict.TryGetValue("choices", out var choicesObj) && choicesObj is IList<object> choicesList)
-        {
-            foreach (var choiceObj in choicesList)
-            {
-                if (choiceObj is IDictionary<object, object> choiceDict)
-                {
-                    scene.Branches.Add(BranchParser.Parse(choiceDict));
-                }
+                scene.Branches.Add(BranchParser.Parse(branchObj));
             }
         }
 
         // Parse Echo Reveal References - defaults to empty list if not found
-        if (sceneDict.TryGetValue("echo_reveals", out var schemaEchoRevealsObj) && schemaEchoRevealsObj is IList<object> schemaEchoReveals)
+        var echoRevealsList = sceneDict.TryGetValue("echo_reveals", out var schemaEchoRevealsObj) && schemaEchoRevealsObj is IList<object> sel
+            ? sel
+            : sceneDict.TryGetValue("echoRevealReferences", out var legacyEchoRevealsObj) && legacyEchoRevealsObj is IList<object> lel
+                ? lel
+                : null;
+
+        if (echoRevealsList != null)
         {
-            foreach (var echoObj in schemaEchoReveals)
+            foreach (var echoObj in echoRevealsList.OfType<IDictionary<object, object>>())
             {
-                if (echoObj is IDictionary<object, object> echoDict)
-                {
-                    scene.EchoReveals.Add(EchoRevealParser.Parse(echoDict));
-                }
-            }
-        }
-        else if (sceneDict.TryGetValue("echoRevealReferences", out var legacyEchoRevealsObj) &&
-                 legacyEchoRevealsObj is IList<object> legacyEchoRevealsList)
-        {
-            foreach (var echoObj in legacyEchoRevealsList)
-            {
-                if (echoObj is IDictionary<object, object> echoDict)
-                {
-                    scene.EchoReveals.Add(EchoRevealParser.Parse(echoDict));
-                }
+                scene.EchoReveals.Add(EchoRevealParser.Parse(echoObj));
             }
         }
 
