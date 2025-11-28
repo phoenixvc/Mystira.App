@@ -15,7 +15,7 @@ export function ResourceGridHeader({
   viewMode,
   onRefresh,
   onViewModeChange,
-  onGroupByTypeChange,
+  onGroupByTypeChange: _onGroupByTypeChange,
 }: ResourceGridHeaderProps) {
   return (
     <div className={`flex items-center justify-between ${compact ? 'mb-2' : 'mb-4'}`}>

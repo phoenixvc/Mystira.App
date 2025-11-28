@@ -2,16 +2,18 @@ import { invoke } from '@tauri-apps/api/tauri';
 import { useEffect, useRef, useState } from 'react';
 import { useDeploymentsStore } from '../stores/deploymentsStore';
 import { useResourcesStore } from '../stores/resourcesStore';
-import type { CommandResponse, WhatIfChange, WorkflowStatus } from '../types';
+import type { CommandResponse, ResourceGroupConvention, TemplateConfig, WhatIfChange, WorkflowStatus } from '../types';
 import { DEFAULT_PROJECTS, type ProjectInfo } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
+import DeploymentHistory from './DeploymentHistory';
 import InfrastructureStatus, { type InfrastructureStatus as InfrastructureStatusType } from './InfrastructureStatus';
 import ProjectDeploymentPlanner from './ProjectDeploymentPlanner';
+import ResourceGrid from './ResourceGrid';
 import ResourceGroupConfig from './ResourceGroupConfig';
 import TemplateEditor from './TemplateEditor';
+import TemplateInspector from './TemplateInspector';
 import WhatIfViewer from './WhatIfViewer';
 import { formatTimeSince } from './services/utils/serviceUtils';
-import { ErrorDisplay, SuccessDisplay } from './ui';
 
 type Tab = 'actions' | 'templates' | 'resources' | 'history';
 
@@ -29,8 +31,8 @@ function InfrastructurePanel() {
   const [pendingEnvironment, setPendingEnvironment] = useState<string>('dev');
   const [hasValidated, setHasValidated] = useState(false);
   const [hasPreviewed, setHasPreviewed] = useState(false);
-  const [hasDeployedInfrastructure, setHasDeployedInfrastructure] = useState(false);
-  const [projects] = useState<ProjectInfo[]>(DEFAULT_PROJECTS);
+  const [_hasDeployedInfrastructure, setHasDeployedInfrastructure] = useState(false);
+  const [_projects] = useState<ProjectInfo[]>(DEFAULT_PROJECTS);
   const [showDeployConfirm, setShowDeployConfirm] = useState(false);
   const [showOutputPanel, setShowOutputPanel] = useState(false);
   const [showDestroySelect, setShowDestroySelect] = useState(false);
@@ -918,17 +920,6 @@ function InfrastructurePanel() {
         onCancel={() => setShowDestroyConfirm(false)}
       />
       <ConfirmDialog
-        isOpen={showDestroySelect}
-        title="💥 Destroy Selected Resources"
-        message={`You are about to permanently delete ${whatIfChanges.filter(c => c.selected !== false && (c.changeType === 'delete' || c.selected === true)).length} selected resource(s). This action cannot be undone!`}
-        confirmText="Yes, Destroy Selected"
-        cancelText="Cancel"
-        confirmButtonClass="bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
-        requireTextMatch="DELETE"
-        onConfirm={handleDestroyConfirm}
-        onCancel={() => setShowDestroySelect(false)}
-      />
-      <ConfirmDialog
         isOpen={showProdConfirm}
         title="⚠️ Production Environment Warning"
         message="You are about to switch to the PRODUCTION environment. All operations (validate, preview, deploy, destroy) will affect production resources. This is a critical environment with real users and data. Are you absolutely sure you want to proceed?"
@@ -969,8 +960,7 @@ function InfrastructurePanel() {
         onConfirm={handleDeployConfirm}
         onCancel={() => setShowDeployConfirm(false)}
       />
-      <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto flex-1 flex flex-col min-h-0">
+      <div className="max-w-7xl mx-auto flex-1 flex flex-col min-h-0 p-6">
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <div>
@@ -1323,65 +1313,37 @@ function InfrastructurePanel() {
                 ⚙️ Resource Groups
               </button>
             </div>
-            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Output</span>
-              <button
-                onClick={() => setShowOutputPanel(false)}
-                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="flex-1 overflow-auto p-3 text-xs">
-              {loading && (
-                <div className="flex items-center gap-2 text-blue-600">
-                  <span className="animate-spin">⟳</span>
-                  <span>Executing...</span>
-                </div>
-              )}
-              {lastResponse && (
-                lastResponse.success ? (
-                  <SuccessDisplay message={lastResponse.message || 'Success'} details={lastResponse.result as Record<string, unknown> | null} />
-                ) : (
-                  <ErrorDisplay error={lastResponse.error || 'Error'} details={lastResponse.result as Record<string, unknown> | null} />
-                )
-              )}
-              {!loading && !lastResponse && (
-                <div className="text-gray-500">No output yet.</div>
-              )}
 
-              {/* Workflow Status */}
-              {workflowStatus && (
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-                  <div className="text-[10px] font-semibold text-gray-500 uppercase mb-2">Workflow</div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <div className="text-gray-400">Status</div>
-                      <div className="font-medium text-gray-900 dark:text-white">{workflowStatus.status || 'Unknown'}</div>
+            {/* Action Buttons Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              {actionButtons.map((button) => (
+                <button
+                  key={button.id}
+                  onClick={button.onClick}
+                  disabled={button.disabled}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    button.disabled
+                      ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                      : button.variant === 'primary'
+                        ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50'
+                        : button.variant === 'warning'
+                          ? 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800 hover:bg-yellow-100 dark:hover:bg-yellow-900/50'
+                          : button.variant === 'success'
+                            ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/50'
+                            : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/50'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">{button.icon}</div>
+                  <div className="font-semibold text-gray-900 dark:text-white">{button.label}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{button.description}</div>
+                  {button.loading && loading && (
+                    <div className="mt-2">
+                      <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-current"></span>
                     </div>
-                    <div>
-                      <div className="text-gray-400">Conclusion</div>
-                      <div className="font-medium text-gray-900 dark:text-white">{workflowStatus.conclusion || 'N/A'}</div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    {workflowStatus.htmlUrl && (
-                      <a
-                        href={workflowStatus.htmlUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2 py-1 bg-blue-600 text-white rounded text-[10px] hover:bg-blue-700"
-                      >
-                        GitHub →
-                      </a>
-                    )}
-                    <button
-                      onClick={fetchWorkflowStatus}
-                      className="px-2 py-1 bg-gray-600 text-white rounded text-[10px] hover:bg-gray-700"
-                    >
-                      Refresh
-                    </button>
-=======
+                  )}
+                </button>
+              ))}
+            </div>
             {/* Response Display */}
             {lastResponse && (
               <div
@@ -1573,8 +1535,8 @@ function InfrastructurePanel() {
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
 
