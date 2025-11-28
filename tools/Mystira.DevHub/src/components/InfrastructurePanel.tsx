@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useDeploymentsStore } from '../stores/deploymentsStore';
 import { useResourcesStore } from '../stores/resourcesStore';
 import type { CommandResponse, CosmosWarning, ResourceGroupConvention, StorageAccountConflictWarning, TemplateConfig, WhatIfChange, WorkflowStatus } from '../types';
-import { DEFAULT_PROJECTS, type ProjectInfo } from '../types';
+import { type ProjectInfo } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
 import { type InfrastructureStatus as InfrastructureStatusType } from './InfrastructureStatus';
 import ResourceGroupConfig from './ResourceGroupConfig';
