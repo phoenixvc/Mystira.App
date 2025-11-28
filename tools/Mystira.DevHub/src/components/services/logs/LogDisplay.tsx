@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { ServiceLog } from '../types';
+import { isErrorMessage, isStackTraceLine } from './logUtils';
 
 interface LogDisplayProps {
   logs: ServiceLog[];
@@ -27,7 +28,7 @@ export function LogDisplay({
   const logEndRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className={`bg-black text-green-400 font-mono text-xs p-4 overflow-y-auto flex-1 ${isMaximized ? 'h-full' : ''}`}>
+    <div className={`bg-black text-green-400 font-mono text-xs overflow-y-auto flex-1 ${isMaximized ? 'h-full' : ''}`}>
       {logs.length === 0 ? (
         <div className="text-gray-500">No logs to display</div>
       ) : (
@@ -35,12 +36,28 @@ export function LogDisplay({
           {logs.map((log, index) => {
             const isBuildLog = log.source === 'build';
             const messageLower = log.message.toLowerCase();
-            const isWarning = messageLower.includes('warning') || messageLower.includes('warn') || messageLower.includes('deprecated');
+            
+            // Check if this is a stack trace continuation line
+            const isStackTrace = isStackTraceLine(log.message);
+            
+            // Check if previous line was an error (for stack trace detection)
+            const prevLog = index > 0 ? logs[index - 1] : null;
+            const prevWasError = prevLog && (
+              prevLog.type === 'stderr' || 
+              isErrorMessage(prevLog.message) ||
+              isStackTraceLine(prevLog.message)
+            );
+            
+            // Stack trace lines should be treated as error lines (red, no timestamp)
             const isErrorMsg = log.type === 'stderr' || 
-              messageLower.includes('error') || 
-              messageLower.includes('failed') || 
-              messageLower.includes('exception') || 
-              messageLower.includes('fatal');
+              isErrorMessage(log.message) ||
+              (isStackTrace && prevWasError);
+            
+            const isWarning = !isErrorMsg && (
+              messageLower.includes('warning') || 
+              messageLower.includes('warn') || 
+              messageLower.includes('deprecated')
+            );
             
             let textColor = 'text-green-400';
             if (isErrorMsg) {
@@ -66,24 +83,33 @@ export function LogDisplay({
                     {index + 1}
                   </span>
                 )}
-                <span className="text-gray-500 text-[10px]">
-                  [{formatTimestamp(log.timestamp)}]
-                </span>
-                {isBuildLog && (
+                {/* Don't show timestamp for stack trace continuation lines */}
+                {!isStackTrace && (
+                  <span className="text-gray-500 text-[10px]">
+                    [{formatTimestamp(log.timestamp)}]
+                  </span>
+                )}
+                {isStackTrace && (
+                  <span className="text-gray-700 text-[10px] mr-1">   </span>
+                )}
+                {isBuildLog && !isStackTrace && (
                   <span className="text-cyan-400 font-semibold ml-1 text-[10px]">
                     [BUILD]
                   </span>
                 )}
-                <span className="text-gray-500 ml-1 text-[10px]">
-                  [{log.service}]
-                </span>
-                {isErrorMsg && (
+                {!isStackTrace && (
+                  <span className="text-gray-500 ml-1 text-[10px]">
+                    [{log.service}]
+                  </span>
+                )}
+                {isErrorMsg && !isStackTrace && (
                   <span className="text-red-500 ml-1 font-bold">⚠</span>
                 )}
-                {isWarning && !isErrorMsg && (
+                {isWarning && !isErrorMsg && !isStackTrace && (
                   <span className="text-yellow-500 ml-1">⚠</span>
                 )}
-                <span className="ml-1">
+                {/* Indent stack trace lines slightly */}
+                <span className={`ml-1 ${isStackTrace ? 'ml-6' : ''}`}>
                   {highlightSearch(log.message, filter.search)}
                 </span>
               </div>

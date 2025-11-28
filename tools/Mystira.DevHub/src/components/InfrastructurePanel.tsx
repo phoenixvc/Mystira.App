@@ -2,18 +2,20 @@ import { invoke } from '@tauri-apps/api/tauri';
 import { useEffect, useRef, useState } from 'react';
 import { useDeploymentsStore } from '../stores/deploymentsStore';
 import { useResourcesStore } from '../stores/resourcesStore';
-import type { CommandResponse, CosmosWarning, WhatIfChange, WorkflowStatus } from '../types';
+import type { CommandResponse, CosmosWarning, ResourceGroupConvention, TemplateConfig, WhatIfChange, WorkflowStatus } from '../types';
 import { DEFAULT_PROJECTS, type ProjectInfo } from '../types';
 import { ConfirmDialog } from './ConfirmDialog';
+import DeploymentHistory from './DeploymentHistory';
 import InfrastructureStatus, { type InfrastructureStatus as InfrastructureStatusType } from './InfrastructureStatus';
 import ProjectDeploymentPlanner from './ProjectDeploymentPlanner';
+import ResourceGrid from './ResourceGrid';
 import ResourceGroupConfig from './ResourceGroupConfig';
 import TemplateEditor from './TemplateEditor';
+import TemplateInspector from './TemplateInspector';
 import WhatIfViewer from './WhatIfViewer';
 import { formatTimeSince } from './services/utils/serviceUtils';
-import { ErrorDisplay, SuccessDisplay } from './ui';
 
-type Tab = 'actions' | 'templates' | 'resources' | 'history';
+type Tab = 'actions' | 'templates' | 'resources' | 'history' | 'recommended-fixes';
 
 function InfrastructurePanel() {
   const [activeTab, setActiveTab] = useState<Tab>('actions');
@@ -29,8 +31,7 @@ function InfrastructurePanel() {
   const [pendingEnvironment, setPendingEnvironment] = useState<string>('dev');
   const [hasValidated, setHasValidated] = useState(false);
   const [hasPreviewed, setHasPreviewed] = useState(false);
-  const [hasDeployedInfrastructure, setHasDeployedInfrastructure] = useState(false);
-  const [projects] = useState<ProjectInfo[]>(DEFAULT_PROJECTS);
+  const [, setHasDeployedInfrastructure] = useState(false);
   const [showDeployConfirm, setShowDeployConfirm] = useState(false);
   const [showOutputPanel, setShowOutputPanel] = useState(false);
   const [showDestroySelect, setShowDestroySelect] = useState(false);
@@ -176,12 +177,12 @@ function InfrastructurePanel() {
     }
   }, [cliBuildLogs, isBuildingCli]);
 
-  // Fetch resources when switching to resources tab
+  // Fetch resources when switching to resources tab or environment changes
   useEffect(() => {
     if (activeTab === 'resources') {
-      fetchResources();
+      fetchResources(false, environment);
     }
-  }, [activeTab, fetchResources]);
+  }, [activeTab, environment, fetchResources]);
 
   // Fetch deployments when switching to history tab
   useEffect(() => {
@@ -898,51 +899,9 @@ function InfrastructurePanel() {
     }
   };
 
-  const actionButtons = [
-    {
-      id: 'validate',
-      icon: '🔍',
-      label: 'Validate',
-      description: 'Check Bicep',
-      onClick: () => handleAction('validate'),
-      disabled: loading,
-      loading: loading,
-      variant: 'primary' as const,
-    },
-    {
-      id: 'preview',
-      icon: '👁️',
-      label: 'Preview',
-      description: 'What-if',
-      onClick: () => handleAction('preview'),
-      disabled: loading,
-      loading: loading,
-      variant: 'warning' as const,
-    },
-    {
-      id: 'deploy',
-      icon: '🚀',
-      label: 'Deploy',
-      description: hasPreviewed ? `${whatIfChanges.filter(c => c.selected !== false).length} selected` : 'Preview first',
-      onClick: () => handleAction('deploy'),
-      disabled: loading || !hasPreviewed,
-      loading: loading,
-      variant: 'success' as const,
-    },
-    {
-      id: 'destroy',
-      icon: '🗑️',
-      label: 'Destroy',
-      description: 'Delete all',
-      onClick: () => setShowDestroyConfirm(true),
-      disabled: loading,
-      loading: loading,
-      variant: 'danger' as const,
-    },
-  ];
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 p-0">
       <ConfirmDialog
         isOpen={showDestroyConfirm && !showDestroySelect}
         title="⚠️ Destroy All Infrastructure"
@@ -1006,17 +965,61 @@ function InfrastructurePanel() {
         onConfirm={handleDeployConfirm}
         onCancel={() => setShowDeployConfirm(false)}
       />
-      <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto flex-1 flex flex-col min-h-0">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+      <div className="p-8 flex-1 flex flex-col min-h-0 w-full">
+        <div className="mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
                 Infrastructure Control Panel
               </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Manage Bicep infrastructure deployments via GitHub Actions
-              </p>
+              {/* Environment and Resource Groups Controls */}
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-600 dark:text-gray-400">Environment:</label>
+                <select
+                  value={environment}
+                  aria-label="Select environment"
+                  onChange={async (e) => {
+                    const newEnv = e.target.value;
+                    if (newEnv === 'prod') {
+                      // Check subscription owner role before allowing prod switch
+                      try {
+                        const ownerCheck = await invoke<CommandResponse<{ isOwner: boolean; userName: string }>>('check_subscription_owner');
+                        if (ownerCheck.success && ownerCheck.result?.isOwner) {
+                          setPendingEnvironment(newEnv);
+                          setShowProdConfirm(true);
+                        } else {
+                          alert('Access Denied: You must have Subscription Owner role to switch to production environment.\n\n' +
+                                `Current user: ${ownerCheck.result?.userName || 'Unknown'}\n` +
+                                'Please contact your subscription administrator.');
+                          // Reset dropdown to current environment
+                          e.target.value = environment;
+                        }
+                      } catch (error) {
+                        console.error('Failed to check subscription owner:', error);
+                        alert('Failed to verify subscription owner role. Cannot switch to production environment.');
+                        e.target.value = environment;
+                      }
+                    } else {
+                      setEnvironment(newEnv);
+                      setHasValidated(false);
+                      setHasPreviewed(false);
+                      setWhatIfChanges([]);
+                    }
+                  }}
+                  className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="dev">dev</option>
+                  <option value="staging">staging</option>
+                  <option value="prod">prod</option>
+                </select>
+                <button
+                  onClick={() => setShowResourceGroupConfig(true)}
+                  className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium"
+                  title="Configure resource group naming conventions"
+                >
+                  ⚙️ Resource Groups
+                </button>
+              </div>
             </div>
             {/* Last Build Time Indicators */}
             <div className="flex flex-col items-end gap-2">
@@ -1293,6 +1296,16 @@ function InfrastructurePanel() {
             >
               📜 History
             </button>
+            <button
+              onClick={() => setActiveTab('recommended-fixes')}
+              className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === 'recommended-fixes'
+                  ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+              }`}
+            >
+              🔧 Recommended Fixes
+            </button>
           </nav>
         </div>
 
@@ -1324,101 +1337,9 @@ function InfrastructurePanel() {
             />
 
             {/* Action Buttons - Step 2 */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Infrastructure Actions</h3>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-600 dark:text-gray-400">Environment:</label>
-                  <select
-                    value={environment}
-                    aria-label="Select environment"
-                    onChange={(e) => {
-                      const newEnv = e.target.value;
-                      if (newEnv === 'prod') {
-                        setPendingEnvironment(newEnv);
-                        setShowProdConfirm(true);
-                      } else {
-                        setEnvironment(newEnv);
-                        setHasValidated(false);
-                        setHasPreviewed(false);
-                        setWhatIfChanges([]);
-                      }
-                    }}
-                    className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="dev">dev</option>
-                    <option value="staging">staging</option>
-                    <option value="prod">prod</option>
-                  </select>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowResourceGroupConfig(true)}
-                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium"
-                title="Configure resource group naming conventions"
-              >
-                ⚙️ Resource Groups
-              </button>
+            <div id="step-2-infrastructure-actions" className="mb-4">
             </div>
-            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">Output</span>
-              <button
-                onClick={() => setShowOutputPanel(false)}
-                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="flex-1 overflow-auto p-3 text-xs">
-              {loading && (
-                <div className="flex items-center gap-2 text-blue-600">
-                  <span className="animate-spin">⟳</span>
-                  <span>Executing...</span>
-                </div>
-              )}
-              {lastResponse && (
-                lastResponse.success ? (
-                  <SuccessDisplay message={lastResponse.message || 'Success'} details={lastResponse.result as Record<string, unknown> | null} />
-                ) : (
-                  <ErrorDisplay error={lastResponse.error || 'Error'} details={lastResponse.result as Record<string, unknown> | null} />
-                )
-              )}
-              {!loading && !lastResponse && (
-                <div className="text-gray-500">No output yet.</div>
-              )}
 
-              {/* Workflow Status */}
-              {workflowStatus && (
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-                  <div className="text-[10px] font-semibold text-gray-500 uppercase mb-2">Workflow</div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <div className="text-gray-400">Status</div>
-                      <div className="font-medium text-gray-900 dark:text-white">{workflowStatus.status || 'Unknown'}</div>
-                    </div>
-                    <div>
-                      <div className="text-gray-400">Conclusion</div>
-                      <div className="font-medium text-gray-900 dark:text-white">{workflowStatus.conclusion || 'N/A'}</div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    {workflowStatus.htmlUrl && (
-                      <a
-                        href={workflowStatus.htmlUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2 py-1 bg-blue-600 text-white rounded text-[10px] hover:bg-blue-700"
-                      >
-                        GitHub →
-                      </a>
-                    )}
-                    <button
-                      onClick={fetchWorkflowStatus}
-                      className="px-2 py-1 bg-gray-600 text-white rounded text-[10px] hover:bg-gray-700"
-                    >
-                      Refresh
-                    </button>
-=======
             {/* Response Display */}
             {lastResponse && (
               <div
@@ -1623,43 +1544,6 @@ function InfrastructurePanel() {
               />
             )}
 
-            {/* Workflow Status */}
-            {workflowStatus && (
-              <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                  Workflow Status
-                </h3>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div>
-                    <div className="text-sm text-gray-500">Status</div>
-                    <div className="text-lg font-semibold">
-                      {workflowStatus.status || 'Unknown'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500">Conclusion</div>
-                    <div className="text-lg font-semibold">
-                      {workflowStatus.conclusion || 'N/A'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500">Workflow</div>
-                    <div className="text-lg font-semibold">
-                      {workflowStatus.workflowName || 'N/A'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500">Updated</div>
-                    <div className="text-lg font-semibold">
-                      {workflowStatus.updatedAt
-                        ? new Date(workflowStatus.updatedAt).toLocaleTimeString()
-                        : 'N/A'}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         )}
 
@@ -1686,7 +1570,7 @@ function InfrastructurePanel() {
                 <p className="text-red-800 dark:text-red-200 mb-3 whitespace-pre-wrap">{resourcesError}</p>
                 <div className="flex gap-3 flex-wrap">
                   <button
-                    onClick={() => fetchResources(true)}
+                    onClick={() => fetchResources(true, environment)}
                     className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
                   >
                     Retry
@@ -1770,7 +1654,7 @@ function InfrastructurePanel() {
                               fetchWithRetry();
                             }
                             setTimeout(() => {
-                              fetchResources(true);
+                              fetchResources(true, environment);
                             }, 1000);
                           }
                         } catch (error) {
@@ -1800,7 +1684,7 @@ function InfrastructurePanel() {
             {!resourcesLoading && !resourcesError && (
               <ResourceGrid 
                 resources={resources} 
-                onRefresh={() => fetchResources(true)}
+                onRefresh={() => fetchResources(true, environment)}
                 onDelete={async (resourceId: string) => {
                   try {
                     const response = await invoke<CommandResponse>('delete_azure_resource', {
@@ -1808,7 +1692,7 @@ function InfrastructurePanel() {
                     });
                     if (response.success) {
                       // Refresh resources after successful deletion
-                      fetchResources(true);
+                      fetchResources(true, environment);
                     } else {
                       throw new Error(response.error || 'Failed to delete resource');
                     }
@@ -1931,6 +1815,143 @@ function InfrastructurePanel() {
             {!deploymentsLoading && !deploymentsError && (
               <DeploymentHistory events={deployments} />
             )}
+          </div>
+        )}
+
+        {/* Tab Content: Recommended Fixes */}
+        {activeTab === 'recommended-fixes' && (
+          <div>
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                🔧 Recommended Fixes & Improvements
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Security and safety improvements to prevent accidental actions and improve resource management
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Delete Button Protection */}
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <span>🛡️</span>
+                  Delete Button Protection
+                </h4>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                  Add filters and confirmation requirements to prevent accidental deletion of resources
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Require resource name confirmation before delete</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Hide delete buttons by default (toggle to show)</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Filter by environment prefix before allowing delete</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Environment Switch Security */}
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <span>🔒</span>
+                  Environment Switch Security
+                </h4>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                  Require subscription owner permissions for production environment operations
+                </p>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={true}
+                      readOnly
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Require subscription owner role for prod-* resources</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Auto-detect subscription owner and validate before operations</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Resource Tagging */}
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                  <span>🏷️</span>
+                  Resource Tagging Script
+                </h4>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                  Automatically add required tags to Azure resources for better organization and compliance
+                </p>
+                <div className="space-y-3">
+                  <button
+                    onClick={async () => {
+                      try {
+                        const response = await invoke<CommandResponse>('run_resource_tagging_script', {
+                          environment: environment === 'prod' ? 'prod' : 'dev',
+                          dryRun: true,
+                        });
+                        if (response.success) {
+                          alert('Tagging script ready. Preview mode will show what tags would be added.');
+                        } else {
+                          alert(`Error: ${response.error}`);
+                        }
+                      } catch (error) {
+                        console.error('Failed to run tagging script:', error);
+                        alert('Tagging script feature is not yet implemented in the backend.');
+                      }
+                    }}
+                    className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-sm font-medium"
+                  >
+                    🔍 Preview Tags (Dry Run)
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!confirm(`Are you sure you want to add tags to all ${environment} resources?`)) {
+                        return;
+                      }
+                      try {
+                        const response = await invoke<CommandResponse>('run_resource_tagging_script', {
+                          environment: environment === 'prod' ? 'prod' : 'dev',
+                          dryRun: false,
+                        });
+                        if (response.success) {
+                          alert('Tags have been successfully added to resources.');
+                        } else {
+                          alert(`Error: ${response.error}`);
+                        }
+                      } catch (error) {
+                        console.error('Failed to run tagging script:', error);
+                        alert('Tagging script feature is not yet implemented in the backend.');
+                      }
+                    }}
+                    className="px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-sm font-medium ml-2"
+                  >
+                    ✏️ Apply Tags to Resources
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
