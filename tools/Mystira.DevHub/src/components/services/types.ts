@@ -16,13 +16,16 @@ export interface BuildStatus {
   isManual?: boolean; // true if manually triggered, false if automatic/initial
 }
 
-export interface ServiceLog {
+export interface LogEntry {
   service: string;
   type: 'stdout' | 'stderr';
   source?: 'build' | 'run'; // Distinguish between build logs and runtime logs
   message: string;
   timestamp: number;
 }
+
+/** @deprecated Use LogEntry instead - kept for backward compatibility */
+export type ServiceLog = LogEntry;
 
 export interface ServiceConfig {
   name: string;

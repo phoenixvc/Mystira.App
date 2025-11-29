@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CommandResponse, CosmosWarning, ResourceGroupConvention, TemplateConfig, WhatIfChange, WorkflowStatus } from '../../../types';
-import { DEFAULT_PROJECTS, type DeploymentMethod, type InfrastructureAction } from '../../../types';
+import { DEFAULT_PROJECTS } from '../../../types';
 import InfrastructureStatus from '../../InfrastructureStatus';
 import ProjectDeployment from '../../ProjectDeployment';
 import ProjectDeploymentPlanner from '../../ProjectDeploymentPlanner';
@@ -28,8 +28,8 @@ interface InfrastructureActionsTabProps {
   hasValidated: boolean;
   hasPreviewed: boolean;
   loading: boolean;
-  currentAction: InfrastructureAction | null;
-  onAction: (action: InfrastructureAction) => Promise<void>;
+  currentAction: 'validate' | 'preview' | 'deploy' | 'destroy' | null;
+  onAction: (action: 'validate' | 'preview' | 'deploy' | 'destroy') => Promise<void>;
   lastResponse: CommandResponse | null;
   whatIfChanges: WhatIfChange[];
   onWhatIfChangesChange: (changes: WhatIfChange[]) => void;
@@ -38,7 +38,7 @@ interface InfrastructureActionsTabProps {
   infrastructureLoading: boolean;
   onInfrastructureLoadingChange: (loading: boolean) => void;
   workflowStatus: WorkflowStatus | null;
-  deploymentMethod: DeploymentMethod;
+  deploymentMethod: 'github' | 'azure-cli';
   onShowDestroySelect: () => void;
   hasDeployedInfrastructure: boolean;
   deploymentProgress: string | null;

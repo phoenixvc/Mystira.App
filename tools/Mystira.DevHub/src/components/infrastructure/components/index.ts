@@ -1,13 +1,20 @@
 export { default as ActionButtons } from './ActionButtons';
 export { CliBuildLogsViewer } from './CliBuildLogsViewer';
+export { DeploymentProgress } from './DeploymentProgress';
+export { InfrastructureActionButtons } from './InfrastructureActionButtons';
 export { default as InfrastructureActionsTab } from './InfrastructureActionsTab';
 export { InfrastructureConfirmDialogs } from './InfrastructureConfirmDialogs';
 export { default as InfrastructureHistoryTab } from './InfrastructureHistoryTab';
 export { InfrastructurePanelHeader } from './InfrastructurePanelHeader';
+export { InfrastructureProgressStepper } from './InfrastructureProgressStepper';
 export { default as InfrastructureRecommendedFixesTab } from './InfrastructureRecommendedFixesTab';
 export { default as InfrastructureResourcesTab } from './InfrastructureResourcesTab';
 export { InfrastructureResponseDisplay } from './InfrastructureResponseDisplay';
 export { InfrastructureTabs } from './InfrastructureTabs';
 export { default as InfrastructureTemplatesTab } from './InfrastructureTemplatesTab';
+export { ReadyToDeployBanner } from './ReadyToDeployBanner';
 export { default as ResponseDisplay } from './ResponseDisplay';
+export { StepSeparator } from './StepSeparator';
+export { WhatIfViewerSection } from './WhatIfViewerSection';
+export { WorkflowStatusDisplay } from './WorkflowStatusDisplay';
 

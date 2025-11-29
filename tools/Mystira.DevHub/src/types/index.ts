@@ -215,6 +215,9 @@ export interface StorageAccountConflictWarning {
   dismissed: boolean;
 }
 
+// Re-export constants for convenience
+export * from './constants';
+
 // Settings Types
 export interface Settings {
   theme: 'light' | 'dark' | 'auto';

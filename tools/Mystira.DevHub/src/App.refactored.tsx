@@ -11,35 +11,35 @@ import { useAppLogs } from './hooks/useAppLogs';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useEnvironmentSummary } from './hooks/useEnvironmentSummary';
 import { useLogConversion } from './hooks/useLogConversion';
-import { BOTTOM_PANEL_TABS, EVENTS, LOG_SEVERITY, LOG_SOURCES, LOG_TYPES, STORAGE_KEYS, VIEWS, type View } from './types';
+
+type View = 'services' | 'dashboard' | 'cosmos' | 'migration' | 'infrastructure';
 
 // Activity bar items for main navigation
 const ACTIVITY_BAR_ITEMS = [
-  { id: VIEWS.SERVICES, icon: '⚡', title: 'Services' },
-  { id: VIEWS.DASHBOARD, icon: '📊', title: 'Dashboard' },
-  { id: VIEWS.COSMOS, icon: '🔮', title: 'Cosmos Explorer' },
-  { id: VIEWS.MIGRATION, icon: '🔄', title: 'Migration Manager' },
-  { id: VIEWS.INFRASTRUCTURE, icon: '☁️', title: 'Infrastructure' },
-  { id: VIEWS.TEST, icon: '🧪', title: 'Test' },
+  { id: 'services', icon: '⚡', title: 'Services' },
+  { id: 'dashboard', icon: '📊', title: 'Dashboard' },
+  { id: 'cosmos', icon: '🔮', title: 'Cosmos Explorer' },
+  { id: 'migration', icon: '🔄', title: 'Migration Manager' },
+  { id: 'infrastructure', icon: '☁️', title: 'Infrastructure' },
 ];
 
 function App() {
-  const [currentView, setCurrentView] = useState<View>(VIEWS.SERVICES);
+  const [currentView, setCurrentView] = useState<View>('services');
   const { isDark, toggleDarkMode } = useDarkMode();
   const { globalLogs, deploymentLogs, problems, clearAllLogs } = useAppLogs();
   
   // LogsViewer state
   const [logFilter, setLogFilter] = useState<LogFilter>({
     search: '',
-    type: LOG_TYPES.ALL,
-    source: LOG_SOURCES.ALL,
-    severity: LOG_SEVERITY.ALL,
+    type: 'all',
+    source: 'all',
+    severity: 'all',
   });
   const [isAutoScroll, setIsAutoScroll] = useState(true);
 
   // Environment status for header (only when on services view)
   const [serviceEnvironments, setServiceEnvironments] = useState<Record<string, 'local' | 'dev' | 'prod'>>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.SERVICE_ENVIRONMENTS);
+    const saved = localStorage.getItem('serviceEnvironments');
     return saved ? JSON.parse(saved) : {};
   });
   const { getEnvironmentUrls } = useEnvironmentManagement();
@@ -47,7 +47,7 @@ function App() {
   // Listen for environment changes
   useEffect(() => {
     const handleStorageChange = () => {
-      const saved = localStorage.getItem(STORAGE_KEYS.SERVICE_ENVIRONMENTS);
+      const saved = localStorage.getItem('serviceEnvironments');
       if (saved) {
         setServiceEnvironments(JSON.parse(saved));
       }
@@ -68,12 +68,12 @@ function App() {
   // Listen for infrastructure navigation requests
   useEffect(() => {
     const handleNavigateToInfrastructure = () => {
-      setCurrentView(VIEWS.INFRASTRUCTURE);
+      setCurrentView('infrastructure');
     };
 
-    window.addEventListener(EVENTS.NAVIGATE_TO_INFRASTRUCTURE, handleNavigateToInfrastructure);
+    window.addEventListener('navigate-to-infrastructure', handleNavigateToInfrastructure);
     return () => {
-      window.removeEventListener(EVENTS.NAVIGATE_TO_INFRASTRUCTURE, handleNavigateToInfrastructure);
+      window.removeEventListener('navigate-to-infrastructure', handleNavigateToInfrastructure);
     };
   }, []);
 
@@ -107,7 +107,7 @@ function App() {
       }
       primarySidebarTitle={ACTIVITY_BAR_ITEMS.find(a => a.id === currentView)?.title}
       bottomPanelTabs={bottomPanelTabs}
-      defaultBottomTab={BOTTOM_PANEL_TABS.OUTPUT}
+      defaultBottomTab="output"
       statusBarLeft={
         <>
           <span className="flex items-center gap-1">
@@ -129,7 +129,7 @@ function App() {
           <span>v1.0.0</span>
         </>
       }
-      storageKey={STORAGE_KEYS.DEVHUB_LAYOUT}
+      storageKey="devhubLayout"
     >
       <AppContent currentView={currentView} onNavigate={handleNavigate} />
     </VSCodeLayout>
