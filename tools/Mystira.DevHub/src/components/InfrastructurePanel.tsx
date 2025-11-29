@@ -2,22 +2,20 @@ import { invoke } from '@tauri-apps/api/tauri';
 import { useEffect, useState } from 'react';
 import { useDeploymentsStore } from '../stores/deploymentsStore';
 import { useResourcesStore } from '../stores/resourcesStore';
-import type { CommandResponse, CosmosWarning, ResourceGroupConvention, TemplateConfig, WhatIfChange, WorkflowStatus } from '../types';
-import { type ProjectInfo } from '../types';
-import { ConfirmDialog } from './ConfirmDialog';
+import type { CommandResponse, CosmosWarning, WhatIfChange } from '../types';
 import { type InfrastructureStatus as InfrastructureStatusType } from './InfrastructureStatus';
 import ResourceGroupConfig from './ResourceGroupConfig';
 import {
-  CliBuildLogsViewer,
   InfrastructureActionsTab,
+  InfrastructureConfirmDialogs,
   InfrastructureHistoryTab,
+  InfrastructurePanelHeader,
   InfrastructureRecommendedFixesTab,
   InfrastructureResourcesTab,
   InfrastructureTabs,
   InfrastructureTemplatesTab,
 } from './infrastructure/components';
-import { useCliBuild, useInfrastructureActions, useResourceGroupConfig, useTemplates, useWorkflowStatus } from './infrastructure/hooks';
-import { formatTimeSince } from './services/utils/serviceUtils';
+import { useCliBuild, useInfrastructureActions, useInfrastructureEnvironment, useResourceGroupConfig, useTemplates, useWorkflowStatus } from './infrastructure/hooks';
 
 type Tab = 'actions' | 'templates' | 'resources' | 'history' | 'recommended-fixes';
 
@@ -30,9 +28,6 @@ function InfrastructurePanel() {
   const [showDestroyConfirm, setShowDestroyConfirm] = useState(false);
   const deploymentMethod: 'github' | 'azure-cli' = 'azure-cli';
   const [repoRoot, setRepoRoot] = useState<string>('');
-  const [environment, setEnvironment] = useState<string>('dev');
-  const [showProdConfirm, setShowProdConfirm] = useState(false);
-  const [pendingEnvironment, setPendingEnvironment] = useState<string>('dev');
   const [hasValidated, setHasValidated] = useState(false);
   const [hasPreviewed, setHasPreviewed] = useState(false);
   const [hasDeployedInfrastructure, setHasDeployedInfrastructure] = useState(false);
@@ -47,15 +42,27 @@ function InfrastructurePanel() {
   const [showStep2, setShowStep2] = useState(false);
   const [infrastructureLoading, setInfrastructureLoading] = useState(true);
   const [cosmosWarning, setCosmosWarning] = useState<CosmosWarning | null>(null);
-  const [fetchingResourceGroup, setFetchingResourceGroup] = useState(false);
-  const [storageAccountConflict] = useState<StorageAccountConflictWarning | null>(null);
-  const [deletingStorageAccount, setDeletingStorageAccount] = useState(false);
-  const [showDeleteStorageConfirm, setShowDeleteStorageConfirm] = useState(false);
-  const [autoRetryAfterDelete, setAutoRetryAfterDelete] = useState(false);
-  const [fetchingResourceGroup] = useState(false);
 
   const workflowFile = '.start-infrastructure-deploy-dev.yml';
   const repository = 'phoenixvc/Mystira.App';
+
+  const resetState = () => {
+    setHasValidated(false);
+    setHasPreviewed(false);
+    setWhatIfChanges([]);
+  };
+
+  const {
+    environment,
+    showProdConfirm,
+    handleEnvironmentChange,
+    confirmProdSwitch,
+    cancelProdSwitch,
+  } = useInfrastructureEnvironment({
+    initialEnvironment: 'dev',
+    onEnvironmentChanged: () => {},
+    onResetState: resetState,
+  });
 
   const { templates, setTemplates } = useTemplates(environment);
   const { config: resourceGroupConfig, setConfig: setResourceGroupConfig } = useResourceGroupConfig(environment);
@@ -165,251 +172,58 @@ function InfrastructurePanel() {
     await handleDestroyConfirm();
   };
 
+  const handleResourceGroupConfirm = async () => {
+    await handleDeployConfirmWrapper();
+  };
+
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 p-0">
-      <ConfirmDialog
-        isOpen={showDestroyConfirm && !showDestroySelect}
-        title="⚠️ Destroy All Infrastructure"
-        message="This will permanently delete ALL infrastructure resources. This action cannot be undone!"
-        confirmText="Yes, Destroy Everything"
-        cancelText="Cancel"
-        confirmButtonClass="bg-red-600 hover:bg-red-700"
-        requireTextMatch="DELETE"
-        onConfirm={handleDestroyConfirmWrapper}
-        onCancel={() => setShowDestroyConfirm(false)}
-      />
-      <ConfirmDialog
-        isOpen={showProdConfirm}
-        title="⚠️ Production Environment Warning"
-        message="You are about to switch to the PRODUCTION environment. All operations (validate, preview, deploy, destroy) will affect production resources. This is a critical environment with real users and data. Are you absolutely sure you want to proceed?"
-        confirmText="Yes, Switch to Production"
-        cancelText="Cancel"
-        confirmButtonClass="bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
-        requireTextMatch="PRODUCTION"
-        onConfirm={() => {
-          setEnvironment(pendingEnvironment);
-          setShowProdConfirm(false);
-          setHasValidated(false);
-          setHasPreviewed(false);
-          setWhatIfChanges([]);
+      <InfrastructureConfirmDialogs
+        showDestroyConfirm={showDestroyConfirm}
+        showDestroySelect={showDestroySelect}
+        showProdConfirm={showProdConfirm}
+        showDeployConfirm={showDeployConfirm}
+        showResourceGroupConfirm={showResourceGroupConfirm}
+        pendingResourceGroup={pendingResourceGroup}
+        whatIfChanges={whatIfChanges}
+        templates={templates}
+        environment={environment}
+        onDestroyConfirm={handleDestroyConfirmWrapper}
+        onDestroyCancel={() => setShowDestroyConfirm(false)}
+        onProdConfirm={() => {
+          confirmProdSwitch();
+          resetState();
         }}
-        onCancel={() => {
-          setShowProdConfirm(false);
-          setPendingEnvironment(environment);
-        }}
-      />
-      <ConfirmDialog
-        isOpen={showDestroySelect}
-        title="💥 Destroy Selected Resources"
-        message={`⚠️ WARNING: You are about to permanently DELETE ${whatIfChanges.filter(c => c.selected !== false && (c.changeType === 'delete' || c.selected === true)).length} selected resource(s) from Azure.\n\nThis action CANNOT be undone and will permanently remove:\n${whatIfChanges.filter(c => c.selected !== false && (c.changeType === 'delete' || c.selected === true)).map(c => `  • ${c.resourceName} (${c.resourceType})`).join('\n')}\n\nType "DELETE" in the field below to confirm.`}
-        confirmText="Yes, Destroy Selected"
-        cancelText="Cancel"
-        confirmButtonClass="bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
-        requireTextMatch="DELETE"
-        onConfirm={handleDestroyConfirmWrapper}
-        onCancel={() => setShowDestroySelect(false)}
-      />
-      <ConfirmDialog
-        isOpen={showDeployConfirm}
-        title="🚀 Deploy Selected Resources"
-        message={`You are about to deploy ${whatIfChanges.length > 0 
-          ? whatIfChanges.filter(c => c.selected !== false).length 
-          : templates.filter(t => t.selected).length} ${whatIfChanges.length > 0 ? 'selected resource(s)' : 'template(s)'} to ${environment} environment.`}
-        confirmText="Deploy Selected Resources"
-        cancelText="Cancel"
-        confirmButtonClass="bg-green-600 hover:bg-green-700"
-        onConfirm={handleDeployConfirmWrapper}
-        onCancel={() => setShowDeployConfirm(false)}
-      />
-      <ConfirmDialog
-        isOpen={showResourceGroupConfirm}
-        title="📦 Create Resource Group"
-        message={pendingResourceGroup 
-          ? `The resource group "${pendingResourceGroup.resourceGroup}" does not exist in location "${pendingResourceGroup.location}".\n\nWould you like to create it now? This is required before deploying infrastructure.`
-          : ''}
-        confirmText="Create Resource Group"
-        cancelText="Cancel"
-        confirmButtonClass="bg-blue-600 hover:bg-blue-700"
-        onConfirm={async () => {
-          if (pendingResourceGroup) {
-            setShowResourceGroupConfirm(false);
-            setLoading(true);
-            setCurrentAction('deploy');
-            setDeploymentProgress(`Creating resource group '${pendingResourceGroup.resourceGroup}'...`);
-            
-            try {
-              const { invoke } = await import('@tauri-apps/api/tauri');
-              const createRgResponse = await invoke<any>('azure_create_resource_group', {
-                resourceGroup: pendingResourceGroup.resourceGroup,
-                location: pendingResourceGroup.location,
-              });
-              
-              if (!createRgResponse.success) {
-                setLastResponse({
-                  success: false,
-                  error: createRgResponse.error || `Failed to create resource group '${pendingResourceGroup.resourceGroup}'`,
-                });
-                setLoading(false);
-                setCurrentAction(null);
-                setPendingResourceGroup(null);
-                return;
-              }
-              
-              // Retry deployment after creating resource group
-              setDeploymentProgress(`Deploying to ${pendingResourceGroup.resourceGroup}...`);
-              await handleDeployConfirmWrapper();
-            } catch (error) {
-              setLastResponse({
-                success: false,
-                error: `Failed to create resource group: ${String(error)}`,
-              });
-              setLoading(false);
-              setCurrentAction(null);
-            } finally {
-              setPendingResourceGroup(null);
-            }
-          }
-        }}
-        onCancel={() => {
+        onProdCancel={cancelProdSwitch}
+        onDeployConfirm={handleDeployConfirmWrapper}
+        onDeployCancel={() => setShowDeployConfirm(false)}
+        onResourceGroupConfirm={handleResourceGroupConfirm}
+        onResourceGroupCancel={() => {
           setShowResourceGroupConfirm(false);
           setPendingResourceGroup(null);
           setLoading(false);
           setCurrentAction(null);
         }}
+        onSetLoading={setLoading}
+        onSetCurrentAction={setCurrentAction}
+        onSetDeploymentProgress={setDeploymentProgress}
+        onSetLastResponse={setLastResponse}
+        onSetPendingResourceGroup={setPendingResourceGroup}
       />
+      
       <div className="p-8 flex-1 flex flex-col min-h-0 w-full">
-        <div className="mb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Infrastructure Control Panel
-              </h2>
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-600 dark:text-gray-400">Environment:</label>
-                <select
-                  value={environment}
-                  aria-label="Select environment"
-                  onChange={async (e) => {
-                    const newEnv = e.target.value;
-                    if (newEnv === 'prod') {
-                      try {
-                        const ownerCheck = await invoke<CommandResponse<{ isOwner: boolean; userName: string }>>('check_subscription_owner');
-                        if (ownerCheck.success && ownerCheck.result?.isOwner) {
-                          setPendingEnvironment(newEnv);
-                          setShowProdConfirm(true);
-                        } else {
-                          alert('Access Denied: You must have Subscription Owner role to switch to production environment.\n\n' +
-                                `Current user: ${ownerCheck.result?.userName || 'Unknown'}\n` +
-                                'Please contact your subscription administrator.');
-                          e.target.value = environment;
-                        }
-                      } catch (error) {
-                        console.error('Failed to check subscription owner:', error);
-                        alert('Failed to verify subscription owner role. Cannot switch to production environment.');
-                        e.target.value = environment;
-                      }
-                    } else {
-                      setEnvironment(newEnv);
-                      setHasValidated(false);
-                      setHasPreviewed(false);
-                      setWhatIfChanges([]);
-                    }
-                  }}
-                  className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="dev">dev</option>
-                  <option value="staging">staging</option>
-                  <option value="prod">prod</option>
-                </select>
-                <button
-                  onClick={() => setShowResourceGroupConfig(true)}
-                  className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium"
-                  title="Configure resource group naming conventions"
-                >
-                  ⚙️ Resource Groups
-                </button>
-              </div>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              {workflowStatus?.updatedAt && (
-                <div className="flex flex-col items-end">
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Last Workflow Build</div>
-                  <div className="px-3 py-1.5 rounded-lg bg-blue-900/20 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-mono font-semibold text-sm" 
-                       title={`Last workflow build: ${new Date(workflowStatus.updatedAt).toLocaleString()}`}>
-                    {formatTimeSince(new Date(workflowStatus.updatedAt).getTime()) || 'Unknown'}
-                  </div>
-                </div>
-              )}
-              {cliBuildTime ? (
-                <div className="flex flex-col items-end">
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Last CLI Build</div>
-                  <div className="flex items-center gap-2">
-                    <div className="px-3 py-1.5 rounded-lg bg-green-900/20 dark:bg-green-900/30 text-green-600 dark:text-green-400 font-mono font-semibold text-sm" 
-                         title={`Last CLI build: ${new Date(cliBuildTime).toLocaleString()}`}>
-                      {formatTimeSince(cliBuildTime) || 'Unknown'}
-                    </div>
-                    <button
-                      onClick={() => {
-                        setShowCliBuildLogs(true);
-                        buildCli();
-                      }}
-                      disabled={isBuildingCli}
-                      className="px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-1.5"
-                      title="Rebuild the CLI executable"
-                    >
-                      {isBuildingCli ? (
-                        <>
-                          <span className="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-white"></span>
-                          Building...
-                        </>
-                      ) : (
-                        <>🔨 Rebuild</>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-end">
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">CLI Status</div>
-                  <div className="flex items-center gap-2">
-                    <div className="px-3 py-1.5 rounded-lg bg-red-900/20 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-mono font-semibold text-sm">
-                      Not Built
-                    </div>
-                    <button
-                      onClick={() => {
-                        setShowCliBuildLogs(true);
-                        buildCli();
-                      }}
-                      disabled={isBuildingCli}
-                      className="px-3 py-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-1.5"
-                      title="Build the CLI executable"
-                    >
-                      {isBuildingCli ? (
-                        <>
-                          <span className="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-white"></span>
-                          Building...
-                        </>
-                      ) : (
-                        <>🔨 Build CLI</>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {showCliBuildLogs && (
-          <div className="mb-6">
-            <CliBuildLogsViewer
-              isBuilding={isBuildingCli}
-              logs={cliBuildLogs}
-              showLogs={showCliBuildLogs}
-              onClose={() => setShowCliBuildLogs(false)}
-            />
-          </div>
-        )}
+        <InfrastructurePanelHeader
+          environment={environment}
+          onEnvironmentChange={handleEnvironmentChange}
+          onShowResourceGroupConfig={() => setShowResourceGroupConfig(true)}
+          workflowStatus={workflowStatus}
+          cliBuildTime={cliBuildTime}
+          isBuildingCli={isBuildingCli}
+          cliBuildLogs={cliBuildLogs}
+          showCliBuildLogs={showCliBuildLogs}
+          onShowCliBuildLogs={setShowCliBuildLogs}
+          onBuildCli={buildCli}
+        />
 
         <InfrastructureTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -513,4 +327,3 @@ function InfrastructurePanel() {
 }
 
 export default InfrastructurePanel;
-
