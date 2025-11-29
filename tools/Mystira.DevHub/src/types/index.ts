@@ -196,7 +196,7 @@ export interface WorkflowStatus {
   htmlUrl: string;
 }
 
-// Cosmos DB What-If Warning - these are expected errors that can be dismissed
+// Cosmos DB Warning Types (for Azure what-if preview limitations)
 export interface CosmosWarning {
   type: 'cosmos-whatif';
   message: string;

@@ -990,17 +990,6 @@ function InfrastructurePanel() {
         onCancel={() => setShowDestroyConfirm(false)}
       />
       <ConfirmDialog
-        isOpen={showDestroySelect}
-        title="💥 Destroy Selected Resources"
-        message={`You are about to permanently delete ${whatIfChanges.filter(c => c.selected !== false && (c.changeType === 'delete' || c.selected === true)).length} selected resource(s). This action cannot be undone!`}
-        confirmText="Yes, Destroy Selected"
-        cancelText="Cancel"
-        confirmButtonClass="bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
-        requireTextMatch="DELETE"
-        onConfirm={handleDestroyConfirm}
-        onCancel={() => setShowDestroySelect(false)}
-      />
-      <ConfirmDialog
         isOpen={showProdConfirm}
         title="⚠️ Production Environment Warning"
         message="You are about to switch to the PRODUCTION environment. All operations (validate, preview, deploy, destroy) will affect production resources. This is a critical environment with real users and data. Are you absolutely sure you want to proceed?"
@@ -1601,7 +1590,6 @@ function InfrastructurePanel() {
               </div>
             </div>
             )}
-
             {/* Response Display */}
             {lastResponse && (
               <div
@@ -1806,6 +1794,43 @@ function InfrastructurePanel() {
               />
             )}
 
+            {/* Workflow Status */}
+            {workflowStatus && (
+              <div className="bg-white border border-gray-200 rounded-lg p-6 mb-8">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                  Workflow Status
+                </h3>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <div className="text-sm text-gray-500">Status</div>
+                    <div className="text-lg font-semibold">
+                      {workflowStatus.status || 'Unknown'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500">Conclusion</div>
+                    <div className="text-lg font-semibold">
+                      {workflowStatus.conclusion || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500">Workflow</div>
+                    <div className="text-lg font-semibold">
+                      {workflowStatus.workflowName || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500">Updated</div>
+                    <div className="text-lg font-semibold">
+                      {workflowStatus.updatedAt
+                        ? new Date(workflowStatus.updatedAt).toLocaleTimeString()
+                        : 'N/A'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1944,8 +1969,8 @@ function InfrastructurePanel() {
             )}
 
             {!resourcesLoading && !resourcesError && (
-              <ResourceGrid 
-                resources={resources} 
+              <ResourceGrid
+                resources={resources}
                 onRefresh={() => fetchResources(true, environment)}
                 onDelete={async (resourceId: string) => {
                   try {
