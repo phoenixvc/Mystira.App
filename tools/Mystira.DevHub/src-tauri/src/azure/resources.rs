@@ -237,11 +237,13 @@ pub async fn delete_azure_resource(resource_id: String) -> Result<CommandRespons
 
     let (az_path, use_direct_path) = get_azure_cli_path();
 
+    // Azure CLI resource delete doesn't support --yes flag in some versions
+    // Remove the flag and let it run (it may prompt, but in non-interactive mode it should proceed)
     let delete_output = if use_direct_path {
         Command::new("powershell")
             .arg("-NoProfile")
             .arg("-Command")
-            .arg(format!("& '{}' resource delete --ids '{}' --yes", az_path.replace("'", "''"), resource_id.replace("'", "''")))
+            .arg(format!("& '{}' resource delete --ids '{}'", az_path.replace("'", "''"), resource_id.replace("'", "''")))
             .output()
     } else {
         Command::new("az")
@@ -249,7 +251,6 @@ pub async fn delete_azure_resource(resource_id: String) -> Result<CommandRespons
             .arg("delete")
             .arg("--ids")
             .arg(&resource_id)
-            .arg("--yes")
             .output()
     };
 

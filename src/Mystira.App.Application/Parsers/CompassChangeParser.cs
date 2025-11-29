@@ -12,45 +12,28 @@ public static class CompassChangeParser
         var compassChange = new CompassChange();
 
         // Parse Axis (required)
-        if (compassChangeDict.TryGetValue("axis", out var axisObj) ||
-            compassChangeDict.TryGetValue("compass_axis", out axisObj) ||
-            compassChangeDict.TryGetValue("value", out axisObj))
+        var axisFound = compassChangeDict.TryGetValue("axis", out var axisObj) ||
+                        compassChangeDict.TryGetValue("compass_axis", out axisObj) ||
+                        compassChangeDict.TryGetValue("value", out axisObj);
+
+        if (!axisFound || axisObj == null)
         {
-            if (axisObj != null)
-            {
-                compassChange.Axis = axisObj.ToString() ?? string.Empty;
-            }
-            else
-            {
-                throw new ArgumentException("Required field 'axis' is missing or null in compass change data");
-            }
+            throw new ArgumentException("Required field 'axis' is missing or null in compass change data");
         }
-        else
-        {
-            throw new ArgumentException("Required field 'axis' is missing in compass change data");
-        }
+        compassChange.Axis = axisObj.ToString() ?? string.Empty;
 
         // Parse Delta (required) with validation
-        if (compassChangeDict.TryGetValue("delta", out var deltaObj) ||
-            compassChangeDict.TryGetValue("change", out deltaObj) ||
-            compassChangeDict.TryGetValue("impact", out deltaObj) ||
-            compassChangeDict.TryGetValue("value", out deltaObj))
+        var deltaFound = compassChangeDict.TryGetValue("delta", out var deltaObj) ||
+                         compassChangeDict.TryGetValue("change", out deltaObj) ||
+                         compassChangeDict.TryGetValue("impact", out deltaObj) ||
+                         compassChangeDict.TryGetValue("value", out deltaObj);
+
+        if (!deltaFound || deltaObj == null || !double.TryParse(deltaObj.ToString(), out double delta))
         {
-            if (deltaObj != null &&
-                double.TryParse(deltaObj.ToString(), out double delta))
-            {
-                // Validate delta is between -1.0 and 1.0
-                compassChange.Delta = Math.Clamp(delta, -1.0, 1.0);
-            }
-            else
-            {
-                throw new ArgumentException("Required field 'delta'/'change'/'impact' is invalid or null in compass change data");
-            }
+            throw new ArgumentException("Required field 'delta'/'change'/'impact' is invalid or null in compass change data");
         }
-        else
-        {
-            throw new ArgumentException("Required field 'delta'/'change'/'impact' is missing in compass change data");
-        }
+        // Validate delta is between -1.0 and 1.0
+        compassChange.Delta = Math.Clamp(delta, -1.0, 1.0);
 
         if (compassChangeDict.TryGetValue("developmental_link", out var devLinkObj) ||
             compassChangeDict.TryGetValue("developmentalLink", out devLinkObj))

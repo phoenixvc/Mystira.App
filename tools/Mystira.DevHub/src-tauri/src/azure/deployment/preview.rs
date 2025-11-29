@@ -37,12 +37,12 @@ pub async fn azure_preview_infrastructure(
     let _ = set_azure_subscription(sub_id);
     
     // Create resource group if it doesn't exist (needed for what-if)
-    let _ = ensure_resource_group(&rg, "westeurope");
+    let _ = ensure_resource_group(&rg, "southafricanorth");
     
     let deploy_storage_val = deploy_storage.unwrap_or(true);
     let deploy_cosmos_val = deploy_cosmos.unwrap_or(true);
     let deploy_app_service_val = deploy_app_service.unwrap_or(true);
-    let preview_params_json = build_parameters_json(env, "westeurope", deploy_storage_val, deploy_cosmos_val, deploy_app_service_val);
+    let preview_params_json = build_parameters_json(env, "southafricanorth", deploy_storage_val, deploy_cosmos_val, deploy_app_service_val);
     let preview_params_file = format!("{}/params-preview.json", deployment_path);
     
     if let Err(e) = fs::write(&preview_params_file, &preview_params_json) {

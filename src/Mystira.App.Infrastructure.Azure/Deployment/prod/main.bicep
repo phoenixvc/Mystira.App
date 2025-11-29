@@ -37,7 +37,7 @@ module storage 'storage.bicep' = {
   params: {
     storageAccountName: '${replace(resourcePrefix, '-', '')}storage'
     location: location
-    sku: environment == 'prod' ? 'Standard_GRS' : 'Standard_LRS' // ⚠️ UPDATE: Update according to data needs
+    sku: 'Standard_LRS' // Always use cheapest option (LRS)
   }
 }
 

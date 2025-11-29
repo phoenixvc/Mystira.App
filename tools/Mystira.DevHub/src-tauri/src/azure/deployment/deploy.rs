@@ -2,7 +2,8 @@
 
 use crate::azure::deployment::helpers::{
     check_azure_cli_or_error, check_azure_login, get_deployment_path, get_resource_group_name,
-    get_subscription_id, set_azure_subscription, ensure_resource_group, build_parameters_json,
+    get_subscription_id, set_azure_subscription, build_parameters_json,
+    check_resource_group_exists,
 };
 use crate::helpers::get_azure_cli_path;
 use crate::types::CommandResponse;
@@ -10,6 +11,83 @@ use serde_json::Value;
 use std::fs;
 use std::process::Command;
 use tracing::{info, warn, error, debug};
+
+/// Create resource group (Tauri command)
+#[tauri::command]
+pub async fn azure_create_resource_group(
+    resource_group: String,
+    location: String,
+) -> Result<CommandResponse, String> {
+    use crate::helpers::get_azure_cli_path;
+    use std::process::Command;
+    
+    let (az_path, use_direct_path) = get_azure_cli_path();
+    
+    let result = if use_direct_path {
+        Command::new("powershell")
+            .arg("-NoProfile")
+            .arg("-Command")
+            .arg(format!("& '{}' group create --name '{}' --location '{}' --output 'none'", az_path.replace("'", "''"), resource_group.replace("'", "''"), location.replace("'", "''")))
+            .output()
+    } else {
+        Command::new("az")
+            .arg("group")
+            .arg("create")
+            .arg("--name")
+            .arg(&resource_group)
+            .arg("--location")
+            .arg(&location)
+            .arg("--output")
+            .arg("none")
+            .output()
+    };
+
+    match result {
+        Ok(output) => {
+            if output.status.success() {
+                Ok(CommandResponse {
+                    success: true,
+                    result: Some(serde_json::json!({
+                        "resourceGroup": resource_group,
+                        "location": location
+                    })),
+                    message: Some(format!("Resource group '{}' created successfully", resource_group)),
+                    error: None,
+                })
+            } else {
+                let error_msg = String::from_utf8_lossy(&output.stderr);
+                // Check if resource group already exists (this is OK)
+                if error_msg.contains("already exists") {
+                    Ok(CommandResponse {
+                        success: true,
+                        result: Some(serde_json::json!({
+                            "resourceGroup": resource_group,
+                            "location": location,
+                            "alreadyExists": true
+                        })),
+                        message: Some(format!("Resource group '{}' already exists", resource_group)),
+                        error: None,
+                    })
+                } else {
+                    Ok(CommandResponse {
+                        success: false,
+                        result: None,
+                        message: None,
+                        error: Some(format!("Failed to create resource group: {}", error_msg)),
+                    })
+                }
+            }
+        }
+        Err(e) => {
+            Ok(CommandResponse {
+                success: false,
+                result: None,
+                message: None,
+                error: Some(format!("Failed to execute command: {}", e)),
+            })
+        }
+    }
+}
 
 /// Deploy Azure infrastructure using Bicep templates
 #[tauri::command]
@@ -26,7 +104,7 @@ pub async fn azure_deploy_infrastructure(
     
     let env = environment.as_str();
     let rg = resource_group.unwrap_or_else(|| get_resource_group_name(env));
-    let loc = location.unwrap_or_else(|| "westeurope".to_string());
+    let loc = location.unwrap_or_else(|| "southafricanorth".to_string());
     let sub_id = get_subscription_id();
     
     debug!("Deployment config: resource_group={}, location={}, subscription={}", rg, loc, sub_id);
@@ -56,9 +134,24 @@ pub async fn azure_deploy_infrastructure(
         });
     }
     
-    // Create resource group if it doesn't exist
-    debug!("Ensuring resource group exists: {}", rg);
-    let _ = ensure_resource_group(&rg, &loc);
+    // Check if resource group exists (frontend will prompt if it doesn't)
+    debug!("Checking if resource group exists: {}", rg);
+    let rg_exists = check_resource_group_exists(&rg).unwrap_or(false);
+    
+    // If resource group doesn't exist, return early so frontend can prompt
+    if !rg_exists {
+        return Ok(CommandResponse {
+            success: false,
+            result: Some(serde_json::json!({
+                "resourceGroupExists": false,
+                "resourceGroup": rg,
+                "location": loc,
+                "needsCreation": true
+            })),
+            message: None,
+            error: Some(format!("Resource group '{}' does not exist. It will be created automatically if you proceed.", rg)),
+        });
+    }
     
     // Deploy using bicep
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -167,23 +260,37 @@ pub async fn azure_deploy_infrastructure(
                 
                 info!("Azure deployment completed successfully: deployment={}, resource_group={}", deployment_name, rg);
                 
+                // Capture deployment logs (stdout contains the deployment output)
+                let deployment_logs = String::from_utf8_lossy(&output.stdout);
+                
                 Ok(CommandResponse {
                     success: true,
                     result: Some(serde_json::json!({
                         "deploymentName": deployment_name,
                         "resourceGroup": rg,
                         "environment": env,
-                        "outputs": outputs_json
+                        "outputs": outputs_json,
+                        "logs": deployment_logs.to_string()
                     })),
                     message: Some(format!("Infrastructure deployed successfully to {}", rg)),
                     error: None,
                 })
             } else {
                 let error_msg = String::from_utf8_lossy(&output.stderr);
-                error!("Azure deployment failed: {}", error_msg);
+                let stdout_msg = String::from_utf8_lossy(&output.stdout);
+                let full_output = if !stdout_msg.trim().is_empty() {
+                    format!("{}\n{}", stdout_msg, error_msg)
+                } else {
+                    error_msg.to_string()
+                };
+                error!("Azure deployment failed: {}", full_output);
                 Ok(CommandResponse {
                     success: false,
-                    result: None,
+                    result: Some(serde_json::json!({
+                        "logs": full_output,
+                        "resourceGroup": rg,
+                        "deploymentName": deployment_name
+                    })),
                     message: None,
                     error: Some(format!("Deployment failed: {}", error_msg)),
                 })

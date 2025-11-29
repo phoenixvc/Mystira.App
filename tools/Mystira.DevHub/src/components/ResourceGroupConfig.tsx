@@ -9,7 +9,7 @@ interface ResourceGroupConfigProps {
 
 const AVAILABLE_VARIABLES = [
   { key: '{env}', label: 'Environment', description: 'dev, prod, staging', example: 'dev' },
-  { key: '{region}', label: 'Region', description: 'euw, eus, wus', example: 'euw' },
+    { key: '{region}', label: 'Region', description: 'san, euw, eus, wus', example: 'san' },
   { key: '{project}', label: 'Project Name', description: 'mystira-app', example: 'mystira-app' },
   { key: '{resource}', label: 'Resource Type', description: 'storage, cosmos, app', example: 'storage' },
   { key: '{rg}', label: 'Resource Group', description: 'rg', example: 'rg' },
@@ -20,10 +20,10 @@ const AVAILABLE_VARIABLES = [
 function ResourceGroupConfig({ environment, onSave, onClose }: ResourceGroupConfigProps) {
   const [config, setConfig] = useState<ResourceGroupConvention>({
     pattern: '{env}-{region}-rg-{project}',
-    defaultResourceGroup: `${environment}-euw-rg-mystira-app`,
+    defaultResourceGroup: `${environment}-san-rg-mystira-app`,
     resourceTypeMappings: {},
     environment: environment,
-    region: 'euw',
+    region: 'san',
     projectName: 'mystira-app',
   });
   const [editingMapping, setEditingMapping] = useState<string | null>(null);
@@ -48,7 +48,7 @@ function ResourceGroupConfig({ environment, onSave, onClose }: ResourceGroupConf
   useEffect(() => {
     let preview = config.pattern;
     preview = preview.replace(/{env}/g, config.environment || environment);
-    preview = preview.replace(/{region}/g, config.region || 'euw');
+    preview = preview.replace(/{region}/g, config.region || 'san');
     preview = preview.replace(/{project}/g, config.projectName || 'mystira-app');
     preview = preview.replace(/{resource}/g, 'storage');
     preview = preview.replace(/{rg}/g, 'rg');
@@ -60,7 +60,7 @@ function ResourceGroupConfig({ environment, onSave, onClose }: ResourceGroupConf
     if (config.pattern) {
       let defaultRG = config.pattern;
       defaultRG = defaultRG.replace(/{env}/g, config.environment || environment);
-      defaultRG = defaultRG.replace(/{region}/g, config.region || 'euw');
+      defaultRG = defaultRG.replace(/{region}/g, config.region || 'san');
       defaultRG = defaultRG.replace(/{project}/g, config.projectName || 'mystira-app');
       defaultRG = defaultRG.replace(/{resource}/g, 'mystira-app');
       defaultRG = defaultRG.replace(/{rg}/g, 'rg');
@@ -135,7 +135,7 @@ function ResourceGroupConfig({ environment, onSave, onClose }: ResourceGroupConf
                 setConfig({ ...config, defaultResourceGroup: e.target.value })
               }
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-              placeholder="dev-euw-rg-mystira-app"
+              placeholder="dev-san-rg-mystira-app"
             />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Default resource group used when no specific mapping exists
@@ -164,11 +164,12 @@ function ResourceGroupConfig({ environment, onSave, onClose }: ResourceGroupConf
                 Region
               </label>
               <select
-                value={config.region || 'euw'}
+                value={config.region || 'san'}
                 onChange={(e) => setConfig({ ...config, region: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                 aria-label="Select region"
               >
+                <option value="san">san (South Africa North)</option>
                 <option value="euw">euw (West Europe)</option>
                 <option value="eus">eus (East US)</option>
                 <option value="wus">wus (West US)</option>
@@ -313,7 +314,7 @@ function ResourceGroupConfig({ environment, onSave, onClose }: ResourceGroupConf
                 type="text"
                 value={newResourceGroup}
                 onChange={(e) => setNewResourceGroup(e.target.value)}
-                placeholder="dev-euw-rg-storage"
+                placeholder="dev-san-rg-storage"
                 className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
               />
               <button
