@@ -20,6 +20,7 @@ import {
   type ServiceStatus,
 } from './services';
 import { ToastContainer, useToast, type Toast } from './ui';
+import { ConfirmDialog } from './ConfirmDialog';
 
 function ServiceManager() {
   const [serviceEnvironments, setServiceEnvironments] = useState<Record<string, 'local' | 'dev' | 'prod'>>(() => {
@@ -87,9 +88,14 @@ function ServiceManager() {
     setAutoScroll,
   });
 
-  const { switchServiceEnvironment } = useServiceEnvironment({
+  const {
+    switchServiceEnvironment,
+    pendingConfirmation,
+    handleConfirmation,
+    cancelConfirmation,
+  } = useServiceEnvironment({
     customPorts,
-      serviceEnvironments,
+    serviceEnvironments,
     getEnvironmentUrls,
     services,
     onStopService: stopService,
@@ -188,7 +194,44 @@ function ServiceManager() {
   return (
     <div className="p-8">
       <ToastContainer toasts={toasts} onClose={dismissToast} />
-      
+
+      {/* Environment Context Warning Dialog */}
+      <ConfirmDialog
+        isOpen={pendingConfirmation?.type === 'context'}
+        title="Environment Context Warning"
+        message={pendingConfirmation?.message || ''}
+        confirmText="Continue"
+        cancelText="Cancel"
+        confirmButtonClass="bg-yellow-600 hover:bg-yellow-700"
+        onConfirm={() => handleConfirmation(true)}
+        onCancel={cancelConfirmation}
+      />
+
+      {/* Production Environment Warning Dialog */}
+      <ConfirmDialog
+        isOpen={pendingConfirmation?.type === 'production'}
+        title="DANGER: PRODUCTION ENVIRONMENT"
+        message={pendingConfirmation?.message || ''}
+        confirmText="Switch to Production"
+        cancelText="Cancel"
+        confirmButtonClass="bg-red-600 hover:bg-red-700"
+        requireTextMatch="PRODUCTION"
+        onConfirm={() => handleConfirmation(true)}
+        onCancel={cancelConfirmation}
+      />
+
+      {/* Stop Service Before Environment Switch Dialog */}
+      <ConfirmDialog
+        isOpen={pendingConfirmation?.type === 'stopService'}
+        title="Stop Running Service"
+        message={pendingConfirmation?.message || ''}
+        confirmText="Stop Service"
+        cancelText="Cancel"
+        confirmButtonClass="bg-orange-600 hover:bg-orange-700"
+        onConfirm={() => handleConfirmation(true)}
+        onCancel={cancelConfirmation}
+      />
+
       <ServiceManagerHeader
         repoRoot={repoRoot}
         currentBranch={currentBranch}
