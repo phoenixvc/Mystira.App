@@ -185,6 +185,7 @@ export function ActionCard({
         text-gray-900 dark:text-gray-100
         transition-colors
         disabled:opacity-50 disabled:cursor-not-allowed
+        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1
         ${actionCardVariants[variant]}
       `.trim().replace(/\s+/g, ' ')}
     >
