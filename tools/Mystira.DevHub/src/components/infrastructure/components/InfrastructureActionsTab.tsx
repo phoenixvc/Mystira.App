@@ -69,77 +69,107 @@ export default function InfrastructureActionsTab({
   const [showResourceGroupConfig, setShowResourceGroupConfig] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TemplateConfig | null>(null);
 
+  // Step completion status
+  const step1Complete = templates.some(t => t.selected);
+  const step2Complete = hasPreviewed;
+  const step3Complete = hasDeployedInfrastructure;
+
+  const steps = [
+    {
+      id: 1,
+      name: 'Plan',
+      description: 'Select templates',
+      complete: step1Complete,
+      active: !step1Complete,
+    },
+    {
+      id: 2,
+      name: 'Infrastructure',
+      description: 'Validate & Deploy',
+      complete: step2Complete,
+      active: step1Complete && showStep2 && !step2Complete,
+    },
+    {
+      id: 3,
+      name: 'Projects',
+      description: 'Deploy apps',
+      complete: step3Complete,
+      active: step2Complete && hasDeployedInfrastructure && !step3Complete,
+    },
+  ];
+
   return (
     <div>
-      {/* Progress Stepper */}
-      <div className="mb-6 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+      {/* Progress Stepper - Enhanced 3-step view */}
+      <div className="mb-6 px-4 py-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-800/30 rounded-lg border border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4 flex-1">
-            {/* Step 1 */}
-            <div className="flex items-center gap-2">
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full font-semibold text-sm ${
-                templates.some(t => t.selected) 
-                  ? 'bg-blue-600 dark:bg-blue-500 text-white' 
-                  : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
-              }`}>
-                {templates.some(t => t.selected) ? '✓' : '1'}
-              </div>
-              <span className={`text-sm font-medium ${
-                templates.some(t => t.selected)
-                  ? 'text-blue-600 dark:text-blue-400'
-                  : 'text-gray-600 dark:text-gray-400'
-              }`}>
-                Plan Deployment
-              </span>
-            </div>
-            
-            {/* Connector - only show when Step 2 is visible */}
-            {showStep2 && (
-              <>
-                <div className={`flex-1 h-0.5 ${
-                  templates.some(t => t.selected)
-                    ? 'bg-blue-600 dark:bg-blue-500'
-                    : 'bg-gray-300 dark:bg-gray-600'
-                }`} />
-                
-                {/* Step 2 */}
-                <div className="flex items-center gap-2">
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-full font-semibold text-sm ${
-                    hasValidated 
-                      ? 'bg-purple-600 dark:bg-purple-500 text-white' 
-                      : templates.some(t => t.selected)
-                      ? 'bg-blue-600 dark:bg-blue-500 text-white'
-                      : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
-                  }`}>
-                    {hasPreviewed ? '✓' : '2'}
+          <nav className="flex items-center flex-1" aria-label="Progress">
+            {steps.map((step, stepIdx) => (
+              <div key={step.id} className="flex items-center flex-1 last:flex-none">
+                {/* Step indicator */}
+                <div className="flex items-center gap-2 group" title={`${step.name}: ${step.description}`}>
+                  <div
+                    className={`flex items-center justify-center w-9 h-9 rounded-full font-semibold text-sm transition-all duration-300 ${
+                      step.complete
+                        ? 'bg-green-600 dark:bg-green-500 text-white shadow-lg shadow-green-500/30'
+                        : step.active
+                        ? 'bg-blue-600 dark:bg-blue-500 text-white shadow-lg shadow-blue-500/30 animate-pulse'
+                        : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400'
+                    }`}
+                  >
+                    {step.complete ? (
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      step.id
+                    )}
                   </div>
-                  <span className={`text-sm font-medium ${
-                    hasValidated || templates.some(t => t.selected)
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : 'text-gray-600 dark:text-gray-400'
-                  }`}>
-                    Infrastructure Actions
-                  </span>
+                  <div className="hidden sm:block">
+                    <p className={`text-sm font-medium transition-colors ${
+                      step.complete
+                        ? 'text-green-600 dark:text-green-400'
+                        : step.active
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-gray-500 dark:text-gray-400'
+                    }`}>
+                      {step.name}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">
+                      {step.description}
+                    </p>
+                  </div>
                 </div>
-              </>
-            )}
-          </div>
-          
+
+                {/* Connector line */}
+                {stepIdx < steps.length - 1 && (
+                  <div className="flex-1 mx-4 hidden sm:block">
+                    <div className={`h-1 rounded-full transition-all duration-500 ${
+                      step.complete
+                        ? 'bg-green-500 dark:bg-green-400'
+                        : 'bg-gray-300 dark:bg-gray-600'
+                    }`} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </nav>
+
           {/* Collapse Toggle */}
           {showStep2 && templates.some(t => t.selected) && (
             <button
               onClick={() => onStep1CollapsedChange(!step1Collapsed)}
-              className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md border border-gray-300 dark:border-gray-600 transition-colors flex items-center gap-1.5"
+              className="ml-4 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md border border-gray-300 dark:border-gray-600 transition-all duration-200 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
               title={step1Collapsed ? 'Expand Step 1' : 'Collapse Step 1'}
             >
               {step1Collapsed ? (
                 <>
-                  <span>▼</span>
+                  <span className="transition-transform">▼</span>
                   <span>Show Step 1</span>
                 </>
               ) : (
                 <>
-                  <span>▲</span>
+                  <span className="transition-transform">▲</span>
                   <span>Hide Step 1</span>
                 </>
               )}
@@ -212,7 +242,7 @@ export default function InfrastructureActionsTab({
               <button
                 onClick={() => onAction('validate')}
                 disabled={loading}
-                className="px-4 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                className="px-4 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 hover:shadow-lg hover:shadow-blue-500/25"
                 title="Validate infrastructure templates"
               >
                 <span>🔍</span>
@@ -220,11 +250,12 @@ export default function InfrastructureActionsTab({
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 )}
                 <span>Validate</span>
+                {hasValidated && <span className="text-green-200">✓</span>}
               </button>
               <button
                 onClick={() => onAction('preview')}
                 disabled={loading || !hasValidated}
-                className="px-4 py-3 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                className="px-4 py-3 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 hover:shadow-lg hover:shadow-purple-500/25"
                 title={!hasValidated ? 'Please validate first' : 'Preview infrastructure changes'}
               >
                 <span>👁️</span>
@@ -232,11 +263,12 @@ export default function InfrastructureActionsTab({
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 )}
                 <span>Preview</span>
+                {hasPreviewed && <span className="text-green-200">✓</span>}
               </button>
               <button
                 onClick={() => onAction('deploy')}
                 disabled={loading || !hasPreviewed}
-                className="px-4 py-3 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                className="px-4 py-3 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 hover:shadow-lg hover:shadow-green-500/25"
                 title={!hasPreviewed ? 'Please preview first' : 'Deploy infrastructure'}
               >
                 <span>🚀</span>
@@ -254,7 +286,7 @@ export default function InfrastructureActionsTab({
                   }
                 }}
                 disabled={loading}
-                className="px-4 py-3 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                className="px-4 py-3 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 hover:shadow-lg hover:shadow-red-500/25"
                 title="Destroy infrastructure resources"
               >
                 <span>💥</span>
@@ -264,9 +296,22 @@ export default function InfrastructureActionsTab({
                 <span>Destroy</span>
               </button>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
-              Workflow: Validate → Preview → Deploy (or Destroy)
-            </p>
+            <div className="mt-3 flex items-center gap-2">
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                <span>Workflow:</span>
+                <span className={`font-medium ${hasValidated ? 'text-green-600 dark:text-green-400' : ''}`}>Validate</span>
+                <span>→</span>
+                <span className={`font-medium ${hasPreviewed ? 'text-green-600 dark:text-green-400' : ''}`}>Preview</span>
+                <span>→</span>
+                <span className="font-medium">Deploy</span>
+              </div>
+              {!hasValidated && (
+                <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                  Start by clicking Validate
+                </span>
+              )}
+            </div>
           </div>
         </div>
       )}

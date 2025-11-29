@@ -18,6 +18,16 @@ export function getProjectTypeColor(type: string): string {
   }
 }
 
+export function getProjectTypeDescription(type: string): string {
+  switch (type) {
+    case 'api': return 'REST API service - Public-facing API endpoints for client applications';
+    case 'admin-api': return 'Admin API service - Administrative API endpoints for content management';
+    case 'pwa': return 'Progressive Web App - Client-facing web application with offline support';
+    case 'service': return 'Background service - Long-running service for background tasks';
+    default: return 'Project component';
+  }
+}
+
 export function getStatusColor(status: string, conclusion: string | null): string {
   if (status === 'completed') {
     return conclusion === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
