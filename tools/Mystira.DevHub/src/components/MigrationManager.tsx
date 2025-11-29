@@ -6,8 +6,10 @@ import { MigrationStepIndicator } from './migration/MigrationStepIndicator';
 import { ResourceSelectionForm } from './migration/ResourceSelectionForm';
 import { useMigration } from './migration/hooks/useMigration';
 import { MigrationConfig, MigrationStep, ResourceSelection } from './migration/types';
+import { ToastContainer, useToast } from './ui';
 
 function MigrationManager() {
+  const { toasts, showToast, dismissToast } = useToast();
   const [currentStep, setCurrentStep] = useState<MigrationStep>('configure');
   const [config, setConfig] = useState<MigrationConfig>({
     sourceCosmosConnection: '',
@@ -56,7 +58,7 @@ function MigrationManager() {
   const startMigration = async () => {
     const validationError = validateConfig(config, selectedResources);
     if (validationError) {
-      alert(validationError);
+      showToast(validationError, 'error', { duration: 5000 });
       return;
     }
 
@@ -85,6 +87,7 @@ function MigrationManager() {
 
   return (
     <div className="p-8">
+      <ToastContainer toasts={toasts} onClose={dismissToast} />
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Migration Manager</h2>

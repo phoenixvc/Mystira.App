@@ -21,6 +21,7 @@ export { useInfrastructureStatus } from './hooks/useInfrastructureStatus';
 export { usePortManagement } from './hooks/usePortManagement';
 export { useRepositoryConfig } from './hooks/useRepositoryConfig';
 export { useServiceEnvironment } from './hooks/useServiceEnvironment';
+export type { EnvironmentConfirmation } from './hooks/useServiceEnvironment';
 export { useServiceLifecycle } from './hooks/useServiceLifecycle';
 export { useServiceLogs } from './hooks/useServiceLogs';
 export { useServiceOperations } from './hooks/useServiceOperations';

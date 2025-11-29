@@ -187,6 +187,12 @@ export interface LoadingStateProps {
   error?: string | null;
   empty?: boolean;
   emptyMessage?: string;
+  emptyIcon?: string;
+  emptyTitle?: string;
+  emptyAction?: {
+    label: string;
+    onClick: () => void;
+  };
   errorAction?: {
     label: string;
     onClick: () => void;
@@ -201,6 +207,9 @@ export function LoadingState({
   error,
   empty = false,
   emptyMessage = 'No data available',
+  emptyIcon = '📭',
+  emptyTitle,
+  emptyAction,
   errorAction,
   skeleton,
   children,
@@ -239,8 +248,19 @@ export function LoadingState({
   if (empty) {
     return (
       <div className={`flex flex-col items-center justify-center py-8 ${className}`}>
-        <div className="text-gray-400 text-3xl mb-2">📭</div>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{emptyMessage}</p>
+        <div className="text-gray-400 text-4xl mb-3">{emptyIcon}</div>
+        {emptyTitle && (
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1">{emptyTitle}</h3>
+        )}
+        <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-md">{emptyMessage}</p>
+        {emptyAction && (
+          <button
+            onClick={emptyAction.onClick}
+            className="mt-4 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            {emptyAction.label}
+          </button>
+        )}
       </div>
     );
   }
