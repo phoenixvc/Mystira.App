@@ -120,7 +120,7 @@ pub async fn azure_validate_infrastructure(
                         "warnings": diagnostic_warnings,
                         "output": stdout.to_string()
                     })),
-                    message: Some(if let Some(ref w) = diagnostic_warnings {
+                    message: Some(if let Some(_) = diagnostic_warnings {
                         format!("Validation successful with warnings")
                     } else {
                         "Validation successful".to_string()
