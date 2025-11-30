@@ -79,6 +79,16 @@ function ProjectDeploymentPlanner({
     return template?.selected || false;
   };
 
+  const handleSelectAll = () => {
+    const updatedTemplates = templates.map(t => ({ ...t, selected: true }));
+    onTemplatesChange(updatedTemplates);
+  };
+
+  const handleDeselectAll = () => {
+    const updatedTemplates = templates.map(t => ({ ...t, selected: false }));
+    onTemplatesChange(updatedTemplates);
+  };
+
   const selectedTemplates = templates.filter(t => t.selected);
   const readyToProceed = selectedTemplates.length > 0 && !infrastructureLoading && !loadingStatus;
 
@@ -88,6 +98,10 @@ function ProjectDeploymentPlanner({
         lastRefreshTime={lastRefreshTime}
         loadingStatus={loadingStatus}
         onRefresh={loadDeploymentStatus}
+        selectedCount={selectedTemplates.length}
+        totalCount={templates.length}
+        onSelectAll={handleSelectAll}
+        onDeselectAll={handleDeselectAll}
       />
 
       {error && (
