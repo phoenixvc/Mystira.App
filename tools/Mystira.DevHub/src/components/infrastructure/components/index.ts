@@ -14,6 +14,7 @@ export { InfrastructureTabs } from './InfrastructureTabs';
 export { default as InfrastructureTemplatesTab } from './InfrastructureTemplatesTab';
 export { ReadyToDeployBanner } from './ReadyToDeployBanner';
 export { default as ResponseDisplay } from './ResponseDisplay';
+export { SmartDeploymentPanel } from './SmartDeploymentPanel';
 export { StepSeparator } from './StepSeparator';
 export { WhatIfViewerSection } from './WhatIfViewerSection';
 export { WorkflowStatusDisplay } from './WorkflowStatusDisplay';
