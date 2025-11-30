@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { LogFilterBar } from './logs/LogFilterBar';
 import { copyLogsToClipboard, exportLogs, findErrorIndices, formatTimestamp, highlightSearch } from './logs/logUtils';
 import { useLogGrouping } from './logs/useLogGrouping';
-import { LogFilter, ServiceLog } from './types';
+import { LogEntry, LogFilter } from './types';
 
 interface LogsViewerProps {
   serviceName: string;
-  logs: ServiceLog[];
-  filteredLogs: ServiceLog[];
+  logs: LogEntry[];
+  filteredLogs: LogEntry[];
   filter: LogFilter;
   isAutoScroll: boolean;
   isMaximized: boolean;
@@ -133,7 +133,7 @@ export function LogsViewer({
   };
 
   // Copy log line
-  const handleCopyLog = async (log: ServiceLog) => {
+  const handleCopyLog = async (log: LogEntry) => {
     const logText = `[${formatTimestampHelper(log.timestamp)}] [${log.service}] ${log.message}`;
     try {
       await navigator.clipboard.writeText(logText);
@@ -192,7 +192,7 @@ export function LogsViewer({
       return filteredLogs;
     }
 
-    const flat: ServiceLog[] = [];
+    const flat: LogEntry[] = [];
     groupedLogs.forEach((group, groupIndex) => {
       const isCollapsed = collapsedGroups.has(groupIndex);
       if (isCollapsed && group.logs.length > 1) {
