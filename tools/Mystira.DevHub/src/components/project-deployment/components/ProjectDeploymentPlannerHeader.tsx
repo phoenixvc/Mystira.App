@@ -20,7 +20,6 @@ export function ProjectDeploymentPlannerHeader({
   onDeselectAll,
 }: ProjectDeploymentPlannerHeaderProps) {
   const allSelected = selectedCount === totalCount && totalCount > 0;
-  const someSelected = selectedCount > 0 && selectedCount < totalCount;
 
   return (
     <div className="flex flex-col gap-3 mb-4">
