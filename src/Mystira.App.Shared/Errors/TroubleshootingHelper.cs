@@ -1,5 +1,6 @@
 namespace Mystira.App.Shared.Errors;
 
+using System.Linq;
 /// <summary>
 /// Provides troubleshooting suggestions for common errors.
 /// Maps error patterns to actionable solutions users can follow.
@@ -270,23 +271,23 @@ public static class TroubleshootingHelper
             ? $"{errorMessage} {exception.Message} {exception.GetType().Name}"
             : errorMessage;
 
-        foreach (var pattern in _errorPatterns)
+        var matchedPattern = _errorPatterns.FirstOrDefault(pattern =>
+            System.Text.RegularExpressions.Regex.IsMatch(fullText, pattern.Pattern,
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase));
+
+        if (matchedPattern != null)
         {
-            if (System.Text.RegularExpressions.Regex.IsMatch(fullText, pattern.Pattern,
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            return new TroubleshootingResult
             {
-                return new TroubleshootingResult
-                {
-                    Matched = true,
-                    ErrorCode = pattern.Code,
-                    Title = pattern.Title,
-                    Category = pattern.Category,
-                    Description = pattern.Description,
-                    OriginalError = errorMessage,
-                    Solutions = pattern.Solutions.ToList(),
-                    RelatedLinks = pattern.RelatedLinks?.ToList() ?? new()
-                };
-            }
+                Matched = true,
+                ErrorCode = matchedPattern.Code,
+                Title = matchedPattern.Title,
+                Category = matchedPattern.Category,
+                Description = matchedPattern.Description,
+                OriginalError = errorMessage,
+                Solutions = matchedPattern.Solutions.ToList(),
+                RelatedLinks = matchedPattern.RelatedLinks?.ToList() ?? new()
+            };
         }
 
         // Return generic guidance if no pattern matched
