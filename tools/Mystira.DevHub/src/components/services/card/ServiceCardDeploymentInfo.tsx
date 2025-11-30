@@ -1,4 +1,4 @@
-import { formatDeploymentInfo, type DeploymentInfo } from '../DeploymentInfo';
+import { formatDeploymentInfo, type DeploymentInfo } from '../components';
 import type { ServiceConfig } from '../types';
 
 interface ServiceCardDeploymentInfoProps {

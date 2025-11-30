@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { TemplateConfig } from '../../TemplateSelector';
+import type { TemplateConfig } from '../../templates/TemplateSelector';
 
 const DEFAULT_TEMPLATES: TemplateConfig[] = [
   {

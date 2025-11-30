@@ -1,6 +1,5 @@
 import { invoke } from '@tauri-apps/api/tauri';
-import { EnvironmentPresetSelector } from '../EnvironmentPresetSelector';
-import type { EnvironmentPreset } from '../EnvironmentPresets';
+import { EnvironmentPresetSelector, type EnvironmentPreset } from '../environment';
 
 interface InfrastructureStatus {
   dev: { exists: boolean; checking: boolean };
