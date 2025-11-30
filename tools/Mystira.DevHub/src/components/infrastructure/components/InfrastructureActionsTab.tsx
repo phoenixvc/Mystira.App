@@ -76,6 +76,35 @@ export default function InfrastructureActionsTab({
   const [editingTemplate, setEditingTemplate] = useState<TemplateConfig | null>(null);
   const hasSelectedTemplates = templates.some(t => t.selected);
 
+  // Step completion status
+  const step1Complete = templates.some(t => t.selected);
+  const step2Complete = hasPreviewed;
+  const step3Complete = hasDeployedInfrastructure;
+
+  const steps = [
+    {
+      id: 1,
+      name: 'Plan',
+      description: 'Select templates',
+      complete: step1Complete,
+      active: !step1Complete,
+    },
+    {
+      id: 2,
+      name: 'Infrastructure',
+      description: 'Validate & Deploy',
+      complete: step2Complete,
+      active: step1Complete && showStep2 && !step2Complete,
+    },
+    {
+      id: 3,
+      name: 'Projects',
+      description: 'Deploy apps',
+      complete: step3Complete,
+      active: step2Complete && hasDeployedInfrastructure && !step3Complete,
+    },
+  ];
+
   return (
     <div>
       <InfrastructureProgressStepper
