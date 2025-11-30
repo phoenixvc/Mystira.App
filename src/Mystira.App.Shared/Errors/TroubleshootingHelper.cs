@@ -290,7 +290,6 @@ public static class TroubleshootingHelper
         }
 
         // Return generic guidance if no pattern matched
-        var fallback = _errorPatterns.Last();
         return new TroubleshootingResult
         {
             Matched = false,
