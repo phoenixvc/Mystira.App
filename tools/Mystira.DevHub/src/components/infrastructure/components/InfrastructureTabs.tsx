@@ -1,4 +1,4 @@
-type Tab = 'actions' | 'templates' | 'resources' | 'history' | 'recommended-fixes';
+type Tab = 'actions' | 'smart-deploy' | 'templates' | 'resources' | 'history' | 'recommended-fixes';
 
 interface InfrastructureTabsProps {
   activeTab: Tab;
@@ -7,6 +7,7 @@ interface InfrastructureTabsProps {
 
 const tabDescriptions: Record<Tab, string> = {
   'actions': 'Plan and deploy infrastructure templates',
+  'smart-deploy': 'Auto-fallback deployment with region prioritization',
   'templates': 'View and manage infrastructure template files',
   'resources': 'View deployed Azure resources',
   'history': 'View deployment history and logs',
@@ -16,6 +17,7 @@ const tabDescriptions: Record<Tab, string> = {
 export function InfrastructureTabs({ activeTab, onTabChange }: InfrastructureTabsProps) {
   const tabs: { id: Tab; icon: string; label: string }[] = [
     { id: 'actions', icon: '⚡', label: 'Actions' },
+    { id: 'smart-deploy', icon: '🚀', label: 'Smart Deploy' },
     { id: 'templates', icon: '📄', label: 'Templates & Resources' },
     { id: 'resources', icon: '☁️', label: 'Azure Resources' },
     { id: 'history', icon: '📜', label: 'History' },
