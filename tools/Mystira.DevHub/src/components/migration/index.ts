@@ -5,4 +5,5 @@ export { MigrationResults } from './MigrationResults';
 export { MigrationStepIndicator } from './MigrationStepIndicator';
 export { ResourceSelectionForm } from './ResourceSelectionForm';
 export { useMigration } from './hooks/useMigration';
+export { default as MigrationManager } from './MigrationManager';
 

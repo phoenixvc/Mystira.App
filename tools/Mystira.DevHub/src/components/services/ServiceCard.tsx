@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { BuildStatusIndicator } from './BuildStatusIndicator';
-import type { DeploymentInfo } from './DeploymentInfo';
-import { EnvironmentSwitcher } from './EnvironmentSwitcher';
-import { ViewModeSelector } from './ViewModeSelector';
+import { BuildStatusIndicator } from './components';
+import type { DeploymentInfo } from './components';
+import { EnvironmentSwitcher } from './environment';
+import { ViewModeSelector } from './components';
 import {
     ServiceCardControls,
     ServiceCardDeploymentInfo,

@@ -4,31 +4,26 @@
 
 // Types
 export type {
-  Environment,
-  EnvironmentHealthStatus,
-  EnvironmentUrls,
-  EnvironmentStatus,
-  EnvironmentPreset,
-  EnvironmentConfig,
-  EnvironmentWarning,
+  Environment, EnvironmentConfig, EnvironmentHealthStatus, EnvironmentPreset, EnvironmentStatus, EnvironmentUrls, EnvironmentWarning
 } from './types';
 
 export { ENVIRONMENT_CONFIG, STATUS_INDICATORS } from './types';
 
-// Components (re-export from parent directory for now)
-export { EnvironmentSwitcher } from '../EnvironmentSwitcher';
-export { EnvironmentBanner } from '../EnvironmentBanner';
-export { EnvironmentPresetSelector } from '../EnvironmentPresetSelector';
-
-// Utils
-export { checkEnvironmentContext } from '../EnvironmentContextWarning';
+// Components
+export { EnvironmentBanner } from './EnvironmentBanner';
+// EnvironmentContextWarning only exports a utility function, not a component
+export { EnvironmentPresetSelector } from './EnvironmentPresetSelector';
 export {
   DEFAULT_PRESETS,
-  savePreset,
-  getSavedPresets,
   deletePreset,
   getAllPresets,
-} from '../EnvironmentPresets';
+  getSavedPresets,
+  savePreset
+} from './EnvironmentPresets';
+export { EnvironmentSwitcher } from './EnvironmentSwitcher';
+
+// Utils
+export { checkEnvironmentContext } from './EnvironmentContextWarning';
 
 // Hooks
 export { useEnvironmentManagement } from '../hooks/useEnvironmentManagement';
@@ -37,7 +32,7 @@ export { useEnvironmentManagement } from '../hooks/useEnvironmentManagement';
 // Helper Functions
 // =============================================================================
 
-import { Environment, EnvironmentWarning, ENVIRONMENT_CONFIG, STATUS_INDICATORS, type EnvironmentHealthStatus } from './types';
+import { ENVIRONMENT_CONFIG, Environment, EnvironmentWarning, STATUS_INDICATORS, type EnvironmentHealthStatus } from './types';
 
 /**
  * Get the display configuration for an environment

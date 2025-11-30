@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
-import type { CommandResponse, ResourceGroupConvention, ProjectInfo } from '../../../types';
-import type { InfrastructureStatus } from '../../InfrastructureStatus';
+import { useEffect, useState } from 'react';
+import type { CommandResponse, ProjectInfo, ResourceGroupConvention } from '../../../types';
+import type { InfrastructureStatus } from '../../infrastructure/InfrastructureStatus';
 import type { DeploymentStatus } from '../types';
 
 interface UseDeploymentStatusProps {

@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import Dashboard from '../Dashboard';
-import { renderWithProviders, mockTauriInvoke, mockConnectionTestSuccess } from '../../test/utils';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useConnectionStore } from '../../stores/connectionStore';
+import { mockConnectionTestSuccess, mockTauriInvoke, renderWithProviders } from '../../test/utils';
+import { Dashboard } from '../dashboard';
 
 describe('Dashboard', () => {
   const mockNavigate = vi.fn();

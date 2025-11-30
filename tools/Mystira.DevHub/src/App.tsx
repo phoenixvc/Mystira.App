@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import './App.css';
-import { useAppBottomPanelTabs } from './components/AppBottomPanel';
-import { AppContent } from './components/AppContent';
-import { AppSidebar } from './components/AppSidebar';
-import { VSCodeLayout } from './components/VSCodeLayout';
+import { useAppBottomPanelTabs, AppContent, AppSidebar, VSCodeLayout } from './components/app';
 import { getServiceConfigs } from './components/services';
 import { useEnvironmentManagement } from './components/services/hooks/useEnvironmentManagement';
 import type { LogFilter } from './components/services/types';

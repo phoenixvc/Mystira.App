@@ -1,5 +1,5 @@
 import type { ResourceGroupConvention, WhatIfChange } from '../../../types';
-import WhatIfViewer from '../../WhatIfViewer';
+import { WhatIfViewer } from '../../what-if';
 
 interface WhatIfViewerSectionProps {
   whatIfChanges: WhatIfChange[];

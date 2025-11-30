@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
+import { useEffect, useRef, useState } from 'react';
 import type { CommandResponse } from '../../../types';
-import type { ProjectInfo } from '../../ProjectDeploymentPlanner';
+import type { ProjectInfo } from '../ProjectDeploymentPlanner';
 import type { ProjectPipeline, WorkflowRun } from '../types';
 
 interface UseProjectDeploymentProps {

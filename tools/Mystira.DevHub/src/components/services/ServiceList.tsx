@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ServiceCard } from './ServiceCard';
 import { BuildStatus, ServiceConfig, ServiceLog, ServiceStatus } from './types';
-import { useServiceOrder } from './useServiceOrder';
+import { useServiceOrder } from './hooks';
 
 interface ServiceListProps {
   serviceConfigs: ServiceConfig[];

@@ -1,5 +1,5 @@
 import { LogsViewer } from '../LogsViewer';
-import { WebviewView } from '../WebviewView';
+import { WebviewView } from '../components';
 import type { ServiceConfig, ServiceLog } from '../types';
 
 interface ServiceCardViewContentProps {

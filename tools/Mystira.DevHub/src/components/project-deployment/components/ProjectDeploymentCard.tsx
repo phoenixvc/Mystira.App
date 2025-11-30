@@ -1,4 +1,4 @@
-import type { ProjectInfo } from '../../ProjectDeploymentPlanner';
+import type { ProjectInfo } from '../ProjectDeploymentPlanner';
 import type { ProjectPipeline, WorkflowRun } from '../types';
 import { getProjectTypeIcon, getStatusColor, getStatusIcon } from '../utils';
 import { WorkflowLogsViewer } from './WorkflowLogsViewer';
