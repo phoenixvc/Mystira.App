@@ -1,0 +1,214 @@
+@* ErrorNavigator.razor - Helps users navigate and resolve errors with actionable steps *@
+
+<div class="error-navigator @(IsExpanded ? "expanded" : "")" role="alert" aria-live="polite">
+    <div class="error-header" @onclick="ToggleExpanded">
+        <div class="error-icon-wrapper">
+            <span class="error-icon">@GetCategoryIcon()</span>
+        </div>
+        <div class="error-header-content">
+            <h3 class="error-title">@Title</h3>
+            @if (!string.IsNullOrEmpty(ErrorCode))
+            {
+                <span class="error-code">@ErrorCode</span>
+            }
+        </div>
+        <button class="expand-toggle" aria-expanded="@IsExpanded" aria-label="@(IsExpanded ? "Collapse" : "Expand") error details">
+            <span class="expand-icon">@(IsExpanded ? "▼" : "▶")</span>
+        </button>
+    </div>
+
+    @if (IsExpanded)
+    {
+        <div class="error-body">
+            <p class="error-description">@Description</p>
+
+            @if (Solutions.Any())
+            {
+                <div class="solutions-section">
+                    <h4>What you can try:</h4>
+                    <ol class="solutions-list">
+                        @foreach (var (solution, index) in Solutions.Select((s, i) => (s, i)))
+                        {
+                            <li class="solution-item @(CompletedSteps.Contains(index) ? "completed" : "")">
+                                <label class="solution-checkbox">
+                                    <input type="checkbox"
+                                           checked="@CompletedSteps.Contains(index)"
+                                           @onchange="() => ToggleStep(index)" />
+                                    <span class="checkmark"></span>
+                                </label>
+                                <span class="solution-text">@solution</span>
+                            </li>
+                        }
+                    </ol>
+                </div>
+            }
+
+            @if (DiagnosticCommands.Any())
+            {
+                <div class="diagnostics-section">
+                    <h4>Diagnostic commands:</h4>
+                    @foreach (var cmd in DiagnosticCommands)
+                    {
+                        <div class="command-block">
+                            <span class="command-description">@cmd.Description</span>
+                            <div class="command-line">
+                                <code>@cmd.Command</code>
+                                <button class="copy-btn" @onclick="() => CopyToClipboard(cmd.Command)" title="Copy command">
+                                    @(CopiedCommand == cmd.Command ? "✓" : "📋")
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (RelatedLinks.Any())
+            {
+                <div class="links-section">
+                    <h4>Helpful resources:</h4>
+                    <ul class="links-list">
+                        @foreach (var link in RelatedLinks)
+                        {
+                            <li>
+                                <a href="@link.Url" target="_blank" rel="noopener noreferrer">
+                                    @link.Title
+                                    <span class="external-link-icon">↗</span>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            <div class="error-actions">
+                @if (ShowRetryButton)
+                {
+                    <button class="btn btn-primary" @onclick="HandleRetry">
+                        <span class="btn-icon">🔄</span> Try Again
+                    </button>
+                }
+                @if (ShowReportButton)
+                {
+                    <button class="btn btn-secondary" @onclick="HandleReport">
+                        <span class="btn-icon">📝</span> Report Issue
+                    </button>
+                }
+                @if (ShowBackButton)
+                {
+                    <button class="btn btn-outline" @onclick="HandleBack">
+                        <span class="btn-icon">←</span> Go Back
+                    </button>
+                }
+            </div>
+
+            @if (!string.IsNullOrEmpty(TechnicalDetails))
+            {
+                <details class="technical-details">
+                    <summary>Technical details</summary>
+                    <pre>@TechnicalDetails</pre>
+                </details>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Something went wrong";
+    [Parameter] public string? ErrorCode { get; set; }
+    [Parameter] public string Description { get; set; } = "We encountered an unexpected error.";
+    [Parameter] public string Category { get; set; } = "Unknown";
+    [Parameter] public List<string> Solutions { get; set; } = new();
+    [Parameter] public List<DiagnosticCommandModel> DiagnosticCommands { get; set; } = new();
+    [Parameter] public List<ResourceLinkModel> RelatedLinks { get; set; } = new();
+    [Parameter] public string? TechnicalDetails { get; set; }
+    [Parameter] public bool ShowRetryButton { get; set; } = true;
+    [Parameter] public bool ShowReportButton { get; set; } = true;
+    [Parameter] public bool ShowBackButton { get; set; } = true;
+    [Parameter] public bool StartExpanded { get; set; } = true;
+    [Parameter] public EventCallback OnRetry { get; set; }
+    [Parameter] public EventCallback OnReport { get; set; }
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    [Inject] private NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
+    private bool IsExpanded { get; set; }
+    private HashSet<int> CompletedSteps { get; set; } = new();
+    private string? CopiedCommand { get; set; }
+
+    protected override void OnInitialized()
+    {
+        IsExpanded = StartExpanded;
+    }
+
+    private void ToggleExpanded() => IsExpanded = !IsExpanded;
+
+    private void ToggleStep(int index)
+    {
+        if (CompletedSteps.Contains(index))
+            CompletedSteps.Remove(index);
+        else
+            CompletedSteps.Add(index);
+    }
+
+    private async Task CopyToClipboard(string text)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            CopiedCommand = text;
+            StateHasChanged();
+
+            await Task.Delay(2000);
+            CopiedCommand = null;
+            StateHasChanged();
+        }
+        catch
+        {
+            // Clipboard API not available
+        }
+    }
+
+    private async Task HandleRetry()
+    {
+        if (OnRetry.HasDelegate)
+            await OnRetry.InvokeAsync();
+    }
+
+    private async Task HandleReport()
+    {
+        if (OnReport.HasDelegate)
+            await OnReport.InvokeAsync();
+    }
+
+    private async Task HandleBack()
+    {
+        if (OnBack.HasDelegate)
+            await OnBack.InvokeAsync();
+        else
+            NavigationManager.NavigateTo("/");
+    }
+
+    private string GetCategoryIcon() => Category?.ToLower() switch
+    {
+        "azure" => "☁️",
+        "authentication" => "🔑",
+        "database" => "🗄️",
+        "network" => "🌐",
+        "configuration" => "⚙️",
+        "build" => "🔨",
+        _ => "⚠️"
+    };
+
+    public class DiagnosticCommandModel
+    {
+        public string Description { get; set; } = string.Empty;
+        public string Command { get; set; } = string.Empty;
+    }
+
+    public class ResourceLinkModel
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Url { get; set; } = string.Empty;
+    }
+}

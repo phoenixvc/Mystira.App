@@ -14,10 +14,11 @@ import {
   InfrastructureResourcesTab,
   InfrastructureTabs,
   InfrastructureTemplatesTab,
+  SmartDeploymentPanel,
 } from './components';
 import { useCliBuild, useInfrastructureActions, useInfrastructureEnvironment, useResourceGroupConfig, useTemplates, useWorkflowStatus } from './hooks';
 
-type Tab = 'actions' | 'templates' | 'resources' | 'history' | 'recommended-fixes';
+type Tab = 'actions' | 'smart-deploy' | 'templates' | 'resources' | 'history' | 'recommended-fixes';
 
 function InfrastructurePanel() {
   const [activeTab, setActiveTab] = useState<Tab>('actions');
@@ -256,6 +257,10 @@ function InfrastructurePanel() {
             hasDeployedInfrastructure={hasDeployedInfrastructure}
             deploymentProgress={deploymentProgress}
           />
+        )}
+
+        {activeTab === 'smart-deploy' && (
+          <SmartDeploymentPanel repoRoot={repoRoot} />
         )}
 
         {activeTab === 'templates' && (

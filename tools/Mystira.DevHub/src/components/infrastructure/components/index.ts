@@ -6,6 +6,7 @@ export { InfrastructureActionButtons } from './InfrastructureActionButtons';
 export { InfrastructureConfirmDialogs } from './InfrastructureConfirmDialogs';
 export { InfrastructurePanelHeader } from './InfrastructurePanelHeader';
 export { InfrastructureProgressStepper } from './InfrastructureProgressStepper';
+export { SmartDeploymentPanel } from './SmartDeploymentPanel';
 export { StepSeparator } from './StepSeparator';
 export { WhatIfViewerSection } from './WhatIfViewerSection';
 
