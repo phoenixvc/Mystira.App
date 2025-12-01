@@ -304,7 +304,7 @@ html[data-theme="dark"] .mystira-tagline {
     position: relative;
     width: 300px;
     height: 300px;
-    margin: 0 auto 80px;
+    margin: 0 auto 20px;
     -webkit-animation: fadeIn 1s ease-in-out;
     animation: fadeIn 1s ease-in-out;
     overflow: visible;
@@ -384,21 +384,21 @@ html[data-theme="dark"] .mystira-tagline {
     filter: drop-shadow(0 6px 25px rgba(139, 92, 246, 0.3));
 }
 
-/* Replay button - subtle and elegant */
+/* Replay button - subtle, positioned in bottom-right corner of logo */
 .replay-btn {
     position: absolute;
-    bottom: -45px;
-    left: 50%;
-    -webkit-transform: translateX(-50%);
-    transform: translateX(-50%);
-    width: 36px;
-    height: 36px;
+    bottom: 15px;
+    right: calc(50% - 130px);
+    -webkit-transform: none;
+    transform: none;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
-    border: 1px solid rgba(139, 92, 246, 0.25);
-    background: rgba(255, 255, 255, 0.6);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-    color: rgba(139, 92, 246, 0.6);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    background: rgba(255, 255, 255, 0.7);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    color: rgba(139, 92, 246, 0.5);
     cursor: pointer;
     display: -webkit-box;
     display: -ms-flexbox;
@@ -409,57 +409,57 @@ html[data-theme="dark"] .mystira-tagline {
     -webkit-box-pack: center;
     -ms-flex-pack: center;
     justify-content: center;
-    font-size: 0.75rem;
+    font-size: 0.6rem;
     z-index: 10;
-    -webkit-transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.1);
+    -webkit-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 4px rgba(139, 92, 246, 0.1);
 }
 
 .replay-btn.visible {
-    opacity: 0.7;
-    -webkit-transform: translateX(-50%) translateY(0);
-    transform: translateX(-50%) translateY(0);
+    opacity: 0.6;
+    -webkit-transform: scale(1);
+    transform: scale(1);
 }
 
 .replay-btn.hidden {
     opacity: 0;
-    -webkit-transform: translateX(-50%) translateY(8px);
-    transform: translateX(-50%) translateY(8px);
+    -webkit-transform: scale(0.8);
+    transform: scale(0.8);
     pointer-events: none;
 }
 
 .replay-btn:hover {
     opacity: 1;
-    background: rgba(139, 92, 246, 0.9);
+    background: rgba(139, 92, 246, 0.85);
     color: white;
-    border-color: rgba(139, 92, 246, 0.8);
-    -webkit-transform: translateX(-50%) scale(1.15);
-    transform: translateX(-50%) scale(1.15);
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);
+    border-color: rgba(139, 92, 246, 0.7);
+    -webkit-transform: scale(1.1);
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
 }
 
 .replay-btn:active {
-    -webkit-transform: translateX(-50%) scale(0.95);
-    transform: translateX(-50%) scale(0.95);
+    -webkit-transform: scale(0.95);
+    transform: scale(0.95);
 }
 
 /* Dark mode replay button */
 html[data-theme="dark"] .replay-btn {
-    background: rgba(30, 41, 59, 0.5);
-    border-color: rgba(139, 92, 246, 0.2);
-    color: rgba(167, 139, 250, 0.6);
+    background: rgba(30, 41, 59, 0.6);
+    border-color: rgba(139, 92, 246, 0.15);
+    color: rgba(167, 139, 250, 0.5);
 }
 
 html[data-theme="dark"] .replay-btn:hover {
-    background: rgba(124, 58, 237, 0.9);
+    background: rgba(124, 58, 237, 0.85);
     color: white;
-    border-color: rgba(124, 58, 237, 0.8);
+    border-color: rgba(124, 58, 237, 0.7);
 }
 
-/* Play icon adjustment */
+/* Icon adjustment */
 .replay-btn i {
-    margin-left: 2px; /* Optical center for play icon */
+    font-size: 0.55rem;
 }
 
 .hero-description {
@@ -717,10 +717,14 @@ html[data-theme="dark"] .hero-description {
     }
 
     .replay-btn {
-        width: 32px;
-        height: 32px;
-        bottom: -35px;
-        font-size: 0.65rem;
+        width: 24px;
+        height: 24px;
+        bottom: 10px;
+        right: calc(50% - 85px);
+    }
+
+    .replay-btn i {
+        font-size: 0.5rem;
     }
 
     .mystira-title {
@@ -766,13 +770,18 @@ html[data-theme="dark"] .hero-description {
     .hero-logo-container {
         width: 180px;
         height: 180px;
-        margin-bottom: 24px;
+        margin-bottom: 16px;
     }
 
     .hero-logo-video,
     .hero-logo {
         max-width: 180px;
         max-height: 180px;
+    }
+
+    .replay-btn {
+        right: calc(50% - 75px);
+        bottom: 8px;
     }
 
     .mystira-title .alpha-badge {

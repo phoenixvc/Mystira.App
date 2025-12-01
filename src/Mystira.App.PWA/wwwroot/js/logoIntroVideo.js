@@ -1,5 +1,6 @@
 // Logo Intro Video Handler
-// Plays video on page load, then fades to static logo with visual effects
+// Loads video in background, transitions from logo to video when ready,
+// then back to logo when video ends
 
 // Store reference per video element to support multiple instances
 const videoRefs = new Map();
@@ -7,85 +8,77 @@ const videoRefs = new Map();
 window.initLogoIntroVideo = function(dotNetRef) {
     const video = document.getElementById('logo-intro-video');
     const logo = document.getElementById('hero-logo-static');
-    
+
     if (!video || !logo) {
-        // If video element doesn't exist, show logo immediately
-        if (dotNetRef) {
-            dotNetRef.invokeMethodAsync('OnVideoError');
-        }
+        // If video element doesn't exist, stay on logo
+        console.log('Video or logo element not found');
         return;
     }
-    
+
     // Store the reference for this video
     videoRefs.set(video, dotNetRef);
-    
+
     // Check if video source exists
     const videoSource = video.querySelector('source');
     if (!videoSource || !videoSource.src) {
-        // No video source, show logo immediately
-        if (dotNetRef) {
-            dotNetRef.invokeMethodAsync('OnVideoError');
-        }
+        // No video source, stay on logo
+        console.log('No video source found');
         return;
     }
-    
-    // Handle video load error - fallback to logo
+
+    // Handle video load error - stay on logo
     video.addEventListener('error', function() {
-        console.log('Logo intro video failed to load, showing static logo');
+        console.log('Logo intro video failed to load, staying on static logo');
         const ref = videoRefs.get(video);
         if (ref) {
             ref.invokeMethodAsync('OnVideoError');
         }
     });
-    
-    // Handle video end - transition to logo
+
+    // Handle video end - transition back to logo
     video.addEventListener('ended', function() {
-        console.log('Video ended, transitioning to logo');
+        console.log('Video ended, transitioning back to logo');
         const ref = videoRefs.get(video);
         if (ref) {
             ref.invokeMethodAsync('OnVideoEnded');
         }
     });
-    
-    // Handle video can play - ensure it starts
-    video.addEventListener('canplay', function() {
-        if (!video.paused) {
-            return; // Already playing
+
+    // Handle video ready to play - transition from logo to video
+    video.addEventListener('canplaythrough', function() {
+        console.log('Video loaded and ready to play');
+        const ref = videoRefs.get(video);
+        if (ref) {
+            // Notify Blazor that video is ready
+            ref.invokeMethodAsync('OnVideoReady');
+
+            // Small delay to allow CSS transition to start, then play
+            setTimeout(function() {
+                video.play().catch(function(error) {
+                    console.log('Video autoplay prevented:', error);
+                    // If autoplay fails, stay on logo
+                    ref.invokeMethodAsync('OnVideoError');
+                });
+            }, 100);
         }
-        video.play().catch(function(error) {
-            console.log('Video autoplay prevented:', error);
-            // If autoplay fails, show logo immediately
-            const ref = videoRefs.get(video);
-            if (ref) {
-                ref.invokeMethodAsync('OnVideoError');
-            }
-        });
-    });
-    
-    // Fallback: If video doesn't start playing within 3 seconds, show logo
-    setTimeout(function() {
-        if (video.paused && video.readyState < 3) {
-            console.log('Video not playing, showing static logo');
-            const ref = videoRefs.get(video);
-            if (ref) {
-                ref.invokeMethodAsync('OnVideoError');
-            }
-        }
-    }, 3000);
+    }, { once: true }); // Only trigger once on first load
+
+    // Start loading the video
+    video.load();
 };
 
 // Function to replay the logo video with transition effect
 window.replayLogoVideo = function() {
     const video = document.getElementById('logo-intro-video');
-    
+
     if (!video) {
         console.log('Video element not found');
         return;
     }
-    
+
     // Reset video to beginning
     video.currentTime = 0;
-    
+
     // Play the video
     video.play().catch(function(error) {
         console.log('Video replay failed:', error);

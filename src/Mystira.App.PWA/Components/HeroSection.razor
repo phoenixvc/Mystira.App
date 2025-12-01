@@ -94,30 +94,30 @@
             </h1>
             <p class="mystira-tagline mb-4">Where imagination meets growth</p>
             <div class="hero-logo-container mb-4">
-                <!-- Logo Intro Video (plays on page load, then fades to logo) -->
-                <video id="logo-intro-video" 
-                       class="hero-logo-video @(showVideo ? "visible" : "hidden")" 
-                       autoplay 
-                       muted 
+                <!-- Logo Intro Video (loads in background, plays when ready) -->
+                <video id="logo-intro-video"
+                       class="hero-logo-video @(showVideo ? "visible" : "hidden")"
+                       muted
                        playsinline
+                       preload="auto"
                        aria-label="Mystira logo introduction video">
                     <source src="videos/logo-intro.mp4" type="video/mp4">
                 </video>
-                <!-- Static Logo (shown after video fades) -->
+                <!-- Static Logo (shown initially, fades when video is ready) -->
                 <img src="images/mystira-logo.webp"
                      id="hero-logo-static"
                      alt="Mystira - Where imagination meets growth"
                      width="300"
                      height="300"
                      class="hero-logo @(showVideo ? "hidden" : "visible")" />
-                     
-                <!-- Replay button (appears after video ends) -->
-                <button id="replay-video-btn" 
+
+                <!-- Replay button (appears after video ends, positioned in corner) -->
+                <button id="replay-video-btn"
                         class="replay-btn @(showReplayButton ? "visible" : "hidden")"
                         @onclick="ReplayVideo"
-                        title="Replay intro video"
+                        title="Replay intro"
                         aria-label="Replay introduction video">
-                    <i class="fas fa-play"></i>
+                    <i class="fas fa-redo-alt"></i>
                 </button>
             </div>
             @if (ShowDescription)
@@ -166,7 +166,7 @@
     public EventCallback OnWatchDemoClick { get; set; }
 
     private bool _particlesInitialized = false;
-    private bool showVideo = true;
+    private bool showVideo = false; // Start with logo visible
     private bool showReplayButton = false;
     private DotNetObjectReference<HeroSection>? _dotNetRef;
 
@@ -178,8 +178,8 @@
             try
             {
                 await JSRuntime.InvokeVoidAsync("MystiraParticles.init", "particle-canvas");
-                
-                // Initialize logo intro video fade transition with callback
+
+                // Initialize logo intro video - loads in background, plays when ready
                 _dotNetRef = DotNetObjectReference.Create(this);
                 await JSRuntime.InvokeVoidAsync("initLogoIntroVideo", _dotNetRef);
             }
@@ -191,8 +191,18 @@
     }
 
     [JSInvokable]
+    public void OnVideoReady()
+    {
+        // Video is loaded and ready - transition from logo to video
+        showVideo = true;
+        showReplayButton = false;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
     public void OnVideoEnded()
     {
+        // Video finished - transition back to logo with replay button
         showVideo = false;
         showReplayButton = true;
         StateHasChanged();
@@ -201,6 +211,7 @@
     [JSInvokable]
     public void OnVideoError()
     {
+        // Video failed - stay on logo, no replay button
         showVideo = false;
         showReplayButton = false;
         StateHasChanged();
