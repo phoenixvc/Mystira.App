@@ -4,42 +4,42 @@
 @implements IAsyncDisposable
 
 <div class="row" style="margin-top: 0;">
-    <div class="col-12 text-center mb-5 hero-section" style="position: relative; overflow: hidden; margin-top: 0; padding-top: 20px;">
+    <div class="col-12 text-center mb-5 hero-section" style="position: relative; margin-top: 0;">
         <!-- Particle Background Canvas -->
         <canvas id="particle-canvas" class="particle-canvas" aria-hidden="true"
                 style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: auto;"></canvas>
         
         <!-- Golden Light Tubes - positioned around the logo/video area -->
         <div class="golden-lights" aria-hidden="true" id="golden-lights-container">
-            <svg class="golden-light-svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+            <svg class="golden-light-svg" viewBox="0 0 600 500" preserveAspectRatio="xMidYMid meet">
                 <!-- Animated twirling light tubes that orbit around center -->
                 <g class="light-tube-group light-tube-group-1">
                     <!-- Left orbital tube -->
                     <path class="light-tube light-tube-1" 
-                          d="M 100 200 C 200 100, 400 150, 500 300 S 550 450, 600 400 S 700 300, 600 350 C 500 400, 550 500, 700 450" 
+                          d="M 50 150 C 100 80, 200 100, 280 200 S 320 320, 300 280 S 350 200, 300 240 C 250 280, 280 350, 380 320" 
                           fill="none" stroke="url(#goldenGradient1)" stroke-width="3" stroke-linecap="round" />
                     <path class="light-tube light-tube-1-glow" 
-                          d="M 100 200 C 200 100, 400 150, 500 300 S 550 450, 600 400 S 700 300, 600 350 C 500 400, 550 500, 700 450" 
+                          d="M 50 150 C 100 80, 200 100, 280 200 S 320 320, 300 280 S 350 200, 300 240 C 250 280, 280 350, 380 320" 
                           fill="none" stroke="url(#goldenGradient1)" stroke-width="12" opacity="0.2" stroke-linecap="round" />
                 </g>
                 
                 <g class="light-tube-group light-tube-group-2">
                     <!-- Right orbital tube -->
                     <path class="light-tube light-tube-2" 
-                          d="M 1100 250 C 1000 150, 800 200, 700 350 S 650 500, 600 400 S 500 300, 600 350 C 700 400, 650 550, 500 500" 
+                          d="M 550 180 C 500 100, 400 130, 340 220 S 310 350, 300 280 S 250 200, 300 240 C 350 280, 330 380, 230 350" 
                           fill="none" stroke="url(#goldenGradient2)" stroke-width="3" stroke-linecap="round" />
                     <path class="light-tube light-tube-2-glow" 
-                          d="M 1100 250 C 1000 150, 800 200, 700 350 S 650 500, 600 400 S 500 300, 600 350 C 700 400, 650 550, 500 500" 
+                          d="M 550 180 C 500 100, 400 130, 340 220 S 310 350, 300 280 S 250 200, 300 240 C 350 280, 330 380, 230 350" 
                           fill="none" stroke="url(#goldenGradient2)" stroke-width="12" opacity="0.2" stroke-linecap="round" />
                 </g>
                 
                 <g class="light-tube-group light-tube-group-3">
                     <!-- Inner spiral around logo -->
                     <path class="light-tube light-tube-3" 
-                          d="M 450 250 Q 500 200, 600 250 T 750 350 Q 700 450, 600 450 T 450 350 Q 500 280, 600 300" 
+                          d="M 200 180 Q 250 140, 300 180 T 400 250 Q 360 320, 300 320 T 200 250 Q 250 200, 300 220" 
                           fill="none" stroke="url(#goldenGradient3)" stroke-width="2.5" stroke-linecap="round" />
                     <path class="light-tube light-tube-3-glow" 
-                          d="M 450 250 Q 500 200, 600 250 T 750 350 Q 700 450, 600 450 T 450 350 Q 500 280, 600 300" 
+                          d="M 200 180 Q 250 140, 300 180 T 400 250 Q 360 320, 300 320 T 200 250 Q 250 200, 300 220" 
                           fill="none" stroke="url(#goldenGradient3)" stroke-width="8" opacity="0.15" stroke-linecap="round" />
                 </g>
                 
