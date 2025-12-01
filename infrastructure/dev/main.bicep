@@ -25,7 +25,48 @@ param acsConnectionString string = ''
 param acsSenderEmail string = 'donotreply@mystira.app'
 
 @description('Allowed CORS origins for APIs')
-param corsAllowedOrigins string = 'http://localhost:7000,https://localhost:7000,https://mystira.app,https://mango-water-04fdb1c03.3.azurestaticapps.net,https://blue-water-0eab7991e.3.azurestaticapps.net'
+param corsAllowedOrigins string = 'http://localhost:7000,https://localhost:7000,https://mystira.app,https://mango-water-04fdb1c03.3.azurestaticapps.net,https://blue-water-0eab7991e.3.azurestaticapps.net,https://brave-meadow-0ecd87c03.3.azurestaticapps.net'
+
+@description('Skip storage account creation if it already exists')
+param skipStorageCreation bool = false
+
+@description('Connection string for existing storage account (if skipStorageCreation is true)')
+@secure()
+param existingStorageConnectionString string = ''
+
+@description('Name of existing storage account (if skipStorageCreation is true)')
+param existingStorageAccountName string = ''
+
+@description('Resource group where existing storage account is located (if skipStorageCreation is true)')
+param existingStorageResourceGroup string = ''
+
+@description('Storage account name to create (only used if skipStorageCreation is false)')
+param newStorageAccountName string = ''
+
+@description('Skip Communication Services creation if it already exists')
+param skipCommServiceCreation bool = false
+
+@description('Resource group where existing Communication Service is located (if skipCommServiceCreation is true)')
+param existingCommServiceResourceGroup string = ''
+
+@description('Skip Cosmos DB creation if it already exists')
+param skipCosmosCreation bool = false
+
+@description('Resource group where existing Cosmos DB is located (if skipCosmosCreation is true)')
+param existingCosmosResourceGroup string = ''
+
+@description('Name of existing Cosmos DB account (if skipCosmosCreation is true)')
+param existingCosmosDbAccountName string = ''
+
+@description('Connection string for existing Cosmos DB (if skipCosmosCreation is true)')
+@secure()
+param existingCosmosConnectionString string = ''
+
+@description('Skip App Service creation if they already exist')
+param skipAppServiceCreation bool = false
+
+@description('Resource group where existing App Services are located (if skipAppServiceCreation is true)')
+param existingAppServiceResourceGroup string = ''
 
 // Deploy Log Analytics Workspace
 module logAnalytics 'modules/log-analytics.bicep' = {
@@ -46,51 +87,91 @@ module appInsights 'modules/application-insights.bicep' = {
   }
 }
 
-// Deploy Azure Communication Services
-module communicationServices 'modules/communication-services.bicep' = {
+// Deploy Communication Services (conditional - skip if already exists)
+module communicationServices 'modules/communication-services.bicep' = if (!skipCommServiceCreation) {
   name: 'communication-services-deployment'
   params: {
     communicationServiceName: '${resourcePrefix}-acs-mystira'
-    emailServiceName: '${resourcePrefix}-ecs-mystira'
+    emailServiceName: '${resourcePrefix}-email-mystira'
     domainName: 'mystira.app'
     location: 'global'
+    dataLocation: 'Europe'
   }
 }
 
-// Deploy Storage Account
-module storage 'modules/storage.bicep' = {
+// Reference existing Communication Service if skipping
+resource existingCommService 'Microsoft.Communication/communicationServices@2023-04-01' existing = if (skipCommServiceCreation && existingCommServiceResourceGroup != '') {
+  name: '${resourcePrefix}-acs-mystira'
+  scope: resourceGroup(existingCommServiceResourceGroup)
+}
+
+// Get ACS connection string (from existing parameter or use empty - connection string must be retrieved separately)
+var acsConnectionStringToUse = skipCommServiceCreation ? acsConnectionString : ''
+
+// Storage account name calculation
+var storageAccountNameToUse = skipStorageCreation ? 'placeholder123456789' : (newStorageAccountName != '' ? newStorageAccountName : replace(toLower('${resourcePrefix}-st-mystira'), '-', ''))
+// Use existing storage connection string if provided, otherwise create new storage
+var storageConnString = skipStorageCreation && existingStorageConnectionString != '' ? existingStorageConnectionString : ''
+
+// Reference existing storage account (only if skipping and resource group provided)
+resource existingStorage 'Microsoft.Storage/storageAccounts@2023-01-01' existing = if (skipStorageCreation && existingStorageResourceGroup != '' && existingStorageAccountName != '') {
+  name: existingStorageAccountName
+  scope: resourceGroup(existingStorageResourceGroup)
+}
+
+// Deploy Storage Account (conditional - skip if already exists)
+module storage 'modules/storage.bicep' = if (!skipStorageCreation) {
   name: 'storage-deployment'
   params: {
-    storageAccountName: 'deveuwstmystira' // max 24 chars, lowercase, no hyphens for storage
+    storageAccountName: storageAccountNameToUse
     location: location
-    sku: 'Standard_LRS' // Dev: Locally redundant (cheapest)
-    corsAllowedOrigins: split(corsAllowedOrigins, ',')
+    sku: 'Standard_LRS' // Dev: LRS for cost optimization
   }
 }
 
-// Deploy Cosmos DB
-module cosmosDb 'modules/cosmos-db.bicep' = {
+// Deploy Cosmos DB (conditional - skip if already exists)
+// Use existing connection string if provided, otherwise create new
+var cosmosConnString = skipCosmosCreation && existingCosmosConnectionString != '' ? existingCosmosConnectionString : ''
+
+module cosmosDb 'modules/cosmos-db.bicep' = if (!skipCosmosCreation) {
   name: 'cosmosdb-deployment'
   params: {
-    cosmosDbAccountName: 'dev-euw-cosmos-mystira'
+    cosmosDbAccountName: '${resourcePrefix}-cosmos-mystira'
     location: location
     databaseName: 'MystiraAppDb'
     serverless: true // Dev: Serverless for cost optimization
   }
 }
 
+// Reference existing Cosmos DB if skipping
+resource existingCosmos 'Microsoft.DocumentDB/databaseAccounts@2023-04-15' existing = if (skipCosmosCreation && existingCosmosResourceGroup != '' && existingCosmosDbAccountName != '') {
+  name: existingCosmosDbAccountName
+  scope: resourceGroup(existingCosmosResourceGroup)
+}
+
+// Reference existing App Services if skipping creation
+resource existingApiAppService 'Microsoft.Web/sites@2023-12-01' existing = if (skipAppServiceCreation && existingAppServiceResourceGroup != '') {
+  name: '${resourcePrefix}-app-mystira-api'
+  scope: resourceGroup(existingAppServiceResourceGroup)
+}
+
+resource existingAdminApiAppService 'Microsoft.Web/sites@2023-12-01' existing = if (skipAppServiceCreation && existingAppServiceResourceGroup != '') {
+  name: '${resourcePrefix}-app-mystira-admin-api'
+  scope: resourceGroup(existingAppServiceResourceGroup)
+}
+
 // Deploy Main API App Service
-module apiAppService 'modules/app-service.bicep' = {
+module apiAppService 'modules/app-service.bicep' = if (!skipAppServiceCreation) {
   name: 'api-appservice-deployment'
   params: {
-    appServiceName: 'dev-euw-app-mystira-api'
+    appServiceName: '${resourcePrefix}-app-mystira-api'
     appServicePlanName: '${resourcePrefix}-asp-mystira-api'
     location: location
     sku: 'F1' // Dev: Free tier for cost optimization
-    cosmosDbConnectionString: cosmosDb.outputs.cosmosDbConnectionString
-    storageConnectionString: storage.outputs.storageConnectionString
+    cosmosDbConnectionString: skipCosmosCreation ? cosmosConnString : (cosmosDb.outputs.cosmosDbConnectionString)
+    storageConnectionString: skipStorageCreation ? storageConnString : (storage.outputs.storageConnectionString)
     jwtSecretKey: jwtSecretKey
-    acsConnectionString: acsConnectionString
+    acsConnectionString: acsConnectionStringToUse
     acsSenderEmail: acsSenderEmail
     corsAllowedOrigins: corsAllowedOrigins
     appInsightsConnectionString: appInsights.outputs.connectionString
@@ -99,17 +180,17 @@ module apiAppService 'modules/app-service.bicep' = {
 }
 
 // Deploy Admin API App Service
-module adminApiAppService 'modules/app-service.bicep' = {
+module adminApiAppService 'modules/app-service.bicep' = if (!skipAppServiceCreation) {
   name: 'admin-api-appservice-deployment'
   params: {
-    appServiceName: 'dev-euw-app-mystira-admin-api'
+    appServiceName: '${resourcePrefix}-app-mystira-admin-api'
     appServicePlanName: '${resourcePrefix}-asp-mystira-admin-api'
     location: location
     sku: 'F1' // Dev: Free tier for cost optimization
-    cosmosDbConnectionString: cosmosDb.outputs.cosmosDbConnectionString
-    storageConnectionString: storage.outputs.storageConnectionString
+    cosmosDbConnectionString: skipCosmosCreation ? cosmosConnString : (cosmosDb.outputs.cosmosDbConnectionString)
+    storageConnectionString: skipStorageCreation ? storageConnString : (storage.outputs.storageConnectionString)
     jwtSecretKey: jwtSecretKey
-    acsConnectionString: acsConnectionString
+    acsConnectionString: acsConnectionStringToUse
     acsSenderEmail: acsSenderEmail
     corsAllowedOrigins: corsAllowedOrigins
     appInsightsConnectionString: appInsights.outputs.connectionString
@@ -121,11 +202,11 @@ module adminApiAppService 'modules/app-service.bicep' = {
 output logAnalyticsWorkspaceId string = logAnalytics.outputs.workspaceId
 output appInsightsInstrumentationKey string = appInsights.outputs.instrumentationKey
 output appInsightsConnectionString string = appInsights.outputs.connectionString
-output communicationServiceId string = communicationServices.outputs.communicationServiceId
-output emailServiceId string = communicationServices.outputs.emailServiceId
-output storageAccountName string = storage.outputs.storageAccountName
-output storageConnectionString string = storage.outputs.storageConnectionString
-output cosmosDbAccountName string = cosmosDb.outputs.cosmosDbAccountName
-output cosmosDbConnectionString string = cosmosDb.outputs.cosmosDbConnectionString
-output apiAppServiceUrl string = apiAppService.outputs.appServiceUrl
-output adminApiAppServiceUrl string = adminApiAppService.outputs.appServiceUrl
+output communicationServiceId string = skipCommServiceCreation ? existingCommService.id : communicationServices.outputs.communicationServiceId
+output emailServiceId string = skipCommServiceCreation ? '' : (communicationServices.outputs.emailServiceId)
+output storageAccountName string = skipStorageCreation ? existingStorageAccountName : (storage.outputs.storageAccountName)
+output storageConnectionString string = skipStorageCreation ? storageConnString : (storage.outputs.storageConnectionString)
+output cosmosDbAccountName string = skipCosmosCreation ? existingCosmosDbAccountName : (cosmosDb.outputs.cosmosDbAccountName)
+output cosmosDbConnectionString string = skipCosmosCreation ? cosmosConnString : (cosmosDb.outputs.cosmosDbConnectionString)
+output apiAppServiceUrl string = skipAppServiceCreation ? 'https://${existingApiAppService.properties.defaultHostName}' : apiAppService.outputs.appServiceUrl
+output adminApiAppServiceUrl string = skipAppServiceCreation ? 'https://${existingAdminApiAppService.properties.defaultHostName}' : adminApiAppService.outputs.appServiceUrl

@@ -1,0 +1,55 @@
+@inject IJSRuntime JSRuntime
+
+<button class="theme-toggle" @onclick="ToggleTheme" title="@(IsDarkMode ? "Switch to light mode" : "Switch to dark mode")" aria-label="@(IsDarkMode ? "Switch to light mode" : "Switch to dark mode")">
+    @if (IsDarkMode)
+    {
+        <i class="fas fa-sun"></i>
+    }
+    else
+    {
+        <i class="fas fa-moon"></i>
+    }
+</button>
+
+@code {
+    private bool IsDarkMode { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Check current theme from localStorage or system preference
+            var currentTheme = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "theme");
+            
+            if (string.IsNullOrEmpty(currentTheme))
+            {
+                // Check system preference
+                var prefersDark = await JSRuntime.InvokeAsync<bool>("eval", "window.matchMedia('(prefers-color-scheme: dark)').matches");
+                IsDarkMode = prefersDark;
+                // Removed useless assignment to currentTheme
+            }
+            else
+            {
+                IsDarkMode = currentTheme == "dark";
+            }
+            
+            // Apply theme
+            await ApplyTheme(IsDarkMode);
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleTheme()
+    {
+        IsDarkMode = !IsDarkMode;
+        await ApplyTheme(IsDarkMode);
+    }
+
+    private async Task ApplyTheme(bool isDark)
+    {
+        var theme = isDark ? "dark" : "light";
+        await JSRuntime.InvokeVoidAsync("eval", $"document.documentElement.setAttribute('data-theme', '{theme}')");
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "theme", theme);
+    }
+}
+

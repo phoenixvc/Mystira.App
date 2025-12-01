@@ -19,10 +19,21 @@ public class DiscordApiClient : BaseApiClient, IDiscordApiClient
             // Discord status is a public endpoint - no auth required
             return await HttpClient.GetFromJsonAsync<DiscordStatusResponse>("api/discord/status", JsonOptions);
         }
+        catch (HttpRequestException ex)
+        {
+            // Log as warning since Discord integration is optional
+            Logger.LogWarning(ex, "Discord status API unavailable (this is expected if Discord integration is not configured).");
+            return new DiscordStatusResponse
+            {
+                Enabled = false,
+                Connected = false,
+                Message = "Discord integration not available"
+            };
+        }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to get Discord status from API.");
-            // Return disabled status if API call fails
+            // Log unexpected errors
+            Logger.LogWarning(ex, "Failed to get Discord status from API.");
             return new DiscordStatusResponse
             {
                 Enabled = false,

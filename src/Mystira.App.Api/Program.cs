@@ -1,4 +1,5 @@
 using System.Text;
+using System.Linq;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -347,31 +348,65 @@ if (discordEnabled)
         .AddDiscordBotHealthCheck();
 }
 
-// Configure CORS for frontend integration
+// Configure CORS for frontend integration (Best Practices)
 var policyName = "MystiraAppPolicy";
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(policyName, policy =>
     {
-        var allowedOrigins = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string>()?.Split(',') ?? Array.Empty<string>();
-        if (allowedOrigins.Length == 0)
+        // Get allowed origins from configuration
+        var allowedOriginsConfig = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string>();
+        string[] originsToUse;
+
+        if (!string.IsNullOrWhiteSpace(allowedOriginsConfig))
         {
-            // Fallback to default origins if configuration is not set
-            policy.WithOrigins(
-                "http://localhost:7000",
-                "https://localhost:7000",
-                "https://mystiraapp.azurewebsites.net",
-                "https://mystira.app",
-                "https://mango-water-04fdb1c03.3.azurestaticapps.net",
-                "https://blue-water-0eab7991e.3.azurestaticapps.net");
+            // Use configured origins
+            originsToUse = allowedOriginsConfig.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         }
         else
         {
-            policy.WithOrigins(allowedOrigins);
+            // Fallback to default origins (development/local + production SWAs)
+            originsToUse = new[]
+            {
+                "http://localhost:7000",
+                "https://localhost:7000",
+                "https://mystira.app",                                    // Production domain
+                "https://blue-water-0eab7991e.3.azurestaticapps.net",    // Prod SWA
+                "https://brave-meadow-0ecd87c03.3.azurestaticapps.net",  // Dev SWA (South Africa North)
+                "https://dev-euw-swa-mystira-app.azurestaticapps.net",   // Dev SWA (West Europe - if custom domain)
+                "https://dev-san-swa-mystira-app.azurestaticapps.net"    // Dev SWA (South Africa North - if custom domain)
+            };
         }
-        policy.AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+
+        // Best Practice: Use WithOrigins (not AllowAnyOrigin) when using AllowCredentials
+        // AllowAnyOrigin cannot be used with AllowCredentials - must specify exact origins
+        policy.WithOrigins(originsToUse);
+
+        // Best Practice: Specify exact headers instead of AllowAnyHeader
+        policy.WithHeaders(
+            "Content-Type",
+            "Authorization",
+            "X-Requested-With",
+            "Accept",
+            "Origin",
+            "User-Agent",
+            "Cache-Control",
+            "Pragma");
+
+        // Best Practice: Specify exact methods instead of AllowAnyMethod
+        policy.WithMethods(
+            HttpMethod.Get.Method,
+            HttpMethod.Post.Method,
+            HttpMethod.Put.Method,
+            HttpMethod.Patch.Method,
+            HttpMethod.Delete.Method,
+            HttpMethod.Options.Method);
+
+        // Allow credentials for authenticated requests (required for cookies/auth headers)
+        policy.AllowCredentials();
+
+        // Set preflight cache duration (24 hours)
+        policy.SetPreflightMaxAge(TimeSpan.FromHours(24));
     });
 });
 

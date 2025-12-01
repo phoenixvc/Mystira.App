@@ -90,7 +90,7 @@
     flex-wrap: wrap;
 }
 
-.btn {
+.btn-primary {
     padding: 0.75rem 1.5rem;
     border: none;
     border-radius: 8px;
@@ -98,9 +98,6 @@
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
-}
-
-.btn-primary {
     background-color: var(--primary-color);
     color: white;
 }
@@ -112,6 +109,13 @@
 }
 
 .btn-secondary {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
     background-color: var(--muted);
     color: white;
 }
@@ -145,7 +149,8 @@
         flex-direction: column;
     }
 
-    .btn {
+    .btn-primary,
+    .btn-secondary {
         width: 100%;
     }
 }
@@ -156,7 +161,8 @@
         animation: none;
     }
 
-    .btn:hover {
+    .btn-primary:hover,
+    .btn-secondary:hover {
         transform: none;
     }
 }

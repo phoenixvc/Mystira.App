@@ -1,4 +1,5 @@
 using System.Text;
+using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -246,26 +247,68 @@ builder.Services.AddScoped<IAccountApiService, AccountApiService>();
 builder.Services.AddHealthChecks()
     .AddCheck<BlobStorageHealthCheck>("blob_storage");
 
-// Configure CORS for frontend integration
+// Configure CORS for frontend integration (Best Practices)
+var policyName = "MystiraAdminPolicy";
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("MystiraAdminPolicy", policy =>
+    options.AddPolicy(policyName, policy =>
     {
-        policy.WithOrigins(
+        // Get allowed origins from configuration
+        var allowedOriginsConfig = builder.Configuration.GetSection("CorsSettings:AllowedOrigins").Get<string>();
+        string[] originsToUse;
+
+        if (!string.IsNullOrWhiteSpace(allowedOriginsConfig))
+        {
+            // Use configured origins
+            originsToUse = allowedOriginsConfig.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        }
+        else
+        {
+            // Fallback to default origins (development/local + production SWAs)
+            originsToUse = new[]
+            {
                 "http://localhost:7001",
                 "https://localhost:7001",
-                "https://admin.mystiraapp.azurewebsites.net",
-                "https://admin.mystira.app",
                 "http://localhost:7000",
                 "https://localhost:7000",
+                "https://admin.mystiraapp.azurewebsites.net",
+                "https://admin.mystira.app",
                 "https://mystiraapp.azurewebsites.net",
                 "https://mystira.app",
-                "https://mango-water-04fdb1c03.3.azurestaticapps.net",
-                "https://blue-water-0eab7991e.3.azurestaticapps.net")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .SetIsOriginAllowedToAllowWildcardSubdomains()
-              .AllowCredentials();
+                "https://blue-water-0eab7991e.3.azurestaticapps.net",
+                "https://brave-meadow-0ecd87c03.3.azurestaticapps.net"
+            };
+        }
+
+        // Best Practice: Use WithOrigins (not AllowAnyOrigin) when using AllowCredentials
+        // AllowAnyOrigin cannot be used with AllowCredentials - must specify exact origins
+        policy.WithOrigins(originsToUse);
+
+        // Best Practice: Specify exact headers instead of AllowAnyHeader
+        policy.WithHeaders(
+            "Content-Type",
+            "Authorization",
+            "X-Requested-With",
+            "Accept",
+            "Origin",
+            "User-Agent",
+            "Cache-Control",
+            "Pragma");
+
+        // Best Practice: Specify exact methods instead of AllowAnyMethod
+        policy.WithMethods(
+            HttpMethod.Get.Method,
+            HttpMethod.Post.Method,
+            HttpMethod.Put.Method,
+            HttpMethod.Patch.Method,
+            HttpMethod.Delete.Method,
+            HttpMethod.Options.Method);
+
+        // Allow credentials for authenticated requests (required for cookies/auth headers)
+        policy.AllowCredentials();
+
+        // Set preflight cache duration (24 hours)
+        policy.SetPreflightMaxAge(TimeSpan.FromHours(24));
     });
 });
 
@@ -290,9 +333,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("MystiraAdminPolicy");
 
 app.UseRouting();
+
+// ✅ CORS must be between UseRouting and auth/endpoints
+app.UseCors(policyName);
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -157,12 +157,17 @@ public class AuthService : IAuthService
             }
 
             _logger.LogWarning("Passwordless signup request failed for: {Email}", email);
-            return (false, response?.Message ?? "Failed to request signup code");
+            return (false, response?.Message ?? "Failed to request signup code. Please check your connection and try again.");
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Network error requesting passwordless signup for: {Email}", email);
+            return (false, "Unable to connect to the server. Please check your internet connection and try again.");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error requesting passwordless signup for: {Email}", email);
-            return (false, "An error occurred while processing your request");
+            return (false, "An error occurred while processing your request. Please try again.");
         }
     }
 

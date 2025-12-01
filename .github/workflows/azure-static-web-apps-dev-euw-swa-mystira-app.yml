@@ -1,0 +1,151 @@
+name: PWA CI/CD - Dev Environment (West Europe)
+
+on:
+  push:
+    branches:
+      - dev
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - dev
+
+# Prevent concurrent deployments to avoid "Deployment Canceled" errors
+concurrency:
+  group: swa-dev-euw-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    runs-on: ubuntu-latest
+    name: Build and Deploy
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          lfs: false
+
+      # DEV-ONLY: Force Blazor environment to "Development" in Azure SWA
+      - name: Generate staticwebapp.config.json for DEV environment
+        run: |
+          cat << 'EOF' > src/Mystira.App.PWA/wwwroot/staticwebapp.config.json
+          {
+            "globalHeaders": {
+              "Blazor-Environment": "Development"
+            },
+            "navigationFallback": {
+              "rewrite": "/index.html",
+              "exclude": [
+                "/_framework/*",
+                "/css/*",
+                "/js/*",
+                "/icons/*",
+                "*.{css,scss,gif,ico,jpg,jpeg,js,json,png,svg,webp,woff,woff2,wasm,br,gz,dll,pdb,dat}"
+              ]
+            },
+            "mimeTypes": {
+              ".wasm": "application/wasm",
+              ".json": "application/json",
+              ".woff": "font/woff",
+              ".woff2": "font/woff2",
+              ".br": "application/octet-stream",
+              ".gz": "application/octet-stream",
+              ".dll": "application/octet-stream",
+              ".pdb": "application/octet-stream",
+              ".dat": "application/octet-stream"
+            },
+            "routes": [
+              {
+                "route": "/index.html",
+                "headers": {
+                  "Cache-Control": "no-cache, no-store, must-revalidate"
+                }
+              },
+              {
+                "route": "/service-worker.js",
+                "headers": {
+                  "Cache-Control": "no-cache, no-store, must-revalidate",
+                  "Service-Worker-Allowed": "/"
+                }
+              },
+              {
+                "route": "/service-worker.published.js",
+                "headers": {
+                  "Cache-Control": "no-cache, no-store, must-revalidate",
+                  "Service-Worker-Allowed": "/"
+                }
+              },
+              {
+                "route": "/_framework/blazor.boot.json",
+                "headers": {
+                  "Cache-Control": "no-cache, no-store, must-revalidate"
+                }
+              },
+              {
+                "route": "/_framework/*.wasm",
+                "headers": {
+                  "Cache-Control": "public, max-age=31536000, immutable",
+                  "Cross-Origin-Embedder-Policy": "require-corp",
+                  "Cross-Origin-Opener-Policy": "same-origin"
+                }
+              },
+              {
+                "route": "/_framework/*",
+                "headers": {
+                  "Cache-Control": "public, max-age=31536000, immutable"
+                }
+              },
+              {
+                "route": "/css/*",
+                "headers": {
+                  "Cache-Control": "public, max-age=31536000, immutable"
+                }
+              },
+              {
+                "route": "/js/*",
+                "headers": {
+                  "Cache-Control": "public, max-age=31536000, immutable"
+                }
+              },
+              {
+                "route": "/icons/*",
+                "headers": {
+                  "Cache-Control": "public, max-age=31536000, immutable"
+                }
+              }
+            ]
+          }
+          EOF
+
+      - name: Build And Deploy
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_MYSTIRA_APP }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
+          action: "upload"
+          ###### Repository/Build Configurations ######
+          app_location: "./src/Mystira.App.PWA" # App source code path
+          api_location: "" # API source code path - empty since we don't use Azure Functions
+          output_location: "wwwroot" # Built app content directory (Blazor WebAssembly outputs to wwwroot)
+          skip_api_build: true # Skip API build since we don't have Azure Functions
+          skip_app_build: false # Let Oryx build the app
+          production_branch: "dev" # Specify the production branch for this environment
+          ###### End of Repository/Build Configurations ######
+
+  close-pull-request:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    name: Close Pull Request
+    steps:
+      - name: Close Pull Request
+        id: closepullrequest
+        uses: Azure/static-web-apps-deploy@v1
+        # Allow this step to fail gracefully - staging environment may not exist
+        # if the build failed or the environment was already cleaned up
+        continue-on-error: true
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_MYSTIRA_APP }}
+          action: "close"
+          app_location: "./src/Mystira.App.PWA"
+

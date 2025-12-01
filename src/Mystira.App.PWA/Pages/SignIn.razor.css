@@ -1,4 +1,14 @@
 /* Sign In Page Styles */
 
-/* No component-specific styles needed - uses global styles */
+/* Auth card styling */
+.auth-card {
+    background-color: var(--card, rgba(255,255,255,0.95));
+    backdrop-filter: blur(10px);
+}
+
+.email-display {
+    background-color: var(--bg, #f8fafc);
+    color: var(--fg, #111827);
+    border-color: var(--border, rgba(17,24,39,0.08));
+}
 
