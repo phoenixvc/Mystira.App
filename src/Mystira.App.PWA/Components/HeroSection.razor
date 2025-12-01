@@ -152,6 +152,7 @@
     private bool _particlesInitialized = false;
     private bool showVideo = true;
     private bool showReplayButton = false;
+    private DotNetObjectReference<HeroSection>? _dotNetRef;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -163,8 +164,8 @@
                 await JSRuntime.InvokeVoidAsync("MystiraParticles.init", "particle-canvas");
                 
                 // Initialize logo intro video fade transition with callback
-                var dotNetRef = DotNetObjectReference.Create(this);
-                await JSRuntime.InvokeVoidAsync("initLogoIntroVideo", dotNetRef);
+                _dotNetRef = DotNetObjectReference.Create(this);
+                await JSRuntime.InvokeVoidAsync("initLogoIntroVideo", _dotNetRef);
             }
             catch (Exception)
             {
@@ -218,10 +219,14 @@
         try
         {
             await JSRuntime.InvokeVoidAsync("MystiraParticles.destroy");
+            await JSRuntime.InvokeVoidAsync("cleanupLogoIntroVideo");
         }
         catch (Exception)
         {
             // Silently fail if JS interop is not available
         }
+        
+        // Dispose the DotNetObjectReference to prevent memory leaks
+        _dotNetRef?.Dispose();
     }
 }

@@ -1,28 +1,30 @@
 // Logo Intro Video Handler
 // Plays video on page load, then fades to static logo with visual effects
 
-let dotNetReference = null;
+// Store reference per video element to support multiple instances
+const videoRefs = new Map();
 
 window.initLogoIntroVideo = function(dotNetRef) {
-    dotNetReference = dotNetRef;
-    
     const video = document.getElementById('logo-intro-video');
     const logo = document.getElementById('hero-logo-static');
     
     if (!video || !logo) {
         // If video element doesn't exist, show logo immediately
-        if (dotNetReference) {
-            dotNetReference.invokeMethodAsync('OnVideoError');
+        if (dotNetRef) {
+            dotNetRef.invokeMethodAsync('OnVideoError');
         }
         return;
     }
+    
+    // Store the reference for this video
+    videoRefs.set(video, dotNetRef);
     
     // Check if video source exists
     const videoSource = video.querySelector('source');
     if (!videoSource || !videoSource.src) {
         // No video source, show logo immediately
-        if (dotNetReference) {
-            dotNetReference.invokeMethodAsync('OnVideoError');
+        if (dotNetRef) {
+            dotNetRef.invokeMethodAsync('OnVideoError');
         }
         return;
     }
@@ -30,16 +32,18 @@ window.initLogoIntroVideo = function(dotNetRef) {
     // Handle video load error - fallback to logo
     video.addEventListener('error', function() {
         console.log('Logo intro video failed to load, showing static logo');
-        if (dotNetReference) {
-            dotNetReference.invokeMethodAsync('OnVideoError');
+        const ref = videoRefs.get(video);
+        if (ref) {
+            ref.invokeMethodAsync('OnVideoError');
         }
     });
     
     // Handle video end - transition to logo
     video.addEventListener('ended', function() {
         console.log('Video ended, transitioning to logo');
-        if (dotNetReference) {
-            dotNetReference.invokeMethodAsync('OnVideoEnded');
+        const ref = videoRefs.get(video);
+        if (ref) {
+            ref.invokeMethodAsync('OnVideoEnded');
         }
     });
     
@@ -51,8 +55,9 @@ window.initLogoIntroVideo = function(dotNetRef) {
         video.play().catch(function(error) {
             console.log('Video autoplay prevented:', error);
             // If autoplay fails, show logo immediately
-            if (dotNetReference) {
-                dotNetReference.invokeMethodAsync('OnVideoError');
+            const ref = videoRefs.get(video);
+            if (ref) {
+                ref.invokeMethodAsync('OnVideoError');
             }
         });
     });
@@ -61,8 +66,9 @@ window.initLogoIntroVideo = function(dotNetRef) {
     setTimeout(function() {
         if (video.paused && video.readyState < 3) {
             console.log('Video not playing, showing static logo');
-            if (dotNetReference) {
-                dotNetReference.invokeMethodAsync('OnVideoError');
+            const ref = videoRefs.get(video);
+            if (ref) {
+                ref.invokeMethodAsync('OnVideoError');
             }
         }
     }, 3000);
@@ -83,8 +89,17 @@ window.replayLogoVideo = function() {
     // Play the video
     video.play().catch(function(error) {
         console.log('Video replay failed:', error);
-        if (dotNetReference) {
-            dotNetReference.invokeMethodAsync('OnVideoError');
+        const ref = videoRefs.get(video);
+        if (ref) {
+            ref.invokeMethodAsync('OnVideoError');
         }
     });
+};
+
+// Cleanup function to remove references when component is disposed
+window.cleanupLogoIntroVideo = function() {
+    const video = document.getElementById('logo-intro-video');
+    if (video) {
+        videoRefs.delete(video);
+    }
 };
