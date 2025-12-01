@@ -278,14 +278,18 @@
     function updateConnectionStatus() {
         const statusElement = document.getElementById('connection-status');
         const offlineIndicator = document.getElementById('offline-indicator');
-        
+
         if (navigator.onLine) {
-            if (statusElement) statusElement.textContent = 'Online';
-            if (statusElement) statusElement.className = 'text-success';
+            if (statusElement) {
+                statusElement.textContent = 'Online';
+                statusElement.className = 'text-success';
+            }
             if (offlineIndicator) offlineIndicator.style.display = 'none';
         } else {
-            if (statusElement) statusElement.textContent = 'Offline';
-            if (statusElement) statusElement.className = 'text-warning';
+            if (statusElement) {
+                statusElement.textContent = 'Offline';
+                statusElement.className = 'text-warning';
+            }
             if (offlineIndicator) offlineIndicator.style.display = 'block';
         }
     }
@@ -293,7 +297,13 @@
     // Monitor connection status
     window.addEventListener('online', updateConnectionStatus);
     window.addEventListener('offline', updateConnectionStatus);
-    
-    // Initial status check
-    document.addEventListener('DOMContentLoaded', updateConnectionStatus);
+
+    // Initial status check - run immediately and also after DOM is ready
+    // This ensures status is updated whether script runs before or after DOM
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', updateConnectionStatus);
+    } else {
+        // DOM is already ready, update immediately
+        updateConnectionStatus();
+    }
 </script>

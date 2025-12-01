@@ -438,6 +438,23 @@ if ($infrastructureDeployed) {
             $swaCheck = $true
             Write-Log "Static Web App $SWA_NAME already exists" "INFO"
             Write-ColorOutput Green "SUCCESS: Static Web App already exists: $SWA_NAME"
+
+            # Offer to disconnect built-in CI/CD to allow GitHub Actions to take over
+            Write-Output ""
+            $disconnectSwa = Read-Host "Disconnect built-in CI/CD to use GitHub Actions instead? (y/n)"
+            if ($disconnectSwa -eq 'y' -or $disconnectSwa -eq 'Y') {
+                Write-Host "Disconnecting SWA built-in CI/CD... " -NoNewline
+                $disconnectResult = az staticwebapp disconnect --name $SWA_NAME --resource-group $RG 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "✓" -ForegroundColor Green
+                    Write-ColorOutput Yellow "   Get deployment token for GitHub Actions:"
+                    Write-ColorOutput Cyan "   az staticwebapp secrets list --name $SWA_NAME --resource-group $RG --query properties.apiKey -o tsv"
+                }
+                else {
+                    Write-Host "✗" -ForegroundColor Red
+                    Write-Output "   (May already be disconnected: $disconnectResult)"
+                }
+            }
         }
         else {
             Write-Log "Static Web App $SWA_NAME does not exist, will create it" "INFO"
