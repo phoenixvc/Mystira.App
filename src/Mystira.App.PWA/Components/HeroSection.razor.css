@@ -20,6 +20,102 @@
     z-index: 0;
 }
 
+/* Golden Light Tubes */
+.golden-lights {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.golden-light-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.6;
+}
+
+.light-tube {
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: blur(0.5px);
+    animation: lightPulse 4s ease-in-out infinite;
+}
+
+.light-tube-glow {
+    filter: blur(2px);
+    animation: lightPulse 4s ease-in-out infinite;
+}
+
+.light-tube-1 {
+    animation-delay: 0s;
+}
+
+.light-tube-1-glow {
+    animation-delay: 0s;
+}
+
+.light-tube-2 {
+    animation-delay: 1.5s;
+}
+
+.light-tube-2-glow {
+    animation-delay: 1.5s;
+}
+
+.light-tube-3 {
+    animation-delay: 0.75s;
+}
+
+.light-tube-3-glow {
+    animation-delay: 0.75s;
+}
+
+@keyframes lightPulse {
+    0%, 100% {
+        opacity: 0.3;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.02);
+    }
+}
+
+/* Subtle movement animation */
+@keyframes lightFloat {
+    0%, 100% {
+        transform: translateY(0) translateX(0);
+    }
+    33% {
+        transform: translateY(-5px) translateX(2px);
+    }
+    66% {
+        transform: translateY(3px) translateX(-2px);
+    }
+}
+
+.light-tube-1,
+.light-tube-1-glow {
+    animation: lightPulse 4s ease-in-out infinite, lightFloat 8s ease-in-out infinite;
+}
+
+.light-tube-2,
+.light-tube-2-glow {
+    animation: lightPulse 4s ease-in-out infinite 1.5s, lightFloat 10s ease-in-out infinite 1s;
+}
+
+.light-tube-3,
+.light-tube-3-glow {
+    animation: lightPulse 5s ease-in-out infinite 0.75s, lightFloat 12s ease-in-out infinite 2s;
+}
+
 .hero-content {
     max-width: 900px;
     margin: 0 auto;
@@ -28,14 +124,25 @@
 }
 
 .mystira-title {
-    font-size: 3.5rem;
-    font-weight: 800;
+    font-size: 5rem;
+    font-weight: 300;
+    letter-spacing: 0.02em;
     background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 50%, #6D28D9 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     margin-bottom: 12px;
     animation: fadeInScale 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    color: var(--primary-color, #9333ea); /* Fallback for browsers that don't support background-clip */
+}
+
+/* Ensure title is visible in dark mode */
+html[data-theme="dark"] .mystira-title {
+    background: linear-gradient(135deg, #A78BFA 0%, #8B5CF6 50%, #7C3AED 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: #A78BFA; /* Fallback */
 }
 
 .alpha-badge {
@@ -50,7 +157,7 @@
 
 .mystira-tagline {
     font-size: 1.25rem;
-    color: #6b7280;
+    color: var(--muted, #6b7280);
     font-weight: 500;
     animation: fadeIn 0.8s ease-in-out;
 }
@@ -263,7 +370,7 @@
     }
     
     .mystira-title {
-        font-size: 2.5rem;
+        font-size: 3.5rem;
     }
     
     .mystira-tagline {
@@ -290,7 +397,7 @@
 
 @media (max-width: 480px) {
     .mystira-title {
-        font-size: 2rem;
+        font-size: 2.75rem;
     }
     
     .hero-logo-container {
