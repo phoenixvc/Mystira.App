@@ -26,7 +26,7 @@
                 // Check system preference
                 var prefersDark = await JSRuntime.InvokeAsync<bool>("eval", "window.matchMedia('(prefers-color-scheme: dark)').matches");
                 IsDarkMode = prefersDark;
-                currentTheme = prefersDark ? "dark" : "light";
+                // Removed useless assignment to currentTheme
             }
             else
             {
