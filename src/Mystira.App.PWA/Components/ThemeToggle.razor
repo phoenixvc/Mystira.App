@@ -1,6 +1,6 @@
 @inject IJSRuntime JSRuntime
 
-<button class="btn btn-link nav-link theme-toggle" @onclick="ToggleTheme" title="@(IsDarkMode ? "Switch to light mode" : "Switch to dark mode")" aria-label="@(IsDarkMode ? "Switch to light mode" : "Switch to dark mode")">
+<button class="theme-toggle" @onclick="ToggleTheme" title="@(IsDarkMode ? "Switch to light mode" : "Switch to dark mode")" aria-label="@(IsDarkMode ? "Switch to light mode" : "Switch to dark mode")">
     @if (IsDarkMode)
     {
         <i class="fas fa-sun"></i>
