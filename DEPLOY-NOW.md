@@ -7,32 +7,38 @@ The `.deploy-now.ps1` script is a smart deployment tool that automatically deter
 ## Features
 
 ### ✅ Smart Deployment Detection
+
 - Automatically detects if infrastructure exists
 - Deploys infrastructure if missing
 - Triggers CI/CD if infrastructure exists
 
 ### ✅ Conflict Resolution
+
 - Handles storage account conflicts
 - Resolves Communication Service conflicts
 - Manages Cosmos DB region/name conflicts
 - Handles App Service conflicts
 
 ### ✅ Rollback Support
+
 - Tracks created resources during deployment
 - Offers automatic cleanup on failure
 - Prevents orphaned resources
 
 ### ✅ Transient Error Retry
+
 - Automatically retries transient failures (network, rate limits, timeouts)
 - Exponential backoff for retries
 - Smart error detection
 
 ### ✅ Logging & Monitoring
+
 - Optional log file with `-LogPath`
 - Progress indicators during deployment
 - Detailed resource summaries
 
 ### ✅ Safety Features
+
 - Dry-run mode with `-WhatIf`
 - Input validation
 - Git repository validation
@@ -105,7 +111,7 @@ The `.deploy-now.ps1` script is a smart deployment tool that automatically deter
 
 The script uses a modular architecture with helper modules:
 
-```
+``` text
 scripts/deploy/
 ├── AzureHelpers.psm1      # Azure CLI timeout protection, login
 ├── ResourceHelpers.psm1   # Resource scanning, naming, validation
@@ -121,18 +127,21 @@ scripts/deploy/
 ### Storage Account Conflicts
 
 When a storage account name is already taken:
+
 - **Option 1**: Use existing storage account (retrieves connection string)
 - **Option 2**: Delete existing storage account and recreate
 
 ### Communication Service Conflicts
 
 When a Communication Service name is taken:
+
 - **Option 1**: Switch to `eastus2` region
 - **Option 2**: Use existing Communication Service
 
 ### Cosmos DB Conflicts
 
 When Cosmos DB has conflicts or region issues:
+
 - Automatically switches **only** Cosmos DB to `eastus2` region
 - Keeps other resources in original region
 - Uses existing Cosmos DB if available in `eastus2`
@@ -140,6 +149,7 @@ When Cosmos DB has conflicts or region issues:
 ### App Service Conflicts
 
 When App Services already exist:
+
 - **Option 1**: Use existing App Services (skip creation)
 - **Option 2**: Delete existing App Services and recreate
 - **Option 3**: Exit
@@ -186,6 +196,7 @@ After successful deployment, the script shows a comprehensive resource summary:
 ### Error Formatting
 
 All errors are formatted consistently with:
+
 - Step name where error occurred
 - Error code (if available)
 - User-friendly error message
@@ -202,7 +213,7 @@ All errors are formatted consistently with:
 
 ### Log File Format
 
-```
+``` text
 [2024-01-15 10:30:45] [INFO] Starting infrastructure deployment
 [2024-01-15 10:30:45] [INFO] Resource Group: dev-euw-rg-mystira-app, Location: westeurope
 [2024-01-15 10:31:20] [INFO] Step: Deployment succeeded in 35.2 seconds
@@ -322,6 +333,7 @@ The script uses the following constants (defined at the top):
 ## Support
 
 For issues or questions:
+
 1. Check the log file (if `-LogPath` was used)
 2. Run with `-Verbose` for detailed output
 3. Review error messages for specific guidance
@@ -332,4 +344,3 @@ For issues or questions:
 **Last Updated**: 2024-01-15  
 **Version**: 2.0  
 **Status**: Production Ready ✅
-

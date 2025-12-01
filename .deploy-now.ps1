@@ -2,7 +2,7 @@
 # Checks if Azure resources exist:
 #   - If NO → Deploy infrastructure
 #   - If YES → Push code to trigger CI/CD
-# Usage: .\.deploy-now.ps1 [region] [branch] [message] [-SkipScan] [-WhatIf] [-SubscriptionId] [-Verbose]
+# Usage: .\.deploy-now.ps1 [region] [branch] [message] [-SkipScan] [-WhatIf] [-SubscriptionId] [-Verbose] [-GitHubPat] [-LogPath]
 
 param(
     [string]$Region = "",
@@ -12,10 +12,22 @@ param(
     [switch]$SkipScan,
     [switch]$WhatIf,
     [string]$SubscriptionId = "22f9eb18-6553-4b7d-9451-47d0195085fe",
-    [string]$LogPath = ""
+    [string]$LogPath = "",
+    [string]$GitHubPat = ""
 )
 
-# Logging function
+# Colors for output (define in global scope so modules can use it)
+function global:Write-ColorOutput($ForegroundColor, $Message) {
+    $fc = $host.UI.RawUI.ForegroundColor
+    $host.UI.RawUI.ForegroundColor = $ForegroundColor
+    Write-Output $Message
+    $host.UI.RawUI.ForegroundColor = $fc
+    if ($script:LogFile) {
+        $Message | Out-File -FilePath $script:LogFile -Append
+    }
+}
+
+# Logging function (define in global scope so modules can use it)
 $script:LogFile = $null
 if ($LogPath) {
     $script:LogFile = $LogPath
@@ -25,7 +37,7 @@ if ($LogPath) {
     "=== Deployment Log Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Out-File -FilePath $LogPath -Append
 }
 
-function Write-Log {
+function global:Write-Log {
     param([string]$Message, [string]$Level = "INFO")
     $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $logMessage = "[$timestamp] [$Level] $Message"
@@ -40,17 +52,6 @@ function Write-Log {
     }
     else {
         Write-Output $logMessage
-    }
-}
-
-# Colors for output
-function Write-ColorOutput($ForegroundColor, $Message) {
-    $fc = $host.UI.RawUI.ForegroundColor
-    $host.UI.RawUI.ForegroundColor = $ForegroundColor
-    Write-Output $Message
-    $host.UI.RawUI.ForegroundColor = $fc
-    if ($script:LogFile) {
-        $Message | Out-File -FilePath $script:LogFile -Append
     }
 }
 
@@ -70,6 +71,154 @@ if (Test-Path $deployModulePath) {
 $script:MAX_DEPLOYMENT_RETRIES = 3
 $script:AZURE_CLI_TIMEOUT_SECONDS = 30
 $script:DEPLOYMENT_POLL_INTERVAL_SECONDS = 10
+
+# Check for GitHub PAT (from parameter, environment variable, or prompt)
+if (-not $GitHubPat) {
+    $GitHubPat = $env:GITHUB_PAT
+}
+
+if (-not $GitHubPat) {
+    Write-ColorOutput Yellow "ℹ️  No GitHub PAT found. Static Web App will be created without GitHub integration."
+    Write-ColorOutput Yellow "   To add GitHub integration later, set GITHUB_PAT environment variable or use -GitHubPat parameter."
+    Write-Output ""
+    Write-ColorOutput Cyan "   To create a PAT:"
+    Write-Output "   1. Go to: https://github.com/settings/tokens"
+    Write-Output "   2. Generate new token (classic)"
+    Write-Output "   3. Select scopes: repo, workflow, admin:repo_hook"
+    Write-Output "   4. Set environment variable: `$env:GITHUB_PAT = 'your-token'"
+    Write-Output ""
+}
+else {
+    Write-ColorOutput Green "✅ GitHub PAT found. Will use for Static Web App GitHub integration."
+    Write-Log "GitHub PAT provided for Static Web App integration" "INFO"
+    # Validate PAT format (basic check)
+    if ($GitHubPat.Length -lt 20) {
+        Write-ColorOutput Yellow "⚠️  GitHub PAT seems too short. Please verify it's correct."
+    }
+}
+
+# Check for SWA CLI (required for GitHub PAT support)
+Write-ColorOutput Cyan "Checking for SWA CLI..."
+
+# Check multiple ways: Get-Command, where.exe, and npm list
+$swaCommand = Get-Command swa -ErrorAction SilentlyContinue
+$swaPath = where.exe swa 2>$null
+$swaNpmInstalled = npm list -g @azure/static-web-apps-cli --depth=0 2>$null | Select-String -Pattern "@azure/static-web-apps-cli"
+
+if ($swaCommand -or $swaPath -or $swaNpmInstalled) {
+    # Found it - determine which method worked
+    if ($swaCommand) {
+        Write-ColorOutput Green "✅ SWA CLI found at: $($swaCommand.Source)"
+    }
+    elseif ($swaPath) {
+        Write-ColorOutput Green "✅ SWA CLI found at: $swaPath"
+        $script:swaCliAvailable = $true
+    }
+    elseif ($swaNpmInstalled) {
+        Write-ColorOutput Green "✅ SWA CLI is installed via npm"
+        # Try to find it in npm global bin
+        $npmGlobalBin = npm config get prefix 2>$null | ForEach-Object { if ($_) { Join-Path $_ "node_modules\@azure\static-web-apps-cli\dist\swa.cmd" } }
+        if ($npmGlobalBin -and (Test-Path $npmGlobalBin)) {
+            $script:swaCliAvailable = $true
+            $script:swaCliPath = $npmGlobalBin
+        }
+        else {
+            # Try common npm global locations
+            $commonPaths = @(
+                "$env:APPDATA\npm\swa.cmd",
+                "$env:ProgramFiles\nodejs\swa.cmd",
+                "$env:LOCALAPPDATA\npm\swa.cmd"
+            )
+            foreach ($path in $commonPaths) {
+                if (Test-Path $path) {
+                    $script:swaCliAvailable = $true
+                    $script:swaCliPath = $path
+                    break
+                }
+            }
+        }
+    }
+    Write-Log "SWA CLI found" "INFO"
+}
+else {
+    Write-ColorOutput Yellow "⚠️  SWA CLI not found. Installing..."
+    Write-Log "SWA CLI not found, installing..." "INFO"
+    
+    # Check if npm is available
+    $npmAvailable = Get-Command npm -ErrorAction SilentlyContinue
+    if (-not $npmAvailable) {
+        Write-ColorOutput Red "❌ npm is not installed. Please install Node.js first: https://nodejs.org/"
+        Write-ColorOutput Yellow "   SWA CLI requires Node.js/npm. Static Web App will be created without GitHub integration."
+        Write-Log "npm not found, cannot install SWA CLI" "WARN"
+        $script:swaCliAvailable = $false
+    }
+    else {
+        try {
+            Write-Host "Installing SWA CLI (this may take a minute)... " -NoNewline
+            $installOutput = npm install -g @azure/static-web-apps-cli 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "✓" -ForegroundColor Green
+                Write-ColorOutput Green "✅ SWA CLI installed successfully!"
+                Write-Log "SWA CLI installed successfully" "INFO"
+                
+                # Try to find it after installation - check npm global bin
+                $npmPrefix = npm config get prefix 2>$null
+                if ($npmPrefix) {
+                    $swaPath1 = Join-Path $npmPrefix "node_modules\@azure\static-web-apps-cli\dist\swa.cmd"
+                    $swaPath2 = Join-Path $npmPrefix "swa.cmd"
+                    $swaPath3 = "$env:APPDATA\npm\swa.cmd"
+                    
+                    if (Test-Path $swaPath1) {
+                        $script:swaCliAvailable = $true
+                        $script:swaCliPath = $swaPath1
+                    }
+                    elseif (Test-Path $swaPath2) {
+                        $script:swaCliAvailable = $true
+                        $script:swaCliPath = $swaPath2
+                    }
+                    elseif (Test-Path $swaPath3) {
+                        $script:swaCliAvailable = $true
+                        $script:swaCliPath = $swaPath3
+                    }
+                    else {
+                        # Force refresh PATH and try Get-Command again
+                        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+                        Start-Sleep -Seconds 1
+                        $swaCommand = Get-Command swa -ErrorAction SilentlyContinue
+                        if ($swaCommand) {
+                            $script:swaCliAvailable = $true
+                            $script:swaCliPath = $swaCommand.Source
+                        }
+                        else {
+                            $script:swaCliAvailable = $false
+                            Write-ColorOutput Yellow "⚠️  SWA CLI installed but not found in PATH. You may need to restart your terminal."
+                            Write-Log "SWA CLI installed but not in PATH" "WARN"
+                        }
+                    }
+                }
+                else {
+                    $script:swaCliAvailable = $false
+                    Write-ColorOutput Yellow "⚠️  SWA CLI installed but could not locate it. You may need to restart your terminal."
+                    Write-Log "SWA CLI installed but could not locate" "WARN"
+                }
+            }
+            else {
+                Write-Host "✗" -ForegroundColor Red
+                Write-ColorOutput Yellow "⚠️  Failed to install SWA CLI. Error: $($installOutput -join '`n')"
+                Write-Log "Failed to install SWA CLI: $($installOutput -join '`n')" "WARN"
+                Write-ColorOutput Yellow "   Static Web App will be created without GitHub integration."
+                $script:swaCliAvailable = $false
+            }
+        }
+        catch {
+            Write-Host "✗" -ForegroundColor Red
+            Write-ColorOutput Yellow "⚠️  Failed to install SWA CLI: $($_.Exception.Message)"
+            Write-Log "Exception installing SWA CLI: $($_.Exception.Message)" "WARN"
+            Write-ColorOutput Yellow "   Static Web App will be created without GitHub integration."
+            $script:swaCliAvailable = $false
+        }
+    }
+}
 
 # Azure config
 $SUB = $SubscriptionId
@@ -260,17 +409,61 @@ $rgExists = $false
 $hasResources = $false
 $swaExists = $false
 
-# Check if the default resource group exists
+# Always check directly for the resource group (more reliable than scan)
+Write-Log "Checking resource group $RG directly..." "INFO"
+try {
+    $rgInfo = az group show --name $RG 2>$null | ConvertFrom-Json
+    if ($rgInfo) {
+        $rgExists = $true
+        Write-Log "Resource group $RG exists" "INFO"
+        
+        # Check for resources in the group
+        $resources = az resource list --resource-group $RG --output json 2>$null | ConvertFrom-Json
+        if ($resources -and $resources.Count -gt 0) {
+            $hasResources = $true
+            Write-Log "Found $($resources.Count) resources in resource group $RG" "INFO"
+        }
+        else {
+            Write-Log "Resource group $RG exists but has no resources" "INFO"
+        }
+    }
+}
+catch {
+    Write-Log "Resource group $RG does not exist or check failed: $($_.Exception.Message)" "INFO"
+}
+
+# Also check scan results as backup
 $matchingRG = $existingResources.ResourceGroups | Where-Object { $_.Name -eq $RG }
-if ($matchingRG) {
+if ($matchingRG -and -not $rgExists) {
     $rgExists = $true
     $hasResources = $matchingRG.HasResources
+    Write-Log "Resource group $RG found via scan" "INFO"
+}
+elseif ($matchingRG -and $matchingRG.HasResources -and -not $hasResources) {
+    # If scan says it has resources but direct check didn't find them, trust the scan
+    $hasResources = $true
+    Write-Log "Using scan result: resource group $RG has resources" "INFO"
 }
 
 # Check if Static Web App exists
 $matchingSWA = $existingResources.StaticWebApps | Where-Object { $_.Name -eq $SWA_NAME -and $_.ResourceGroup -eq $RG }
 if ($matchingSWA) {
     $swaExists = $true
+    Write-Log "Static Web App $SWA_NAME found via scan" "INFO"
+}
+else {
+    # Also check directly
+    try {
+        $swaInfo = az staticwebapp show --name $SWA_NAME --resource-group $RG 2>$null | ConvertFrom-Json
+        if ($swaInfo) {
+            $swaExists = $true
+            Write-Log "Static Web App $SWA_NAME found via direct check" "INFO"
+        }
+    }
+    catch {
+        # SWA doesn't exist
+        Write-Log "Static Web App $SWA_NAME does not exist" "INFO"
+    }
 }
 
 # If we have existing resources, show them and ask what to do
@@ -407,25 +600,31 @@ if ($existingResources.ResourceGroups.Count -gt 0 -or $existingResources.StaticW
         # Static Web App doesn't exist
     }
     
-    # Re-check resource group existence
-    $rgExists = $false
-    $hasResources = $false
-    try {
-        $rgInfo = az group show --name $RG 2>$null | ConvertFrom-Json
-        if ($rgInfo) {
-            $rgExists = $true
-            $resources = az resource list --resource-group $RG --output json 2>$null | ConvertFrom-Json
-            if ($resources -and $resources.Count -gt 0) {
-                $hasResources = $true
+    # Re-check resource group existence after user selection
+    # Double-check resource group and resources directly (more reliable than scan)
+    if (-not $rgExists) {
+        try {
+            $rgInfo = az group show --name $RG 2>$null | ConvertFrom-Json
+            if ($rgInfo) {
+                $rgExists = $true
+                $resources = az resource list --resource-group $RG --output json 2>$null | ConvertFrom-Json
+                if ($resources -and $resources.Count -gt 0) {
+                    $hasResources = $true
+                    Write-Log "Found $($resources.Count) resources in resource group $RG" "INFO"
+                }
             }
         }
-    }
-    catch {
-        # Resource group doesn't exist
+        catch {
+            # Resource group doesn't exist
+            Write-Log "Resource group $RG does not exist" "INFO"
+        }
     }
 }
 
-if ($hasResources -and $swaExists) {
+# Check if infrastructure is deployed (either has resources in RG or SWA exists)
+$infrastructureDeployed = ($hasResources -or $swaExists)
+
+if ($infrastructureDeployed) {
     Write-ColorOutput Green "✅ Infrastructure is deployed. Pushing code to trigger CI/CD..."
     Write-Output ""
     
@@ -517,7 +716,14 @@ if ($hasResources -and $swaExists) {
     Show-ResourceSummary -ResourceGroup $RG -Location $LOCATION
 }
 else {
-    Write-ColorOutput Yellow "No resources found"
+    if ($Verbose) {
+        Write-ColorOutput Yellow "No resources found in resource group '$RG'"
+        Write-Output "   (rgExists: $rgExists, hasResources: $hasResources, swaExists: $swaExists)"
+        Write-Output "   (matchingRG found: $($null -ne $matchingRG), matchingSWA found: $($null -ne $matchingSWA))"
+    }
+    else {
+        Write-ColorOutput Yellow "No resources found"
+    }
     Write-Output ""
     Write-ColorOutput Cyan "🏗️  Infrastructure not deployed. Deploying infrastructure..."
     Write-Output ""
@@ -559,9 +765,66 @@ else {
     Write-Output "Using template: $BICEP_FILE"
     Write-Output ""
     
-    # Generate JWT secret
-    $JWT_SECRET = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
-    $JWT_SECRET_BASE64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($JWT_SECRET))
+    # Try to reuse existing JWT secret from App Services
+    $JWT_SECRET_BASE64 = $null
+    $existingJwtSecret = $null
+    
+    # Check existing App Services in the resource group for JWT secret
+    Write-ColorOutput Cyan "   Checking for existing JWT secret in App Services..."
+    Write-Log "Checking for existing JWT secret in App Services" "INFO"
+    
+    try {
+        # Get all App Services (sites) in the resource group
+        $appServices = az resource list `
+            --resource-group $RG `
+            --resource-type "Microsoft.Web/sites" `
+            --output json 2>$null | ConvertFrom-Json
+        
+        if ($appServices) {
+            foreach ($appService in $appServices) {
+                Write-ColorOutput Cyan "   Checking App Service '$($appService.name)'..."
+                Write-Log "Checking App Service $($appService.name) for JWT secret" "INFO"
+                
+                try {
+                    $appSettings = az webapp config appsettings list `
+                        --name $appService.name `
+                        --resource-group $RG `
+                        --output json 2>$null | ConvertFrom-Json
+                    
+                    if ($appSettings) {
+                        # Check for Jwt__Key (preferred) or JwtSettings__SecretKey
+                        $jwtKey = $appSettings | Where-Object { $_.name -eq "Jwt__Key" -or $_.name -eq "JwtSettings__SecretKey" }
+                        
+                        if ($jwtKey -and $jwtKey.value) {
+                            $existingJwtSecret = $jwtKey.value
+                            Write-ColorOutput Green "   ✅ Found existing JWT secret in App Service '$($appService.name)'"
+                            Write-Log "Found existing JWT secret in App Service $($appService.name)" "INFO"
+                            break
+                        }
+                    }
+                }
+                catch {
+                    Write-Log "Failed to retrieve app settings from $($appService.name): $($_.Exception.Message)" "WARN"
+                }
+            }
+        }
+    }
+    catch {
+        Write-Log "Failed to query App Services for JWT secret: $($_.Exception.Message)" "WARN"
+    }
+    
+    # Use existing secret if found, otherwise generate new one
+    if ($existingJwtSecret) {
+        $JWT_SECRET_BASE64 = $existingJwtSecret
+        Write-ColorOutput Green "✅ Reusing existing JWT secret"
+        Write-Log "Reusing existing JWT secret from App Service" "INFO"
+    }
+    else {
+        Write-ColorOutput Cyan "   Generating new JWT secret..."
+        Write-Log "No existing JWT secret found, generating new one" "INFO"
+        $JWT_SECRET = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
+        $JWT_SECRET_BASE64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($JWT_SECRET))
+    }
     
     # Get resource prefix based on location (matches infrastructure/dev/main.bicep)
     $resourcePrefix = switch ($LOCATION) {
@@ -1029,26 +1292,318 @@ else {
                     Write-Log "GitHub repository: $repoOwner/$repoName" "INFO"
                     Write-Output ""
                     
-                    # Create Static Web App with GitHub integration
+                    # Create Static Web App
                     Write-Host "Creating Static Web App... " -NoNewline
                     Write-Log "Creating Static Web App: $SWA_NAME" "INFO"
-                    $swaResult = az staticwebapp create `
-                        --name $SWA_NAME `
-                        --resource-group $RG `
-                        --location $LOCATION `
-                        --sku Free `
-                        --login-with-github `
-                        --source "https://github.com/$repoOwner/$repoName" `
-                        --branch "dev" `
-                        --app-location "./src/Mystira.App.PWA" `
-                        --api-location "swa-db-connections" `
-                        --output-location "out" `
-                        --output json 2>$null | ConvertFrom-Json
                     
-                    if ($swaResult) {
-                        Write-Host "✓" -ForegroundColor Green
-                        Write-ColorOutput Green "✅ Static Web App created!"
-                        Write-Log "Static Web App created successfully: $SWA_NAME" "INFO"
+                    # Track if SWA was created successfully
+                    $swaCreated = $false
+                    $swaResult = $null
+                    
+                    # Use SWA CLI if available (better GitHub PAT support)
+                    # Re-check in case it was just installed or path wasn't found earlier
+                    if (-not $script:swaCliAvailable -or -not $script:swaCliPath) {
+                        # Check common npm locations
+                        $swaCheckPaths = @(
+                            "$env:APPDATA\npm\swa.cmd",
+                            "$env:LOCALAPPDATA\npm\swa.cmd"
+                        )
+                        $npmPrefix = npm config get prefix 2>$null
+                        if ($npmPrefix) {
+                            $swaCheckPaths += @(
+                                Join-Path $npmPrefix "swa.cmd",
+                                Join-Path $npmPrefix "node_modules\@azure\static-web-apps-cli\dist\swa.cmd"
+                            )
+                        }
+                        
+                        foreach ($checkPath in $swaCheckPaths) {
+                            if ($checkPath -and (Test-Path $checkPath)) {
+                                $script:swaCliAvailable = $true
+                                $script:swaCliPath = $checkPath
+                                # Add to PATH for this session
+                                $swaDir = Split-Path $checkPath -Parent
+                                if ($env:Path -notlike "*$swaDir*") {
+                                    $env:Path = "$swaDir;$env:Path"
+                                }
+                                break
+                            }
+                        }
+                        
+                        # Also try Get-Command as fallback
+                        if (-not $script:swaCliAvailable) {
+                            $swaCheck = Get-Command swa -ErrorAction SilentlyContinue
+                            if ($swaCheck) {
+                                $script:swaCliAvailable = $true
+                                $script:swaCliPath = $swaCheck.Source
+                            }
+                        }
+                    }
+                    
+                    if ($script:swaCliAvailable -and $GitHubPat -and $repoOwner -and $repoName) {
+                        # Use SWA CLI to create and connect (better GitHub PAT support)
+                        Write-Output ""
+                        Write-ColorOutput Cyan "   Using SWA CLI to create Static Web App with GitHub PAT..."
+                        Write-Log "Using SWA CLI to create Static Web App with GitHub PAT" "INFO"
+                        
+                        # Static Web Apps have limited region support - check if current region is supported
+                        $swaSupportedRegions = @("westus2", "centralus", "eastus2", "westeurope", "eastasia")
+                        $swaLocation = $LOCATION
+                        
+                        if ($LOCATION -notin $swaSupportedRegions) {
+                            Write-ColorOutput Yellow "   ⚠️  Static Web Apps not available in $LOCATION"
+                            Write-ColorOutput Yellow "   Available regions: $($swaSupportedRegions -join ', ')"
+                            Write-ColorOutput Cyan "   Creating Static Web App in 'westeurope' (closest supported region)"
+                            Write-Log "Static Web Apps not available in $LOCATION, using westeurope" "WARN"
+                            $swaLocation = "westeurope"
+                        }
+                        
+                        # Use the stored path or find it again
+                        $swaCmd = if ($script:swaCliPath -and (Test-Path $script:swaCliPath)) {
+                            $script:swaCliPath
+                        }
+                        else {
+                            # Try to find it in common locations
+                            $foundPath = $null
+                            $checkPaths = @(
+                                "$env:APPDATA\npm\swa.cmd",
+                                "$env:LOCALAPPDATA\npm\swa.cmd"
+                            )
+                            $npmPrefix = npm config get prefix 2>$null
+                            if ($npmPrefix) {
+                                $checkPaths += @(
+                                    Join-Path $npmPrefix "swa.cmd",
+                                    Join-Path $npmPrefix "node_modules\@azure\static-web-apps-cli\dist\swa.cmd"
+                                )
+                            }
+                            foreach ($path in $checkPaths) {
+                                if ($path -and (Test-Path $path)) {
+                                    $foundPath = $path
+                                    $script:swaCliPath = $path
+                                    break
+                                }
+                            }
+                            if ($foundPath) { $foundPath } else { "swa" }
+                        }
+                        
+                        Write-Log "Using SWA CLI at: $swaCmd" "INFO"
+                        
+                        # Get subscription ID
+                        $azAccount = az account show --output json 2>$null | ConvertFrom-Json
+                        $subscriptionId = if ($azAccount) { $azAccount.id } else { $SubscriptionId }
+                        
+                        # Set GitHub token as environment variable for SWA CLI
+                        $env:GITHUB_TOKEN = $GitHubPat
+                        
+                        # Use SWA CLI to create and connect the Static Web App
+                        Write-ColorOutput Cyan "   Creating Static Web App with SWA CLI..."
+                        Write-Log "Creating Static Web App: $SWA_NAME in resource group: $RG using SWA CLI" "INFO"
+                        
+                        # Ensure SWA CLI is logged in
+                        Write-ColorOutput Cyan "   Authenticating with SWA CLI..."
+                        $swaLoginOutput = & $swaCmd login 2>&1
+                        if ($LASTEXITCODE -ne 0) {
+                            Write-ColorOutput Yellow "   ⚠️  SWA CLI login may have failed, but continuing..."
+                            Write-Log "SWA CLI login output: $($swaLoginOutput -join '`n')" "WARN"
+                        }
+                        
+                        # Set GitHub token as environment variable for SWA CLI
+                        $env:GITHUB_TOKEN = $GitHubPat
+                        
+                        # Use SWA CLI deploy to create the Static Web App and connect GitHub
+                        # Create a minimal output directory for deployment
+                        $tempDeployDir = Join-Path $env:TEMP "swa-deploy-$(Get-Random)"
+                        New-Item -ItemType Directory -Path $tempDeployDir -Force | Out-Null
+                        try {
+                            # Create a minimal index.html for deployment
+                            "<!DOCTYPE html><html><head><title>SWA Setup</title></head><body><h1>Setting up Static Web App</h1></body></html>" | Out-File -FilePath (Join-Path $tempDeployDir "index.html") -Encoding UTF8
+                            
+                            Write-ColorOutput Cyan "   Creating Static Web App and connecting to GitHub with SWA CLI..."
+                            Write-Log "Using SWA CLI deploy to create SWA and connect GitHub" "INFO"
+                            
+                            # Use SWA CLI deploy with all parameters - it should create the resource if it doesn't exist
+                            $swaDeployOutput = & $swaCmd deploy $tempDeployDir `
+                                --app-name $SWA_NAME `
+                                --resource-group $RG `
+                                --subscription-id $subscriptionId `
+                                --repo "https://github.com/$repoOwner/$repoName" `
+                                --branch "dev" `
+                                --app-location "./src/Mystira.App.PWA" `
+                                --api-location "swa-db-connections" `
+                                --output-location "out" `
+                                2>&1
+                            
+                            if ($LASTEXITCODE -eq 0) {
+                                Write-Host "✓" -ForegroundColor Green
+                                Write-ColorOutput Green "✅ Static Web App created and connected to GitHub via SWA CLI!"
+                                Write-Log "Static Web App created and connected via SWA CLI" "INFO"
+                                $swaCreated = $true
+                                # Set a dummy result so the success check works
+                                $swaResult = @{ name = $SWA_NAME }
+                            }
+                            else {
+                                # If deploy fails, try creating resource first with Azure CLI, then connecting
+                                $errorOutput = $swaDeployOutput -join '`n'
+                                Write-ColorOutput Yellow "   ⚠️  SWA CLI deploy failed. Creating resource first..."
+                                Write-Log "SWA CLI deploy failed, creating resource first: $errorOutput" "WARN"
+                                
+                                # Check if error is due to region unavailability
+                                $isRegionError = $false
+                                if ($errorOutput -match "LocationNotAvailableForResourceType|region.*not available|not available.*region") {
+                                    $isRegionError = $true
+                                }
+                                
+                                # If region error and we haven't already switched, prompt for region change
+                                if ($isRegionError -and $swaLocation -eq $LOCATION) {
+                                    Write-Output ""
+                                    Write-ColorOutput Yellow "⚠️  Static Web Apps are not available in region: $LOCATION"
+                                    Write-ColorOutput Yellow "   Available regions: $($swaSupportedRegions -join ', ')"
+                                    Write-Output ""
+                                    
+                                    $changeRegion = Read-Host "Would you like to create the Static Web App in a different region? (y/n)"
+                                    if ($changeRegion -eq 'y' -or $changeRegion -eq 'Y') {
+                                        Write-Output ""
+                                        Write-Output "Available Static Web App regions:"
+                                        for ($i = 0; $i -lt $swaSupportedRegions.Count; $i++) {
+                                            Write-Output "  [$($i+1)] $($swaSupportedRegions[$i])"
+                                        }
+                                        Write-Output ""
+                                        
+                                        do {
+                                            $regionChoice = Read-Host "Enter region number (1-$($swaSupportedRegions.Count))"
+                                            if ($regionChoice -notmatch "^\d+$" -or [int]$regionChoice -lt 1 -or [int]$regionChoice -gt $swaSupportedRegions.Count) {
+                                                Write-ColorOutput Red "❌ Invalid choice. Please enter a number between 1 and $($swaSupportedRegions.Count)."
+                                            }
+                                        } while ($regionChoice -notmatch "^\d+$" -or [int]$regionChoice -lt 1 -or [int]$regionChoice -gt $swaSupportedRegions.Count)
+                                        
+                                        $swaLocation = $swaSupportedRegions[[int]$regionChoice - 1]
+                                        Write-ColorOutput Green "✅ Will create Static Web App in: $swaLocation"
+                                        Write-Log "User selected region: $swaLocation" "INFO"
+                                    }
+                                    else {
+                                        Write-ColorOutput Yellow "   Skipping Static Web App creation."
+                                        Write-Log "User declined region change, skipping SWA creation" "WARN"
+                                        break
+                                    }
+                                }
+                                
+                                # Try creating with Azure CLI
+                                $swaCreateOutput = az staticwebapp create `
+                                    --name $SWA_NAME `
+                                    --resource-group $RG `
+                                    --location $swaLocation `
+                                    --sku Free `
+                                    --output json 2>&1
+                                
+                                if ($LASTEXITCODE -eq 0) {
+                                    Write-ColorOutput Green "   ✅ Resource created in $swaLocation. Connecting to GitHub..."
+                                    
+                                    # Connect with REST API
+                                    try {
+                                        $accessToken = az account get-access-token --resource "https://management.azure.com" --query accessToken -o tsv 2>$null
+                                        
+                                        if ($accessToken -and $azAccount) {
+                                            $apiVersion = "2022-03-01"
+                                            $uri = "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$RG/providers/Microsoft.Web/staticSites/$SWA_NAME/sourcecontrols/GitHub?api-version=$apiVersion"
+                                            
+                                            $body = @{
+                                                properties = @{
+                                                    repo                      = "https://github.com/$repoOwner/$repoName"
+                                                    branch                    = "dev"
+                                                    githubActionConfiguration = @{
+                                                        generateWorkflowFile = $true
+                                                        workflowSettings     = @{
+                                                            appLocation    = "./src/Mystira.App.PWA"
+                                                            apiLocation    = "swa-db-connections"
+                                                            outputLocation = "out"
+                                                        }
+                                                    }
+                                                    githubPersonalAccessToken = $GitHubPat
+                                                }
+                                            } | ConvertTo-Json -Depth 10
+                                            
+                                            $headers = @{
+                                                "Authorization" = "Bearer $accessToken"
+                                                "Content-Type"  = "application/json"
+                                            }
+                                            
+                                            $response = Invoke-RestMethod -Uri $uri -Method Put -Headers $headers -Body $body -ErrorAction Stop
+                                            
+                                            Write-Host "✓" -ForegroundColor Green
+                                            Write-ColorOutput Green "✅ Static Web App created and connected to GitHub!"
+                                            Write-Log "Static Web App created and connected via REST API" "INFO"
+                                            $swaCreated = $true
+                                            # Set result so success check works
+                                            $swaResult = @{ name = $SWA_NAME }
+                                        }
+                                        else {
+                                            Write-ColorOutput Yellow "   ⚠️  Could not get Azure access token."
+                                        }
+                                    }
+                                    catch {
+                                        Write-ColorOutput Yellow "   ⚠️  Failed to connect to GitHub: $($_.Exception.Message)"
+                                        Write-Log "Failed to connect GitHub: $($_.Exception.Message)" "WARN"
+                                    }
+                                }
+                                else {
+                                    $errorMsg = $swaCreateOutput -join '`n'
+                                    
+                                    # Check if it's still a region error
+                                    if ($errorMsg -match "LocationNotAvailableForResourceType" -and $swaLocation -ne $LOCATION) {
+                                        Write-Host "✗" -ForegroundColor Red
+                                        Write-ColorOutput Red "   ❌ Static Web Apps are not available in $swaLocation either."
+                                        Write-ColorOutput Yellow "   Error: $errorMsg"
+                                        Write-Log "Static Web App creation failed in ${swaLocation}: $errorMsg" "ERROR"
+                                    }
+                                    else {
+                                        Write-Host "✗" -ForegroundColor Red
+                                        Write-ColorOutput Yellow "   ⚠️  Static Web App creation failed."
+                                        Write-ColorOutput Yellow "   Error: $errorMsg"
+                                        Write-Log "Static Web App creation failed: $errorMsg" "ERROR"
+                                    }
+                                }
+                            }
+                        }
+                        finally {
+                            # Clean up temp directory
+                            if (Test-Path $tempDeployDir) {
+                                Remove-Item -Path $tempDeployDir -Recurse -Force -ErrorAction SilentlyContinue
+                            }
+                        }
+                    }
+                    else {
+                        # Use Azure CLI (fallback)
+                        Write-Output ""
+                        if (-not $swaCliAvailable) {
+                            Write-ColorOutput Yellow "   ℹ️  SWA CLI not found. Using Azure CLI (install with: npm install -g @azure/static-web-apps-cli)"
+                        }
+                        
+                        $swaResult = az staticwebapp create `
+                            --name $SWA_NAME `
+                            --resource-group $RG `
+                            --location $LOCATION `
+                            --sku Free `
+                            --output json 2>$null | ConvertFrom-Json
+                        
+                        if ($swaResult) {
+                            Write-Host "✓" -ForegroundColor Green
+                            Write-ColorOutput Green "✅ Static Web App created!"
+                            if (-not $GitHubPat) {
+                                Write-ColorOutput Yellow "   ⚠️  Created without GitHub integration."
+                                Write-ColorOutput Yellow "   Connect it to GitHub later via Azure Portal or use:"
+                                Write-ColorOutput Cyan "   az staticwebapp connect --name $SWA_NAME --resource-group $RG --login-with-github"
+                            }
+                            else {
+                                Write-ColorOutput Yellow "   ⚠️  Install SWA CLI for better GitHub PAT support: npm install -g @azure/static-web-apps-cli"
+                            }
+                        }
+                    }
+                    
+                    if ($swaCreated -or $swaResult) {
+                        if (-not $swaCreated) {
+                            Write-Host "✓" -ForegroundColor Green
+                            Write-ColorOutput Green "✅ Static Web App created!"
+                            Write-Log "Static Web App created successfully: $SWA_NAME" "INFO"
+                        }
                         Write-Output ""
                         Write-ColorOutput Yellow "⚠️  IMPORTANT: Get the deployment token and add it to GitHub Secrets:"
                         Write-Output ""

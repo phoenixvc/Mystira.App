@@ -68,10 +68,14 @@ function Get-ExistingResources {
     
     .PARAMETER Verbose
     Show verbose output
+    
+    .PARAMETER TimeoutSeconds
+    Timeout in seconds for Azure CLI commands
     #>
     param(
         [switch]$SkipScan,
-        [switch]$Verbose
+        [switch]$Verbose,
+        [int]$TimeoutSeconds = 30
     )
     
     if ($SkipScan) {
