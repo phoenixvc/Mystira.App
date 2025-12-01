@@ -127,7 +127,7 @@ jobs:
           ###### Repository/Build Configurations ######
           app_location: "./src/Mystira.App.PWA" # App source code path
           api_location: "swa-db-connections" # API source code path
-          output_location: "out" # Built app content directory
+          output_location: "wwwroot" # Built app content directory (Blazor WebAssembly outputs to wwwroot)
           skip_api_build: true # Skip API build since we don't have Azure Functions
           skip_app_build: false # Let Oryx build the app
           production_branch: "dev" # Specify the production branch for this environment
