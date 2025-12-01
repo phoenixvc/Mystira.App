@@ -24,9 +24,9 @@ function New-StaticWebAppWithGitHub {
     )
     
     $result = @{
-        Success = $false
-        Created = $false
-        Error = ""
+        Success      = $false
+        Created      = $false
+        Error        = ""
         StaticWebApp = $null
     }
     
@@ -49,7 +49,7 @@ function New-StaticWebAppWithGitHub {
         return $result
     }
     
-    # Get GitHub repo info if not provided
+    # Get GitHub repo info if not provided (optional - SWA can be created without GitHub)
     if (-not $RepositoryOwner -or -not $RepositoryName) {
         $repoUrl = Get-GitRemoteUrl
         $repoInfo = Get-GitHubRepositoryInfo -RemoteUrl $repoUrl
@@ -57,16 +57,19 @@ function New-StaticWebAppWithGitHub {
         $RepositoryName = $repoInfo.Name
     }
     
-    if (-not $RepositoryOwner -or -not $RepositoryName) {
-        $result.Error = "Could not detect GitHub repository"
-        Write-ColorOutput Yellow "WARNING: Could not detect GitHub repository."
-        Write-Log "Error: Could not detect GitHub repository" "ERROR"
-        return $result
+    if ($RepositoryOwner -and $RepositoryName) {
+        Write-Output "Repository: $RepositoryOwner/$RepositoryName"
+        Write-Log "GitHub repository: $RepositoryOwner/$RepositoryName" "INFO"
+        Write-Output ""
     }
-    
-    Write-Output "Repository: $RepositoryOwner/$RepositoryName"
-    Write-Log "GitHub repository: $RepositoryOwner/$RepositoryName" "INFO"
-    Write-Output ""
+    else {
+        Write-ColorOutput Yellow "WARNING: Could not detect GitHub repository."
+        Write-ColorOutput Yellow "   Static Web App will be created without GitHub integration."
+        Write-ColorOutput Cyan "   You can connect it later via Azure Portal or use:"
+        Write-ColorOutput Cyan "   az staticwebapp connect --name $Name --resource-group $ResourceGroup --login-with-github"
+        Write-Log "Could not detect GitHub repository, will create SWA without integration" "WARN"
+        Write-Output ""
+    }
     
     # Use SWA CLI if available (better GitHub PAT support)
     if ($SwaCliAvailable -and $GitHubPat -and $RepositoryOwner -and $RepositoryName) {
@@ -119,7 +122,8 @@ function New-StaticWebAppWithGitHub {
         $result.Success = $true
         $result.Created = $true
         $result.StaticWebApp = $swaResult.StaticWebApp
-    } else {
+    }
+    else {
         $result.Error = $swaResult.Error
     }
     
@@ -148,9 +152,9 @@ function New-StaticWebAppWithSwaCli {
     )
     
     $result = @{
-        Success = $false
+        Success      = $false
         StaticWebApp = $null
-        Error = ""
+        Error        = ""
     }
     
     try {
@@ -168,7 +172,8 @@ function New-StaticWebAppWithSwaCli {
         # Determine SWA CLI command
         $swaCmd = if ($SwaCliPath -and (Test-Path $SwaCliPath)) {
             $SwaCliPath
-        } else {
+        }
+        else {
             # Try to find it in common locations
             $foundPath = $null
             $checkPaths = @(
@@ -232,7 +237,8 @@ function New-StaticWebAppWithSwaCli {
                 Write-Log "Static Web App created and connected via SWA CLI" "INFO"
                 $result.Success = $true
                 $result.StaticWebApp = @{ name = $Name }
-            } else {
+            }
+            else {
                 $errorOutput = $swaDeployOutput -join '`n'
                 Write-ColorOutput Yellow "   WARNING: SWA CLI deploy failed. Creating resource first..."
                 Write-Log "SWA CLI deploy failed, creating resource first: $errorOutput" "WARN"
@@ -275,9 +281,9 @@ function New-StaticWebAppWithAzureCli {
     )
     
     $result = @{
-        Success = $false
+        Success      = $false
         StaticWebApp = $null
-        Error = ""
+        Error        = ""
     }
     
     try {
@@ -301,10 +307,22 @@ function New-StaticWebAppWithAzureCli {
             --output json 2>&1
         
         if ($LASTEXITCODE -eq 0) {
-            Write-ColorOutput Green "   SUCCESS: Resource created in $swaLocation. Connecting to GitHub..."
+            # Parse the created SWA info
+            try {
+                $swaInfo = $swaCreateOutput | ConvertFrom-Json -ErrorAction Stop
+                $result.StaticWebApp = $swaInfo
+            }
+            catch {
+                # If parsing fails, create a basic object
+                $result.StaticWebApp = @{ name = $Name }
+            }
             
-            # Connect with REST API using helper function
+            Write-ColorOutput Green "   SUCCESS: Resource created in $swaLocation."
+            $result.Success = $true
+            
+            # Connect with REST API using helper function (optional - SWA is already created)
             if ($GitHubPat -and $RepositoryOwner -and $RepositoryName) {
+                Write-ColorOutput Cyan "   Connecting to GitHub..."
                 $connectResult = Connect-StaticWebAppToGitHub `
                     -StaticWebAppName $Name `
                     -ResourceGroup $ResourceGroup `
@@ -321,18 +339,24 @@ function New-StaticWebAppWithAzureCli {
                     Write-Host "[OK]" -ForegroundColor Green
                     Write-ColorOutput Green "SUCCESS: Static Web App created and connected to GitHub!"
                     Write-Log "Static Web App created and connected via REST API" "INFO"
-                    $result.Success = $true
-                    $result.StaticWebApp = @{ name = $Name }
-                } else {
-                    Write-ColorOutput Yellow "   WARNING: Failed to connect to GitHub: $($connectResult.Error)"
-                    Write-Log "Failed to connect GitHub: $($connectResult.Error)" "WARN"
-                    $result.Error = $connectResult.Error
                 }
-            } else {
-                Write-ColorOutput Yellow "   WARNING: Missing GitHub PAT or repository info."
-                $result.Error = "Missing GitHub PAT or repository info"
+                else {
+                    Write-ColorOutput Yellow "   WARNING: Failed to connect to GitHub: $($connectResult.Error)"
+                    Write-ColorOutput Yellow "   The Static Web App was created successfully, but GitHub integration failed."
+                    Write-ColorOutput Cyan "   You can connect it later via Azure Portal or use:"
+                    Write-ColorOutput Cyan "   az staticwebapp connect --name $Name --resource-group $ResourceGroup --login-with-github"
+                    Write-Log "Failed to connect GitHub: $($connectResult.Error)" "WARN"
+                }
             }
-        } else {
+            else {
+                Write-ColorOutput Yellow "   WARNING: Missing GitHub PAT or repository info."
+                Write-ColorOutput Yellow "   The Static Web App was created successfully, but without GitHub integration."
+                Write-ColorOutput Cyan "   You can connect it later via Azure Portal or use:"
+                Write-ColorOutput Cyan "   az staticwebapp connect --name $Name --resource-group $ResourceGroup --login-with-github"
+                Write-Log "SWA created without GitHub integration (missing PAT or repo info)" "WARN"
+            }
+        }
+        else {
             $errorMsg = $swaCreateOutput -join '`n'
             
             # Check if it's a region error
@@ -341,7 +365,8 @@ function New-StaticWebAppWithAzureCli {
                 Write-ColorOutput Red "   ERROR: Static Web Apps are not available in $swaLocation."
                 Write-ColorOutput Yellow "   Error: $errorMsg"
                 Write-Log "Static Web App creation failed in ${swaLocation}: $errorMsg" "ERROR"
-            } else {
+            }
+            else {
                 Write-Host "[X]" -ForegroundColor Red
                 Write-ColorOutput Yellow "   WARNING: Static Web App creation failed."
                 Write-ColorOutput Yellow "   Error: $errorMsg"

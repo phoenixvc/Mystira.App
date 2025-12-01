@@ -490,13 +490,24 @@ if ($infrastructureDeployed) {
                 }
             }
             else {
-                Write-Host "[X]" -ForegroundColor Red
-                Write-ColorOutput Yellow "WARNING: Static Web App creation failed: $($swaResult.Error)"
-                Write-Log "Static Web App creation failed: $($swaResult.Error)" "ERROR"
+                # Verify if SWA was actually created despite the error (safety check)
+                Write-Log "SWA creation reported failure, verifying if resource exists..." "WARN"
+                $swaExists = Test-StaticWebAppExists -Name $SWA_NAME -ResourceGroup $RG
+                if ($swaExists) {
+                    Write-Host "[OK]" -ForegroundColor Green
+                    Write-ColorOutput Green "SUCCESS: Static Web App was created successfully!"
+                    Write-ColorOutput Yellow "   (Creation reported an error, but the resource exists in Azure)"
+                    Write-Log "SWA exists despite reported error - creation succeeded" "INFO"
+                }
+                else {
+                    Write-Host "[X]" -ForegroundColor Red
+                    Write-ColorOutput Yellow "WARNING: Static Web App creation failed: $($swaResult.Error)"
+                    Write-Log "Static Web App creation failed: $($swaResult.Error)" "ERROR"
+                }
             }
-        }
-        else {
-            Write-ColorOutput Yellow "   Skipping Static Web App creation."
+            else {
+                Write-ColorOutput Yellow "   Skipping Static Web App creation."
+            }
         }
         Write-Output ""
     }
@@ -634,63 +645,72 @@ else {
     }
     
     # Deployment succeeded - continue with post-deployment steps
-    if ($deploymentResult.Success) {
-        Write-Output ""
-        Write-ColorOutput Green "================================================"
-        Write-ColorOutput Green "  Infrastructure deployment successful!"
-        Write-ColorOutput Green "================================================"
-        Write-Output ""
-        Write-Output "Resources deployed to: $RG"
-        Write-Output "Location: $LOCATION"
-        Write-Output ""
-        Write-ColorOutput Yellow "JWT Secret (save this!):"
-        Write-Output $JWT_SECRET_BASE64
+    Write-Output ""
+    Write-ColorOutput Green "================================================"
+    Write-ColorOutput Green "  Infrastructure deployment successful!"
+    Write-ColorOutput Green "================================================"
+    Write-Output ""
+    Write-Output "Resources deployed to: $RG"
+    Write-Output "Location: $LOCATION"
+    Write-Output ""
+    Write-ColorOutput Yellow "JWT Secret (save this!):"
+    Write-Output $JWT_SECRET_BASE64
+    Write-Output ""
+    
+    # Check if Static Web App needs to be created (re-check to avoid race condition)
+    Write-Log "Step: Checking Static Web App existence" "INFO"
+    $swaCheck = Test-StaticWebAppExists -Name $SWA_NAME -ResourceGroup $RG
+    if ($swaCheck) {
+        Write-Log "Static Web App already exists: $SWA_NAME" "INFO"
+    }
+    else {
+        Write-Log "Static Web App not found: $SWA_NAME" "INFO"
+    }
+    
+    if (-not $swaCheck) {
+        Write-Log "Step: Creating Static Web App" "INFO"
+        Write-ColorOutput Yellow "Creating Static Web App..."
         Write-Output ""
         
-        # Check if Static Web App needs to be created (re-check to avoid race condition)
-        Write-Log "Step: Checking Static Web App existence" "INFO"
-        $swaCheck = Test-StaticWebAppExists -Name $SWA_NAME -ResourceGroup $RG
-        if ($swaCheck) {
-            Write-Log "Static Web App already exists: $SWA_NAME" "INFO"
+        # Get subscription ID
+        $azAccount = az account show --output json 2>$null | ConvertFrom-Json
+        $subscriptionId = if ($azAccount) { $azAccount.id } else { $SubscriptionId }
+        
+        # Create Static Web App using module function
+        Write-Host "Creating Static Web App... " -NoNewline
+        $swaResult = New-StaticWebAppWithGitHub `
+            -Name $SWA_NAME `
+            -ResourceGroup $RG `
+            -Location $LOCATION `
+            -SubscriptionId $subscriptionId `
+            -GitHubPat $GitHubPat `
+            -SwaCliPath $script:swaCliPath `
+            -SwaCliAvailable:$script:swaCliAvailable `
+            -Verbose:$Verbose
+        
+        if ($swaResult.Success) {
+            Write-Host "[OK]" -ForegroundColor Green
+            Write-ColorOutput Green "SUCCESS: Static Web App created!"
+            if ($swaResult.Created) {
+                Write-Output ""
+                Write-ColorOutput Yellow "WARNING: IMPORTANT: Get the deployment token and add it to GitHub Secrets:"
+                Write-Output ""
+                Write-Output "   Secret name: AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_MYSTIRA_APP"
+                Write-Output ""
+                Write-Output "   Get token with:"
+                Write-ColorOutput Cyan "   az staticwebapp secrets list --name $SWA_NAME --resource-group $RG --query properties.apiKey -o tsv"
+                Write-Output ""
+            }
         }
         else {
-            Write-Log "Static Web App not found: $SWA_NAME" "INFO"
-        }
-        
-        if (-not $swaCheck) {
-            Write-Log "Step: Creating Static Web App" "INFO"
-            Write-ColorOutput Yellow "Creating Static Web App..."
-            Write-Output ""
-            
-            # Get subscription ID
-            $azAccount = az account show --output json 2>$null | ConvertFrom-Json
-            $subscriptionId = if ($azAccount) { $azAccount.id } else { $SubscriptionId }
-            
-            # Create Static Web App using module function
-            Write-Host "Creating Static Web App... " -NoNewline
-            $swaResult = New-StaticWebAppWithGitHub `
-                -Name $SWA_NAME `
-                -ResourceGroup $RG `
-                -Location $LOCATION `
-                -SubscriptionId $subscriptionId `
-                -GitHubPat $GitHubPat `
-                -SwaCliPath $script:swaCliPath `
-                -SwaCliAvailable:$script:swaCliAvailable `
-                -Verbose:$Verbose
-            
-            if ($swaResult.Success) {
+            # Verify if SWA was actually created despite the error (safety check)
+            Write-Log "SWA creation reported failure, verifying if resource exists..." "WARN"
+            $swaExists = Test-StaticWebAppExists -Name $SWA_NAME -ResourceGroup $RG
+            if ($swaExists) {
                 Write-Host "[OK]" -ForegroundColor Green
-                Write-ColorOutput Green "SUCCESS: Static Web App created!"
-                if ($swaResult.Created) {
-                    Write-Output ""
-                    Write-ColorOutput Yellow "WARNING: IMPORTANT: Get the deployment token and add it to GitHub Secrets:"
-                    Write-Output ""
-                    Write-Output "   Secret name: AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_MYSTIRA_APP"
-                    Write-Output ""
-                    Write-Output "   Get token with:"
-                    Write-ColorOutput Cyan "   az staticwebapp secrets list --name $SWA_NAME --resource-group $RG --query properties.apiKey -o tsv"
-                    Write-Output ""
-                }
+                Write-ColorOutput Green "SUCCESS: Static Web App was created successfully!"
+                Write-ColorOutput Yellow "   (Creation reported an error, but the resource exists in Azure)"
+                Write-Log "SWA exists despite reported error - creation succeeded" "INFO"
             }
             else {
                 Write-Host "[X]" -ForegroundColor Red
@@ -698,13 +718,13 @@ else {
                 Write-Log "Static Web App creation failed: $($swaResult.Error)" "ERROR"
             }
         }
-        else {
-            if ($Verbose) {
-                Write-ColorOutput Green "   [VERBOSE] Static Web App already exists, skipping creation."
-            }
-        }
-        
-        # Show final resource summary
-        Show-ResourceSummary -ResourceGroup $RG -Location $LOCATION
     }
+    else {
+        if ($Verbose) {
+            Write-ColorOutput Green "   [VERBOSE] Static Web App already exists, skipping creation."
+        }
+    }
+    
+    # Show final resource summary
+    Show-ResourceSummary -ResourceGroup $RG -Location $LOCATION
 }
