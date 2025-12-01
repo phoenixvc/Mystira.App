@@ -2,13 +2,46 @@
 # Checks if Azure resources exist:
 #   - If NO → Deploy infrastructure
 #   - If YES → Push code to trigger CI/CD
-# Usage: .\.deploy-now.ps1 [region] [branch] [message]
+# Usage: .\.deploy-now.ps1 [region] [branch] [message] [-SkipScan] [-WhatIf] [-SubscriptionId] [-Verbose]
 
 param(
     [string]$Region = "",
     [string]$Branch = "",
-    [string]$Message = "Trigger deployment"
+    [string]$Message = "Trigger deployment",
+    [switch]$Verbose,
+    [switch]$SkipScan,
+    [switch]$WhatIf,
+    [string]$SubscriptionId = "22f9eb18-6553-4b7d-9451-47d0195085fe",
+    [string]$LogPath = ""
 )
+
+# Logging function
+$script:LogFile = $null
+if ($LogPath) {
+    $script:LogFile = $LogPath
+    if (-not (Test-Path (Split-Path $LogPath -Parent))) {
+        New-Item -ItemType Directory -Path (Split-Path $LogPath -Parent) -Force | Out-Null
+    }
+    "=== Deployment Log Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Out-File -FilePath $LogPath -Append
+}
+
+function Write-Log {
+    param([string]$Message, [string]$Level = "INFO")
+    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $logMessage = "[$timestamp] [$Level] $Message"
+    if ($script:LogFile) {
+        $logMessage | Out-File -FilePath $script:LogFile -Append
+    }
+    if ($Level -eq "ERROR") {
+        Write-ColorOutput Red $logMessage
+    }
+    elseif ($Level -eq "WARN") {
+        Write-ColorOutput Yellow $logMessage
+    }
+    else {
+        Write-Output $logMessage
+    }
+}
 
 # Colors for output
 function Write-ColorOutput($ForegroundColor, $Message) {
@@ -16,38 +49,46 @@ function Write-ColorOutput($ForegroundColor, $Message) {
     $host.UI.RawUI.ForegroundColor = $ForegroundColor
     Write-Output $Message
     $host.UI.RawUI.ForegroundColor = $fc
+    if ($script:LogFile) {
+        $Message | Out-File -FilePath $script:LogFile -Append
+    }
 }
+
+# Import helper modules
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$deployModulePath = Join-Path $scriptDir "scripts\deploy"
+if (Test-Path $deployModulePath) {
+    Import-Module (Join-Path $deployModulePath "AzureHelpers.psm1") -Force
+    Import-Module (Join-Path $deployModulePath "ResourceHelpers.psm1") -Force
+    Import-Module (Join-Path $deployModulePath "ErrorHandlers.psm1") -Force
+    Import-Module (Join-Path $deployModulePath "ErrorFormatter.psm1") -Force
+    Import-Module (Join-Path $deployModulePath "RollbackHelpers.psm1") -Force
+    Import-Module (Join-Path $deployModulePath "RetryHelpers.psm1") -Force
+}
+
+# Constants
+$script:MAX_DEPLOYMENT_RETRIES = 3
+$script:AZURE_CLI_TIMEOUT_SECONDS = 30
+$script:DEPLOYMENT_POLL_INTERVAL_SECONDS = 10
 
 # Azure config
-$SUB = "22f9eb18-6553-4b7d-9451-47d0195085fe"
-$REGIONS = @("eastus2", "westus2", "centralus", "westeurope", "northeurope", "eastasia")
-$LOCATION = if ($Region) { $Region } else { $REGIONS[0] }
+$SUB = $SubscriptionId
+$REGIONS = @("southafricanorth", "eastus2", "westus2", "centralus", "westeurope", "northeurope", "eastasia")
 
-# Get resource group name from location
-function Get-ResourceGroupName($loc) {
-    switch ($loc) {
-        "eastus2" { return "dev-eus2-rg-mystira-app" }
-        "westus2" { return "dev-wus2-rg-mystira-app" }
-        "centralus" { return "dev-cus-rg-mystira-app" }
-        "westeurope" { return "dev-euw-rg-mystira-app" }
-        "northeurope" { return "dev-eun-rg-mystira-app" }
-        "eastasia" { return "dev-ea-rg-mystira-app" }
-        default { return "dev-$($loc.Substring(0,4))-rg-mystira-app" }
+# Validate region if provided
+if ($Region) {
+    if (-not (Test-Region -Region $Region -SupportedRegions $REGIONS)) {
+        Write-ColorOutput Red "❌ Invalid region: $Region"
+        Write-Output "Supported regions: $($REGIONS -join ', ')"
+        exit 1
     }
+    $LOCATION = $Region
+}
+else {
+    $LOCATION = $REGIONS[0]
 }
 
-# Get Static Web App name based on location
-function Get-StaticWebAppName($loc) {
-    switch ($loc) {
-        "eastus2" { return "dev-eus2-swa-mystira-app" }
-        "westus2" { return "dev-wus2-swa-mystira-app" }
-        "centralus" { return "dev-cus-swa-mystira-app" }
-        "westeurope" { return "dev-euw-swa-mystira-app" }
-        "northeurope" { return "dev-eun-swa-mystira-app" }
-        "eastasia" { return "dev-ea-swa-mystira-app" }
-        default { return "dev-$($loc.Substring(0,4))-swa-mystira-app" }
-    }
-}
+# Functions are now in ResourceHelpers module
 
 Write-ColorOutput Cyan "🚀 Deploy Now - Smart Deployment"
 Write-Output "================================="
@@ -55,67 +96,333 @@ Write-Output ""
 
 # Check Azure login
 Write-Host "Checking Azure login... " -NoNewline
-try {
-    $account = az account show 2>$null | ConvertFrom-Json
-    if (-not $account) {
-        throw "Not logged in"
-    }
-    Write-Host "✓" -ForegroundColor Green
-    Write-Output "  ($($account.name))"
-}
-catch {
+$account = Test-AzureLogin
+if (-not $account) {
     Write-Host "✗" -ForegroundColor Red
     Write-Output "Logging in with device code..."
     az login --use-device-code
+    $account = Test-AzureLogin
+    if (-not $account) {
+        Write-ColorOutput Red "❌ Failed to login to Azure"
+        exit 1
+    }
 }
+Write-Host "✓" -ForegroundColor Green
+Write-Output "  ($($account.name))"
 
 # Set subscription
 Write-Host "Setting subscription... " -NoNewline
-try {
-    az account set --subscription $SUB 2>$null | Out-Null
+if (Set-AzureSubscription -SubscriptionId $SUB) {
     Write-Host "✓" -ForegroundColor Green
 }
-catch {
+else {
     Write-Host "✗" -ForegroundColor Red
     Write-Output "Available subscriptions:"
     az account list --output table
     exit 1
 }
 
-# Check if resource group exists and has resources
-Write-Host "Checking infrastructure... " -NoNewline
-$rgExists = $false
-$hasResources = $false
+# Functions are now in modules
 
-try {
-    $rgInfo = az group show --name $RG 2>$null | ConvertFrom-Json
-    if ($rgInfo) {
-        $rgExists = $true
-        # Check if resource group has any resources
-        $resources = az resource list --resource-group $RG --output json 2>$null | ConvertFrom-Json
-        if ($resources -and $resources.Count -gt 0) {
-            $hasResources = $true
+# Function to display resource summary
+function Show-ResourceSummary {
+    param(
+        [string]$ResourceGroup,
+        [string]$Location
+    )
+    
+    Write-Output ""
+    Write-ColorOutput Cyan "================================================"
+    Write-ColorOutput Cyan "  📊 Resource Summary"
+    Write-ColorOutput Cyan "================================================"
+    Write-Output ""
+    
+    # Get all resources in the resource group
+    try {
+        $resources = az resource list --resource-group $ResourceGroup --output json 2>$null | ConvertFrom-Json
+        if ($resources) {
+            Write-Output "Resource Group: $ResourceGroup"
+            Write-Output "Location: $Location"
+            Write-Output ""
+            Write-Output "Resources:"
+            
+            $appServices = @()
+            $storageAccounts = @()
+            $cosmosAccounts = @()
+            $commServices = @()
+            
+            foreach ($resource in $resources | Sort-Object type, name) {
+                $resourceType = $resource.type -replace '.*/', ''
+                $resourceName = $resource.name
+                $resourceState = if ($resource.properties.provisioningState) { $resource.properties.provisioningState } else { "N/A" }
+                
+                Write-Output "  • $resourceType : $resourceName ($resourceState)"
+                
+                # Categorize resources for detailed info
+                if ($resourceType -eq "sites") {
+                    $appServices += $resource
+                }
+                elseif ($resourceType -eq "storageAccounts") {
+                    $storageAccounts += $resource
+                }
+                elseif ($resourceType -eq "databaseAccounts") {
+                    $cosmosAccounts += $resource
+                }
+                elseif ($resourceType -eq "communicationServices") {
+                    $commServices += $resource
+                }
+            }
+            
+            # Show detailed info for App Services
+            if ($appServices.Count -gt 0) {
+                Write-Output ""
+                Write-Output "App Services:"
+                foreach ($app in $appServices) {
+                    try {
+                        $appInfo = az webapp show --name $app.name --resource-group $ResourceGroup --query "{Url:defaultHostName, State:state, Location:location}" -o json 2>$null | ConvertFrom-Json
+                        if ($appInfo) {
+                            Write-Output "  • $($app.name):"
+                            Write-Output "    URL: https://$($appInfo.Url)"
+                            Write-Output "    State: $($appInfo.State)"
+                            Write-Output "    Location: $($appInfo.Location)"
+                        }
+                    }
+                    catch {
+                        Write-Output "  • $($app.name): (details unavailable)"
+                    }
+                }
+            }
+            
+            # Show detailed info for Storage Accounts
+            if ($storageAccounts.Count -gt 0) {
+                Write-Output ""
+                Write-Output "Storage Accounts:"
+                foreach ($storage in $storageAccounts) {
+                    Write-Output "  • $($storage.name)"
+                    Write-Output "    Primary Endpoint: https://$($storage.name).blob.core.windows.net"
+                }
+            }
+            
+            # Show detailed info for Cosmos DB
+            if ($cosmosAccounts.Count -gt 0) {
+                Write-Output ""
+                Write-Output "Cosmos DB Accounts:"
+                foreach ($cosmos in $cosmosAccounts) {
+                    try {
+                        $cosmosInfo = az cosmosdb show --name $cosmos.name --resource-group $ResourceGroup --query "{DocumentEndpoint:documentEndpoint, ProvisioningState:provisioningState}" -o json 2>$null | ConvertFrom-Json
+                        if ($cosmosInfo) {
+                            Write-Output "  • $($cosmos.name):"
+                            Write-Output "    Endpoint: $($cosmosInfo.DocumentEndpoint)"
+                            Write-Output "    State: $($cosmosInfo.ProvisioningState)"
+                        }
+                    }
+                    catch {
+                        Write-Output "  • $($cosmos.name): (details unavailable)"
+                    }
+                }
+            }
+        }
+        
+        # Check for Static Web App
+        $swaName = Get-StaticWebAppName $Location
+        try {
+            $swaInfo = az staticwebapp show --name $swaName --resource-group $ResourceGroup 2>$null | ConvertFrom-Json
+            if ($swaInfo) {
+                Write-Output ""
+                Write-Output "Static Web App:"
+                Write-Output "  • Name: $($swaInfo.name)"
+                Write-Output "  • URL: https://$($swaInfo.defaultHostname)"
+                Write-Output "  • Location: $($swaInfo.location)"
+            }
+        }
+        catch {
+            Write-Output ""
+            Write-ColorOutput Yellow "  ⚠️  Static Web App not found: $swaName"
         }
     }
+    catch {
+        Write-ColorOutput Yellow "  Could not retrieve resource details"
+    }
+    
+    Write-Output ""
+    Write-ColorOutput Cyan "================================================"
+    Write-Output ""
 }
-catch {
-    # Resource group doesn't exist
-}
-Write-Host "✓" -ForegroundColor Green
+
+# Scan for existing resources
+$existingResources = Get-ExistingResources -SkipScan:$SkipScan -Verbose:$Verbose -TimeoutSeconds $script:AZURE_CLI_TIMEOUT_SECONDS
 
 $RG = Get-ResourceGroupName $LOCATION
 $SWA_NAME = Get-StaticWebAppName $LOCATION
 
-# Check if Static Web App exists
+# Check if we have existing resources
+$rgExists = $false
+$hasResources = $false
 $swaExists = $false
-try {
-    $swaInfo = az staticwebapp show --name $SWA_NAME --resource-group $RG 2>$null | ConvertFrom-Json
-    if ($swaInfo) {
-        $swaExists = $true
-    }
+
+# Check if the default resource group exists
+$matchingRG = $existingResources.ResourceGroups | Where-Object { $_.Name -eq $RG }
+if ($matchingRG) {
+    $rgExists = $true
+    $hasResources = $matchingRG.HasResources
 }
-catch {
-    # Static Web App doesn't exist
+
+# Check if Static Web App exists
+$matchingSWA = $existingResources.StaticWebApps | Where-Object { $_.Name -eq $SWA_NAME -and $_.ResourceGroup -eq $RG }
+if ($matchingSWA) {
+    $swaExists = $true
+}
+
+# If we have existing resources, show them and ask what to do
+if ($existingResources.ResourceGroups.Count -gt 0 -or $existingResources.StaticWebApps.Count -gt 0) {
+    Write-Output ""
+    Write-ColorOutput Cyan "📋 Found Existing Resources:"
+    Write-Output ""
+    
+    if ($existingResources.ResourceGroups.Count -gt 0) {
+        Write-Output "Resource Groups:"
+        for ($i = 0; $i -lt $existingResources.ResourceGroups.Count; $i++) {
+            $rgItem = $existingResources.ResourceGroups[$i]
+            $status = if ($rgItem.HasResources) { "✓ Has resources ($($rgItem.ResourceCount))" } else { "Empty" }
+            Write-Output "  [$($i+1)] $($rgItem.Name) - $($rgItem.Location) ($status)"
+        }
+        Write-Output ""
+    }
+    
+    if ($existingResources.StaticWebApps.Count -gt 0) {
+        Write-Output "Static Web Apps:"
+        for ($i = 0; $i -lt $existingResources.StaticWebApps.Count; $i++) {
+            $swaItem = $existingResources.StaticWebApps[$i]
+            Write-Output "  [$($i+1)] $($swaItem.Name) - $($swaItem.ResourceGroup) ($($swaItem.Location))"
+            Write-Output "      URL: https://$($swaItem.DefaultHostname)"
+        }
+        Write-Output ""
+    }
+    
+    Write-ColorOutput Yellow "What would you like to do?"
+    $maxOption = 4
+    $options = @("1. Use existing resource group: $RG (in $LOCATION)")
+    if ($existingResources.ResourceGroups.Count -gt 0) {
+        $options += "2. Use a different existing resource group"
+        $maxOption = 4
+    }
+    else {
+        $maxOption = 3
+    }
+    $options += "3. Create new resource group with new name"
+    $options += "4. Create new resource group in different region"
+    
+    foreach ($opt in $options) {
+        Write-Output "  $opt"
+    }
+    Write-Output ""
+    
+    # Input validation with retry
+    do {
+        $choice = Read-Host "Choose an option (1-$maxOption)"
+        if ($choice -notmatch "^[1-$maxOption]$") {
+            Write-ColorOutput Red "❌ Invalid choice. Please enter a number between 1 and $maxOption."
+        }
+    } while ($choice -notmatch "^[1-$maxOption]$")
+    
+    switch ($choice) {
+        "1" {
+            # Use default - continue as normal
+            Write-ColorOutput Green "✅ Using existing resource group: $RG"
+        }
+        "2" {
+            if ($existingResources.ResourceGroups.Count -gt 0) {
+                Write-Output ""
+                Write-Output "Select a resource group:"
+                for ($i = 0; $i -lt $existingResources.ResourceGroups.Count; $i++) {
+                    $rgItem = $existingResources.ResourceGroups[$i]
+                    Write-Output "  [$($i+1)] $($rgItem.Name) - $($rgItem.Location)"
+                }
+                Write-Output ""
+                # Input validation with retry
+                do {
+                    $rgChoice = Read-Host "Enter number (1-$($existingResources.ResourceGroups.Count))"
+                    if ($rgChoice -notmatch "^\d+$" -or [int]$rgChoice -lt 1 -or [int]$rgChoice -gt $existingResources.ResourceGroups.Count) {
+                        Write-ColorOutput Red "❌ Invalid choice. Please enter a number between 1 and $($existingResources.ResourceGroups.Count)."
+                    }
+                } while ($rgChoice -notmatch "^\d+$" -or [int]$rgChoice -lt 1 -or [int]$rgChoice -gt $existingResources.ResourceGroups.Count)
+                
+                $selectedResourceGroup = $existingResources.ResourceGroups[[int]$rgChoice - 1]
+                $RG = $selectedResourceGroup.Name
+                $LOCATION = $selectedResourceGroup.Location
+                $SWA_NAME = Get-StaticWebAppName $LOCATION
+                Write-ColorOutput Green "✅ Selected: $RG in $LOCATION"
+            }
+        }
+        "3" {
+            $newName = Read-Host "Enter new resource group name (e.g., dev-custom-rg-mystira-app)"
+            $RG = $newName
+            $rgExists = $false
+            $hasResources = $false
+            Write-ColorOutput Green "✅ Will create new resource group: $RG"
+        }
+        "4" {
+            Write-Output ""
+            Write-Output "Available regions:"
+            for ($i = 0; $i -lt $REGIONS.Count; $i++) {
+                Write-Output "  [$($i+1)] $($REGIONS[$i])"
+            }
+            Write-Output ""
+            # Input validation with retry
+            do {
+                $regionChoice = Read-Host "Enter region number (1-$($REGIONS.Count))"
+                if ($regionChoice -notmatch "^\d+$" -or [int]$regionChoice -lt 1 -or [int]$regionChoice -gt $REGIONS.Count) {
+                    Write-ColorOutput Red "❌ Invalid choice. Please enter a number between 1 and $($REGIONS.Count)."
+                }
+            } while ($regionChoice -notmatch "^\d+$" -or [int]$regionChoice -lt 1 -or [int]$regionChoice -gt $REGIONS.Count)
+                        
+            $selectedRegion = $REGIONS[[int]$regionChoice - 1]
+            if (-not (Test-Region -Region $selectedRegion -SupportedRegions $REGIONS)) {
+                Write-ColorOutput Red "❌ Invalid region selected"
+                exit 1
+            }
+            $LOCATION = $selectedRegion
+            $RG = Get-ResourceGroupName $LOCATION
+            $SWA_NAME = Get-StaticWebAppName $LOCATION
+            $rgExists = $false
+            $hasResources = $false
+            Write-ColorOutput Green "✅ Will create in region: $LOCATION (Resource Group: $RG)"
+        }
+        default {
+            Write-ColorOutput Red "❌ Invalid choice. Using default: $RG"
+        }
+    }
+    
+    Write-Output ""
+    
+    # Re-check Static Web App existence after selection
+    $swaExists = $false
+    try {
+        $swaInfo = az staticwebapp show --name $SWA_NAME --resource-group $RG 2>$null | ConvertFrom-Json
+        if ($swaInfo) {
+            $swaExists = $true
+        }
+    }
+    catch {
+        # Static Web App doesn't exist
+    }
+    
+    # Re-check resource group existence
+    $rgExists = $false
+    $hasResources = $false
+    try {
+        $rgInfo = az group show --name $RG 2>$null | ConvertFrom-Json
+        if ($rgInfo) {
+            $rgExists = $true
+            $resources = az resource list --resource-group $RG --output json 2>$null | ConvertFrom-Json
+            if ($resources -and $resources.Count -gt 0) {
+                $hasResources = $true
+            }
+        }
+    }
+    catch {
+        # Resource group doesn't exist
+    }
 }
 
 if ($hasResources -and $swaExists) {
@@ -123,10 +430,30 @@ if ($hasResources -and $swaExists) {
     Write-Output ""
     
     # Code deployment path
+    Write-Log "Step: Validating git repository" "INFO"
+    
+    # Validate git repo
+    try {
+        $gitRoot = git rev-parse --git-dir 2>$null
+        if (-not $gitRoot) {
+            Write-ColorOutput Red "❌ Not in a git repository. Please run this script from the repository root."
+            Write-Log "Error: Not in a git repository" "ERROR"
+            exit 1
+        }
+        Write-Log "Git repository validated: $gitRoot" "INFO"
+    }
+    catch {
+        Write-ColorOutput Red "❌ Git not available or not in a git repository."
+        Write-Log "Error: Git validation failed" "ERROR"
+        exit 1
+    }
+    
     $CURRENT_BRANCH = git rev-parse --abbrev-ref HEAD
     $TARGET_BRANCH = if ($Branch) { $Branch } else { $CURRENT_BRANCH }
+    Write-Log "Current branch: $CURRENT_BRANCH, Target branch: $TARGET_BRANCH" "INFO"
     
     # Check if there are uncommitted changes
+    Write-Log "Step: Checking for uncommitted changes" "INFO"
     $status = git status --porcelain
     if ($status) {
         Write-ColorOutput Yellow "⚠️  You have uncommitted changes."
@@ -184,7 +511,10 @@ if ($hasResources -and $swaExists) {
     Write-ColorOutput Green "✅ Code deployment triggered!"
     Write-ColorOutput Green "   Branch: $TARGET_BRANCH"
     Write-ColorOutput Green "   Check GitHub Actions for deployment status"
+    Write-Output ""
     
+    # Show resource summary
+    Show-ResourceSummary -ResourceGroup $RG -Location $LOCATION
 }
 else {
     Write-ColorOutput Yellow "No resources found"
@@ -235,6 +565,7 @@ else {
     
     # Get resource prefix based on location (matches infrastructure/dev/main.bicep)
     $resourcePrefix = switch ($LOCATION) {
+        "southafricanorth" { "dev-san" }
         "eastus2" { "dev-eus2" }
         "westus2" { "dev-wus2" }
         "centralus" { "dev-cus" }
@@ -248,7 +579,8 @@ else {
     $storageNameBase = ($resourcePrefix + "-st-mystira") -replace '-', ''
     if ($storageNameBase.Length -gt 24) {
         $expectedStorageName = $storageNameBase.Substring(0, 24)
-    } else {
+    }
+    else {
         $expectedStorageName = $storageNameBase
     }
     
@@ -256,9 +588,12 @@ else {
     Write-Output "   (Will handle conflicts if they occur)"
     Write-Output ""
     
+    # Initialize rollback tracking
+    $deployName = "mystira-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+    Initialize-RollbackTracking -ResourceGroup $RG -DeploymentName $deployName
+    
     # Deploy infrastructure - try first, handle conflicts on failure
     $retryCount = 0
-    $maxRetries = 3
     $script:cosmosUseAttempted = $false
     $script:skipCosmosCreation = $false
     $script:skipStorageCreation = $false
@@ -269,7 +604,7 @@ else {
     if (-not $script:existingCosmosResourceGroup) { $script:existingCosmosResourceGroup = "" }
     if (-not $script:existingCosmosDbAccountName) { $script:existingCosmosDbAccountName = "" }
     
-    while ($retryCount -le $maxRetries) {
+    while ($retryCount -le $script:MAX_DEPLOYMENT_RETRIES) {
         # Ensure resource group exists in current region
         $rgCheck = az group show --name $RG 2>$null | ConvertFrom-Json -ErrorAction SilentlyContinue
         if (-not $rgCheck) {
@@ -278,27 +613,27 @@ else {
             Write-Host " ✓" -ForegroundColor Green
         }
         
-        $deployName = "mystira-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-        
         # Create parameters JSON file for secure parameters
         $paramsFile = Join-Path $env:TEMP "bicep-params-$(Get-Date -Format 'yyyyMMdd-HHmmss').json"
         
         # Build parameters object - preserve skip flags across retries using script-scoped variables
-        # Debug: Show script-scoped variable values
-        if ($retryCount -gt 0) {
-            Write-ColorOutput Yellow "   Debug (retry $retryCount): script:skipAppServiceCreation=$($script:skipAppServiceCreation), script:existingAppServiceResourceGroup=$($script:existingAppServiceResourceGroup)"
+        if ($Verbose -and $retryCount -gt 0) {
+            $skipAppService = $script:skipAppServiceCreation
+            $existingAppServiceRG = $script:existingAppServiceResourceGroup
+            $verboseMsg = "   [VERBOSE] Retry $retryCount : skipAppServiceCreation=$skipAppService, existingAppServiceResourceGroup=$existingAppServiceRG"
+            Write-ColorOutput Yellow $verboseMsg
         }
         
         $paramsObj = @{
-            environment = @{ value = "dev" }
-            location = @{ value = $LOCATION }
-            resourcePrefix = @{ value = $resourcePrefix }
-            jwtSecretKey = @{ value = $JWT_SECRET_BASE64 }
-            newStorageAccountName = @{ value = $expectedStorageName }
-            skipCosmosCreation = @{ value = [bool]$script:skipCosmosCreation }
-            skipStorageCreation = @{ value = [bool]$script:skipStorageCreation }
+            environment             = @{ value = "dev" }
+            location                = @{ value = $LOCATION }
+            resourcePrefix          = @{ value = $resourcePrefix }
+            jwtSecretKey            = @{ value = $JWT_SECRET_BASE64 }
+            newStorageAccountName   = @{ value = $expectedStorageName }
+            skipCosmosCreation      = @{ value = [bool]$script:skipCosmosCreation }
+            skipStorageCreation     = @{ value = [bool]$script:skipStorageCreation }
             skipCommServiceCreation = @{ value = [bool]$script:skipCommServiceCreation }
-            skipAppServiceCreation = @{ value = [bool]$script:skipAppServiceCreation }
+            skipAppServiceCreation  = @{ value = [bool]$script:skipAppServiceCreation }
         }
         
         # Add existing resource parameters - use script-scoped variables (they persist across retries)
@@ -321,42 +656,136 @@ else {
         
         Write-Output "Using parameters file: $paramsFile"
         Write-Output ""
-        Write-ColorOutput Cyan "🚀 Starting infrastructure deployment..."
-        Write-Output "This may take several minutes. Please wait..."
-        Write-Output ""
         
-        $deploymentSuccess = $false
-        $shouldRetry = $false
-        
-        try {
-            # Debug: Show parameters file contents
-            Write-ColorOutput Yellow "   Debug: Parameters file contents:"
+        if ($WhatIf) {
+            Write-ColorOutput Cyan "🔍 [WHATIF] Would deploy infrastructure with the following parameters:"
             $paramsDebug = Get-Content $paramsFile | ConvertFrom-Json
             Write-Output ($paramsDebug.parameters | ConvertTo-Json -Depth 10)
             Write-Output ""
+            Write-ColorOutput Yellow "   [WHATIF] Deployment would target:"
+            Write-Output "   Resource Group: $RG"
+            Write-Output "   Location: $LOCATION"
+            Write-Output "   Template: $BICEP_FILE"
+            Write-Output ""
+            Write-ColorOutput Green "✅ [WHATIF] Preview complete. Run without -WhatIf to deploy."
+            $deploymentSuccess = $true
+            break
+        }
+        
+        Write-ColorOutput Cyan "🚀 Starting infrastructure deployment..."
+        Write-Output "This may take several minutes. Please wait..."
+        Write-Output ""
+        Write-Log "Starting infrastructure deployment" "INFO"
+        Write-Log "Resource Group: $RG, Location: $LOCATION, Template: $BICEP_FILE" "INFO"
+        
+        $deploymentSuccess = $false
+        $shouldRetry = $false
+        $deploymentStartTime = Get-Date
+        
+        try {
+            Write-Log "Step: Executing Bicep deployment" "INFO"
+            if ($Verbose) {
+                Write-ColorOutput Yellow "   [VERBOSE] Parameters file contents:"
+                $paramsDebug = Get-Content $paramsFile | ConvertFrom-Json
+                Write-Output ($paramsDebug.parameters | ConvertTo-Json -Depth 10)
+                Write-Output ""
+            }
             
-            # Capture both stdout and stderr separately
-            $stdout = az deployment group create `
-                --resource-group $RG `
-                --template-file $BICEP_FILE `
-                --parameters "@$paramsFile" `
-                --mode Incremental `
-                --name $deployName `
-                --output json 2>&1 | Where-Object { $_ -notmatch '^WARNING:' }
+            # Show progress indicator
+            Write-Host "Deploying..." -NoNewline
+            $progressJob = Start-Job -ScriptBlock {
+                $dots = 0
+                while ($true) {
+                    Start-Sleep -Seconds 2
+                    $dots = ($dots + 1) % 4
+                    $progress = "." * $dots + " " * (3 - $dots)
+                    Write-Host "`rDeploying$progress" -NoNewline
+                }
+            }
+            
+            # Capture both stdout and stderr separately with retry logic for transient errors
+            $deploymentResult = Invoke-WithRetry -ScriptBlock {
+                $output = az deployment group create `
+                    --resource-group $RG `
+                    --template-file $BICEP_FILE `
+                    --parameters "@$paramsFile" `
+                    --mode Incremental `
+                    --name $deployName `
+                    --output json 2>&1 | Where-Object { $_ -notmatch '^WARNING:' }
+                
+                if ($LASTEXITCODE -ne 0) {
+                    throw ($output -join "`n")
+                }
+                
+                return $output
+            } -MaxRetries 3 -InitialDelaySeconds 5 -MaxDelaySeconds 30
+            
+            if (-not $deploymentResult.Success) {
+                # Check if it's a transient error that we should retry
+                if ($deploymentResult.IsTransient) {
+                    Write-ColorOutput Yellow "⚠️  Transient error detected, will retry with conflict handling..."
+                    $stdout = $deploymentResult.Error
+                }
+                else {
+                    $stdout = $deploymentResult.Error
+                }
+                $LASTEXITCODE = 1
+            }
+            else {
+                $stdout = $deploymentResult.Result
+                $LASTEXITCODE = 0
+            }
+            
+            # Stop progress indicator
+            $progressJob | Stop-Job -ErrorAction SilentlyContinue
+            $progressJob | Remove-Job -ErrorAction SilentlyContinue
+            Write-Host "`r" -NoNewline  # Clear progress line
             
             if ($LASTEXITCODE -eq 0) {
                 # Success - try to parse JSON
+                $elapsed = (Get-Date) - $deploymentStartTime
+                Write-Host "✓ Deployment completed in $([math]::Round($elapsed.TotalMinutes, 1)) minutes" -ForegroundColor Green
+                Write-Log "Step: Deployment succeeded in $([math]::Round($elapsed.TotalSeconds, 2)) seconds" "INFO"
                 try {
                     $result = $stdout | ConvertFrom-Json -ErrorAction Stop
-                    Write-Output ($result | ConvertTo-Json -Depth 10 | Out-String)
-                    $deploymentSuccess = $true
-                } catch {
-                    # If JSON parse fails but exit code is 0, deployment might have succeeded
-                    Write-Output $stdout
+                    if (-not $Verbose) {
+                        Write-Output "Deployment successful!"
+                    }
+                    else {
+                        Write-Output ($result | ConvertTo-Json -Depth 10 | Out-String)
+                    }
+                    
+                    # Track created resources from deployment output
+                    if ($result.properties.outputs) {
+                        if ($result.properties.outputs.storageAccountName) {
+                            Register-Resource -ResourceType "Microsoft.Storage/storageAccounts" `
+                                -ResourceName $result.properties.outputs.storageAccountName.value `
+                                -ResourceGroup $RG
+                        }
+                        if ($result.properties.outputs.cosmosDbAccountName) {
+                            Register-Resource -ResourceType "Microsoft.DocumentDB/databaseAccounts" `
+                                -ResourceName $result.properties.outputs.cosmosDbAccountName.value `
+                                -ResourceGroup $RG
+                        }
+                        if ($result.properties.outputs.communicationServiceName) {
+                            Register-Resource -ResourceType "Microsoft.Communication/communicationServices" `
+                                -ResourceName $result.properties.outputs.communicationServiceName.value `
+                                -ResourceGroup $RG
+                        }
+                    }
+                    
                     $deploymentSuccess = $true
                 }
-            } else {
+                catch {
+                    # If JSON parse fails but exit code is 0, deployment might have succeeded
+                    Write-Output "Deployment completed (output parsing skipped)"
+                    $deploymentSuccess = $true
+                }
+            }
+            else {
                 # Failure - try to parse error JSON
+                $elapsed = (Get-Date) - $deploymentStartTime
+                Write-Log "Step: Deployment failed after $([math]::Round($elapsed.TotalSeconds, 2)) seconds" "ERROR"
                 $errorJson = $null
                 $errorMsg = ""
                 
@@ -364,21 +793,26 @@ else {
                     $errorJson = $stdout | ConvertFrom-Json -ErrorAction Stop
                     if ($errorJson.error) {
                         $errorMsg = $errorJson.error.message
+                        Write-Log "Error details: $errorMsg" "ERROR"
                     }
-                } catch {
+                }
+                catch {
                     # Not JSON, use raw output
                     $errorMsg = ($stdout -join "`n")
+                    Write-Log "Error (non-JSON): $errorMsg" "ERROR"
                 }
                 
                 if (-not $errorMsg) {
                     $errorMsg = ($stdout -join "`n")
+                    Write-Log "Error (raw): $errorMsg" "ERROR"
                 }
                 
                 # If we already tried "use" for Communication Service and it failed again, don't retry
                 if ($script:commServiceUseAttempted -and $errorMsg -match "NameReservationTaken" -and $errorMsg -match "communication") {
                     Write-Output ""
-                    Write-ColorOutput Red "❌ Communication Service 'use' failed. Cannot proceed."
-                    Write-Output "Error: $errorMsg"
+                    $formattedError = Format-Error -ErrorMessage $errorMsg -Step "Communication Service conflict resolution"
+                    Write-ColorOutput Red $formattedError
+                    Write-Log "Communication Service 'use' failed after retry" "ERROR"
                     exit 1
                 }
                 
@@ -386,298 +820,129 @@ else {
                 # If we already tried using existing App Services in a PREVIOUS retry and it failed again, don't retry
                 if ($script:appServiceUseAttempted -and ($errorMsg -match "Website.*already exists" -or ($errorMsg -match "Conflict" -and $errorMsg -match "Website"))) {
                     Write-Output ""
-                    Write-ColorOutput Red "❌ App Service 'use existing' failed. Cannot proceed."
+                    $formattedError = Format-Error -ErrorMessage $errorMsg -Step "App Service conflict resolution"
+                    Write-ColorOutput Red $formattedError
                     Write-ColorOutput Yellow "   The App Services exist but the deployment is still trying to create them."
                     Write-ColorOutput Cyan "   This may indicate the skipAppServiceCreation parameter isn't being applied correctly."
                     Write-ColorOutput Cyan "   Parameter should be: skipAppServiceCreation=true, existingAppServiceResourceGroup=$RG"
-                    Write-Output "Error: $errorMsg"
+                    Write-Log "App Service 'use existing' failed after retry" "ERROR"
                     exit 1
                 }
                 
                 # Handle App Service conflicts (they already exist - provide detailed info and options)
                 if ($errorMsg -match "Website.*already exists" -or ($errorMsg -match "Conflict" -and $errorMsg -match "Website")) {
-                    Write-Output ""
-                    Write-ColorOutput Yellow "⚠️  App Service conflict detected!"
-                    Write-Output ""
-                    Write-ColorOutput Cyan "   The following App Services already exist:"
-                    $appServicesToDelete = @()
-                    $apiAppServiceName = "${resourcePrefix}-app-mystira-api"
-                    $adminApiAppServiceName = "${resourcePrefix}-app-mystira-admin-api"
-                    
-                    if ($errorMsg -match $apiAppServiceName -or $errorMsg -match "dev-euw-app-mystira-api") {
-                        Write-ColorOutput Yellow "   • API App Service: $apiAppServiceName"
-                        # Get App Service details
-                        try {
-                            $apiAppInfo = az webapp show --name $apiAppServiceName --resource-group $RG --query "{State:state, Location:location, Plan:appServicePlanId}" -o json 2>$null | ConvertFrom-Json
-                            if ($apiAppInfo) {
-                                Write-ColorOutput Cyan "     State: $($apiAppInfo.State)"
-                                Write-ColorOutput Cyan "     Location: $($apiAppInfo.Location)"
-                            }
-                        } catch {
-                            # Ignore errors getting details
-                        }
-                        $appServicesToDelete += $apiAppServiceName
-                    }
-                    if ($errorMsg -match $adminApiAppServiceName -or $errorMsg -match "dev-euw-app-mystira-admin-api") {
-                        Write-ColorOutput Yellow "   • Admin API App Service: $adminApiAppServiceName"
-                        # Get App Service details
-                        try {
-                            $adminAppInfo = az webapp show --name $adminApiAppServiceName --resource-group $RG --query "{State:state, Location:location, Plan:appServicePlanId}" -o json 2>$null | ConvertFrom-Json
-                            if ($adminAppInfo) {
-                                Write-ColorOutput Cyan "     State: $($adminAppInfo.State)"
-                                Write-ColorOutput Cyan "     Location: $($adminAppInfo.Location)"
-                            }
-                        } catch {
-                            # Ignore errors getting details
-                        }
-                        $appServicesToDelete += $adminApiAppServiceName
-                    }
-                    Write-Output ""
-                    Write-ColorOutput Cyan "   Options:"
-                    Write-ColorOutput White "   1. Use existing App Services (skip creation, reference existing)"
-                    Write-ColorOutput White "   2. Delete existing App Services and recreate"
-                    Write-ColorOutput White "   3. Exit (deployment will fail)"
-                    Write-Output ""
-                    $response = Read-Host "Choose an option (1/2/3)"
-                    
-                    if ($response -eq "1") {
-                        Write-ColorOutput Green "✅ Will use existing App Services and skip creation."
-                        Write-ColorOutput Cyan "   Using App Services in resource group: $RG"
-                        $script:skipAppServiceCreation = $true
-                        $script:existingAppServiceResourceGroup = $RG
-                        $script:appServiceUseAttempted = $true
-                        Write-ColorOutput Cyan "   Set script-scoped variables: skipAppServiceCreation=$($script:skipAppServiceCreation), existingAppServiceResourceGroup=$($script:existingAppServiceResourceGroup)"
-                        Write-Output ""
-                        # Set retry flag - don't break, let the code continue to check other errors
-                        # The retry will happen at the end of the error handling block
-                        $shouldRetry = $true
-                        $retryCount++
-                        Write-ColorOutput Yellow "   Debug: Set shouldRetry=$shouldRetry, retryCount=$retryCount"
-                        Write-ColorOutput Yellow "   Debug: Will retry with skipAppServiceCreation=$($script:skipAppServiceCreation)"
-                        # Don't break - continue to check other error types, but this error is handled
-                    } elseif ($response -eq "2") {
-                        Write-ColorOutput Yellow "   Deleting existing App Services..."
-                        foreach ($appServiceName in $appServicesToDelete) {
-                            Write-Host "   Deleting $appServiceName..." -NoNewline
-                            try {
-                                az webapp delete --name $appServiceName --resource-group $RG --yes 2>$null
-                                Write-Host " ✓" -ForegroundColor Green
-                            } catch {
-                                Write-Host " ✗" -ForegroundColor Red
-                            }
-                        }
-                        Write-ColorOutput Green "✅ Deleted. Retrying deployment..."
-                        Write-Output ""
-                        $shouldRetry = $true
-                        $retryCount++
-                    } else {
-                        Write-ColorOutput Yellow "⚠️  Exiting. Deployment will fail."
-                        Write-ColorOutput Cyan "   You can delete the App Services manually and retry."
-                        Write-Output ""
-                        $shouldRetry = $false
-                        break
-                    }
+                    Handle-AppServiceConflict `
+                        -ErrorMsg $errorMsg `
+                        -ResourcePrefix $resourcePrefix `
+                        -RG $RG `
+                        -Location ([ref]$LOCATION) `
+                        -ResourceGroup ([ref]$RG) `
+                        -ResourcePrefixRef ([ref]$resourcePrefix) `
+                        -ParamsObj ([ref]$paramsObj) `
+                        -ParamsContent ([ref]$paramsContent) `
+                        -ParamsFile $paramsFile `
+                        -ShouldRetry ([ref]$shouldRetry) `
+                        -RetryCount ([ref]$retryCount) `
+                        -SkipAppServiceCreation ([ref]$script:skipAppServiceCreation) `
+                        -ExistingAppServiceResourceGroup ([ref]$script:existingAppServiceResourceGroup) `
+                        -AppServiceUseAttempted ([ref]$script:appServiceUseAttempted) `
+                        -Verbose:$Verbose `
+                        -WhatIf:$WhatIf
                 }
                 
                 # If we already tried using existing Cosmos DB and it failed again with a Cosmos DB error, don't retry
                 # BUT only if it's actually a Cosmos DB error (not App Service or other errors)
-                if ($script:cosmosUseAttempted -and ($errorMsg -match "cosmos" -or $errorMsg -match "Cosmos" -or $errorMsg -match "DocumentDB") -and -not ($errorMsg -match "Website" -or $errorMsg -match "App Service" -or $errorMsg -match "appservice" -or $errorMsg -match "Conflict.*Website")) {
+                # Also check that we haven't just set appServiceUseAttempted (to avoid exiting when App Service retry is needed)
+                if ($script:cosmosUseAttempted -and -not $script:appServiceUseAttempted -and ($errorMsg -match "cosmos" -or $errorMsg -match "Cosmos" -or $errorMsg -match "DocumentDB") -and -not ($errorMsg -match "Website" -or $errorMsg -match "App Service" -or $errorMsg -match "appservice" -or $errorMsg -match "Conflict.*Website")) {
                     Write-Output ""
-                    Write-ColorOutput Red "❌ Cosmos DB 'use existing' failed. Cannot proceed."
-                    Write-Output "Error: $errorMsg"
+                    $formattedError = Format-Error -ErrorMessage $errorMsg -Step "Cosmos DB conflict resolution"
+                    Write-ColorOutput Red $formattedError
+                    Write-Log "Cosmos DB 'use existing' failed after retry" "ERROR"
                     exit 1
                 }
                 
                 # Handle storage account conflict - auto switch to eastus2
                 if ($errorMsg -match "StorageAccountAlreadyTaken" -or $errorMsg -match "storage account.*already taken") {
-                    Write-Output ""
-                    Write-ColorOutput Yellow "⚠️  Storage account name conflict detected!"
-                    Write-ColorOutput Cyan "   Automatically switching to eastus2 region..."
-                    # Switch to eastus2
-                    $LOCATION = "eastus2"
-                    $RG = "dev-eus2-rg-mystira-app"
-                    $resourcePrefix = "dev-eus2"
-                    # Recalculate storage name for new region
-                    $storageNameBase = ($resourcePrefix + "-st-mystira") -replace '-', ''
-                    if ($storageNameBase.Length -gt 24) {
-                        $expectedStorageName = $storageNameBase.Substring(0, 24)
-                    } else {
-                        $expectedStorageName = $storageNameBase
-                    }
-                    Write-ColorOutput Green "✅ Switched to region: $LOCATION"
-                    Write-ColorOutput Green "   Resource Group: $RG"
-                    Write-Output ""
-                    # Update params and retry
-                    $paramsObj.location = @{ value = $LOCATION }
-                    $paramsObj.resourcePrefix = @{ value = $resourcePrefix }
-                    $paramsObj.newStorageAccountName = @{ value = $expectedStorageName }
-                    $paramsContent.parameters = $paramsObj
-                    $jsonContent = $paramsContent | ConvertTo-Json -Depth 10 -Compress:$false
-                    [System.IO.File]::WriteAllText($paramsFile, $jsonContent, [System.Text.Encoding]::UTF8)
-                    $shouldRetry = $true
-                    $retryCount++
+                    Handle-StorageConflict `
+                        -Location ([ref]$LOCATION) `
+                        -ResourceGroup ([ref]$RG) `
+                        -ResourcePrefix ([ref]$resourcePrefix) `
+                        -ExpectedStorageName ([ref]$expectedStorageName) `
+                        -ParamsObj ([ref]$paramsObj) `
+                        -ParamsContent ([ref]$paramsContent) `
+                        -ParamsFile $paramsFile `
+                        -ShouldRetry ([ref]$shouldRetry) `
+                        -RetryCount ([ref]$retryCount) `
+                        -WhatIf:$WhatIf
                 }
                 # Handle Communication Services conflict - prompt user
                 elseif ($errorMsg -match "NameReservationTaken" -and $errorMsg -match "communication") {
-                    Write-Output ""
-                    Write-ColorOutput Yellow "⚠️  Communication Service name conflict!"
-                    $response = Read-Host "Switch to eastus2 region, or use existing? (switch/use)"
-                    if ($response -eq 'switch' -or $response -eq 's') {
-                        Write-ColorOutput Cyan "   Switching to eastus2 region..."
-                        # Switch to eastus2
-                        $LOCATION = "eastus2"
-                        $RG = "dev-eus2-rg-mystira-app"
-                        $resourcePrefix = "dev-eus2"
-                        # Recalculate storage name for new region
-                        $storageNameBase = ($resourcePrefix + "-st-mystira") -replace '-', ''
-                        if ($storageNameBase.Length -gt 24) {
-                            $expectedStorageName = $storageNameBase.Substring(0, 24)
-                        } else {
-                            $expectedStorageName = $storageNameBase
-                        }
-                        Write-ColorOutput Green "✅ Switched to region: $LOCATION"
-                        Write-ColorOutput Green "   Resource Group: $RG"
-                        Write-Output ""
-                        # Update params and retry
-                        $paramsObj.location = @{ value = $LOCATION }
-                        $paramsObj.resourcePrefix = @{ value = $resourcePrefix }
-                        $paramsObj.newStorageAccountName = @{ value = $expectedStorageName }
-                        $paramsContent.parameters = $paramsObj
-                        $jsonContent = $paramsContent | ConvertTo-Json -Depth 10 -Compress:$false
-                        [System.IO.File]::WriteAllText($paramsFile, $jsonContent, [System.Text.Encoding]::UTF8)
-                        $shouldRetry = $true
-                        $retryCount++
-                    } elseif ($response -eq 'use' -or $response -eq 'u') {
-                        Write-ColorOutput Green "✅ Will use existing Communication Service and skip creation."
-                        $commName = "${resourcePrefix}-acs-mystira"
-                        # Use current resource group
-                        $commRG = $RG
-                        Write-ColorOutput Green "   Using: $commName in $commRG"
-                        $paramsObj.skipCommServiceCreation = @{ value = $true }
-                        $paramsObj.existingCommServiceResourceGroup = @{ value = $commRG }
-                        $paramsObj.existingCommServiceAccountName = @{ value = $commName }
-                        # Update params file and retry ONCE - if it fails again, don't retry
-                        $paramsContent.parameters = $paramsObj
-                        $jsonContent = $paramsContent | ConvertTo-Json -Depth 10 -Compress:$false
-                        [System.IO.File]::WriteAllText($paramsFile, $jsonContent, [System.Text.Encoding]::UTF8)
-                        Write-ColorOutput Green "✅ Retrying with existing resource (one attempt only)..."
-                        Write-Output ""
-                        $shouldRetry = $true
-                        $retryCount++
-                        # Mark that we've tried "use" - if it fails again, don't retry
-                        $script:commServiceUseAttempted = $true
-                    } else {
-                        Write-ColorOutput Red "❌ Invalid response. Cancelling."
-                        exit 1
-                    }
+                    Handle-CommunicationServiceConflict `
+                        -ResourcePrefix $resourcePrefix `
+                        -RG $RG `
+                        -Location ([ref]$LOCATION) `
+                        -ResourceGroup ([ref]$RG) `
+                        -ResourcePrefixRef ([ref]$resourcePrefix) `
+                        -ExpectedStorageName ([ref]$expectedStorageName) `
+                        -ParamsObj ([ref]$paramsObj) `
+                        -ParamsContent ([ref]$paramsContent) `
+                        -ParamsFile $paramsFile `
+                        -ShouldRetry ([ref]$shouldRetry) `
+                        -RetryCount ([ref]$retryCount) `
+                        -CommServiceUseAttempted ([ref]$script:commServiceUseAttempted) `
+                        -Verbose:$Verbose `
+                        -WhatIf:$WhatIf
                 }
                 # Handle Cosmos DB conflict or region issues - switch ONLY Cosmos DB to eastus2
                 elseif (($errorMsg -match "Dns record.*already taken" -or ($errorMsg -match "BadRequest" -and $errorMsg -match "cosmos") -or ($errorMsg -match "ServiceUnavailable" -and $errorMsg -match "cosmos") -or ($errorMsg -match "high demand" -and $errorMsg -match "region") -or ($errorMsg -match "failed provisioning state")) -and -not $script:cosmosUseAttempted) {
-                    Write-Output ""
-                    Write-ColorOutput Yellow "⚠️  Cosmos DB issue detected (conflict, region unavailable, or failed state)!"
-                    
-                    # Check if it's a failed provisioning state that needs deletion
-                    $shouldSwitchToEastus2 = $true
-                    if ($errorMsg -match "failed provisioning state") {
-                        $failedCosmosName = "${resourcePrefix}-cosmos-mystira"
-                        Write-ColorOutput Yellow "   Detected failed Cosmos DB account: $failedCosmosName"
-                        Write-Host "   Deleting failed account..." -NoNewline
-                        try {
-                            az cosmosdb delete --name $failedCosmosName --resource-group $RG --yes 2>$null
-                            Write-Host " ✓" -ForegroundColor Green
-                            Write-ColorOutput Green "✅ Deleted failed account."
-                        } catch {
-                            Write-Host " ✗" -ForegroundColor Red
-                            Write-ColorOutput Yellow "   Could not delete."
-                        }
-                    }
-                    
-                    # Switch to using existing Cosmos DB in eastus2 (don't retry creating in current region)
-                    Write-ColorOutput Cyan "   Switching Cosmos DB to eastus2 region (keeping other resources in current region)..."
-                    # Use existing Cosmos DB in eastus2 - skip creation in current region
-                    $cosmosName = "dev-eus2-cosmos-mystira"
-                    $cosmosRG = "dev-eus2-rg-mystira-app"
-                    Write-ColorOutput Green "   Using Cosmos DB: $cosmosName in $cosmosRG"
-                    $script:skipCosmosCreation = $true
-                    $paramsObj.skipCosmosCreation = @{ value = $true }
-                    $paramsObj.existingCosmosResourceGroup = @{ value = $cosmosRG }
-                    $paramsObj.existingCosmosDbAccountName = @{ value = $cosmosName }
-                    # Get connection string
-                    Write-Host "Getting connection string..." -NoNewline
-                    try {
-                        $cosmosKeys = az cosmosdb keys list --name $cosmosName --resource-group $cosmosRG --query "primaryMasterKey" -o tsv 2>$null
-                        $cosmosEndpoint = az cosmosdb show --name $cosmosName --resource-group $cosmosRG --query "documentEndpoint" -o tsv 2>$null
-                        if ($cosmosKeys -and $cosmosEndpoint) {
-                            $connString = "AccountEndpoint=$cosmosEndpoint;AccountKey=$cosmosKeys;"
-                            $paramsObj.existingCosmosConnectionString = @{ value = $connString }
-                            Write-Host " ✓" -ForegroundColor Green
-                        } else {
-                            Write-Host " (skipped)" -ForegroundColor Yellow
-                        }
-                    } catch {
-                        Write-Host " (skipped)" -ForegroundColor Yellow
-                    }
-                    # Update params and retry ONCE
-                    $paramsContent.parameters = $paramsObj
-                    $jsonContent = $paramsContent | ConvertTo-Json -Depth 10 -Compress:$false
-                    [System.IO.File]::WriteAllText($paramsFile, $jsonContent, [System.Text.Encoding]::UTF8)
-                    Write-ColorOutput Green "✅ Will use existing Cosmos DB in eastus2"
-                    Write-ColorOutput Cyan "   Parameters: skipCosmosCreation=$($paramsObj.skipCosmosCreation.value), existingCosmosResourceGroup=$($paramsObj.existingCosmosResourceGroup.value), existingCosmosDbAccountName=$($paramsObj.existingCosmosDbAccountName.value)"
-                    Write-Output ""
-                    $shouldRetry = $true
-                    $retryCount++
-                    $script:cosmosUseAttempted = $true
-                    Write-ColorOutput Yellow "   (Flag set: cosmosUseAttempted = true - will exit on any Cosmos DB error)"
+                    Handle-CosmosDbConflict `
+                        -ErrorMsg $errorMsg `
+                        -ResourcePrefix $resourcePrefix `
+                        -RG $RG `
+                        -ParamsObj ([ref]$paramsObj) `
+                        -ParamsContent ([ref]$paramsContent) `
+                        -ParamsFile $paramsFile `
+                        -ShouldRetry ([ref]$shouldRetry) `
+                        -RetryCount ([ref]$retryCount) `
+                        -SkipCosmosCreation ([ref]$script:skipCosmosCreation) `
+                        -CosmosUseAttempted ([ref]$script:cosmosUseAttempted) `
+                        -Verbose:$Verbose `
+                        -WhatIf:$WhatIf
                 }
                 # If we already tried using existing Cosmos DB and it failed again, don't retry
-                elseif ($script:cosmosUseAttempted -and ($errorMsg -match "cosmos" -or $errorMsg -match "Cosmos" -or $errorMsg -match "DocumentDB")) {
+                # BUT only if it's actually a Cosmos DB error (not App Service or other errors)
+                # Also check that we haven't just set appServiceUseAttempted (to avoid exiting when App Service retry is needed)
+                elseif ($script:cosmosUseAttempted -and -not $script:appServiceUseAttempted -and ($errorMsg -match "cosmos" -or $errorMsg -match "Cosmos" -or $errorMsg -match "DocumentDB") -and -not ($errorMsg -match "Website" -or $errorMsg -match "App Service" -or $errorMsg -match "appservice" -or $errorMsg -match "Conflict.*Website")) {
                     Write-Output ""
                     Write-ColorOutput Red "❌ Cosmos DB 'use existing' failed. Cannot proceed."
                     Write-Output "Error: $errorMsg"
                     exit 1
                 }
-                # Handle storage account conflict - also switch region
-                elseif ($errorMsg -match "StorageAccountAlreadyTaken" -or $errorMsg -match "storage account.*already taken") {
-                    Write-Output ""
-                    Write-ColorOutput Yellow "⚠️  Storage account name conflict detected!"
-                    Write-ColorOutput Cyan "   Automatically switching to eastus2 region..."
-                    # Switch to eastus2
-                    $LOCATION = "eastus2"
-                    $RG = "dev-eus2-rg-mystira-app"
-                    $resourcePrefix = "dev-eus2"
-                    # Recalculate storage name for new region
-                    $storageNameBase = ($resourcePrefix + "-st-mystira") -replace '-', ''
-                    if ($storageNameBase.Length -gt 24) {
-                        $expectedStorageName = $storageNameBase.Substring(0, 24)
-                    } else {
-                        $expectedStorageName = $storageNameBase
-                    }
-                    Write-ColorOutput Green "✅ Switched to region: $LOCATION"
-                    Write-ColorOutput Green "   Resource Group: $RG"
-                    Write-Output ""
-                    # Update params and retry
-                    $paramsObj.location = @{ value = $LOCATION }
-                    $paramsObj.resourcePrefix = @{ value = $resourcePrefix }
-                    $paramsObj.newStorageAccountName = @{ value = $expectedStorageName }
-                    $paramsContent.parameters = $paramsObj
-                    $jsonContent = $paramsContent | ConvertTo-Json -Depth 10 -Compress:$false
-                    [System.IO.File]::WriteAllText($paramsFile, $jsonContent, [System.Text.Encoding]::UTF8)
-                    $shouldRetry = $true
-                    $retryCount++
-                }
                 else {
-                    # Other error - don't retry
-                    Write-Output ""
-                    Write-ColorOutput Red "❌ Deployment failed!"
-                    Write-Output ""
-                    Write-Output "Error: $errorMsg"
-                    exit 1
+                    # Other error - don't retry (unless we've already set shouldRetry for a handled conflict)
+                    if (-not $shouldRetry) {
+                        Write-Output ""
+                        Write-ColorOutput Red "❌ Deployment failed at step: Infrastructure deployment"
+                        Write-Log "Deployment failed at step: Infrastructure deployment" "ERROR"
+                        Write-Output ""
+                        Write-Output "Error: $errorMsg"
+                        Write-Log "Error message: $errorMsg" "ERROR"
+                        exit 1
+                    }
+                    # If shouldRetry is true, we've already handled the error above, just continue to retry
                 }
             }
-        } catch {
-            Write-ColorOutput Red "❌ Deployment error: $($_.Exception.Message)"
+        }
+        catch {
+            $formattedError = Format-Error -ErrorMessage $_.Exception.Message -Step "Infrastructure deployment"
+            Write-ColorOutput Red $formattedError
+            Write-Log "Exception at step: Infrastructure deployment - $($_.Exception.Message)" "ERROR"
             exit 1
-        } finally {
+        }
+        finally {
+            if ($script:LogFile) {
+                "=== Deployment Log Ended: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Out-File -FilePath $script:LogFile -Append
+            }
             # Clean up temp file
             if (Test-Path $paramsFile) {
                 Remove-Item $paramsFile -Force
@@ -685,14 +950,16 @@ else {
         }
         
         # If deployment succeeded or we shouldn't retry, break the loop
-        Write-ColorOutput Yellow "   Debug: After error handling - deploymentSuccess=$deploymentSuccess, shouldRetry=$shouldRetry"
+        if ($Verbose) {
+            Write-ColorOutput Yellow "   [VERBOSE] After error handling - deploymentSuccess=$deploymentSuccess, shouldRetry=$shouldRetry"
+        }
         if ($deploymentSuccess -or -not $shouldRetry) {
             break
         }
         
         # If we've exceeded max retries
-        if ($retryCount -gt $maxRetries) {
-            Write-ColorOutput Red "❌ Maximum retry attempts exceeded."
+        if ($retryCount -gt $script:MAX_DEPLOYMENT_RETRIES) {
+            Write-ColorOutput Red "❌ Maximum retry attempts exceeded ($($script:MAX_DEPLOYMENT_RETRIES))."
             exit 1
         }
     }
@@ -711,52 +978,110 @@ else {
         Write-Output $JWT_SECRET_BASE64
         Write-Output ""
         
-        # Check if Static Web App needs to be created
-        if (-not $swaExists) {
+        # Check if Static Web App needs to be created (re-check to avoid race condition)
+        Write-Log "Step: Checking Static Web App existence" "INFO"
+        $swaCheck = $false
+        try {
+            $swaInfo = az staticwebapp show --name $SWA_NAME --resource-group $RG 2>$null | ConvertFrom-Json
+            if ($swaInfo) {
+                $swaCheck = $true
+                Write-Log "Static Web App already exists: $SWA_NAME" "INFO"
+            }
+        }
+        catch {
+            # Static Web App doesn't exist
+            Write-Log "Static Web App not found: $SWA_NAME" "INFO"
+        }
+        
+        if (-not $swaCheck) {
+            Write-Log "Step: Creating Static Web App" "INFO"
             Write-ColorOutput Yellow "📱 Creating Static Web App..."
             Write-Output ""
             
-            # Get GitHub repo info
-            $repoUrl = git remote get-url origin
-            $repoOwner = ""
-            $repoName = ""
-            
-            if ($repoUrl -match "github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?$") {
-                $repoOwner = $matches[1]
-                $repoName = $matches[2] -replace '\.git$', ''
+            # Check name availability first
+            Write-Log "Step: Checking Static Web App name availability" "INFO"
+            $nameAvailable = $true
+            try {
+                $existingSWA = az staticwebapp list --query "[?name=='$SWA_NAME']" -o json 2>$null | ConvertFrom-Json
+                if ($existingSWA -and $existingSWA.Count -gt 0) {
+                    $nameAvailable = $false
+                    Write-ColorOutput Yellow "⚠️  Static Web App name '$SWA_NAME' is already taken globally."
+                    Write-Log "Warning: Static Web App name already exists globally" "WARN"
+                }
+            }
+            catch {
+                # Ignore - name might be available
             }
             
-            if ($repoOwner -and $repoName) {
-                Write-Output "Repository: $repoOwner/$repoName"
-                Write-Output ""
+            if ($nameAvailable) {
+                # Get GitHub repo info
+                $repoUrl = git remote get-url origin
+                $repoOwner = ""
+                $repoName = ""
                 
-                # Create Static Web App with GitHub integration
-                az staticwebapp create `
-                    --name $SWA_NAME `
-                    --resource-group $RG `
-                    --location $LOCATION `
-                    --sku Free `
-                    --login-with-github `
-                    --repo-url "https://github.com/$repoOwner/$repoName" `
-                    --branch "dev" `
-                    --app-location "./src/Mystira.App.PWA" `
-                    --api-location "./src/Mystira.App.API" `
-                    --output-location "build" `
-                    --output none 2>$null
+                if ($repoUrl -match "github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?$") {
+                    $repoOwner = $matches[1]
+                    $repoName = $matches[2] -replace '\.git$', ''
+                }
                 
-                Write-ColorOutput Green "✅ Static Web App created!"
-                Write-Output ""
-                Write-ColorOutput Yellow "⚠️  IMPORTANT: Get the deployment token and add it to GitHub Secrets:"
-                Write-Output ""
-                Write-Output "   Secret name: AZURE_STATIC_WEB_APPS_API_TOKEN"
-                Write-Output ""
-                Write-Output "   Get token with:"
-                Write-ColorOutput Cyan "   az staticwebapp secrets list --name $SWA_NAME --resource-group $RG --query properties.apiKey -o tsv"
-                Write-Output ""
-            } else {
-                Write-ColorOutput Yellow "⚠️  Could not detect GitHub repository."
-                Write-Output "   Please create the Static Web App manually or update the script."
+                if ($repoOwner -and $repoName) {
+                    Write-Output "Repository: $repoOwner/$repoName"
+                    Write-Log "GitHub repository: $repoOwner/$repoName" "INFO"
+                    Write-Output ""
+                    
+                    # Create Static Web App with GitHub integration
+                    Write-Host "Creating Static Web App... " -NoNewline
+                    Write-Log "Creating Static Web App: $SWA_NAME" "INFO"
+                    $swaResult = az staticwebapp create `
+                        --name $SWA_NAME `
+                        --resource-group $RG `
+                        --location $LOCATION `
+                        --sku Free `
+                        --login-with-github `
+                        --source "https://github.com/$repoOwner/$repoName" `
+                        --branch "dev" `
+                        --app-location "./src/Mystira.App.PWA" `
+                        --api-location "swa-db-connections" `
+                        --output-location "out" `
+                        --output json 2>$null | ConvertFrom-Json
+                    
+                    if ($swaResult) {
+                        Write-Host "✓" -ForegroundColor Green
+                        Write-ColorOutput Green "✅ Static Web App created!"
+                        Write-Log "Static Web App created successfully: $SWA_NAME" "INFO"
+                        Write-Output ""
+                        Write-ColorOutput Yellow "⚠️  IMPORTANT: Get the deployment token and add it to GitHub Secrets:"
+                        Write-Output ""
+                        Write-Output "   Secret name: AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_MYSTIRA_APP"
+                        Write-Output ""
+                        Write-Output "   Get token with:"
+                        Write-ColorOutput Cyan "   az staticwebapp secrets list --name $SWA_NAME --resource-group $RG --query properties.apiKey -o tsv"
+                        Write-Output ""
+                    }
+                    else {
+                        Write-Host "✗" -ForegroundColor Red
+                        Write-ColorOutput Yellow "⚠️  Static Web App creation may have failed. Check Azure portal."
+                        Write-Log "Warning: Static Web App creation may have failed" "WARN"
+                    }
+                }
+                else {
+                    Write-ColorOutput Yellow "⚠️  Could not detect GitHub repository."
+                    Write-Log "Error: Could not detect GitHub repository" "ERROR"
+                    Write-Output "   Please create the Static Web App manually or update the script."
+                }
+            }
+            else {
+                Write-ColorOutput Yellow "⚠️  Cannot create Static Web App - name is already taken."
+                Write-Log "Error: Static Web App name unavailable" "ERROR"
             }
         }
+        else {
+            if ($Verbose) {
+                Write-ColorOutput Green "   [VERBOSE] Static Web App already exists, skipping creation."
+            }
+        }
+        
+        # Show final resource summary
+        Show-ResourceSummary -ResourceGroup $RG -Location $LOCATION
     }
 }
