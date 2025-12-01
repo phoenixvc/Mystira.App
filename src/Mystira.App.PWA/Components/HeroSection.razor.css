@@ -1,5 +1,14 @@
 /* Hero Section Scoped Styles */
 
+/* Prevent focus outline on non-interactive hero elements including wrapper */
+.row:focus,
+.row:focus-visible,
+div:focus,
+div:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 .hero-section {
     padding: 20px 20px 60px;
     background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
@@ -10,6 +19,19 @@
     position: relative;
     overflow: hidden;
     min-height: 500px;
+}
+
+/* Prevent focus outline on non-interactive hero elements */
+.hero-section:focus,
+.hero-section:focus-visible,
+.hero-content:focus,
+.hero-content:focus-visible,
+.mystira-title:focus,
+.mystira-title:focus-visible,
+.hero-logo-container:focus,
+.hero-logo-container:focus-visible {
+    outline: none;
+    box-shadow: none;
 }
 
 /* Dark mode background */
