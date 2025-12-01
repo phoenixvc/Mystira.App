@@ -39,7 +39,7 @@ function Handle-AppServiceConflict {
     }
     
     Write-Output ""
-    Write-ColorOutput Yellow "⚠️  App Service conflict detected!"
+    Write-ColorOutput Yellow "WARNING: App Service conflict detected!"
     Write-Output ""
     Write-ColorOutput Cyan "   The following App Services already exist:"
     $appServicesToDelete = @()
@@ -88,7 +88,7 @@ function Handle-AppServiceConflict {
     $response = Read-Host "Choose an option (1/2/3)"
     
     if ($response -eq "1") {
-        Write-ColorOutput Green "✅ Will use existing App Services and skip creation."
+        Write-ColorOutput Green "SUCCESS: Will use existing App Services and skip creation."
         Write-ColorOutput Cyan "   Using App Services in resource group: $actualResourceGroup"
         $SkipAppServiceCreation.Value = $true
         $ExistingAppServiceResourceGroup.Value = $actualResourceGroup
@@ -108,11 +108,11 @@ function Handle-AppServiceConflict {
                 Write-Host " ✗" -ForegroundColor Red
             }
         }
-        Write-ColorOutput Green "✅ Deleted. Retrying deployment..."
+        Write-ColorOutput Green "SUCCESS: Deleted. Retrying deployment..."
         $ShouldRetry.Value = $true
         $RetryCount.Value++
     } else {
-        Write-ColorOutput Yellow "⚠️  Exiting. Deployment will fail."
+        Write-ColorOutput Yellow "WARNING: Exiting. Deployment will fail."
         $ShouldRetry.Value = $false
     }
 }
@@ -141,7 +141,7 @@ function Handle-StorageConflict {
     }
     
     Write-Output ""
-    Write-ColorOutput Yellow "⚠️  Storage account name conflict detected!"
+    Write-ColorOutput Yellow "WARNING: Storage account name conflict detected!"
     Write-ColorOutput Cyan "   Automatically switching to eastus2 region..."
     
     $Location.Value = "eastus2"
@@ -155,7 +155,7 @@ function Handle-StorageConflict {
         $ExpectedStorageName.Value = $storageNameBase
     }
     
-    Write-ColorOutput Green "✅ Switched to region: $($Location.Value)"
+    Write-ColorOutput Green "SUCCESS: Switched to region: $($Location.Value)"
     Write-ColorOutput Green "   Resource Group: $($ResourceGroup.Value)"
     
     $ParamsObj.Value.location = @{ value = $Location.Value }
@@ -197,7 +197,7 @@ function Handle-CommunicationServiceConflict {
     }
     
     Write-Output ""
-    Write-ColorOutput Yellow "⚠️  Communication Service name conflict!"
+    Write-ColorOutput Yellow "WARNING: Communication Service name conflict!"
     $response = Read-Host "Switch to eastus2 region, or use existing? (switch/use)"
     
     if ($response -eq 'switch' -or $response -eq 's') {
@@ -213,7 +213,7 @@ function Handle-CommunicationServiceConflict {
             $ExpectedStorageName.Value = $storageNameBase
         }
         
-        Write-ColorOutput Green "✅ Switched to region: $($Location.Value)"
+        Write-ColorOutput Green "SUCCESS: Switched to region: $($Location.Value)"
         Write-ColorOutput Green "   Resource Group: $($ResourceGroup.Value)"
         
         $ParamsObj.Value.location = @{ value = $Location.Value }
@@ -226,7 +226,7 @@ function Handle-CommunicationServiceConflict {
         $ShouldRetry.Value = $true
         $RetryCount.Value++
     } elseif ($response -eq 'use' -or $response -eq 'u') {
-        Write-ColorOutput Green "✅ Will use existing Communication Service and skip creation."
+        Write-ColorOutput Green "SUCCESS: Will use existing Communication Service and skip creation."
         $commName = "${ResourcePrefix}-acs-mystira"
         $commRG = $RG
         Write-ColorOutput Green "   Using: $commName in $commRG"
@@ -275,7 +275,7 @@ function Handle-CosmosDbConflict {
     }
     
     Write-Output ""
-    Write-ColorOutput Yellow "⚠️  Cosmos DB issue detected (conflict, region unavailable, or failed state)!"
+    Write-ColorOutput Yellow "WARNING: Cosmos DB issue detected (conflict, region unavailable, or failed state)!"
     
     if ($ErrorMsg -match "failed provisioning state") {
         $failedCosmosName = "${ResourcePrefix}-cosmos-mystira"
@@ -320,7 +320,7 @@ function Handle-CosmosDbConflict {
     $jsonContent = $ParamsContent.Value | ConvertTo-Json -Depth 10 -Compress:$false
     [System.IO.File]::WriteAllText($ParamsFile, $jsonContent, [System.Text.Encoding]::UTF8)
     
-    Write-ColorOutput Green "✅ Will use existing Cosmos DB in eastus2"
+    Write-ColorOutput Green "SUCCESS: Will use existing Cosmos DB in eastus2"
     $ShouldRetry.Value = $true
     $RetryCount.Value++
     $CosmosUseAttempted.Value = $true

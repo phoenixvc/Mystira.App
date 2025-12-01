@@ -163,7 +163,7 @@ function Get-ExistingResources {
         }
     }
     
-    Write-Host "✓" -ForegroundColor Green
+    Write-Host "[OK]" -ForegroundColor Green
     return @{
         ResourceGroups = $existingRGs
         StaticWebApps  = $existingSWAs

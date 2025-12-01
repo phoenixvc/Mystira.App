@@ -82,7 +82,7 @@ function Invoke-Rollback {
     }
     
     Write-Output ""
-    Write-ColorOutput Yellow "⚠️  Rollback will delete the following resources:"
+    Write-ColorOutput Yellow "WARNING: Rollback will delete the following resources:"
     Write-Output ""
     foreach ($resource in $script:CreatedResources.Resources) {
         Write-Output "  • $($resource.Type): $($resource.Name) (in $($resource.ResourceGroup))"
@@ -149,7 +149,7 @@ function Invoke-Rollback {
     
     if ($failed.Count -gt 0) {
         Write-Output ""
-        Write-ColorOutput Yellow "⚠️  Some resources could not be deleted:"
+        Write-ColorOutput Yellow "WARNING: Some resources could not be deleted:"
         foreach ($resource in $failed) {
             Write-Output "  • $($resource.Type): $($resource.Name)"
         }
@@ -157,7 +157,7 @@ function Invoke-Rollback {
         Write-ColorOutput Cyan "   You may need to delete these manually from the Azure portal."
     } else {
         Write-Output ""
-        Write-ColorOutput Green "✅ Rollback completed successfully!"
+        Write-ColorOutput Green "SUCCESS: Rollback completed successfully!"
     }
     
     # Clear tracking

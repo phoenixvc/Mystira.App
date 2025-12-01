@@ -65,6 +65,13 @@ if (Test-Path $deployModulePath) {
     Import-Module (Join-Path $deployModulePath "ErrorFormatter.psm1") -Force
     Import-Module (Join-Path $deployModulePath "RollbackHelpers.psm1") -Force
     Import-Module (Join-Path $deployModulePath "RetryHelpers.psm1") -Force
+    Import-Module (Join-Path $deployModulePath "StaticWebAppHelpers.psm1") -Force
+    Import-Module (Join-Path $deployModulePath "SecretHelpers.psm1") -Force
+    Import-Module (Join-Path $deployModulePath "GitHelpers.psm1") -Force
+    Import-Module (Join-Path $deployModulePath "ResourceInfoHelpers.psm1") -Force
+    Import-Module (Join-Path $deployModulePath "ResourceGroupHelpers.psm1") -Force
+    Import-Module (Join-Path $deployModulePath "BicepHelpers.psm1") -Force
+    Import-Module (Join-Path $deployModulePath "ResourceSummaryHelpers.psm1") -Force
 }
 
 # Constants
@@ -412,13 +419,13 @@ $swaExists = $false
 # Always check directly for the resource group (more reliable than scan)
 Write-Log "Checking resource group $RG directly..." "INFO"
 try {
-    $rgInfo = az group show --name $RG 2>$null | ConvertFrom-Json
+    $rgInfo = Get-ResourceGroupInfo -Name $RG
     if ($rgInfo) {
         $rgExists = $true
         Write-Log "Resource group $RG exists" "INFO"
         
         # Check for resources in the group
-        $resources = az resource list --resource-group $RG --output json 2>$null | ConvertFrom-Json
+        $resources = Get-ResourceGroupResources -ResourceGroup $RG
         if ($resources -and $resources.Count -gt 0) {
             $hasResources = $true
             Write-Log "Found $($resources.Count) resources in resource group $RG" "INFO"
@@ -454,7 +461,7 @@ if ($matchingSWA) {
 else {
     # Also check directly
     try {
-        $swaInfo = az staticwebapp show --name $SWA_NAME --resource-group $RG 2>$null | ConvertFrom-Json
+        $swaInfo = Get-StaticWebAppInfo -Name $SWA_NAME -ResourceGroup $RG
         if ($swaInfo) {
             $swaExists = $true
             Write-Log "Static Web App $SWA_NAME found via direct check" "INFO"
@@ -591,7 +598,7 @@ if ($existingResources.ResourceGroups.Count -gt 0 -or $existingResources.StaticW
     # Re-check Static Web App existence after selection
     $swaExists = $false
     try {
-        $swaInfo = az staticwebapp show --name $SWA_NAME --resource-group $RG 2>$null | ConvertFrom-Json
+        $swaInfo = Get-StaticWebAppInfo -Name $SWA_NAME -ResourceGroup $RG
         if ($swaInfo) {
             $swaExists = $true
         }
@@ -604,10 +611,10 @@ if ($existingResources.ResourceGroups.Count -gt 0 -or $existingResources.StaticW
     # Double-check resource group and resources directly (more reliable than scan)
     if (-not $rgExists) {
         try {
-            $rgInfo = az group show --name $RG 2>$null | ConvertFrom-Json
+            $rgInfo = Get-ResourceGroupInfo -Name $RG
             if ($rgInfo) {
                 $rgExists = $true
-                $resources = az resource list --resource-group $RG --output json 2>$null | ConvertFrom-Json
+                $resources = Get-ResourceGroupResources -ResourceGroup $RG
                 if ($resources -and $resources.Count -gt 0) {
                     $hasResources = $true
                     Write-Log "Found $($resources.Count) resources in resource group $RG" "INFO"
@@ -647,19 +654,19 @@ if ($infrastructureDeployed) {
         exit 1
     }
     
-    $CURRENT_BRANCH = git rev-parse --abbrev-ref HEAD
+    $gitStatus = Get-GitRepositoryStatus
+    $CURRENT_BRANCH = $gitStatus.Branch
     $TARGET_BRANCH = if ($Branch) { $Branch } else { $CURRENT_BRANCH }
     Write-Log "Current branch: $CURRENT_BRANCH, Target branch: $TARGET_BRANCH" "INFO"
     
     # Check if there are uncommitted changes
     Write-Log "Step: Checking for uncommitted changes" "INFO"
-    $status = git status --porcelain
-    if ($status) {
+    if ($gitStatus.HasUncommittedChanges) {
         Write-ColorOutput Yellow "⚠️  You have uncommitted changes."
         $response = Read-Host "Do you want to commit them? (y/n)"
         if ($response -eq 'y' -or $response -eq 'Y') {
             git add .
-            git commit -m $Message
+            Commit-GitChanges -Message $Message
         }
         else {
             Write-ColorOutput Red "❌ Aborting. Please commit or stash your changes first."
@@ -673,6 +680,7 @@ if ($infrastructureDeployed) {
         $response = Read-Host "Do you want to switch to '$TARGET_BRANCH'? (y/n)"
         if ($response -eq 'y' -or $response -eq 'Y') {
             git checkout $TARGET_BRANCH
+            $CURRENT_BRANCH = $TARGET_BRANCH
         }
         else {
             Write-ColorOutput Red "❌ Aborting."
@@ -680,37 +688,153 @@ if ($infrastructureDeployed) {
         }
     }
     
-    # Fetch latest changes
+    # Sync repository (fetch and pull if needed)
     Write-ColorOutput Yellow "📥 Fetching latest changes..."
-    git fetch origin
-    
-    # Check if we're behind remote
-    $behind = git rev-list HEAD..origin/$TARGET_BRANCH --count 2>$null
-    if ($behind -gt 0) {
-        Write-ColorOutput Yellow "⚠️  Your branch is behind origin/$TARGET_BRANCH"
-        $response = Read-Host "Do you want to pull latest changes? (y/n)"
-        if ($response -eq 'y' -or $response -eq 'Y') {
-            git pull origin $TARGET_BRANCH
-        }
-    }
+    Sync-GitRepository -Branch $TARGET_BRANCH
     
     # Check if we're ahead of remote
     $LOCAL_COMMITS = git rev-list origin/$TARGET_BRANCH..HEAD --count 2>$null
     if ($LOCAL_COMMITS -eq 0) {
         # Create an empty commit to trigger deployment
         Write-ColorOutput Yellow "📝 Creating empty commit to trigger deployment..."
-        git commit --allow-empty -m $Message
+        Commit-GitChanges -Message $Message -AllowEmpty
     }
     
     # Push to remote
     Write-ColorOutput Yellow "📤 Pushing to origin/$TARGET_BRANCH..."
-    git push origin $TARGET_BRANCH
+    Push-GitBranch -Branch $TARGET_BRANCH
     
     Write-Output ""
     Write-ColorOutput Green "✅ Code deployment triggered!"
     Write-ColorOutput Green "   Branch: $TARGET_BRANCH"
     Write-ColorOutput Green "   Check GitHub Actions for deployment status"
     Write-Output ""
+    
+    # Check if Static Web App exists, create if missing
+    Write-Log "Step: Checking if Static Web App needs to be created" "INFO"
+    $swaCheck = $false
+    try {
+        $swaInfo = Get-StaticWebAppInfo -Name $SWA_NAME -ResourceGroup $RG
+        if ($swaInfo) {
+            $swaCheck = $true
+            Write-Log "Static Web App $SWA_NAME already exists" "INFO"
+            Write-ColorOutput Green "✅ Static Web App already exists: $SWA_NAME"
+        }
+    }
+    catch {
+        # Static Web App doesn't exist
+        Write-Log "Static Web App $SWA_NAME does not exist, will create it" "INFO"
+    }
+    
+    if (-not $swaCheck) {
+        Write-Output ""
+        Write-ColorOutput Cyan "📱 Static Web App not found. Would you like to create it now?"
+        Write-Output ""
+        
+        $createSWA = Read-Host "Create Static Web App '$SWA_NAME'? (y/n)"
+        if ($createSWA -eq 'y' -or $createSWA -eq 'Y') {
+            Write-Output ""
+            Write-ColorOutput Cyan "Creating Static Web App..."
+            Write-Log "Creating Static Web App: $SWA_NAME" "INFO"
+            
+            # Jump to the SWA creation section by including the logic
+            # The SWA creation code starts around line 1312 in the infrastructure deployment section
+            # We'll create a simplified version here that calls the same logic
+            
+            # Check name availability
+            $nameAvailable = $true
+            try {
+                $existingSWA = az staticwebapp list --query "[?name=='$SWA_NAME']" -o json 2>$null | ConvertFrom-Json
+                if ($existingSWA -and $existingSWA.Count -gt 0) {
+                    $nameAvailable = $false
+                    Write-ColorOutput Yellow "⚠️  Static Web App name '$SWA_NAME' is already taken globally."
+                }
+            }
+            catch {
+                # Name might be available
+            }
+            
+            if ($nameAvailable) {
+                # Get GitHub repo info
+                $repoUrl = Get-GitRemoteUrl
+                $repoInfo = Get-GitHubRepositoryInfo -RemoteUrl $repoUrl
+                $repoOwner = $repoInfo.Owner
+                $repoName = $repoInfo.Name
+                
+                if ($repoOwner -and $repoName) {
+                    Write-Output "Repository: $repoOwner/$repoName"
+                    Write-Log "GitHub repository: $repoOwner/$repoName" "INFO"
+                    Write-Output ""
+                    
+                    # Create Static Web App - use the same logic as in infrastructure deployment
+                    # We'll reference the code that starts at line 1348
+                    # For now, let's create a simple version that uses Azure CLI
+                    Write-Host "Creating Static Web App... " -NoNewline
+                    
+                    # Static Web Apps have limited region support
+                    $swaSupportedRegions = @("westus2", "centralus", "eastus2", "westeurope", "eastasia")
+                    $swaLocation = $LOCATION
+                    
+                    if ($LOCATION -notin $swaSupportedRegions) {
+                        Write-ColorOutput Yellow "   ⚠️  Static Web Apps not available in $LOCATION"
+                        Write-ColorOutput Yellow "   Available regions: $($swaSupportedRegions -join ', ')"
+                        Write-ColorOutput Cyan "   Creating Static Web App in 'westeurope' (closest supported region)"
+                        $swaLocation = "westeurope"
+                    }
+                    
+                    $swaResult = az staticwebapp create `
+                        --name $SWA_NAME `
+                        --resource-group $RG `
+                        --location $swaLocation `
+                        --sku Free `
+                        --output json 2>&1
+                    
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Host "✓" -ForegroundColor Green
+                        Write-ColorOutput Green "✅ Static Web App created!"
+                        
+                        # Connect to GitHub if PAT is available
+                        if ($GitHubPat -and $repoOwner -and $repoName) {
+                            Write-ColorOutput Cyan "   Connecting to GitHub..."
+                            $azAccount = az account show --output json 2>$null | ConvertFrom-Json
+                            $subscriptionId = if ($azAccount) { $azAccount.id } else { $SubscriptionId }
+                            
+                            $connectResult = Connect-StaticWebAppToGitHub `
+                                -StaticWebAppName $SWA_NAME `
+                                -ResourceGroup $RG `
+                                -SubscriptionId $subscriptionId `
+                                -RepositoryOwner $repoOwner `
+                                -RepositoryName $repoName `
+                                -Branch "dev" `
+                                -AppLocation "./src/Mystira.App.PWA" `
+                                -ApiLocation "swa-db-connections" `
+                                -OutputLocation "out" `
+                                -GitHubPat $GitHubPat
+                            
+                            if ($connectResult.Success) {
+                                Write-ColorOutput Green "✅ Connected to GitHub!"
+                            }
+                            else {
+                                Write-ColorOutput Yellow "   ⚠️  Failed to connect to GitHub: $($connectResult.Error)"
+                            }
+                        }
+                    }
+                    else {
+                        Write-Host "✗" -ForegroundColor Red
+                        $errorMsg = $swaResult -join '`n'
+                        Write-ColorOutput Yellow "   ⚠️  Static Web App creation failed: $errorMsg"
+                    }
+                }
+                else {
+                    Write-ColorOutput Yellow "⚠️  Could not detect GitHub repository."
+                }
+            }
+        }
+        else {
+            Write-ColorOutput Yellow "   Skipping Static Web App creation."
+        }
+        Write-Output ""
+    }
     
     # Show resource summary
     Show-ResourceSummary -ResourceGroup $RG -Location $LOCATION
@@ -734,8 +858,15 @@ else {
     # Create resource group if it doesn't exist
     if (-not $rgExists) {
         Write-Host "Creating resource group... " -NoNewline
-        az group create --name $RG --location $LOCATION --output none 2>$null
-        Write-Host "✓" -ForegroundColor Green
+        $rgResult = New-ResourceGroup -Name $RG -Location $LOCATION
+        if ($rgResult.Success) {
+            Write-Host "✓" -ForegroundColor Green
+        }
+        else {
+            Write-Host "✗" -ForegroundColor Red
+            Write-ColorOutput Red "❌ Failed to create resource group: $($rgResult.Error)"
+            exit 1
+        }
     }
     
     # Find bicep template
@@ -908,14 +1039,12 @@ else {
         $paramsObj.existingCosmosResourceGroup = @{ value = $script:existingCosmosResourceGroup }
         $paramsObj.existingCosmosDbAccountName = @{ value = $script:existingCosmosDbAccountName }
         
-        $paramsContent = @{}
-        $paramsContent.'$schema' = "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#"
-        $paramsContent.contentVersion = "1.0.0.0"
-        $paramsContent.parameters = $paramsObj
-        
-        # Write JSON with proper formatting
-        $jsonContent = $paramsContent | ConvertTo-Json -Depth 10 -Compress:$false
-        [System.IO.File]::WriteAllText($paramsFile, $jsonContent, [System.Text.Encoding]::UTF8)
+        # Create parameter file using helper
+        $paramResult = New-BicepParameterFile -Parameters $paramsObj -OutputPath $paramsFile
+        if (-not $paramResult.Success) {
+            Write-ColorOutput Red "❌ Failed to create parameter file: $($paramResult.Error)"
+            exit 1
+        }
         
         Write-Output "Using parameters file: $paramsFile"
         Write-Output ""
@@ -1073,9 +1202,21 @@ else {
                 # If we already tried "use" for Communication Service and it failed again, don't retry
                 if ($script:commServiceUseAttempted -and $errorMsg -match "NameReservationTaken" -and $errorMsg -match "communication") {
                     Write-Output ""
-                    $formattedError = Format-Error -ErrorMessage $errorMsg -Step "Communication Service conflict resolution"
+                    $formattedError = Format-AzureError -ErrorJson ($stdout -join "`n") -Step "Communication Service conflict resolution"
                     Write-ColorOutput Red $formattedError
                     Write-Log "Communication Service 'use' failed after retry" "ERROR"
+                    
+                    # Offer rollback
+                    $createdResources = Get-CreatedResources
+                    if ($createdResources.Resources.Count -gt 0) {
+                        Write-Output ""
+                        Write-ColorOutput Yellow "⚠️  Would you like to rollback created resources? (y/n)"
+                        $rollbackChoice = Read-Host
+                        if ($rollbackChoice -eq 'y' -or $rollbackChoice -eq 'Y') {
+                            Invoke-Rollback -Confirm:$false
+                        }
+                    }
+                    
                     exit 1
                 }
                 
@@ -1083,12 +1224,24 @@ else {
                 # If we already tried using existing App Services in a PREVIOUS retry and it failed again, don't retry
                 if ($script:appServiceUseAttempted -and ($errorMsg -match "Website.*already exists" -or ($errorMsg -match "Conflict" -and $errorMsg -match "Website"))) {
                     Write-Output ""
-                    $formattedError = Format-Error -ErrorMessage $errorMsg -Step "App Service conflict resolution"
+                    $formattedError = Format-AzureError -ErrorJson ($stdout -join "`n") -Step "App Service conflict resolution"
                     Write-ColorOutput Red $formattedError
                     Write-ColorOutput Yellow "   The App Services exist but the deployment is still trying to create them."
                     Write-ColorOutput Cyan "   This may indicate the skipAppServiceCreation parameter isn't being applied correctly."
                     Write-ColorOutput Cyan "   Parameter should be: skipAppServiceCreation=true, existingAppServiceResourceGroup=$RG"
                     Write-Log "App Service 'use existing' failed after retry" "ERROR"
+                    
+                    # Offer rollback
+                    $createdResources = Get-CreatedResources
+                    if ($createdResources.Resources.Count -gt 0) {
+                        Write-Output ""
+                        Write-ColorOutput Yellow "⚠️  Would you like to rollback created resources? (y/n)"
+                        $rollbackChoice = Read-Host
+                        if ($rollbackChoice -eq 'y' -or $rollbackChoice -eq 'Y') {
+                            Invoke-Rollback -Confirm:$false
+                        }
+                    }
+                    
                     exit 1
                 }
                 
@@ -1118,9 +1271,21 @@ else {
                 # Also check that we haven't just set appServiceUseAttempted (to avoid exiting when App Service retry is needed)
                 if ($script:cosmosUseAttempted -and -not $script:appServiceUseAttempted -and ($errorMsg -match "cosmos" -or $errorMsg -match "Cosmos" -or $errorMsg -match "DocumentDB") -and -not ($errorMsg -match "Website" -or $errorMsg -match "App Service" -or $errorMsg -match "appservice" -or $errorMsg -match "Conflict.*Website")) {
                     Write-Output ""
-                    $formattedError = Format-Error -ErrorMessage $errorMsg -Step "Cosmos DB conflict resolution"
+                    $formattedError = Format-AzureError -ErrorJson ($stdout -join "`n") -Step "Cosmos DB conflict resolution"
                     Write-ColorOutput Red $formattedError
                     Write-Log "Cosmos DB 'use existing' failed after retry" "ERROR"
+                    
+                    # Offer rollback
+                    $createdResources = Get-CreatedResources
+                    if ($createdResources.Resources.Count -gt 0) {
+                        Write-Output ""
+                        Write-ColorOutput Yellow "⚠️  Would you like to rollback created resources? (y/n)"
+                        $rollbackChoice = Read-Host
+                        if ($rollbackChoice -eq 'y' -or $rollbackChoice -eq 'Y') {
+                            Invoke-Rollback -Confirm:$false
+                        }
+                    }
+                    
                     exit 1
                 }
                 
@@ -1177,8 +1342,21 @@ else {
                 # Also check that we haven't just set appServiceUseAttempted (to avoid exiting when App Service retry is needed)
                 elseif ($script:cosmosUseAttempted -and -not $script:appServiceUseAttempted -and ($errorMsg -match "cosmos" -or $errorMsg -match "Cosmos" -or $errorMsg -match "DocumentDB") -and -not ($errorMsg -match "Website" -or $errorMsg -match "App Service" -or $errorMsg -match "appservice" -or $errorMsg -match "Conflict.*Website")) {
                     Write-Output ""
-                    Write-ColorOutput Red "❌ Cosmos DB 'use existing' failed. Cannot proceed."
-                    Write-Output "Error: $errorMsg"
+                    $formattedError = Format-AzureError -ErrorJson ($stdout -join "`n") -Step "Cosmos DB 'use existing' failed"
+                    Write-ColorOutput Red $formattedError
+                    Write-Log "Cosmos DB 'use existing' failed. Cannot proceed." "ERROR"
+                    
+                    # Offer rollback
+                    $createdResources = Get-CreatedResources
+                    if ($createdResources.Resources.Count -gt 0) {
+                        Write-Output ""
+                        Write-ColorOutput Yellow "⚠️  Would you like to rollback created resources? (y/n)"
+                        $rollbackChoice = Read-Host
+                        if ($rollbackChoice -eq 'y' -or $rollbackChoice -eq 'Y') {
+                            Invoke-Rollback -Confirm:$false
+                        }
+                    }
+                    
                     exit 1
                 }
                 else {
@@ -1200,6 +1378,26 @@ else {
             $formattedError = Format-Error -ErrorMessage $_.Exception.Message -Step "Infrastructure deployment"
             Write-ColorOutput Red $formattedError
             Write-Log "Exception at step: Infrastructure deployment - $($_.Exception.Message)" "ERROR"
+            
+            # Show what was created before rollback
+            $createdResources = Get-CreatedResources
+            if ($createdResources.Resources.Count -gt 0) {
+                Write-Output ""
+                Write-ColorOutput Yellow "⚠️  The following resources were created before the failure:"
+                foreach ($resource in $createdResources.Resources) {
+                    Write-Output "  • $($resource.Type): $($resource.Name)"
+                }
+                Write-Output ""
+                Write-ColorOutput Cyan "   Would you like to rollback (delete) these resources? (y/n)"
+                $rollbackChoice = Read-Host
+                if ($rollbackChoice -eq 'y' -or $rollbackChoice -eq 'Y') {
+                    Invoke-Rollback -Confirm:$false
+                }
+                else {
+                    Write-ColorOutput Yellow "   Rollback skipped. Resources remain in Azure."
+                }
+            }
+            
             exit 1
         }
         finally {
@@ -1243,16 +1441,11 @@ else {
         
         # Check if Static Web App needs to be created (re-check to avoid race condition)
         Write-Log "Step: Checking Static Web App existence" "INFO"
-        $swaCheck = $false
-        try {
-            $swaInfo = az staticwebapp show --name $SWA_NAME --resource-group $RG 2>$null | ConvertFrom-Json
-            if ($swaInfo) {
-                $swaCheck = $true
-                Write-Log "Static Web App already exists: $SWA_NAME" "INFO"
-            }
+        $swaCheck = Test-StaticWebAppExists -Name $SWA_NAME -ResourceGroup $RG
+        if ($swaCheck) {
+            Write-Log "Static Web App already exists: $SWA_NAME" "INFO"
         }
-        catch {
-            # Static Web App doesn't exist
+        else {
             Write-Log "Static Web App not found: $SWA_NAME" "INFO"
         }
         
@@ -1278,14 +1471,10 @@ else {
             
             if ($nameAvailable) {
                 # Get GitHub repo info
-                $repoUrl = git remote get-url origin
-                $repoOwner = ""
-                $repoName = ""
-                
-                if ($repoUrl -match "github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?$") {
-                    $repoOwner = $matches[1]
-                    $repoName = $matches[2] -replace '\.git$', ''
-                }
+                $repoUrl = Get-GitRemoteUrl
+                $repoInfo = Get-GitHubRepositoryInfo -RemoteUrl $repoUrl
+                $repoOwner = $repoInfo.Owner
+                $repoName = $repoInfo.Name
                 
                 if ($repoOwner -and $repoName) {
                     Write-Output "Repository: $repoOwner/$repoName"
@@ -1497,37 +1686,21 @@ else {
                                 if ($LASTEXITCODE -eq 0) {
                                     Write-ColorOutput Green "   ✅ Resource created in $swaLocation. Connecting to GitHub..."
                                     
-                                    # Connect with REST API
-                                    try {
-                                        $accessToken = az account get-access-token --resource "https://management.azure.com" --query accessToken -o tsv 2>$null
+                                    # Connect with REST API using helper function
+                                    if ($GitHubPat -and $repoOwner -and $repoName) {
+                                        $connectResult = Connect-StaticWebAppToGitHub `
+                                            -StaticWebAppName $SWA_NAME `
+                                            -ResourceGroup $RG `
+                                            -SubscriptionId $subscriptionId `
+                                            -RepositoryOwner $repoOwner `
+                                            -RepositoryName $repoName `
+                                            -Branch "dev" `
+                                            -AppLocation "./src/Mystira.App.PWA" `
+                                            -ApiLocation "swa-db-connections" `
+                                            -OutputLocation "out" `
+                                            -GitHubPat $GitHubPat
                                         
-                                        if ($accessToken -and $azAccount) {
-                                            $apiVersion = "2022-03-01"
-                                            $uri = "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$RG/providers/Microsoft.Web/staticSites/$SWA_NAME/sourcecontrols/GitHub?api-version=$apiVersion"
-                                            
-                                            $body = @{
-                                                properties = @{
-                                                    repo                      = "https://github.com/$repoOwner/$repoName"
-                                                    branch                    = "dev"
-                                                    githubActionConfiguration = @{
-                                                        generateWorkflowFile = $true
-                                                        workflowSettings     = @{
-                                                            appLocation    = "./src/Mystira.App.PWA"
-                                                            apiLocation    = "swa-db-connections"
-                                                            outputLocation = "out"
-                                                        }
-                                                    }
-                                                    githubPersonalAccessToken = $GitHubPat
-                                                }
-                                            } | ConvertTo-Json -Depth 10
-                                            
-                                            $headers = @{
-                                                "Authorization" = "Bearer $accessToken"
-                                                "Content-Type"  = "application/json"
-                                            }
-                                            
-                                            $response = Invoke-RestMethod -Uri $uri -Method Put -Headers $headers -Body $body -ErrorAction Stop
-                                            
+                                        if ($connectResult.Success) {
                                             Write-Host "✓" -ForegroundColor Green
                                             Write-ColorOutput Green "✅ Static Web App created and connected to GitHub!"
                                             Write-Log "Static Web App created and connected via REST API" "INFO"
@@ -1536,12 +1709,12 @@ else {
                                             $swaResult = @{ name = $SWA_NAME }
                                         }
                                         else {
-                                            Write-ColorOutput Yellow "   ⚠️  Could not get Azure access token."
+                                            Write-ColorOutput Yellow "   ⚠️  Failed to connect to GitHub: $($connectResult.Error)"
+                                            Write-Log "Failed to connect GitHub: $($connectResult.Error)" "WARN"
                                         }
                                     }
-                                    catch {
-                                        Write-ColorOutput Yellow "   ⚠️  Failed to connect to GitHub: $($_.Exception.Message)"
-                                        Write-Log "Failed to connect GitHub: $($_.Exception.Message)" "WARN"
+                                    else {
+                                        Write-ColorOutput Yellow "   ⚠️  Missing GitHub PAT or repository info."
                                     }
                                 }
                                 else {

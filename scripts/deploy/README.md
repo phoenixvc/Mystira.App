@@ -55,6 +55,67 @@ Transient error retry functions:
 - `Invoke-WithRetry` - Execute a command with retry logic
 - `Invoke-AzureCliWithRetry` - Execute Azure CLI command with retry
 
+### StaticWebAppHelpers.psm1
+
+Static Web App management functions:
+
+- `Get-StaticWebAppSupportedRegions` - Get list of regions where SWA is available
+- `Test-StaticWebAppRegion` - Check if a region supports Static Web Apps
+- `Get-StaticWebAppFallbackRegion` - Get fallback region if requested region is unsupported
+- `Get-GitHubRepositoryInfo` - Extract GitHub repo owner and name from git remote URL
+- `Test-StaticWebAppExists` - Check if a Static Web App exists
+- `Connect-StaticWebAppToGitHub` - Connect SWA to GitHub repository via REST API
+
+### SecretHelpers.psm1
+
+Secret management functions:
+
+- `Get-ExistingJwtSecret` - Retrieve existing JWT secret from App Service app settings
+- `New-JwtSecret` - Generate a new JWT secret key
+
+### GitHelpers.psm1
+
+Git repository operations:
+
+- `Get-GitRepositoryStatus` - Get current git repository status
+- `Commit-GitChanges` - Commit changes to git repository
+- `Push-GitBranch` - Push a branch to remote
+- `Get-GitRemoteUrl` - Get the remote URL for a git repository
+- `Sync-GitRepository` - Fetch latest changes and ensure branch is up to date
+
+### ResourceInfoHelpers.psm1
+
+Resource detail retrieval functions:
+
+- `Get-AppServiceInfo` - Get detailed information about an App Service
+- `Get-CosmosDbInfo` - Get detailed information about a Cosmos DB account
+- `Get-StorageAccountInfo` - Get detailed information about a Storage Account
+- `Get-StaticWebAppInfo` - Get detailed information about a Static Web App
+- `Get-ResourceGroupResources` - Get all resources in a resource group
+- `Get-ResourcesByType` - Get resources of a specific type in a resource group
+
+### ResourceGroupHelpers.psm1
+
+Resource group operations:
+
+- `Test-ResourceGroupExists` - Check if a resource group exists
+- `New-ResourceGroup` - Create a new resource group
+- `Get-ResourceGroupInfo` - Get information about a resource group
+
+### BicepHelpers.psm1
+
+Bicep template operations:
+
+- `New-BicepParameterFile` - Create a Bicep parameter file with specified parameters
+- `Find-BicepTemplate` - Find a Bicep template file in common locations
+- `Invoke-BicepDeployment` - Execute a Bicep deployment
+
+### ResourceSummaryHelpers.psm1
+
+Resource summary display:
+
+- `Show-ResourceSummary` - Display a summary of all resources in a resource group
+
 ## Usage
 
 These modules are automatically imported by `.deploy-now.ps1`. They can also be imported manually:
@@ -66,5 +127,12 @@ Import-Module .\scripts\deploy\ErrorHandlers.psm1
 Import-Module .\scripts\deploy\ErrorFormatter.psm1
 Import-Module .\scripts\deploy\RollbackHelpers.psm1
 Import-Module .\scripts\deploy\RetryHelpers.psm1
+Import-Module .\scripts\deploy\StaticWebAppHelpers.psm1
+Import-Module .\scripts\deploy\SecretHelpers.psm1
+Import-Module .\scripts\deploy\GitHelpers.psm1
+Import-Module .\scripts\deploy\ResourceInfoHelpers.psm1
+Import-Module .\scripts\deploy\ResourceGroupHelpers.psm1
+Import-Module .\scripts\deploy\BicepHelpers.psm1
+Import-Module .\scripts\deploy\ResourceSummaryHelpers.psm1
 ```
 
