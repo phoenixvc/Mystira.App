@@ -1,94 +1,105 @@
 // Logo Intro Video Handler
-// Plays video on page load, then fades to static logo
+// Plays video on page load, then fades to static logo with visual effects
 
-window.initLogoIntroVideo = function() {
+// Store reference per video element to support multiple instances
+const videoRefs = new Map();
+
+window.initLogoIntroVideo = function(dotNetRef) {
     const video = document.getElementById('logo-intro-video');
     const logo = document.getElementById('hero-logo-static');
     
     if (!video || !logo) {
         // If video element doesn't exist, show logo immediately
-        if (logo) {
-            logo.style.opacity = '1';
+        if (dotNetRef) {
+            dotNetRef.invokeMethodAsync('OnVideoError');
         }
         return;
     }
+    
+    // Store the reference for this video
+    videoRefs.set(video, dotNetRef);
     
     // Check if video source exists
     const videoSource = video.querySelector('source');
     if (!videoSource || !videoSource.src) {
         // No video source, show logo immediately
-        logo.style.opacity = '1';
-        video.style.display = 'none';
+        if (dotNetRef) {
+            dotNetRef.invokeMethodAsync('OnVideoError');
+        }
         return;
     }
-    
-    let userInteracted = false;
-    let autoFadeEnabled = true;
-    
-    // Track user interaction with video
-    video.addEventListener('play', function() {
-        // If user manually plays, don't auto-fade
-        if (!video.autoplay || video.currentTime > 0) {
-            userInteracted = true;
-            autoFadeEnabled = false;
-        }
-    });
-    
-    video.addEventListener('click', function() {
-        userInteracted = true;
-        autoFadeEnabled = false;
-    });
     
     // Handle video load error - fallback to logo
     video.addEventListener('error', function() {
         console.log('Logo intro video failed to load, showing static logo');
-        video.style.display = 'none';
-        logo.style.opacity = '1';
+        const ref = videoRefs.get(video);
+        if (ref) {
+            ref.invokeMethodAsync('OnVideoError');
+        }
     });
     
-    // Handle video end - fade to logo (only if auto-fade is enabled)
+    // Handle video end - transition to logo
     video.addEventListener('ended', function() {
-        if (autoFadeEnabled && !userInteracted) {
-            fadeToLogo();
+        console.log('Video ended, transitioning to logo');
+        const ref = videoRefs.get(video);
+        if (ref) {
+            ref.invokeMethodAsync('OnVideoEnded');
         }
     });
     
     // Handle video can play - ensure it starts
     video.addEventListener('canplay', function() {
-        // Try to play, but don't force if user interacts
         if (!video.paused) {
             return; // Already playing
         }
         video.play().catch(function(error) {
             console.log('Video autoplay prevented:', error);
             // If autoplay fails, show logo immediately
-            fadeToLogo();
+            const ref = videoRefs.get(video);
+            if (ref) {
+                ref.invokeMethodAsync('OnVideoError');
+            }
         });
     });
     
     // Fallback: If video doesn't start playing within 3 seconds, show logo
     setTimeout(function() {
-        if (video.paused && video.readyState < 3 && !userInteracted) {
+        if (video.paused && video.readyState < 3) {
             console.log('Video not playing, showing static logo');
-            fadeToLogo();
+            const ref = videoRefs.get(video);
+            if (ref) {
+                ref.invokeMethodAsync('OnVideoError');
+            }
         }
     }, 3000);
-    
-    function fadeToLogo() {
-        if (!autoFadeEnabled || userInteracted) {
-            return; // Don't fade if user is interacting
-        }
-        
-        // Fade out video
-        video.style.opacity = '0';
-        
-        // After fade out completes, hide video and show logo
-        setTimeout(function() {
-            if (!userInteracted) {
-                video.style.display = 'none';
-                logo.style.opacity = '1';
-            }
-        }, 1500); // Match CSS transition duration
-    }
 };
 
+// Function to replay the logo video with transition effect
+window.replayLogoVideo = function() {
+    const video = document.getElementById('logo-intro-video');
+    
+    if (!video) {
+        console.log('Video element not found');
+        return;
+    }
+    
+    // Reset video to beginning
+    video.currentTime = 0;
+    
+    // Play the video
+    video.play().catch(function(error) {
+        console.log('Video replay failed:', error);
+        const ref = videoRefs.get(video);
+        if (ref) {
+            ref.invokeMethodAsync('OnVideoError');
+        }
+    });
+};
+
+// Cleanup function to remove references when component is disposed
+window.cleanupLogoIntroVideo = function() {
+    const video = document.getElementById('logo-intro-video');
+    if (video) {
+        videoRefs.delete(video);
+    }
+};
