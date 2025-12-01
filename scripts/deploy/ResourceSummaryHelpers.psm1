@@ -35,13 +35,19 @@ function Show-ResourceSummary {
             }
         }
         
+        # Initialize resource category arrays
+        $appServices = @()
+        $storageAccounts = @()
+        $cosmosAccounts = @()
+        $commServices = @()
+        $emailServices = @()
+        $appServicePlans = @()
+        $appInsights = @()
+        $logWorkspaces = @()
+        $staticSites = @()
+        
         if ($validResources.Count -gt 0) {
             Write-Output "Resources:"
-            
-            $appServices = @()
-            $storageAccounts = @()
-            $cosmosAccounts = @()
-            $commServices = @()
             
             foreach ($resource in $validResources | Sort-Object type, name) {
                 $resourceType = $resource.type -replace '.*/', ''
@@ -63,6 +69,21 @@ function Show-ResourceSummary {
                 elseif ($resourceType -eq "communicationServices") {
                     $commServices += $resource
                 }
+                elseif ($resourceType -eq "emailServices") {
+                    $emailServices += $resource
+                }
+                elseif ($resourceType -eq "serverFarms") {
+                    $appServicePlans += $resource
+                }
+                elseif ($resourceType -eq "components") {
+                    $appInsights += $resource
+                }
+                elseif ($resourceType -eq "workspaces") {
+                    $logWorkspaces += $resource
+                }
+                elseif ($resourceType -eq "staticSites") {
+                    $staticSites += $resource
+                }
             }
             
             # Show detailed info for App Services
@@ -71,7 +92,7 @@ function Show-ResourceSummary {
                 Write-Output "App Services:"
                 foreach ($app in $appServices) {
                     $appInfo = Get-AppServiceInfo -Name $app.name -ResourceGroup $ResourceGroup
-                    if ($appInfo) {
+                    if ($appInfo -and $appInfo.Url) {
                         Write-Output "  • $($app.name):"
                         Write-Output "    URL: https://$($appInfo.Url)"
                         Write-Output "    State: $($appInfo.State)"
@@ -98,7 +119,7 @@ function Show-ResourceSummary {
                 Write-Output "Cosmos DB Accounts:"
                 foreach ($cosmos in $cosmosAccounts) {
                     $cosmosInfo = Get-CosmosDbInfo -Name $cosmos.name -ResourceGroup $ResourceGroup
-                    if ($cosmosInfo) {
+                    if ($cosmosInfo -and $cosmosInfo.DocumentEndpoint) {
                         Write-Output "  • $($cosmos.name):"
                         Write-Output "    Endpoint: $($cosmosInfo.DocumentEndpoint)"
                         Write-Output "    State: $($cosmosInfo.ProvisioningState)"
@@ -107,24 +128,84 @@ function Show-ResourceSummary {
                     }
                 }
             }
+            
+            # Show detailed info for Communication Services
+            if ($commServices.Count -gt 0) {
+                Write-Output ""
+                Write-Output "Communication Services:"
+                foreach ($comm in $commServices) {
+                    Write-Output "  • $($comm.name)"
+                }
+            }
+            
+            # Show detailed info for Email Services
+            if ($emailServices.Count -gt 0) {
+                Write-Output ""
+                Write-Output "Email Services:"
+                foreach ($email in $emailServices) {
+                    Write-Output "  • $($email.name)"
+                }
+            }
+            
+            # Show detailed info for App Service Plans
+            if ($appServicePlans.Count -gt 0) {
+                Write-Output ""
+                Write-Output "App Service Plans:"
+                foreach ($plan in $appServicePlans) {
+                    Write-Output "  • $($plan.name)"
+                }
+            }
+            
+            # Show detailed info for Application Insights
+            if ($appInsights.Count -gt 0) {
+                Write-Output ""
+                Write-Output "Application Insights:"
+                foreach ($ai in $appInsights) {
+                    Write-Output "  • $($ai.name)"
+                }
+            }
+            
+            # Show detailed info for Log Analytics Workspaces
+            if ($logWorkspaces.Count -gt 0) {
+                Write-Output ""
+                Write-Output "Log Analytics Workspaces:"
+                foreach ($workspace in $logWorkspaces) {
+                    Write-Output "  • $($workspace.name)"
+                }
+            }
+            
+            # Show detailed info for Static Web Apps (if found in resource list)
+            if ($staticSites.Count -gt 0) {
+                Write-Output ""
+                Write-Output "Static Web Apps:"
+                foreach ($swa in $staticSites) {
+                    $swaInfo = Get-StaticWebAppInfo -Name $swa.name -ResourceGroup $ResourceGroup
+                    if ($swaInfo) {
+                        Write-Output "  • $($swaInfo.name):"
+                        Write-Output "    URL: https://$($swaInfo.defaultHostname)"
+                        Write-Output "    Location: $($swaInfo.location)"
+                    } else {
+                        Write-Output "  • $($swa.name): (details unavailable)"
+                    }
+                }
+            }
         } else {
             Write-Output "Resources: (none found or unable to retrieve)"
             Write-Log "No valid resources found in resource group $ResourceGroup" "WARN"
         }
         
-        # Check for Static Web App
-        $swaName = Get-StaticWebAppName $Location
-        $swaInfo = Get-StaticWebAppInfo -Name $swaName -ResourceGroup $ResourceGroup
-        
-        if ($swaInfo) {
-            Write-Output ""
-            Write-Output "Static Web App:"
-            Write-Output "  • Name: $($swaInfo.name)"
-            Write-Output "  • URL: https://$($swaInfo.defaultHostname)"
-            Write-Output "  • Location: $($swaInfo.location)"
-        } else {
-            Write-Output ""
-            Write-ColorOutput Yellow "  WARNING: Static Web App not found: $swaName"
+        # Check for Static Web App (fallback if not found in resource list)
+        if ($staticSites.Count -eq 0) {
+            $swaName = Get-StaticWebAppName $Location
+            $swaInfo = Get-StaticWebAppInfo -Name $swaName -ResourceGroup $ResourceGroup
+            
+            if ($swaInfo) {
+                Write-Output ""
+                Write-Output "Static Web App:"
+                Write-Output "  • Name: $($swaInfo.name)"
+                Write-Output "  • URL: https://$($swaInfo.defaultHostname)"
+                Write-Output "  • Location: $($swaInfo.location)"
+            }
         }
     }
     catch {

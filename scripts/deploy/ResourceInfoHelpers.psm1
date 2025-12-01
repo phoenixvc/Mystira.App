@@ -12,17 +12,18 @@ function Get-AppServiceInfo {
     )
     
     try {
-        if (Get-Command Invoke-AzureCliWithRetry -ErrorAction SilentlyContinue) {
-            $result = Invoke-AzureCliWithRetry -Command "az webapp show --name `"$Name`" --resource-group `"$ResourceGroup`" --query `"{Url:defaultHostName, State:state, Location:location}`" -o json" -MaxRetries 2
-            if ($result) {
-                return $result | ConvertFrom-Json -ErrorAction SilentlyContinue
+        # Use direct az command to ensure we get proper exit codes
+        $result = az webapp show --name $Name --resource-group $ResourceGroup --query "{Url:defaultHostName, State:state, Location:location}" -o json 2>$null
+        $exitCode = $LASTEXITCODE
+        
+        if ($exitCode -eq 0 -and $result) {
+            $appInfo = $result | ConvertFrom-Json -ErrorAction SilentlyContinue
+            if ($appInfo) {
+                return $appInfo
             }
         }
         else {
-            $result = az webapp show --name $Name --resource-group $ResourceGroup --query "{Url:defaultHostName, State:state, Location:location}" -o json 2>$null
-            if ($result) {
-                return $result | ConvertFrom-Json
-            }
+            Write-Log "Failed to get App Service info for $Name (exit code: $exitCode)" "WARN"
         }
     }
     catch {
@@ -43,17 +44,18 @@ function Get-CosmosDbInfo {
     )
     
     try {
-        if (Get-Command Invoke-AzureCliWithRetry -ErrorAction SilentlyContinue) {
-            $result = Invoke-AzureCliWithRetry -Command "az cosmosdb show --name `"$Name`" --resource-group `"$ResourceGroup`" --query `"{DocumentEndpoint:documentEndpoint, ProvisioningState:provisioningState}`" -o json" -MaxRetries 2
-            if ($result) {
-                return $result | ConvertFrom-Json -ErrorAction SilentlyContinue
+        # Use direct az command to ensure we get proper exit codes
+        $result = az cosmosdb show --name $Name --resource-group $ResourceGroup --query "{DocumentEndpoint:documentEndpoint, ProvisioningState:provisioningState}" -o json 2>$null
+        $exitCode = $LASTEXITCODE
+        
+        if ($exitCode -eq 0 -and $result) {
+            $cosmosInfo = $result | ConvertFrom-Json -ErrorAction SilentlyContinue
+            if ($cosmosInfo) {
+                return $cosmosInfo
             }
         }
         else {
-            $result = az cosmosdb show --name $Name --resource-group $ResourceGroup --query "{DocumentEndpoint:documentEndpoint, ProvisioningState:provisioningState}" -o json 2>$null
-            if ($result) {
-                return $result | ConvertFrom-Json
-            }
+            Write-Log "Failed to get Cosmos DB info for $Name (exit code: $exitCode)" "WARN"
         }
     }
     catch {
