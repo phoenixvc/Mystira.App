@@ -10,10 +10,12 @@
                 <i class="fas fa-download me-2"></i>
                 <div class="install-text">
                     <strong>Install Mystira</strong>
+                </div>
+                <div class="install-text">
                     <small>Works offline • No app store needed</small>
                 </div>
             </div>
-            <span class="badge badge-pwa">PWA</span>
+            <!--<span class="badge badge-pwa">PWA</span>-->
         </button>
     </div>
 }
@@ -51,7 +53,7 @@
                 objRef = DotNetObjectReference.Create(this);
 
                 await jsModule.InvokeVoidAsync("initializePwaInstall", objRef);
-                
+
                 // Start periodic check to detect installation changes
                 cts = new CancellationTokenSource();
                 _ = MonitorInstallationStateAsync(cts.Token);
@@ -66,7 +68,7 @@
     private async Task MonitorInstallationStateAsync(CancellationToken cancellationToken)
     {
         checkTimer = new PeriodicTimer(TimeSpan.FromSeconds(2));
-        
+
         try
         {
             while (await checkTimer.WaitForNextTickAsync(cancellationToken))
@@ -87,7 +89,7 @@
         {
             return;
         }
-        
+
         try
         {
             if (jsModule != null)
@@ -151,13 +153,13 @@
     {
         // Cancel first to stop any pending operations
         cts?.Cancel();
-        
+
         // Small delay to allow cancellation to propagate
         await Task.Delay(50);
-        
+
         checkTimer?.Dispose();
         cts?.Dispose();
-        
+
         if (jsModule != null)
         {
             try

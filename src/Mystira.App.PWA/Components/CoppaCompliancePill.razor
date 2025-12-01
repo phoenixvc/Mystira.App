@@ -1,10 +1,6 @@
 @* COPPA Compliance Pillbox with Tooltip *@
 
 <div class="coppa-pill-container" @onmouseenter="ShowTooltip" @onmouseleave="HideTooltip">
-    <span class="trust-badge coppa-pill">
-        <i class="fas fa-lock me-1"></i>COPPA Compliant
-    </span>
-    
     @if (showTooltip)
     {
         <div class="coppa-tooltip" @onclick:stopPropagation="true">
