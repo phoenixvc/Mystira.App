@@ -5,28 +5,28 @@
 <div class="row">
     <div class="col-12 text-center mb-5 hero-section" style="position: relative; overflow: hidden;">
         <!-- Particle Background Canvas -->
-        <canvas id="particle-canvas" class="particle-canvas" aria-hidden="true" 
+        <canvas id="particle-canvas" class="particle-canvas" aria-hidden="true"
                 style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: auto;"></canvas>
         
         <!-- Golden Light Tubes -->
         <div class="golden-lights" aria-hidden="true">
             <svg class="golden-light-svg" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice">
-                <!-- Left side light tube -->
-                <path class="light-tube light-tube-1" d="M 50 100 Q 150 200, 200 350 T 300 500" 
+                <!-- Left side light tube - curves toward logo -->
+                <path class="light-tube light-tube-1" d="M 50 100 Q 200 250, 400 300 Q 500 320, 600 300 Q 650 290, 700 280" 
                       fill="none" stroke="url(#goldenGradient1)" stroke-width="3" opacity="0.4" />
-                <path class="light-tube light-tube-1-glow" d="M 50 100 Q 150 200, 200 350 T 300 500" 
+                <path class="light-tube light-tube-1-glow" d="M 50 100 Q 200 250, 400 300 Q 500 320, 600 300 Q 650 290, 700 280" 
                       fill="none" stroke="url(#goldenGradient1)" stroke-width="8" opacity="0.15" />
                 
-                <!-- Right side light tube -->
-                <path class="light-tube light-tube-2" d="M 900 80 Q 950 250, 1000 400 T 1100 550" 
+                <!-- Right side light tube - curves around logo from right -->
+                <path class="light-tube light-tube-2" d="M 1150 80 Q 1000 200, 800 280 Q 650 300, 600 300 Q 550 300, 500 320" 
                       fill="none" stroke="url(#goldenGradient2)" stroke-width="3" opacity="0.4" />
-                <path class="light-tube light-tube-2-glow" d="M 900 80 Q 950 250, 1000 400 T 1100 550" 
+                <path class="light-tube light-tube-2-glow" d="M 1150 80 Q 1000 200, 800 280 Q 650 300, 600 300 Q 550 300, 500 320" 
                       fill="none" stroke="url(#goldenGradient2)" stroke-width="8" opacity="0.15" />
                 
-                <!-- Center subtle light tube -->
-                <path class="light-tube light-tube-3" d="M 500 50 Q 600 200, 600 350 T 700 550" 
+                <!-- Center light tube - wraps around logo area -->
+                <path class="light-tube light-tube-3" d="M 400 200 Q 500 250, 600 280 Q 600 300, 600 320 Q 550 340, 500 330 Q 450 320, 500 300 Q 550 280, 600 300" 
                       fill="none" stroke="url(#goldenGradient3)" stroke-width="2" opacity="0.3" />
-                <path class="light-tube light-tube-3-glow" d="M 500 50 Q 600 200, 600 350 T 700 550" 
+                <path class="light-tube light-tube-3-glow" d="M 400 200 Q 500 250, 600 280 Q 600 300, 600 320 Q 550 340, 500 330 Q 450 320, 500 300 Q 550 280, 600 300" 
                       fill="none" stroke="url(#goldenGradient3)" stroke-width="6" opacity="0.1" />
                 
                 <!-- Gradients -->
@@ -52,7 +52,7 @@
         
         <div class="hero-content" style="position: relative; z-index: 1;">
             <h1 class="mystira-title mb-2">
-                Mystira <span class="alpha-badge">ALPHA</span>
+                <span class="title-text">Mystira</span><span class="alpha-badge">ALPHA</span>
             </h1>
             <p class="mystira-tagline mb-4">Where imagination meets growth</p>
             <div class="hero-logo-container mb-4" style="position: relative;">
@@ -81,19 +81,20 @@
                 <p class="hero-description mb-4">
                     Bring stories to life with Mystira — an interactive adventure platform that helps children, parents, and group leaders explore imagination, teamwork, and growth through guided storytelling and play.
                 </p>
-                
+
                 @if (ShowCallToActions)
                 {
                     <div class="hero-cta-buttons d-flex gap-3 justify-content-center flex-wrap mb-4">
                         <a href="/signup" class="btn btn-primary-custom btn-lg px-5 py-3">
-                            <i class="fas fa-rocket me-2"></i>Start Free Trial
+                            <i class="fas fa-rocket me-2"></i>Get Started
                         </a>
                         <button class="btn btn-outline-primary btn-lg px-5 py-3" @onclick="OnWatchDemo">
                             <i class="fas fa-play-circle me-2"></i>Watch Demo (2 min)
                         </button>
                     </div>
-                    
+
                     <!-- Trust Indicators -->
+                    <!--
                     <div class="trust-badges">
                         <span class="trust-badge">
                             <i class="fas fa-shield-alt me-1"></i>Safe for Kids
@@ -103,6 +104,7 @@
                         </span>
                         <CoppaCompliancePill />
                     </div>
+                    -->
                 }
             }
         </div>
@@ -112,15 +114,15 @@
 @code {
     [Parameter]
     public bool ShowDescription { get; set; } = false;
-    
+
     [Parameter]
     public bool ShowCallToActions { get; set; } = false;
-    
+
     [Parameter]
     public EventCallback OnWatchDemoClick { get; set; }
-    
+
     private bool _particlesInitialized = false;
-    
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !_particlesInitialized)
@@ -139,7 +141,7 @@
             }
         }
     }
-    
+
     private async Task OnWatchDemo()
     {
         if (OnWatchDemoClick.HasDelegate)
@@ -147,7 +149,7 @@
             await OnWatchDemoClick.InvokeAsync();
         }
     }
-    
+
     public async ValueTask DisposeAsync()
     {
         try

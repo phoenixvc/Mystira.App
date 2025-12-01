@@ -1,34 +1,51 @@
 /* PWA Install Button Scoped Styles */
 
 .pwa-install-container {
-    max-width: 220px;
-    right: 16px;
-    left: auto;
-    transform: translateX(0);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 16px;
+    display: flex;
+    justify-content: center;
+    padding: 0 16px;
+    z-index: 10000;
 }
 
 .btn-pwa-install {
-    display: flex;
+    /* Shrink-wrap the button to its content */
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 6px 10px;
-    gap: 6px;
-    font-size: 0.75rem;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06);
+    justify-content: center;
+    padding: 10px 16px;
+    gap: 8px;
+    font-size: 0.875rem;
+    border-radius: 9999px;
+    /* Match the primary CTA (Start Free Trial) gradient */
+    background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 50%, #6D28D9 100%);
+    color: #ffffff;
+    border: 1px solid #7C3AED;
+    box-shadow: 0 8px 20px rgba(147, 51, 234, 0.35), 0 2px 6px rgba(0, 0, 0, 0.12);
+    width: auto;
+    max-width: 100%;
+}
+
+.btn-pwa-install:hover {
+    background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 60%, #5B21B6 100%);
+    border-color: #6D28D9;
 }
 
 .install-content {
     display: flex;
     align-items: center;
     gap: 6px;
-    flex: 1;
+    /* Do not force the inner content to stretch the button */
+    flex: 0 1 auto;
     min-width: 0;
 }
 
 .install-content i {
-    font-size: 0.85rem;
-    color: #9333ea;
+    font-size: 0.95rem;
+    color: #ffffff;
     flex-shrink: 0;
 }
 
@@ -42,21 +59,21 @@
 }
 
 .install-text strong {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     line-height: 1.2;
-    color: #111827;
-    font-weight: 600;
+    color: #ffffff;
+    font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .install-text small {
-    font-size: 0.6rem;
-    opacity: 0.75;
-    font-weight: 400;
+    font-size: 0.7rem;
+    opacity: 0.9;
+    font-weight: 500;
     line-height: 1.1;
-    color: #6b7280;
+    color: rgba(255, 255, 255, 0.9);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -64,11 +81,11 @@
 }
 
 .badge-pwa {
-    background: #9333ea;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 6px;
-    font-size: 0.55rem;
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-size: 0.6rem;
     font-weight: 700;
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -77,26 +94,22 @@
 
 /* Mobile responsiveness */
 @media (max-width: 576px) {
-    .pwa-install-container {
-        max-width: 200px;
-        right: 12px;
-        left: auto;
-    }
-    
+    .pwa-install-container { padding: 0 12px; bottom: 12px; }
+
     .btn-pwa-install {
-        padding: 5px 8px;
+        padding: 10px 14px;
     }
-    
+
     .install-text strong {
-        font-size: 0.7rem;
+        font-size: 0.8rem;
     }
-    
+
     .install-text small {
-        font-size: 0.55rem;
+        font-size: 0.65rem;
     }
-    
+
     .badge-pwa {
-        font-size: 0.5rem;
-        padding: 2px 5px;
+        font-size: 0.55rem;
+        padding: 2px 6px;
     }
 }
