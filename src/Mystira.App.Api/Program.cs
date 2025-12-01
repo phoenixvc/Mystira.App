@@ -371,7 +371,6 @@ builder.Services.AddCors(options =>
                 "http://localhost:7000",
                 "https://localhost:7000",
                 "https://mystira.app",                                    // Production domain
-                "https://mango-water-04fdb1c03.3.azurestaticapps.net",   // Dev SWA (West Europe)
                 "https://blue-water-0eab7991e.3.azurestaticapps.net",    // Prod SWA
                 "https://brave-meadow-0ecd87c03.3.azurestaticapps.net",  // Dev SWA (South Africa North)
                 "https://dev-euw-swa-mystira-app.azurestaticapps.net",   // Dev SWA (West Europe - if custom domain)

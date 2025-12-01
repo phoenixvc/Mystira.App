@@ -275,7 +275,6 @@ builder.Services.AddCors(options =>
                 "https://admin.mystira.app",
                 "https://mystiraapp.azurewebsites.net",
                 "https://mystira.app",
-                "https://mango-water-04fdb1c03.3.azurestaticapps.net",
                 "https://blue-water-0eab7991e.3.azurestaticapps.net",
                 "https://brave-meadow-0ecd87c03.3.azurestaticapps.net"
             };
