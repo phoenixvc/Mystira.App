@@ -155,13 +155,13 @@ html[data-theme="dark"] .hero-section {
 }
 
 @-webkit-keyframes tubePulse {
-    0%, 100% { opacity: 0.6; stroke-width: 3px; }
-    50% { opacity: 0.9; stroke-width: 4px; }
+    0%, 100% { opacity: 0.6; stroke-width: 3; }
+    50% { opacity: 0.9; stroke-width: 4; }
 }
 
 @keyframes tubePulse {
-    0%, 100% { opacity: 0.6; stroke-width: 3px; }
-    50% { opacity: 0.9; stroke-width: 4px; }
+    0%, 100% { opacity: 0.6; stroke-width: 3; }
+    50% { opacity: 0.9; stroke-width: 4; }
 }
 
 /* Hero content */
