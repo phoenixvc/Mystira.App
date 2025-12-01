@@ -8,44 +8,66 @@
         <canvas id="particle-canvas" class="particle-canvas" aria-hidden="true"
                 style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: auto;"></canvas>
         
-        <!-- Golden Light Tubes -->
-        <div class="golden-lights" aria-hidden="true">
-            <svg class="golden-light-svg" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice">
-                <!-- Left side light tube - curves toward logo -->
-                <path class="light-tube light-tube-1" d="M 50 100 Q 200 250, 400 300 Q 500 320, 600 300 Q 650 290, 700 280" 
-                      fill="none" stroke="url(#goldenGradient1)" stroke-width="3" opacity="0.4" />
-                <path class="light-tube light-tube-1-glow" d="M 50 100 Q 200 250, 400 300 Q 500 320, 600 300 Q 650 290, 700 280" 
-                      fill="none" stroke="url(#goldenGradient1)" stroke-width="8" opacity="0.15" />
+        <!-- Golden Light Tubes - positioned around the logo/video area -->
+        <div class="golden-lights" aria-hidden="true" id="golden-lights-container">
+            <svg class="golden-light-svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+                <!-- Animated twirling light tubes that orbit around center -->
+                <g class="light-tube-group light-tube-group-1">
+                    <!-- Left orbital tube -->
+                    <path class="light-tube light-tube-1" 
+                          d="M 100 200 C 200 100, 400 150, 500 300 S 550 450, 600 400 S 700 300, 600 350 C 500 400, 550 500, 700 450" 
+                          fill="none" stroke="url(#goldenGradient1)" stroke-width="3" stroke-linecap="round" />
+                    <path class="light-tube light-tube-1-glow" 
+                          d="M 100 200 C 200 100, 400 150, 500 300 S 550 450, 600 400 S 700 300, 600 350 C 500 400, 550 500, 700 450" 
+                          fill="none" stroke="url(#goldenGradient1)" stroke-width="12" opacity="0.2" stroke-linecap="round" />
+                </g>
                 
-                <!-- Right side light tube - curves around logo from right -->
-                <path class="light-tube light-tube-2" d="M 1150 80 Q 1000 200, 800 280 Q 650 300, 600 300 Q 550 300, 500 320" 
-                      fill="none" stroke="url(#goldenGradient2)" stroke-width="3" opacity="0.4" />
-                <path class="light-tube light-tube-2-glow" d="M 1150 80 Q 1000 200, 800 280 Q 650 300, 600 300 Q 550 300, 500 320" 
-                      fill="none" stroke="url(#goldenGradient2)" stroke-width="8" opacity="0.15" />
+                <g class="light-tube-group light-tube-group-2">
+                    <!-- Right orbital tube -->
+                    <path class="light-tube light-tube-2" 
+                          d="M 1100 250 C 1000 150, 800 200, 700 350 S 650 500, 600 400 S 500 300, 600 350 C 700 400, 650 550, 500 500" 
+                          fill="none" stroke="url(#goldenGradient2)" stroke-width="3" stroke-linecap="round" />
+                    <path class="light-tube light-tube-2-glow" 
+                          d="M 1100 250 C 1000 150, 800 200, 700 350 S 650 500, 600 400 S 500 300, 600 350 C 700 400, 650 550, 500 500" 
+                          fill="none" stroke="url(#goldenGradient2)" stroke-width="12" opacity="0.2" stroke-linecap="round" />
+                </g>
                 
-                <!-- Center light tube - wraps around logo area -->
-                <path class="light-tube light-tube-3" d="M 400 200 Q 500 250, 600 280 Q 600 300, 600 320 Q 550 340, 500 330 Q 450 320, 500 300 Q 550 280, 600 300" 
-                      fill="none" stroke="url(#goldenGradient3)" stroke-width="2" opacity="0.3" />
-                <path class="light-tube light-tube-3-glow" d="M 400 200 Q 500 250, 600 280 Q 600 300, 600 320 Q 550 340, 500 330 Q 450 320, 500 300 Q 550 280, 600 300" 
-                      fill="none" stroke="url(#goldenGradient3)" stroke-width="6" opacity="0.1" />
+                <g class="light-tube-group light-tube-group-3">
+                    <!-- Inner spiral around logo -->
+                    <path class="light-tube light-tube-3" 
+                          d="M 450 250 Q 500 200, 600 250 T 750 350 Q 700 450, 600 450 T 450 350 Q 500 280, 600 300" 
+                          fill="none" stroke="url(#goldenGradient3)" stroke-width="2.5" stroke-linecap="round" />
+                    <path class="light-tube light-tube-3-glow" 
+                          d="M 450 250 Q 500 200, 600 250 T 750 350 Q 700 450, 600 450 T 450 350 Q 500 280, 600 300" 
+                          fill="none" stroke="url(#goldenGradient3)" stroke-width="8" opacity="0.15" stroke-linecap="round" />
+                </g>
                 
-                <!-- Gradients -->
+                <!-- Gradients with brighter golden colors -->
                 <defs>
                     <linearGradient id="goldenGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#FCD34D;stop-opacity:0.6" />
-                        <stop offset="50%" style="stop-color:#FBBF24;stop-opacity:0.5" />
-                        <stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0.3" />
+                        <stop offset="0%" style="stop-color:#FFD700;stop-opacity:0.8" />
+                        <stop offset="50%" style="stop-color:#FFA500;stop-opacity:0.6" />
+                        <stop offset="100%" style="stop-color:#FF8C00;stop-opacity:0.4" />
                     </linearGradient>
-                    <linearGradient id="goldenGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#FCD34D;stop-opacity:0.5" />
-                        <stop offset="50%" style="stop-color:#FBBF24;stop-opacity:0.4" />
-                        <stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0.25" />
+                    <linearGradient id="goldenGradient2" x1="100%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#FFD700;stop-opacity:0.7" />
+                        <stop offset="50%" style="stop-color:#FFA500;stop-opacity:0.5" />
+                        <stop offset="100%" style="stop-color:#FF8C00;stop-opacity:0.35" />
                     </linearGradient>
-                    <linearGradient id="goldenGradient3" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#FCD34D;stop-opacity:0.4" />
-                        <stop offset="50%" style="stop-color:#FBBF24;stop-opacity:0.3" />
-                        <stop offset="100%" style="stop-color:#F59E0B;stop-opacity:0.2" />
+                    <linearGradient id="goldenGradient3" x1="50%" y1="0%" x2="50%" y2="100%">
+                        <stop offset="0%" style="stop-color:#FFE066;stop-opacity:0.6" />
+                        <stop offset="50%" style="stop-color:#FFD700;stop-opacity:0.5" />
+                        <stop offset="100%" style="stop-color:#FFA500;stop-opacity:0.3" />
                     </linearGradient>
+                    
+                    <!-- Filter for extra glow effect -->
+                    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
                 </defs>
             </svg>
         </div>
@@ -55,27 +77,32 @@
                 <span class="title-text">Mystira</span><span class="alpha-badge">ALPHA</span>
             </h1>
             <p class="mystira-tagline mb-4">Where imagination meets growth</p>
-            <div class="hero-logo-container mb-4" style="position: relative;">
+            <div class="hero-logo-container mb-4">
                 <!-- Logo Intro Video (plays on page load, then fades to logo) -->
                 <video id="logo-intro-video" 
-                       class="hero-logo-video" 
+                       class="hero-logo-video @(showVideo ? "visible" : "hidden")" 
                        autoplay 
                        muted 
                        playsinline
-                       controls
-                       aria-label="Mystira logo introduction video"
-                       style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 600px; max-height: 600px; opacity: 1; transition: opacity 1.5s ease-in-out; z-index: 2;">
+                       aria-label="Mystira logo introduction video">
                     <source src="videos/logo-intro.mp4" type="video/mp4">
-                    <!-- Fallback to logo if video fails to load -->
                 </video>
                 <!-- Static Logo (shown after video fades) -->
                 <img src="icons/icon-512.png"
                      id="hero-logo-static"
                      alt="Mystira - Where imagination meets growth"
-                     width="600"
-                     height="600"
-                     class="hero-logo" 
-                     style="opacity: 0; transition: opacity 1.5s ease-in-out; position: relative; z-index: 1;" />
+                     width="300"
+                     height="300"
+                     class="hero-logo @(showVideo ? "hidden" : "visible")" />
+                     
+                <!-- Replay button (appears after video ends) -->
+                <button id="replay-video-btn" 
+                        class="replay-btn @(showReplayButton ? "visible" : "hidden")"
+                        @onclick="ReplayVideo"
+                        title="Replay intro video"
+                        aria-label="Replay introduction video">
+                    <i class="fas fa-play"></i>
+                </button>
             </div>
             @if (ShowDescription)
             {
@@ -123,6 +150,8 @@
     public EventCallback OnWatchDemoClick { get; set; }
 
     private bool _particlesInitialized = false;
+    private bool showVideo = true;
+    private bool showReplayButton = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -133,13 +162,46 @@
             {
                 await JSRuntime.InvokeVoidAsync("MystiraParticles.init", "particle-canvas");
                 
-                // Initialize logo intro video fade transition
-                await JSRuntime.InvokeVoidAsync("initLogoIntroVideo");
+                // Initialize logo intro video fade transition with callback
+                var dotNetRef = DotNetObjectReference.Create(this);
+                await JSRuntime.InvokeVoidAsync("initLogoIntroVideo", dotNetRef);
             }
             catch (Exception)
             {
                 // Silently fail if JS interop is not available (e.g., during prerendering)
             }
+        }
+    }
+
+    [JSInvokable]
+    public void OnVideoEnded()
+    {
+        showVideo = false;
+        showReplayButton = true;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void OnVideoError()
+    {
+        showVideo = false;
+        showReplayButton = false;
+        StateHasChanged();
+    }
+
+    private async Task ReplayVideo()
+    {
+        showVideo = true;
+        showReplayButton = false;
+        StateHasChanged();
+        
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("replayLogoVideo");
+        }
+        catch (Exception)
+        {
+            // Silently fail
         }
     }
 

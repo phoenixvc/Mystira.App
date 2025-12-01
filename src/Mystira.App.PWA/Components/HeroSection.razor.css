@@ -9,6 +9,12 @@
     padding-top: 20px;
     position: relative;
     overflow: hidden;
+    min-height: 500px;
+}
+
+/* Dark mode background */
+html[data-theme="dark"] .hero-section {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
 }
 
 /* Particle Canvas Background */
@@ -22,16 +28,16 @@
     z-index: 0;
 }
 
-/* Golden Light Tubes */
+/* Golden Light Tubes Container */
 .golden-lights {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: 0;
+    z-index: 1;
     pointer-events: none;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .golden-light-svg {
@@ -40,146 +46,118 @@
     left: 0;
     width: 100%;
     height: 100%;
-    opacity: 0.6;
-    /* Smooth transitions for twirling */
-    transition: transform 0.1s ease-out;
+    opacity: 0.85;
 }
 
+/* Light tube base styles */
 .light-tube {
     stroke-linecap: round;
     stroke-linejoin: round;
-    filter: blur(0.5px);
-    animation: lightPulse 4s ease-in-out infinite;
+    filter: url(#glow);
 }
 
-.light-tube-glow {
-    filter: blur(2px);
-    animation: lightPulse 4s ease-in-out infinite;
-}
-
-.light-tube-1 {
-    animation-delay: 0s;
-}
-
-.light-tube-1-glow {
-    animation-delay: 0s;
-}
-
-.light-tube-2 {
-    animation-delay: 1.5s;
-}
-
-.light-tube-2-glow {
-    animation-delay: 1.5s;
-}
-
-.light-tube-3 {
-    animation-delay: 0.75s;
-}
-
-.light-tube-3-glow {
-    animation-delay: 0.75s;
-}
-
-@keyframes lightPulse {
-    0%, 100% {
-        opacity: 0.3;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.5;
-        transform: scale(1.02);
-    }
-}
-
-/* Subtle movement animation */
-@keyframes lightFloat {
-    0%, 100% {
-        transform: translateY(0) translateX(0);
-    }
-    33% {
-        transform: translateY(-5px) translateX(2px);
-    }
-    66% {
-        transform: translateY(3px) translateX(-2px);
-    }
-}
-
-/* Slow twirling animation - rotates around center/logo area */
-@keyframes lightTwirl {
-    0% {
-        transform: rotate(0deg) translateX(0) translateY(0);
-        transform-origin: 50% 50%;
-    }
-    25% {
-        transform: rotate(5deg) translateX(10px) translateY(-8px);
-        transform-origin: 50% 50%;
-    }
-    50% {
-        transform: rotate(0deg) translateX(0) translateY(-5px);
-        transform-origin: 50% 50%;
-    }
-    75% {
-        transform: rotate(-5deg) translateX(-10px) translateY(-8px);
-        transform-origin: 50% 50%;
-    }
-    100% {
-        transform: rotate(0deg) translateX(0) translateY(0);
-        transform-origin: 50% 50%;
-    }
-}
-
-/* Twirl around logo area - more pronounced movement */
-@keyframes lightTwirlLogo {
-    0% {
-        transform: rotate(0deg) translateX(0) translateY(0);
-        transform-origin: 50% 45%;
-    }
-    20% {
-        transform: rotate(8deg) translateX(15px) translateY(-12px);
-        transform-origin: 50% 45%;
-    }
-    40% {
-        transform: rotate(0deg) translateX(0) translateY(-10px);
-        transform-origin: 50% 45%;
-    }
-    60% {
-        transform: rotate(-8deg) translateX(-15px) translateY(-12px);
-        transform-origin: 50% 45%;
-    }
-    80% {
-        transform: rotate(4deg) translateX(8px) translateY(-5px);
-        transform-origin: 50% 45%;
-    }
-    100% {
-        transform: rotate(0deg) translateX(0) translateY(0);
-        transform-origin: 50% 45%;
-    }
-}
-
-.light-tube-1,
-.light-tube-1-glow {
-    animation: lightPulse 4s ease-in-out infinite, lightTwirl 20s ease-in-out infinite;
+/* Twirling animation for tube groups */
+.light-tube-group {
     transform-origin: 50% 50%;
 }
 
-.light-tube-2,
-.light-tube-2-glow {
-    animation: lightPulse 4s ease-in-out infinite 1.5s, lightTwirlLogo 25s ease-in-out infinite 2s;
-    transform-origin: 50% 50%; /* Focus on center/logo area */
+.light-tube-group-1 {
+    animation: orbitTwirl1 25s ease-in-out infinite;
 }
 
-.light-tube-3,
-.light-tube-3-glow {
-    animation: lightPulse 5s ease-in-out infinite 0.75s, lightTwirlLogo 30s ease-in-out infinite 1s;
-    transform-origin: 50% 50%; /* Focus on logo area - center of screen */
+.light-tube-group-2 {
+    animation: orbitTwirl2 30s ease-in-out infinite;
 }
 
+.light-tube-group-3 {
+    animation: orbitTwirl3 20s ease-in-out infinite;
+}
+
+/* Orbital twirl animations - rotate and translate to create orbiting effect */
+@keyframes orbitTwirl1 {
+    0% {
+        transform: rotate(0deg) translateX(0) translateY(0);
+    }
+    25% {
+        transform: rotate(15deg) translateX(20px) translateY(-15px);
+    }
+    50% {
+        transform: rotate(0deg) translateX(0) translateY(-10px);
+    }
+    75% {
+        transform: rotate(-15deg) translateX(-20px) translateY(-15px);
+    }
+    100% {
+        transform: rotate(0deg) translateX(0) translateY(0);
+    }
+}
+
+@keyframes orbitTwirl2 {
+    0% {
+        transform: rotate(0deg) translateX(0) translateY(0);
+    }
+    20% {
+        transform: rotate(-12deg) translateX(-15px) translateY(10px);
+    }
+    40% {
+        transform: rotate(8deg) translateX(10px) translateY(-20px);
+    }
+    60% {
+        transform: rotate(-8deg) translateX(-10px) translateY(15px);
+    }
+    80% {
+        transform: rotate(12deg) translateX(15px) translateY(-10px);
+    }
+    100% {
+        transform: rotate(0deg) translateX(0) translateY(0);
+    }
+}
+
+@keyframes orbitTwirl3 {
+    0% {
+        transform: rotate(0deg) scale(1);
+    }
+    33% {
+        transform: rotate(20deg) scale(1.05);
+    }
+    66% {
+        transform: rotate(-20deg) scale(0.95);
+    }
+    100% {
+        transform: rotate(0deg) scale(1);
+    }
+}
+
+/* Individual tube pulse animation */
+.light-tube-1, .light-tube-1-glow {
+    animation: tubePulse 4s ease-in-out infinite;
+}
+
+.light-tube-2, .light-tube-2-glow {
+    animation: tubePulse 4.5s ease-in-out infinite 0.5s;
+}
+
+.light-tube-3, .light-tube-3-glow {
+    animation: tubePulse 3.5s ease-in-out infinite 1s;
+}
+
+@keyframes tubePulse {
+    0%, 100% {
+        opacity: 0.6;
+        stroke-width: 3;
+    }
+    50% {
+        opacity: 0.9;
+        stroke-width: 4;
+    }
+}
+
+/* Hero content */
 .hero-content {
     max-width: 900px;
     margin: 0 auto;
     position: relative;
-    z-index: 1;
+    z-index: 2;
 }
 
 .mystira-title {
@@ -192,19 +170,18 @@
     background-clip: text;
     margin-bottom: 12px;
     animation: fadeInScale 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    color: var(--primary-color, #9333ea); /* Fallback for browsers that don't support background-clip */
+    color: var(--primary-color, #9333ea);
 }
 
-/* Ensure title is visible in dark mode */
+/* Dark mode title */
 html[data-theme="dark"] .mystira-title {
     background: linear-gradient(135deg, #A78BFA 0%, #8B5CF6 50%, #7C3AED 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    color: #A78BFA; /* Fallback */
+    color: #A78BFA;
 }
 
-/* Apply gradient only to the title text, not to the badge */
 .mystira-title .title-text {
     background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 50%, #6D28D9 100%);
     -webkit-background-clip: text;
@@ -213,7 +190,6 @@ html[data-theme="dark"] .mystira-title {
 }
 
 .mystira-title .alpha-badge {
-    /* Superscript pill badge with yellow fill */
     display: inline-block;
     vertical-align: super;
     margin-left: 2px;
@@ -221,14 +197,12 @@ html[data-theme="dark"] .mystira-title {
     line-height: 1;
     font-size: 0.75rem;
     font-weight: 800;
-    color: #7c2d12 !important; /* dark amber text for contrast */
-    /* Ensure the badge text isn't made transparent by parent -webkit-text-fill-color */
+    color: #7c2d12 !important;
     -webkit-text-fill-color: #7c2d12 !important;
-    background-color: #fde68a; /* amber-200 */
-    border: 1px solid #f59e0b; /* amber-500 */
-    border-radius: 9999px; /* pill */
+    background-color: #fde68a;
+    border: 1px solid #f59e0b;
+    border-radius: 9999px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.6);
-    /* Make sure background clipping from parent gradient titles doesn't affect the badge */
     -webkit-background-clip: border-box !important;
     background-clip: border-box !important;
     background: none !important;
@@ -241,29 +215,135 @@ html[data-theme="dark"] .mystira-title {
     animation: fadeIn 0.8s ease-in-out;
 }
 
+/* Hero logo container - fixed size to prevent empty space */
 .hero-logo-container {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    margin: 0 auto;
     animation: fadeIn 1s ease-in-out;
 }
 
+/* Video and logo positioning */
+.hero-logo-video {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    max-width: 300px;
+    max-height: 300px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 20px rgba(139, 92, 246, 0.2));
+    border-radius: 12px;
+    z-index: 2;
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), 
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                filter 0.5s ease;
+}
+
+.hero-logo-video.visible {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.hero-logo-video.hidden {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.8);
+    pointer-events: none;
+}
+
 .hero-logo {
-    max-width: 100%;
-    height: auto;
-    filter: drop-shadow(0 4px 20px rgba(139, 92, 246, 0.15));
-    transition: transform 0.3s ease;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    max-width: 300px;
+    max-height: 300px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 20px rgba(139, 92, 246, 0.2));
+    z-index: 1;
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), 
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-logo.visible {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.hero-logo.hidden {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
 }
 
 .hero-logo:hover {
-    transform: scale(1.02);
+    filter: drop-shadow(0 6px 25px rgba(139, 92, 246, 0.3));
 }
 
-.hero-logo-video {
-    max-width: 600px;
-    max-height: 600px;
-    width: 100%;
-    height: auto;
-    object-fit: contain;
-    filter: drop-shadow(0 4px 20px rgba(139, 92, 246, 0.15));
-    border-radius: 8px;
+/* Replay button */
+.replay-btn {
+    position: absolute;
+    bottom: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid rgba(139, 92, 246, 0.4);
+    background: rgba(255, 255, 255, 0.9);
+    color: #8B5CF6;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    z-index: 3;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 10px rgba(139, 92, 246, 0.2);
+}
+
+.replay-btn.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.replay-btn.hidden {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+    pointer-events: none;
+}
+
+.replay-btn:hover {
+    background: #8B5CF6;
+    color: white;
+    border-color: #8B5CF6;
+    transform: translateX(-50%) scale(1.1);
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+}
+
+.replay-btn:active {
+    transform: translateX(-50%) scale(0.95);
+}
+
+/* Dark mode replay button */
+html[data-theme="dark"] .replay-btn {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: rgba(139, 92, 246, 0.5);
+    color: #A78BFA;
+}
+
+html[data-theme="dark"] .replay-btn:hover {
+    background: #7C3AED;
+    color: white;
+}
+
+/* Play icon adjustment */
+.replay-btn i {
+    margin-left: 2px; /* Optical center for play icon */
 }
 
 .hero-description {
@@ -273,6 +353,10 @@ html[data-theme="dark"] .mystira-title {
     max-width: 720px;
     margin: 0 auto 32px;
     animation: fadeIn 1.2s ease-in-out;
+}
+
+html[data-theme="dark"] .hero-description {
+    color: #d1d5db;
 }
 
 .hero-cta-buttons {
@@ -317,7 +401,7 @@ html[data-theme="dark"] .mystira-title {
     transform: scale(1.1);
 }
 
-/* Trust badges - Modern pillbox design */
+/* Trust badges */
 .trust-badges {
     display: flex;
     justify-content: center;
@@ -390,7 +474,7 @@ html[data-theme="dark"] .mystira-title {
     color: #047857;
 }
 
-/* COPPA pill specific styling - Purple theme */
+/* COPPA pill specific styling */
 .coppa-pill {
     color: #9333ea !important;
     border-color: rgba(147, 51, 234, 0.2) !important;
@@ -417,18 +501,7 @@ html[data-theme="dark"] .mystira-title {
     transform: scale(1.15) rotate(-5deg);
 }
 
-@media (max-width: 768px) {
-    .trust-badges {
-        gap: 12px;
-        margin-top: 24px;
-    }
-
-    .trust-badge {
-        padding: 10px 16px;
-        font-size: 0.8125rem;
-    }
-}
-
+/* Animations */
 @keyframes fadeInScale {
     from {
         opacity: 0;
@@ -456,6 +529,24 @@ html[data-theme="dark"] .mystira-title {
     .hero-section {
         padding: 15px 15px 40px;
         margin-bottom: 32px;
+        min-height: 400px;
+    }
+
+    .hero-logo-container {
+        width: 200px;
+        height: 200px;
+    }
+
+    .hero-logo-video,
+    .hero-logo {
+        max-width: 200px;
+        max-height: 200px;
+    }
+
+    .replay-btn {
+        width: 38px;
+        height: 38px;
+        bottom: -45px;
     }
 
     .mystira-title {
@@ -482,6 +573,15 @@ html[data-theme="dark"] .mystira-title {
         padding: 12px 24px;
     }
 
+    .trust-badges {
+        gap: 12px;
+        margin-top: 24px;
+    }
+
+    .trust-badge {
+        padding: 10px 16px;
+        font-size: 0.8125rem;
+    }
 }
 
 @media (max-width: 480px) {
@@ -490,7 +590,15 @@ html[data-theme="dark"] .mystira-title {
     }
 
     .hero-logo-container {
+        width: 180px;
+        height: 180px;
         margin-bottom: 24px;
+    }
+
+    .hero-logo-video,
+    .hero-logo {
+        max-width: 180px;
+        max-height: 180px;
     }
 
     .mystira-title .alpha-badge {
