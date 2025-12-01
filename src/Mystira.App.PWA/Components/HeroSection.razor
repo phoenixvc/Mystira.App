@@ -55,12 +55,26 @@
                 Mystira <span class="alpha-badge">ALPHA</span>
             </h1>
             <p class="mystira-tagline mb-4">Where imagination meets growth</p>
-            <div class="hero-logo-container mb-4">
+            <div class="hero-logo-container mb-4" style="position: relative;">
+                <!-- Logo Intro Video (plays on page load, then fades to logo) -->
+                <video id="logo-intro-video" 
+                       class="hero-logo-video" 
+                       autoplay 
+                       muted 
+                       playsinline
+                       aria-hidden="true"
+                       style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 600px; max-height: 600px; opacity: 1; transition: opacity 1.5s ease-in-out; z-index: 2;">
+                    <source src="videos/logo-intro.mp4" type="video/mp4">
+                    <!-- Fallback to logo if video fails to load -->
+                </video>
+                <!-- Static Logo (shown after video fades) -->
                 <img src="icons/icon-512.png"
+                     id="hero-logo-static"
                      alt="Mystira - Where imagination meets growth"
                      width="600"
                      height="600"
-                     class="hero-logo" />
+                     class="hero-logo" 
+                     style="opacity: 0; transition: opacity 1.5s ease-in-out; position: relative; z-index: 1;" />
             </div>
             @if (ShowDescription)
             {
@@ -115,6 +129,9 @@
             try
             {
                 await JSRuntime.InvokeVoidAsync("MystiraParticles.init", "particle-canvas");
+                
+                // Initialize logo intro video fade transition
+                await JSRuntime.InvokeVoidAsync("initLogoIntroVideo");
             }
             catch (Exception)
             {

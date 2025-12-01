@@ -25,7 +25,7 @@ param acsConnectionString string = ''
 param acsSenderEmail string = 'donotreply@mystira.app'
 
 @description('Allowed CORS origins for APIs')
-param corsAllowedOrigins string = 'http://localhost:7000,https://localhost:7000,https://mystira.app,https://mango-water-04fdb1c03.3.azurestaticapps.net,https://blue-water-0eab7991e.3.azurestaticapps.net'
+param corsAllowedOrigins string = 'http://localhost:7000,https://localhost:7000,https://mystira.app,https://mango-water-04fdb1c03.3.azurestaticapps.net,https://blue-water-0eab7991e.3.azurestaticapps.net,https://brave-meadow-0ecd87c03.3.azurestaticapps.net'
 
 @description('Skip storage account creation if it already exists')
 param skipStorageCreation bool = false

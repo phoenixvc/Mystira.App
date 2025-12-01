@@ -177,6 +177,16 @@ html[data-theme="dark"] .mystira-title {
     transform: scale(1.02);
 }
 
+.hero-logo-video {
+    max-width: 600px;
+    max-height: 600px;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 20px rgba(139, 92, 246, 0.15));
+    border-radius: 8px;
+}
+
 .hero-description {
     font-size: 1.125rem;
     line-height: 1.7;
