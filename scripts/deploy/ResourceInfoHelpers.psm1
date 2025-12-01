@@ -17,7 +17,8 @@ function Get-AppServiceInfo {
             if ($result) {
                 return $result | ConvertFrom-Json -ErrorAction SilentlyContinue
             }
-        } else {
+        }
+        else {
             $result = az webapp show --name $Name --resource-group $ResourceGroup --query "{Url:defaultHostName, State:state, Location:location}" -o json 2>$null
             if ($result) {
                 return $result | ConvertFrom-Json
@@ -47,7 +48,8 @@ function Get-CosmosDbInfo {
             if ($result) {
                 return $result | ConvertFrom-Json -ErrorAction SilentlyContinue
             }
-        } else {
+        }
+        else {
             $result = az cosmosdb show --name $Name --resource-group $ResourceGroup --query "{DocumentEndpoint:documentEndpoint, ProvisioningState:provisioningState}" -o json 2>$null
             if ($result) {
                 return $result | ConvertFrom-Json
@@ -77,7 +79,8 @@ function Get-StorageAccountInfo {
             if ($result) {
                 return $result | ConvertFrom-Json -ErrorAction SilentlyContinue
             }
-        } else {
+        }
+        else {
             $result = az storage account show --name $Name --resource-group $ResourceGroup --query "{PrimaryEndpoints:primaryEndpoints, Location:location}" -o json 2>$null
             if ($result) {
                 return $result | ConvertFrom-Json
@@ -102,15 +105,18 @@ function Get-StaticWebAppInfo {
     )
     
     try {
-        if (Get-Command Invoke-AzureCliWithRetry -ErrorAction SilentlyContinue) {
-            $result = Invoke-AzureCliWithRetry -Command "az staticwebapp show --name `"$Name`" --resource-group `"$ResourceGroup`" --output json" -MaxRetries 2
-            if ($result) {
-                return $result | ConvertFrom-Json -ErrorAction SilentlyContinue
-            }
-        } else {
-            $result = az staticwebapp show --name $Name --resource-group $ResourceGroup --output json 2>$null
-            if ($result) {
-                return $result | ConvertFrom-Json
+        # Always use direct az command to properly check exit code
+        # Redirect stderr to null to avoid error messages, but capture exit code
+        $result = az staticwebapp show --name $Name --resource-group $ResourceGroup --output json 2>$null
+        $exitCode = $LASTEXITCODE
+        
+        # Only process if command succeeded (exit code 0)
+        if ($exitCode -eq 0 -and $result) {
+            $swaInfo = $result | ConvertFrom-Json -ErrorAction SilentlyContinue
+            # Check if it's actually a SWA (not an error response)
+            # Valid SWA has a 'name' property and no 'error' property
+            if ($swaInfo -and $swaInfo.name -and -not $swaInfo.error) {
+                return $swaInfo
             }
         }
     }
@@ -136,7 +142,8 @@ function Get-ResourceGroupResources {
             if ($result) {
                 return $result | ConvertFrom-Json -ErrorAction SilentlyContinue
             }
-        } else {
+        }
+        else {
             $result = az resource list --resource-group $ResourceGroup --output json 2>$null
             if ($result) {
                 return $result | ConvertFrom-Json
@@ -166,7 +173,8 @@ function Get-ResourcesByType {
             if ($result) {
                 return $result | ConvertFrom-Json -ErrorAction SilentlyContinue
             }
-        } else {
+        }
+        else {
             $result = az resource list --resource-group $ResourceGroup --resource-type $ResourceType --output json 2>$null
             if ($result) {
                 return $result | ConvertFrom-Json

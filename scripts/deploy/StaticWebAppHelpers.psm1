@@ -49,15 +49,15 @@ function Get-GitHubRepositoryInfo {
     
     if ($RemoteUrl -match "github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?$") {
         return @{
-            Owner = $matches[1]
-            Name = $matches[2] -replace '\.git$', ''
+            Owner   = $matches[1]
+            Name    = $matches[2] -replace '\.git$', ''
             Success = $true
         }
     }
     
     return @{
-        Owner = ""
-        Name = ""
+        Owner   = ""
+        Name    = ""
         Success = $false
     }
 }
@@ -73,15 +73,19 @@ function Test-StaticWebAppExists {
     )
     
     try {
-        if (Get-Command Invoke-AzureCliWithRetry -ErrorAction SilentlyContinue) {
-            $result = Invoke-AzureCliWithRetry -Command "az staticwebapp show --name `"$Name`" --resource-group `"$ResourceGroup`" --output json" -MaxRetries 2
-            if ($result) {
-                $swaInfo = $result | ConvertFrom-Json -ErrorAction SilentlyContinue
-                return $null -ne $swaInfo
+        # Always use direct az command to properly check exit code
+        # Redirect stderr to null to avoid error messages, but capture exit code
+        $result = az staticwebapp show --name $Name --resource-group $ResourceGroup --output json 2>$null
+        $exitCode = $LASTEXITCODE
+        
+        # Only process if command succeeded (exit code 0)
+        if ($exitCode -eq 0 -and $result) {
+            $swaInfo = $result | ConvertFrom-Json -ErrorAction SilentlyContinue
+            # Check if it's actually a SWA (not an error response)
+            # Valid SWA has a 'name' property and no 'error' property
+            if ($swaInfo -and $swaInfo.name -and -not $swaInfo.error) {
+                return $true
             }
-        } else {
-            $swaInfo = az staticwebapp show --name $Name --resource-group $ResourceGroup --output json 2>$null | ConvertFrom-Json
-            return $null -ne $swaInfo
         }
     }
     catch {
@@ -116,7 +120,7 @@ function Connect-StaticWebAppToGitHub {
         if (-not $accessToken -or -not $azAccount) {
             return @{
                 Success = $false
-                Error = "Could not get Azure access token"
+                Error   = "Could not get Azure access token"
             }
         }
         
@@ -125,13 +129,13 @@ function Connect-StaticWebAppToGitHub {
         
         $body = @{
             properties = @{
-                repo = "https://github.com/$RepositoryOwner/$RepositoryName"
-                branch = $Branch
+                repo                      = "https://github.com/$RepositoryOwner/$RepositoryName"
+                branch                    = $Branch
                 githubActionConfiguration = @{
                     generateWorkflowFile = $true
-                    workflowSettings = @{
-                        appLocation = $AppLocation
-                        apiLocation = $ApiLocation
+                    workflowSettings     = @{
+                        appLocation    = $AppLocation
+                        apiLocation    = $ApiLocation
                         outputLocation = $OutputLocation
                     }
                 }
@@ -141,20 +145,20 @@ function Connect-StaticWebAppToGitHub {
         
         $headers = @{
             "Authorization" = "Bearer $accessToken"
-            "Content-Type" = "application/json"
+            "Content-Type"  = "application/json"
         }
         
         $response = Invoke-RestMethod -Uri $uri -Method Put -Headers $headers -Body $body -ErrorAction Stop
         
         return @{
-            Success = $true
+            Success  = $true
             Response = $response
         }
     }
     catch {
         return @{
             Success = $false
-            Error = $_.Exception.Message
+            Error   = $_.Exception.Message
         }
     }
 }

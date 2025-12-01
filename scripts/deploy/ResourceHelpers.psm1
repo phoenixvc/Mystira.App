@@ -170,6 +170,24 @@ function Get-ExistingResources {
     }
 }
 
+function Get-ExpectedStorageAccountName {
+    <#
+    .SYNOPSIS
+    Calculates the expected storage account name based on resource prefix.
+    #>
+    param(
+        [string]$ResourcePrefix
+    )
+    
+    $storageNameBase = ($ResourcePrefix + "-st-mystira") -replace '-', ''
+    if ($storageNameBase.Length -gt 24) {
+        return $storageNameBase.Substring(0, 24)
+    }
+    else {
+        return $storageNameBase
+    }
+}
+
 function Test-Region {
     <#
     .SYNOPSIS
@@ -183,5 +201,5 @@ function Test-Region {
     return $SupportedRegions -contains $Region
 }
 
-Export-ModuleMember -Function Get-ResourceGroupName, Get-StaticWebAppName, Get-ResourcePrefix, Get-ExistingResources, Test-Region
+Export-ModuleMember -Function Get-ResourceGroupName, Get-StaticWebAppName, Get-ResourcePrefix, Get-ExpectedStorageAccountName, Get-ExistingResources, Test-Region
 

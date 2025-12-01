@@ -72,6 +72,11 @@ if (Test-Path $deployModulePath) {
     Import-Module (Join-Path $deployModulePath "ResourceGroupHelpers.psm1") -Force
     Import-Module (Join-Path $deployModulePath "BicepHelpers.psm1") -Force
     Import-Module (Join-Path $deployModulePath "ResourceSummaryHelpers.psm1") -Force
+    Import-Module (Join-Path $deployModulePath "InfrastructureDetectionHelpers.psm1") -Force
+    Import-Module (Join-Path $deployModulePath "ResourceSelectionHelpers.psm1") -Force
+    Import-Module (Join-Path $deployModulePath "StaticWebAppCreationHelpers.psm1") -Force
+    Import-Module (Join-Path $deployModulePath "DeploymentOrchestrationHelpers.psm1") -Force
+    Import-Module (Join-Path $deployModulePath "DeploymentStateHelpers.psm1") -Force
 }
 
 # Constants
@@ -280,352 +285,65 @@ else {
 
 # Functions are now in modules
 
-# Function to display resource summary
-function Show-ResourceSummary {
-    param(
-        [string]$ResourceGroup,
-        [string]$Location
-    )
-    
-    Write-Output ""
-    Write-ColorOutput Cyan "================================================"
-    Write-ColorOutput Cyan "  📊 Resource Summary"
-    Write-ColorOutput Cyan "================================================"
-    Write-Output ""
-    
-    # Get all resources in the resource group
-    try {
-        $resources = az resource list --resource-group $ResourceGroup --output json 2>$null | ConvertFrom-Json
-        if ($resources) {
-            Write-Output "Resource Group: $ResourceGroup"
-            Write-Output "Location: $Location"
-            Write-Output ""
-            Write-Output "Resources:"
-            
-            $appServices = @()
-            $storageAccounts = @()
-            $cosmosAccounts = @()
-            $commServices = @()
-            
-            foreach ($resource in $resources | Sort-Object type, name) {
-                $resourceType = $resource.type -replace '.*/', ''
-                $resourceName = $resource.name
-                $resourceState = if ($resource.properties.provisioningState) { $resource.properties.provisioningState } else { "N/A" }
-                
-                Write-Output "  • $resourceType : $resourceName ($resourceState)"
-                
-                # Categorize resources for detailed info
-                if ($resourceType -eq "sites") {
-                    $appServices += $resource
-                }
-                elseif ($resourceType -eq "storageAccounts") {
-                    $storageAccounts += $resource
-                }
-                elseif ($resourceType -eq "databaseAccounts") {
-                    $cosmosAccounts += $resource
-                }
-                elseif ($resourceType -eq "communicationServices") {
-                    $commServices += $resource
-                }
-            }
-            
-            # Show detailed info for App Services
-            if ($appServices.Count -gt 0) {
-                Write-Output ""
-                Write-Output "App Services:"
-                foreach ($app in $appServices) {
-                    try {
-                        $appInfo = az webapp show --name $app.name --resource-group $ResourceGroup --query "{Url:defaultHostName, State:state, Location:location}" -o json 2>$null | ConvertFrom-Json
-                        if ($appInfo) {
-                            Write-Output "  • $($app.name):"
-                            Write-Output "    URL: https://$($appInfo.Url)"
-                            Write-Output "    State: $($appInfo.State)"
-                            Write-Output "    Location: $($appInfo.Location)"
-                        }
-                    }
-                    catch {
-                        Write-Output "  • $($app.name): (details unavailable)"
-                    }
-                }
-            }
-            
-            # Show detailed info for Storage Accounts
-            if ($storageAccounts.Count -gt 0) {
-                Write-Output ""
-                Write-Output "Storage Accounts:"
-                foreach ($storage in $storageAccounts) {
-                    Write-Output "  • $($storage.name)"
-                    Write-Output "    Primary Endpoint: https://$($storage.name).blob.core.windows.net"
-                }
-            }
-            
-            # Show detailed info for Cosmos DB
-            if ($cosmosAccounts.Count -gt 0) {
-                Write-Output ""
-                Write-Output "Cosmos DB Accounts:"
-                foreach ($cosmos in $cosmosAccounts) {
-                    try {
-                        $cosmosInfo = az cosmosdb show --name $cosmos.name --resource-group $ResourceGroup --query "{DocumentEndpoint:documentEndpoint, ProvisioningState:provisioningState}" -o json 2>$null | ConvertFrom-Json
-                        if ($cosmosInfo) {
-                            Write-Output "  • $($cosmos.name):"
-                            Write-Output "    Endpoint: $($cosmosInfo.DocumentEndpoint)"
-                            Write-Output "    State: $($cosmosInfo.ProvisioningState)"
-                        }
-                    }
-                    catch {
-                        Write-Output "  • $($cosmos.name): (details unavailable)"
-                    }
-                }
-            }
-        }
-        
-        # Check for Static Web App
-        $swaName = Get-StaticWebAppName $Location
-        try {
-            $swaInfo = az staticwebapp show --name $swaName --resource-group $ResourceGroup 2>$null | ConvertFrom-Json
-            if ($swaInfo) {
-                Write-Output ""
-                Write-Output "Static Web App:"
-                Write-Output "  • Name: $($swaInfo.name)"
-                Write-Output "  • URL: https://$($swaInfo.defaultHostname)"
-                Write-Output "  • Location: $($swaInfo.location)"
-            }
-        }
-        catch {
-            Write-Output ""
-            Write-ColorOutput Yellow "  ⚠️  Static Web App not found: $swaName"
-        }
-    }
-    catch {
-        Write-ColorOutput Yellow "  Could not retrieve resource details"
-    }
-    
-    Write-Output ""
-    Write-ColorOutput Cyan "================================================"
-    Write-Output ""
-}
-
 # Scan for existing resources
 $existingResources = Get-ExistingResources -SkipScan:$SkipScan -Verbose:$Verbose -TimeoutSeconds $script:AZURE_CLI_TIMEOUT_SECONDS
 
 $RG = Get-ResourceGroupName $LOCATION
 $SWA_NAME = Get-StaticWebAppName $LOCATION
 
-# Check if we have existing resources
-$rgExists = $false
-$hasResources = $false
-$swaExists = $false
+# Check infrastructure status using helper function
+$infrastructureStatus = Get-InfrastructureStatus `
+    -Location $LOCATION `
+    -ResourceGroup $RG `
+    -StaticWebAppName $SWA_NAME `
+    -ExistingResources $existingResources `
+    -Verbose:$Verbose
 
-# Always check directly for the resource group (more reliable than scan)
-Write-Log "Checking resource group $RG directly..." "INFO"
-try {
-    $rgInfo = Get-ResourceGroupInfo -Name $RG
-    if ($rgInfo) {
-        $rgExists = $true
-        Write-Log "Resource group $RG exists" "INFO"
-        
-        # Check for resources in the group
-        $resources = Get-ResourceGroupResources -ResourceGroup $RG
-        if ($resources -and $resources.Count -gt 0) {
-            $hasResources = $true
-            Write-Log "Found $($resources.Count) resources in resource group $RG" "INFO"
-        }
-        else {
-            Write-Log "Resource group $RG exists but has no resources" "INFO"
-        }
-    }
-}
-catch {
-    Write-Log "Resource group $RG does not exist or check failed: $($_.Exception.Message)" "INFO"
-}
-
-# Also check scan results as backup
-$matchingRG = $existingResources.ResourceGroups | Where-Object { $_.Name -eq $RG }
-if ($matchingRG -and -not $rgExists) {
-    $rgExists = $true
-    $hasResources = $matchingRG.HasResources
-    Write-Log "Resource group $RG found via scan" "INFO"
-}
-elseif ($matchingRG -and $matchingRG.HasResources -and -not $hasResources) {
-    # If scan says it has resources but direct check didn't find them, trust the scan
-    $hasResources = $true
-    Write-Log "Using scan result: resource group $RG has resources" "INFO"
-}
-
-# Check if Static Web App exists
-$matchingSWA = $existingResources.StaticWebApps | Where-Object { $_.Name -eq $SWA_NAME -and $_.ResourceGroup -eq $RG }
-if ($matchingSWA) {
-    $swaExists = $true
-    Write-Log "Static Web App $SWA_NAME found via scan" "INFO"
-}
-else {
-    # Also check directly
-    try {
-        $swaInfo = Get-StaticWebAppInfo -Name $SWA_NAME -ResourceGroup $RG
-        if ($swaInfo) {
-            $swaExists = $true
-            Write-Log "Static Web App $SWA_NAME found via direct check" "INFO"
-        }
-    }
-    catch {
-        # SWA doesn't exist
-        Write-Log "Static Web App $SWA_NAME does not exist" "INFO"
-    }
-}
+$rgExists = $infrastructureStatus.ResourceGroupExists
+$hasResources = $infrastructureStatus.HasResources
+$swaExists = $infrastructureStatus.StaticWebAppExists
 
 # If we have existing resources, show them and ask what to do
 if ($existingResources.ResourceGroups.Count -gt 0 -or $existingResources.StaticWebApps.Count -gt 0) {
-    Write-Output ""
-    Write-ColorOutput Cyan "📋 Found Existing Resources:"
-    Write-Output ""
+    $selection = Show-ResourceSelectionMenu `
+        -ExistingResources $existingResources `
+        -DefaultResourceGroup $RG `
+        -DefaultLocation $LOCATION `
+        -AvailableRegions $REGIONS
     
-    if ($existingResources.ResourceGroups.Count -gt 0) {
-        Write-Output "Resource Groups:"
-        for ($i = 0; $i -lt $existingResources.ResourceGroups.Count; $i++) {
-            $rgItem = $existingResources.ResourceGroups[$i]
-            $status = if ($rgItem.HasResources) { "✓ Has resources ($($rgItem.ResourceCount))" } else { "Empty" }
-            Write-Output "  [$($i+1)] $($rgItem.Name) - $($rgItem.Location) ($status)"
+    # Apply selection
+    switch ($selection.Action) {
+        "use_selected" {
+            $RG = $selection.ResourceGroup
+            $LOCATION = $selection.Location
+            $SWA_NAME = $selection.StaticWebAppName
         }
-        Write-Output ""
-    }
-    
-    if ($existingResources.StaticWebApps.Count -gt 0) {
-        Write-Output "Static Web Apps:"
-        for ($i = 0; $i -lt $existingResources.StaticWebApps.Count; $i++) {
-            $swaItem = $existingResources.StaticWebApps[$i]
-            Write-Output "  [$($i+1)] $($swaItem.Name) - $($swaItem.ResourceGroup) ($($swaItem.Location))"
-            Write-Output "      URL: https://$($swaItem.DefaultHostname)"
-        }
-        Write-Output ""
-    }
-    
-    Write-ColorOutput Yellow "What would you like to do?"
-    $maxOption = 4
-    $options = @("1. Use existing resource group: $RG (in $LOCATION)")
-    if ($existingResources.ResourceGroups.Count -gt 0) {
-        $options += "2. Use a different existing resource group"
-        $maxOption = 4
-    }
-    else {
-        $maxOption = 3
-    }
-    $options += "3. Create new resource group with new name"
-    $options += "4. Create new resource group in different region"
-    
-    foreach ($opt in $options) {
-        Write-Output "  $opt"
-    }
-    Write-Output ""
-    
-    # Input validation with retry
-    do {
-        $choice = Read-Host "Choose an option (1-$maxOption)"
-        if ($choice -notmatch "^[1-$maxOption]$") {
-            Write-ColorOutput Red "❌ Invalid choice. Please enter a number between 1 and $maxOption."
-        }
-    } while ($choice -notmatch "^[1-$maxOption]$")
-    
-    switch ($choice) {
-        "1" {
-            # Use default - continue as normal
-            Write-ColorOutput Green "✅ Using existing resource group: $RG"
-        }
-        "2" {
-            if ($existingResources.ResourceGroups.Count -gt 0) {
-                Write-Output ""
-                Write-Output "Select a resource group:"
-                for ($i = 0; $i -lt $existingResources.ResourceGroups.Count; $i++) {
-                    $rgItem = $existingResources.ResourceGroups[$i]
-                    Write-Output "  [$($i+1)] $($rgItem.Name) - $($rgItem.Location)"
-                }
-                Write-Output ""
-                # Input validation with retry
-                do {
-                    $rgChoice = Read-Host "Enter number (1-$($existingResources.ResourceGroups.Count))"
-                    if ($rgChoice -notmatch "^\d+$" -or [int]$rgChoice -lt 1 -or [int]$rgChoice -gt $existingResources.ResourceGroups.Count) {
-                        Write-ColorOutput Red "❌ Invalid choice. Please enter a number between 1 and $($existingResources.ResourceGroups.Count)."
-                    }
-                } while ($rgChoice -notmatch "^\d+$" -or [int]$rgChoice -lt 1 -or [int]$rgChoice -gt $existingResources.ResourceGroups.Count)
-                
-                $selectedResourceGroup = $existingResources.ResourceGroups[[int]$rgChoice - 1]
-                $RG = $selectedResourceGroup.Name
-                $LOCATION = $selectedResourceGroup.Location
-                $SWA_NAME = Get-StaticWebAppName $LOCATION
-                Write-ColorOutput Green "✅ Selected: $RG in $LOCATION"
-            }
-        }
-        "3" {
-            $newName = Read-Host "Enter new resource group name (e.g., dev-custom-rg-mystira-app)"
-            $RG = $newName
+        "create_new" {
             $rgExists = $false
             $hasResources = $false
-            Write-ColorOutput Green "✅ Will create new resource group: $RG"
         }
-        "4" {
-            Write-Output ""
-            Write-Output "Available regions:"
-            for ($i = 0; $i -lt $REGIONS.Count; $i++) {
-                Write-Output "  [$($i+1)] $($REGIONS[$i])"
-            }
-            Write-Output ""
-            # Input validation with retry
-            do {
-                $regionChoice = Read-Host "Enter region number (1-$($REGIONS.Count))"
-                if ($regionChoice -notmatch "^\d+$" -or [int]$regionChoice -lt 1 -or [int]$regionChoice -gt $REGIONS.Count) {
-                    Write-ColorOutput Red "❌ Invalid choice. Please enter a number between 1 and $($REGIONS.Count)."
-                }
-            } while ($regionChoice -notmatch "^\d+$" -or [int]$regionChoice -lt 1 -or [int]$regionChoice -gt $REGIONS.Count)
-                        
-            $selectedRegion = $REGIONS[[int]$regionChoice - 1]
-            if (-not (Test-Region -Region $selectedRegion -SupportedRegions $REGIONS)) {
-                Write-ColorOutput Red "❌ Invalid region selected"
-                exit 1
-            }
-            $LOCATION = $selectedRegion
-            $RG = Get-ResourceGroupName $LOCATION
-            $SWA_NAME = Get-StaticWebAppName $LOCATION
+        "create_in_region" {
+            $RG = $selection.ResourceGroup
+            $LOCATION = $selection.Location
+            $SWA_NAME = $selection.StaticWebAppName
             $rgExists = $false
             $hasResources = $false
-            Write-ColorOutput Green "✅ Will create in region: $LOCATION (Resource Group: $RG)"
-        }
-        default {
-            Write-ColorOutput Red "❌ Invalid choice. Using default: $RG"
         }
     }
     
     Write-Output ""
     
-    # Re-check Static Web App existence after selection
-    $swaExists = $false
-    try {
-        $swaInfo = Get-StaticWebAppInfo -Name $SWA_NAME -ResourceGroup $RG
-        if ($swaInfo) {
-            $swaExists = $true
-        }
-    }
-    catch {
-        # Static Web App doesn't exist
-    }
+    # Re-check infrastructure status after selection
+    $infrastructureStatus = Get-InfrastructureStatus `
+        -Location $LOCATION `
+        -ResourceGroup $RG `
+        -StaticWebAppName $SWA_NAME `
+        -ExistingResources $existingResources `
+        -Verbose:$Verbose
     
-    # Re-check resource group existence after user selection
-    # Double-check resource group and resources directly (more reliable than scan)
-    if (-not $rgExists) {
-        try {
-            $rgInfo = Get-ResourceGroupInfo -Name $RG
-            if ($rgInfo) {
-                $rgExists = $true
-                $resources = Get-ResourceGroupResources -ResourceGroup $RG
-                if ($resources -and $resources.Count -gt 0) {
-                    $hasResources = $true
-                    Write-Log "Found $($resources.Count) resources in resource group $RG" "INFO"
-                }
-            }
-        }
-        catch {
-            # Resource group doesn't exist
-            Write-Log "Resource group $RG does not exist" "INFO"
-        }
-    }
+    $rgExists = $infrastructureStatus.ResourceGroupExists
+    $hasResources = $infrastructureStatus.HasResources
+    $swaExists = $infrastructureStatus.StaticWebAppExists
 }
 
 # Check if infrastructure is deployed (either has resources in RG or SWA exists)
@@ -715,10 +433,14 @@ if ($infrastructureDeployed) {
     $swaCheck = $false
     try {
         $swaInfo = Get-StaticWebAppInfo -Name $SWA_NAME -ResourceGroup $RG
-        if ($swaInfo) {
+        # Validate it's actually a SWA (has name property and no error)
+        if ($swaInfo -and $swaInfo.name -and -not $swaInfo.error) {
             $swaCheck = $true
             Write-Log "Static Web App $SWA_NAME already exists" "INFO"
-            Write-ColorOutput Green "✅ Static Web App already exists: $SWA_NAME"
+            Write-ColorOutput Green "SUCCESS: Static Web App already exists: $SWA_NAME"
+        }
+        else {
+            Write-Log "Static Web App $SWA_NAME does not exist, will create it" "INFO"
         }
     }
     catch {
@@ -737,97 +459,40 @@ if ($infrastructureDeployed) {
             Write-ColorOutput Cyan "Creating Static Web App..."
             Write-Log "Creating Static Web App: $SWA_NAME" "INFO"
             
-            # Jump to the SWA creation section by including the logic
-            # The SWA creation code starts around line 1312 in the infrastructure deployment section
-            # We'll create a simplified version here that calls the same logic
+            # Get subscription ID
+            $azAccount = az account show --output json 2>$null | ConvertFrom-Json
+            $subscriptionId = if ($azAccount) { $azAccount.id } else { $SubscriptionId }
             
-            # Check name availability
-            $nameAvailable = $true
-            try {
-                $existingSWA = az staticwebapp list --query "[?name=='$SWA_NAME']" -o json 2>$null | ConvertFrom-Json
-                if ($existingSWA -and $existingSWA.Count -gt 0) {
-                    $nameAvailable = $false
-                    Write-ColorOutput Yellow "⚠️  Static Web App name '$SWA_NAME' is already taken globally."
-                }
-            }
-            catch {
-                # Name might be available
-            }
+            # Create Static Web App using module function
+            Write-Host "Creating Static Web App... " -NoNewline
+            $swaResult = New-StaticWebAppWithGitHub `
+                -Name $SWA_NAME `
+                -ResourceGroup $RG `
+                -Location $LOCATION `
+                -SubscriptionId $subscriptionId `
+                -GitHubPat $GitHubPat `
+                -SwaCliPath $script:swaCliPath `
+                -SwaCliAvailable:$script:swaCliAvailable `
+                -Verbose:$Verbose
             
-            if ($nameAvailable) {
-                # Get GitHub repo info
-                $repoUrl = Get-GitRemoteUrl
-                $repoInfo = Get-GitHubRepositoryInfo -RemoteUrl $repoUrl
-                $repoOwner = $repoInfo.Owner
-                $repoName = $repoInfo.Name
-                
-                if ($repoOwner -and $repoName) {
-                    Write-Output "Repository: $repoOwner/$repoName"
-                    Write-Log "GitHub repository: $repoOwner/$repoName" "INFO"
+            if ($swaResult.Success) {
+                Write-Host "[OK]" -ForegroundColor Green
+                Write-ColorOutput Green "SUCCESS: Static Web App created!"
+                if ($swaResult.Created) {
                     Write-Output ""
-                    
-                    # Create Static Web App - use the same logic as in infrastructure deployment
-                    # We'll reference the code that starts at line 1348
-                    # For now, let's create a simple version that uses Azure CLI
-                    Write-Host "Creating Static Web App... " -NoNewline
-                    
-                    # Static Web Apps have limited region support
-                    $swaSupportedRegions = @("westus2", "centralus", "eastus2", "westeurope", "eastasia")
-                    $swaLocation = $LOCATION
-                    
-                    if ($LOCATION -notin $swaSupportedRegions) {
-                        Write-ColorOutput Yellow "   ⚠️  Static Web Apps not available in $LOCATION"
-                        Write-ColorOutput Yellow "   Available regions: $($swaSupportedRegions -join ', ')"
-                        Write-ColorOutput Cyan "   Creating Static Web App in 'westeurope' (closest supported region)"
-                        $swaLocation = "westeurope"
-                    }
-                    
-                    $swaResult = az staticwebapp create `
-                        --name $SWA_NAME `
-                        --resource-group $RG `
-                        --location $swaLocation `
-                        --sku Free `
-                        --output json 2>&1
-                    
-                    if ($LASTEXITCODE -eq 0) {
-                        Write-Host "✓" -ForegroundColor Green
-                        Write-ColorOutput Green "✅ Static Web App created!"
-                        
-                        # Connect to GitHub if PAT is available
-                        if ($GitHubPat -and $repoOwner -and $repoName) {
-                            Write-ColorOutput Cyan "   Connecting to GitHub..."
-                            $azAccount = az account show --output json 2>$null | ConvertFrom-Json
-                            $subscriptionId = if ($azAccount) { $azAccount.id } else { $SubscriptionId }
-                            
-                            $connectResult = Connect-StaticWebAppToGitHub `
-                                -StaticWebAppName $SWA_NAME `
-                                -ResourceGroup $RG `
-                                -SubscriptionId $subscriptionId `
-                                -RepositoryOwner $repoOwner `
-                                -RepositoryName $repoName `
-                                -Branch "dev" `
-                                -AppLocation "./src/Mystira.App.PWA" `
-                                -ApiLocation "swa-db-connections" `
-                                -OutputLocation "out" `
-                                -GitHubPat $GitHubPat
-                            
-                            if ($connectResult.Success) {
-                                Write-ColorOutput Green "✅ Connected to GitHub!"
-                            }
-                            else {
-                                Write-ColorOutput Yellow "   ⚠️  Failed to connect to GitHub: $($connectResult.Error)"
-                            }
-                        }
-                    }
-                    else {
-                        Write-Host "✗" -ForegroundColor Red
-                        $errorMsg = $swaResult -join '`n'
-                        Write-ColorOutput Yellow "   ⚠️  Static Web App creation failed: $errorMsg"
-                    }
+                    Write-ColorOutput Yellow "WARNING: IMPORTANT: Get the deployment token and add it to GitHub Secrets:"
+                    Write-Output ""
+                    Write-Output "   Secret name: AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_MYSTIRA_APP"
+                    Write-Output ""
+                    Write-Output "   Get token with:"
+                    Write-ColorOutput Cyan "   az staticwebapp secrets list --name $SWA_NAME --resource-group $RG --query properties.apiKey -o tsv"
+                    Write-Output ""
                 }
-                else {
-                    Write-ColorOutput Yellow "⚠️  Could not detect GitHub repository."
-                }
+            }
+            else {
+                Write-Host "[X]" -ForegroundColor Red
+                Write-ColorOutput Yellow "WARNING: Static Web App creation failed: $($swaResult.Error)"
+                Write-Log "Static Web App creation failed: $($swaResult.Error)" "ERROR"
             }
         }
         else {
@@ -897,86 +562,27 @@ else {
     Write-Output ""
     
     # Try to reuse existing JWT secret from App Services
-    $JWT_SECRET_BASE64 = $null
-    $existingJwtSecret = $null
-    
-    # Check existing App Services in the resource group for JWT secret
     Write-ColorOutput Cyan "   Checking for existing JWT secret in App Services..."
     Write-Log "Checking for existing JWT secret in App Services" "INFO"
     
-    try {
-        # Get all App Services (sites) in the resource group
-        $appServices = az resource list `
-            --resource-group $RG `
-            --resource-type "Microsoft.Web/sites" `
-            --output json 2>$null | ConvertFrom-Json
-        
-        if ($appServices) {
-            foreach ($appService in $appServices) {
-                Write-ColorOutput Cyan "   Checking App Service '$($appService.name)'..."
-                Write-Log "Checking App Service $($appService.name) for JWT secret" "INFO"
-                
-                try {
-                    $appSettings = az webapp config appsettings list `
-                        --name $appService.name `
-                        --resource-group $RG `
-                        --output json 2>$null | ConvertFrom-Json
-                    
-                    if ($appSettings) {
-                        # Check for Jwt__Key (preferred) or JwtSettings__SecretKey
-                        $jwtKey = $appSettings | Where-Object { $_.name -eq "Jwt__Key" -or $_.name -eq "JwtSettings__SecretKey" }
-                        
-                        if ($jwtKey -and $jwtKey.value) {
-                            $existingJwtSecret = $jwtKey.value
-                            Write-ColorOutput Green "   ✅ Found existing JWT secret in App Service '$($appService.name)'"
-                            Write-Log "Found existing JWT secret in App Service $($appService.name)" "INFO"
-                            break
-                        }
-                    }
-                }
-                catch {
-                    Write-Log "Failed to retrieve app settings from $($appService.name): $($_.Exception.Message)" "WARN"
-                }
-            }
-        }
-    }
-    catch {
-        Write-Log "Failed to query App Services for JWT secret: $($_.Exception.Message)" "WARN"
-    }
+    $existingJwtSecret = Get-ExistingJwtSecret -ResourceGroup $RG
     
     # Use existing secret if found, otherwise generate new one
     if ($existingJwtSecret) {
         $JWT_SECRET_BASE64 = $existingJwtSecret
-        Write-ColorOutput Green "✅ Reusing existing JWT secret"
+        Write-ColorOutput Green "SUCCESS: Reusing existing JWT secret"
         Write-Log "Reusing existing JWT secret from App Service" "INFO"
     }
     else {
         Write-ColorOutput Cyan "   Generating new JWT secret..."
         Write-Log "No existing JWT secret found, generating new one" "INFO"
-        $JWT_SECRET = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
-        $JWT_SECRET_BASE64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($JWT_SECRET))
+        $jwtSecretObj = New-JwtSecret -Length 32
+        $JWT_SECRET_BASE64 = $jwtSecretObj.Base64
     }
     
-    # Get resource prefix based on location (matches infrastructure/dev/main.bicep)
-    $resourcePrefix = switch ($LOCATION) {
-        "southafricanorth" { "dev-san" }
-        "eastus2" { "dev-eus2" }
-        "westus2" { "dev-wus2" }
-        "centralus" { "dev-cus" }
-        "westeurope" { "dev-euw" }
-        "northeurope" { "dev-eun" }
-        "eastasia" { "dev-ea" }
-        default { "dev-$($LOCATION.Substring(0, 4))" }
-    }
-    
-    # Calculate expected storage name (needed for template)
-    $storageNameBase = ($resourcePrefix + "-st-mystira") -replace '-', ''
-    if ($storageNameBase.Length -gt 24) {
-        $expectedStorageName = $storageNameBase.Substring(0, 24)
-    }
-    else {
-        $expectedStorageName = $storageNameBase
-    }
+    # Get resource prefix and calculate expected storage name
+    $resourcePrefix = Get-ResourcePrefix -Location $LOCATION
+    $expectedStorageName = Get-ExpectedStorageAccountName -ResourcePrefix $resourcePrefix
     
     Write-ColorOutput Cyan "🚀 Deploying infrastructure..."
     Write-Output "   (Will handle conflicts if they occur)"
@@ -986,447 +592,49 @@ else {
     $deployName = "mystira-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
     Initialize-RollbackTracking -ResourceGroup $RG -DeploymentName $deployName
     
-    # Deploy infrastructure - try first, handle conflicts on failure
-    $retryCount = 0
-    $script:cosmosUseAttempted = $false
-    $script:skipCosmosCreation = $false
-    $script:skipStorageCreation = $false
-    $script:skipCommServiceCreation = $false
-    $script:skipAppServiceCreation = $false
-    $script:appServiceUseAttempted = $false
-    if (-not $script:existingAppServiceResourceGroup) { $script:existingAppServiceResourceGroup = "" }
-    if (-not $script:existingCosmosResourceGroup) { $script:existingCosmosResourceGroup = "" }
-    if (-not $script:existingCosmosDbAccountName) { $script:existingCosmosDbAccountName = "" }
+    # Deploy infrastructure using orchestration function
+    $deploymentResult = Invoke-InfrastructureDeploymentWithRetry `
+        -ResourceGroup $RG `
+        -Location $LOCATION `
+        -BicepFile $BICEP_FILE `
+        -ResourcePrefix $resourcePrefix `
+        -ExpectedStorageName $expectedStorageName `
+        -JwtSecretBase64 $JWT_SECRET_BASE64 `
+        -DeploymentName $deployName `
+        -MaxRetries $script:MAX_DEPLOYMENT_RETRIES `
+        -Verbose:$Verbose `
+        -WhatIf:$WhatIf
     
-    while ($retryCount -le $script:MAX_DEPLOYMENT_RETRIES) {
-        # Ensure resource group exists in current region
-        $rgCheck = az group show --name $RG 2>$null | ConvertFrom-Json -ErrorAction SilentlyContinue
-        if (-not $rgCheck) {
-            Write-Host "Creating resource group $RG in $LOCATION..." -NoNewline
-            az group create --name $RG --location $LOCATION --output none 2>$null
-            Write-Host " ✓" -ForegroundColor Green
-        }
-        
-        # Create parameters JSON file for secure parameters
-        $paramsFile = Join-Path $env:TEMP "bicep-params-$(Get-Date -Format 'yyyyMMdd-HHmmss').json"
-        
-        # Build parameters object - preserve skip flags across retries using script-scoped variables
-        if ($Verbose -and $retryCount -gt 0) {
-            $skipAppService = $script:skipAppServiceCreation
-            $existingAppServiceRG = $script:existingAppServiceResourceGroup
-            $verboseMsg = "   [VERBOSE] Retry $retryCount : skipAppServiceCreation=$skipAppService, existingAppServiceResourceGroup=$existingAppServiceRG"
-            Write-ColorOutput Yellow $verboseMsg
-        }
-        
-        $paramsObj = @{
-            environment             = @{ value = "dev" }
-            location                = @{ value = $LOCATION }
-            resourcePrefix          = @{ value = $resourcePrefix }
-            jwtSecretKey            = @{ value = $JWT_SECRET_BASE64 }
-            newStorageAccountName   = @{ value = $expectedStorageName }
-            skipCosmosCreation      = @{ value = [bool]$script:skipCosmosCreation }
-            skipStorageCreation     = @{ value = [bool]$script:skipStorageCreation }
-            skipCommServiceCreation = @{ value = [bool]$script:skipCommServiceCreation }
-            skipAppServiceCreation  = @{ value = [bool]$script:skipAppServiceCreation }
-        }
-        
-        # Add existing resource parameters - use script-scoped variables (they persist across retries)
-        if (-not $script:existingAppServiceResourceGroup) { $script:existingAppServiceResourceGroup = "" }
-        if (-not $script:existingCosmosResourceGroup) { $script:existingCosmosResourceGroup = "" }
-        if (-not $script:existingCosmosDbAccountName) { $script:existingCosmosDbAccountName = "" }
-        
-        $paramsObj.existingAppServiceResourceGroup = @{ value = $script:existingAppServiceResourceGroup }
-        $paramsObj.existingCosmosResourceGroup = @{ value = $script:existingCosmosResourceGroup }
-        $paramsObj.existingCosmosDbAccountName = @{ value = $script:existingCosmosDbAccountName }
-        
-        # Create parameter file using helper
-        $paramResult = New-BicepParameterFile -Parameters $paramsObj -OutputPath $paramsFile
-        if (-not $paramResult.Success) {
-            Write-ColorOutput Red "❌ Failed to create parameter file: $($paramResult.Error)"
-            exit 1
-        }
-        
-        Write-Output "Using parameters file: $paramsFile"
-        Write-Output ""
-        
-        if ($WhatIf) {
-            Write-ColorOutput Cyan "🔍 [WHATIF] Would deploy infrastructure with the following parameters:"
-            $paramsDebug = Get-Content $paramsFile | ConvertFrom-Json
-            Write-Output ($paramsDebug.parameters | ConvertTo-Json -Depth 10)
+    # Update variables from result (in case region/resource group changed)
+    $LOCATION = $deploymentResult.FinalLocation
+    $RG = $deploymentResult.FinalResourceGroup
+    $resourcePrefix = $deploymentResult.FinalResourcePrefix
+    $expectedStorageName = $deploymentResult.FinalExpectedStorageName
+    
+    # Handle deployment result
+    if (-not $deploymentResult.Success) {
+        # Check if we need to offer rollback
+        $createdResources = Get-CreatedResources
+        if ($createdResources.Resources.Count -gt 0) {
             Write-Output ""
-            Write-ColorOutput Yellow "   [WHATIF] Deployment would target:"
-            Write-Output "   Resource Group: $RG"
-            Write-Output "   Location: $LOCATION"
-            Write-Output "   Template: $BICEP_FILE"
-            Write-Output ""
-            Write-ColorOutput Green "✅ [WHATIF] Preview complete. Run without -WhatIf to deploy."
-            $deploymentSuccess = $true
-            break
+            Write-ColorOutput Yellow "WARNING: Would you like to rollback created resources? (y/n)"
+            $rollbackChoice = Read-Host
+            if ($rollbackChoice -eq 'y' -or $rollbackChoice -eq 'Y') {
+                Invoke-Rollback -Confirm:$false
+            }
         }
         
-        Write-ColorOutput Cyan "🚀 Starting infrastructure deployment..."
-        Write-Output "This may take several minutes. Please wait..."
         Write-Output ""
-        Write-Log "Starting infrastructure deployment" "INFO"
-        Write-Log "Resource Group: $RG, Location: $LOCATION, Template: $BICEP_FILE" "INFO"
-        
-        $deploymentSuccess = $false
-        $shouldRetry = $false
-        $deploymentStartTime = Get-Date
-        
-        try {
-            Write-Log "Step: Executing Bicep deployment" "INFO"
-            if ($Verbose) {
-                Write-ColorOutput Yellow "   [VERBOSE] Parameters file contents:"
-                $paramsDebug = Get-Content $paramsFile | ConvertFrom-Json
-                Write-Output ($paramsDebug.parameters | ConvertTo-Json -Depth 10)
-                Write-Output ""
-            }
-            
-            # Show progress indicator
-            Write-Host "Deploying..." -NoNewline
-            $progressJob = Start-Job -ScriptBlock {
-                $dots = 0
-                while ($true) {
-                    Start-Sleep -Seconds 2
-                    $dots = ($dots + 1) % 4
-                    $progress = "." * $dots + " " * (3 - $dots)
-                    Write-Host "`rDeploying$progress" -NoNewline
-                }
-            }
-            
-            # Capture both stdout and stderr separately with retry logic for transient errors
-            $deploymentResult = Invoke-WithRetry -ScriptBlock {
-                $output = az deployment group create `
-                    --resource-group $RG `
-                    --template-file $BICEP_FILE `
-                    --parameters "@$paramsFile" `
-                    --mode Incremental `
-                    --name $deployName `
-                    --output json 2>&1 | Where-Object { $_ -notmatch '^WARNING:' }
-                
-                if ($LASTEXITCODE -ne 0) {
-                    throw ($output -join "`n")
-                }
-                
-                return $output
-            } -MaxRetries 3 -InitialDelaySeconds 5 -MaxDelaySeconds 30
-            
-            if (-not $deploymentResult.Success) {
-                # Check if it's a transient error that we should retry
-                if ($deploymentResult.IsTransient) {
-                    Write-ColorOutput Yellow "⚠️  Transient error detected, will retry with conflict handling..."
-                    $stdout = $deploymentResult.Error
-                }
-                else {
-                    $stdout = $deploymentResult.Error
-                }
-                $LASTEXITCODE = 1
-            }
-            else {
-                $stdout = $deploymentResult.Result
-                $LASTEXITCODE = 0
-            }
-            
-            # Stop progress indicator
-            $progressJob | Stop-Job -ErrorAction SilentlyContinue
-            $progressJob | Remove-Job -ErrorAction SilentlyContinue
-            Write-Host "`r" -NoNewline  # Clear progress line
-            
-            if ($LASTEXITCODE -eq 0) {
-                # Success - try to parse JSON
-                $elapsed = (Get-Date) - $deploymentStartTime
-                Write-Host "✓ Deployment completed in $([math]::Round($elapsed.TotalMinutes, 1)) minutes" -ForegroundColor Green
-                Write-Log "Step: Deployment succeeded in $([math]::Round($elapsed.TotalSeconds, 2)) seconds" "INFO"
-                try {
-                    $result = $stdout | ConvertFrom-Json -ErrorAction Stop
-                    if (-not $Verbose) {
-                        Write-Output "Deployment successful!"
-                    }
-                    else {
-                        Write-Output ($result | ConvertTo-Json -Depth 10 | Out-String)
-                    }
-                    
-                    # Track created resources from deployment output
-                    if ($result.properties.outputs) {
-                        if ($result.properties.outputs.storageAccountName) {
-                            Register-Resource -ResourceType "Microsoft.Storage/storageAccounts" `
-                                -ResourceName $result.properties.outputs.storageAccountName.value `
-                                -ResourceGroup $RG
-                        }
-                        if ($result.properties.outputs.cosmosDbAccountName) {
-                            Register-Resource -ResourceType "Microsoft.DocumentDB/databaseAccounts" `
-                                -ResourceName $result.properties.outputs.cosmosDbAccountName.value `
-                                -ResourceGroup $RG
-                        }
-                        if ($result.properties.outputs.communicationServiceName) {
-                            Register-Resource -ResourceType "Microsoft.Communication/communicationServices" `
-                                -ResourceName $result.properties.outputs.communicationServiceName.value `
-                                -ResourceGroup $RG
-                        }
-                    }
-                    
-                    $deploymentSuccess = $true
-                }
-                catch {
-                    # If JSON parse fails but exit code is 0, deployment might have succeeded
-                    Write-Output "Deployment completed (output parsing skipped)"
-                    $deploymentSuccess = $true
-                }
-            }
-            else {
-                # Failure - try to parse error JSON
-                $elapsed = (Get-Date) - $deploymentStartTime
-                Write-Log "Step: Deployment failed after $([math]::Round($elapsed.TotalSeconds, 2)) seconds" "ERROR"
-                $errorJson = $null
-                $errorMsg = ""
-                
-                try {
-                    $errorJson = $stdout | ConvertFrom-Json -ErrorAction Stop
-                    if ($errorJson.error) {
-                        $errorMsg = $errorJson.error.message
-                        Write-Log "Error details: $errorMsg" "ERROR"
-                    }
-                }
-                catch {
-                    # Not JSON, use raw output
-                    $errorMsg = ($stdout -join "`n")
-                    Write-Log "Error (non-JSON): $errorMsg" "ERROR"
-                }
-                
-                if (-not $errorMsg) {
-                    $errorMsg = ($stdout -join "`n")
-                    Write-Log "Error (raw): $errorMsg" "ERROR"
-                }
-                
-                # If we already tried "use" for Communication Service and it failed again, don't retry
-                if ($script:commServiceUseAttempted -and $errorMsg -match "NameReservationTaken" -and $errorMsg -match "communication") {
-                    Write-Output ""
-                    $formattedError = Format-AzureError -ErrorJson ($stdout -join "`n") -Step "Communication Service conflict resolution"
-                    Write-ColorOutput Red $formattedError
-                    Write-Log "Communication Service 'use' failed after retry" "ERROR"
-                    
-                    # Offer rollback
-                    $createdResources = Get-CreatedResources
-                    if ($createdResources.Resources.Count -gt 0) {
-                        Write-Output ""
-                        Write-ColorOutput Yellow "⚠️  Would you like to rollback created resources? (y/n)"
-                        $rollbackChoice = Read-Host
-                        if ($rollbackChoice -eq 'y' -or $rollbackChoice -eq 'Y') {
-                            Invoke-Rollback -Confirm:$false
-                        }
-                    }
-                    
-                    exit 1
-                }
-                
-                # Check for App Service errors FIRST (before handling other conflicts)
-                # If we already tried using existing App Services in a PREVIOUS retry and it failed again, don't retry
-                if ($script:appServiceUseAttempted -and ($errorMsg -match "Website.*already exists" -or ($errorMsg -match "Conflict" -and $errorMsg -match "Website"))) {
-                    Write-Output ""
-                    $formattedError = Format-AzureError -ErrorJson ($stdout -join "`n") -Step "App Service conflict resolution"
-                    Write-ColorOutput Red $formattedError
-                    Write-ColorOutput Yellow "   The App Services exist but the deployment is still trying to create them."
-                    Write-ColorOutput Cyan "   This may indicate the skipAppServiceCreation parameter isn't being applied correctly."
-                    Write-ColorOutput Cyan "   Parameter should be: skipAppServiceCreation=true, existingAppServiceResourceGroup=$RG"
-                    Write-Log "App Service 'use existing' failed after retry" "ERROR"
-                    
-                    # Offer rollback
-                    $createdResources = Get-CreatedResources
-                    if ($createdResources.Resources.Count -gt 0) {
-                        Write-Output ""
-                        Write-ColorOutput Yellow "⚠️  Would you like to rollback created resources? (y/n)"
-                        $rollbackChoice = Read-Host
-                        if ($rollbackChoice -eq 'y' -or $rollbackChoice -eq 'Y') {
-                            Invoke-Rollback -Confirm:$false
-                        }
-                    }
-                    
-                    exit 1
-                }
-                
-                # Handle App Service conflicts (they already exist - provide detailed info and options)
-                if ($errorMsg -match "Website.*already exists" -or ($errorMsg -match "Conflict" -and $errorMsg -match "Website")) {
-                    Handle-AppServiceConflict `
-                        -ErrorMsg $errorMsg `
-                        -ResourcePrefix $resourcePrefix `
-                        -RG $RG `
-                        -Location ([ref]$LOCATION) `
-                        -ResourceGroup ([ref]$RG) `
-                        -ResourcePrefixRef ([ref]$resourcePrefix) `
-                        -ParamsObj ([ref]$paramsObj) `
-                        -ParamsContent ([ref]$paramsContent) `
-                        -ParamsFile $paramsFile `
-                        -ShouldRetry ([ref]$shouldRetry) `
-                        -RetryCount ([ref]$retryCount) `
-                        -SkipAppServiceCreation ([ref]$script:skipAppServiceCreation) `
-                        -ExistingAppServiceResourceGroup ([ref]$script:existingAppServiceResourceGroup) `
-                        -AppServiceUseAttempted ([ref]$script:appServiceUseAttempted) `
-                        -Verbose:$Verbose `
-                        -WhatIf:$WhatIf
-                }
-                
-                # If we already tried using existing Cosmos DB and it failed again with a Cosmos DB error, don't retry
-                # BUT only if it's actually a Cosmos DB error (not App Service or other errors)
-                # Also check that we haven't just set appServiceUseAttempted (to avoid exiting when App Service retry is needed)
-                if ($script:cosmosUseAttempted -and -not $script:appServiceUseAttempted -and ($errorMsg -match "cosmos" -or $errorMsg -match "Cosmos" -or $errorMsg -match "DocumentDB") -and -not ($errorMsg -match "Website" -or $errorMsg -match "App Service" -or $errorMsg -match "appservice" -or $errorMsg -match "Conflict.*Website")) {
-                    Write-Output ""
-                    $formattedError = Format-AzureError -ErrorJson ($stdout -join "`n") -Step "Cosmos DB conflict resolution"
-                    Write-ColorOutput Red $formattedError
-                    Write-Log "Cosmos DB 'use existing' failed after retry" "ERROR"
-                    
-                    # Offer rollback
-                    $createdResources = Get-CreatedResources
-                    if ($createdResources.Resources.Count -gt 0) {
-                        Write-Output ""
-                        Write-ColorOutput Yellow "⚠️  Would you like to rollback created resources? (y/n)"
-                        $rollbackChoice = Read-Host
-                        if ($rollbackChoice -eq 'y' -or $rollbackChoice -eq 'Y') {
-                            Invoke-Rollback -Confirm:$false
-                        }
-                    }
-                    
-                    exit 1
-                }
-                
-                # Handle storage account conflict - auto switch to eastus2
-                if ($errorMsg -match "StorageAccountAlreadyTaken" -or $errorMsg -match "storage account.*already taken") {
-                    Handle-StorageConflict `
-                        -Location ([ref]$LOCATION) `
-                        -ResourceGroup ([ref]$RG) `
-                        -ResourcePrefix ([ref]$resourcePrefix) `
-                        -ExpectedStorageName ([ref]$expectedStorageName) `
-                        -ParamsObj ([ref]$paramsObj) `
-                        -ParamsContent ([ref]$paramsContent) `
-                        -ParamsFile $paramsFile `
-                        -ShouldRetry ([ref]$shouldRetry) `
-                        -RetryCount ([ref]$retryCount) `
-                        -WhatIf:$WhatIf
-                }
-                # Handle Communication Services conflict - prompt user
-                elseif ($errorMsg -match "NameReservationTaken" -and $errorMsg -match "communication") {
-                    Handle-CommunicationServiceConflict `
-                        -ResourcePrefix $resourcePrefix `
-                        -RG $RG `
-                        -Location ([ref]$LOCATION) `
-                        -ResourceGroup ([ref]$RG) `
-                        -ResourcePrefixRef ([ref]$resourcePrefix) `
-                        -ExpectedStorageName ([ref]$expectedStorageName) `
-                        -ParamsObj ([ref]$paramsObj) `
-                        -ParamsContent ([ref]$paramsContent) `
-                        -ParamsFile $paramsFile `
-                        -ShouldRetry ([ref]$shouldRetry) `
-                        -RetryCount ([ref]$retryCount) `
-                        -CommServiceUseAttempted ([ref]$script:commServiceUseAttempted) `
-                        -Verbose:$Verbose `
-                        -WhatIf:$WhatIf
-                }
-                # Handle Cosmos DB conflict or region issues - switch ONLY Cosmos DB to eastus2
-                elseif (($errorMsg -match "Dns record.*already taken" -or ($errorMsg -match "BadRequest" -and $errorMsg -match "cosmos") -or ($errorMsg -match "ServiceUnavailable" -and $errorMsg -match "cosmos") -or ($errorMsg -match "high demand" -and $errorMsg -match "region") -or ($errorMsg -match "failed provisioning state")) -and -not $script:cosmosUseAttempted) {
-                    Handle-CosmosDbConflict `
-                        -ErrorMsg $errorMsg `
-                        -ResourcePrefix $resourcePrefix `
-                        -RG $RG `
-                        -ParamsObj ([ref]$paramsObj) `
-                        -ParamsContent ([ref]$paramsContent) `
-                        -ParamsFile $paramsFile `
-                        -ShouldRetry ([ref]$shouldRetry) `
-                        -RetryCount ([ref]$retryCount) `
-                        -SkipCosmosCreation ([ref]$script:skipCosmosCreation) `
-                        -CosmosUseAttempted ([ref]$script:cosmosUseAttempted) `
-                        -Verbose:$Verbose `
-                        -WhatIf:$WhatIf
-                }
-                # If we already tried using existing Cosmos DB and it failed again, don't retry
-                # BUT only if it's actually a Cosmos DB error (not App Service or other errors)
-                # Also check that we haven't just set appServiceUseAttempted (to avoid exiting when App Service retry is needed)
-                elseif ($script:cosmosUseAttempted -and -not $script:appServiceUseAttempted -and ($errorMsg -match "cosmos" -or $errorMsg -match "Cosmos" -or $errorMsg -match "DocumentDB") -and -not ($errorMsg -match "Website" -or $errorMsg -match "App Service" -or $errorMsg -match "appservice" -or $errorMsg -match "Conflict.*Website")) {
-                    Write-Output ""
-                    $formattedError = Format-AzureError -ErrorJson ($stdout -join "`n") -Step "Cosmos DB 'use existing' failed"
-                    Write-ColorOutput Red $formattedError
-                    Write-Log "Cosmos DB 'use existing' failed. Cannot proceed." "ERROR"
-                    
-                    # Offer rollback
-                    $createdResources = Get-CreatedResources
-                    if ($createdResources.Resources.Count -gt 0) {
-                        Write-Output ""
-                        Write-ColorOutput Yellow "⚠️  Would you like to rollback created resources? (y/n)"
-                        $rollbackChoice = Read-Host
-                        if ($rollbackChoice -eq 'y' -or $rollbackChoice -eq 'Y') {
-                            Invoke-Rollback -Confirm:$false
-                        }
-                    }
-                    
-                    exit 1
-                }
-                else {
-                    # Other error - don't retry (unless we've already set shouldRetry for a handled conflict)
-                    if (-not $shouldRetry) {
-                        Write-Output ""
-                        Write-ColorOutput Red "❌ Deployment failed at step: Infrastructure deployment"
-                        Write-Log "Deployment failed at step: Infrastructure deployment" "ERROR"
-                        Write-Output ""
-                        Write-Output "Error: $errorMsg"
-                        Write-Log "Error message: $errorMsg" "ERROR"
-                        exit 1
-                    }
-                    # If shouldRetry is true, we've already handled the error above, just continue to retry
-                }
-            }
-        }
-        catch {
-            $formattedError = Format-Error -ErrorMessage $_.Exception.Message -Step "Infrastructure deployment"
-            Write-ColorOutput Red $formattedError
-            Write-Log "Exception at step: Infrastructure deployment - $($_.Exception.Message)" "ERROR"
-            
-            # Show what was created before rollback
-            $createdResources = Get-CreatedResources
-            if ($createdResources.Resources.Count -gt 0) {
-                Write-Output ""
-                Write-ColorOutput Yellow "⚠️  The following resources were created before the failure:"
-                foreach ($resource in $createdResources.Resources) {
-                    Write-Output "  • $($resource.Type): $($resource.Name)"
-                }
-                Write-Output ""
-                Write-ColorOutput Cyan "   Would you like to rollback (delete) these resources? (y/n)"
-                $rollbackChoice = Read-Host
-                if ($rollbackChoice -eq 'y' -or $rollbackChoice -eq 'Y') {
-                    Invoke-Rollback -Confirm:$false
-                }
-                else {
-                    Write-ColorOutput Yellow "   Rollback skipped. Resources remain in Azure."
-                }
-            }
-            
-            exit 1
-        }
-        finally {
-            if ($script:LogFile) {
-                "=== Deployment Log Ended: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ===" | Out-File -FilePath $script:LogFile -Append
-            }
-            # Clean up temp file
-            if (Test-Path $paramsFile) {
-                Remove-Item $paramsFile -Force
-            }
-        }
-        
-        # If deployment succeeded or we shouldn't retry, break the loop
-        if ($Verbose) {
-            Write-ColorOutput Yellow "   [VERBOSE] After error handling - deploymentSuccess=$deploymentSuccess, shouldRetry=$shouldRetry"
-        }
-        if ($deploymentSuccess -or -not $shouldRetry) {
-            break
-        }
-        
-        # If we've exceeded max retries
-        if ($retryCount -gt $script:MAX_DEPLOYMENT_RETRIES) {
-            Write-ColorOutput Red "❌ Maximum retry attempts exceeded ($($script:MAX_DEPLOYMENT_RETRIES))."
-            exit 1
-        }
+        Write-ColorOutput Red "ERROR: Deployment failed at step: Infrastructure deployment"
+        Write-Log "Deployment failed at step: Infrastructure deployment" "ERROR"
+        Write-Output ""
+        Write-Output "Error: $($deploymentResult.Error)"
+        Write-Log "Error message: $($deploymentResult.Error)" "ERROR"
+        exit 1
     }
     
-    # Check final deployment status
-    if ($deploymentSuccess) {
+    # Deployment succeeded - continue with post-deployment steps
+    if ($deploymentResult.Success) {
         Write-Output ""
         Write-ColorOutput Green "================================================"
         Write-ColorOutput Green "  Infrastructure deployment successful!"
@@ -1451,356 +659,43 @@ else {
         
         if (-not $swaCheck) {
             Write-Log "Step: Creating Static Web App" "INFO"
-            Write-ColorOutput Yellow "📱 Creating Static Web App..."
+            Write-ColorOutput Yellow "Creating Static Web App..."
             Write-Output ""
             
-            # Check name availability first
-            Write-Log "Step: Checking Static Web App name availability" "INFO"
-            $nameAvailable = $true
-            try {
-                $existingSWA = az staticwebapp list --query "[?name=='$SWA_NAME']" -o json 2>$null | ConvertFrom-Json
-                if ($existingSWA -and $existingSWA.Count -gt 0) {
-                    $nameAvailable = $false
-                    Write-ColorOutput Yellow "⚠️  Static Web App name '$SWA_NAME' is already taken globally."
-                    Write-Log "Warning: Static Web App name already exists globally" "WARN"
-                }
-            }
-            catch {
-                # Ignore - name might be available
-            }
+            # Get subscription ID
+            $azAccount = az account show --output json 2>$null | ConvertFrom-Json
+            $subscriptionId = if ($azAccount) { $azAccount.id } else { $SubscriptionId }
             
-            if ($nameAvailable) {
-                # Get GitHub repo info
-                $repoUrl = Get-GitRemoteUrl
-                $repoInfo = Get-GitHubRepositoryInfo -RemoteUrl $repoUrl
-                $repoOwner = $repoInfo.Owner
-                $repoName = $repoInfo.Name
-                
-                if ($repoOwner -and $repoName) {
-                    Write-Output "Repository: $repoOwner/$repoName"
-                    Write-Log "GitHub repository: $repoOwner/$repoName" "INFO"
+            # Create Static Web App using module function
+            Write-Host "Creating Static Web App... " -NoNewline
+            $swaResult = New-StaticWebAppWithGitHub `
+                -Name $SWA_NAME `
+                -ResourceGroup $RG `
+                -Location $LOCATION `
+                -SubscriptionId $subscriptionId `
+                -GitHubPat $GitHubPat `
+                -SwaCliPath $script:swaCliPath `
+                -SwaCliAvailable:$script:swaCliAvailable `
+                -Verbose:$Verbose
+            
+            if ($swaResult.Success) {
+                Write-Host "[OK]" -ForegroundColor Green
+                Write-ColorOutput Green "SUCCESS: Static Web App created!"
+                if ($swaResult.Created) {
                     Write-Output ""
-                    
-                    # Create Static Web App
-                    Write-Host "Creating Static Web App... " -NoNewline
-                    Write-Log "Creating Static Web App: $SWA_NAME" "INFO"
-                    
-                    # Track if SWA was created successfully
-                    $swaCreated = $false
-                    $swaResult = $null
-                    
-                    # Use SWA CLI if available (better GitHub PAT support)
-                    # Re-check in case it was just installed or path wasn't found earlier
-                    if (-not $script:swaCliAvailable -or -not $script:swaCliPath) {
-                        # Check common npm locations
-                        $swaCheckPaths = @(
-                            "$env:APPDATA\npm\swa.cmd",
-                            "$env:LOCALAPPDATA\npm\swa.cmd"
-                        )
-                        $npmPrefix = npm config get prefix 2>$null
-                        if ($npmPrefix) {
-                            $swaCheckPaths += @(
-                                Join-Path $npmPrefix "swa.cmd",
-                                Join-Path $npmPrefix "node_modules\@azure\static-web-apps-cli\dist\swa.cmd"
-                            )
-                        }
-                        
-                        foreach ($checkPath in $swaCheckPaths) {
-                            if ($checkPath -and (Test-Path $checkPath)) {
-                                $script:swaCliAvailable = $true
-                                $script:swaCliPath = $checkPath
-                                # Add to PATH for this session
-                                $swaDir = Split-Path $checkPath -Parent
-                                if ($env:Path -notlike "*$swaDir*") {
-                                    $env:Path = "$swaDir;$env:Path"
-                                }
-                                break
-                            }
-                        }
-                        
-                        # Also try Get-Command as fallback
-                        if (-not $script:swaCliAvailable) {
-                            $swaCheck = Get-Command swa -ErrorAction SilentlyContinue
-                            if ($swaCheck) {
-                                $script:swaCliAvailable = $true
-                                $script:swaCliPath = $swaCheck.Source
-                            }
-                        }
-                    }
-                    
-                    if ($script:swaCliAvailable -and $GitHubPat -and $repoOwner -and $repoName) {
-                        # Use SWA CLI to create and connect (better GitHub PAT support)
-                        Write-Output ""
-                        Write-ColorOutput Cyan "   Using SWA CLI to create Static Web App with GitHub PAT..."
-                        Write-Log "Using SWA CLI to create Static Web App with GitHub PAT" "INFO"
-                        
-                        # Static Web Apps have limited region support - check if current region is supported
-                        $swaSupportedRegions = @("westus2", "centralus", "eastus2", "westeurope", "eastasia")
-                        $swaLocation = $LOCATION
-                        
-                        if ($LOCATION -notin $swaSupportedRegions) {
-                            Write-ColorOutput Yellow "   ⚠️  Static Web Apps not available in $LOCATION"
-                            Write-ColorOutput Yellow "   Available regions: $($swaSupportedRegions -join ', ')"
-                            Write-ColorOutput Cyan "   Creating Static Web App in 'westeurope' (closest supported region)"
-                            Write-Log "Static Web Apps not available in $LOCATION, using westeurope" "WARN"
-                            $swaLocation = "westeurope"
-                        }
-                        
-                        # Use the stored path or find it again
-                        $swaCmd = if ($script:swaCliPath -and (Test-Path $script:swaCliPath)) {
-                            $script:swaCliPath
-                        }
-                        else {
-                            # Try to find it in common locations
-                            $foundPath = $null
-                            $checkPaths = @(
-                                "$env:APPDATA\npm\swa.cmd",
-                                "$env:LOCALAPPDATA\npm\swa.cmd"
-                            )
-                            $npmPrefix = npm config get prefix 2>$null
-                            if ($npmPrefix) {
-                                $checkPaths += @(
-                                    Join-Path $npmPrefix "swa.cmd",
-                                    Join-Path $npmPrefix "node_modules\@azure\static-web-apps-cli\dist\swa.cmd"
-                                )
-                            }
-                            foreach ($path in $checkPaths) {
-                                if ($path -and (Test-Path $path)) {
-                                    $foundPath = $path
-                                    $script:swaCliPath = $path
-                                    break
-                                }
-                            }
-                            if ($foundPath) { $foundPath } else { "swa" }
-                        }
-                        
-                        Write-Log "Using SWA CLI at: $swaCmd" "INFO"
-                        
-                        # Get subscription ID
-                        $azAccount = az account show --output json 2>$null | ConvertFrom-Json
-                        $subscriptionId = if ($azAccount) { $azAccount.id } else { $SubscriptionId }
-                        
-                        # Set GitHub token as environment variable for SWA CLI
-                        $env:GITHUB_TOKEN = $GitHubPat
-                        
-                        # Use SWA CLI to create and connect the Static Web App
-                        Write-ColorOutput Cyan "   Creating Static Web App with SWA CLI..."
-                        Write-Log "Creating Static Web App: $SWA_NAME in resource group: $RG using SWA CLI" "INFO"
-                        
-                        # Ensure SWA CLI is logged in
-                        Write-ColorOutput Cyan "   Authenticating with SWA CLI..."
-                        $swaLoginOutput = & $swaCmd login 2>&1
-                        if ($LASTEXITCODE -ne 0) {
-                            Write-ColorOutput Yellow "   ⚠️  SWA CLI login may have failed, but continuing..."
-                            Write-Log "SWA CLI login output: $($swaLoginOutput -join '`n')" "WARN"
-                        }
-                        
-                        # Set GitHub token as environment variable for SWA CLI
-                        $env:GITHUB_TOKEN = $GitHubPat
-                        
-                        # Use SWA CLI deploy to create the Static Web App and connect GitHub
-                        # Create a minimal output directory for deployment
-                        $tempDeployDir = Join-Path $env:TEMP "swa-deploy-$(Get-Random)"
-                        New-Item -ItemType Directory -Path $tempDeployDir -Force | Out-Null
-                        try {
-                            # Create a minimal index.html for deployment
-                            "<!DOCTYPE html><html><head><title>SWA Setup</title></head><body><h1>Setting up Static Web App</h1></body></html>" | Out-File -FilePath (Join-Path $tempDeployDir "index.html") -Encoding UTF8
-                            
-                            Write-ColorOutput Cyan "   Creating Static Web App and connecting to GitHub with SWA CLI..."
-                            Write-Log "Using SWA CLI deploy to create SWA and connect GitHub" "INFO"
-                            
-                            # Use SWA CLI deploy with all parameters - it should create the resource if it doesn't exist
-                            $swaDeployOutput = & $swaCmd deploy $tempDeployDir `
-                                --app-name $SWA_NAME `
-                                --resource-group $RG `
-                                --subscription-id $subscriptionId `
-                                --repo "https://github.com/$repoOwner/$repoName" `
-                                --branch "dev" `
-                                --app-location "./src/Mystira.App.PWA" `
-                                --api-location "swa-db-connections" `
-                                --output-location "out" `
-                                2>&1
-                            
-                            if ($LASTEXITCODE -eq 0) {
-                                Write-Host "✓" -ForegroundColor Green
-                                Write-ColorOutput Green "✅ Static Web App created and connected to GitHub via SWA CLI!"
-                                Write-Log "Static Web App created and connected via SWA CLI" "INFO"
-                                $swaCreated = $true
-                                # Set a dummy result so the success check works
-                                $swaResult = @{ name = $SWA_NAME }
-                            }
-                            else {
-                                # If deploy fails, try creating resource first with Azure CLI, then connecting
-                                $errorOutput = $swaDeployOutput -join '`n'
-                                Write-ColorOutput Yellow "   ⚠️  SWA CLI deploy failed. Creating resource first..."
-                                Write-Log "SWA CLI deploy failed, creating resource first: $errorOutput" "WARN"
-                                
-                                # Check if error is due to region unavailability
-                                $isRegionError = $false
-                                if ($errorOutput -match "LocationNotAvailableForResourceType|region.*not available|not available.*region") {
-                                    $isRegionError = $true
-                                }
-                                
-                                # If region error and we haven't already switched, prompt for region change
-                                if ($isRegionError -and $swaLocation -eq $LOCATION) {
-                                    Write-Output ""
-                                    Write-ColorOutput Yellow "⚠️  Static Web Apps are not available in region: $LOCATION"
-                                    Write-ColorOutput Yellow "   Available regions: $($swaSupportedRegions -join ', ')"
-                                    Write-Output ""
-                                    
-                                    $changeRegion = Read-Host "Would you like to create the Static Web App in a different region? (y/n)"
-                                    if ($changeRegion -eq 'y' -or $changeRegion -eq 'Y') {
-                                        Write-Output ""
-                                        Write-Output "Available Static Web App regions:"
-                                        for ($i = 0; $i -lt $swaSupportedRegions.Count; $i++) {
-                                            Write-Output "  [$($i+1)] $($swaSupportedRegions[$i])"
-                                        }
-                                        Write-Output ""
-                                        
-                                        do {
-                                            $regionChoice = Read-Host "Enter region number (1-$($swaSupportedRegions.Count))"
-                                            if ($regionChoice -notmatch "^\d+$" -or [int]$regionChoice -lt 1 -or [int]$regionChoice -gt $swaSupportedRegions.Count) {
-                                                Write-ColorOutput Red "❌ Invalid choice. Please enter a number between 1 and $($swaSupportedRegions.Count)."
-                                            }
-                                        } while ($regionChoice -notmatch "^\d+$" -or [int]$regionChoice -lt 1 -or [int]$regionChoice -gt $swaSupportedRegions.Count)
-                                        
-                                        $swaLocation = $swaSupportedRegions[[int]$regionChoice - 1]
-                                        Write-ColorOutput Green "✅ Will create Static Web App in: $swaLocation"
-                                        Write-Log "User selected region: $swaLocation" "INFO"
-                                    }
-                                    else {
-                                        Write-ColorOutput Yellow "   Skipping Static Web App creation."
-                                        Write-Log "User declined region change, skipping SWA creation" "WARN"
-                                        break
-                                    }
-                                }
-                                
-                                # Try creating with Azure CLI
-                                $swaCreateOutput = az staticwebapp create `
-                                    --name $SWA_NAME `
-                                    --resource-group $RG `
-                                    --location $swaLocation `
-                                    --sku Free `
-                                    --output json 2>&1
-                                
-                                if ($LASTEXITCODE -eq 0) {
-                                    Write-ColorOutput Green "   ✅ Resource created in $swaLocation. Connecting to GitHub..."
-                                    
-                                    # Connect with REST API using helper function
-                                    if ($GitHubPat -and $repoOwner -and $repoName) {
-                                        $connectResult = Connect-StaticWebAppToGitHub `
-                                            -StaticWebAppName $SWA_NAME `
-                                            -ResourceGroup $RG `
-                                            -SubscriptionId $subscriptionId `
-                                            -RepositoryOwner $repoOwner `
-                                            -RepositoryName $repoName `
-                                            -Branch "dev" `
-                                            -AppLocation "./src/Mystira.App.PWA" `
-                                            -ApiLocation "swa-db-connections" `
-                                            -OutputLocation "out" `
-                                            -GitHubPat $GitHubPat
-                                        
-                                        if ($connectResult.Success) {
-                                            Write-Host "✓" -ForegroundColor Green
-                                            Write-ColorOutput Green "✅ Static Web App created and connected to GitHub!"
-                                            Write-Log "Static Web App created and connected via REST API" "INFO"
-                                            $swaCreated = $true
-                                            # Set result so success check works
-                                            $swaResult = @{ name = $SWA_NAME }
-                                        }
-                                        else {
-                                            Write-ColorOutput Yellow "   ⚠️  Failed to connect to GitHub: $($connectResult.Error)"
-                                            Write-Log "Failed to connect GitHub: $($connectResult.Error)" "WARN"
-                                        }
-                                    }
-                                    else {
-                                        Write-ColorOutput Yellow "   ⚠️  Missing GitHub PAT or repository info."
-                                    }
-                                }
-                                else {
-                                    $errorMsg = $swaCreateOutput -join '`n'
-                                    
-                                    # Check if it's still a region error
-                                    if ($errorMsg -match "LocationNotAvailableForResourceType" -and $swaLocation -ne $LOCATION) {
-                                        Write-Host "✗" -ForegroundColor Red
-                                        Write-ColorOutput Red "   ❌ Static Web Apps are not available in $swaLocation either."
-                                        Write-ColorOutput Yellow "   Error: $errorMsg"
-                                        Write-Log "Static Web App creation failed in ${swaLocation}: $errorMsg" "ERROR"
-                                    }
-                                    else {
-                                        Write-Host "✗" -ForegroundColor Red
-                                        Write-ColorOutput Yellow "   ⚠️  Static Web App creation failed."
-                                        Write-ColorOutput Yellow "   Error: $errorMsg"
-                                        Write-Log "Static Web App creation failed: $errorMsg" "ERROR"
-                                    }
-                                }
-                            }
-                        }
-                        finally {
-                            # Clean up temp directory
-                            if (Test-Path $tempDeployDir) {
-                                Remove-Item -Path $tempDeployDir -Recurse -Force -ErrorAction SilentlyContinue
-                            }
-                        }
-                    }
-                    else {
-                        # Use Azure CLI (fallback)
-                        Write-Output ""
-                        if (-not $swaCliAvailable) {
-                            Write-ColorOutput Yellow "   ℹ️  SWA CLI not found. Using Azure CLI (install with: npm install -g @azure/static-web-apps-cli)"
-                        }
-                        
-                        $swaResult = az staticwebapp create `
-                            --name $SWA_NAME `
-                            --resource-group $RG `
-                            --location $LOCATION `
-                            --sku Free `
-                            --output json 2>$null | ConvertFrom-Json
-                        
-                        if ($swaResult) {
-                            Write-Host "✓" -ForegroundColor Green
-                            Write-ColorOutput Green "✅ Static Web App created!"
-                            if (-not $GitHubPat) {
-                                Write-ColorOutput Yellow "   ⚠️  Created without GitHub integration."
-                                Write-ColorOutput Yellow "   Connect it to GitHub later via Azure Portal or use:"
-                                Write-ColorOutput Cyan "   az staticwebapp connect --name $SWA_NAME --resource-group $RG --login-with-github"
-                            }
-                            else {
-                                Write-ColorOutput Yellow "   ⚠️  Install SWA CLI for better GitHub PAT support: npm install -g @azure/static-web-apps-cli"
-                            }
-                        }
-                    }
-                    
-                    if ($swaCreated -or $swaResult) {
-                        if (-not $swaCreated) {
-                            Write-Host "✓" -ForegroundColor Green
-                            Write-ColorOutput Green "✅ Static Web App created!"
-                            Write-Log "Static Web App created successfully: $SWA_NAME" "INFO"
-                        }
-                        Write-Output ""
-                        Write-ColorOutput Yellow "⚠️  IMPORTANT: Get the deployment token and add it to GitHub Secrets:"
-                        Write-Output ""
-                        Write-Output "   Secret name: AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_MYSTIRA_APP"
-                        Write-Output ""
-                        Write-Output "   Get token with:"
-                        Write-ColorOutput Cyan "   az staticwebapp secrets list --name $SWA_NAME --resource-group $RG --query properties.apiKey -o tsv"
-                        Write-Output ""
-                    }
-                    else {
-                        Write-Host "✗" -ForegroundColor Red
-                        Write-ColorOutput Yellow "⚠️  Static Web App creation may have failed. Check Azure portal."
-                        Write-Log "Warning: Static Web App creation may have failed" "WARN"
-                    }
-                }
-                else {
-                    Write-ColorOutput Yellow "⚠️  Could not detect GitHub repository."
-                    Write-Log "Error: Could not detect GitHub repository" "ERROR"
-                    Write-Output "   Please create the Static Web App manually or update the script."
+                    Write-ColorOutput Yellow "WARNING: IMPORTANT: Get the deployment token and add it to GitHub Secrets:"
+                    Write-Output ""
+                    Write-Output "   Secret name: AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_MYSTIRA_APP"
+                    Write-Output ""
+                    Write-Output "   Get token with:"
+                    Write-ColorOutput Cyan "   az staticwebapp secrets list --name $SWA_NAME --resource-group $RG --query properties.apiKey -o tsv"
+                    Write-Output ""
                 }
             }
             else {
-                Write-ColorOutput Yellow "⚠️  Cannot create Static Web App - name is already taken."
-                Write-Log "Error: Static Web App name unavailable" "ERROR"
+                Write-Host "[X]" -ForegroundColor Red
+                Write-ColorOutput Yellow "WARNING: Static Web App creation failed: $($swaResult.Error)"
+                Write-Log "Static Web App creation failed: $($swaResult.Error)" "ERROR"
             }
         }
         else {
