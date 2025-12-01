@@ -132,9 +132,9 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
                         return errorResult;
                     }
                 }
-                catch
+                catch (System.Text.Json.JsonException ex)
                 {
-                    // If we can't parse the error response, return a generic error
+                    Logger.LogWarning(ex, "Failed to parse error response during passwordless signin for email: {Email}", email);
                 }
 
                 return new PasswordlessSigninResponse
