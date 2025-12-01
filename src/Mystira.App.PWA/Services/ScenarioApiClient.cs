@@ -28,10 +28,33 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
 
             if (response.IsSuccessStatusCode)
             {
-                var scenariosResponse = await response.Content.ReadFromJsonAsync<ScenariosResponse>(JsonOptions);
-                var scenarios = scenariosResponse?.Scenarios ?? new List<Scenario>();
-                Logger.LogInformation("Successfully fetched {Count} scenarios", scenarios.Count);
-                return scenarios;
+                // Try to parse as ScenariosResponse first (object with Scenarios property)
+                try
+                {
+                    var scenariosResponse = await response.Content.ReadFromJsonAsync<ScenariosResponse>(JsonOptions);
+                    var scenarios = scenariosResponse?.Scenarios ?? new List<Scenario>();
+                    Logger.LogInformation("Successfully fetched {Count} scenarios (ScenariosResponse format)", scenarios.Count);
+                    return scenarios;
+                }
+                catch (System.Text.Json.JsonException)
+                {
+                    // If that fails, try to parse as a direct array of scenarios
+                    Logger.LogInformation("Attempting to parse response as direct scenario array...");
+
+                    // Re-fetch because the stream was consumed
+                    var retryRequest = new HttpRequestMessage(HttpMethod.Get, "api/scenarios");
+                    retryRequest.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
+                    var retryResponse = await HttpClient.SendAsync(retryRequest);
+
+                    if (retryResponse.IsSuccessStatusCode)
+                    {
+                        var scenarios = await retryResponse.Content.ReadFromJsonAsync<List<Scenario>>(JsonOptions);
+                        Logger.LogInformation("Successfully fetched {Count} scenarios (array format)", scenarios?.Count ?? 0);
+                        return scenarios ?? new List<Scenario>();
+                    }
+                }
+
+                return new List<Scenario>();
             }
             else
             {

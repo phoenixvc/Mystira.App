@@ -32,13 +32,45 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
             {
                 Logger.LogWarning("Passwordless signup request failed with status: {StatusCode} for email: {Email}",
                     response.StatusCode, email);
-                return null;
+
+                // Try to read error response from the API
+                try
+                {
+                    var errorResult = await response.Content.ReadFromJsonAsync<PasswordlessSignupResponse>(JsonOptions);
+                    if (errorResult != null)
+                    {
+                        return errorResult;
+                    }
+                }
+                catch
+                {
+                    // If we can't parse the error response, return a generic error
+                }
+
+                return new PasswordlessSignupResponse
+                {
+                    Success = false,
+                    Message = $"Request failed with status {(int)response.StatusCode}. Please try again."
+                };
             }
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Network error requesting passwordless signup for email: {Email}", email);
+            return new PasswordlessSignupResponse
+            {
+                Success = false,
+                Message = "Unable to connect to the server. Please check your internet connection and try again."
+            };
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error requesting passwordless signup for email: {Email}", email);
-            return null;
+            return new PasswordlessSignupResponse
+            {
+                Success = false,
+                Message = "An unexpected error occurred. Please try again."
+            };
         }
     }
 
@@ -90,13 +122,45 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
             {
                 Logger.LogWarning("Passwordless signin request failed with status: {StatusCode} for email: {Email}",
                     response.StatusCode, email);
-                return null;
+
+                // Try to read error response from the API
+                try
+                {
+                    var errorResult = await response.Content.ReadFromJsonAsync<PasswordlessSigninResponse>(JsonOptions);
+                    if (errorResult != null)
+                    {
+                        return errorResult;
+                    }
+                }
+                catch
+                {
+                    // If we can't parse the error response, return a generic error
+                }
+
+                return new PasswordlessSigninResponse
+                {
+                    Success = false,
+                    Message = $"Request failed with status {(int)response.StatusCode}. Please try again."
+                };
             }
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Network error requesting passwordless signin for email: {Email}", email);
+            return new PasswordlessSigninResponse
+            {
+                Success = false,
+                Message = "Unable to connect to the server. Please check your internet connection and try again."
+            };
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error requesting passwordless signin for email: {Email}", email);
-            return null;
+            return new PasswordlessSigninResponse
+            {
+                Success = false,
+                Message = "An unexpected error occurred. Please try again."
+            };
         }
     }
 
