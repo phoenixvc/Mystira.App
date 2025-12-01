@@ -145,14 +145,34 @@ html[data-theme="dark"] .mystira-title {
     color: #A78BFA; /* Fallback */
 }
 
-.alpha-badge {
-    font-size: 1rem;
-    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+/* Apply gradient only to the title text, not to the badge */
+.mystira-title .title-text {
+    background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 50%, #6D28D9 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    font-weight: 700;
+}
+
+.mystira-title .alpha-badge {
+    /* Superscript pill badge with yellow fill */
+    display: inline-block;
     vertical-align: super;
+    margin-left: 2px;
+    padding: 0.1em 0.5em;
+    line-height: 1;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #7c2d12 !important; /* dark amber text for contrast */
+    /* Ensure the badge text isn't made transparent by parent -webkit-text-fill-color */
+    -webkit-text-fill-color: #7c2d12 !important;
+    background-color: #fde68a; /* amber-200 */
+    border: 1px solid #f59e0b; /* amber-500 */
+    border-radius: 9999px; /* pill */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.6);
+    /* Make sure background clipping from parent gradient titles doesn't affect the badge */
+    -webkit-background-clip: border-box !important;
+    background-clip: border-box !important;
+    background: none !important;
 }
 
 .mystira-tagline {
@@ -250,7 +270,7 @@ html[data-theme="dark"] .mystira-title {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    box-shadow: 
+    box-shadow:
         0 2px 8px rgba(0, 0, 0, 0.06),
         0 1px 3px rgba(0, 0, 0, 0.04),
         inset 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -268,16 +288,16 @@ html[data-theme="dark"] .mystira-title {
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, 
-        transparent 0%, 
-        rgba(255, 255, 255, 0.6) 50%, 
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.6) 50%,
         transparent 100%);
     transition: left 0.6s ease;
 }
 
 .trust-badge:hover {
     transform: translateY(-3px);
-    box-shadow: 
+    box-shadow:
         0 8px 24px rgba(5, 150, 105, 0.15),
         0 4px 8px rgba(0, 0, 0, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.9);
@@ -314,7 +334,7 @@ html[data-theme="dark"] .mystira-title {
 }
 
 .coppa-pill:hover {
-    box-shadow: 
+    box-shadow:
         0 8px 24px rgba(147, 51, 234, 0.2),
         0 4px 8px rgba(0, 0, 0, 0.08),
         inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
@@ -333,7 +353,7 @@ html[data-theme="dark"] .mystira-title {
         gap: 12px;
         margin-top: 24px;
     }
-    
+
     .trust-badge {
         padding: 10px 16px;
         font-size: 0.8125rem;
@@ -368,43 +388,43 @@ html[data-theme="dark"] .mystira-title {
         padding: 15px 15px 40px;
         margin-bottom: 32px;
     }
-    
+
     .mystira-title {
         font-size: 3.5rem;
     }
-    
+
     .mystira-tagline {
         font-size: 1rem;
     }
-    
+
     .hero-description {
         font-size: 1rem;
         line-height: 1.6;
     }
-    
+
     .hero-cta-buttons {
         flex-direction: column !important;
         gap: 16px !important;
     }
-    
+
     .hero-cta-buttons .btn {
         width: 100%;
         justify-content: center;
         padding: 12px 24px;
     }
-    
+
 }
 
 @media (max-width: 480px) {
     .mystira-title {
         font-size: 2.75rem;
     }
-    
+
     .hero-logo-container {
         margin-bottom: 24px;
     }
-    
-    .alpha-badge {
-        font-size: 0.875rem;
+
+    .mystira-title .alpha-badge {
+        font-size: 0.8125rem;
     }
 }
