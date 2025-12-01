@@ -42,15 +42,17 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                     Logger.LogInformation("Attempting to parse response as direct scenario array...");
 
                     // Re-fetch because the stream was consumed
-                    var retryRequest = new HttpRequestMessage(HttpMethod.Get, "api/scenarios");
-                    retryRequest.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
-                    var retryResponse = await HttpClient.SendAsync(retryRequest);
+                    using (var retryRequest = new HttpRequestMessage(HttpMethod.Get, "api/scenarios"))
+                    {
+                        retryRequest.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
+                        var retryResponse = await HttpClient.SendAsync(retryRequest);
 
                     if (retryResponse.IsSuccessStatusCode)
                     {
                         var scenarios = await retryResponse.Content.ReadFromJsonAsync<List<Scenario>>(JsonOptions);
                         Logger.LogInformation("Successfully fetched {Count} scenarios (array format)", scenarios?.Count ?? 0);
                         return scenarios ?? new List<Scenario>();
+                        }
                     }
                 }
 
