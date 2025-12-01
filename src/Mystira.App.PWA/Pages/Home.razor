@@ -20,11 +20,11 @@
 
 <div class="container-fluid pb-4">
     <!-- Hero Section -->
-    <HeroSection 
+    <HeroSection
         ShowDescription="@(!isAuthenticated)"
         ShowCallToActions="@(!isAuthenticated)"
         OnWatchDemoClick="@(() => { /* TODO: Implement demo video modal */ })" />
-    
+
     <!-- Active Adventures Section -->
     @if (isAuthenticated && !isLoading && activeSessions.Any())
     {
@@ -53,7 +53,7 @@
                                                 <p class="card-text small text-muted mb-3">
                                                     Started: @activeSession.StartedAt.ToLocalTime().ToString("g")
                                                 </p>
-                                                <button class="btn btn-info w-100" 
+                                                <button class="btn btn-info w-100"
                                                         @onclick="() => ContinueAdventure(activeSession, scenario)">
                                                     <i class="fas fa-play me-2"></i>
                                                     Continue
@@ -83,7 +83,7 @@
                             </h2>
                         </div>
                         <div class="avatar-placeholder">
-                            <CachedMystiraImage 
+                            <CachedMystiraImage
                                 MediaId="placeholder-avatar-default"
                                 Alt="Player avatar"
                                 Width="60"
@@ -95,7 +95,7 @@
             </div>
         </div>
     }
-    
+
     <!-- In-Progress Adventures Section -->
     @if (isAuthenticated && hasProfiles && inProgressSessions.Any())
     {
@@ -119,7 +119,7 @@
                                                 <h5 class="card-title">@scenario.Title</h5>
                                                 <p class="card-text small text-muted">@scenarioProgress</p>
                                                 <div class="mt-auto">
-                                                    <button class="btn btn-warning btn-sm w-100" 
+                                                    <button class="btn btn-warning btn-sm w-100"
                                                             @onclick="() => StartAdventure(scenario)"
                                                             disabled="@isStartingAdventure">
                                                         <i class="fas fa-redo me-2"></i>
@@ -137,11 +137,11 @@
             </div>
         </div>
     }
-    
-    <!-- Filter Section -->
-    @if (!isLoading)
+
+    <!-- Filter & Bundles (hidden when not logged in) -->
+    @if (isAuthenticated && !isLoading)
     {
-        <FilterSection 
+        <FilterSection
             AgeGroups="@availableAgeGroups"
             SelectedAgeGroups="@selectedAgeGroups"
             AgeGroupCounts="@_ageGroupBundleCounts"
@@ -188,7 +188,7 @@
                 }
                 else if (!filteredBundles.Any())
                 {
-                    <EmptyState 
+                    <EmptyState
                         IconClass="fas fa-box-open fa-4x"
                         Title="No Bundles Found"
                         Message="Try adjusting your age group filters to see available adventure bundles."
@@ -203,19 +203,19 @@
                         var featured = GetFeaturedBundle();
                         if (featured != null)
                         {
-                            <FeaturedBundleCard 
-                                Bundle="@featured" 
+                            <FeaturedBundleCard
+                                Bundle="@featured"
                                 CompletedScenarioIds="@completedScenarioIds"
                                 ShowGameState="@gameStateLoadingComplete"
                                 OnExplore="@((bundle) => SelectBundle(bundle))" />
                         }
                     }
-                    
+
                     @* Regular Bundle Grid *@
                     <div class="row">
                         @foreach (var bundle in filteredBundles.Where(b => b.Id != GetFeaturedBundle()?.Id))
                         {
-                            <BundleCard 
+                            <BundleCard
                                 Bundle="@bundle"
                                 CompletedScenarioIds="@completedScenarioIds"
                                 ShowGameState="@gameStateLoadingComplete"
@@ -226,7 +226,7 @@
             </div>
         </div>
     }
-    
+
     <style>
         .dice-roller-container {
             max-width: 300px; /* Adjust this value to control the width */
@@ -237,8 +237,8 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
     </style>
-    
-    @if (isLoading)
+
+    @if (isAuthenticated && ShouldShowCatalog && isLoading)
     {
         <div class="row justify-content-center">
             <div class="col-auto text-center">
@@ -254,7 +254,7 @@
             {
                 var isCompleted = completedScenarioIds.Contains(scenario.Id);
                 <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4">
-                    <AdventureCard 
+                    <AdventureCard
                         Adventure="@scenario"
                         IsCompleted="@isCompleted"
                         Themes="@(scenario.Tags?.Take(2).ToList())"
@@ -265,7 +265,7 @@
     }
     else if (ShouldShowCatalog && !string.IsNullOrEmpty(selectedBundleId) && !filteredScenarios.Any() && scenarios.Any())
     {
-        <EmptyState 
+        <EmptyState
             IconClass="fas fa-search-minus fa-4x"
             Title="No Adventures Match Your Filters"
             Message="Try adjusting your age group filters or search terms to discover more adventures."
@@ -274,7 +274,7 @@
     }
     else if (ShouldShowCatalog && !string.IsNullOrEmpty(selectedBundleId) && !scenarios.Any())
     {
-        <EmptyState 
+        <EmptyState
             IconClass="fas fa-wifi-slash fa-4x"
             Title="Connection Issue"
             Message="We couldn't load adventures right now. Please check your internet connection and try again."
@@ -364,10 +364,10 @@
     private bool isLoadingProfiles = false;
     private GameSession? gameSession;
     private string _searchQuery = string.Empty;
-    private string searchQuery 
-    { 
+    private string searchQuery
+    {
         get => _searchQuery;
-        set 
+        set
         {
             if (_searchQuery != value)
             {
@@ -377,41 +377,41 @@
         }
     }
     private string currentSort = "newest";
-    
+
     // Cache for performance optimization
     private Dictionary<string, int> _ageGroupBundleCounts = new();
     private ContentBundle? _cachedFeaturedBundle;
-    
+
     // Age group filter state
     private readonly HashSet<string> selectedAgeGroups = new();
     private readonly string[] availableAgeGroups = { "1-2", "3-5", "6-9", "10-12", "13-18", "19+" };
-    
+
     // Computed property for catalog visibility logic
     private bool ShouldShowCatalog => !isAuthenticated || (isAuthenticated && hasProfiles);
 
     protected override async Task OnInitializedAsync()
     {
-        try 
+        try
         {
             Logger.LogInformation("Home component initializing...");
-            
+
             // Subscribe to authentication state changes
             AuthService.AuthenticationStateChanged += OnAuthenticationStateChanged;
-            
+
             // Subscribe to game session changes
             GameSessionService.GameSessionChanged += OnGameSessionChanged;
-            
+
             // Check current authentication status
             isAuthenticated = await AuthService.IsAuthenticatedAsync();
-            
+
             Logger.LogInformation("Auth service initialized. IsAuthenticated: {IsAuthenticated}", isAuthenticated);
-            
+
             // Load bundles and scenarios for everyone (preview mode for unauthenticated)
             await LoadBundles();
             await LoadScenarios();
-            
+
             // Load user-specific data only if authenticated
-            if (isAuthenticated) 
+            if (isAuthenticated)
             {
                 await LoadProfiles();
                 await LoadInProgressSessions();
@@ -420,7 +420,7 @@
                 // Get current game session
                 gameSession = GameSessionService.CurrentGameSession;
             }
-            else 
+            else
             {
                 isLoading = false;
                 StateHasChanged();
@@ -437,12 +437,12 @@
     private void OnAuthenticationStateChanged(object? sender, bool authenticated)
     {
         isAuthenticated = authenticated;
-        InvokeAsync(async () => 
+        InvokeAsync(async () =>
         {
             // Always reload bundles and scenarios
             await LoadBundles();
             await LoadScenarios();
-            
+
             if (authenticated)
             {
                 await LoadProfiles();
@@ -451,7 +451,7 @@
                 // Get current game session
                 gameSession = GameSessionService.CurrentGameSession;
             }
-            else 
+            else
             {
                 // Clear user-specific data but keep catalog
                 inProgressSessions.Clear();
@@ -490,7 +490,7 @@
         {
             isLoadingProfiles = true;
             StateHasChanged();
-            
+
             var currentAccount = await AuthService.GetCurrentAccountAsync();
             if (currentAccount != null)
             {
@@ -545,11 +545,11 @@
         {
             isLoading = true;
             StateHasChanged();
-            
+
             Logger.LogInformation("Loading scenarios...");
             scenarios = await ApiClient.GetScenariosAsync();
             Logger.LogInformation("Loaded {Count} scenarios", scenarios.Count);
-            
+
             // Apply filters after loading scenarios
             ApplyFilters();
         }
@@ -574,12 +574,12 @@
             Logger.LogInformation("Loading content bundles...");
             bundles = await ApiClient.GetBundlesAsync();
             Logger.LogInformation("Loaded {Count} bundles", bundles.Count);
-            
+
             // Pre-compute age group counts for performance
             UpdateAgeGroupCounts();
 
             Logger.LogInformation("Loading completed scenarios and active sessions...");
-            
+
             // Get current account
             var account = await AuthService.GetCurrentAccountAsync();
             if (account != null)
@@ -593,21 +593,21 @@
                         .Where(s => s.Status == SessionStatus.InProgress.ToString() || s.Status == SessionStatus.Paused.ToString())
                         .OrderByDescending(s => s.StartedAt)
                         .ToList();
-                    
-                    Logger.LogInformation("Found {Count} active session(s) for account {AccountId}", 
+
+                    Logger.LogInformation("Found {Count} active session(s) for account {AccountId}",
                         activeSessions.Count, account.Id);
-                    
+
                     // Track completed scenarios
                     completedScenarioIds = sessions
                         .Where(s => s.Status == SessionStatus.Completed.ToString())
                         .Select(s => s.ScenarioId)
                         .ToHashSet();
-                    
-                    Logger.LogInformation("Loaded {Count} completed scenarios for account {AccountId}", 
+
+                    Logger.LogInformation("Loaded {Count} completed scenarios for account {AccountId}",
                         completedScenarioIds.Count, account.Id);
                 }
             }
-            
+
             // Apply filters to show/hide completed scenarios
             ApplyFilters();
         }
@@ -627,12 +627,12 @@
         try
         {
             StateHasChanged();
-            
+
             var currentAccount = await AuthService.GetCurrentAccountAsync();
             if (currentAccount != null)
             {
                 Logger.LogInformation("Loading game state for account {AccountId}", currentAccount.Id);
-                
+
                 var gameStateResponse = await ApiClient.GetScenariosWithGameStateAsync(currentAccount.Id);
                 if (gameStateResponse != null)
                 {
@@ -649,7 +649,7 @@
                     completedScenarioIds = new HashSet<string>();
                 }
             }
-            
+
             gameStateLoadingComplete = true;
         }
         catch (Exception ex)
@@ -675,30 +675,30 @@
                 NavigationManager.NavigateTo("/signup");
                 return;
             }
-            
+
             isStartingAdventure = true;
             StateHasChanged();
-            
+
             Logger.LogInformation("Starting adventure: {ScenarioName}", scenario.Name);
-            
+
             // Check if there's an in-progress session for this scenario
             var inProgressSession = inProgressSessions.FirstOrDefault(s => s.ScenarioId == scenario.Id);
             if (inProgressSession != null)
             {
-                Logger.LogInformation("Found in-progress session {SessionId} for scenario {ScenarioId}, resuming it", 
+                Logger.LogInformation("Found in-progress session {SessionId} for scenario {ScenarioId}, resuming it",
                     inProgressSession.Id, scenario.Id);
                 await ResumeInProgressSession(inProgressSession);
                 return;
             }
-            
+
             // Clear any existing game session
             GameSessionService.ClearGameSession();
-            
+
             // Check if we should skip character assignment for young age groups
             if (scenario.AgeGroup == "1-2")
             {
                 Logger.LogInformation("Skipping character assignment for age group {AgeGroup}, starting game directly", scenario.AgeGroup);
-                
+
                 // Get the full scenario with scenes
                 var fullScenario = await ApiClient.GetScenarioAsync(scenario.Id);
                 if (fullScenario == null)
@@ -706,7 +706,7 @@
                     Logger.LogError("Failed to load full scenario details for: {ScenarioName}", scenario.Name);
                     return;
                 }
-                
+
                 // Start game session directly without character assignment
                 var success = await GameSessionService.StartGameSessionAsync(fullScenario);
                 if (success)
@@ -742,7 +742,7 @@
         try
         {
             Logger.LogInformation("Resuming in-progress session {SessionId}", session.Id);
-            
+
             // Get the full scenario with scenes
             var fullScenario = await ApiClient.GetScenarioAsync(session.ScenarioId);
             if (fullScenario == null)
@@ -802,7 +802,7 @@
         {
             selectedAgeGroups.Add(ageGroup);
         }
-        
+
         ApplyFilters();
         StateHasChanged();
     }
@@ -831,12 +831,12 @@
         }
         if (!string.IsNullOrEmpty(searchQuery))
         {
-            bundleFiltered = bundleFiltered.Where(b => 
+            bundleFiltered = bundleFiltered.Where(b =>
                 b.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
                 b.Description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
         }
         filteredBundles = bundleFiltered.ToList();
-        
+
         // Invalidate featured bundle cache when filters change
         _cachedFeaturedBundle = null;
 
@@ -848,38 +848,38 @@
             var ids = selected?.ScenarioIds ?? new List<string>();
             filtered = filtered.Where(s => ids.Contains(s.Id));
         }
-        
+
         // Apply age group filter
         if (selectedAgeGroups.Any())
         {
             filtered = filtered.Where(s => selectedAgeGroups.Contains(s.AgeGroup));
         }
-        
+
         // Apply search filter (optimized)
         if (!string.IsNullOrEmpty(searchQuery))
         {
             var query = searchQuery.ToLowerInvariant();
-            filtered = filtered.Where(s => 
+            filtered = filtered.Where(s =>
                 s.Name.ToLowerInvariant().Contains(query) ||
                 s.Description.ToLowerInvariant().Contains(query) ||
                 (s.Tags != null && s.Tags.Any(t => t.ToLowerInvariant().Contains(query))));
         }
-        
+
         // Apply completed stories filter
         if (!showCompletedStories)
         {
             filtered = filtered.Where(s => !completedScenarioIds.Contains(s.Id));
         }
-        
+
         // Apply sorting
         filtered = ApplySorting(filtered);
-        
+
         filteredScenarios = filtered.ToList();
-        
-        Logger.LogInformation("Applied filters. Age groups: [{SelectedFilters}], Search: '{SearchQuery}', Sort: '{Sort}', Show completed: {ShowCompleted}, Showing {Count} of {Total} scenarios", 
+
+        Logger.LogInformation("Applied filters. Age groups: [{SelectedFilters}], Search: '{SearchQuery}', Sort: '{Sort}', Show completed: {ShowCompleted}, Showing {Count} of {Total} scenarios",
             string.Join(", ", selectedAgeGroups), searchQuery, currentSort, showCompletedStories, filteredScenarios.Count, scenarios.Count);
     }
-    
+
     private IEnumerable<Scenario> ApplySorting(IEnumerable<Scenario> scenarios)
     {
         return currentSort switch
@@ -892,9 +892,9 @@
             "newest" or _ => scenarios.OrderByDescending(s => s.CreatedAt)
         };
     }
-    
+
     private const int DefaultDurationOrder = 2;  // Medium duration default
-    
+
     private int GetDifficultyOrder(string difficulty)
     {
         return difficulty?.ToLower() switch
@@ -906,7 +906,7 @@
             _ => 0
         };
     }
-    
+
     private int GetDurationOrder(string duration)
     {
         return duration?.ToLower() switch
@@ -918,7 +918,7 @@
             _ => DefaultDurationOrder
         };
     }
-    
+
     private void OnSortChanged(string sort)
     {
         currentSort = sort;
@@ -932,10 +932,10 @@
         {
             isStartingAdventure = true;
             StateHasChanged();
-            
-            Logger.LogInformation("Continuing adventure for session: {SessionId}, Scenario: {ScenarioName}", 
+
+            Logger.LogInformation("Continuing adventure for session: {SessionId}, Scenario: {ScenarioName}",
                 activeSession.Id, scenario.Name);
-            
+
             // Get the full scenario with scenes
             var fullScenario = await ApiClient.GetScenarioAsync(scenario.Id);
             if (fullScenario == null)
@@ -943,24 +943,24 @@
                 Logger.LogError("Failed to load full scenario details for: {ScenarioName}", scenario.Name);
                 return;
             }
-            
+
             // Find the current scene from the session
             var currentScene = fullScenario.Scenes.FirstOrDefault(s => s.Id == activeSession.CurrentSceneId);
             if (currentScene == null)
             {
-                Logger.LogError("Could not find current scene {SceneId} in scenario {ScenarioId}", 
+                Logger.LogError("Could not find current scene {SceneId} in scenario {ScenarioId}",
                     activeSession.CurrentSceneId, scenario.Id);
                 return;
             }
-            
+
             // Load media URLs for the current scene
-            currentScene.AudioUrl = !string.IsNullOrEmpty(currentScene.Media?.Audio) 
+            currentScene.AudioUrl = !string.IsNullOrEmpty(currentScene.Media?.Audio)
                 ? await ApiClient.GetMediaUrlFromId(currentScene.Media.Audio) : null;
-            currentScene.ImageUrl = !string.IsNullOrEmpty(currentScene.Media?.Image) 
+            currentScene.ImageUrl = !string.IsNullOrEmpty(currentScene.Media?.Image)
                 ? await ApiClient.GetMediaUrlFromId(currentScene.Media.Image) : null;
-            currentScene.VideoUrl = !string.IsNullOrEmpty(currentScene.Media?.Video) 
+            currentScene.VideoUrl = !string.IsNullOrEmpty(currentScene.Media?.Video)
                 ? await ApiClient.GetMediaUrlFromId(currentScene.Media.Video) : null;
-            
+
             // Create a local game session to resume from
             var localGameSession = new Models.GameSession
             {
@@ -973,10 +973,10 @@
                 CompletedScenes = new List<Scene>(),
                 IsCompleted = false
             };
-            
+
             // Set the game session
             GameSessionService.SetCurrentGameSession(localGameSession);
-            
+
             // Navigate to the game page
             NavigationManager.NavigateTo("/game");
         }
@@ -1021,7 +1021,7 @@
         }
         return 0;
     }
-    
+
     private void UpdateAgeGroupCounts()
     {
         // Pre-compute bundle counts for all age groups
@@ -1039,7 +1039,7 @@
         {
             return _cachedFeaturedBundle;
         }
-        
+
         // Compute and cache the featured bundle
         var freeBundle = filteredBundles.FirstOrDefault(b => b.IsFree);
         if (freeBundle != null)
@@ -1047,14 +1047,14 @@
             _cachedFeaturedBundle = freeBundle;
             return _cachedFeaturedBundle;
         }
-        
+
         _cachedFeaturedBundle = filteredBundles
             .OrderByDescending(b => b.ScenarioIds?.Count ?? 0)
             .FirstOrDefault();
-            
+
         return _cachedFeaturedBundle;
     }
-    
+
     private int? GetResultCount()
     {
         if (!string.IsNullOrEmpty(selectedBundleId))
@@ -1067,7 +1067,7 @@
         }
         return null;
     }
-    
+
     private string GetResultCountLabel()
     {
         if (!string.IsNullOrEmpty(selectedBundleId))
