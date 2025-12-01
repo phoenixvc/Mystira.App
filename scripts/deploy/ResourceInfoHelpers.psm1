@@ -137,17 +137,23 @@ function Get-ResourceGroupResources {
     )
     
     try {
-        if (Get-Command Invoke-AzureCliWithRetry -ErrorAction SilentlyContinue) {
-            $result = Invoke-AzureCliWithRetry -Command "az resource list --resource-group `"$ResourceGroup`" --output json" -MaxRetries 2
-            if ($result) {
-                return $result | ConvertFrom-Json -ErrorAction SilentlyContinue
+        # Use direct az command to ensure we get proper exit codes
+        $result = az resource list --resource-group $ResourceGroup --output json 2>$null
+        $exitCode = $LASTEXITCODE
+        
+        if ($exitCode -eq 0 -and $result) {
+            $resources = $result | ConvertFrom-Json -ErrorAction SilentlyContinue
+            # Ensure we return an array (even if empty)
+            if ($resources) {
+                # If it's a single object, wrap it in an array
+                if ($resources -isnot [Array]) {
+                    return @($resources)
+                }
+                return $resources
             }
         }
         else {
-            $result = az resource list --resource-group $ResourceGroup --output json 2>$null
-            if ($result) {
-                return $result | ConvertFrom-Json
-            }
+            Write-Log "Failed to list resources in $ResourceGroup (exit code: $exitCode)" "WARN"
         }
     }
     catch {

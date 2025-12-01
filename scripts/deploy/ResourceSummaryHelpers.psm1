@@ -19,12 +19,23 @@ function Show-ResourceSummary {
     
     # Get all resources in the resource group
     try {
+        Write-Output "Resource Group: $ResourceGroup"
+        Write-Output "Location: $Location"
+        Write-Output ""
+        
         $resources = Get-ResourceGroupResources -ResourceGroup $ResourceGroup
         
+        # Filter out null/empty resources and ensure we have valid objects
+        $validResources = @()
         if ($resources) {
-            Write-Output "Resource Group: $ResourceGroup"
-            Write-Output "Location: $Location"
-            Write-Output ""
+            foreach ($resource in $resources) {
+                if ($resource -and $resource.name -and $resource.type) {
+                    $validResources += $resource
+                }
+            }
+        }
+        
+        if ($validResources.Count -gt 0) {
             Write-Output "Resources:"
             
             $appServices = @()
@@ -32,7 +43,7 @@ function Show-ResourceSummary {
             $cosmosAccounts = @()
             $commServices = @()
             
-            foreach ($resource in $resources | Sort-Object type, name) {
+            foreach ($resource in $validResources | Sort-Object type, name) {
                 $resourceType = $resource.type -replace '.*/', ''
                 $resourceName = $resource.name
                 $resourceState = if ($resource.properties.provisioningState) { $resource.properties.provisioningState } else { "N/A" }
@@ -96,6 +107,9 @@ function Show-ResourceSummary {
                     }
                 }
             }
+        } else {
+            Write-Output "Resources: (none found or unable to retrieve)"
+            Write-Log "No valid resources found in resource group $ResourceGroup" "WARN"
         }
         
         # Check for Static Web App
