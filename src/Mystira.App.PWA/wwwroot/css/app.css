@@ -24,6 +24,12 @@
     --die-grad1: #ffffff;
     --die-grad2: #d4d4d8;
     --pip: #111827;
+
+    /* navbar appearance */
+    --navbar-bg: rgba(255, 255, 255, 0.85);
+    --navbar-border: rgba(17, 24, 39, 0.08);
+    --navbar-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    --nav-link-color: #111827;
 }
 
 /* Dark mode using prefers-color-scheme */
@@ -43,6 +49,12 @@
 
         --light-color: #1e293b;
         --dark-color: #f1f5f9;
+
+        /* navbar appearance */
+        --navbar-bg: rgba(15, 23, 42, 0.95);
+        --navbar-border: rgba(148, 163, 184, 0.15);
+        --navbar-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(148, 163, 184, 0.1);
+        --nav-link-color: #e2e8f0;
     }
 }
 
@@ -62,6 +74,12 @@ html[data-theme="dark"] {
 
     --light-color: #1e293b;
     --dark-color: #f1f5f9;
+
+    /* navbar appearance */
+    --navbar-bg: rgba(15, 23, 42, 0.95);
+    --navbar-border: rgba(148, 163, 184, 0.15);
+    --navbar-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(148, 163, 184, 0.1);
+    --nav-link-color: #e2e8f0;
 }
 
 html[data-theme="light"] {
@@ -76,6 +94,12 @@ html[data-theme="light"] {
     --die-grad1: #ffffff;
     --die-grad2: #d4d4d8;
     --pip: #111827;
+
+    /* navbar appearance */
+    --navbar-bg: rgba(255, 255, 255, 0.85);
+    --navbar-border: rgba(17, 24, 39, 0.08);
+    --navbar-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    --nav-link-color: #111827;
 }
 
 html, body {
@@ -281,23 +305,12 @@ html, body {
 
 /* Navigation Styles - Fixed with transparency */
 .navbar {
-    background-color: rgba(255, 255, 255, 0.85) !important;
+    background-color: var(--navbar-bg) !important;
     backdrop-filter: blur(10px) saturate(180%);
     -webkit-backdrop-filter: blur(10px) saturate(180%);
-    border-bottom: 1px solid var(--border, rgba(17,24,39,0.08));
-    transition: background-color 0.3s ease, border-color 0.3s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-/* Dark mode navbar transparency */
-html[data-theme="dark"] .navbar {
-    background-color: rgba(30, 41, 59, 0.85) !important;
-}
-
-@media (prefers-color-scheme: dark) {
-    .navbar {
-        background-color: rgba(30, 41, 59, 0.85) !important;
-    }
+    border-bottom: 1px solid var(--navbar-border);
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: var(--navbar-shadow);
 }
 
 .navbar-brand {
@@ -307,7 +320,7 @@ html[data-theme="dark"] .navbar {
 }
 
 .nav-link {
-    color: var(--fg, #111827) !important;
+    color: var(--nav-link-color) !important;
     font-weight: 500;
     transition: color 0.2s ease;
 }
