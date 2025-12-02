@@ -3,6 +3,7 @@ using Mystira.App.Contracts.Requests.CharacterMaps;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data;
 using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -39,7 +40,7 @@ public class CharacterMapApiService : ICharacterMapApiService
             Name = "Elarion the Wise",
             Image = "media/images/elarion.jpg",
             Audio = "media/audio/elarion_voice.mp3",
-            Metadata = new App.Domain.Models.CharacterMetadata
+            Metadata = new CharacterMetadata
             {
                 Roles = ["mentor", "peacemaker"],
                 Archetypes = ["guardian", "quiet strength"],
@@ -56,7 +57,7 @@ public class CharacterMapApiService : ICharacterMapApiService
             Name = "Grubb the Goblin",
             Image = "media/images/grubb.png",
             Audio = "media/audio/grubb_laugh.mp3",
-            Metadata = new App.Domain.Models.CharacterMetadata
+            Metadata = new CharacterMetadata
             {
                 Roles = ["trickster", "sly"],
                 Archetypes = ["sneaky foe"],
@@ -169,7 +170,7 @@ public class CharacterMapApiService : ICharacterMapApiService
         };
 
         var serializer = new SerializerBuilder()
-            .WithNamingConvention(YamlDotNet.Serialization.NamingConventions.UnderscoredNamingConvention.Instance)
+            .WithNamingConvention(UnderscoredNamingConvention.Instance)
             .Build();
 
         return serializer.Serialize(characterMapYaml);
@@ -179,7 +180,7 @@ public class CharacterMapApiService : ICharacterMapApiService
     {
         var deserializer = new DeserializerBuilder()
             .WithCaseInsensitivePropertyMatching()
-            .WithNamingConvention(YamlDotNet.Serialization.NamingConventions.UnderscoredNamingConvention.Instance)
+            .WithNamingConvention(UnderscoredNamingConvention.Instance)
             .Build();
 
         using var reader = new StreamReader(yamlStream);

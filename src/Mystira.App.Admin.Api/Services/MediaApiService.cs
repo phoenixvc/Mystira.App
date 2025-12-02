@@ -1,13 +1,10 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Application.Ports.Media;
 using Mystira.App.Application.Ports.Storage;
 using Mystira.App.Application.UseCases.Media;
-using Mystira.App.Contracts.Requests.Media;
-using Mystira.App.Contracts.Responses.Media;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data;
 
@@ -88,10 +85,10 @@ public class MediaApiService : IMediaApiService
     }
 
     /// <inheritdoc />
-    public async Task<Mystira.App.Admin.Api.Models.MediaQueryResponse> GetMediaAsync(Mystira.App.Admin.Api.Models.MediaQueryRequest request)
+    public async Task<MediaQueryResponse> GetMediaAsync(MediaQueryRequest request)
     {
         // Convert Admin.Api.Models.MediaQueryRequest to Contracts.MediaQueryRequest
-        var contractsRequest = new Mystira.App.Contracts.Requests.Media.MediaQueryRequest
+        var contractsRequest = new Contracts.Requests.Media.MediaQueryRequest
         {
             Page = request.Page,
             PageSize = request.PageSize,
@@ -105,7 +102,7 @@ public class MediaApiService : IMediaApiService
         var contractsResponse = await _listMediaUseCase.ExecuteAsync(contractsRequest);
 
         // Convert Contracts.MediaQueryResponse back to Admin.Api.Models.MediaQueryResponse
-        return new Mystira.App.Admin.Api.Models.MediaQueryResponse
+        return new MediaQueryResponse
         {
             Media = contractsResponse.Media,
             TotalCount = contractsResponse.TotalCount,
@@ -116,11 +113,11 @@ public class MediaApiService : IMediaApiService
     }
 
     /// <inheritdoc />
-    public Task<Domain.Models.MediaAsset?> GetMediaByIdAsync(string mediaId) =>
+    public Task<MediaAsset?> GetMediaByIdAsync(string mediaId) =>
         _getMediaUseCase.ExecuteAsync(mediaId);
 
     /// <inheritdoc />
-    public async Task<Domain.Models.MediaAsset> UploadMediaAsync(IFormFile file, string mediaId, string mediaType, string? description = null, List<string>? tags = null)
+    public async Task<MediaAsset> UploadMediaAsync(IFormFile file, string mediaId, string mediaType, string? description = null, List<string>? tags = null)
     {
         ValidateMediaFile(file, mediaType);
 
@@ -144,7 +141,7 @@ public class MediaApiService : IMediaApiService
         var url = await _blobStorageService.UploadMediaAsync(processedStream.Stream, processedStream.FileName, processedStream.ContentType);
 
         // Create media asset record
-        var mediaAsset = new Domain.Models.MediaAsset
+        var mediaAsset = new MediaAsset
         {
             Id = Guid.NewGuid().ToString(),
             MediaId = resolvedMediaId,
@@ -239,10 +236,10 @@ public class MediaApiService : IMediaApiService
     }
 
     /// <inheritdoc />
-    public async Task<Domain.Models.MediaAsset> UpdateMediaAsync(string mediaId, Mystira.App.Admin.Api.Models.MediaUpdateRequest updateData)
+    public async Task<MediaAsset> UpdateMediaAsync(string mediaId, MediaUpdateRequest updateData)
     {
         // Convert Admin.Api.Models.MediaUpdateRequest to Contracts.MediaUpdateRequest
-        var contractsRequest = new Mystira.App.Contracts.Requests.Media.MediaUpdateRequest
+        var contractsRequest = new Contracts.Requests.Media.MediaUpdateRequest
         {
             Description = updateData.Description,
             Tags = updateData.Tags,
@@ -514,7 +511,7 @@ public class MediaApiService : IMediaApiService
         _downloadMediaUseCase.ExecuteAsync(mediaId);
 
     /// <inheritdoc />
-    public Task<Domain.Models.MediaAsset?> GetMediaByFileNameAsync(string fileName) =>
+    public Task<MediaAsset?> GetMediaByFileNameAsync(string fileName) =>
         _getMediaByFilenameUseCase.ExecuteAsync(fileName);
 
     /// <inheritdoc />
@@ -652,7 +649,7 @@ public class MediaApiService : IMediaApiService
                         var url = await _blobStorageService.UploadMediaAsync(memoryStream, fileName, mimeType);
 
                         // Create media asset record
-                        var mediaAsset = new Domain.Models.MediaAsset
+                        var mediaAsset = new MediaAsset
                         {
                             Id = Guid.NewGuid().ToString(),
                             MediaId = mediaId,

@@ -1,8 +1,8 @@
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Contracts.Requests.CharacterMaps;
-using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Domain.Models;
 using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
 using ValidationErrorResponse = Mystira.App.Contracts.Responses.Common.ValidationErrorResponse;
@@ -217,7 +217,7 @@ public class CharacterMapsAdminController : ControllerBase
         try
         {
             var yamlContent = await _characterMapService.ExportCharacterMapsAsYamlAsync();
-            return File(System.Text.Encoding.UTF8.GetBytes(yamlContent), "application/x-yaml", "character_maps.yaml");
+            return File(Encoding.UTF8.GetBytes(yamlContent), "application/x-yaml", "character_maps.yaml");
         }
         catch (Exception ex)
         {

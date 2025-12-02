@@ -1,18 +1,22 @@
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Validation;
-using Mystira.App.Contracts.Requests.Scenarios;
-using Mystira.App.Contracts.Responses.Scenarios;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data;
 using NJsonSchema;
+using CharacterMediaMetadataEntry = Mystira.App.Domain.Models.CharacterMediaMetadataEntry;
+using CharacterMediaMetadataFile = Mystira.App.Domain.Models.CharacterMediaMetadataFile;
+using CharacterMetadata = Mystira.App.Domain.Models.CharacterMetadata;
 using CharacterReference = Mystira.App.Contracts.Responses.Scenarios.CharacterReference;
+using ClassificationTag = Mystira.App.Domain.Models.ClassificationTag;
 using CreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;
+using MediaMetadataEntry = Mystira.App.Domain.Models.MediaMetadataEntry;
+using MediaMetadataFile = Mystira.App.Domain.Models.MediaMetadataFile;
 using MediaReference = Mystira.App.Contracts.Responses.Scenarios.MediaReference;
 using MissingReference = Mystira.App.Contracts.Responses.Scenarios.MissingReference;
+using Modifier = Mystira.App.Domain.Models.Modifier;
 using ScenarioListResponse = Mystira.App.Contracts.Responses.Scenarios.ScenarioListResponse;
 using ScenarioQueryRequest = Mystira.App.Contracts.Requests.Scenarios.ScenarioQueryRequest;
 using ScenarioReferenceValidation = Mystira.App.Contracts.Responses.Scenarios.ScenarioReferenceValidation;
@@ -56,21 +60,22 @@ public class ScenarioApiService : IScenarioApiService
 
     public async Task<ScenarioListResponse> GetScenariosAsync(ScenarioQueryRequest request)
     {
-        var query = _context.Scenarios.AsQueryable();
+        // Build server-translatable base query first (avoid value-object access in provider translation)
+        var baseQuery = _context.Scenarios.AsQueryable();
 
         if (request.Difficulty.HasValue)
         {
-            query = query.Where(s => s.Difficulty == request.Difficulty.Value);
+            baseQuery = baseQuery.Where(s => s.Difficulty == request.Difficulty.Value);
         }
 
         if (request.SessionLength.HasValue)
         {
-            query = query.Where(s => s.SessionLength == request.SessionLength.Value);
+            baseQuery = baseQuery.Where(s => s.SessionLength == request.SessionLength.Value);
         }
 
         if (request.MinimumAge.HasValue)
         {
-            query = query.Where(s => s.MinimumAge <= request.MinimumAge.Value);
+            baseQuery = baseQuery.Where(s => s.MinimumAge <= request.MinimumAge.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(request.AgeGroup))
@@ -78,11 +83,11 @@ public class ScenarioApiService : IScenarioApiService
             var targetMinimumAge = GetMinimumAgeForGroup(request.AgeGroup);
             if (targetMinimumAge.HasValue)
             {
-                query = query.Where(s => s.MinimumAge <= targetMinimumAge.Value);
+                baseQuery = baseQuery.Where(s => s.MinimumAge <= targetMinimumAge.Value);
             }
             else
             {
-                query = query.Where(s => s.AgeGroup == request.AgeGroup);
+                baseQuery = baseQuery.Where(s => s.AgeGroup == request.AgeGroup);
             }
         }
 
@@ -90,15 +95,21 @@ public class ScenarioApiService : IScenarioApiService
         {
             foreach (var tag in request.Tags)
             {
-                query = query.Where(s => s.Tags.Contains(tag));
+                baseQuery = baseQuery.Where(s => s.Tags.Contains(tag));
             }
         }
+
+        // Materialize after base filters to perform value-object filters and projections safely in-memory
+        var prefiltered = await baseQuery.ToListAsync();
+
+        // Apply Archetype/CoreAxis filters in-memory to avoid provider translation of a.Value
+        IEnumerable<Scenario> filtered = prefiltered;
 
         if (request.Archetypes?.Any() == true)
         {
             foreach (var archetype in request.Archetypes)
             {
-                query = query.Where(s => s.Archetypes.Any(a => a.Value == archetype));
+                filtered = filtered.Where(s => s.Archetypes != null && s.Archetypes.Any(a => a.Value == archetype));
             }
         }
 
@@ -106,13 +117,13 @@ public class ScenarioApiService : IScenarioApiService
         {
             foreach (var axis in request.CoreAxes)
             {
-                query = query.Where(s => s.CoreAxes.Any(a => a.Value == axis));
+                filtered = filtered.Where(s => s.CoreAxes != null && s.CoreAxes.Any(a => a.Value == axis));
             }
         }
 
-        var totalCount = await query.CountAsync();
+        var totalCount = filtered.Count();
 
-        var scenarios = await query
+        var scenarios = filtered
             .OrderBy(s => s.CreatedAt)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
@@ -130,7 +141,7 @@ public class ScenarioApiService : IScenarioApiService
                 CoreAxes = s.CoreAxes.Select(a => a.Value).ToList(),
                 CreatedAt = s.CreatedAt
             })
-            .ToListAsync();
+            .ToList();
 
         return new ScenarioListResponse
         {
@@ -160,18 +171,19 @@ public class ScenarioApiService : IScenarioApiService
             Tags = request.Tags,
             Difficulty = request.Difficulty,
             SessionLength = request.SessionLength,
-            Archetypes = request.Archetypes?.Select(a => Archetype.Parse(a)!).ToList() ?? new List<Archetype>(),
+            Archetypes = ParseArchetypesOrThrow(request.Archetypes),
             AgeGroup = request.AgeGroup,
             MinimumAge = request.MinimumAge,
-            CoreAxes = request.CoreAxes?.Select(a => CoreAxis.Parse(a)!).ToList() ?? new List<CoreAxis>(),
+            CoreAxes = ParseCoreAxesOrThrow(request.CoreAxes),
             Characters = request.Characters,
             Scenes = request.Scenes,
             CreatedAt = DateTime.UtcNow
         };
 
-        await ValidateScenarioAsync(scenario);
-
         _context.Scenarios.Add(scenario);
+
+        // Validate the full scenario model before persisting
+        await ValidateScenarioAsync(scenario);
 
         try
         {
@@ -202,10 +214,10 @@ public class ScenarioApiService : IScenarioApiService
         scenario.Tags = request.Tags;
         scenario.Difficulty = request.Difficulty;
         scenario.SessionLength = request.SessionLength;
-        scenario.Archetypes = request.Archetypes?.Select(a => Archetype.Parse(a)!).ToList() ?? new List<Archetype>();
+        scenario.Archetypes = ParseArchetypesOrThrow(request.Archetypes);
         scenario.AgeGroup = request.AgeGroup;
         scenario.MinimumAge = request.MinimumAge;
-        scenario.CoreAxes = request.CoreAxes?.Select(a => CoreAxis.Parse(a)!).ToList() ?? new List<CoreAxis>();
+        scenario.CoreAxes = ParseCoreAxesOrThrow(request.CoreAxes);
         scenario.Characters = request.Characters;
         scenario.Scenes = request.Scenes;
 
@@ -215,6 +227,48 @@ public class ScenarioApiService : IScenarioApiService
 
         _logger.LogInformation("Updated scenario: {ScenarioId} - {Title}", scenario.Id, scenario.Title);
         return scenario;
+    }
+
+    private static List<Archetype> ParseArchetypesOrThrow(List<string>? values)
+    {
+        var result = new List<Archetype>();
+        if (values == null)
+        {
+            return result;
+        }
+
+        foreach (var v in values)
+        {
+            var parsed = Archetype.Parse(v);
+            if (parsed == null)
+            {
+                throw new ArgumentException($"Unknown archetype '{v}'.");
+            }
+            result.Add(parsed);
+        }
+
+        return result;
+    }
+
+    private static List<CoreAxis> ParseCoreAxesOrThrow(List<string>? values)
+    {
+        var result = new List<CoreAxis>();
+        if (values == null)
+        {
+            return result;
+        }
+
+        foreach (var v in values)
+        {
+            var parsed = CoreAxis.Parse(v);
+            if (parsed == null)
+            {
+                throw new ArgumentException($"Unknown core axis '{v}'.");
+            }
+            result.Add(parsed);
+        }
+
+        return result;
     }
 
     public async Task<bool> DeleteScenarioAsync(string id)
@@ -304,30 +358,37 @@ public class ScenarioApiService : IScenarioApiService
 
         var payload = new
         {
-            Title = request.Title,
-            Description = request.Description,
+            request.Title,
+            request.Description,
             Tags = tags,
             Difficulty = request.Difficulty.ToString(),
             SessionLength = request.SessionLength.ToString(),
-            AgeGroup = request.AgeGroup,
-            MinimumAge = request.MinimumAge,
+            request.AgeGroup,
+            request.MinimumAge,
             CoreAxes = coreAxes,
             Archetypes = archetypes,
-            Characters = characters.Select(character => new
+            Characters = characters.Select(character =>
             {
-                Id = character.Id,
-                Name = character.Name,
-                Image = character.Image,
-                Audio = character.Audio,
-                Metadata = character.Metadata == null ? null : new
+                var meta = character.Metadata;
+                return new
                 {
-                    Role = character.Metadata.Role ?? new List<string>(),
-                    Archetype = character.Metadata.Archetype?.Select(a => a.Value).ToList() ?? new List<string>(),
-                    Species = character.Metadata.Species,
-                    Age = character.Metadata.Age,
-                    Traits = character.Metadata.Traits ?? new List<string>(),
-                    Backstory = character.Metadata.Backstory
-                }
+                    character.Id,
+                    character.Name,
+                    character.Image,
+                    character.Audio,
+                    Metadata = meta == null ? null : new
+                    {
+                        Role = meta.Role ?? new List<string>(),
+                        Archetype = (meta.Archetype ?? new List<Archetype>())
+                            .Where(a => a != null)
+                            .Select(a => a.Value)
+                            .ToList(),
+                        meta.Species,
+                        meta.Age,
+                        Traits = meta.Traits ?? new List<string>(),
+                        meta.Backstory
+                    }
+                };
             }).ToList(),
             Scenes = scenes.Select(scene =>
             {
@@ -341,43 +402,43 @@ public class ScenarioApiService : IScenarioApiService
 
                 return new
                 {
-                    Id = scene.Id,
-                    Title = scene.Title,
+                    scene.Id,
+                    scene.Title,
                     Type = scene.Type.ToString().ToLowerInvariant(),
-                    Description = scene.Description,
+                    scene.Description,
                     NextScene = string.IsNullOrWhiteSpace(scene.NextSceneId) ? null : scene.NextSceneId,
-                    Difficulty = scene.Difficulty,
+                    scene.Difficulty,
                     Media = hasMedia ? new
                     {
-                        Image = media?.Image,
-                        Audio = media?.Audio,
-                        Video = media?.Video
+                        media?.Image,
+                        media?.Audio,
+                        media?.Video
                     } : null,
                     Branches = branches.Select(branch => new
                     {
-                        Choice = branch.Choice,
+                        branch.Choice,
                         NextScene = string.IsNullOrWhiteSpace(branch.NextSceneId) ? null : branch.NextSceneId,
                         EchoLog = branch.EchoLog == null ? null : new
                         {
-                            EchoType = branch.EchoLog.EchoType,
-                            Description = branch.EchoLog.Description,
-                            Strength = branch.EchoLog.Strength
+                            branch.EchoLog.EchoType,
+                            branch.EchoLog.Description,
+                            branch.EchoLog.Strength
                         },
                         CompassChange = branch.CompassChange == null ? null : new
                         {
-                            Axis = branch.CompassChange.Axis,
-                            Delta = branch.CompassChange.Delta,
-                            DevelopmentalLink = branch.CompassChange.DevelopmentalLink
+                            branch.CompassChange.Axis,
+                            branch.CompassChange.Delta,
+                            branch.CompassChange.DevelopmentalLink
                         }
                     }).ToList(),
                     EchoReveals = echoReveals.Select(reveal => new
                     {
-                        EchoType = reveal.EchoType,
-                        MinStrength = reveal.MinStrength,
-                        TriggerSceneId = reveal.TriggerSceneId,
-                        MaxAgeScenes = reveal.MaxAgeScenes,
-                        RevealMechanic = reveal.RevealMechanic,
-                        Required = reveal.Required
+                        reveal.EchoType,
+                        reveal.MinStrength,
+                        reveal.TriggerSceneId,
+                        reveal.MaxAgeScenes,
+                        reveal.RevealMechanic,
+                        reveal.Required
                     }).ToList()
                 };
             }).ToList()
@@ -538,12 +599,12 @@ public class ScenarioApiService : IScenarioApiService
             // Convert Api.Models.Character to Domain.Models.CharacterMapFileCharacter
             var allCharacters = characterMapFile.Characters.ToDictionary(
                 c => c.Id,
-                c => new Domain.Models.CharacterMapFileCharacter
+                c => new CharacterMapFileCharacter
                 {
                     Id = c.Id,
                     Name = c.Name,
                     Image = c.Image,
-                    Metadata = new Domain.Models.CharacterMetadata
+                    Metadata = new CharacterMetadata
                     {
                         Roles = c.Metadata.Roles,
                         Archetypes = c.Metadata.Archetypes,
@@ -554,8 +615,8 @@ public class ScenarioApiService : IScenarioApiService
                     }
                 });
 
-            Domain.Models.MediaMetadataFile? mediaMetadata = null;
-            Domain.Models.CharacterMediaMetadataFile? characterMetadata = null;
+            MediaMetadataFile? mediaMetadata = null;
+            CharacterMediaMetadataFile? characterMetadata = null;
 
             if (includeMetadataValidation)
             {
@@ -565,10 +626,10 @@ public class ScenarioApiService : IScenarioApiService
                     var apiCharacterMetadata = await _characterMetadataService.GetCharacterMediaMetadataFileAsync();
 
                     // Convert Api.Models to Domain.Models
-                    mediaMetadata = apiMediaMetadata == null ? null : new Domain.Models.MediaMetadataFile
+                    mediaMetadata = apiMediaMetadata == null ? null : new MediaMetadataFile
                     {
                         Id = apiMediaMetadata.Id,
-                        Entries = apiMediaMetadata.Entries.Select(e => new Domain.Models.MediaMetadataEntry
+                        Entries = apiMediaMetadata.Entries.Select(e => new MediaMetadataEntry
                         {
                             Id = e.Id,
                             Title = e.Title,
@@ -577,8 +638,8 @@ public class ScenarioApiService : IScenarioApiService
                             Description = e.Description,
                             AgeRating = e.AgeRating,
                             SubjectReferenceId = e.SubjectReferenceId,
-                            ClassificationTags = e.ClassificationTags.Select(t => new Domain.Models.ClassificationTag { Key = t.Key, Value = t.Value }).ToList(),
-                            Modifiers = e.Modifiers.Select(m => new Domain.Models.Modifier { Key = m.Key, Value = m.Value }).ToList(),
+                            ClassificationTags = e.ClassificationTags.Select(t => new ClassificationTag { Key = t.Key, Value = t.Value }).ToList(),
+                            Modifiers = e.Modifiers.Select(m => new Modifier { Key = m.Key, Value = m.Value }).ToList(),
                             Loopable = e.Loopable
                         }).ToList(),
                         CreatedAt = apiMediaMetadata.CreatedAt,
@@ -586,10 +647,10 @@ public class ScenarioApiService : IScenarioApiService
                         Version = apiMediaMetadata.Version
                     };
 
-                    characterMetadata = apiCharacterMetadata == null ? null : new Domain.Models.CharacterMediaMetadataFile
+                    characterMetadata = apiCharacterMetadata == null ? null : new CharacterMediaMetadataFile
                     {
                         Id = apiCharacterMetadata.Id,
-                        Entries = apiCharacterMetadata.Entries.Select(e => new Domain.Models.CharacterMediaMetadataEntry
+                        Entries = apiCharacterMetadata.Entries.Select(e => new CharacterMediaMetadataEntry
                         {
                             Id = e.Id,
                             Title = e.Title,
@@ -652,10 +713,10 @@ public class ScenarioApiService : IScenarioApiService
 
     private async Task ValidateSceneReferences(
         Scene scene,
-        Dictionary<string, Domain.Models.MediaAsset> allMedia,
-        Dictionary<string, Domain.Models.CharacterMapFileCharacter> allCharacters,
-        Domain.Models.MediaMetadataFile? mediaMetadata,
-        Domain.Models.CharacterMediaMetadataFile? characterMetadata,
+        Dictionary<string, MediaAsset> allMedia,
+        Dictionary<string, CharacterMapFileCharacter> allCharacters,
+        MediaMetadataFile? mediaMetadata,
+        CharacterMediaMetadataFile? characterMetadata,
         ScenarioReferenceValidation validation,
         bool includeMetadataValidation)
     {
@@ -676,8 +737,8 @@ public class ScenarioApiService : IScenarioApiService
         Scene scene,
         string? mediaId,
         string mediaType,
-        Dictionary<string, Domain.Models.MediaAsset> allMedia,
-        Domain.Models.MediaMetadataFile? mediaMetadata,
+        Dictionary<string, MediaAsset> allMedia,
+        MediaMetadataFile? mediaMetadata,
         ScenarioReferenceValidation validation,
         bool includeMetadataValidation)
     {
@@ -732,8 +793,8 @@ public class ScenarioApiService : IScenarioApiService
 
     private Task ValidateCharacterReferences(
         Scene scene,
-        Dictionary<string, Domain.Models.CharacterMapFileCharacter> allCharacters,
-        Domain.Models.CharacterMediaMetadataFile? characterMetadata,
+        Dictionary<string, CharacterMapFileCharacter> allCharacters,
+        CharacterMediaMetadataFile? characterMetadata,
         ScenarioReferenceValidation validation,
         bool includeMetadataValidation)
     {

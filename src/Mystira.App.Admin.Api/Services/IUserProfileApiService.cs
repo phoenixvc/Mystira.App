@@ -1,4 +1,3 @@
-using Mystira.App.Contracts.Requests.UserProfiles;
 using Mystira.App.Domain.Models;
 using ContractsCreateGuestProfileRequest = Mystira.App.Contracts.Requests.UserProfiles.CreateGuestProfileRequest;
 using ContractsCreateMultipleProfilesRequest = Mystira.App.Contracts.Requests.UserProfiles.CreateMultipleProfilesRequest;

@@ -1,8 +1,3 @@
-using System.Linq;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Mystira.App.Admin.Api.Services;
-using Mystira.App.Contracts.Requests.UserProfiles;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data;
 using Mystira.App.Shared.Models;
@@ -23,7 +18,7 @@ public class UserProfileApiService : IUserProfileApiService
         _userProfileService = new UserProfileService<MystiraAppDbContext>(context, logger);
     }
 
-    private static Mystira.App.Shared.Models.CreateUserProfileRequest MapToShared(ContractsCreateUserProfileRequest req) => new()
+    private static CreateUserProfileRequest MapToShared(ContractsCreateUserProfileRequest req) => new()
     {
         Id = req.Id,
         Name = req.Name,
@@ -37,7 +32,7 @@ public class UserProfileApiService : IUserProfileApiService
         SelectedAvatarMediaId = req.SelectedAvatarMediaId
     };
 
-    private static Mystira.App.Shared.Models.UpdateUserProfileRequest MapToShared(ContractsUpdateUserProfileRequest req) => new()
+    private static UpdateUserProfileRequest MapToShared(ContractsUpdateUserProfileRequest req) => new()
     {
         PreferredFantasyThemes = req.PreferredFantasyThemes,
         AgeGroup = req.AgeGroup,
@@ -51,7 +46,7 @@ public class UserProfileApiService : IUserProfileApiService
         SelectedAvatarMediaId = req.SelectedAvatarMediaId
     };
 
-    private static Mystira.App.Shared.Models.CreateGuestProfileRequest MapToShared(ContractsCreateGuestProfileRequest req) => new()
+    private static CreateGuestProfileRequest MapToShared(ContractsCreateGuestProfileRequest req) => new()
     {
         Id = req.Id,
         Name = req.Name,
@@ -59,7 +54,7 @@ public class UserProfileApiService : IUserProfileApiService
         UseAdjectiveNames = req.UseAdjectiveNames
     };
 
-    private static Mystira.App.Shared.Models.CreateMultipleProfilesRequest MapToShared(ContractsCreateMultipleProfilesRequest req) => new()
+    private static CreateMultipleProfilesRequest MapToShared(ContractsCreateMultipleProfilesRequest req) => new()
     {
         Profiles = req.Profiles.Select(MapToShared).ToList()
     };

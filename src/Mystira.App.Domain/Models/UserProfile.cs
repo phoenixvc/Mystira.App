@@ -164,6 +164,7 @@ public class AgeGroup : StringEnum<AgeGroup>
 {
     public int MinimumAge { get; set; }
     public int MaximumAge { get; set; }
+    public static string[] All { get; set; } = ["1-2", "3-5", "6-9", "10-12", "13-18"];
 
     public AgeGroup(int minimumAge, int maximumAge) : base("")
     {

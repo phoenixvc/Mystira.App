@@ -446,7 +446,7 @@ public class CreateCharacterMapRequest
     public string? Audio { get; set; }
 
     [Required]
-    public App.Domain.Models.CharacterMetadata Metadata { get; set; } = new();
+    public Domain.Models.CharacterMetadata Metadata { get; set; } = new();
 }
 
 public class UpdateCharacterMapRequest
@@ -454,7 +454,7 @@ public class UpdateCharacterMapRequest
     public string? Name { get; set; }
     public string? Image { get; set; }
     public string? Audio { get; set; }
-    public App.Domain.Models.CharacterMetadata? Metadata { get; set; }
+    public Domain.Models.CharacterMetadata? Metadata { get; set; }
 }
 
 // Badge Configuration API Models

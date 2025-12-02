@@ -1,9 +1,7 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Admin.Api.Models;
-using Mystira.App.Admin.Api.Services;
 
 namespace Mystira.App.Admin.Api.Controllers;
 

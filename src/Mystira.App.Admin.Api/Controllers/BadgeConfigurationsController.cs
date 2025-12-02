@@ -1,8 +1,8 @@
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Contracts.Requests.Badges;
-using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Domain.Models;
 using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
 using ValidationErrorResponse = Mystira.App.Contracts.Responses.Common.ValidationErrorResponse;
@@ -239,7 +239,7 @@ public class BadgeConfigurationsController : ControllerBase
         try
         {
             var yamlContent = await _badgeConfigService.ExportBadgeConfigurationsAsYamlAsync();
-            return File(System.Text.Encoding.UTF8.GetBytes(yamlContent), "application/x-yaml", "badge_configurations.yaml");
+            return File(Encoding.UTF8.GetBytes(yamlContent), "application/x-yaml", "badge_configurations.yaml");
         }
         catch (Exception ex)
         {
