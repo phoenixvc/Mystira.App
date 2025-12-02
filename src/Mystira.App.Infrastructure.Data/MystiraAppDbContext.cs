@@ -116,9 +116,8 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
-                entity.Property<string>("PartitionKeyId").ToJsonProperty("id");
                 entity.ToContainer("Accounts")
-                      .HasPartitionKey("PartitionKeyId");
+                      .HasPartitionKey(e => e.Id);
             }
 
             entity.Property(e => e.UserProfileIds)

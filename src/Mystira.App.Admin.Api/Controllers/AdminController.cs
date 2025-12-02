@@ -189,7 +189,25 @@ public class AdminController : Controller
     [HttpGet("badges/import")]
     public IActionResult ImportBadges()
     {
-        return View("ImportBadges");
+       return View("ImportBadges");
+    }
+
+    /// <summary>
+    /// Compass Axes management page
+    /// </summary>
+    [HttpGet("compassaxes")]
+    public IActionResult CompassAxes()
+    {
+       return View("CompassAxes");
+    }
+
+    /// <summary>
+    /// Archetypes management page
+    /// </summary>
+    [HttpGet("archetypes")]
+    public IActionResult Archetypes()
+    {
+       return View("Archetypes");
     }
 
     /// <summary>
