@@ -8,10 +8,11 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 300px;
+    min-height: 220px;
     background: #f8f9fa;
     border-radius: 0.5rem;
     margin-bottom: 1rem;
+    padding: 1rem;
 }
 
 .avatar-image {
@@ -33,6 +34,9 @@
 
 .avatar-thumbnails {
     gap: 0.5rem;
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 0.5rem 0;
 }
 
 .avatar-thumbnail {
@@ -41,16 +45,17 @@
     background: white;
     border: 2px solid #dee2e6;
     transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
 .avatar-thumbnail:hover {
-    border-color: #0d6efd;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    border-color: #9333ea;
+    box-shadow: 0 0 0 0.2rem rgba(147, 51, 234, 0.25);
 }
 
 .avatar-thumbnail.active {
-    border-color: #0d6efd;
-    background: #e7f1ff;
+    border-color: #9333ea;
+    background: #f3e8ff;
 }
 
 .thumbnail-image {
@@ -65,3 +70,81 @@
     cursor: not-allowed;
 }
 
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .avatar-display {
+        background: #312e81;
+    }
+    
+    .avatar-counter {
+        color: #c4b5fd;
+    }
+    
+    .avatar-thumbnail {
+        background: #1e1b4b;
+        border-color: #4c1d95;
+    }
+    
+    .avatar-thumbnail:hover {
+        border-color: #a855f7;
+        box-shadow: 0 0 0 0.2rem rgba(168, 85, 247, 0.25);
+    }
+    
+    .avatar-thumbnail.active {
+        border-color: #a855f7;
+        background: #3730a3;
+    }
+    
+    .avatar-carousel-container .card {
+        background: linear-gradient(135deg, #312e81 0%, #3730a3 100%);
+        border-color: #4c1d95;
+    }
+    
+    .avatar-carousel-container .card-title {
+        color: #f1f5f9;
+    }
+    
+    .avatar-carousel-container .alert-warning {
+        background-color: rgba(234, 179, 8, 0.2);
+        border-color: #eab308;
+        color: #fef08a;
+    }
+}
+
+html[data-theme="dark"] .avatar-display {
+    background: #312e81;
+}
+
+html[data-theme="dark"] .avatar-counter {
+    color: #c4b5fd;
+}
+
+html[data-theme="dark"] .avatar-thumbnail {
+    background: #1e1b4b;
+    border-color: #4c1d95;
+}
+
+html[data-theme="dark"] .avatar-thumbnail:hover {
+    border-color: #a855f7;
+    box-shadow: 0 0 0 0.2rem rgba(168, 85, 247, 0.25);
+}
+
+html[data-theme="dark"] .avatar-thumbnail.active {
+    border-color: #a855f7;
+    background: #3730a3;
+}
+
+html[data-theme="dark"] .avatar-carousel-container .card {
+    background: linear-gradient(135deg, #312e81 0%, #3730a3 100%);
+    border-color: #4c1d95;
+}
+
+html[data-theme="dark"] .avatar-carousel-container .card-title {
+    color: #f1f5f9;
+}
+
+html[data-theme="dark"] .avatar-carousel-container .alert-warning {
+    background-color: rgba(234, 179, 8, 0.2);
+    border-color: #eab308;
+    color: #fef08a;
+}
