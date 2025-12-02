@@ -137,13 +137,13 @@
 
 /* Dark mode support */
 html[data-theme="dark"] .bundle-card {
-    background: #1e1b4b;
-    border-color: #4c1d95;
+    background: #14122b;
+    border-color: #2d2a5e;
 }
 
 html[data-theme="dark"] .bundle-card:hover {
-    box-shadow: 0 12px 24px rgba(168, 85, 247, 0.3);
-    border-color: #a855f7;
+    box-shadow: 0 12px 24px rgba(99, 102, 241, 0.2);
+    border-color: #6366f1;
 }
 
 html[data-theme="dark"] .card-title {
@@ -155,14 +155,14 @@ html[data-theme="dark"] .card-text {
 }
 
 html[data-theme="dark"] .progress {
-    background-color: #312e81;
+    background-color: #1e1b4b;
 }
 
 html[data-theme="dark"] .card-footer {
-    background: #312e81;
-    border-top-color: #4c1d95;
+    background: #1e1b4b;
+    border-top-color: #2d2a5e;
 }
 
 html[data-theme="dark"] .card-footer span {
-    color: #c4b5fd;
+    color: #a5b4fc;
 }

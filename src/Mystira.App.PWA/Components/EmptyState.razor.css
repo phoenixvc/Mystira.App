@@ -123,13 +123,13 @@
 
 /* Dark mode support */
 html[data-theme="dark"] .empty-state {
-    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-    border-color: rgba(168, 85, 247, 0.2);
-    box-shadow: 0 4px 24px rgba(168, 85, 247, 0.1);
+    background: linear-gradient(135deg, #14122b 0%, #1e1b4b 100%);
+    border-color: rgba(99, 102, 241, 0.15);
+    box-shadow: 0 4px 24px rgba(99, 102, 241, 0.08);
 }
 
 html[data-theme="dark"] .empty-state-icon {
-    color: #a78bfa;
+    color: #818cf8;
 }
 
 html[data-theme="dark"] .empty-state-title {
@@ -141,23 +141,23 @@ html[data-theme="dark"] .empty-state-message {
 }
 
 html[data-theme="dark"] .btn-clear-filters {
-    background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
-    box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
 }
 
 html[data-theme="dark"] .btn-clear-filters:hover {
-    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
-    box-shadow: 0 8px 28px rgba(168, 85, 247, 0.5);
+    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+    box-shadow: 0 8px 28px rgba(99, 102, 241, 0.4);
 }
 
 html[data-theme="dark"] .btn-retry {
-    background: #1e1b4b;
-    color: #c4b5fd;
-    border-color: #4c1d95;
+    background: #14122b;
+    color: #a5b4fc;
+    border-color: #2d2a5e;
 }
 
 html[data-theme="dark"] .btn-retry:hover {
-    background: #312e81;
-    border-color: #a855f7;
-    box-shadow: 0 6px 16px rgba(168, 85, 247, 0.2);
+    background: #1e1b4b;
+    border-color: #6366f1;
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.15);
 }

@@ -65,18 +65,18 @@ footer {
 /* Dark Mode Support for Profile Dropdown Menu */
 @media (prefers-color-scheme: dark) {
     .profile-menu-dropdown {
-        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-        border: 1px solid #4c1d95;
+        background: linear-gradient(135deg, #14122b 0%, #1e1b4b 100%);
+        border: 1px solid #2d2a5e;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     }
     
     .profile-menu-dropdown .dropdown-header {
-        color: #c4b5fd;
+        color: #a5b4fc;
         background: transparent;
     }
     
     .profile-menu-dropdown .dropdown-divider {
-        border-top-color: #4c1d95;
+        border-top-color: #2d2a5e;
     }
     
     .profile-menu-dropdown .dropdown-item {
@@ -85,32 +85,32 @@ footer {
     
     .profile-menu-dropdown .dropdown-item:hover,
     .profile-menu-dropdown .dropdown-item:focus {
-        background: linear-gradient(135deg, #3730a3 0%, #4c1d95 100%);
-        color: #e9d5ff;
+        background: linear-gradient(135deg, #1e1b4b 0%, #2d2a5e 100%);
+        color: #c7d2fe;
     }
     
     .profile-menu-dropdown .dropdown-item i {
-        color: #a5b4fc;
+        color: #818cf8;
     }
     
     .profile-menu-dropdown .dropdown-item:hover i {
-        color: #c4b5fd;
+        color: #a5b4fc;
     }
 }
 
 html[data-theme="dark"] .profile-menu-dropdown {
-    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-    border: 1px solid #4c1d95;
+    background: linear-gradient(135deg, #14122b 0%, #1e1b4b 100%);
+    border: 1px solid #2d2a5e;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 html[data-theme="dark"] .profile-menu-dropdown .dropdown-header {
-    color: #c4b5fd;
+    color: #a5b4fc;
     background: transparent;
 }
 
 html[data-theme="dark"] .profile-menu-dropdown .dropdown-divider {
-    border-top-color: #4c1d95;
+    border-top-color: #2d2a5e;
 }
 
 html[data-theme="dark"] .profile-menu-dropdown .dropdown-item {
@@ -119,14 +119,14 @@ html[data-theme="dark"] .profile-menu-dropdown .dropdown-item {
 
 html[data-theme="dark"] .profile-menu-dropdown .dropdown-item:hover,
 html[data-theme="dark"] .profile-menu-dropdown .dropdown-item:focus {
-    background: linear-gradient(135deg, #3730a3 0%, #4c1d95 100%);
-    color: #e9d5ff;
+    background: linear-gradient(135deg, #1e1b4b 0%, #2d2a5e 100%);
+    color: #c7d2fe;
 }
 
 html[data-theme="dark"] .profile-menu-dropdown .dropdown-item i {
-    color: #a5b4fc;
+    color: #818cf8;
 }
 
 html[data-theme="dark"] .profile-menu-dropdown .dropdown-item:hover i {
-    color: #c4b5fd;
+    color: #a5b4fc;
 }

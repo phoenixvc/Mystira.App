@@ -29,17 +29,17 @@
 /* Modal Dark Mode Support */
 @media (prefers-color-scheme: dark) {
     .modal-content {
-        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-        border: 1px solid #4c1d95;
+        background: linear-gradient(135deg, #14122b 0%, #1e1b4b 100%);
+        border: 1px solid #2d2a5e;
         color: #f1f5f9;
     }
     
     .modal-header {
-        border-bottom-color: #4c1d95;
+        border-bottom-color: #2d2a5e;
     }
     
     .modal-footer {
-        border-top-color: #4c1d95;
+        border-top-color: #2d2a5e;
     }
     
     .modal-title {
@@ -51,48 +51,48 @@
     }
     
     .form-label {
-        color: #c4b5fd;
+        color: #a5b4fc;
     }
     
     .form-control,
     .form-select {
-        background-color: #1e1b4b;
-        border-color: #6366f1;
+        background-color: #14122b;
+        border-color: #4f46e5;
         color: #f1f5f9;
     }
     
     .form-control:focus,
     .form-select:focus {
-        background-color: #312e81;
-        border-color: #818cf8;
+        background-color: #1e1b4b;
+        border-color: #6366f1;
         color: #f1f5f9;
-        box-shadow: 0 0 0 0.25rem rgba(129, 140, 248, 0.25);
+        box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25);
     }
     
     .form-control::placeholder {
-        color: #a5b4fc;
+        color: #818cf8;
     }
     
     .form-select option {
-        background-color: #1e1b4b;
+        background-color: #14122b;
         color: #f1f5f9;
     }
     
     .alert-info {
-        background-color: rgba(99, 102, 241, 0.2);
-        border-color: #6366f1;
+        background-color: rgba(99, 102, 241, 0.15);
+        border-color: #4f46e5;
         color: #c7d2fe;
     }
     
     .alert-warning {
-        background-color: rgba(234, 179, 8, 0.2);
+        background-color: rgba(234, 179, 8, 0.15);
         border-color: #eab308;
         color: #fef08a;
     }
     
     .card {
-        background: linear-gradient(135deg, #312e81 0%, #3730a3 100%);
-        border-color: #4c1d95;
+        background: linear-gradient(135deg, #1e1b4b 0%, #2d2a5e 100%);
+        border-color: #2d2a5e;
     }
     
     .card-title {
@@ -100,29 +100,29 @@
     }
     
     .btn-secondary {
-        background-color: #374151;
-        border-color: #4b5563;
+        background-color: #2d2a5e;
+        border-color: #3d3a6e;
         color: #f1f5f9;
     }
     
     .btn-secondary:hover {
-        background-color: #4b5563;
-        border-color: #6b7280;
+        background-color: #3d3a6e;
+        border-color: #4f4c7e;
     }
 }
 
 html[data-theme="dark"] .modal-content {
-    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-    border: 1px solid #4c1d95;
+    background: linear-gradient(135deg, #14122b 0%, #1e1b4b 100%);
+    border: 1px solid #2d2a5e;
     color: #f1f5f9;
 }
 
 html[data-theme="dark"] .modal-header {
-    border-bottom-color: #4c1d95;
+    border-bottom-color: #2d2a5e;
 }
 
 html[data-theme="dark"] .modal-footer {
-    border-top-color: #4c1d95;
+    border-top-color: #2d2a5e;
 }
 
 html[data-theme="dark"] .modal-title {
@@ -134,48 +134,48 @@ html[data-theme="dark"] .btn-close {
 }
 
 html[data-theme="dark"] .form-label {
-    color: #c4b5fd;
+    color: #a5b4fc;
 }
 
 html[data-theme="dark"] .form-control,
 html[data-theme="dark"] .form-select {
-    background-color: #1e1b4b;
-    border-color: #6366f1;
+    background-color: #14122b;
+    border-color: #4f46e5;
     color: #f1f5f9;
 }
 
 html[data-theme="dark"] .form-control:focus,
 html[data-theme="dark"] .form-select:focus {
-    background-color: #312e81;
-    border-color: #818cf8;
+    background-color: #1e1b4b;
+    border-color: #6366f1;
     color: #f1f5f9;
-    box-shadow: 0 0 0 0.25rem rgba(129, 140, 248, 0.25);
+    box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25);
 }
 
 html[data-theme="dark"] .form-control::placeholder {
-    color: #a5b4fc;
+    color: #818cf8;
 }
 
 html[data-theme="dark"] .form-select option {
-    background-color: #1e1b4b;
+    background-color: #14122b;
     color: #f1f5f9;
 }
 
 html[data-theme="dark"] .alert-info {
-    background-color: rgba(99, 102, 241, 0.2);
-    border-color: #6366f1;
+    background-color: rgba(99, 102, 241, 0.15);
+    border-color: #4f46e5;
     color: #c7d2fe;
 }
 
 html[data-theme="dark"] .alert-warning {
-    background-color: rgba(234, 179, 8, 0.2);
+    background-color: rgba(234, 179, 8, 0.15);
     border-color: #eab308;
     color: #fef08a;
 }
 
 html[data-theme="dark"] .card {
-    background: linear-gradient(135deg, #312e81 0%, #3730a3 100%);
-    border-color: #4c1d95;
+    background: linear-gradient(135deg, #1e1b4b 0%, #2d2a5e 100%);
+    border-color: #2d2a5e;
 }
 
 html[data-theme="dark"] .card-title {
@@ -183,12 +183,12 @@ html[data-theme="dark"] .card-title {
 }
 
 html[data-theme="dark"] .btn-secondary {
-    background-color: #374151;
-    border-color: #4b5563;
+    background-color: #2d2a5e;
+    border-color: #3d3a6e;
     color: #f1f5f9;
 }
 
 html[data-theme="dark"] .btn-secondary:hover {
-    background-color: #4b5563;
-    border-color: #6b7280;
+    background-color: #3d3a6e;
+    border-color: #4f4c7e;
 }
