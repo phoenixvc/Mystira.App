@@ -212,11 +212,15 @@ echo "JWT key rotated successfully"
 Generate a cryptographically secure random key:
 
 ```bash
-# Using OpenSSL (recommended)
+# Using OpenSSL (recommended - Linux/macOS/WSL)
 openssl rand -base64 64
+```
 
-# Using PowerShell (Windows)
-[Convert]::ToBase64String((1..64 | ForEach-Object { Get-Random -Minimum 0 -Maximum 256 }))
+```powershell
+# Using PowerShell (Windows) - cryptographically secure
+$bytes = [byte[]]::new(64)
+[System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+[Convert]::ToBase64String($bytes)
 ```
 
 Store this in Key Vault or User Secrets, never in appsettings.json.

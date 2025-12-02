@@ -53,6 +53,8 @@ This JSON object allows GitHub Actions to authenticate with Azure.
 
 **Step 1: Create Service Principal**
 
+#### Option A: Using Bash (Linux/macOS)
+
 ```bash
 # Login to Azure
 az login
@@ -65,6 +67,23 @@ az ad sp create-for-rbac \
   --name "github-actions-mystira-app" \
   --role Contributor \
   --scopes /subscriptions/22f9eb18-6553-4b7d-9451-47d0195085fe \
+  --sdk-auth
+```
+
+#### Option B: Using PowerShell (Windows)
+
+```powershell
+# Login to Azure
+az login
+
+# Set subscription
+az account set --subscription "22f9eb18-6553-4b7d-9451-47d0195085fe"
+
+# Create Service Principal with Contributor role (scoped to all resource groups)
+az ad sp create-for-rbac `
+  --name "github-actions-mystira-app" `
+  --role Contributor `
+  --scopes "/subscriptions/22f9eb18-6553-4b7d-9451-47d0195085fe" `
   --sdk-auth
 ```
 
@@ -100,11 +119,15 @@ az ad sp create-for-rbac \
 Generate a secure key:
 
 ```bash
-# Using OpenSSL (Linux/Mac)
+# Using OpenSSL (Linux/macOS/WSL)
 openssl rand -base64 32
+```
 
-# Using PowerShell (Windows)
-[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Minimum 0 -Maximum 256 }))
+```powershell
+# Using PowerShell (Windows) - cryptographically secure
+$bytes = [byte[]]::new(32)
+[System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+[Convert]::ToBase64String($bytes)
 ```
 
 Add to GitHub:
@@ -308,6 +331,8 @@ After adding all secrets, you should have these **14 secrets** configured:
 
 ## Quick Commands Reference
 
+### Bash (Linux/macOS)
+
 ```bash
 # Login to Azure
 az login
@@ -336,6 +361,41 @@ az communication list-key \
 az webapp deployment list-publishing-profiles \
   --name mystira-app-dev-api \
   --resource-group dev-euw-rg-mystira \
+  --xml
+```
+
+### PowerShell (Windows)
+
+```powershell
+# Login to Azure
+az login
+
+# Set subscription
+az account set --subscription "22f9eb18-6553-4b7d-9451-47d0195085fe"
+
+# Create Service Principal (AZURE_CREDENTIALS)
+az ad sp create-for-rbac `
+  --name "github-actions-mystira-app" `
+  --role Contributor `
+  --scopes "/subscriptions/22f9eb18-6553-4b7d-9451-47d0195085fe" `
+  --sdk-auth
+
+# Generate JWT secret (cryptographically secure)
+$bytes = [byte[]]::new(32)
+[System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+[Convert]::ToBase64String($bytes)
+
+# Get ACS connection string
+az communication list-key `
+  --name "dev-euw-acs-mystira" `
+  --resource-group "dev-euw-rg-mystira" `
+  --query "primaryConnectionString" `
+  --output tsv
+
+# Get App Service publish profile
+az webapp deployment list-publishing-profiles `
+  --name "mystira-app-dev-api" `
+  --resource-group "dev-euw-rg-mystira" `
   --xml
 ```
 
