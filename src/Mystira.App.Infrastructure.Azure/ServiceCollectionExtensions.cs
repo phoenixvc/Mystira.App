@@ -4,6 +4,7 @@ using Azure.Storage.Blobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Mystira.App.Application.Ports.Auth;
 using Mystira.App.Application.Ports.Media;
 using Mystira.App.Application.Ports.Storage;
 using Mystira.App.Infrastructure.Azure.Configuration;
@@ -143,6 +144,17 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IBlobService, AzureBlobService>();
 
+        return services;
+    }
+
+    /// <summary>
+    /// Add Azure Communication Services email service.
+    /// Registers IEmailService from Application.Ports.Auth.
+    /// Configuration is read from AzureCommunicationServices:ConnectionString and AzureCommunicationServices:SenderEmail.
+    /// </summary>
+    public static IServiceCollection AddAzureEmailService(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddScoped<IEmailService, AzureEmailService>();
         return services;
     }
 }

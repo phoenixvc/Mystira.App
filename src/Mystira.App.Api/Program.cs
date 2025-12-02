@@ -305,12 +305,12 @@ builder.Services.AddScoped<DownloadMediaUseCase>();
 // Register application services
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
 builder.Services.AddScoped<IAppStatusService, AppStatusService>();
-builder.Services.AddScoped<Mystira.App.Api.Services.IEmailService, AzureEmailService>();
 builder.Services.AddScoped<Mystira.App.Api.Services.IJwtService, JwtService>();
 
 // Register Application.Ports adapters for CQRS handlers
 builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, JwtServiceAdapter>();
-builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IEmailService, EmailServiceAdapter>();
+// Use infrastructure email service directly - configuration is read from AzureCommunicationServices section
+builder.Services.AddAzureEmailService(builder.Configuration);
 builder.Services.AddScoped<IHealthCheckPort, HealthCheckPortAdapter>();
 builder.Services.AddScoped<IMediaMetadataService, MediaMetadataService>();
 
