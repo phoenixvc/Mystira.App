@@ -73,31 +73,31 @@
 /* Dark Mode Support */
 @media (prefers-color-scheme: dark) {
     .avatar-display {
-        background: #312e81;
+        background: #1e1b4b;
     }
     
     .avatar-counter {
-        color: #c4b5fd;
+        color: #a5b4fc;
     }
     
     .avatar-thumbnail {
-        background: #1e1b4b;
-        border-color: #4c1d95;
+        background: #14122b;
+        border-color: #2d2a5e;
     }
     
     .avatar-thumbnail:hover {
-        border-color: #a855f7;
-        box-shadow: 0 0 0 0.2rem rgba(168, 85, 247, 0.25);
+        border-color: #6366f1;
+        box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
     }
     
     .avatar-thumbnail.active {
-        border-color: #a855f7;
-        background: #3730a3;
+        border-color: #6366f1;
+        background: #1e1b4b;
     }
     
     .avatar-carousel-container .card {
-        background: linear-gradient(135deg, #312e81 0%, #3730a3 100%);
-        border-color: #4c1d95;
+        background: linear-gradient(135deg, #1e1b4b 0%, #2d2a5e 100%);
+        border-color: #2d2a5e;
     }
     
     .avatar-carousel-container .card-title {
@@ -105,38 +105,38 @@
     }
     
     .avatar-carousel-container .alert-warning {
-        background-color: rgba(234, 179, 8, 0.2);
+        background-color: rgba(234, 179, 8, 0.15);
         border-color: #eab308;
         color: #fef08a;
     }
 }
 
 html[data-theme="dark"] .avatar-display {
-    background: #312e81;
+    background: #1e1b4b;
 }
 
 html[data-theme="dark"] .avatar-counter {
-    color: #c4b5fd;
+    color: #a5b4fc;
 }
 
 html[data-theme="dark"] .avatar-thumbnail {
-    background: #1e1b4b;
-    border-color: #4c1d95;
+    background: #14122b;
+    border-color: #2d2a5e;
 }
 
 html[data-theme="dark"] .avatar-thumbnail:hover {
-    border-color: #a855f7;
-    box-shadow: 0 0 0 0.2rem rgba(168, 85, 247, 0.25);
+    border-color: #6366f1;
+    box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
 }
 
 html[data-theme="dark"] .avatar-thumbnail.active {
-    border-color: #a855f7;
-    background: #3730a3;
+    border-color: #6366f1;
+    background: #1e1b4b;
 }
 
 html[data-theme="dark"] .avatar-carousel-container .card {
-    background: linear-gradient(135deg, #312e81 0%, #3730a3 100%);
-    border-color: #4c1d95;
+    background: linear-gradient(135deg, #1e1b4b 0%, #2d2a5e 100%);
+    border-color: #2d2a5e;
 }
 
 html[data-theme="dark"] .avatar-carousel-container .card-title {
@@ -144,7 +144,7 @@ html[data-theme="dark"] .avatar-carousel-container .card-title {
 }
 
 html[data-theme="dark"] .avatar-carousel-container .alert-warning {
-    background-color: rgba(234, 179, 8, 0.2);
+    background-color: rgba(234, 179, 8, 0.15);
     border-color: #eab308;
     color: #fef08a;
 }

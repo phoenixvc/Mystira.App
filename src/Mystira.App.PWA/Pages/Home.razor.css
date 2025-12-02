@@ -77,3 +77,46 @@
     transform: scale(1.1);
 }
 
+/* Dark mode support */
+html[data-theme="dark"] .section-header {
+    background: linear-gradient(135deg, #14122b 0%, #1e1b4b 100%);
+    border-color: rgba(99, 102, 241, 0.15);
+}
+
+html[data-theme="dark"] .section-header h5,
+html[data-theme="dark"] .section-header .section-title {
+    color: #f1f5f9;
+}
+
+html[data-theme="dark"] .section-header h5 i,
+html[data-theme="dark"] .section-header .section-title i {
+    color: #818cf8;
+}
+
+html[data-theme="dark"] .section-header .btn-outline-secondary {
+    background: #14122b;
+    border-color: #2d2a5e;
+    color: #a5b4fc;
+}
+
+html[data-theme="dark"] .section-header .btn-outline-secondary:hover {
+    background: #1e1b4b;
+    border-color: #6366f1;
+}
+
+html[data-theme="dark"] .feature-card {
+    background-color: #14122b;
+    border-color: #2d2a5e;
+}
+
+html[data-theme="dark"] .feature-card:hover {
+    box-shadow: 0 12px 24px rgba(99, 102, 241, 0.15);
+}
+
+html[data-theme="dark"] .feature-card .card-title {
+    color: #f1f5f9;
+}
+
+html[data-theme="dark"] .feature-card .card-text {
+    color: #94a3b8;
+}
