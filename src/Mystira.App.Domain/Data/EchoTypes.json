@@ -106,5 +106,11 @@
   { "value": "lesson_learned" },
   { "value": "lesson_ignored" },
   { "value": "role_locked" },
-  { "value": "destiny_revealed" }
+  { "value": "destiny_revealed" },
+  { "value": "rule_checker" },
+  { "value": "what_if_scientist" },
+  { "value": "try_again_hero" },
+  { "value": "tidy_expert" },
+  { "value": "helper_captain_coop" },
+  { "value": "rhythm_explorer" }
 ]

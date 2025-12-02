@@ -1,12 +1,6 @@
 [
-  { "value": "heroic" },
-  { "value": "guardian" },
-  { "value": "trickster" },
-  { "value": "wise/mental" },
-  { "value": "inner" },
-  { "value": "moral" },
-  { "value": "elemental" },
-  { "value": "the_vanguard" },
-  { "value": "" },
-  { "value": "elemental" },
+  { "value": "rhythm_explorer" },
+  { "value": "what_if_scientist" },
+  { "value": "routine_keeper" },
+  { "value": "helper_captain" }
 ]
