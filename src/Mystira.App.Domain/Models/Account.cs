@@ -17,6 +17,7 @@ public class Account
 
 public class SubscriptionDetails
 {
+    public string Id { get; set; } = Guid.NewGuid().ToString();
     public SubscriptionType Type { get; set; } = SubscriptionType.Free;
     public string ProductId { get; set; } = string.Empty; // App store product identifier
     public DateTime? ValidUntil { get; set; } // null for lifetime or free accounts
