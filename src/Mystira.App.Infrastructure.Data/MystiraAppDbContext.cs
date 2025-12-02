@@ -577,9 +577,9 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
-                entity.Property<string>("PartitionKeyId").ToJsonProperty("Id");
+                // Note: PendingSignups container uses /email as partition key path
                 entity.ToContainer("PendingSignups")
-                      .HasPartitionKey("PartitionKeyId");
+                      .HasPartitionKey(e => e.Email);
             }
         });
 
