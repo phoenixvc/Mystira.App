@@ -420,7 +420,8 @@ public class ScenarioApiService : IScenarioApiService
                         NextScene = string.IsNullOrWhiteSpace(branch.NextSceneId) ? null : branch.NextSceneId,
                         EchoLog = branch.EchoLog == null ? null : new
                         {
-                            branch.EchoLog.EchoType,
+                            // Schema expects a string for echo_type
+                            EchoType = branch.EchoLog.EchoType?.Value,
                             branch.EchoLog.Description,
                             branch.EchoLog.Strength
                         },
@@ -433,7 +434,8 @@ public class ScenarioApiService : IScenarioApiService
                     }).ToList(),
                     EchoReveals = echoReveals.Select(reveal => new
                     {
-                        reveal.EchoType,
+                        // Schema expects a string for echo_type
+                        EchoType = reveal.EchoType?.Value,
                         reveal.MinStrength,
                         reveal.TriggerSceneId,
                         reveal.MaxAgeScenes,
