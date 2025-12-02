@@ -15,11 +15,13 @@ namespace Mystira.App.Api.Controllers
     {
         private readonly IMediator _mediator;
         private readonly ILogger<AuthController> _logger;
+        private readonly IWebHostEnvironment _environment;
 
-        public AuthController(IMediator mediator, ILogger<AuthController> logger)
+        public AuthController(IMediator mediator, ILogger<AuthController> logger, IWebHostEnvironment environment)
         {
             _mediator = mediator;
             _logger = logger;
+            _environment = environment;
         }
 
         [HttpPost("passwordless/signup")]
@@ -35,7 +37,7 @@ namespace Mystira.App.Api.Controllers
             }
 
             var command = new RequestPasswordlessSignupCommand(request.Email, request.DisplayName);
-            var (success, message, code) = await _mediator.Send(command);
+            var (success, message, code, errorDetails) = await _mediator.Send(command);
 
             // Use PII redaction for COPPA/GDPR compliance
             _logger.LogInformation("Passwordless signup request: user={UserHash}, domain={EmailDomain}, success={Success}",
@@ -47,7 +49,9 @@ namespace Mystira.App.Api.Controllers
             {
                 Success = success,
                 Message = message,
-                Email = success ? request.Email : null
+                Email = success ? request.Email : null,
+                // Only include error details in development mode for debugging
+                ErrorDetails = _environment.IsDevelopment() ? errorDetails : null
             });
         }
 
@@ -104,7 +108,7 @@ namespace Mystira.App.Api.Controllers
             }
 
             var command = new RequestPasswordlessSigninCommand(request.Email);
-            var (success, message, code) = await _mediator.Send(command);
+            var (success, message, code, errorDetails) = await _mediator.Send(command);
 
             // Use PII redaction for COPPA/GDPR compliance
             _logger.LogInformation("Passwordless signin request: user={UserHash}, domain={EmailDomain}, success={Success}",
@@ -116,7 +120,9 @@ namespace Mystira.App.Api.Controllers
             {
                 Success = success,
                 Message = message,
-                Email = success ? request.Email : null
+                Email = success ? request.Email : null,
+                // Only include error details in development mode for debugging
+                ErrorDetails = _environment.IsDevelopment() ? errorDetails : null
             });
         }
 

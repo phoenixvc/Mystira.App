@@ -12,7 +12,7 @@ namespace Mystira.App.Application.CQRS.Auth.Commands;
 /// Validates email availability, generates secure code, and sends verification email.
 /// </summary>
 public class RequestPasswordlessSignupCommandHandler
-    : ICommandHandler<RequestPasswordlessSignupCommand, (bool Success, string Message, string? Code)>
+    : ICommandHandler<RequestPasswordlessSignupCommand, (bool Success, string Message, string? Code, string? ErrorDetails)>
 {
     private readonly IAccountRepository _accountRepository;
     private readonly IPendingSignupRepository _pendingSignupRepository;
@@ -35,7 +35,7 @@ public class RequestPasswordlessSignupCommandHandler
         _logger = logger;
     }
 
-    public async Task<(bool Success, string Message, string? Code)> Handle(
+    public async Task<(bool Success, string Message, string? Code, string? ErrorDetails)> Handle(
         RequestPasswordlessSignupCommand command,
         CancellationToken cancellationToken)
     {
@@ -49,7 +49,7 @@ public class RequestPasswordlessSignupCommandHandler
             if (existingAccount != null)
             {
                 _logger.LogWarning("Signup requested for existing email: {Email}", email);
-                return (false, "An account with this email already exists", null);
+                return (false, "An account with this email already exists", null, null);
             }
 
             // Check if there's already a pending signup
@@ -57,7 +57,7 @@ public class RequestPasswordlessSignupCommandHandler
             if (existingPending != null)
             {
                 _logger.LogInformation("Signup already pending for email: {Email}, reusing existing code", email);
-                return (true, "Check your email for the verification code", existingPending.Code);
+                return (true, "Check your email for the verification code", existingPending.Code, null);
             }
 
             // Generate secure verification code
@@ -84,15 +84,20 @@ public class RequestPasswordlessSignupCommandHandler
             if (!emailSuccess)
             {
                 _logger.LogWarning("Failed to send verification email to {Email}: {Error}", email, emailError);
-                return (false, "Failed to send verification email. Please try again later.", null);
+                return (false, "Failed to send verification email. Please try again later.", null, emailError);
             }
 
-            return (true, "Check your email for the verification code", code);
+            return (true, "Check your email for the verification code", code, null);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error requesting signup for email: {Email}", command.Email);
-            return (false, "An error occurred while processing your signup", null);
+            var errorDetails = $"{ex.GetType().Name}: {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                errorDetails += $" | Inner: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}";
+            }
+            return (false, "An error occurred while processing your signup", null, errorDetails);
         }
     }
 
