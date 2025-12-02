@@ -363,6 +363,10 @@ using (var scope = app.Services.CreateScope())
     try
     {
         await context.Database.EnsureCreatedAsync();
+        
+        // Seed master data (idempotent - only seeds if data doesn't exist)
+        var seeder = scope.ServiceProvider.GetRequiredService<MasterDataSeederService>();
+        await seeder.SeedAllAsync();
     }
     catch (Exception ex)
     {
