@@ -1,9 +1,9 @@
 [
-  "heroic",
-  "guardian",
-  "trickster",
-  "wise/mental",
-  "inner",
-  "moral",
-  "elemental"
+  { "value": "heroic" },
+  { "value": "guardian" },
+  { "value": "trickster" },
+  { "value": "wise/mental" },
+  { "value": "inner" },
+  { "value": "moral" },
+  { "value": "elemental" }
 ]

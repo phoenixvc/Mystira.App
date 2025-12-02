@@ -49,7 +49,7 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
             AccountId = request.AccountId,
             ProfileId = request.ProfileId,
             PlayerNames = request.PlayerNames,
-            TargetAgeGroup = AgeGroup.Parse(request.TargetAgeGroup) ?? AgeGroup.School,
+            TargetAgeGroup = AgeGroup.Parse(request.TargetAgeGroup) ?? new AgeGroup(6, 9),
             Status = SessionStatus.InProgress,
             StartTime = DateTime.UtcNow,
             ChoiceHistory = new List<SessionChoice>(),

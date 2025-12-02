@@ -15,7 +15,7 @@ public static class RandomNameGenerator
     internal static string[] AdjectiveNames => AdjectiveNamesLazy.Value;
 
     private static readonly ThreadLocal<Random> ThreadLocalRandom = new(() => new Random());
-    
+
     /// <summary>
     /// Gets the thread-local Random instance, ensuring it is never null.
     /// </summary>
@@ -23,7 +23,7 @@ public static class RandomNameGenerator
 
     private static string[] LoadNames(string fileName)
     {
-        var assembly = Assembly.GetExecutingAssembly();
+        var assembly = typeof(RandomNameGenerator).Assembly; // ensure we read from Domain assembly
         var resourceName = $"Mystira.App.Domain.Data.{fileName}";
 
         using var stream = assembly.GetManifestResourceStream(resourceName);
@@ -34,7 +34,47 @@ public static class RandomNameGenerator
 
         using var reader = new StreamReader(stream);
         var json = reader.ReadToEnd();
-        return JsonSerializer.Deserialize<string[]>(json) ?? Array.Empty<string>();
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                var list = new List<string>();
+                foreach (var el in doc.RootElement.EnumerateArray())
+                {
+                    if (el.ValueKind == JsonValueKind.Object)
+                    {
+                        string? value = null;
+                        foreach (var prop in el.EnumerateObject())
+                        {
+                            if (string.Equals(prop.Name, "value", StringComparison.OrdinalIgnoreCase)
+                                && prop.Value.ValueKind == JsonValueKind.String)
+                            {
+                                value = prop.Value.GetString();
+                                break;
+                            }
+                        }
+                        if (!string.IsNullOrWhiteSpace(value))
+                        {
+                            list.Add(value);
+                        }
+                    }
+                    else if (el.ValueKind == JsonValueKind.String)
+                    {
+                        // Backward compatibility if any string entries remain
+                        list.Add(el.GetString()!);
+                    }
+                }
+
+                return list.ToArray();
+            }
+        }
+        catch
+        {
+            // ignore and return empty below
+        }
+
+        return Array.Empty<string>();
     }
 
     /// <summary>
