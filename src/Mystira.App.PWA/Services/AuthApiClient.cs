@@ -13,6 +13,34 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
     {
     }
 
+    /// <summary>
+    /// Attempts to parse a PasswordlessVerifyResponse from an HTTP response.
+    /// </summary>
+    private async Task<PasswordlessVerifyResponse?> TryParseVerifyErrorResponseAsync(
+        HttpResponseMessage response,
+        string operationType,
+        string email)
+    {
+        try
+        {
+            var errorResult = await response.Content.ReadFromJsonAsync<PasswordlessVerifyResponse>(JsonOptions);
+            if (errorResult != null)
+            {
+                return errorResult;
+            }
+        }
+        catch (System.Text.Json.JsonException jsonEx)
+        {
+            Logger.LogWarning(jsonEx, "Failed to parse error response for passwordless {OperationType} verification for email: {Email}", operationType, email);
+        }
+
+        return new PasswordlessVerifyResponse
+        {
+            Success = false,
+            Message = $"Verification failed with status {(int)response.StatusCode}. Please try again."
+        };
+    }
+
     public async Task<PasswordlessSignupResponse?> RequestPasswordlessSignupAsync(string email, string displayName)
     {
         try
@@ -94,13 +122,27 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
             {
                 Logger.LogWarning("Passwordless signup verification failed with status: {StatusCode} for email: {Email}",
                     response.StatusCode, email);
-                return null;
+
+                return await TryParseVerifyErrorResponseAsync(response, "signup", email);
             }
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Network error verifying passwordless signup for email: {Email}", email);
+            return new PasswordlessVerifyResponse
+            {
+                Success = false,
+                Message = "Unable to connect to the server. Please check your internet connection and try again."
+            };
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error verifying passwordless signup for email: {Email}", email);
-            return null;
+            return new PasswordlessVerifyResponse
+            {
+                Success = false,
+                Message = "An unexpected error occurred during verification. Please try again."
+            };
         }
     }
 
@@ -185,13 +227,27 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
             {
                 Logger.LogWarning("Passwordless signin verification failed with status: {StatusCode} for email: {Email}",
                     response.StatusCode, email);
-                return null;
+
+                return await TryParseVerifyErrorResponseAsync(response, "signin", email);
             }
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Network error verifying passwordless signin for email: {Email}", email);
+            return new PasswordlessVerifyResponse
+            {
+                Success = false,
+                Message = "Unable to connect to the server. Please check your internet connection and try again."
+            };
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error verifying passwordless signin for email: {Email}", email);
-            return null;
+            return new PasswordlessVerifyResponse
+            {
+                Success = false,
+                Message = "An unexpected error occurred during verification. Please try again."
+            };
         }
     }
 

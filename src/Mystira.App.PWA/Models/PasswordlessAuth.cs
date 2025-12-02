@@ -16,6 +16,11 @@ public class PasswordlessVerifyResponse
     public string? RefreshToken { get; set; }
     public DateTime? TokenExpiresAt { get; set; }
     public DateTime? RefreshTokenExpiresAt { get; set; }
+
+    /// <summary>
+    /// Detailed error information. Only populated in development mode for debugging purposes.
+    /// </summary>
+    public string? ErrorDetails { get; set; }
 }
 
 public class PasswordlessSigninResponse

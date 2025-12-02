@@ -68,14 +68,16 @@ namespace Mystira.App.Api.Controllers
             }
 
             var command = new VerifyPasswordlessSignupCommand(request.Email, request.Code);
-            var (success, message, account, accessToken, refreshToken) = await _mediator.Send(command);
+            var (success, message, account, accessToken, refreshToken, errorDetails) = await _mediator.Send(command);
 
             if (!success || account == null)
             {
                 return Ok(new PasswordlessVerifyResponse
                 {
                     Success = false,
-                    Message = message
+                    Message = message,
+                    // Only include error details in development mode for debugging
+                    ErrorDetails = _environment.IsDevelopment() ? errorDetails : null
                 });
             }
 
@@ -139,14 +141,16 @@ namespace Mystira.App.Api.Controllers
             }
 
             var command = new VerifyPasswordlessSigninCommand(request.Email, request.Code);
-            var (success, message, account, accessToken, refreshToken) = await _mediator.Send(command);
+            var (success, message, account, accessToken, refreshToken, errorDetails) = await _mediator.Send(command);
 
             if (!success || account == null)
             {
                 return Ok(new PasswordlessVerifyResponse
                 {
                     Success = false,
-                    Message = message
+                    Message = message,
+                    // Only include error details in development mode for debugging
+                    ErrorDetails = _environment.IsDevelopment() ? errorDetails : null
                 });
             }
 
