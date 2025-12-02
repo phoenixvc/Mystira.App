@@ -200,7 +200,7 @@
             SearchQuery="@searchQuery"
             SearchQueryChanged="@((value) => { searchQuery = value; })"
             ShowCompleted="@showCompletedStories"
-            ShowCompletedChanged="@((value) => { showCompletedStories = value; ToggleCompletedStories(); })"
+            ShowCompletedChanged="@OnShowCompletedChanged"
             HiddenCount="@completedScenarioIds.Count"
             ResultCount="@GetResultCount()"
             ResultCountLabel="@GetResultCountLabel()"
@@ -862,6 +862,13 @@
     private void ClearAllFilters()
     {
         selectedAgeGroups.Clear();
+        ApplyFilters();
+        StateHasChanged();
+    }
+
+    private void OnShowCompletedChanged(bool value)
+    {
+        showCompletedStories = value;
         ApplyFilters();
         StateHasChanged();
     }
