@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Services;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.CompassAxes.Commands;
@@ -11,15 +12,18 @@ public class CreateCompassAxisCommandHandler : ICommandHandler<CreateCompassAxis
 {
     private readonly ICompassAxisRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IQueryCacheInvalidationService _cacheInvalidation;
     private readonly ILogger<CreateCompassAxisCommandHandler> _logger;
 
     public CreateCompassAxisCommandHandler(
         ICompassAxisRepository repository,
         IUnitOfWork unitOfWork,
+        IQueryCacheInvalidationService cacheInvalidation,
         ILogger<CreateCompassAxisCommandHandler> logger)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _cacheInvalidation = cacheInvalidation;
         _logger = logger;
     }
 
@@ -45,6 +49,9 @@ public class CreateCompassAxisCommandHandler : ICommandHandler<CreateCompassAxis
 
         await _repository.AddAsync(axis);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Invalidate cache
+        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:CompassAxes");
 
         _logger.LogInformation("Successfully created compass axis with id: {Id}", axis.Id);
         return axis;

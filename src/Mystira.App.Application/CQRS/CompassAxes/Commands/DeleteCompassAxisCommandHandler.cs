@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Services;
 
 namespace Mystira.App.Application.CQRS.CompassAxes.Commands;
 
@@ -10,15 +11,18 @@ public class DeleteCompassAxisCommandHandler : ICommandHandler<DeleteCompassAxis
 {
     private readonly ICompassAxisRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IQueryCacheInvalidationService _cacheInvalidation;
     private readonly ILogger<DeleteCompassAxisCommandHandler> _logger;
 
     public DeleteCompassAxisCommandHandler(
         ICompassAxisRepository repository,
         IUnitOfWork unitOfWork,
+        IQueryCacheInvalidationService cacheInvalidation,
         ILogger<DeleteCompassAxisCommandHandler> logger)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _cacheInvalidation = cacheInvalidation;
         _logger = logger;
     }
 
@@ -37,6 +41,9 @@ public class DeleteCompassAxisCommandHandler : ICommandHandler<DeleteCompassAxis
 
         await _repository.DeleteAsync(command.Id);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Invalidate cache
+        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:CompassAxes");
 
         _logger.LogInformation("Successfully deleted compass axis with id: {Id}", command.Id);
         return true;

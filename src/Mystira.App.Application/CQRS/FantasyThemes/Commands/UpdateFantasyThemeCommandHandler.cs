@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Services;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.FantasyThemes.Commands;
@@ -11,15 +12,18 @@ public class UpdateFantasyThemeCommandHandler : ICommandHandler<UpdateFantasyThe
 {
     private readonly IFantasyThemeRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IQueryCacheInvalidationService _cacheInvalidation;
     private readonly ILogger<UpdateFantasyThemeCommandHandler> _logger;
 
     public UpdateFantasyThemeCommandHandler(
         IFantasyThemeRepository repository,
         IUnitOfWork unitOfWork,
+        IQueryCacheInvalidationService cacheInvalidation,
         ILogger<UpdateFantasyThemeCommandHandler> logger)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _cacheInvalidation = cacheInvalidation;
         _logger = logger;
     }
 
@@ -42,6 +46,9 @@ public class UpdateFantasyThemeCommandHandler : ICommandHandler<UpdateFantasyThe
 
         await _repository.UpdateAsync(existingFantasyTheme);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Invalidate cache
+        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:FantasyThemes");
 
         _logger.LogInformation("Successfully updated fantasy theme with id: {Id}", command.Id);
         return existingFantasyTheme;

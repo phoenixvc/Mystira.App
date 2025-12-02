@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Services;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.FantasyThemes.Commands;
@@ -11,15 +12,18 @@ public class CreateFantasyThemeCommandHandler : ICommandHandler<CreateFantasyThe
 {
     private readonly IFantasyThemeRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IQueryCacheInvalidationService _cacheInvalidation;
     private readonly ILogger<CreateFantasyThemeCommandHandler> _logger;
 
     public CreateFantasyThemeCommandHandler(
         IFantasyThemeRepository repository,
         IUnitOfWork unitOfWork,
+        IQueryCacheInvalidationService cacheInvalidation,
         ILogger<CreateFantasyThemeCommandHandler> logger)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _cacheInvalidation = cacheInvalidation;
         _logger = logger;
     }
 
@@ -45,6 +49,9 @@ public class CreateFantasyThemeCommandHandler : ICommandHandler<CreateFantasyThe
 
         await _repository.AddAsync(fantasyTheme);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Invalidate cache
+        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:FantasyThemes");
 
         _logger.LogInformation("Successfully created fantasy theme with id: {Id}", fantasyTheme.Id);
         return fantasyTheme;

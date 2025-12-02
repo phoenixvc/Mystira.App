@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Services;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.AgeGroups.Commands;
@@ -11,15 +12,18 @@ public class CreateAgeGroupCommandHandler : ICommandHandler<CreateAgeGroupComman
 {
     private readonly IAgeGroupRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IQueryCacheInvalidationService _cacheInvalidation;
     private readonly ILogger<CreateAgeGroupCommandHandler> _logger;
 
     public CreateAgeGroupCommandHandler(
         IAgeGroupRepository repository,
         IUnitOfWork unitOfWork,
+        IQueryCacheInvalidationService cacheInvalidation,
         ILogger<CreateAgeGroupCommandHandler> logger)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _cacheInvalidation = cacheInvalidation;
         _logger = logger;
     }
 
@@ -53,6 +57,9 @@ public class CreateAgeGroupCommandHandler : ICommandHandler<CreateAgeGroupComman
 
         await _repository.AddAsync(ageGroup);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Invalidate cache
+        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:AgeGroups");
 
         _logger.LogInformation("Successfully created age group with id: {Id}", ageGroup.Id);
         return ageGroup;

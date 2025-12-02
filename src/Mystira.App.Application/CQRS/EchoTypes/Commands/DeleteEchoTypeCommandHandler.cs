@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Services;
 
 namespace Mystira.App.Application.CQRS.EchoTypes.Commands;
 
@@ -10,15 +11,18 @@ public class DeleteEchoTypeCommandHandler : ICommandHandler<DeleteEchoTypeComman
 {
     private readonly IEchoTypeRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IQueryCacheInvalidationService _cacheInvalidation;
     private readonly ILogger<DeleteEchoTypeCommandHandler> _logger;
 
     public DeleteEchoTypeCommandHandler(
         IEchoTypeRepository repository,
         IUnitOfWork unitOfWork,
+        IQueryCacheInvalidationService cacheInvalidation,
         ILogger<DeleteEchoTypeCommandHandler> logger)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _cacheInvalidation = cacheInvalidation;
         _logger = logger;
     }
 
@@ -37,6 +41,9 @@ public class DeleteEchoTypeCommandHandler : ICommandHandler<DeleteEchoTypeComman
 
         await _repository.DeleteAsync(command.Id);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Invalidate cache
+        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:EchoTypes");
 
         _logger.LogInformation("Successfully deleted echo type with id: {Id}", command.Id);
         return true;

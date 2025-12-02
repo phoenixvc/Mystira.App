@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Services;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.Archetypes.Commands;
@@ -11,15 +12,18 @@ public class UpdateArchetypeCommandHandler : ICommandHandler<UpdateArchetypeComm
 {
     private readonly IArchetypeRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IQueryCacheInvalidationService _cacheInvalidation;
     private readonly ILogger<UpdateArchetypeCommandHandler> _logger;
 
     public UpdateArchetypeCommandHandler(
         IArchetypeRepository repository,
         IUnitOfWork unitOfWork,
+        IQueryCacheInvalidationService cacheInvalidation,
         ILogger<UpdateArchetypeCommandHandler> logger)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _cacheInvalidation = cacheInvalidation;
         _logger = logger;
     }
 
@@ -42,6 +46,9 @@ public class UpdateArchetypeCommandHandler : ICommandHandler<UpdateArchetypeComm
 
         await _repository.UpdateAsync(existingArchetype);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Invalidate cache
+        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:Archetypes");
 
         _logger.LogInformation("Successfully updated archetype with id: {Id}", command.Id);
         return existingArchetype;

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Services;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.EchoTypes.Commands;
@@ -11,15 +12,18 @@ public class CreateEchoTypeCommandHandler : ICommandHandler<CreateEchoTypeComman
 {
     private readonly IEchoTypeRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IQueryCacheInvalidationService _cacheInvalidation;
     private readonly ILogger<CreateEchoTypeCommandHandler> _logger;
 
     public CreateEchoTypeCommandHandler(
         IEchoTypeRepository repository,
         IUnitOfWork unitOfWork,
+        IQueryCacheInvalidationService cacheInvalidation,
         ILogger<CreateEchoTypeCommandHandler> logger)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _cacheInvalidation = cacheInvalidation;
         _logger = logger;
     }
 
@@ -45,6 +49,9 @@ public class CreateEchoTypeCommandHandler : ICommandHandler<CreateEchoTypeComman
 
         await _repository.AddAsync(echoType);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Invalidate cache
+        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:EchoTypes");
 
         _logger.LogInformation("Successfully created echo type with id: {Id}", echoType.Id);
         return echoType;

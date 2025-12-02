@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Services;
 
 namespace Mystira.App.Application.CQRS.FantasyThemes.Commands;
 
@@ -10,15 +11,18 @@ public class DeleteFantasyThemeCommandHandler : ICommandHandler<DeleteFantasyThe
 {
     private readonly IFantasyThemeRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IQueryCacheInvalidationService _cacheInvalidation;
     private readonly ILogger<DeleteFantasyThemeCommandHandler> _logger;
 
     public DeleteFantasyThemeCommandHandler(
         IFantasyThemeRepository repository,
         IUnitOfWork unitOfWork,
+        IQueryCacheInvalidationService cacheInvalidation,
         ILogger<DeleteFantasyThemeCommandHandler> logger)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _cacheInvalidation = cacheInvalidation;
         _logger = logger;
     }
 
@@ -37,6 +41,9 @@ public class DeleteFantasyThemeCommandHandler : ICommandHandler<DeleteFantasyThe
 
         await _repository.DeleteAsync(command.Id);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Invalidate cache
+        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:FantasyThemes");
 
         _logger.LogInformation("Successfully deleted fantasy theme with id: {Id}", command.Id);
         return true;

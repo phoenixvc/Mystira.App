@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Services;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.EchoTypes.Commands;
@@ -11,15 +12,18 @@ public class UpdateEchoTypeCommandHandler : ICommandHandler<UpdateEchoTypeComman
 {
     private readonly IEchoTypeRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IQueryCacheInvalidationService _cacheInvalidation;
     private readonly ILogger<UpdateEchoTypeCommandHandler> _logger;
 
     public UpdateEchoTypeCommandHandler(
         IEchoTypeRepository repository,
         IUnitOfWork unitOfWork,
+        IQueryCacheInvalidationService cacheInvalidation,
         ILogger<UpdateEchoTypeCommandHandler> logger)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _cacheInvalidation = cacheInvalidation;
         _logger = logger;
     }
 
@@ -42,6 +46,9 @@ public class UpdateEchoTypeCommandHandler : ICommandHandler<UpdateEchoTypeComman
 
         await _repository.UpdateAsync(existingEchoType);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Invalidate cache
+        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:EchoTypes");
 
         _logger.LogInformation("Successfully updated echo type with id: {Id}", command.Id);
         return existingEchoType;

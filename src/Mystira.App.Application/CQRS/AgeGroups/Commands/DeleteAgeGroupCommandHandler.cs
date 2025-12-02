@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Services;
 
 namespace Mystira.App.Application.CQRS.AgeGroups.Commands;
 
@@ -10,15 +11,18 @@ public class DeleteAgeGroupCommandHandler : ICommandHandler<DeleteAgeGroupComman
 {
     private readonly IAgeGroupRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IQueryCacheInvalidationService _cacheInvalidation;
     private readonly ILogger<DeleteAgeGroupCommandHandler> _logger;
 
     public DeleteAgeGroupCommandHandler(
         IAgeGroupRepository repository,
         IUnitOfWork unitOfWork,
+        IQueryCacheInvalidationService cacheInvalidation,
         ILogger<DeleteAgeGroupCommandHandler> logger)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _cacheInvalidation = cacheInvalidation;
         _logger = logger;
     }
 
@@ -37,6 +41,9 @@ public class DeleteAgeGroupCommandHandler : ICommandHandler<DeleteAgeGroupComman
 
         await _repository.DeleteAsync(command.Id);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Invalidate cache
+        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:AgeGroups");
 
         _logger.LogInformation("Successfully deleted age group with id: {Id}", command.Id);
         return true;

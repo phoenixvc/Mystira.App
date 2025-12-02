@@ -1,0 +1,208 @@
+@{
+    ViewData["Title"] = "Age Groups Management";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Age Groups</h3>
+                    <a href="/admin" class="btn btn-secondary">Back to Dashboard</a>
+                </div>
+                <div class="card-body">
+                    <div id="errorAlert" class="alert alert-danger d-none"></div>
+                    <div id="successAlert" class="alert alert-success d-none"></div>
+
+                    <div class="row">
+                        <div class="col-md-7">
+                            <h5>Existing Age Groups</h5>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Value</th>
+                                            <th>Age Range</th>
+                                            <th>Description</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ageGroupsTableBody">
+                                        <!-- Filled by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="col-md-5">
+                            <h5 id="formTitle">Create / Update Age Group</h5>
+                            <form id="ageGroupForm" onsubmit="return false;">
+                                <input type="hidden" id="ageGroupId" />
+                                <div class="mb-3">
+                                    <label for="ageGroupName" class="form-label">Name *</label>
+                                    <input type="text" id="ageGroupName" class="form-control" required />
+                                </div>
+                                <div class="mb-3">
+                                    <label for="ageGroupValue" class="form-label">Value *</label>
+                                    <input type="text" id="ageGroupValue" class="form-control" required placeholder="e.g., kids, tweens, teens" />
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <label for="ageGroupMinimumAge" class="form-label">Minimum Age</label>
+                                        <input type="number" id="ageGroupMinimumAge" class="form-control" min="0" max="99" />
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="ageGroupMaximumAge" class="form-label">Maximum Age</label>
+                                        <input type="number" id="ageGroupMaximumAge" class="form-control" min="0" max="99" />
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="ageGroupDescription" class="form-label">Description</label>
+                                    <textarea id="ageGroupDescription" class="form-control" rows="3"></textarea>
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-primary" onclick="saveAgeGroup()">Save</button>
+                                    <button type="button" class="btn btn-secondary" onclick="resetForm()">Reset</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const apiBase = '/api/admin/agegroups';
+
+    async function loadAgeGroups() {
+        try {
+            const res = await fetch(apiBase, { credentials: 'include' });
+            if (!res.ok) throw new Error('Failed to load age groups');
+            const data = await res.json();
+            const tbody = document.getElementById('ageGroupsTableBody');
+            tbody.innerHTML = '';
+            data.forEach(ageGroup => {
+                const tr = document.createElement('tr');
+                const ageRange = ageGroup.minimumAge !== undefined && ageGroup.maximumAge !== undefined 
+                    ? `${ageGroup.minimumAge} - ${ageGroup.maximumAge}` 
+                    : 'N/A';
+                tr.innerHTML = `
+                    <td>${ageGroup.name}</td>
+                    <td><code>${ageGroup.value}</code></td>
+                    <td>${ageRange}</td>
+                    <td>${ageGroup.description || ''}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick='editAgeGroup(${JSON.stringify(ageGroup)})'>Edit</button>
+                        <button class="btn btn-sm btn-outline-danger" onclick='deleteAgeGroup("${ageGroup.id}")'>Delete</button>
+                    </td>`;
+                tbody.appendChild(tr);
+            });
+        } catch (e) {
+            showError(e.message);
+        }
+    }
+
+    function editAgeGroup(ageGroup) {
+        document.getElementById('ageGroupId').value = ageGroup.id;
+        document.getElementById('ageGroupName').value = ageGroup.name;
+        document.getElementById('ageGroupValue').value = ageGroup.value || '';
+        document.getElementById('ageGroupMinimumAge').value = ageGroup.minimumAge || '';
+        document.getElementById('ageGroupMaximumAge').value = ageGroup.maximumAge || '';
+        document.getElementById('ageGroupDescription').value = ageGroup.description || '';
+        document.getElementById('formTitle').textContent = 'Update Age Group';
+    }
+
+    async function saveAgeGroup() {
+        const id = document.getElementById('ageGroupId').value;
+        const name = document.getElementById('ageGroupName').value;
+        const value = document.getElementById('ageGroupValue').value;
+        const minimumAge = document.getElementById('ageGroupMinimumAge').value;
+        const maximumAge = document.getElementById('ageGroupMaximumAge').value;
+        const description = document.getElementById('ageGroupDescription').value;
+
+        if (!name) {
+            showError('Name is required');
+            return;
+        }
+
+        if (!value) {
+            showError('Value is required');
+            return;
+        }
+
+        const payload = { 
+            name, 
+            value, 
+            minimumAge: minimumAge ? parseInt(minimumAge) : null,
+            maximumAge: maximumAge ? parseInt(maximumAge) : null,
+            description 
+        };
+
+        try {
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `${apiBase}/${id}` : apiBase;
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                credentials: 'include'
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.message || 'Failed to save age group');
+            }
+
+            showSuccess(id ? 'Age group updated successfully' : 'Age group created successfully');
+            resetForm();
+            loadAgeGroups();
+        } catch (e) {
+            showError(e.message);
+        }
+    }
+
+    async function deleteAgeGroup(id) {
+        if (!confirm('Are you sure you want to delete this age group?')) return;
+
+        try {
+            const res = await fetch(`${apiBase}/${id}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+
+            if (!res.ok) throw new Error('Failed to delete age group');
+
+            showSuccess('Age group deleted successfully');
+            loadAgeGroups();
+        } catch (e) {
+            showError(e.message);
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('ageGroupForm').reset();
+        document.getElementById('ageGroupId').value = '';
+        document.getElementById('formTitle').textContent = 'Create / Update Age Group';
+    }
+
+    function showError(message) {
+        const alert = document.getElementById('errorAlert');
+        alert.textContent = message;
+        alert.classList.remove('d-none');
+        setTimeout(() => alert.classList.add('d-none'), 5000);
+    }
+
+    function showSuccess(message) {
+        const alert = document.getElementById('successAlert');
+        alert.textContent = message;
+        alert.classList.remove('d-none');
+        setTimeout(() => alert.classList.add('d-none'), 5000);
+    }
+
+    // Load on page load
+    loadAgeGroups();
+</script>
