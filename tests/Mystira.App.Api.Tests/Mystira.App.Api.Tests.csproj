@@ -13,6 +13,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageReference Include="FluentAssertions" Version="6.12.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.4" />
     <PackageReference Include="coverlet.collector" Version="6.0.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -23,5 +24,6 @@
     <ProjectReference Include="..\..\src\Mystira.App.Api\Mystira.App.Api.csproj" />
     <ProjectReference Include="..\..\src\Mystira.App.Domain\Mystira.App.Domain.csproj" />
     <ProjectReference Include="..\..\src\Mystira.App.Infrastructure.Azure\Mystira.App.Infrastructure.Azure.csproj" />
+    <ProjectReference Include="..\..\src\Mystira.App.Infrastructure.Data\Mystira.App.Infrastructure.Data.csproj" />
   </ItemGroup>
 </Project>

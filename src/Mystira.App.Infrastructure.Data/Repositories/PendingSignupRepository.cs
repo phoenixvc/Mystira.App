@@ -16,7 +16,7 @@ public class PendingSignupRepository : Repository<PendingSignup>, IPendingSignup
     public async Task<PendingSignup?> GetByEmailAndCodeAsync(string email, string code)
     {
         return await _dbSet
-            .FirstOrDefaultAsync(p => p.Email == email && p.Code == code);
+            .FirstOrDefaultAsync(p => p.Email == email && p.Code == code && !p.IsUsed);
     }
 
     public async Task<PendingSignup?> GetActiveByEmailAsync(string email)
