@@ -61,7 +61,7 @@ public class MasterDataSeederService
 
         var entities = items.Select(item => new CompassAxis
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = GenerateDeterministicId("compass-axis", item.Value),
             Name = item.Value,
             Description = $"Compass axis: {item.Value}",
             CreatedAt = DateTime.UtcNow,
@@ -99,7 +99,7 @@ public class MasterDataSeederService
 
         var entities = items.Select(item => new ArchetypeDefinition
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = GenerateDeterministicId("archetype", item.Value),
             Name = item.Value,
             Description = $"Archetype: {item.Value}",
             CreatedAt = DateTime.UtcNow,
@@ -137,7 +137,7 @@ public class MasterDataSeederService
 
         var entities = items.Select(item => new EchoTypeDefinition
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = GenerateDeterministicId("echo-type", item.Value),
             Name = item.Value,
             Description = $"Echo type: {item.Value}",
             CreatedAt = DateTime.UtcNow,
@@ -175,7 +175,7 @@ public class MasterDataSeederService
 
         var entities = items.Select(item => new FantasyThemeDefinition
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = GenerateDeterministicId("fantasy-theme", item.Value),
             Name = item.Value,
             Description = $"Fantasy theme: {item.Value}",
             CreatedAt = DateTime.UtcNow,
@@ -213,7 +213,7 @@ public class MasterDataSeederService
 
         var entities = items.Select(item => new AgeGroupDefinition
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = GenerateDeterministicId("age-group", item.Value),
             Name = item.Name,
             Value = item.Value,
             MinimumAge = item.MinimumAge,
@@ -260,6 +260,21 @@ public class MasterDataSeederService
         {
             PropertyNameCaseInsensitive = true
         };
+    }
+
+    /// <summary>
+    /// Generates a deterministic ID based on entity type and name.
+    /// This ensures idempotent seeding operations.
+    /// </summary>
+    private static string GenerateDeterministicId(string entityType, string name)
+    {
+        var input = $"{entityType}:{name.ToLowerInvariant()}";
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(input));
+        // Create a GUID-like format from the first 16 bytes of the hash
+        var guidBytes = new byte[16];
+        Array.Copy(hash, guidBytes, 16);
+        return new Guid(guidBytes).ToString();
     }
 
     private class JsonValueItem
