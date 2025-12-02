@@ -27,6 +27,7 @@ public class SubscriptionDetails
 
 public class AccountSettings
 {
+    public string Id { get; set; } = Guid.NewGuid().ToString();
     public bool CacheCredentials { get; set; } = true;
     public bool RequireAuthOnStartup { get; set; } = false;
     public string PreferredLanguage { get; set; } = "en";
