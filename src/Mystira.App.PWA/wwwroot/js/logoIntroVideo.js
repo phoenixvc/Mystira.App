@@ -89,6 +89,20 @@ window.replayLogoVideo = function() {
     });
 };
 
+// Function to skip the logo video
+window.skipLogoVideo = function() {
+    const video = document.getElementById('logo-intro-video');
+
+    if (!video) {
+        console.log('Video element not found');
+        return;
+    }
+
+    // Pause and reset video
+    video.pause();
+    video.currentTime = 0;
+};
+
 // Cleanup function to remove references when component is disposed
 window.cleanupLogoIntroVideo = function() {
     const video = document.getElementById('logo-intro-video');
