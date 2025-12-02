@@ -122,11 +122,7 @@ public class VerifyPasswordlessSignupCommandHandler
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error verifying signup for email: {Email}", command.Email);
-            var errorDetails = $"{ex.GetType().Name}: {ex.Message}";
-            if (ex.InnerException != null)
-            {
-                errorDetails += $" | Inner: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}";
-            }
+            var errorDetails = ExceptionDetailsHelper.FormatExceptionDetails(ex);
             return (false, "An error occurred while verifying your account", null, null, null, errorDetails);
         }
     }

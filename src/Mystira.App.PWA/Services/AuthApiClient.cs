@@ -13,6 +13,34 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
     {
     }
 
+    /// <summary>
+    /// Attempts to parse a PasswordlessVerifyResponse from an HTTP response.
+    /// </summary>
+    private async Task<PasswordlessVerifyResponse?> TryParseVerifyErrorResponseAsync(
+        HttpResponseMessage response,
+        string operationType,
+        string email)
+    {
+        try
+        {
+            var errorResult = await response.Content.ReadFromJsonAsync<PasswordlessVerifyResponse>(JsonOptions);
+            if (errorResult != null)
+            {
+                return errorResult;
+            }
+        }
+        catch (System.Text.Json.JsonException jsonEx)
+        {
+            Logger.LogWarning(jsonEx, "Failed to parse error response for passwordless {OperationType} verification for email: {Email}", operationType, email);
+        }
+
+        return new PasswordlessVerifyResponse
+        {
+            Success = false,
+            Message = $"Verification failed with status {(int)response.StatusCode}. Please try again."
+        };
+    }
+
     public async Task<PasswordlessSignupResponse?> RequestPasswordlessSignupAsync(string email, string displayName)
     {
         try
@@ -95,26 +123,7 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
                 Logger.LogWarning("Passwordless signup verification failed with status: {StatusCode} for email: {Email}",
                     response.StatusCode, email);
 
-                // Try to read error response from the API
-                try
-                {
-                    var errorResult = await response.Content.ReadFromJsonAsync<PasswordlessVerifyResponse>(JsonOptions);
-                    if (errorResult != null)
-                    {
-                        return errorResult;
-                    }
-                }
-                catch (System.Text.Json.JsonException jsonEx)
-                {
-                    Logger.LogWarning(jsonEx, "Failed to parse error response for passwordless signup verification for email: {Email}", email);
-                    // If we can't parse the error response, return a generic error
-                }
-
-                return new PasswordlessVerifyResponse
-                {
-                    Success = false,
-                    Message = $"Verification failed with status {(int)response.StatusCode}. Please try again."
-                };
+                return await TryParseVerifyErrorResponseAsync(response, "signup", email);
             }
         }
         catch (HttpRequestException ex)
@@ -219,26 +228,7 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
                 Logger.LogWarning("Passwordless signin verification failed with status: {StatusCode} for email: {Email}",
                     response.StatusCode, email);
 
-                // Try to read error response from the API
-                try
-                {
-                    var errorResult = await response.Content.ReadFromJsonAsync<PasswordlessVerifyResponse>(JsonOptions);
-                    if (errorResult != null)
-                    {
-                        return errorResult;
-                    }
-                }
-                catch (System.Text.Json.JsonException jsonEx)
-                {
-                    Logger.LogWarning(jsonEx, "Failed to parse error response for passwordless signin verification for email: {Email}", email);
-                    // If we can't parse the error response, return a generic error
-                }
-
-                return new PasswordlessVerifyResponse
-                {
-                    Success = false,
-                    Message = $"Verification failed with status {(int)response.StatusCode}. Please try again."
-                };
+                return await TryParseVerifyErrorResponseAsync(response, "signin", email);
             }
         }
         catch (HttpRequestException ex)
