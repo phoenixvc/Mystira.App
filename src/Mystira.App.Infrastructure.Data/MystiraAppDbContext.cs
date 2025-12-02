@@ -223,9 +223,8 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
-                entity.Property<string>("PartitionKeyId").ToJsonProperty("id");
                 entity.ToContainer("CompassAxes")
-                      .HasPartitionKey("PartitionKeyId");
+                      .HasPartitionKey(e => e.Id);
             }
         });
 
@@ -237,9 +236,8 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
-                entity.Property<string>("PartitionKeyId").ToJsonProperty("id");
                 entity.ToContainer("ArchetypeDefinitions")
-                      .HasPartitionKey("PartitionKeyId");
+                      .HasPartitionKey(e => e.Id);
             }
         });
 
