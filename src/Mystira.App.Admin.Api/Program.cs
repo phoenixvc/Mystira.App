@@ -195,6 +195,8 @@ builder.Services.AddScoped<IMediaMetadataFileRepository, MediaMetadataFileReposi
 builder.Services.AddScoped<ICharacterMediaMetadataFileRepository, CharacterMediaMetadataFileRepository>();
 builder.Services.AddScoped<ICharacterMapFileRepository, CharacterMapFileRepository>();
 builder.Services.AddScoped<IAvatarConfigurationFileRepository, AvatarConfigurationFileRepository>();
+builder.Services.AddScoped<ICompassAxisRepository, CompassAxisRepository>();
+builder.Services.AddScoped<IArchetypeRepository, ArchetypeRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Register Application Layer Use Cases

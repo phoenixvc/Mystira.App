@@ -32,4 +32,24 @@ public class ArchetypeRepository : IArchetypeRepository
     {
         return await _context.ArchetypeDefinitions.AnyAsync(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
+
+    public async Task AddAsync(ArchetypeDefinition archetype)
+    {
+        await _context.ArchetypeDefinitions.AddAsync(archetype);
+    }
+
+    public Task UpdateAsync(ArchetypeDefinition archetype)
+    {
+        _context.ArchetypeDefinitions.Update(archetype);
+        return Task.CompletedTask;
+    }
+
+    public async Task DeleteAsync(string id)
+    {
+        var archetype = await _context.ArchetypeDefinitions.FirstOrDefaultAsync(x => x.Id == id);
+        if (archetype != null)
+        {
+            _context.ArchetypeDefinitions.Remove(archetype);
+        }
+    }
 }

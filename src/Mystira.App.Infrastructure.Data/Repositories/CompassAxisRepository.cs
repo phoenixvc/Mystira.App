@@ -32,4 +32,24 @@ public class CompassAxisRepository : ICompassAxisRepository
     {
         return await _context.CompassAxes.AnyAsync(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
+
+    public async Task AddAsync(CompassAxis axis)
+    {
+        await _context.CompassAxes.AddAsync(axis);
+    }
+
+    public Task UpdateAsync(CompassAxis axis)
+    {
+        _context.CompassAxes.Update(axis);
+        return Task.CompletedTask;
+    }
+
+    public async Task DeleteAsync(string id)
+    {
+        var axis = await _context.CompassAxes.FirstOrDefaultAsync(x => x.Id == id);
+        if (axis != null)
+        {
+            _context.CompassAxes.Remove(axis);
+        }
+    }
 }
