@@ -78,6 +78,73 @@ html[data-theme="dark"] .hero-section {
     stroke-linecap: round;
     stroke-linejoin: round;
     filter: url(#glow);
+    stroke-dasharray: 10, 5;
+}
+
+/* Flowing animation for tubes - light traveling along the path */
+.light-tube-1 {
+    -webkit-animation: tubeFlow 3s linear infinite, tubePulse 4s ease-in-out infinite;
+    animation: tubeFlow 3s linear infinite, tubePulse 4s ease-in-out infinite;
+}
+
+.light-tube-2 {
+    -webkit-animation: tubeFlow 4s linear infinite reverse, tubePulse 4.5s ease-in-out infinite 0.5s;
+    animation: tubeFlow 4s linear infinite reverse, tubePulse 4.5s ease-in-out infinite 0.5s;
+}
+
+.light-tube-3 {
+    -webkit-animation: tubeFlow 2.5s linear infinite, tubePulse 3.5s ease-in-out infinite 1s;
+    animation: tubeFlow 2.5s linear infinite, tubePulse 3.5s ease-in-out infinite 1s;
+}
+
+.light-tube-4 {
+    -webkit-animation: tubeFlow 3.5s linear infinite reverse, tubePulse 5s ease-in-out infinite 1.5s;
+    animation: tubeFlow 3.5s linear infinite reverse, tubePulse 5s ease-in-out infinite 1.5s;
+}
+
+/* Glow layers animate slightly differently */
+.light-tube-1-glow {
+    stroke-dasharray: 15, 8;
+    -webkit-animation: tubeFlow 3s linear infinite, tubeGlowPulse 4s ease-in-out infinite;
+    animation: tubeFlow 3s linear infinite, tubeGlowPulse 4s ease-in-out infinite;
+}
+
+.light-tube-2-glow {
+    stroke-dasharray: 15, 8;
+    -webkit-animation: tubeFlow 4s linear infinite reverse, tubeGlowPulse 4.5s ease-in-out infinite 0.5s;
+    animation: tubeFlow 4s linear infinite reverse, tubeGlowPulse 4.5s ease-in-out infinite 0.5s;
+}
+
+.light-tube-3-glow {
+    stroke-dasharray: 15, 8;
+    -webkit-animation: tubeFlow 2.5s linear infinite, tubeGlowPulse 3.5s ease-in-out infinite 1s;
+    animation: tubeFlow 2.5s linear infinite, tubeGlowPulse 3.5s ease-in-out infinite 1s;
+}
+
+.light-tube-4-glow {
+    stroke-dasharray: 15, 8;
+    -webkit-animation: tubeFlow 3.5s linear infinite reverse, tubeGlowPulse 5s ease-in-out infinite 1.5s;
+    animation: tubeFlow 3.5s linear infinite reverse, tubeGlowPulse 5s ease-in-out infinite 1.5s;
+}
+
+@-webkit-keyframes tubeFlow {
+    0% { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: 30; }
+}
+
+@keyframes tubeFlow {
+    0% { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: 30; }
+}
+
+@-webkit-keyframes tubeGlowPulse {
+    0%, 100% { opacity: 0.15; }
+    50% { opacity: 0.35; }
+}
+
+@keyframes tubeGlowPulse {
+    0%, 100% { opacity: 0.15; }
+    50% { opacity: 0.35; }
 }
 
 /* Twirling animation for tube groups - with vendor prefixes for Edge/Safari */
@@ -266,27 +333,7 @@ html[data-theme="dark"] .hero-section {
     100% { transform: rotate(0deg) translateX(0) translateY(0); }
 }
 
-/* Individual tube pulse animation */
-.light-tube-1, .light-tube-1-glow {
-    -webkit-animation: tubePulse 4s ease-in-out infinite;
-    animation: tubePulse 4s ease-in-out infinite;
-}
-
-.light-tube-2, .light-tube-2-glow {
-    -webkit-animation: tubePulse 4.5s ease-in-out infinite 0.5s;
-    animation: tubePulse 4.5s ease-in-out infinite 0.5s;
-}
-
-.light-tube-3, .light-tube-3-glow {
-    -webkit-animation: tubePulse 3.5s ease-in-out infinite 1s;
-    animation: tubePulse 3.5s ease-in-out infinite 1s;
-}
-
-.light-tube-4, .light-tube-4-glow {
-    -webkit-animation: tubePulse 5s ease-in-out infinite 1.5s;
-    animation: tubePulse 5s ease-in-out infinite 1.5s;
-}
-
+/* tubePulse animation for individual tubes (used in combined animations) */
 @-webkit-keyframes tubePulse {
     0%, 100% { opacity: 0.6; stroke-width: 3; }
     50% { opacity: 0.9; stroke-width: 4; }
@@ -403,8 +450,8 @@ html[data-theme="dark"] .mystira-tagline {
 /* Hero logo container - fixed size with visible overflow for button */
 .hero-logo-container {
     position: relative;
-    width: 300px;
-    height: 300px;
+    width: 400px;
+    height: 400px;
     margin: 0 auto 20px;
     -webkit-animation: fadeIn 1s ease-in-out;
     animation: fadeIn 1s ease-in-out;
@@ -420,8 +467,8 @@ html[data-theme="dark"] .mystira-tagline {
     transform: translate(-50%, -50%);
     width: 100%;
     height: 100%;
-    max-width: 300px;
-    max-height: 300px;
+    max-width: 400px;
+    max-height: 400px;
     object-fit: contain;
     -webkit-filter: drop-shadow(0 4px 20px rgba(139, 92, 246, 0.2));
     filter: drop-shadow(0 4px 20px rgba(139, 92, 246, 0.2));
@@ -456,8 +503,8 @@ html[data-theme="dark"] .mystira-tagline {
     transform: translate(-50%, -50%);
     width: 100%;
     height: 100%;
-    max-width: 300px;
-    max-height: 300px;
+    max-width: 400px;
+    max-height: 400px;
     object-fit: contain;
     -webkit-filter: drop-shadow(0 4px 20px rgba(139, 92, 246, 0.2));
     filter: drop-shadow(0 4px 20px rgba(139, 92, 246, 0.2));
@@ -489,7 +536,7 @@ html[data-theme="dark"] .mystira-tagline {
 .replay-btn {
     position: absolute;
     bottom: 15px;
-    right: calc(50% - 130px);
+    right: calc(50% - 180px);
     -webkit-transform: none;
     transform: none;
     width: 28px;
@@ -560,6 +607,84 @@ html[data-theme="dark"] .replay-btn:hover {
 
 /* Icon adjustment */
 .replay-btn i {
+    font-size: 0.55rem;
+}
+
+/* Skip button - similar to replay button, positioned on opposite side */
+.skip-btn {
+    position: absolute;
+    bottom: 15px;
+    left: calc(50% - 180px);
+    -webkit-transform: none;
+    transform: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    background: rgba(255, 255, 255, 0.7);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    color: rgba(139, 92, 246, 0.5);
+    cursor: pointer;
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    -webkit-box-pack: center;
+    -ms-flex-pack: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    z-index: 10;
+    -webkit-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 4px rgba(139, 92, 246, 0.1);
+}
+
+.skip-btn.visible {
+    opacity: 0.6;
+    -webkit-transform: scale(1);
+    transform: scale(1);
+}
+
+.skip-btn.hidden {
+    opacity: 0;
+    -webkit-transform: scale(0.8);
+    transform: scale(0.8);
+    pointer-events: none;
+}
+
+.skip-btn:hover {
+    opacity: 1;
+    background: rgba(139, 92, 246, 0.85);
+    color: white;
+    border-color: rgba(139, 92, 246, 0.7);
+    -webkit-transform: scale(1.1);
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}
+
+.skip-btn:active {
+    -webkit-transform: scale(0.95);
+    transform: scale(0.95);
+}
+
+/* Dark mode skip button */
+html[data-theme="dark"] .skip-btn {
+    background: rgba(30, 41, 59, 0.6);
+    border-color: rgba(139, 92, 246, 0.15);
+    color: rgba(167, 139, 250, 0.5);
+}
+
+html[data-theme="dark"] .skip-btn:hover {
+    background: rgba(124, 58, 237, 0.85);
+    color: white;
+    border-color: rgba(124, 58, 237, 0.7);
+}
+
+/* Icon adjustment for skip button */
+.skip-btn i {
     font-size: 0.55rem;
 }
 
@@ -807,24 +932,35 @@ html[data-theme="dark"] .hero-description {
     }
 
     .hero-logo-container {
-        width: 200px;
-        height: 200px;
+        width: 280px;
+        height: 280px;
     }
 
     .hero-logo-video,
     .hero-logo {
-        max-width: 200px;
-        max-height: 200px;
+        max-width: 280px;
+        max-height: 280px;
     }
 
     .replay-btn {
         width: 24px;
         height: 24px;
         bottom: 10px;
-        right: calc(50% - 85px);
+        right: calc(50% - 125px);
     }
 
     .replay-btn i {
+        font-size: 0.5rem;
+    }
+
+    .skip-btn {
+        width: 24px;
+        height: 24px;
+        bottom: 10px;
+        left: calc(50% - 125px);
+    }
+
+    .skip-btn i {
         font-size: 0.5rem;
     }
 
@@ -869,19 +1005,24 @@ html[data-theme="dark"] .hero-description {
     }
 
     .hero-logo-container {
-        width: 180px;
-        height: 180px;
+        width: 240px;
+        height: 240px;
         margin-bottom: 16px;
     }
 
     .hero-logo-video,
     .hero-logo {
-        max-width: 180px;
-        max-height: 180px;
+        max-width: 240px;
+        max-height: 240px;
     }
 
     .replay-btn {
-        right: calc(50% - 75px);
+        right: calc(50% - 105px);
+        bottom: 8px;
+    }
+
+    .skip-btn {
+        left: calc(50% - 105px);
         bottom: 8px;
     }
 

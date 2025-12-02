@@ -97,6 +97,7 @@
                 <!-- Logo Intro Video (loads in background, plays when ready) -->
                 <video id="logo-intro-video"
                        class="hero-logo-video @(showVideo ? "visible" : "hidden")"
+                       controls
                        muted
                        playsinline
                        preload="auto"
@@ -118,6 +119,15 @@
                         title="Replay intro"
                         aria-label="Replay introduction video">
                     <i class="fas fa-redo-alt"></i>
+                </button>
+
+                <!-- Skip button (appears when video is playing, positioned opposite to replay) -->
+                <button id="skip-video-btn"
+                        class="skip-btn @(showVideo ? "visible" : "hidden")"
+                        @onclick="SkipVideo"
+                        title="Skip intro"
+                        aria-label="Skip introduction video">
+                    <i class="fas fa-forward"></i>
                 </button>
             </div>
             @if (ShowDescription)
@@ -231,6 +241,23 @@
         {
             // Silently fail
         }
+    }
+
+    private async Task SkipVideo()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("skipLogoVideo");
+        }
+        catch (JSException)
+        {
+            // Silently fail
+        }
+        
+        // Transition back to logo
+        showVideo = false;
+        showReplayButton = true;
+        StateHasChanged();
     }
 
     private async Task OnWatchDemo()
