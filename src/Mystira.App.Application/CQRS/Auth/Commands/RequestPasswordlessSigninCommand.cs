@@ -7,4 +7,4 @@ namespace Mystira.App.Application.CQRS.Auth.Commands;
 /// </summary>
 public record RequestPasswordlessSigninCommand(
     string Email
-) : ICommand<(bool Success, string Message, string? Code)>;
+) : ICommand<(bool Success, string Message, string? Code, string? ErrorDetails)>;

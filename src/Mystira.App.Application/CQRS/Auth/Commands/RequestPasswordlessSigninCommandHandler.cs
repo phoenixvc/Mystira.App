@@ -12,7 +12,7 @@ namespace Mystira.App.Application.CQRS.Auth.Commands;
 /// Validates account exists, generates secure code, and sends signin email.
 /// </summary>
 public class RequestPasswordlessSigninCommandHandler
-    : ICommandHandler<RequestPasswordlessSigninCommand, (bool Success, string Message, string? Code)>
+    : ICommandHandler<RequestPasswordlessSigninCommand, (bool Success, string Message, string? Code, string? ErrorDetails)>
 {
     private readonly IAccountRepository _accountRepository;
     private readonly IPendingSignupRepository _pendingSignupRepository;
@@ -35,7 +35,7 @@ public class RequestPasswordlessSigninCommandHandler
         _logger = logger;
     }
 
-    public async Task<(bool Success, string Message, string? Code)> Handle(
+    public async Task<(bool Success, string Message, string? Code, string? ErrorDetails)> Handle(
         RequestPasswordlessSigninCommand command,
         CancellationToken cancellationToken)
     {
@@ -48,7 +48,7 @@ public class RequestPasswordlessSigninCommandHandler
             if (existingAccount == null)
             {
                 _logger.LogWarning("Signin requested for non-existent email: {Email}", email);
-                return (false, "No account found with this email. Please sign up first.", null);
+                return (false, "No account found with this email. Please sign up first.", null, null);
             }
 
             // Check if there's already a pending signin
@@ -56,7 +56,7 @@ public class RequestPasswordlessSigninCommandHandler
             if (existingPending != null && existingPending.IsSignin)
             {
                 _logger.LogInformation("Signin already pending for email: {Email}, reusing existing code", email);
-                return (true, "Check your email for the sign-in code", existingPending.Code);
+                return (true, "Check your email for the sign-in code", existingPending.Code, null);
             }
 
             // Generate secure verification code
@@ -87,15 +87,20 @@ public class RequestPasswordlessSigninCommandHandler
             if (!emailSuccess)
             {
                 _logger.LogWarning("Failed to send sign-in email to {Email}: {Error}", email, emailError);
-                return (false, "Failed to send sign-in email. Please try again later.", null);
+                return (false, "Failed to send sign-in email. Please try again later.", null, emailError);
             }
 
-            return (true, "Check your email for the sign-in code", code);
+            return (true, "Check your email for the sign-in code", code, null);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error requesting signin for email: {Email}", command.Email);
-            return (false, "An error occurred while processing your sign-in request", null);
+            var errorDetails = $"{ex.GetType().Name}: {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                errorDetails += $" | Inner: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}";
+            }
+            return (false, "An error occurred while processing your sign-in request", null, errorDetails);
         }
     }
 
