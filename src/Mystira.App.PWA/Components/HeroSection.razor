@@ -10,7 +10,7 @@
                 style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: auto;"></canvas>
         
         <!-- Golden Light Tubes - vine-like tubes that twine around the logo/video area -->
-        <div class="golden-lights" aria-hidden="true" id="golden-lights-container">
+        <div class="golden-lights @(showVideo ? "video-mode" : "logo-mode")" aria-hidden="true" id="golden-lights-container">
             <svg class="golden-light-svg" viewBox="0 0 600 500" preserveAspectRatio="xMidYMid meet">
                 <!-- Twining vine tubes that wrap around center -->
                 <g class="light-tube-group light-tube-group-1">
