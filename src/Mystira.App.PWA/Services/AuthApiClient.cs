@@ -94,13 +94,46 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
             {
                 Logger.LogWarning("Passwordless signup verification failed with status: {StatusCode} for email: {Email}",
                     response.StatusCode, email);
-                return null;
+
+                // Try to read error response from the API
+                try
+                {
+                    var errorResult = await response.Content.ReadFromJsonAsync<PasswordlessVerifyResponse>(JsonOptions);
+                    if (errorResult != null)
+                    {
+                        return errorResult;
+                    }
+                }
+                catch (System.Text.Json.JsonException jsonEx)
+                {
+                    Logger.LogWarning(jsonEx, "Failed to parse error response for passwordless signup verification for email: {Email}", email);
+                    // If we can't parse the error response, return a generic error
+                }
+
+                return new PasswordlessVerifyResponse
+                {
+                    Success = false,
+                    Message = $"Verification failed with status {(int)response.StatusCode}. Please try again."
+                };
             }
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Network error verifying passwordless signup for email: {Email}", email);
+            return new PasswordlessVerifyResponse
+            {
+                Success = false,
+                Message = "Unable to connect to the server. Please check your internet connection and try again."
+            };
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error verifying passwordless signup for email: {Email}", email);
-            return null;
+            return new PasswordlessVerifyResponse
+            {
+                Success = false,
+                Message = "An unexpected error occurred during verification. Please try again."
+            };
         }
     }
 
@@ -185,13 +218,46 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
             {
                 Logger.LogWarning("Passwordless signin verification failed with status: {StatusCode} for email: {Email}",
                     response.StatusCode, email);
-                return null;
+
+                // Try to read error response from the API
+                try
+                {
+                    var errorResult = await response.Content.ReadFromJsonAsync<PasswordlessVerifyResponse>(JsonOptions);
+                    if (errorResult != null)
+                    {
+                        return errorResult;
+                    }
+                }
+                catch (System.Text.Json.JsonException jsonEx)
+                {
+                    Logger.LogWarning(jsonEx, "Failed to parse error response for passwordless signin verification for email: {Email}", email);
+                    // If we can't parse the error response, return a generic error
+                }
+
+                return new PasswordlessVerifyResponse
+                {
+                    Success = false,
+                    Message = $"Verification failed with status {(int)response.StatusCode}. Please try again."
+                };
             }
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Network error verifying passwordless signin for email: {Email}", email);
+            return new PasswordlessVerifyResponse
+            {
+                Success = false,
+                Message = "Unable to connect to the server. Please check your internet connection and try again."
+            };
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error verifying passwordless signin for email: {Email}", email);
-            return null;
+            return new PasswordlessVerifyResponse
+            {
+                Success = false,
+                Message = "An unexpected error occurred during verification. Please try again."
+            };
         }
     }
 

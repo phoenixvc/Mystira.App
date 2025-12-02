@@ -11,7 +11,7 @@ namespace Mystira.App.Application.CQRS.Auth.Commands;
 /// Validates code with rate limiting, creates account, and generates JWT tokens.
 /// </summary>
 public class VerifyPasswordlessSignupCommandHandler
-    : ICommandHandler<VerifyPasswordlessSignupCommand, (bool Success, string Message, Account? Account, string? AccessToken, string? RefreshToken)>
+    : ICommandHandler<VerifyPasswordlessSignupCommand, (bool Success, string Message, Account? Account, string? AccessToken, string? RefreshToken, string? ErrorDetails)>
 {
     private readonly IAccountRepository _accountRepository;
     private readonly IPendingSignupRepository _pendingSignupRepository;
@@ -34,7 +34,7 @@ public class VerifyPasswordlessSignupCommandHandler
         _logger = logger;
     }
 
-    public async Task<(bool Success, string Message, Account? Account, string? AccessToken, string? RefreshToken)> Handle(
+    public async Task<(bool Success, string Message, Account? Account, string? AccessToken, string? RefreshToken, string? ErrorDetails)> Handle(
         VerifyPasswordlessSignupCommand command,
         CancellationToken cancellationToken)
     {
@@ -54,13 +54,13 @@ public class VerifyPasswordlessSignupCommandHandler
                     if (pendingByEmail.FailedAttempts >= MaxFailedAttempts)
                     {
                         _logger.LogWarning("Too many failed attempts for email: {Email}", email);
-                        return (false, "Too many failed attempts. Please request a new code.", null, null, null);
+                        return (false, "Too many failed attempts. Please request a new code.", null, null, null, null);
                     }
 
                     if (pendingByEmail.ExpiresAt < DateTime.UtcNow)
                     {
                         _logger.LogWarning("Expired code for email: {Email}", email);
-                        return (false, "Your verification code has expired. Please request a new one", null, null, null);
+                        return (false, "Your verification code has expired. Please request a new one", null, null, null, null);
                     }
 
                     // Increment failed attempts
@@ -68,25 +68,25 @@ public class VerifyPasswordlessSignupCommandHandler
                     await _pendingSignupRepository.UpdateAsync(pendingByEmail);
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
                     _logger.LogWarning("Invalid code for email: {Email}", email);
-                    return (false, "Invalid verification code", null, null, null);
+                    return (false, "Invalid verification code", null, null, null, null);
                 }
 
                 _logger.LogWarning("No pending signup found for email: {Email}", email);
-                return (false, "Invalid or expired verification code", null, null, null);
+                return (false, "Invalid or expired verification code", null, null, null, null);
             }
 
             // Validate rate limiting
             if (pendingSignup.FailedAttempts >= MaxFailedAttempts)
             {
                 _logger.LogWarning("Too many failed attempts for email: {Email}", email);
-                return (false, "Too many failed attempts. Please request a new code.", null, null, null);
+                return (false, "Too many failed attempts. Please request a new code.", null, null, null, null);
             }
 
             // Validate expiration
             if (pendingSignup.ExpiresAt < DateTime.UtcNow)
             {
                 _logger.LogWarning("Expired code for email: {Email}", email);
-                return (false, "Your verification code has expired. Please request a new one", null, null, null);
+                return (false, "Your verification code has expired. Please request a new one", null, null, null, null);
             }
 
             // Create new account
@@ -117,12 +117,17 @@ public class VerifyPasswordlessSignupCommandHandler
                 account.Role);
             var refreshToken = _jwtService.GenerateRefreshToken();
 
-            return (true, "Account created successfully", account, accessToken, refreshToken);
+            return (true, "Account created successfully", account, accessToken, refreshToken, null);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error verifying signup for email: {Email}", command.Email);
-            return (false, "An error occurred while verifying your account", null, null, null);
+            var errorDetails = $"{ex.GetType().Name}: {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                errorDetails += $" | Inner: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}";
+            }
+            return (false, "An error occurred while verifying your account", null, null, null, errorDetails);
         }
     }
 }
