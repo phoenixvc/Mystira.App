@@ -39,13 +39,23 @@ public class AzureEmailService : IEmailService
                     "Azure Communication Services email client initialized. SenderEmail: {SenderEmail}",
                     _senderEmail);
             }
-            catch (Exception ex)
+            catch (ArgumentException ex)
             {
                 _logger.LogError(ex,
-                    "Failed to initialize Azure Communication Services email client. " +
+                    "Failed to initialize Azure Communication Services email client due to argument error. " +
                     "ConnectionString present: {HasConnectionString}, SenderEmail: {SenderEmail}",
                     !string.IsNullOrEmpty(connectionString),
                     _senderEmail);
+                _isEnabled = false;
+            }
+            catch (RequestFailedException ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to initialize Azure Communication Services email client due to request failure. " +
+                    "ConnectionString present: {HasConnectionString}, SenderEmail: {SenderEmail}, ErrorCode: {ErrorCode}",
+                    !string.IsNullOrEmpty(connectionString),
+                    _senderEmail,
+                    ex.ErrorCode);
                 _isEnabled = false;
             }
         }
@@ -116,13 +126,21 @@ public class AzureEmailService : IEmailService
                 operationId, toEmail, ex.ErrorCode, ex.Status, ex.Message);
             return (false, $"Failed to send email: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             _logger.LogError(ex,
-                "[{OperationId}] Unexpected error sending verification email. " +
-                "Recipient: {Email}, ExceptionType: {ExceptionType}",
-                operationId, toEmail, ex.GetType().Name);
-            return (false, "An unexpected error occurred while sending email");
+                "[{OperationId}] Invalid operation error sending verification email. " +
+                "Recipient: {Email}",
+                operationId, toEmail);
+            return (false, "Operation was invalid while sending email");
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex,
+                "[{OperationId}] Argument error sending verification email. " +
+                "Recipient: {Email}",
+                operationId, toEmail);
+            return (false, "Invalid argument provided for sending email");
         }
     }
 
@@ -183,13 +201,21 @@ public class AzureEmailService : IEmailService
                 operationId, toEmail, ex.ErrorCode, ex.Status, ex.Message);
             return (false, $"Failed to send sign-in email: {ex.Message}");
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             _logger.LogError(ex,
-                "[{OperationId}] Unexpected error sending sign-in email. " +
-                "Recipient: {Email}, ExceptionType: {ExceptionType}",
-                operationId, toEmail, ex.GetType().Name);
-            return (false, "An unexpected error occurred while sending sign-in email");
+                "[{OperationId}] Invalid operation error sending sign-in email. " +
+                "Recipient: {Email}",
+                operationId, toEmail);
+            return (false, "Operation was invalid while sending sign-in email");
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex,
+                "[{OperationId}] Argument error sending sign-in email. " +
+                "Recipient: {Email}",
+                operationId, toEmail);
+            return (false, "Invalid argument provided for sending sign-in email");
         }
     }
 
