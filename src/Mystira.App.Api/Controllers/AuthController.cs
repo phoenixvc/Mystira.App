@@ -108,7 +108,7 @@ namespace Mystira.App.Api.Controllers
             }
 
             var command = new RequestPasswordlessSigninCommand(request.Email);
-            var (success, message, code, errorDetails) = await _mediator.Send(command);
+            var (success, message, _, errorDetails) = await _mediator.Send(command);
 
             // Use PII redaction for COPPA/GDPR compliance
             _logger.LogInformation("Passwordless signin request: user={UserHash}, domain={EmailDomain}, success={Success}",
