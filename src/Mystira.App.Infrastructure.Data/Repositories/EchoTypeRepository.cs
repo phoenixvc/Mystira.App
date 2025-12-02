@@ -15,22 +15,25 @@ public class EchoTypeRepository : IEchoTypeRepository
 
     public async Task<List<EchoTypeDefinition>> GetAllAsync()
     {
-        return await _context.EchoTypeDefinitions.OrderBy(x => x.Name).ToListAsync();
+        return await _context.EchoTypeDefinitions
+            .Where(x => !x.IsDeleted)
+            .OrderBy(x => x.Name)
+            .ToListAsync();
     }
 
     public async Task<EchoTypeDefinition?> GetByIdAsync(string id)
     {
-        return await _context.EchoTypeDefinitions.FirstOrDefaultAsync(x => x.Id == id);
+        return await _context.EchoTypeDefinitions.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
     }
 
     public async Task<EchoTypeDefinition?> GetByNameAsync(string name)
     {
-        return await _context.EchoTypeDefinitions.FirstOrDefaultAsync(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        return await _context.EchoTypeDefinitions.FirstOrDefaultAsync(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && !x.IsDeleted);
     }
 
     public async Task<bool> ExistsByNameAsync(string name)
     {
-        return await _context.EchoTypeDefinitions.AnyAsync(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        return await _context.EchoTypeDefinitions.AnyAsync(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && !x.IsDeleted);
     }
 
     public async Task AddAsync(EchoTypeDefinition echoType)
@@ -49,7 +52,10 @@ public class EchoTypeRepository : IEchoTypeRepository
         var echoType = await _context.EchoTypeDefinitions.FirstOrDefaultAsync(x => x.Id == id);
         if (echoType != null)
         {
-            _context.EchoTypeDefinitions.Remove(echoType);
+            // Soft delete instead of hard delete
+            echoType.IsDeleted = true;
+            echoType.UpdatedAt = DateTime.UtcNow;
+            _context.EchoTypeDefinitions.Update(echoType);
         }
     }
 }

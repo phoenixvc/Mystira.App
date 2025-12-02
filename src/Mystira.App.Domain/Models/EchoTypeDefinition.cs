@@ -15,6 +15,11 @@ public class EchoTypeDefinition
     /// </summary>
     public string Category { get; set; } = string.Empty;
     
+    /// <summary>
+    /// Indicates if this record is soft-deleted (for referential integrity).
+    /// </summary>
+    public bool IsDeleted { get; set; } = false;
+    
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

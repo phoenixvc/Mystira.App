@@ -12,6 +12,12 @@ public class AgeGroupDefinition
     public int MinimumAge { get; set; }
     public int MaximumAge { get; set; }
     public string Description { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Indicates if this record is soft-deleted (for referential integrity).
+    /// </summary>
+    public bool IsDeleted { get; set; } = false;
+    
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

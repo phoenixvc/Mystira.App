@@ -15,22 +15,25 @@ public class FantasyThemeRepository : IFantasyThemeRepository
 
     public async Task<List<FantasyThemeDefinition>> GetAllAsync()
     {
-        return await _context.FantasyThemeDefinitions.OrderBy(x => x.Name).ToListAsync();
+        return await _context.FantasyThemeDefinitions
+            .Where(x => !x.IsDeleted)
+            .OrderBy(x => x.Name)
+            .ToListAsync();
     }
 
     public async Task<FantasyThemeDefinition?> GetByIdAsync(string id)
     {
-        return await _context.FantasyThemeDefinitions.FirstOrDefaultAsync(x => x.Id == id);
+        return await _context.FantasyThemeDefinitions.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
     }
 
     public async Task<FantasyThemeDefinition?> GetByNameAsync(string name)
     {
-        return await _context.FantasyThemeDefinitions.FirstOrDefaultAsync(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        return await _context.FantasyThemeDefinitions.FirstOrDefaultAsync(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && !x.IsDeleted);
     }
 
     public async Task<bool> ExistsByNameAsync(string name)
     {
-        return await _context.FantasyThemeDefinitions.AnyAsync(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        return await _context.FantasyThemeDefinitions.AnyAsync(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && !x.IsDeleted);
     }
 
     public async Task AddAsync(FantasyThemeDefinition fantasyTheme)
@@ -49,7 +52,10 @@ public class FantasyThemeRepository : IFantasyThemeRepository
         var fantasyTheme = await _context.FantasyThemeDefinitions.FirstOrDefaultAsync(x => x.Id == id);
         if (fantasyTheme != null)
         {
-            _context.FantasyThemeDefinitions.Remove(fantasyTheme);
+            // Soft delete instead of hard delete
+            fantasyTheme.IsDeleted = true;
+            fantasyTheme.UpdatedAt = DateTime.UtcNow;
+            _context.FantasyThemeDefinitions.Update(fantasyTheme);
         }
     }
 }
