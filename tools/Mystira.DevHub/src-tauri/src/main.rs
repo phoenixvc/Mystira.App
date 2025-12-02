@@ -27,6 +27,7 @@ use infrastructure::{infrastructure_validate, infrastructure_preview, infrastruc
 use github::{get_github_deployments, github_dispatch_workflow, github_workflow_status, github_workflow_logs, list_github_workflows};
 use azure::cli::{check_azure_cli, install_azure_cli};
 use azure::deployment::{azure_deploy_infrastructure, azure_validate_infrastructure, azure_preview_infrastructure, check_infrastructure_exists, check_infrastructure_status, azure_create_resource_group};
+use azure::deploy_now::{check_azure_login, check_github_pat, check_swa_cli, check_npm, scan_existing_resources, get_git_status, git_stage_all, git_commit, git_commit_empty, git_push, git_sync, update_cors_settings, restart_api_services, disconnect_swa_cicd, get_swa_deployment_token};
 use azure::resources::{get_azure_resources, delete_azure_resource, check_subscription_owner};
 use services::lifecycle::{prebuild_service, start_service, stop_service};
 use services::status::{get_service_status, check_service_health};
@@ -67,6 +68,21 @@ fn main() {
             check_subscription_owner,
             check_azure_cli,
             install_azure_cli,
+            check_azure_login,
+            check_github_pat,
+            check_swa_cli,
+            check_npm,
+            scan_existing_resources,
+            get_git_status,
+            git_stage_all,
+            git_commit,
+            git_commit_empty,
+            git_push,
+            git_sync,
+            update_cors_settings,
+            restart_api_services,
+            disconnect_swa_cicd,
+            get_swa_deployment_token,
             get_github_deployments,
             github_dispatch_workflow,
             github_workflow_status,
