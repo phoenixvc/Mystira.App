@@ -51,6 +51,82 @@ Without this, the "Resource not accessible by integration" error occurs when the
 
 This JSON object allows GitHub Actions to authenticate with Azure.
 
+---
+
+#### If You've Already Created a Service Principal
+
+If you've previously created a service principal and need to retrieve or reset the credentials, follow these steps:
+
+**Step 1: Find the Existing Service Principal**
+
+```bash
+# List all service principals for your app
+az ad sp list --display-name "github-actions-mystira-app" --output table
+
+# Or search by app/client ID if you have it (GUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+az ad sp show --id <CLIENT_ID>
+```
+
+**Step 2: Reset Credentials (Generate New Client Secret)**
+
+> ⚠️ **Important**: You **cannot retrieve** an existing client secret - Azure only shows it once when created. You must generate a new one.
+
+```bash
+# Reset credentials and get new client secret (Bash)
+# Replace <CLIENT_ID> with the clientId/appId from Step 1 (GUID format)
+az ad sp credential reset \
+  --id <CLIENT_ID> \
+  --query "{clientId: appId, clientSecret: password, tenantId: tenant}" \
+  --output json
+```
+
+```powershell
+# Reset credentials and get new client secret (PowerShell)
+# Replace <CLIENT_ID> with the clientId/appId from Step 1 (GUID format)
+az ad sp credential reset `
+  --id "<CLIENT_ID>" `
+  --query "{clientId: appId, clientSecret: password, tenantId: tenant}" `
+  --output json
+```
+
+**Step 3: Build the Full AZURE_CREDENTIALS JSON**
+
+The `az ad sp credential reset` command returns partial credentials. You need to build the full JSON:
+
+```json
+{
+  "clientId": "<from credential reset output>",
+  "clientSecret": "<from credential reset output>",
+  "subscriptionId": "22f9eb18-6553-4b7d-9451-47d0195085fe",
+  "tenantId": "<from credential reset output>"
+}
+```
+
+**Step 4: Verify Service Principal Permissions**
+
+```bash
+# Check current role assignments
+az role assignment list --assignee <CLIENT_ID> --all --output table
+
+# If missing Contributor role, add it:
+az role assignment create \
+  --assignee <CLIENT_ID> \
+  --role Contributor \
+  --scope /subscriptions/22f9eb18-6553-4b7d-9451-47d0195085fe
+```
+
+**Step 5: Update the GitHub Secret**
+
+1. Go to: https://github.com/phoenixvc/Mystira.App/settings/secrets/actions
+2. Click on `AZURE_CREDENTIALS`
+3. Click **Update**
+4. Paste the new JSON credentials
+5. Click **Update secret**
+
+---
+
+#### Creating a New Service Principal
+
 **Step 1: Create Service Principal**
 
 #### Option A: Using Bash (Linux/macOS)
@@ -270,6 +346,22 @@ After adding all secrets, you should have these **14 secrets** configured:
 
 ## Common Errors and Fixes
 
+### Lost or Forgotten Service Principal Credentials
+
+**Problem:** You created a service principal before but don't have the credentials anymore.
+
+**Solution:** You cannot retrieve existing secrets - you must reset them:
+
+```bash
+# Find your service principal
+az ad sp list --display-name "github-actions-mystira-app" --output table
+
+# Reset credentials (generates a new client secret)
+az ad sp credential reset --id <CLIENT_ID>
+```
+
+Then update the `AZURE_CREDENTIALS` GitHub secret with the new credentials. See the ["If You've Already Created a Service Principal"](#if-youve-already-created-a-service-principal) section above for detailed steps.
+
 ### "Resource not accessible by integration" (403)
 
 **Cause:** GitHub Actions doesn't have permission to comment on PRs.
@@ -340,7 +432,16 @@ az login
 # Set subscription
 az account set --subscription 22f9eb18-6553-4b7d-9451-47d0195085fe
 
-# Create Service Principal (AZURE_CREDENTIALS)
+# Find existing Service Principal
+az ad sp list --display-name "github-actions-mystira-app" --output table
+
+# Reset Service Principal credentials (if you lost the secret)
+az ad sp credential reset \
+  --id <CLIENT_ID> \
+  --query "{clientId: appId, clientSecret: password, tenantId: tenant}" \
+  --output json
+
+# Create NEW Service Principal (AZURE_CREDENTIALS)
 az ad sp create-for-rbac \
   --name "github-actions-mystira-app" \
   --role Contributor \
@@ -373,7 +474,16 @@ az login
 # Set subscription
 az account set --subscription "22f9eb18-6553-4b7d-9451-47d0195085fe"
 
-# Create Service Principal (AZURE_CREDENTIALS)
+# Find existing Service Principal
+az ad sp list --display-name "github-actions-mystira-app" --output table
+
+# Reset Service Principal credentials (if you lost the secret)
+az ad sp credential reset `
+  --id "<CLIENT_ID>" `
+  --query "{clientId: appId, clientSecret: password, tenantId: tenant}" `
+  --output json
+
+# Create NEW Service Principal (AZURE_CREDENTIALS)
 az ad sp create-for-rbac `
   --name "github-actions-mystira-app" `
   --role Contributor `
