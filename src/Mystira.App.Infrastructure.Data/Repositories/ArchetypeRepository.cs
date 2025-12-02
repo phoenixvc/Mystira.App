@@ -1,0 +1,35 @@
+using Microsoft.EntityFrameworkCore;
+using Mystira.App.Application.Ports.Data;
+using Mystira.App.Domain.Models;
+
+namespace Mystira.App.Infrastructure.Data.Repositories;
+
+public class ArchetypeRepository : IArchetypeRepository
+{
+    private readonly MystiraAppDbContext _context;
+
+    public ArchetypeRepository(MystiraAppDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<List<ArchetypeDefinition>> GetAllAsync()
+    {
+        return await _context.ArchetypeDefinitions.OrderBy(x => x.Name).ToListAsync();
+    }
+
+    public async Task<ArchetypeDefinition?> GetByIdAsync(string id)
+    {
+        return await _context.ArchetypeDefinitions.FirstOrDefaultAsync(x => x.Id == id);
+    }
+
+    public async Task<ArchetypeDefinition?> GetByNameAsync(string name)
+    {
+        return await _context.ArchetypeDefinitions.FirstOrDefaultAsync(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public async Task<bool> ExistsByNameAsync(string name)
+    {
+        return await _context.ArchetypeDefinitions.AnyAsync(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+    }
+}

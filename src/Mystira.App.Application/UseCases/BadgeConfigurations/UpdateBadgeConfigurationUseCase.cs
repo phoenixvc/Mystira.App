@@ -11,15 +11,18 @@ namespace Mystira.App.Application.UseCases.BadgeConfigurations;
 public class UpdateBadgeConfigurationUseCase
 {
     private readonly IBadgeConfigurationRepository _repository;
+    private readonly ICompassAxisRepository _compassAxisRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UpdateBadgeConfigurationUseCase> _logger;
 
     public UpdateBadgeConfigurationUseCase(
         IBadgeConfigurationRepository repository,
+        ICompassAxisRepository compassAxisRepository,
         IUnitOfWork unitOfWork,
         ILogger<UpdateBadgeConfigurationUseCase> logger)
     {
         _repository = repository;
+        _compassAxisRepository = compassAxisRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -55,11 +58,12 @@ public class UpdateBadgeConfigurationUseCase
 
         if (request.Axis != null)
         {
-            // Validate that the axis is from the master list
-            if (CoreAxis.Parse(request.Axis) == null)
+            // Validate that the axis exists in the database
+            var axisExists = await _compassAxisRepository.ExistsByNameAsync(request.Axis);
+            if (!axisExists)
             {
-                var allAxes = CoreAxis.ValueMap.Values.Select(a => a.Value).ToList();
-                throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", allAxes)}", nameof(request));
+                var allAxes = await _compassAxisRepository.GetAllAsync();
+                throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", allAxes.Select(a => a.Name))}", nameof(request));
             }
             badgeConfig.Axis = request.Axis;
         }
