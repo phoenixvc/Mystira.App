@@ -62,7 +62,7 @@ public static class ScenarioSchemaDefinitions
             "required": ["role", "archetype", "species", "age", "traits", "backstory"],
             "properties": {
               "role": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Character's role in the story" },
-              "archetype": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Character archetype" },
+              "archetype": { "type": "array", "items": { "type": "string" }, "minItems": 0, "description": "Character archetype" },
               "species": { "type": "string", "minLength": 1, "description": "Character species" },
               "age": { "type": "integer", "minimum": 1, "description": "Character age" },
               "traits": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Character traits" },

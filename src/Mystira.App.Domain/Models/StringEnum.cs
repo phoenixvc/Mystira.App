@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Reflection;
 using System.Text.Json;
 
@@ -10,7 +9,7 @@ public abstract class StringEnum<T> where T : StringEnum<T>
 
     public static IReadOnlyDictionary<string, T> ValueMap => LazyValueMap.Value;
 
-    public string Value { get; }
+    public string Value { get; set; }
 
     protected StringEnum(string value)
     {
@@ -20,24 +19,64 @@ public abstract class StringEnum<T> where T : StringEnum<T>
     private static Dictionary<string, T> GetAll()
     {
         var type = typeof(T);
-        var assembly = Assembly.GetExecutingAssembly();
+        var assembly = type.Assembly; // ensure we read from the assembly that defines T
         var resourceName = $"Mystira.App.Domain.Data.{type.Name}s.json";
 
         using var stream = assembly.GetManifestResourceStream(resourceName);
         if (stream == null)
         {
-            return new Dictionary<string, T>();
+            return new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
         }
 
         using var reader = new StreamReader(stream);
         var json = reader.ReadToEnd();
-        var options = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        };
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
-        var values = JsonSerializer.Deserialize<List<T>>(json, options);
-        return values?.ToDictionary(x => x.Value, x => x, StringComparer.OrdinalIgnoreCase) ?? new Dictionary<string, T>();
+        // New canonical schema: array of objects with { "value": "..." }
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                var list = new List<T>();
+                foreach (var el in doc.RootElement.EnumerateArray())
+                {
+                    string? value = null;
+                    if (el.ValueKind == JsonValueKind.Object)
+                    {
+                        foreach (var prop in el.EnumerateObject())
+                        {
+                            if (string.Equals(prop.Name, "value", StringComparison.OrdinalIgnoreCase)
+                                && prop.Value.ValueKind == JsonValueKind.String)
+                            {
+                                value = prop.Value.GetString();
+                                break;
+                            }
+                        }
+                    }
+                    else if (el.ValueKind == JsonValueKind.String)
+                    {
+                        // Backward compatibility (if any old files still exist)
+                        value = el.GetString();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        // Construct T via (string) constructor
+                        var instance = (T)Activator.CreateInstance(typeof(T), value)!;
+                        list.Add(instance);
+                    }
+                }
+
+                return list.ToDictionary(x => x.Value, x => x, StringComparer.OrdinalIgnoreCase);
+            }
+        }
+        catch
+        {
+            // If parsing fails, fall through to empty
+        }
+
+        return new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
     }
 
     public static bool TryParse(string? value, out T? result)
@@ -67,7 +106,7 @@ public abstract class StringEnum<T> where T : StringEnum<T>
 
     public override int GetHashCode()
     {
-        return Value.GetHashCode();
+        return StringComparer.OrdinalIgnoreCase.GetHashCode(Value);
     }
 
     public static bool operator ==(StringEnum<T>? left, StringEnum<T>? right)

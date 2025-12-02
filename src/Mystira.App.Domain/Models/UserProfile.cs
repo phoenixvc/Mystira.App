@@ -1,3 +1,6 @@
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
+
 namespace Mystira.App.Domain.Models;
 
 public class UserProfile
@@ -22,7 +25,8 @@ public class UserProfile
     public bool IsNpc { get; set; } = false;
 
     // Store as string for database compatibility, but provide AgeGroup access
-    private string _ageGroup = "school";
+    private string _ageGroup = "6-9";
+    [JsonPropertyName("ageGroup")]
     public string AgeGroupName
     {
         get => _ageGroup;
@@ -30,10 +34,12 @@ public class UserProfile
     }
 
     // Convenience property to get AgeGroup object
+    [NotMapped]
+    [JsonIgnore]
     public AgeGroup AgeGroup
     {
-        get => AgeGroup.Parse(_ageGroup) ?? new AgeGroup("school", 6, 9);
-        set => _ageGroup = value?.Value ?? "school";
+        get => AgeGroup.Parse(_ageGroup) ?? new AgeGroup(6, 9);
+        set => _ageGroup = value?.Value ?? "6-9";
     }
 
     // New properties from dev branch
@@ -156,29 +162,18 @@ public class UserProfile
 
 public class AgeGroup : StringEnum<AgeGroup>
 {
-    private static readonly Dictionary<string, AgeGroup> AgeGroupLookup = new();
-    public static AgeGroup Toddlers = new("toddlers", 1, 3);     // 1-3
-    public static AgeGroup Preschoolers = new("preschoolers", 4, 5); // 4-5  
-    public static AgeGroup School = new("school", 6, 9);         // 6-9
-    public static AgeGroup Preteens = new("preteens", 10, 12);     // 10-12
-    public static AgeGroup Teens = new("teens", 13, 18);           // 13-18
-    public static AgeGroup Adults = new("adults", 19, 120);        // 19+
-    public static readonly AgeGroup[] All = [Toddlers, Preschoolers, School, Preteens, Teens, Adults];
-    public string Name { get; set; }
     public int MinimumAge { get; set; }
     public int MaximumAge { get; set; }
-    public string AgeRange => $"{MinimumAge}-{MaximumAge}";
+    public static string[] All { get; set; } = ["1-2", "3-5", "6-9", "10-12", "13-18"];
 
-    public AgeGroup(string name, int minimumAge, int maximumAge) : base(name)
+    public AgeGroup(int minimumAge, int maximumAge) : base("")
     {
-        Name = name;
         MinimumAge = minimumAge;
         MaximumAge = maximumAge;
     }
 
     public AgeGroup() : base("")
     {
-        Name = string.Empty;
     }
 
     /// <summary>

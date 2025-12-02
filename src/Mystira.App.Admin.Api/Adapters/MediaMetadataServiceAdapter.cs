@@ -1,6 +1,5 @@
 using Mystira.App.Application.Ports;
 using Mystira.App.Domain.Models;
-using Mystira.App.Admin.Api.Services;
 using ApiModels = Mystira.App.Admin.Api.Models;
 
 namespace Mystira.App.Admin.Api.Adapters;
@@ -8,7 +7,7 @@ namespace Mystira.App.Admin.Api.Adapters;
 /// <summary>
 /// Adapter that adapts Admin.Api.Services.IMediaMetadataService to Application.Ports.IMediaMetadataService
 /// </summary>
-public class MediaMetadataServiceAdapter : Application.Ports.IMediaMetadataService
+public class MediaMetadataServiceAdapter : IMediaMetadataService
 {
     private readonly Services.IMediaMetadataService _apiService;
 

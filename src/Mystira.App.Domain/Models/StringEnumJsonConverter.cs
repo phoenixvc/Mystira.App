@@ -21,6 +21,32 @@ public class StringEnumJsonConverter<T> : JsonConverter<T> where T : StringEnum<
             return StringEnum<T>.Parse(value);
         }
 
+        if (reader.TokenType == JsonTokenType.StartObject)
+        {
+            using var doc = JsonDocument.ParseValue(ref reader);
+            var obj = doc.RootElement;
+            string? value = null;
+            // Try case-insensitive match for property named "value"
+            foreach (var prop in obj.EnumerateObject())
+            {
+                if (string.Equals(prop.Name, "value", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (prop.Value.ValueKind == JsonValueKind.String)
+                    {
+                        value = prop.Value.GetString();
+                    }
+                    break;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(value))
+            {
+                return StringEnum<T>.Parse(value);
+            }
+
+            throw new JsonException($"Object does not contain a 'value' property for {typeof(T).Name}.");
+        }
+
         throw new JsonException($"Cannot convert token type {reader.TokenType} to {typeof(T).Name}");
     }
 

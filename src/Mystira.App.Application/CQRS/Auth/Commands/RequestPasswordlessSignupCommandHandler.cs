@@ -52,13 +52,14 @@ public class RequestPasswordlessSignupCommandHandler
                 return (false, "An account with this email already exists", null, null);
             }
 
+            // BELOW BLOCKS RESEND CODE. TODO: Fix.
             // Check if there's already a pending signup
-            var existingPending = await _pendingSignupRepository.GetActiveByEmailAsync(email);
-            if (existingPending != null)
-            {
-                _logger.LogInformation("Signup already pending for email: {Email}, reusing existing code", email);
-                return (true, "Check your email for the verification code", existingPending.Code, null);
-            }
+            // var existingPending = await _pendingSignupRepository.GetActiveByEmailAsync(email);
+            // if (existingPending != null)
+            // {
+            //     _logger.LogInformation("Signup already pending for email: {Email}, reusing existing code", email);
+            //     return (true, "Check your email for the verification code", existingPending.Code, null);
+            // }
 
             // Generate secure verification code
             var code = GenerateSecureCode();

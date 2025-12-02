@@ -49,7 +49,15 @@ public class UserProfileRepository : Repository<UserProfile>, IUserProfileReposi
 
     public async Task<bool> ExistsByNameAsync(string name)
     {
-        return await _dbSet.AnyAsync(p => p.Name == name);
+        // Work around a Cosmos SQL translation issue with Any/Exists by using FirstOrDefault
+        // and checking for a non-null result. This generates a simple TOP 1 query.
+        var anyId = await _dbSet
+            .AsNoTracking()
+            .Where(p => p.Name == name)
+            .Select(p => p.Id)
+            .FirstOrDefaultAsync();
+
+        return anyId != null;
     }
 }
 

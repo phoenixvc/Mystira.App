@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using Mystira.App.Contracts.Requests.Scenarios;
 using Mystira.App.Contracts.Responses.Media;
 using ScenarioQueryRequest = Mystira.App.Contracts.Requests.Scenarios.ScenarioQueryRequest;
 
@@ -231,11 +230,13 @@ public class ClientApiService : IClientApiService
         {
             return "New scenario and media assets available. Refresh recommended.";
         }
-        else if (hasScenarioChanges)
+
+        if (hasScenarioChanges)
         {
             return "New scenario content available. Refresh recommended.";
         }
-        else if (hasMediaChanges)
+
+        if (hasMediaChanges)
         {
             return "New media assets available. Refresh recommended.";
         }

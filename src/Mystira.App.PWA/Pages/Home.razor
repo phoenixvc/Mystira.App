@@ -24,7 +24,7 @@
         ShowDescription="@(!isAuthenticated)"
         ShowCallToActions="@(!isAuthenticated)"
         OnWatchDemoClick="@(() => { /* TODO: Implement demo video modal */ })" />
-    
+
     <!-- Feature Cards Section (shown when not authenticated) -->
     @if (!isAuthenticated)
     {
@@ -76,7 +76,7 @@
             </div>
         </div>
     }
-    
+
     <!-- Active Adventures Section -->
     @if (isAuthenticated && !isLoading && activeSessions.Any())
     {
@@ -350,7 +350,7 @@
             </div>
         </div>
     }
-    else if (isAuthenticated && !hasProfiles)
+    else if (isAuthenticated && !hasProfiles && !isLoadingBundles && !filteredBundles.Any())
     {
         <div class="row justify-content-center">
             <div class="col-md-6 text-center">

@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data;
 

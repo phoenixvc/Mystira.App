@@ -30,8 +30,8 @@ public class GameSession
     // Convenience property to get AgeGroup object
     public AgeGroup TargetAgeGroup
     {
-        get => AgeGroup.Parse(_targetAgeGroup) ?? new AgeGroup("school", 6, 9);
-        set => _targetAgeGroup = value?.Value ?? "school";
+        get => AgeGroup.Parse(_targetAgeGroup) ?? new AgeGroup(6, 9);
+        set => _targetAgeGroup = value?.Value ?? "6-9";
     }
     public string? SelectedCharacterId { get; set; } // Character selected from character map
 

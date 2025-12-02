@@ -2,8 +2,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
-using Mystira.App.Contracts.Requests.Scenarios;
-using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Domain.Models;
 using CreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;
 using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;

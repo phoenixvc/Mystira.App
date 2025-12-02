@@ -1,8 +1,7 @@
 using System.IO.Compression;
-using System.Text.Json;
+using System.Security.Cryptography;
+using System.Text;
 using Mystira.App.Admin.Api.Models;
-using Mystira.App.Admin.Api.Services;
-using Mystira.App.Contracts.Requests.Scenarios;
 using Mystira.App.Domain.Models;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -363,7 +362,7 @@ public class BundleService : IBundleService
     private string GenerateMediaId(string fileName)
     {
         var nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(fileName)))[..8];
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(fileName)))[..8];
         return $"{nameWithoutExtension.ToLowerInvariant().Replace(" ", "-")}-{hash}";
     }
 }

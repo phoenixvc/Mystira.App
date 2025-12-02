@@ -1,10 +1,4 @@
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data;
 using Mystira.App.Shared.Models;
@@ -22,7 +16,7 @@ public class UserProfileService : IUserProfileService
         _logger = logger;
     }
 
-    public async Task<UserProfile?> UpdateProfileByIdAsync(string id, Mystira.App.Shared.Models.UpdateUserProfileRequest request)
+    public async Task<UserProfile?> UpdateProfileByIdAsync(string id, UpdateUserProfileRequest request)
     {
         var profile = await GetProfileByIdAsync(id);
         if (profile == null)
@@ -45,7 +39,7 @@ public class UserProfileService : IUserProfileService
         {
             if (AgeGroup.Parse(request.AgeGroup) == null)
             {
-                throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All.Select(a => a.Name))}");
+                throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All)}");
             }
 
             profile.AgeGroupName = request.AgeGroup;
@@ -100,7 +94,7 @@ public class UserProfileService : IUserProfileService
         // Validate age group
         if (AgeGroup.Parse(request.AgeGroup) == null)
         {
-            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All.Select(a => a.Name))}");
+            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All)}");
         }
 
         var profile = new UserProfile
@@ -149,7 +143,7 @@ public class UserProfileService : IUserProfileService
         // Validate age group
         if (AgeGroup.Parse(request.AgeGroup) == null)
         {
-            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All.Select(a => a.Name))}");
+            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All)}");
         }
 
         var profile = new UserProfile
@@ -233,7 +227,7 @@ public class UserProfileService : IUserProfileService
             // Validate age group
             if (AgeGroup.Parse(request.AgeGroup) == null)
             {
-                throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All.Select(a => a.Name))}");
+                throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroup.All)}");
             }
 
             profile.AgeGroupName = request.AgeGroup;

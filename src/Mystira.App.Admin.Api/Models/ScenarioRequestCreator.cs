@@ -1,5 +1,4 @@
 using Mystira.App.Application.Parsers;
-using Mystira.App.Contracts.Requests.Scenarios;
 using Mystira.App.Domain.Models;
 using ContractsCreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;
 
@@ -16,7 +15,7 @@ public static class ScenarioRequestCreator
         return ScenarioParser.Create(scenarioData);
     }
 
-    public static Domain.Models.Scene ParseSceneFromDictionary(IDictionary<object, object> sceneDict)
+    public static Scene ParseSceneFromDictionary(IDictionary<object, object> sceneDict)
     {
         return SceneParser.Parse(sceneDict);
     }

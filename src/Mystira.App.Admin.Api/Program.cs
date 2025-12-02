@@ -1,10 +1,9 @@
 using System.Text;
-using System.Linq;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Mystira.App.Admin.Api.Adapters;
-using Mystira.App.Infrastructure.Data;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Ports.Media;
@@ -13,12 +12,15 @@ using Mystira.App.Application.UseCases.GameSessions;
 using Mystira.App.Application.UseCases.Media;
 using Mystira.App.Application.UseCases.Scenarios;
 using Mystira.App.Application.UseCases.UserProfiles;
+using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
+using Mystira.App.Infrastructure.Data;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
 using Mystira.App.Infrastructure.StoryProtocol;
+using IUnitOfWork = Mystira.App.Application.Ports.Data.IUnitOfWork;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,7 +29,7 @@ builder.Services.AddControllersWithViews()
     .AddJsonOptions(options =>
     {
         // Configure enums to serialize as strings instead of numbers
-        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
 // Configure OpenAPI/Swagger
@@ -74,7 +76,7 @@ builder.Services.AddSwaggerGen(c =>
     // Fix schema naming conflicts
     c.CustomSchemaIds(type =>
     {
-        if (type == typeof(Mystira.App.Domain.Models.CharacterMetadata))
+        if (type == typeof(CharacterMetadata))
         {
             return "DomainCharacterMetadata";
         }
@@ -106,13 +108,13 @@ else
 }
 
 // Register DbContext base type for repository dependency injection
-builder.Services.AddScoped<Microsoft.EntityFrameworkCore.DbContext>(sp => sp.GetRequiredService<MystiraAppDbContext>());
+builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<MystiraAppDbContext>());
 
 // Add Azure Infrastructure Services
 builder.Services.AddAzureBlobStorage(builder.Configuration);
 builder.Services.Configure<AudioTranscodingOptions>(builder.Configuration.GetSection(AudioTranscodingOptions.SectionName));
 // Register Application.Ports.Media.IAudioTranscodingService for use cases
-builder.Services.AddSingleton<Mystira.App.Application.Ports.Media.IAudioTranscodingService, FfmpegAudioTranscodingService>();
+builder.Services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingService>();
 
 // Add Story Protocol Services
 builder.Services.AddStoryProtocolServices(builder.Configuration);
@@ -176,11 +178,11 @@ builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
 // Register Application.Ports.IMediaMetadataService for use cases
 builder.Services.AddScoped<Mystira.App.Application.Ports.IMediaMetadataService, MediaMetadataServiceAdapter>();
 // Register repositories
-builder.Services.AddScoped<IRepository<Mystira.App.Domain.Models.GameSession>, Repository<Mystira.App.Domain.Models.GameSession>>();
+builder.Services.AddScoped<IRepository<GameSession>, Repository<GameSession>>();
 builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();
-builder.Services.AddScoped<IRepository<Mystira.App.Domain.Models.UserProfile>, Repository<Mystira.App.Domain.Models.UserProfile>>();
+builder.Services.AddScoped<IRepository<UserProfile>, Repository<UserProfile>>();
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
-builder.Services.AddScoped<IRepository<Mystira.App.Domain.Models.Account>, Repository<Mystira.App.Domain.Models.Account>>();
+builder.Services.AddScoped<IRepository<Account>, Repository<Account>>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IScenarioRepository, ScenarioRepository>();
 builder.Services.AddScoped<ICharacterMapRepository, CharacterMapRepository>();
@@ -193,7 +195,7 @@ builder.Services.AddScoped<IMediaMetadataFileRepository, MediaMetadataFileReposi
 builder.Services.AddScoped<ICharacterMediaMetadataFileRepository, CharacterMediaMetadataFileRepository>();
 builder.Services.AddScoped<ICharacterMapFileRepository, CharacterMapFileRepository>();
 builder.Services.AddScoped<IAvatarConfigurationFileRepository, AvatarConfigurationFileRepository>();
-builder.Services.AddScoped<Mystira.App.Application.Ports.Data.IUnitOfWork, Mystira.App.Infrastructure.Data.UnitOfWork.UnitOfWork>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Register Application Layer Use Cases
 // Scenario Use Cases
@@ -366,5 +368,5 @@ app.Run();
 // Make Program class accessible for testing
 namespace Mystira.App.Admin.Api
 {
-    public partial class Program { }
+    public class Program { }
 }

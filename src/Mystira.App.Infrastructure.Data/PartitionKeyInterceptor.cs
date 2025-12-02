@@ -36,13 +36,20 @@ public class PartitionKeyInterceptor : SaveChangesInterceptor
         {
             if (entry.State == EntityState.Added || entry.State == EntityState.Modified)
             {
-                // Check if entity has both Id property and PartitionKeyId shadow property
-                var idProperty = entry.Property("Id");
-                var partitionKeyIdProperty = entry.Metadata.FindProperty("PartitionKeyId");
-
-                if (idProperty != null && partitionKeyIdProperty != null)
+                // Skip owned/value types; they don't have their own identity/partition key
+                var entityType = entry.Metadata;
+                if (entityType.IsOwned())
                 {
-                    var idValue = idProperty.CurrentValue?.ToString();
+                    continue;
+                }
+
+                // Check if entity has both Id property and PartitionKeyId shadow property
+                var idTypeProperty = entityType.FindProperty("Id");
+                var partitionKeyIdProperty = entityType.FindProperty("PartitionKeyId");
+
+                if (idTypeProperty != null && partitionKeyIdProperty != null)
+                {
+                    var idValue = entry.Property("Id").CurrentValue?.ToString();
                     if (!string.IsNullOrEmpty(idValue))
                     {
                         entry.Property("PartitionKeyId").CurrentValue = idValue;
@@ -53,12 +60,12 @@ public class PartitionKeyInterceptor : SaveChangesInterceptor
                 // Sync the PartitionKeyAxis shadow property with Axis
                 if (entry.Entity.GetType().Name == "CompassTracking")
                 {
-                    var axisProperty = entry.Property("Axis");
-                    var partitionKeyAxisProperty = entry.Metadata.FindProperty("PartitionKeyAxis");
+                    var axisTypeProperty = entityType.FindProperty("Axis");
+                    var partitionKeyAxisProperty = entityType.FindProperty("PartitionKeyAxis");
 
-                    if (axisProperty != null && partitionKeyAxisProperty != null)
+                    if (axisTypeProperty != null && partitionKeyAxisProperty != null)
                     {
-                        var axisValue = axisProperty.CurrentValue?.ToString();
+                        var axisValue = entry.Property("Axis").CurrentValue?.ToString();
                         if (!string.IsNullOrEmpty(axisValue))
                         {
                             entry.Property("PartitionKeyAxis").CurrentValue = axisValue;

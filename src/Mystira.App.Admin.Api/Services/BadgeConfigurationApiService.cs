@@ -1,8 +1,10 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Contracts.Requests.Badges;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data;
 using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -215,7 +217,7 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
         };
 
         var serializer = new SerializerBuilder()
-            .WithNamingConvention(YamlDotNet.Serialization.NamingConventions.UnderscoredNamingConvention.Instance)
+            .WithNamingConvention(UnderscoredNamingConvention.Instance)
             .Build();
 
         return serializer.Serialize(badgeConfigYaml);
@@ -225,7 +227,7 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
     {
         var deserializer = new DeserializerBuilder()
             .WithCaseInsensitivePropertyMatching()
-            .WithNamingConvention(YamlDotNet.Serialization.NamingConventions.UnderscoredNamingConvention.Instance)
+            .WithNamingConvention(UnderscoredNamingConvention.Instance)
             .Build();
 
         using var reader = new StreamReader(yamlStream);
@@ -280,6 +282,6 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
         }
 
         var json = File.ReadAllText(filePath);
-        return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+        return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
     }
 }
