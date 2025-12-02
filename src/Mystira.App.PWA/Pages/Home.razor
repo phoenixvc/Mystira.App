@@ -200,7 +200,7 @@
             SearchQuery="@searchQuery"
             SearchQueryChanged="@((value) => { searchQuery = value; })"
             ShowCompleted="@showCompletedStories"
-            ShowCompletedChanged="@((value) => { showCompletedStories = value; ToggleCompletedStories(); })"
+            ShowCompletedChanged="@OnShowCompletedChanged"
             HiddenCount="@completedScenarioIds.Count"
             ResultCount="@GetResultCount()"
             ResultCountLabel="@GetResultCountLabel()"
@@ -866,9 +866,9 @@
         StateHasChanged();
     }
 
-    private void ToggleCompletedStories()
+    private void OnShowCompletedChanged(bool value)
     {
-        showCompletedStories = !showCompletedStories;
+        showCompletedStories = value;
         ApplyFilters();
         StateHasChanged();
     }
