@@ -63,7 +63,6 @@ export function SmartDeploymentPanel({ repoRoot }: SmartDeploymentPanelProps) {
 
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [prerequisitesReady, setPrerequisitesReady] = useState(false);
-  const [azureAccount, setAzureAccount] = useState<{ name: string; id: string } | null>(null);
   const [discoveredResources, setDiscoveredResources] = useState<DiscoveredResources | null>(null);
   const [selectedResourceGroup, setSelectedResourceGroup] = useState<ResourceGroup | null>(null);
   const [selectedStaticWebApp, setSelectedStaticWebApp] = useState<StaticWebApp | null>(null);
