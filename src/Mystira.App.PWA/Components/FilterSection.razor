@@ -96,7 +96,7 @@
                                        id="showCompletedToggle" 
                                        role="switch"
                                        aria-label="Toggle completed stories visibility"
-                                       checked="@ShowCompleted" 
+                                       checked="@(ShowCompleted ? true : (bool?)null)" 
                                        @onchange="OnShowCompletedChanged">
                                 <label class="form-check-label toggle-label" for="showCompletedToggle">
                                     <i class="fas fa-check-circle me-1"></i>
