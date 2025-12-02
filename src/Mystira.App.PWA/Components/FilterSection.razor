@@ -90,26 +90,37 @@
                     @if (ShowCompletedToggle)
                     {
                         <div class="filter-toggle">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" 
-                                       type="checkbox" 
-                                       id="showCompletedToggle" 
-                                       role="switch"
-                                       aria-label="Toggle completed stories visibility"
-                                       checked="@(ShowCompleted ? true : (bool?)null)" 
-                                       @onchange="OnShowCompletedChanged">
-                                <label class="form-check-label toggle-label" for="showCompletedToggle">
-                                    <i class="fas fa-check-circle me-1"></i>
-                                    Show Completed
-                                    @if (!ShowCompleted && HiddenCount > 0)
-                                    {
-                                        <span class="badge bg-secondary ms-1 completed-count">@HiddenCount</span>
-                                    }
-                                    else if (ShowCompleted && HiddenCount > 0)
-                                    {
-                                        <span class="badge bg-success ms-1 completed-count">@HiddenCount</span>
-                                    }
-                                </label>
+                            <div class="completed-toggle-wrapper @(ShowCompleted ? "active" : "")">
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input completed-switch" 
+                                           type="checkbox" 
+                                           id="showCompletedToggle" 
+                                           role="switch"
+                                           aria-label="Toggle completed stories visibility"
+                                           checked="@(ShowCompleted ? true : (bool?)null)" 
+                                           @onchange="OnShowCompletedChanged">
+                                    <label class="form-check-label toggle-label" for="showCompletedToggle">
+                                        <span class="toggle-icon">
+                                            @if (ShowCompleted)
+                                            {
+                                                <i class="fas fa-eye"></i>
+                                            }
+                                            else
+                                            {
+                                                <i class="fas fa-eye-slash"></i>
+                                            }
+                                        </span>
+                                        <span class="toggle-text-label">
+                                            @(ShowCompleted ? "Showing" : "Hiding") Completed
+                                        </span>
+                                        @if (HiddenCount > 0)
+                                        {
+                                            <span class="badge @(ShowCompleted ? "bg-success" : "bg-secondary") completed-count">
+                                                @HiddenCount
+                                            </span>
+                                        }
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     }
