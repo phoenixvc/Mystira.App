@@ -7,7 +7,7 @@ interface InfrastructureTabsProps {
 
 const tabDescriptions: Record<Tab, string> = {
   'actions': 'Plan and deploy infrastructure templates',
-  'smart-deploy': 'Auto-fallback deployment with region prioritization',
+  'smart-deploy': 'Smart deployment - checks resources, deploys infrastructure or code',
   'templates': 'View and manage infrastructure template files',
   'resources': 'View deployed Azure resources',
   'history': 'View deployment history and logs',
@@ -17,7 +17,7 @@ const tabDescriptions: Record<Tab, string> = {
 export function InfrastructureTabs({ activeTab, onTabChange }: InfrastructureTabsProps) {
   const tabs: { id: Tab; icon: string; label: string }[] = [
     { id: 'actions', icon: '⚡', label: 'Actions' },
-    { id: 'smart-deploy', icon: '🚀', label: 'Smart Deploy' },
+    { id: 'smart-deploy', icon: '🚀', label: 'Deploy Now' },
     { id: 'templates', icon: '📄', label: 'Templates & Resources' },
     { id: 'resources', icon: '☁️', label: 'Azure Resources' },
     { id: 'history', icon: '📜', label: 'History' },
