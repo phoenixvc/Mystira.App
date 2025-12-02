@@ -28,7 +28,7 @@ public class AzureEmailServiceTests
             .Build();
 
         // Act
-        var service = new AzureEmailService(configuration, _mockLogger.Object);
+        new AzureEmailService(configuration, _mockLogger.Object);
 
         // Assert
         _mockLogger.Verify(
