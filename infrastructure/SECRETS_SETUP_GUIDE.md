@@ -24,7 +24,6 @@ Or: Repository → Settings → Secrets and variables → Actions
 | `AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN` | Admin API CI/CD - Prod | ✅ Required |
 | `AZURE_WEBAPP_PUBLISH_PROFILE_STAGING` | API CI/CD - Staging | ✅ Required |
 | `AZURE_WEBAPP_PUBLISH_PROFILE_STAGING_ADMIN` | Admin API CI/CD - Staging | ✅ Required |
-| `AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_MYSTIRA_APP` | PWA CI/CD - Dev (West Europe) | ✅ Required |
 | `AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_SAN_MYSTIRA_APP` | PWA CI/CD - Dev (South Africa North) | ✅ Required |
 | `AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_WATER_0EAB7991E` | PWA CI/CD - Prod | ✅ Required |
 
@@ -132,19 +131,7 @@ az communication list-key \
 
 ## Section 2: Static Web Apps (PWA) Secrets
 
-These are required for the Blazor PWA deployment. There are separate Static Web Apps for different environments and regions.
-
-### `AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_MYSTIRA_APP` (Dev - West Europe)
-
-**Get from Azure Portal:**
-1. Go to: https://portal.azure.com
-2. Navigate to: Static Web Apps → Your dev SWA in West Europe region
-3. Click: **Manage deployment token** (in the toolbar or Overview)
-4. Copy the deployment token
-
-**Add to GitHub:**
-1. Name: `AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_MYSTIRA_APP`
-2. Value: Paste the deployment token
+These are required for the Blazor PWA deployment. There are separate Static Web Apps for different environments.
 
 ### `AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_SAN_MYSTIRA_APP` (Dev - South Africa North)
 
@@ -171,7 +158,6 @@ These are required for the Blazor PWA deployment. There are separate Static Web 
 2. Value: Paste the deployment token
 
 **Note:** The secret names must exactly match those used in the workflow files:
-- `.github/workflows/azure-static-web-apps-dev-euw-swa-mystira-app.yml` uses `AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_MYSTIRA_APP`
 - `.github/workflows/azure-static-web-apps-dev-san-swa-mystira-app.yml` uses `AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_SAN_MYSTIRA_APP`
 - `.github/workflows/azure-static-web-apps-blue-water-0eab7991e.yml` uses `AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_WATER_0EAB7991E`
 
@@ -227,15 +213,14 @@ az webapp deployment list-publishing-profiles --name prod-wus-app-mystira-api-ad
 
 ## Verification Checklist
 
-After adding all secrets, you should have these **15 secrets** configured:
+After adding all secrets, you should have these **14 secrets** configured:
 
 ### Azure Authentication (3)
 - [ ] `AZURE_CREDENTIALS`
 - [ ] `AZURE_SUBSCRIPTION_ID`
 - [ ] `JWT_SECRET_KEY`
 
-### Static Web Apps (3)
-- [ ] `AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_MYSTIRA_APP` (West Europe)
+### Static Web Apps (2)
 - [ ] `AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_SAN_MYSTIRA_APP` (South Africa North)
 - [ ] `AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_WATER_0EAB7991E` (Production)
 
