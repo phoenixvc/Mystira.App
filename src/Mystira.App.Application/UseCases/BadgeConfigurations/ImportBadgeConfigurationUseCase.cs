@@ -11,15 +11,18 @@ namespace Mystira.App.Application.UseCases.BadgeConfigurations;
 public class ImportBadgeConfigurationUseCase
 {
     private readonly IBadgeConfigurationRepository _repository;
+    private readonly ICompassAxisRepository _compassAxisRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ImportBadgeConfigurationUseCase> _logger;
 
     public ImportBadgeConfigurationUseCase(
         IBadgeConfigurationRepository repository,
+        ICompassAxisRepository compassAxisRepository,
         IUnitOfWork unitOfWork,
         ILogger<ImportBadgeConfigurationUseCase> logger)
     {
         _repository = repository;
+        _compassAxisRepository = compassAxisRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -49,8 +52,9 @@ public class ImportBadgeConfigurationUseCase
 
         foreach (var yamlEntry in badgeConfigYaml.Badges)
         {
-            // Validate axis
-            if (CoreAxis.Parse(yamlEntry.Axis) == null)
+            // Validate axis exists in database
+            var axisExists = await _compassAxisRepository.ExistsByNameAsync(yamlEntry.Axis);
+            if (!axisExists)
             {
                 _logger.LogWarning("Skipping badge configuration {Id} with invalid axis: {Axis}", yamlEntry.Id, yamlEntry.Axis);
                 continue;

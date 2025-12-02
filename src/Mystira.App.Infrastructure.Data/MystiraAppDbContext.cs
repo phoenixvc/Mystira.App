@@ -28,6 +28,8 @@ public partial class MystiraAppDbContext : DbContext
     public DbSet<ContentBundle> ContentBundles { get; set; }
     public DbSet<CharacterMap> CharacterMaps { get; set; }
     public DbSet<BadgeConfiguration> BadgeConfigurations { get; set; }
+    public DbSet<CompassAxis> CompassAxes { get; set; }
+    public DbSet<ArchetypeDefinition> ArchetypeDefinitions { get; set; }
 
     // Media Management
     public DbSet<MediaAsset> MediaAssets { get; set; }
@@ -210,6 +212,34 @@ public partial class MystiraAppDbContext : DbContext
             {
                 entity.Property<string>("PartitionKeyId").ToJsonProperty("id");
                 entity.ToContainer("BadgeConfigurations")
+                      .HasPartitionKey("PartitionKeyId");
+            }
+        });
+
+        // Configure CompassAxis
+        modelBuilder.Entity<CompassAxis>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            // Only apply Cosmos DB configurations when not using in-memory database
+            if (!isInMemoryDatabase)
+            {
+                entity.Property<string>("PartitionKeyId").ToJsonProperty("id");
+                entity.ToContainer("CompassAxes")
+                      .HasPartitionKey("PartitionKeyId");
+            }
+        });
+
+        // Configure ArchetypeDefinition
+        modelBuilder.Entity<ArchetypeDefinition>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            // Only apply Cosmos DB configurations when not using in-memory database
+            if (!isInMemoryDatabase)
+            {
+                entity.Property<string>("PartitionKeyId").ToJsonProperty("id");
+                entity.ToContainer("ArchetypeDefinitions")
                       .HasPartitionKey("PartitionKeyId");
             }
         });

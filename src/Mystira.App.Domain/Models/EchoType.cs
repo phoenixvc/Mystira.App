@@ -1,11 +1,43 @@
-using System.Text.Json.Serialization;
-
 namespace Mystira.App.Domain.Models;
 
-[JsonConverter(typeof(StringEnumJsonConverter<EchoType>))]
-public class EchoType : StringEnum<EchoType>
+/// <summary>
+/// Represents an echo type value used in scenarios for game events and progression.
+/// </summary>
+public class EchoType
 {
-    public EchoType(string value) : base(value)
+    public string Value { get; set; }
+
+    public EchoType(string value)
     {
+        Value = value;
+    }
+
+    public override string ToString() => Value;
+
+    public override bool Equals(object? obj)
+    {
+        return obj is EchoType other && Value.Equals(other.Value, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public override int GetHashCode()
+    {
+        return StringComparer.OrdinalIgnoreCase.GetHashCode(Value);
+    }
+
+    public static bool operator ==(EchoType? left, EchoType? right)
+    {
+        return Equals(left, right);
+    }
+
+    public static bool operator !=(EchoType? left, EchoType? right)
+    {
+        return !Equals(left, right);
+    }
+
+    public static EchoType? Parse(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+        return new EchoType(value);
     }
 }
