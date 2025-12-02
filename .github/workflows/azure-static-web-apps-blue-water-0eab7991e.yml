@@ -4,10 +4,8 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
-    branches:
-      - main
+  # Note: PR staging deployments disabled to avoid hitting Azure SWA staging environment limit
+  # See: https://learn.microsoft.com/en-us/azure/static-web-apps/
 
 # Prevent concurrent deployments to avoid "Deployment Canceled" errors
 concurrency:
@@ -16,7 +14,6 @@ concurrency:
 
 jobs:
   build-and-deploy:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy
     steps:
@@ -132,19 +129,3 @@ jobs:
           skip_app_build: false # Let Oryx build the app
           production_branch: "main" # Specify the production branch for this environment
           ###### End of Repository/Build Configurations ######
-
-  close-pull-request:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    name: Close Pull Request
-    steps:
-      - name: Close Pull Request
-        id: closepullrequest
-        uses: Azure/static-web-apps-deploy@v1
-        # Allow this step to fail gracefully - staging environment may not exist
-        # if the build failed or the environment was already cleaned up
-        continue-on-error: true
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_WATER_0EAB7991E }}
-          action: "close"
-          app_location: "./src/Mystira.App.PWA"
