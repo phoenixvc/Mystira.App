@@ -458,3 +458,249 @@ button:focus-visible {
         max-width: 100%;
     }
 }
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .filter-card {
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+        border-color: rgba(147, 51, 234, 0.3);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .filter-card:hover {
+        box-shadow: 0 6px 24px rgba(147, 51, 234, 0.25) !important;
+        border-color: rgba(147, 51, 234, 0.4);
+    }
+    
+    .filter-title {
+        color: #f1f5f9;
+    }
+    
+    .filter-card .card-title {
+        color: #f1f5f9;
+    }
+    
+    .input-group {
+        background: #1e1b4b;
+    }
+    
+    .input-group-text {
+        background: linear-gradient(135deg, #312e81 0%, #3730a3 100%);
+        border-color: #4c1d95;
+        color: #c4b5fd;
+    }
+    
+    .input-group .form-control {
+        background: #1e1b4b;
+        border-color: #4c1d95;
+        color: #f1f5f9;
+    }
+    
+    .input-group .form-control::placeholder {
+        color: #a78bfa;
+    }
+    
+    .input-group .btn-outline-secondary {
+        background: #1e1b4b;
+        border-color: #4c1d95;
+        color: #c4b5fd;
+    }
+    
+    .completed-toggle-wrapper {
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+        border-color: #4c1d95;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+    
+    .completed-toggle-wrapper:hover {
+        background: linear-gradient(135deg, #312e81 0%, #3730a3 100%);
+        border-color: #7c3aed;
+        box-shadow: 0 4px 12px rgba(147, 51, 234, 0.25);
+    }
+    
+    .completed-toggle-wrapper.active {
+        background: linear-gradient(135deg, #3730a3 0%, #4c1d95 100%);
+        border-color: #7c3aed;
+        box-shadow: 0 2px 8px rgba(147, 51, 234, 0.3);
+    }
+    
+    .completed-switch {
+        border-color: #6366f1;
+        background-color: #312e81;
+    }
+    
+    .completed-switch:not(:checked):hover {
+        border-color: #818cf8;
+        background-color: #3730a3;
+    }
+    
+    .completed-toggle-wrapper:not(.active) .toggle-icon {
+        background: #312e81;
+        color: #a5b4fc;
+    }
+    
+    .toggle-text-label {
+        color: #c4b5fd;
+    }
+    
+    .completed-toggle-wrapper.active .toggle-text-label {
+        color: #e9d5ff;
+    }
+    
+    .btn-age-filter:not(.btn-primary-custom) {
+        background: #1e1b4b;
+        border-color: #4c1d95;
+        color: #c4b5fd;
+    }
+    
+    .btn-age-filter:not(.btn-primary-custom):hover {
+        background: linear-gradient(135deg, #312e81 0%, #3730a3 100%);
+        border-color: #7c3aed;
+        color: #e9d5ff;
+    }
+    
+    .btn-age-filter:not(.btn-primary-custom) .badge-count {
+        background: #312e81;
+        color: #c4b5fd;
+    }
+    
+    .btn-outline-danger {
+        background: rgba(220, 38, 38, 0.1);
+        border-color: #f87171;
+        color: #fca5a5;
+    }
+    
+    .btn-sm:not(.btn-primary-custom) {
+        background: #1e1b4b;
+        border-color: #4c1d95;
+        color: #c4b5fd;
+    }
+    
+    .btn-sm:not(.btn-primary-custom):hover {
+        background: rgba(139, 92, 246, 0.15);
+        border-color: #8B5CF6;
+        color: #c4b5fd;
+    }
+}
+
+/* Manual dark mode toggle support */
+html[data-theme="dark"] .filter-card {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    border-color: rgba(147, 51, 234, 0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+html[data-theme="dark"] .filter-card:hover {
+    box-shadow: 0 6px 24px rgba(147, 51, 234, 0.25) !important;
+    border-color: rgba(147, 51, 234, 0.4);
+}
+
+html[data-theme="dark"] .filter-title {
+    color: #f1f5f9;
+}
+
+html[data-theme="dark"] .filter-card .card-title {
+    color: #f1f5f9;
+}
+
+html[data-theme="dark"] .input-group {
+    background: #1e1b4b;
+}
+
+html[data-theme="dark"] .input-group-text {
+    background: linear-gradient(135deg, #312e81 0%, #3730a3 100%);
+    border-color: #4c1d95;
+    color: #c4b5fd;
+}
+
+html[data-theme="dark"] .input-group .form-control {
+    background: #1e1b4b;
+    border-color: #4c1d95;
+    color: #f1f5f9;
+}
+
+html[data-theme="dark"] .input-group .form-control::placeholder {
+    color: #a78bfa;
+}
+
+html[data-theme="dark"] .input-group .btn-outline-secondary {
+    background: #1e1b4b;
+    border-color: #4c1d95;
+    color: #c4b5fd;
+}
+
+html[data-theme="dark"] .completed-toggle-wrapper {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    border-color: #4c1d95;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+html[data-theme="dark"] .completed-toggle-wrapper:hover {
+    background: linear-gradient(135deg, #312e81 0%, #3730a3 100%);
+    border-color: #7c3aed;
+    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.25);
+}
+
+html[data-theme="dark"] .completed-toggle-wrapper.active {
+    background: linear-gradient(135deg, #3730a3 0%, #4c1d95 100%);
+    border-color: #7c3aed;
+    box-shadow: 0 2px 8px rgba(147, 51, 234, 0.3);
+}
+
+html[data-theme="dark"] .completed-switch {
+    border-color: #6366f1;
+    background-color: #312e81;
+}
+
+html[data-theme="dark"] .completed-switch:not(:checked):hover {
+    border-color: #818cf8;
+    background-color: #3730a3;
+}
+
+html[data-theme="dark"] .completed-toggle-wrapper:not(.active) .toggle-icon {
+    background: #312e81;
+    color: #a5b4fc;
+}
+
+html[data-theme="dark"] .toggle-text-label {
+    color: #c4b5fd;
+}
+
+html[data-theme="dark"] .completed-toggle-wrapper.active .toggle-text-label {
+    color: #e9d5ff;
+}
+
+html[data-theme="dark"] .btn-age-filter:not(.btn-primary-custom) {
+    background: #1e1b4b;
+    border-color: #4c1d95;
+    color: #c4b5fd;
+}
+
+html[data-theme="dark"] .btn-age-filter:not(.btn-primary-custom):hover {
+    background: linear-gradient(135deg, #312e81 0%, #3730a3 100%);
+    border-color: #7c3aed;
+    color: #e9d5ff;
+}
+
+html[data-theme="dark"] .btn-age-filter:not(.btn-primary-custom) .badge-count {
+    background: #312e81;
+    color: #c4b5fd;
+}
+
+html[data-theme="dark"] .btn-outline-danger {
+    background: rgba(220, 38, 38, 0.1);
+    border-color: #f87171;
+    color: #fca5a5;
+}
+
+html[data-theme="dark"] .btn-sm:not(.btn-primary-custom) {
+    background: #1e1b4b;
+    border-color: #4c1d95;
+    color: #c4b5fd;
+}
+
+html[data-theme="dark"] .btn-sm:not(.btn-primary-custom):hover {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: #8B5CF6;
+    color: #c4b5fd;
+}
