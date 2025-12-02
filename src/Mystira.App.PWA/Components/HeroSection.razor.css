@@ -12,7 +12,7 @@
 }
 
 .hero-section {
-    padding: 10px 20px 80px;
+    padding: 0 20px 80px;
     background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
     border-radius: 0 0 24px 24px;
     margin-bottom: 40px;
@@ -21,9 +21,9 @@
     overflow: hidden;
 }
 
-/* Dark mode background */
+/* Dark mode background - slightly darker for less brightness */
 html[data-theme="dark"] .hero-section {
-    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    background: linear-gradient(135deg, #14122b 0%, #1e1b4b 100%);
 }
 
 /* Particle Canvas Background */
@@ -700,7 +700,7 @@ html[data-theme="dark"] .hero-description {
 /* Mobile responsiveness */
 @media (max-width: 768px) {
     .hero-section {
-        padding: 5px 15px 40px;
+        padding: 0 15px 40px;
         margin-bottom: 32px;
         min-height: 400px;
     }
