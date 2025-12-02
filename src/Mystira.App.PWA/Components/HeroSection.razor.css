@@ -47,10 +47,21 @@ html[data-theme="dark"] .hero-section {
     transform: translate(-50%, -50%);
     z-index: 1;
     pointer-events: none;
-    overflow: hidden;
+    overflow: visible;
     /* Contain the SVG within the hero section bounds */
     max-width: 100%;
     max-height: 100%;
+    transition: transform 0.8s ease-in-out, opacity 0.8s ease-in-out;
+}
+
+/* Video mode - tubes expand and animate more actively */
+.golden-lights.video-mode {
+    transform: translate(-50%, -50%) scale(1.15);
+}
+
+/* Logo mode - tubes contract and animate more gently */
+.golden-lights.logo-mode {
+    transform: translate(-50%, -50%) scale(1);
 }
 
 .golden-light-svg {
@@ -77,92 +88,182 @@ html[data-theme="dark"] .hero-section {
 }
 
 .light-tube-group-1 {
-    -webkit-animation: twineTwirl1 35s ease-in-out infinite;
-    animation: twineTwirl1 35s ease-in-out infinite;
+    -webkit-animation: twineTwirl1 20s ease-in-out infinite;
+    animation: twineTwirl1 20s ease-in-out infinite;
 }
 
 .light-tube-group-2 {
-    -webkit-animation: twineTwirl2 40s ease-in-out infinite;
-    animation: twineTwirl2 40s ease-in-out infinite;
+    -webkit-animation: twineTwirl2 25s ease-in-out infinite;
+    animation: twineTwirl2 25s ease-in-out infinite;
 }
 
 .light-tube-group-3 {
-    -webkit-animation: twineTwirl3 28s ease-in-out infinite;
-    animation: twineTwirl3 28s ease-in-out infinite;
+    -webkit-animation: twineTwirl3 18s ease-in-out infinite;
+    animation: twineTwirl3 18s ease-in-out infinite;
 }
 
 .light-tube-group-4 {
-    -webkit-animation: twineTwirl4 32s ease-in-out infinite;
-    animation: twineTwirl4 32s ease-in-out infinite;
+    -webkit-animation: twineTwirl4 22s ease-in-out infinite;
+    animation: twineTwirl4 22s ease-in-out infinite;
 }
 
-/* Twining vine animations - slow, organic movements that wrap around */
+/* Video mode - faster, more dynamic animations */
+.golden-lights.video-mode .light-tube-group-1 {
+    -webkit-animation: twineTwirlVideo1 12s ease-in-out infinite;
+    animation: twineTwirlVideo1 12s ease-in-out infinite;
+}
+
+.golden-lights.video-mode .light-tube-group-2 {
+    -webkit-animation: twineTwirlVideo2 15s ease-in-out infinite;
+    animation: twineTwirlVideo2 15s ease-in-out infinite;
+}
+
+.golden-lights.video-mode .light-tube-group-3 {
+    -webkit-animation: twineTwirlVideo3 10s ease-in-out infinite;
+    animation: twineTwirlVideo3 10s ease-in-out infinite;
+}
+
+.golden-lights.video-mode .light-tube-group-4 {
+    -webkit-animation: twineTwirlVideo4 14s ease-in-out infinite;
+    animation: twineTwirlVideo4 14s ease-in-out infinite;
+}
+
+/* Twining vine animations - organic movements that wrap around */
 @-webkit-keyframes twineTwirl1 {
     0% { -webkit-transform: rotate(0deg) translateX(0) translateY(0); transform: rotate(0deg) translateX(0) translateY(0); }
-    15% { -webkit-transform: rotate(3deg) translateX(8px) translateY(-5px); transform: rotate(3deg) translateX(8px) translateY(-5px); }
-    30% { -webkit-transform: rotate(-2deg) translateX(-5px) translateY(8px); transform: rotate(-2deg) translateX(-5px) translateY(8px); }
-    50% { -webkit-transform: rotate(4deg) translateX(10px) translateY(3px); transform: rotate(4deg) translateX(10px) translateY(3px); }
-    70% { -webkit-transform: rotate(-3deg) translateX(-8px) translateY(-6px); transform: rotate(-3deg) translateX(-8px) translateY(-6px); }
-    85% { -webkit-transform: rotate(2deg) translateX(5px) translateY(4px); transform: rotate(2deg) translateX(5px) translateY(4px); }
+    15% { -webkit-transform: rotate(5deg) translateX(12px) translateY(-8px); transform: rotate(5deg) translateX(12px) translateY(-8px); }
+    30% { -webkit-transform: rotate(-4deg) translateX(-8px) translateY(12px); transform: rotate(-4deg) translateX(-8px) translateY(12px); }
+    50% { -webkit-transform: rotate(6deg) translateX(15px) translateY(5px); transform: rotate(6deg) translateX(15px) translateY(5px); }
+    70% { -webkit-transform: rotate(-5deg) translateX(-12px) translateY(-10px); transform: rotate(-5deg) translateX(-12px) translateY(-10px); }
+    85% { -webkit-transform: rotate(3deg) translateX(8px) translateY(6px); transform: rotate(3deg) translateX(8px) translateY(6px); }
     100% { -webkit-transform: rotate(0deg) translateX(0) translateY(0); transform: rotate(0deg) translateX(0) translateY(0); }
 }
 
 @keyframes twineTwirl1 {
-    0% { -webkit-transform: rotate(0deg) translateX(0) translateY(0); transform: rotate(0deg) translateX(0) translateY(0); }
-    15% { -webkit-transform: rotate(3deg) translateX(8px) translateY(-5px); transform: rotate(3deg) translateX(8px) translateY(-5px); }
-    30% { -webkit-transform: rotate(-2deg) translateX(-5px) translateY(8px); transform: rotate(-2deg) translateX(-5px) translateY(8px); }
-    50% { -webkit-transform: rotate(4deg) translateX(10px) translateY(3px); transform: rotate(4deg) translateX(10px) translateY(3px); }
-    70% { -webkit-transform: rotate(-3deg) translateX(-8px) translateY(-6px); transform: rotate(-3deg) translateX(-8px) translateY(-6px); }
-    85% { -webkit-transform: rotate(2deg) translateX(5px) translateY(4px); transform: rotate(2deg) translateX(5px) translateY(4px); }
-    100% { -webkit-transform: rotate(0deg) translateX(0) translateY(0); transform: rotate(0deg) translateX(0) translateY(0); }
+    0% { transform: rotate(0deg) translateX(0) translateY(0); }
+    15% { transform: rotate(5deg) translateX(12px) translateY(-8px); }
+    30% { transform: rotate(-4deg) translateX(-8px) translateY(12px); }
+    50% { transform: rotate(6deg) translateX(15px) translateY(5px); }
+    70% { transform: rotate(-5deg) translateX(-12px) translateY(-10px); }
+    85% { transform: rotate(3deg) translateX(8px) translateY(6px); }
+    100% { transform: rotate(0deg) translateX(0) translateY(0); }
 }
 
 @-webkit-keyframes twineTwirl2 {
     0% { -webkit-transform: rotate(0deg) translateX(0) translateY(0); transform: rotate(0deg) translateX(0) translateY(0); }
-    20% { -webkit-transform: rotate(-3deg) translateX(-10px) translateY(6px); transform: rotate(-3deg) translateX(-10px) translateY(6px); }
-    40% { -webkit-transform: rotate(2deg) translateX(6px) translateY(-8px); transform: rotate(2deg) translateX(6px) translateY(-8px); }
-    60% { -webkit-transform: rotate(-4deg) translateX(-8px) translateY(5px); transform: rotate(-4deg) translateX(-8px) translateY(5px); }
-    80% { -webkit-transform: rotate(3deg) translateX(7px) translateY(-4px); transform: rotate(3deg) translateX(7px) translateY(-4px); }
+    20% { -webkit-transform: rotate(-5deg) translateX(-15px) translateY(10px); transform: rotate(-5deg) translateX(-15px) translateY(10px); }
+    40% { -webkit-transform: rotate(4deg) translateX(10px) translateY(-12px); transform: rotate(4deg) translateX(10px) translateY(-12px); }
+    60% { -webkit-transform: rotate(-6deg) translateX(-12px) translateY(8px); transform: rotate(-6deg) translateX(-12px) translateY(8px); }
+    80% { -webkit-transform: rotate(5deg) translateX(12px) translateY(-6px); transform: rotate(5deg) translateX(12px) translateY(-6px); }
     100% { -webkit-transform: rotate(0deg) translateX(0) translateY(0); transform: rotate(0deg) translateX(0) translateY(0); }
 }
 
 @keyframes twineTwirl2 {
-    0% { -webkit-transform: rotate(0deg) translateX(0) translateY(0); transform: rotate(0deg) translateX(0) translateY(0); }
-    20% { -webkit-transform: rotate(-3deg) translateX(-10px) translateY(6px); transform: rotate(-3deg) translateX(-10px) translateY(6px); }
-    40% { -webkit-transform: rotate(2deg) translateX(6px) translateY(-8px); transform: rotate(2deg) translateX(6px) translateY(-8px); }
-    60% { -webkit-transform: rotate(-4deg) translateX(-8px) translateY(5px); transform: rotate(-4deg) translateX(-8px) translateY(5px); }
-    80% { -webkit-transform: rotate(3deg) translateX(7px) translateY(-4px); transform: rotate(3deg) translateX(7px) translateY(-4px); }
-    100% { -webkit-transform: rotate(0deg) translateX(0) translateY(0); transform: rotate(0deg) translateX(0) translateY(0); }
+    0% { transform: rotate(0deg) translateX(0) translateY(0); }
+    20% { transform: rotate(-5deg) translateX(-15px) translateY(10px); }
+    40% { transform: rotate(4deg) translateX(10px) translateY(-12px); }
+    60% { transform: rotate(-6deg) translateX(-12px) translateY(8px); }
+    80% { transform: rotate(5deg) translateX(12px) translateY(-6px); }
+    100% { transform: rotate(0deg) translateX(0) translateY(0); }
 }
 
 @-webkit-keyframes twineTwirl3 {
     0% { -webkit-transform: rotate(0deg) scale(1); transform: rotate(0deg) scale(1); }
-    25% { -webkit-transform: rotate(5deg) scale(1.02); transform: rotate(5deg) scale(1.02); }
-    50% { -webkit-transform: rotate(-5deg) scale(0.98); transform: rotate(-5deg) scale(0.98); }
-    75% { -webkit-transform: rotate(3deg) scale(1.01); transform: rotate(3deg) scale(1.01); }
+    25% { -webkit-transform: rotate(8deg) scale(1.05); transform: rotate(8deg) scale(1.05); }
+    50% { -webkit-transform: rotate(-7deg) scale(0.95); transform: rotate(-7deg) scale(0.95); }
+    75% { -webkit-transform: rotate(5deg) scale(1.03); transform: rotate(5deg) scale(1.03); }
     100% { -webkit-transform: rotate(0deg) scale(1); transform: rotate(0deg) scale(1); }
 }
 
 @keyframes twineTwirl3 {
-    0% { -webkit-transform: rotate(0deg) scale(1); transform: rotate(0deg) scale(1); }
-    25% { -webkit-transform: rotate(5deg) scale(1.02); transform: rotate(5deg) scale(1.02); }
-    50% { -webkit-transform: rotate(-5deg) scale(0.98); transform: rotate(-5deg) scale(0.98); }
-    75% { -webkit-transform: rotate(3deg) scale(1.01); transform: rotate(3deg) scale(1.01); }
-    100% { -webkit-transform: rotate(0deg) scale(1); transform: rotate(0deg) scale(1); }
+    0% { transform: rotate(0deg) scale(1); }
+    25% { transform: rotate(8deg) scale(1.05); }
+    50% { transform: rotate(-7deg) scale(0.95); }
+    75% { transform: rotate(5deg) scale(1.03); }
+    100% { transform: rotate(0deg) scale(1); }
 }
 
 @-webkit-keyframes twineTwirl4 {
     0% { -webkit-transform: rotate(0deg) translateX(0) translateY(0); transform: rotate(0deg) translateX(0) translateY(0); }
-    30% { -webkit-transform: rotate(4deg) translateX(6px) translateY(-4px); transform: rotate(4deg) translateX(6px) translateY(-4px); }
-    60% { -webkit-transform: rotate(-3deg) translateX(-5px) translateY(6px); transform: rotate(-3deg) translateX(-5px) translateY(6px); }
+    30% { -webkit-transform: rotate(6deg) translateX(10px) translateY(-8px); transform: rotate(6deg) translateX(10px) translateY(-8px); }
+    60% { -webkit-transform: rotate(-5deg) translateX(-8px) translateY(10px); transform: rotate(-5deg) translateX(-8px) translateY(10px); }
     100% { -webkit-transform: rotate(0deg) translateX(0) translateY(0); transform: rotate(0deg) translateX(0) translateY(0); }
 }
 
 @keyframes twineTwirl4 {
+    0% { transform: rotate(0deg) translateX(0) translateY(0); }
+    30% { transform: rotate(6deg) translateX(10px) translateY(-8px); }
+    60% { transform: rotate(-5deg) translateX(-8px) translateY(10px); }
+    100% { transform: rotate(0deg) translateX(0) translateY(0); }
+}
+
+/* Video mode animations - faster, more dynamic movements */
+@-webkit-keyframes twineTwirlVideo1 {
     0% { -webkit-transform: rotate(0deg) translateX(0) translateY(0); transform: rotate(0deg) translateX(0) translateY(0); }
-    30% { -webkit-transform: rotate(4deg) translateX(6px) translateY(-4px); transform: rotate(4deg) translateX(6px) translateY(-4px); }
-    60% { -webkit-transform: rotate(-3deg) translateX(-5px) translateY(6px); transform: rotate(-3deg) translateX(-5px) translateY(6px); }
+    15% { -webkit-transform: rotate(8deg) translateX(15px) translateY(-12px); transform: rotate(8deg) translateX(15px) translateY(-12px); }
+    30% { -webkit-transform: rotate(-6deg) translateX(-12px) translateY(15px); transform: rotate(-6deg) translateX(-12px) translateY(15px); }
+    50% { -webkit-transform: rotate(10deg) translateX(18px) translateY(8px); transform: rotate(10deg) translateX(18px) translateY(8px); }
+    70% { -webkit-transform: rotate(-8deg) translateX(-15px) translateY(-10px); transform: rotate(-8deg) translateX(-15px) translateY(-10px); }
+    85% { -webkit-transform: rotate(5deg) translateX(10px) translateY(6px); transform: rotate(5deg) translateX(10px) translateY(6px); }
     100% { -webkit-transform: rotate(0deg) translateX(0) translateY(0); transform: rotate(0deg) translateX(0) translateY(0); }
+}
+
+@keyframes twineTwirlVideo1 {
+    0% { transform: rotate(0deg) translateX(0) translateY(0); }
+    15% { transform: rotate(8deg) translateX(15px) translateY(-12px); }
+    30% { transform: rotate(-6deg) translateX(-12px) translateY(15px); }
+    50% { transform: rotate(10deg) translateX(18px) translateY(8px); }
+    70% { transform: rotate(-8deg) translateX(-15px) translateY(-10px); }
+    85% { transform: rotate(5deg) translateX(10px) translateY(6px); }
+    100% { transform: rotate(0deg) translateX(0) translateY(0); }
+}
+
+@-webkit-keyframes twineTwirlVideo2 {
+    0% { -webkit-transform: rotate(0deg) translateX(0) translateY(0); transform: rotate(0deg) translateX(0) translateY(0); }
+    20% { -webkit-transform: rotate(-8deg) translateX(-18px) translateY(12px); transform: rotate(-8deg) translateX(-18px) translateY(12px); }
+    40% { -webkit-transform: rotate(6deg) translateX(12px) translateY(-15px); transform: rotate(6deg) translateX(12px) translateY(-15px); }
+    60% { -webkit-transform: rotate(-10deg) translateX(-15px) translateY(10px); transform: rotate(-10deg) translateX(-15px) translateY(10px); }
+    80% { -webkit-transform: rotate(7deg) translateX(14px) translateY(-8px); transform: rotate(7deg) translateX(14px) translateY(-8px); }
+    100% { -webkit-transform: rotate(0deg) translateX(0) translateY(0); transform: rotate(0deg) translateX(0) translateY(0); }
+}
+
+@keyframes twineTwirlVideo2 {
+    0% { transform: rotate(0deg) translateX(0) translateY(0); }
+    20% { transform: rotate(-8deg) translateX(-18px) translateY(12px); }
+    40% { transform: rotate(6deg) translateX(12px) translateY(-15px); }
+    60% { transform: rotate(-10deg) translateX(-15px) translateY(10px); }
+    80% { transform: rotate(7deg) translateX(14px) translateY(-8px); }
+    100% { transform: rotate(0deg) translateX(0) translateY(0); }
+}
+
+@-webkit-keyframes twineTwirlVideo3 {
+    0% { -webkit-transform: rotate(0deg) scale(1); transform: rotate(0deg) scale(1); }
+    25% { -webkit-transform: rotate(12deg) scale(1.08); transform: rotate(12deg) scale(1.08); }
+    50% { -webkit-transform: rotate(-10deg) scale(0.92); transform: rotate(-10deg) scale(0.92); }
+    75% { -webkit-transform: rotate(8deg) scale(1.05); transform: rotate(8deg) scale(1.05); }
+    100% { -webkit-transform: rotate(0deg) scale(1); transform: rotate(0deg) scale(1); }
+}
+
+@keyframes twineTwirlVideo3 {
+    0% { transform: rotate(0deg) scale(1); }
+    25% { transform: rotate(12deg) scale(1.08); }
+    50% { transform: rotate(-10deg) scale(0.92); }
+    75% { transform: rotate(8deg) scale(1.05); }
+    100% { transform: rotate(0deg) scale(1); }
+}
+
+@-webkit-keyframes twineTwirlVideo4 {
+    0% { -webkit-transform: rotate(0deg) translateX(0) translateY(0); transform: rotate(0deg) translateX(0) translateY(0); }
+    30% { -webkit-transform: rotate(10deg) translateX(14px) translateY(-10px); transform: rotate(10deg) translateX(14px) translateY(-10px); }
+    60% { -webkit-transform: rotate(-8deg) translateX(-12px) translateY(14px); transform: rotate(-8deg) translateX(-12px) translateY(14px); }
+    100% { -webkit-transform: rotate(0deg) translateX(0) translateY(0); transform: rotate(0deg) translateX(0) translateY(0); }
+}
+
+@keyframes twineTwirlVideo4 {
+    0% { transform: rotate(0deg) translateX(0) translateY(0); }
+    30% { transform: rotate(10deg) translateX(14px) translateY(-10px); }
+    60% { transform: rotate(-8deg) translateX(-12px) translateY(14px); }
+    100% { transform: rotate(0deg) translateX(0) translateY(0); }
 }
 
 /* Individual tube pulse animation */
