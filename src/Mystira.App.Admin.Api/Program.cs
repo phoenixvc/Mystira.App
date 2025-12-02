@@ -18,6 +18,7 @@ using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
 using Mystira.App.Infrastructure.Data;
 using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.App.Infrastructure.Data.Services;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
 using Mystira.App.Infrastructure.StoryProtocol;
 using IUnitOfWork = Mystira.App.Application.Ports.Data.IUnitOfWork;
@@ -167,7 +168,7 @@ builder.Services.AddScoped<ICharacterMapApiService, CharacterMapApiService>();
 builder.Services.AddScoped<IAppStatusService, AppStatusService>();
 builder.Services.AddScoped<IBundleService, BundleService>();
 builder.Services.AddScoped<ICharacterMapFileService, CharacterMapFileService>();
-builder.Services.AddScoped<IMediaMetadataService, MediaMetadataService>();
+builder.Services.AddScoped<IMediaMetadataService, Mystira.App.Admin.Api.Services.MediaMetadataService>();
 builder.Services.AddScoped<ICharacterMediaMetadataService, CharacterMediaMetadataService>();
 builder.Services.AddScoped<IBadgeConfigurationApiService, BadgeConfigurationApiService>();
 builder.Services.AddScoped<IMediaApiService, MediaApiService>();
@@ -197,7 +198,13 @@ builder.Services.AddScoped<ICharacterMapFileRepository, CharacterMapFileReposito
 builder.Services.AddScoped<IAvatarConfigurationFileRepository, AvatarConfigurationFileRepository>();
 builder.Services.AddScoped<ICompassAxisRepository, CompassAxisRepository>();
 builder.Services.AddScoped<IArchetypeRepository, ArchetypeRepository>();
+builder.Services.AddScoped<IEchoTypeRepository, EchoTypeRepository>();
+builder.Services.AddScoped<IFantasyThemeRepository, FantasyThemeRepository>();
+builder.Services.AddScoped<IAgeGroupRepository, AgeGroupRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+// Register Master Data Seeder Service
+builder.Services.AddScoped<MasterDataSeederService>();
 
 // Register Application Layer Use Cases
 // Scenario Use Cases

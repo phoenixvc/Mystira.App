@@ -30,6 +30,9 @@ public partial class MystiraAppDbContext : DbContext
     public DbSet<BadgeConfiguration> BadgeConfigurations { get; set; }
     public DbSet<CompassAxis> CompassAxes { get; set; }
     public DbSet<ArchetypeDefinition> ArchetypeDefinitions { get; set; }
+    public DbSet<EchoTypeDefinition> EchoTypeDefinitions { get; set; }
+    public DbSet<FantasyThemeDefinition> FantasyThemeDefinitions { get; set; }
+    public DbSet<AgeGroupDefinition> AgeGroupDefinitions { get; set; }
 
     // Media Management
     public DbSet<MediaAsset> MediaAssets { get; set; }

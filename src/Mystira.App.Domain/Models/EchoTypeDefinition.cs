@@ -1,0 +1,14 @@
+namespace Mystira.App.Domain.Models;
+
+/// <summary>
+/// Represents an echo type definition stored in the database.
+/// Echo types are used in scenarios for game events and progression tracking.
+/// </summary>
+public class EchoTypeDefinition
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
