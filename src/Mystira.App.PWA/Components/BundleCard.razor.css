@@ -134,3 +134,35 @@
         font-size: 0.875rem;
     }
 }
+
+/* Dark mode support */
+html[data-theme="dark"] .bundle-card {
+    background: #1e1b4b;
+    border-color: #4c1d95;
+}
+
+html[data-theme="dark"] .bundle-card:hover {
+    box-shadow: 0 12px 24px rgba(168, 85, 247, 0.3);
+    border-color: #a855f7;
+}
+
+html[data-theme="dark"] .card-title {
+    color: #f1f5f9;
+}
+
+html[data-theme="dark"] .card-text {
+    color: #94a3b8;
+}
+
+html[data-theme="dark"] .progress {
+    background-color: #312e81;
+}
+
+html[data-theme="dark"] .card-footer {
+    background: #312e81;
+    border-top-color: #4c1d95;
+}
+
+html[data-theme="dark"] .card-footer span {
+    color: #c4b5fd;
+}

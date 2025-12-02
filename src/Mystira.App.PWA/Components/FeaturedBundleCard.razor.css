@@ -26,3 +26,35 @@
     }
 }
 
+/* Dark mode support */
+html[data-theme="dark"] .featured-bundle-card .card {
+    background: #1e1b4b;
+    border-color: #eab308;
+}
+
+html[data-theme="dark"] .featured-bundle-card .card-header {
+    background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+    color: #1e1b4b;
+}
+
+html[data-theme="dark"] .featured-bundle-card .card-body {
+    background: #1e1b4b;
+}
+
+html[data-theme="dark"] .featured-bundle-card .card-title {
+    color: #f1f5f9;
+}
+
+html[data-theme="dark"] .featured-bundle-card .card-text {
+    color: #94a3b8;
+}
+
+html[data-theme="dark"] .featured-bundle-card .btn-warning {
+    background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+    color: #1e1b4b;
+    border: none;
+}
+
+html[data-theme="dark"] .featured-bundle-card .btn-warning:hover {
+    background: linear-gradient(135deg, #fbbf24 0%, #eab308 100%);
+}

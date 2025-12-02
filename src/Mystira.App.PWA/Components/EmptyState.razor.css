@@ -120,3 +120,44 @@
         max-width: 300px;
     }
 }
+
+/* Dark mode support */
+html[data-theme="dark"] .empty-state {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    border-color: rgba(168, 85, 247, 0.2);
+    box-shadow: 0 4px 24px rgba(168, 85, 247, 0.1);
+}
+
+html[data-theme="dark"] .empty-state-icon {
+    color: #a78bfa;
+}
+
+html[data-theme="dark"] .empty-state-title {
+    color: #f1f5f9;
+}
+
+html[data-theme="dark"] .empty-state-message {
+    color: #94a3b8;
+}
+
+html[data-theme="dark"] .btn-clear-filters {
+    background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+    box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4);
+}
+
+html[data-theme="dark"] .btn-clear-filters:hover {
+    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+    box-shadow: 0 8px 28px rgba(168, 85, 247, 0.5);
+}
+
+html[data-theme="dark"] .btn-retry {
+    background: #1e1b4b;
+    color: #c4b5fd;
+    border-color: #4c1d95;
+}
+
+html[data-theme="dark"] .btn-retry:hover {
+    background: #312e81;
+    border-color: #a855f7;
+    box-shadow: 0 6px 16px rgba(168, 85, 247, 0.2);
+}
