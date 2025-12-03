@@ -246,9 +246,8 @@ public class MasterDataSeederService
             Path.Combine(currentDir, fileName),
         };
 
-        foreach (var path in possiblePaths)
+        foreach (var fullPath in possiblePaths.Select(Path.GetFullPath))
         {
-            var fullPath = Path.GetFullPath(path);
             if (File.Exists(fullPath))
             {
                 return fullPath;
