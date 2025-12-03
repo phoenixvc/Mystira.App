@@ -27,6 +27,11 @@ public class Scenario
     /// </summary>
     public bool IsFeatured { get; set; } = false;
 
+    /// <summary>
+    /// The image ID that corresponds to the cover picture of the scenario.
+    /// </summary>
+    public string? Image { get; set; }
+
     public bool Validate(out List<string> errors)
     {
         errors = new List<string>();

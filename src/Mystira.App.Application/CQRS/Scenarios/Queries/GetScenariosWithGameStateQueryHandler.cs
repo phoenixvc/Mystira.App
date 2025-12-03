@@ -74,7 +74,8 @@ public class GetScenariosWithGameStateQueryHandler
                 Archetypes = scenario.Archetypes?.Select(a => a.ToString()).ToArray() ?? [],
                 GameState = gameState,
                 LastPlayedAt = lastSession?.StartTime,
-                PlayCount = sessions.Count
+                PlayCount = sessions.Count,
+                Image = scenario.Image
             };
         }).ToList();
 
