@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Mystira.App.Shared.Models;
 using System.Reflection;
 
 namespace Mystira.App.Api.Controllers;
@@ -75,36 +76,4 @@ public class ApiInfoController : ControllerBase
             }
         });
     }
-}
-
-public class ApiVersionInfo
-{
-    public string ApiVersion { get; set; } = string.Empty;
-    public string BuildVersion { get; set; } = string.Empty;
-    public string MasterDataVersion { get; set; } = string.Empty;
-    public bool SupportsLegacyEnums { get; set; }
-    public MasterDataEntityInfo[] MasterDataEntities { get; set; } = Array.Empty<MasterDataEntityInfo>();
-    public DeprecatedApiInfo[] DeprecatedApis { get; set; } = Array.Empty<DeprecatedApiInfo>();
-}
-
-public class MasterDataEntityInfo
-{
-    public string Name { get; set; } = string.Empty;
-    public string Endpoint { get; set; } = string.Empty;
-    public int? Count { get; set; }
-}
-
-public class DeprecatedApiInfo
-{
-    public string Endpoint { get; set; } = string.Empty;
-    public string ReplacedBy { get; set; } = string.Empty;
-    public string DeprecationDate { get; set; } = string.Empty;
-    public string RemovalDate { get; set; } = string.Empty;
-}
-
-public class LegacyMappings
-{
-    public string Message { get; set; } = string.Empty;
-    public Dictionary<string, string> CoreAxisMappings { get; set; } = new();
-    public Dictionary<string, string> ArchetypeMappings { get; set; } = new();
 }

@@ -51,7 +51,7 @@ public class MigrationCommands
 
             var jsonFilesPath = args.JsonFilesPath
                 ?? Environment.GetEnvironmentVariable("MASTER_DATA_JSON_PATH")
-                ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "src", "Mystira.App.Domain", "Data");
+                ?? FindMasterDataJsonPath();
 
             var results = new List<MigrationResult>();
 
@@ -146,5 +146,38 @@ public class MigrationCommands
         {
             return CommandResponse.Fail(ex.Message);
         }
+    }
+
+    /// <summary>
+    /// Searches for the master data JSON files directory by looking for known files.
+    /// </summary>
+    private static string FindMasterDataJsonPath()
+    {
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        
+        // Search for the Data directory containing CoreAxes.json
+        var searchPaths = new[]
+        {
+            // When running from tools/Mystira.DevHub.CLI/bin
+            Path.Combine(baseDir, "..", "..", "..", "..", "src", "Mystira.App.Domain", "Data"),
+            // When running from solution root
+            Path.Combine(baseDir, "src", "Mystira.App.Domain", "Data"),
+            // When running from src directory
+            Path.Combine(baseDir, "Mystira.App.Domain", "Data"),
+            // Relative to current directory
+            Path.Combine(Directory.GetCurrentDirectory(), "src", "Mystira.App.Domain", "Data"),
+        };
+
+        foreach (var path in searchPaths)
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (Directory.Exists(fullPath) && File.Exists(Path.Combine(fullPath, "CoreAxes.json")))
+            {
+                return fullPath;
+            }
+        }
+
+        // Fallback to most likely path
+        return Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "src", "Mystira.App.Domain", "Data"));
     }
 }
