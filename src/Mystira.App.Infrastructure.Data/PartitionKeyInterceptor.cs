@@ -43,16 +43,26 @@ public class PartitionKeyInterceptor : SaveChangesInterceptor
                     continue;
                 }
 
-                // Check if entity has both Id property and PartitionKeyId shadow property
+                // Sync common patterns where partition key mirrors the entity Id
                 var idTypeProperty = entityType.FindProperty("Id");
-                var partitionKeyIdProperty = entityType.FindProperty("PartitionKeyId");
-
-                if (idTypeProperty != null && partitionKeyIdProperty != null)
+                if (idTypeProperty != null)
                 {
                     var idValue = entry.Property("Id").CurrentValue?.ToString();
                     if (!string.IsNullOrEmpty(idValue))
                     {
-                        entry.Property("PartitionKeyId").CurrentValue = idValue;
+                        // Legacy shadow property mapped to JSON 'id' (lowercase)
+                        var partitionKeyIdProperty = entityType.FindProperty("PartitionKeyId");
+                        if (partitionKeyIdProperty != null)
+                        {
+                            entry.Property("PartitionKeyId").CurrentValue = idValue;
+                        }
+
+                        // New shadow property for containers using '/Id' (uppercase)
+                        var partitionKeyIdUpperProperty = entityType.FindProperty("PartitionKeyIdUpper");
+                        if (partitionKeyIdUpperProperty != null)
+                        {
+                            entry.Property("PartitionKeyIdUpper").CurrentValue = idValue;
+                        }
                     }
                 }
 

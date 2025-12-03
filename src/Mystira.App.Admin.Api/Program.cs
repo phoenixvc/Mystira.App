@@ -173,6 +173,8 @@ builder.Services.AddScoped<ICharacterMediaMetadataService, CharacterMediaMetadat
 builder.Services.AddScoped<IBadgeConfigurationApiService, BadgeConfigurationApiService>();
 builder.Services.AddScoped<IMediaApiService, MediaApiService>();
 builder.Services.AddScoped<IAvatarApiService, AvatarApiService>();
+builder.Services.AddScoped<ICompassAxisApiService, CompassAxisApiService>();
+builder.Services.AddScoped<IArchetypeApiService, ArchetypeApiService>();
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
 // Use infrastructure email service - not needed in Admin.Api unless used in Admin CQRS handlers
 // builder.Services.AddAzureEmailService(builder.Configuration);
@@ -367,12 +369,16 @@ using (var scope = app.Services.CreateScope())
         // Seed master data (idempotent - only seeds if data doesn't exist)
         var seeder = scope.ServiceProvider.GetRequiredService<MasterDataSeederService>();
         await seeder.SeedAllAsync();
+      
+        var startupLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        startupLogger.LogInformation("Database initialization succeeded. Verified containers for current model are present.");
     }
     catch (Exception ex)
     {
-        // Log error but continue - some environments may not have database access
+        // Fail fast with clear guidance so missing Cosmos containers/permissions are visible immediately
         var startupLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        startupLogger.LogWarning(ex, "Failed to initialize database during startup. Continuing without database initialization.");
+        startupLogger.LogCritical(ex, "Failed to initialize database during startup. Ensure Azure Cosmos DB database 'MystiraAppDb' exists and app identity has permissions to create/read containers. Expected containers include: CompassAxes (PK /Id), BadgeConfigurations (PK /Id), CharacterMaps (PK /Id), ContentBundles (PK /Id), Scenarios (PK /Id), MediaMetadataFiles (PK /Id), CharacterMediaMetadataFiles (PK /Id), CharacterMapFiles (PK /Id), UserProfiles (PK /Id), Accounts (PK /Id), PendingSignups (PK /email). The application will now stop.");
+        throw;
     }
 }
 
