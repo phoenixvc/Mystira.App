@@ -305,4 +305,354 @@ public class MigrationService : IMigrationService
             _logger.LogWarning(ex, "Could not ensure container {Container} exists", containerName);
         }
     }
+
+    public async Task<MigrationResult> SeedMasterDataAsync(string destConnectionString, string databaseName, string jsonFilesPath)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var result = new MigrationResult();
+
+        try
+        {
+            _logger.LogInformation("Starting master data seeding to {Database}", databaseName);
+
+            using var destClient = new CosmosClient(destConnectionString);
+
+            // Seed all master data types
+            var compassAxisResult = await SeedCompassAxesAsync(destClient, databaseName, jsonFilesPath);
+            var archetypeResult = await SeedArchetypesAsync(destClient, databaseName, jsonFilesPath);
+            var echoTypeResult = await SeedEchoTypesAsync(destClient, databaseName, jsonFilesPath);
+            var fantasyThemeResult = await SeedFantasyThemesAsync(destClient, databaseName, jsonFilesPath);
+            var ageGroupResult = await SeedAgeGroupsAsync(destClient, databaseName, jsonFilesPath);
+
+            result.TotalItems = compassAxisResult.TotalItems + archetypeResult.TotalItems +
+                               echoTypeResult.TotalItems + fantasyThemeResult.TotalItems + ageGroupResult.TotalItems;
+            result.SuccessCount = compassAxisResult.SuccessCount + archetypeResult.SuccessCount +
+                                 echoTypeResult.SuccessCount + fantasyThemeResult.SuccessCount + ageGroupResult.SuccessCount;
+            result.FailureCount = compassAxisResult.FailureCount + archetypeResult.FailureCount +
+                                 echoTypeResult.FailureCount + fantasyThemeResult.FailureCount + ageGroupResult.FailureCount;
+            result.Errors.AddRange(compassAxisResult.Errors);
+            result.Errors.AddRange(archetypeResult.Errors);
+            result.Errors.AddRange(echoTypeResult.Errors);
+            result.Errors.AddRange(fantasyThemeResult.Errors);
+            result.Errors.AddRange(ageGroupResult.Errors);
+
+            result.Success = result.FailureCount == 0;
+            stopwatch.Stop();
+            result.Duration = stopwatch.Elapsed;
+
+            _logger.LogInformation("Master data seeding completed: {Result}", result);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Critical error during master data seeding");
+            result.Success = false;
+            result.Errors.Add($"Critical error: {ex.Message}");
+            stopwatch.Stop();
+            result.Duration = stopwatch.Elapsed;
+            return result;
+        }
+    }
+
+    private async Task<MigrationResult> SeedCompassAxesAsync(CosmosClient client, string databaseName, string jsonFilesPath)
+    {
+        var result = new MigrationResult();
+        var containerName = "CompassAxes";
+        var jsonFile = Path.Combine(jsonFilesPath, "CoreAxes.json");
+
+        try
+        {
+            await EnsureContainerExists(client, databaseName, containerName, "/id");
+            var container = client.GetContainer(databaseName, containerName);
+
+            if (!File.Exists(jsonFile))
+            {
+                _logger.LogWarning("CoreAxes.json not found at {Path}", jsonFile);
+                return result;
+            }
+
+            var json = await File.ReadAllTextAsync(jsonFile);
+            var items = System.Text.Json.JsonSerializer.Deserialize<List<JsonValueItem>>(json);
+
+            if (items == null) return result;
+
+            result.TotalItems = items.Count;
+
+            foreach (var item in items)
+            {
+                try
+                {
+                    var entity = new CompassAxis
+                    {
+                        Id = GenerateDeterministicId("compass-axis", item.Value),
+                        Name = item.Value,
+                        Description = $"Compass axis: {item.Value}",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    await container.UpsertItemAsync(entity, new PartitionKey(entity.Id));
+                    result.SuccessCount++;
+                }
+                catch (Exception ex)
+                {
+                    result.FailureCount++;
+                    result.Errors.Add($"Failed to seed compass axis {item.Value}: {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            result.Errors.Add($"Failed to seed compass axes: {ex.Message}");
+        }
+
+        return result;
+    }
+
+    private async Task<MigrationResult> SeedArchetypesAsync(CosmosClient client, string databaseName, string jsonFilesPath)
+    {
+        var result = new MigrationResult();
+        var containerName = "ArchetypeDefinitions";
+        var jsonFile = Path.Combine(jsonFilesPath, "Archetypes.json");
+
+        try
+        {
+            await EnsureContainerExists(client, databaseName, containerName, "/id");
+            var container = client.GetContainer(databaseName, containerName);
+
+            if (!File.Exists(jsonFile))
+            {
+                _logger.LogWarning("Archetypes.json not found at {Path}", jsonFile);
+                return result;
+            }
+
+            var json = await File.ReadAllTextAsync(jsonFile);
+            var items = System.Text.Json.JsonSerializer.Deserialize<List<JsonValueItem>>(json);
+
+            if (items == null) return result;
+
+            result.TotalItems = items.Count;
+
+            foreach (var item in items)
+            {
+                try
+                {
+                    var entity = new ArchetypeDefinition
+                    {
+                        Id = GenerateDeterministicId("archetype", item.Value),
+                        Name = item.Value,
+                        Description = $"Archetype: {item.Value}",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    await container.UpsertItemAsync(entity, new PartitionKey(entity.Id));
+                    result.SuccessCount++;
+                }
+                catch (Exception ex)
+                {
+                    result.FailureCount++;
+                    result.Errors.Add($"Failed to seed archetype {item.Value}: {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            result.Errors.Add($"Failed to seed archetypes: {ex.Message}");
+        }
+
+        return result;
+    }
+
+    private async Task<MigrationResult> SeedEchoTypesAsync(CosmosClient client, string databaseName, string jsonFilesPath)
+    {
+        var result = new MigrationResult();
+        var containerName = "EchoTypeDefinitions";
+        var jsonFile = Path.Combine(jsonFilesPath, "EchoTypes.json");
+
+        try
+        {
+            await EnsureContainerExists(client, databaseName, containerName, "/id");
+            var container = client.GetContainer(databaseName, containerName);
+
+            if (!File.Exists(jsonFile))
+            {
+                _logger.LogWarning("EchoTypes.json not found at {Path}", jsonFile);
+                return result;
+            }
+
+            var json = await File.ReadAllTextAsync(jsonFile);
+            var items = System.Text.Json.JsonSerializer.Deserialize<List<JsonValueItem>>(json);
+
+            if (items == null) return result;
+
+            result.TotalItems = items.Count;
+
+            foreach (var item in items)
+            {
+                try
+                {
+                    var entity = new EchoTypeDefinition
+                    {
+                        Id = GenerateDeterministicId("echo-type", item.Value),
+                        Name = item.Value,
+                        Description = $"Echo type: {item.Value}",
+                        Category = "other",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    await container.UpsertItemAsync(entity, new PartitionKey(entity.Id));
+                    result.SuccessCount++;
+                }
+                catch (Exception ex)
+                {
+                    result.FailureCount++;
+                    result.Errors.Add($"Failed to seed echo type {item.Value}: {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            result.Errors.Add($"Failed to seed echo types: {ex.Message}");
+        }
+
+        return result;
+    }
+
+    private async Task<MigrationResult> SeedFantasyThemesAsync(CosmosClient client, string databaseName, string jsonFilesPath)
+    {
+        var result = new MigrationResult();
+        var containerName = "FantasyThemeDefinitions";
+        var jsonFile = Path.Combine(jsonFilesPath, "FantasyThemes.json");
+
+        try
+        {
+            await EnsureContainerExists(client, databaseName, containerName, "/id");
+            var container = client.GetContainer(databaseName, containerName);
+
+            if (!File.Exists(jsonFile))
+            {
+                _logger.LogWarning("FantasyThemes.json not found at {Path}", jsonFile);
+                return result;
+            }
+
+            var json = await File.ReadAllTextAsync(jsonFile);
+            var items = System.Text.Json.JsonSerializer.Deserialize<List<JsonValueItem>>(json);
+
+            if (items == null) return result;
+
+            result.TotalItems = items.Count;
+
+            foreach (var item in items)
+            {
+                try
+                {
+                    var entity = new FantasyThemeDefinition
+                    {
+                        Id = GenerateDeterministicId("fantasy-theme", item.Value),
+                        Name = item.Value,
+                        Description = $"Fantasy theme: {item.Value}",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    await container.UpsertItemAsync(entity, new PartitionKey(entity.Id));
+                    result.SuccessCount++;
+                }
+                catch (Exception ex)
+                {
+                    result.FailureCount++;
+                    result.Errors.Add($"Failed to seed fantasy theme {item.Value}: {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            result.Errors.Add($"Failed to seed fantasy themes: {ex.Message}");
+        }
+
+        return result;
+    }
+
+    private async Task<MigrationResult> SeedAgeGroupsAsync(CosmosClient client, string databaseName, string jsonFilesPath)
+    {
+        var result = new MigrationResult();
+        var containerName = "AgeGroupDefinitions";
+        var jsonFile = Path.Combine(jsonFilesPath, "AgeGroups.json");
+
+        try
+        {
+            await EnsureContainerExists(client, databaseName, containerName, "/id");
+            var container = client.GetContainer(databaseName, containerName);
+
+            if (!File.Exists(jsonFile))
+            {
+                _logger.LogWarning("AgeGroups.json not found at {Path}", jsonFile);
+                return result;
+            }
+
+            var json = await File.ReadAllTextAsync(jsonFile);
+            var items = System.Text.Json.JsonSerializer.Deserialize<List<AgeGroupJsonItem>>(json);
+
+            if (items == null) return result;
+
+            result.TotalItems = items.Count;
+
+            foreach (var item in items)
+            {
+                try
+                {
+                    var entity = new AgeGroupDefinition
+                    {
+                        Id = GenerateDeterministicId("age-group", item.Value),
+                        Name = item.Name,
+                        Value = item.Value,
+                        MinimumAge = item.MinimumAge,
+                        MaximumAge = item.MaximumAge,
+                        Description = $"Age group for ages {item.MinimumAge}-{item.MaximumAge}",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    await container.UpsertItemAsync(entity, new PartitionKey(entity.Id));
+                    result.SuccessCount++;
+                }
+                catch (Exception ex)
+                {
+                    result.FailureCount++;
+                    result.Errors.Add($"Failed to seed age group {item.Value}: {ex.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            result.Errors.Add($"Failed to seed age groups: {ex.Message}");
+        }
+
+        return result;
+    }
+
+    private static string GenerateDeterministicId(string entityType, string name)
+    {
+        var input = $"{entityType}:{name.ToLowerInvariant()}";
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(input));
+        var guidBytes = new byte[16];
+        Array.Copy(hash, guidBytes, 16);
+        return new Guid(guidBytes).ToString();
+    }
+
+    private class JsonValueItem
+    {
+        public string Value { get; set; } = string.Empty;
+    }
+
+    private class AgeGroupJsonItem
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
+        public int MinimumAge { get; set; }
+        public int MaximumAge { get; set; }
+    }
 }
