@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components.WebAssembly.Http;
 using Mystira.App.PWA.Models;
+using System.Linq;
 
 namespace Mystira.App.PWA.Services;
 
@@ -306,9 +307,8 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                     var branches = new List<SceneBranch>();
                     if (!obj.TryGetProperty("branches", out var arr) || arr.ValueKind != JsonValueKind.Array)
                         return branches;
-                    foreach (var br in arr.EnumerateArray())
+                    foreach (var br in arr.EnumerateArray().Where(br => br.ValueKind == JsonValueKind.Object))
                     {
-                        if (br.ValueKind != JsonValueKind.Object) continue;
                         branches.Add(new SceneBranch
                         {
                             Choice = GetString(br, "choice"),
