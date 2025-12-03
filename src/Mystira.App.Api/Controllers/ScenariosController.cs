@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Application.CQRS.Scenarios.Commands;
 using Mystira.App.Application.CQRS.Scenarios.Queries;
 using Mystira.App.Contracts.Requests.Scenarios;
 using Mystira.App.Contracts.Responses.Common;

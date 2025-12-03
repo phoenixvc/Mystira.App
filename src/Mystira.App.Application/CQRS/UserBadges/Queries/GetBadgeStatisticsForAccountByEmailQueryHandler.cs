@@ -2,7 +2,6 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.CQRS.Accounts.Queries;
 using Mystira.App.Application.CQRS.UserProfiles.Queries;
-using Mystira.App.Application.Interfaces;
 
 namespace Mystira.App.Application.CQRS.UserBadges.Queries;
 

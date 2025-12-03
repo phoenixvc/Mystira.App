@@ -1,5 +1,3 @@
-using Mystira.App.Application.Interfaces;
-
 namespace Mystira.App.Application.CQRS.Accounts.Queries;
 
 /// <summary>

@@ -1,5 +1,3 @@
-using System.Globalization;
-using CsvHelper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using Mystira.App.CosmosConsole.Data;
 using Mystira.App.CosmosConsole.Extensions;
 using Mystira.App.CosmosConsole.Services;
-using Mystira.App.Domain.Models;
 
 namespace Mystira.App.CosmosConsole;
 

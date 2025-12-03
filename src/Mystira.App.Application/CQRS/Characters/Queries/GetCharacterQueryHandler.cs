@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Domain.Models;
-using Mystira.App.Application.Interfaces;
 using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Application.CQRS.Characters.Queries;

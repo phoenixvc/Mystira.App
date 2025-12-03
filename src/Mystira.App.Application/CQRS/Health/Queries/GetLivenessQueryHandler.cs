@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Mystira.App.Application.Interfaces;
 
 namespace Mystira.App.Application.CQRS.Health.Queries;
 
