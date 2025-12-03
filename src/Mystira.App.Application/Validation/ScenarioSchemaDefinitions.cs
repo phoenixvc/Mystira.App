@@ -37,6 +37,7 @@ public static class ScenarioSchemaDefinitions
     "minimum_age": { "type": "integer", "enum": [1, 3, 6, 10, 13], "description": "Minimum recommended age (controls allowed age_group bands)" },
     "core_axes": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Core story themes/axes" },
     "archetypes": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Character archetypes present in the story" },
+    "image": { "type": "string", "description": "Image ID for the cover picture of the scenario" },
 
     "characters": {
       "type": "array",

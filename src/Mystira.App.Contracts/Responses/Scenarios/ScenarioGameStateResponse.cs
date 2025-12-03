@@ -21,6 +21,7 @@ public class ScenarioWithGameState
     public ScenarioGameState GameState { get; set; } = ScenarioGameState.NotStarted;
     public DateTime? LastPlayedAt { get; set; }
     public int? PlayCount { get; set; }
+    public string? Image { get; set; }
 }
 
 public class ScenarioGameStateResponse
