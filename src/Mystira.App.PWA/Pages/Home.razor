@@ -299,7 +299,7 @@
             </div>
         </div>
     }
-    else if (ShouldShowCatalog && !string.IsNullOrEmpty(selectedBundleId) && filteredScenarios.Any())
+    else if (!string.IsNullOrEmpty(selectedBundleId) && filteredScenarios.Any())
     {
         <div class="adventures-grid row">
             @foreach (var scenario in filteredScenarios)
