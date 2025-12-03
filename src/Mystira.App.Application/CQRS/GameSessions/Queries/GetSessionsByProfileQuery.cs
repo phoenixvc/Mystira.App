@@ -1,4 +1,3 @@
-using Mystira.App.Application.Interfaces;
 using Mystira.App.Contracts.Responses.GameSessions;
 
 namespace Mystira.App.Application.CQRS.GameSessions.Queries;

@@ -55,4 +55,17 @@ public class ContentBundleAdminService : IContentBundleAdminService
         await _context.SaveChangesAsync();
         return existing;
     }
+
+    public async Task<bool> DeleteAsync(string id)
+    {
+        var existing = await _context.ContentBundles.FindAsync(id);
+        if (existing == null)
+        {
+            return false;
+        }
+
+        _context.ContentBundles.Remove(existing);
+        await _context.SaveChangesAsync();
+        return true;
+    }
 }

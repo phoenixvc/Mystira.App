@@ -1,10 +1,8 @@
 using MediatR;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.UserBadges.Commands;
 using Mystira.App.Application.CQRS.UserBadges.Queries;
 using Mystira.App.Contracts.Requests.Badges;
-using Mystira.App.Contracts.Responses.Badges;
 using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Domain.Models;
 

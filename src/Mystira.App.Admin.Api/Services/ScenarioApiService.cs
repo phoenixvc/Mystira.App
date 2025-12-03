@@ -124,24 +124,25 @@ public class ScenarioApiService : IScenarioApiService
         var totalCount = filtered.Count();
 
         var scenarios = filtered
-            .OrderBy(s => s.CreatedAt)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
-            .Select(s => new ScenarioSummary
-            {
-                Id = s.Id,
-                Title = s.Title,
-                Description = s.Description,
-                Tags = s.Tags,
-                Difficulty = s.Difficulty,
-                SessionLength = s.SessionLength,
-                Archetypes = s.Archetypes.Select(a => a.Value).ToList(),
-                MinimumAge = s.MinimumAge,
-                AgeGroup = s.AgeGroup,
-                CoreAxes = s.CoreAxes.Select(a => a.Value).ToList(),
-                CreatedAt = s.CreatedAt
-            })
-            .ToList();
+             .OrderBy(s => s.CreatedAt)
+             .Skip((request.Page - 1) * request.PageSize)
+             .Take(request.PageSize)
+             .Select(s => new ScenarioSummary
+             {
+                 Id = s.Id,
+                 Title = s.Title,
+                 Description = s.Description,
+                 Tags = s.Tags,
+                 Difficulty = s.Difficulty,
+                 SessionLength = s.SessionLength,
+                 Archetypes = s.Archetypes.Select(a => a.Value).ToList(),
+                 MinimumAge = s.MinimumAge,
+                 AgeGroup = s.AgeGroup,
+                 CoreAxes = s.CoreAxes.Select(a => a.Value).ToList(),
+                 CreatedAt = s.CreatedAt,
+                 Image = s.Image
+             })
+             .ToList();
 
         return new ScenarioListResponse
         {
@@ -165,19 +166,20 @@ public class ScenarioApiService : IScenarioApiService
 
         var scenario = new Scenario
         {
-            Id = Guid.NewGuid().ToString(),
-            Title = request.Title,
-            Description = request.Description,
-            Tags = request.Tags,
-            Difficulty = request.Difficulty,
-            SessionLength = request.SessionLength,
-            Archetypes = ParseArchetypesOrThrow(request.Archetypes),
-            AgeGroup = request.AgeGroup,
-            MinimumAge = request.MinimumAge,
-            CoreAxes = ParseCoreAxesOrThrow(request.CoreAxes),
-            Characters = request.Characters,
-            Scenes = request.Scenes,
-            CreatedAt = DateTime.UtcNow
+             Id = Guid.NewGuid().ToString(),
+             Title = request.Title,
+             Description = request.Description,
+             Tags = request.Tags,
+             Difficulty = request.Difficulty,
+             SessionLength = request.SessionLength,
+             Archetypes = ParseArchetypesOrThrow(request.Archetypes),
+             AgeGroup = request.AgeGroup,
+             MinimumAge = request.MinimumAge,
+             CoreAxes = ParseCoreAxesOrThrow(request.CoreAxes),
+             Characters = request.Characters,
+             Scenes = request.Scenes,
+             Image = request.Image,
+             CreatedAt = DateTime.UtcNow
         };
 
         _context.Scenarios.Add(scenario);
@@ -220,6 +222,7 @@ public class ScenarioApiService : IScenarioApiService
         scenario.CoreAxes = ParseCoreAxesOrThrow(request.CoreAxes);
         scenario.Characters = request.Characters;
         scenario.Scenes = request.Scenes;
+        scenario.Image = request.Image;
 
         await ValidateScenarioAsync(scenario);
 
@@ -358,15 +361,16 @@ public class ScenarioApiService : IScenarioApiService
 
         var payload = new
         {
-            request.Title,
-            request.Description,
-            Tags = tags,
-            Difficulty = request.Difficulty.ToString(),
-            SessionLength = request.SessionLength.ToString(),
-            request.AgeGroup,
-            request.MinimumAge,
-            CoreAxes = coreAxes,
-            Archetypes = archetypes,
+             request.Title,
+             request.Description,
+             Tags = tags,
+             Difficulty = request.Difficulty.ToString(),
+             SessionLength = request.SessionLength.ToString(),
+             request.AgeGroup,
+             request.MinimumAge,
+             CoreAxes = coreAxes,
+             Archetypes = archetypes,
+             request.Image,
             Characters = characters.Select(character =>
             {
                 var meta = character.Metadata;

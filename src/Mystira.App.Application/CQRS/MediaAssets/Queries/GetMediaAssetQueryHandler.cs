@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Mystira.App.Application.Interfaces;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
 
@@ -22,8 +21,15 @@ public class GetMediaAssetQueryHandler : IQueryHandler<GetMediaAssetQuery, Media
         GetMediaAssetQuery request,
         CancellationToken cancellationToken)
     {
-        var media = await _repository.GetByIdAsync(request.MediaId);
-        _logger.LogDebug("Retrieved media asset {MediaId}", request.MediaId);
+        // MediaId is an external identifier stored in the MediaAsset document; do not use the DB primary key.
+        var media = await _repository.GetByMediaIdAsync(request.MediaId);
+        if (media == null)
+        {
+            _logger.LogDebug("Media asset not found by MediaId {MediaId}", request.MediaId);
+            return null;
+        }
+
+        _logger.LogDebug("Retrieved media asset by MediaId {MediaId}", request.MediaId);
         return media;
     }
 }

@@ -1,7 +1,5 @@
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Mystira.App.Application.Interfaces;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Contracts.Responses.Scenarios;
 
@@ -76,7 +74,8 @@ public class GetScenariosWithGameStateQueryHandler
                 Archetypes = scenario.Archetypes?.Select(a => a.ToString()).ToArray() ?? [],
                 GameState = gameState,
                 LastPlayedAt = lastSession?.StartTime,
-                PlayCount = sessions.Count
+                PlayCount = sessions.Count,
+                Image = scenario.Image
             };
         }).ToList();
 

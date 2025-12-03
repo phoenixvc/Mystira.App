@@ -1,8 +1,11 @@
+using System.Text.Json.Serialization;
+
 namespace Mystira.App.Domain.Models;
 
 /// <summary>
 /// Represents an echo type value used in scenarios for game events and progression.
 /// </summary>
+[JsonConverter(typeof(EchoTypeJsonConverter))]
 public class EchoType
 {
     public string Value { get; set; }

@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Accounts.Commands;
 using Mystira.App.Application.CQRS.Accounts.Queries;

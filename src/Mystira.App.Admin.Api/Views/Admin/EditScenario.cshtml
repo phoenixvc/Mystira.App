@@ -78,8 +78,14 @@
                                             <label for="compassAxes">Compass Axes (comma-separated, max 4)</label>
                                             <input type="text" class="form-control" id="compassAxes" name="compassAxes" value="@string.Join(", ", Model.CoreAxes)">
                                         </div>
-                                    </div>
-                                </div>
+
+                                        <div class="form-group mb-3">
+                                            <label for="image">Cover Image ID</label>
+                                            <input type="text" class="form-control" id="image" name="image" value="@Model.Image" placeholder="e.g., img_scenario_cover_001">
+                                            <small class="form-text text-muted">The image ID that corresponds to the cover picture of the scenario</small>
+                                        </div>
+                                        </div>
+                                        </div>
                                 
                                 <!-- Scenes Section -->
                                 <div class="card">

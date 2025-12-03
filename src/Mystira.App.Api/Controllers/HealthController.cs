@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Mystira.App.Application.CQRS.Health.Queries;
 using Mystira.App.Contracts.Responses.Common;
 

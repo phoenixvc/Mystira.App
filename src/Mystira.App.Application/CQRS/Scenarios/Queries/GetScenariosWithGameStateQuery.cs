@@ -1,4 +1,3 @@
-using Mystira.App.Application.Interfaces;
 using Mystira.App.Contracts.Responses.Scenarios;
 
 namespace Mystira.App.Application.CQRS.Scenarios.Queries;

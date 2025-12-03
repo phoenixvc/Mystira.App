@@ -1,8 +1,11 @@
+using System.Text.Json.Serialization;
+
 namespace Mystira.App.Domain.Models;
 
 /// <summary>
 /// Represents a core axis value used in scenarios for character development.
 /// </summary>
+[JsonConverter(typeof(CoreAxisJsonConverter))]
 public class CoreAxis
 {
     public string Value { get; set; }

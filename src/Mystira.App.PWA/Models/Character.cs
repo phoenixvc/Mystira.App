@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace Mystira.App.PWA.Models;
 
 /// <summary>

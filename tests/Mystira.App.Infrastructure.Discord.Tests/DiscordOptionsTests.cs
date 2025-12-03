@@ -1,10 +1,5 @@
 using FluentAssertions;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Moq;
 using Mystira.App.Infrastructure.Discord.Configuration;
-using Mystira.App.Infrastructure.Discord.Services;
-using Xunit;
 
 namespace Mystira.App.Infrastructure.Discord.Tests;
 

@@ -3,9 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Mystira.App.Infrastructure.Discord.Configuration;
-using Mystira.App.Infrastructure.Discord.HealthChecks;
 using Mystira.App.Infrastructure.Discord.Services;
-using Xunit;
 
 namespace Mystira.App.Infrastructure.Discord.Tests;
 

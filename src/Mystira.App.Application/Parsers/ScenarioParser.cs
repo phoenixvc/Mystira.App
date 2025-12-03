@@ -40,10 +40,11 @@ public static class ScenarioParser
             MinimumAge = Convert.ToInt32(scenarioData["minimum_age"]!),
             CoreAxes = coreAxesList,
             Characters = charactersObj.Select(o => CharacterParser.Parse((Dictionary<object, object>)o)).ToList(),
-            Scenes = scenes.Select(o => SceneParser.Parse((Dictionary<object, object>)o)).ToList()
-        };
+            Scenes = scenes.Select(o => SceneParser.Parse((Dictionary<object, object>)o)).ToList(),
+            Image = scenarioData.GetValueOrDefault("image")?.ToString()
+            };
 
-        createRequest.CompassAxes = createRequest.CoreAxes;
+            createRequest.CompassAxes = createRequest.CoreAxes;
 
         return createRequest;
     }

@@ -15,5 +15,6 @@ public class ScenarioSummary
     public string AgeGroup { get; set; } = string.Empty;
     public List<string> CoreAxes { get; set; } = new();
     public DateTime CreatedAt { get; set; }
-}
+    public string? Image { get; set; }
+    }
 

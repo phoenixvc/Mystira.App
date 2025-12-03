@@ -192,3 +192,86 @@ html[data-theme="dark"] .btn-secondary:hover {
     background-color: #3d3a6e;
     border-color: #4f4c7e;
 }
+
+/* Light mode overrides - ensures light mode when manually selected via toggle */
+html[data-theme="light"] .modal-content {
+    background: white;
+    border: 1px solid rgba(17, 24, 39, 0.1);
+    color: #111827;
+}
+
+html[data-theme="light"] .modal-header {
+    border-bottom-color: rgba(17, 24, 39, 0.1);
+}
+
+html[data-theme="light"] .modal-footer {
+    border-top-color: rgba(17, 24, 39, 0.1);
+}
+
+html[data-theme="light"] .modal-title {
+    color: #111827;
+}
+
+html[data-theme="light"] .btn-close {
+    filter: none;
+}
+
+html[data-theme="light"] .form-label {
+    color: #111827;
+}
+
+html[data-theme="light"] .form-control,
+html[data-theme="light"] .form-select {
+    background-color: white;
+    border-color: rgba(17, 24, 39, 0.1);
+    color: #111827;
+}
+
+html[data-theme="light"] .form-control:focus,
+html[data-theme="light"] .form-select:focus {
+    background-color: white;
+    border-color: #9333ea;
+    color: #111827;
+    box-shadow: 0 0 0 0.25rem rgba(147, 51, 234, 0.25);
+}
+
+html[data-theme="light"] .form-control::placeholder {
+    color: #6b7280;
+}
+
+html[data-theme="light"] .form-select option {
+    background-color: white;
+    color: #111827;
+}
+
+html[data-theme="light"] .alert-info {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #2563eb;
+}
+
+html[data-theme="light"] .alert-warning {
+    background-color: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #d97706;
+}
+
+html[data-theme="light"] .card {
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(17, 24, 39, 0.08);
+}
+
+html[data-theme="light"] .card-title {
+    color: #111827;
+}
+
+html[data-theme="light"] .btn-secondary {
+    background-color: #f3f4f6;
+    border-color: #d1d5db;
+    color: #111827;
+}
+
+html[data-theme="light"] .btn-secondary:hover {
+    background-color: #e5e7eb;
+    border-color: #9ca3af;
+}

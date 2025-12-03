@@ -1,5 +1,4 @@
 using System.Text.Json.Serialization;
-using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Models;
 
