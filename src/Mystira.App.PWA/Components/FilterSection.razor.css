@@ -170,6 +170,9 @@
     background-color: #e2e8f0;
     background-image: none !important;
     transition: all 0.3s ease;
+    position: relative; /* Required for ::before pseudo-element positioning */
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .completed-switch::before {
@@ -183,6 +186,10 @@
     left: 1px;
     transition: all 0.3s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.completed-switch:checked::before {
+    left: calc(100% - 19px); /* Move knob to the right when checked */
 }
 
 .completed-switch:checked {
