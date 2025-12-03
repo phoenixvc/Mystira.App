@@ -170,6 +170,9 @@
     background-color: #e2e8f0;
     background-image: none !important;
     transition: all 0.3s ease;
+    position: relative; /* Required for ::before pseudo-element positioning */
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .completed-switch::before {
@@ -183,6 +186,10 @@
     left: 1px;
     transition: all 0.3s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.completed-switch:checked::before {
+    left: calc(100% - 19px); /* Move knob to the right when checked */
 }
 
 .completed-switch:checked {
@@ -334,14 +341,14 @@
     background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
     border: 2px solid #9333ea;
     color: white;
-    transform: scale(1.03);
     box-shadow: 0 4px 16px rgba(147, 51, 234, 0.3);
+    /* Removed scale transform to prevent overlap with neighboring buttons */
 }
 
 .btn-age-filter.btn-primary-custom:hover {
     background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
     border-color: #7c3aed;
-    transform: scale(1.03) translateY(-2px);
+    transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(147, 51, 234, 0.35);
 }
 
