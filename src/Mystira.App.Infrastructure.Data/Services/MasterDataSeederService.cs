@@ -246,12 +246,11 @@ public class MasterDataSeederService
             Path.Combine(currentDir, fileName),
         };
 
-        foreach (var fullPath in possiblePaths.Select(Path.GetFullPath))
+        var firstExistingPath = possiblePaths.Select(Path.GetFullPath)
+            .FirstOrDefault(File.Exists);
+        if (firstExistingPath != null)
         {
-            if (File.Exists(fullPath))
-            {
-                return fullPath;
-            }
+            return firstExistingPath;
         }
 
         // Return the path in the dataDir even if it doesn't exist
