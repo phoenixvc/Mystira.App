@@ -20,13 +20,14 @@ public class CosmosStatsArgs
 
 public class MigrationArgs
 {
-    public string Type { get; set; } = string.Empty; // scenarios, bundles, media-metadata, blobs, all
+    public string Type { get; set; } = string.Empty; // scenarios, bundles, media-metadata, blobs, master-data, all
     public string? SourceCosmosConnection { get; set; }
     public string? DestCosmosConnection { get; set; }
     public string? SourceStorageConnection { get; set; }
     public string? DestStorageConnection { get; set; }
     public string DatabaseName { get; set; } = "MystiraAppDb";
     public string ContainerName { get; set; } = "mystira-app-media";
+    public string? JsonFilesPath { get; set; } // Path to master data JSON files
 }
 
 public class InfrastructureArgs

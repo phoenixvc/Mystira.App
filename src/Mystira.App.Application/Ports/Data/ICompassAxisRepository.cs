@@ -8,4 +8,7 @@ public interface ICompassAxisRepository
     Task<CompassAxis?> GetByIdAsync(string id);
     Task<CompassAxis?> GetByNameAsync(string name);
     Task<bool> ExistsByNameAsync(string name);
+    Task AddAsync(CompassAxis axis);
+    Task UpdateAsync(CompassAxis axis);
+    Task DeleteAsync(string id);
 }

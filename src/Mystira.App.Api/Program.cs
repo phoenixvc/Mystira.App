@@ -251,6 +251,11 @@ builder.Services.AddScoped<IMediaMetadataFileRepository, MediaMetadataFileReposi
 builder.Services.AddScoped<ICharacterMediaMetadataFileRepository, CharacterMediaMetadataFileRepository>();
 builder.Services.AddScoped<ICharacterMapFileRepository, CharacterMapFileRepository>();
 builder.Services.AddScoped<IAvatarConfigurationFileRepository, AvatarConfigurationFileRepository>();
+builder.Services.AddScoped<ICompassAxisRepository, CompassAxisRepository>();
+builder.Services.AddScoped<IArchetypeRepository, ArchetypeRepository>();
+builder.Services.AddScoped<IEchoTypeRepository, EchoTypeRepository>();
+builder.Services.AddScoped<IFantasyThemeRepository, FantasyThemeRepository>();
+builder.Services.AddScoped<IAgeGroupRepository, AgeGroupRepository>();
 builder.Services.AddScoped<Mystira.App.Application.Ports.Data.IUnitOfWork, Mystira.App.Infrastructure.Data.UnitOfWork.UnitOfWork>();
 
 // Register Application Layer Use Cases

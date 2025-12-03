@@ -21,6 +21,12 @@ public interface IMigrationService
     /// Copies blob files from source storage to destination storage
     /// </summary>
     Task<MigrationResult> MigrateBlobStorageAsync(string sourceStorageConnectionString, string destStorageConnectionString, string containerName);
+
+    /// <summary>
+    /// Seeds master data (CompassAxes, Archetypes, EchoTypes, FantasyThemes, AgeGroups)
+    /// from JSON files into production Cosmos DB
+    /// </summary>
+    Task<MigrationResult> SeedMasterDataAsync(string destConnectionString, string databaseName, string jsonFilesPath);
 }
 
 public class MigrationResult

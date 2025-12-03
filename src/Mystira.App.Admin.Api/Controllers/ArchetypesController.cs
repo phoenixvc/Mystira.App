@@ -1,5 +1,7 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Admin.Api.Services;
+using Mystira.App.Application.CQRS.Archetypes.Commands;
+using Mystira.App.Application.CQRS.Archetypes.Queries;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Admin.Api.Controllers;
@@ -8,12 +10,12 @@ namespace Mystira.App.Admin.Api.Controllers;
 [Route("api/admin/[controller]")]
 public class ArchetypesController : ControllerBase
 {
-    private readonly IArchetypeApiService _archetypeService;
+    private readonly IMediator _mediator;
     private readonly ILogger<ArchetypesController> _logger;
 
-    public ArchetypesController(IArchetypeApiService archetypeService, ILogger<ArchetypesController> logger)
+    public ArchetypesController(IMediator mediator, ILogger<ArchetypesController> logger)
     {
-        _archetypeService = archetypeService;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -21,7 +23,7 @@ public class ArchetypesController : ControllerBase
     public async Task<ActionResult<List<ArchetypeDefinition>>> GetAllArchetypes()
     {
         _logger.LogInformation("GET: Retrieving all archetypes");
-        var archetypes = await _archetypeService.GetAllArchetypesAsync();
+        var archetypes = await _mediator.Send(new GetAllArchetypesQuery());
         return Ok(archetypes);
     }
 
@@ -29,7 +31,7 @@ public class ArchetypesController : ControllerBase
     public async Task<ActionResult<ArchetypeDefinition>> GetArchetypeById(string id)
     {
         _logger.LogInformation("GET: Retrieving archetype with id: {Id}", id);
-        var archetype = await _archetypeService.GetArchetypeByIdAsync(id);
+        var archetype = await _mediator.Send(new GetArchetypeByIdQuery(id));
         if (archetype == null)
         {
             _logger.LogWarning("Archetype with id {Id} not found", id);
@@ -43,13 +45,7 @@ public class ArchetypesController : ControllerBase
     {
         _logger.LogInformation("POST: Creating archetype with name: {Name}", request.Name);
         
-        var archetype = new ArchetypeDefinition
-        {
-            Name = request.Name,
-            Description = request.Description
-        };
-
-        var created = await _archetypeService.CreateArchetypeAsync(archetype);
+        var created = await _mediator.Send(new CreateArchetypeCommand(request.Name, request.Description));
         return CreatedAtAction(nameof(GetArchetypeById), new { id = created.Id }, created);
     }
 
@@ -58,13 +54,7 @@ public class ArchetypesController : ControllerBase
     {
         _logger.LogInformation("PUT: Updating archetype with id: {Id}", id);
         
-        var archetype = new ArchetypeDefinition
-        {
-            Name = request.Name,
-            Description = request.Description
-        };
-
-        var updated = await _archetypeService.UpdateArchetypeAsync(id, archetype);
+        var updated = await _mediator.Send(new UpdateArchetypeCommand(id, request.Name, request.Description));
         if (updated == null)
         {
             _logger.LogWarning("Archetype with id {Id} not found", id);
@@ -78,7 +68,7 @@ public class ArchetypesController : ControllerBase
     {
         _logger.LogInformation("DELETE: Deleting archetype with id: {Id}", id);
         
-        var success = await _archetypeService.DeleteArchetypeAsync(id);
+        var success = await _mediator.Send(new DeleteArchetypeCommand(id));
         if (!success)
         {
             _logger.LogWarning("Archetype with id {Id} not found", id);
