@@ -211,6 +211,33 @@ public class AdminController : Controller
     }
 
     /// <summary>
+    /// Echo Types management page
+    /// </summary>
+    [HttpGet("echotypes")]
+    public IActionResult EchoTypes()
+    {
+       return View("EchoTypes");
+    }
+
+    /// <summary>
+    /// Fantasy Themes management page
+    /// </summary>
+    [HttpGet("fantasythemes")]
+    public IActionResult FantasyThemes()
+    {
+       return View("FantasyThemes");
+    }
+
+    /// <summary>
+    /// Age Groups management page
+    /// </summary>
+    [HttpGet("agegroups")]
+    public IActionResult AgeGroups()
+    {
+       return View("AgeGroups");
+    }
+
+    /// <summary>
     /// Character Maps management page
     /// </summary>
     [HttpGet("charactermaps")]

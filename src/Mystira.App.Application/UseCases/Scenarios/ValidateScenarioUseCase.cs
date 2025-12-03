@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.UseCases.Scenarios;
@@ -9,14 +10,51 @@ namespace Mystira.App.Application.UseCases.Scenarios;
 public class ValidateScenarioUseCase
 {
     private readonly ILogger<ValidateScenarioUseCase> _logger;
+    private readonly ICompassAxisRepository _compassAxisRepository;
+    private readonly IArchetypeRepository _archetypeRepository;
 
-    public ValidateScenarioUseCase(ILogger<ValidateScenarioUseCase> logger)
+    public ValidateScenarioUseCase(
+        ILogger<ValidateScenarioUseCase> logger,
+        ICompassAxisRepository compassAxisRepository,
+        IArchetypeRepository archetypeRepository)
     {
         _logger = logger;
+        _compassAxisRepository = compassAxisRepository;
+        _archetypeRepository = archetypeRepository;
     }
 
-    public Task ExecuteAsync(Scenario scenario)
+    public async Task ExecuteAsync(Scenario scenario)
     {
+        // Validate CoreAxes against DB
+        if (scenario.CoreAxes != null && scenario.CoreAxes.Count > 0)
+        {
+            var validAxes = await _compassAxisRepository.GetAllAsync();
+            var validAxisNames = validAxes.Select(a => a.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            
+            foreach (var axis in scenario.CoreAxes)
+            {
+                if (!validAxisNames.Contains(axis.Value))
+                {
+                    throw new ArgumentException($"Invalid compass axis: '{axis.Value}'. Valid values: {string.Join(", ", validAxisNames)}");
+                }
+            }
+        }
+
+        // Validate Archetypes against DB
+        if (scenario.Archetypes != null && scenario.Archetypes.Count > 0)
+        {
+            var validArchetypes = await _archetypeRepository.GetAllAsync();
+            var validArchetypeNames = validArchetypes.Select(a => a.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            
+            foreach (var archetype in scenario.Archetypes)
+            {
+                if (!validArchetypeNames.Contains(archetype.Value))
+                {
+                    throw new ArgumentException($"Invalid archetype: '{archetype.Value}'. Valid values: {string.Join(", ", validArchetypeNames)}");
+                }
+            }
+        }
+
         // Validate scene references
         var sceneIds = scenario.Scenes.Select(s => s.Id).ToHashSet();
         var allReferencedScenes = new HashSet<string>();
@@ -78,8 +116,6 @@ public class ValidateScenarioUseCase
 
         // Note: Character references in scenes are not currently stored in the Scene model
         // This validation would need to be added if scenes reference characters directly
-
-        return Task.CompletedTask;
     }
 }
 

@@ -23,7 +23,7 @@ public class MigrationCommands
             var args = JsonSerializer.Deserialize<MigrationArgs>(argsJson.GetRawText());
             if (args == null || string.IsNullOrEmpty(args.Type))
             {
-                return CommandResponse.Fail("Type is required (scenarios, bundles, media-metadata, blobs, all)");
+                return CommandResponse.Fail("Type is required (scenarios, bundles, media-metadata, blobs, master-data, all)");
             }
 
             // Get connection strings from args, environment, or configuration
@@ -48,6 +48,10 @@ public class MigrationCommands
                 ?? _configuration.GetConnectionString("DestStorage")
                 ?? _configuration.GetConnectionString("AzureStorage")
                 ?? "";
+
+            var jsonFilesPath = args.JsonFilesPath
+                ?? Environment.GetEnvironmentVariable("MASTER_DATA_JSON_PATH")
+                ?? FindMasterDataJsonPath();
 
             var results = new List<MigrationResult>();
 
@@ -89,6 +93,15 @@ public class MigrationCommands
                     results.Add(blobResult);
                     break;
 
+                case "master-data":
+                    if (string.IsNullOrEmpty(destCosmosConnection))
+                    {
+                        return CommandResponse.Fail("Destination Cosmos DB connection string is required");
+                    }
+                    var masterDataResult = await _migrationService.SeedMasterDataAsync(destCosmosConnection, args.DatabaseName, jsonFilesPath);
+                    results.Add(masterDataResult);
+                    break;
+
                 case "all":
                     // Migrate all Cosmos DB data
                     if (!string.IsNullOrEmpty(sourceCosmosConnection) && !string.IsNullOrEmpty(destCosmosConnection))
@@ -96,6 +109,12 @@ public class MigrationCommands
                         results.Add(await _migrationService.MigrateScenariosAsync(sourceCosmosConnection, destCosmosConnection, args.DatabaseName));
                         results.Add(await _migrationService.MigrateContentBundlesAsync(sourceCosmosConnection, destCosmosConnection, args.DatabaseName));
                         results.Add(await _migrationService.MigrateMediaAssetsAsync(sourceCosmosConnection, destCosmosConnection, args.DatabaseName));
+                    }
+
+                    // Seed master data
+                    if (!string.IsNullOrEmpty(destCosmosConnection))
+                    {
+                        results.Add(await _migrationService.SeedMasterDataAsync(destCosmosConnection, args.DatabaseName, jsonFilesPath));
                     }
 
                     // Migrate Blob Storage
@@ -127,5 +146,38 @@ public class MigrationCommands
         {
             return CommandResponse.Fail(ex.Message);
         }
+    }
+
+    /// <summary>
+    /// Searches for the master data JSON files directory by looking for known files.
+    /// </summary>
+    private static string FindMasterDataJsonPath()
+    {
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        
+        // Search for the Data directory containing CoreAxes.json
+        var searchPaths = new[]
+        {
+            // When running from tools/Mystira.DevHub.CLI/bin
+            Path.Combine(baseDir, "..", "..", "..", "..", "src", "Mystira.App.Domain", "Data"),
+            // When running from solution root
+            Path.Combine(baseDir, "src", "Mystira.App.Domain", "Data"),
+            // When running from src directory
+            Path.Combine(baseDir, "Mystira.App.Domain", "Data"),
+            // Relative to current directory
+            Path.Combine(Directory.GetCurrentDirectory(), "src", "Mystira.App.Domain", "Data"),
+        };
+
+        foreach (var path in searchPaths)
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (Directory.Exists(fullPath) && File.Exists(Path.Combine(fullPath, "CoreAxes.json")))
+            {
+                return fullPath;
+            }
+        }
+
+        // Fallback to most likely path
+        return Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "src", "Mystira.App.Domain", "Data"));
     }
 }

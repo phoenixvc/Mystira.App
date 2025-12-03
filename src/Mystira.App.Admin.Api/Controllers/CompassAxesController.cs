@@ -1,5 +1,7 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Admin.Api.Services;
+using Mystira.App.Application.CQRS.CompassAxes.Commands;
+using Mystira.App.Application.CQRS.CompassAxes.Queries;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Admin.Api.Controllers;
@@ -8,12 +10,12 @@ namespace Mystira.App.Admin.Api.Controllers;
 [Route("api/admin/[controller]")]
 public class CompassAxesController : ControllerBase
 {
-    private readonly ICompassAxisApiService _compassAxisService;
+    private readonly IMediator _mediator;
     private readonly ILogger<CompassAxesController> _logger;
 
-    public CompassAxesController(ICompassAxisApiService compassAxisService, ILogger<CompassAxesController> logger)
+    public CompassAxesController(IMediator mediator, ILogger<CompassAxesController> logger)
     {
-        _compassAxisService = compassAxisService;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -21,7 +23,7 @@ public class CompassAxesController : ControllerBase
     public async Task<ActionResult<List<CompassAxis>>> GetAllCompassAxes()
     {
         _logger.LogInformation("GET: Retrieving all compass axes");
-        var axes = await _compassAxisService.GetAllCompassAxesAsync();
+        var axes = await _mediator.Send(new GetAllCompassAxesQuery());
         return Ok(axes);
     }
 
@@ -29,7 +31,7 @@ public class CompassAxesController : ControllerBase
     public async Task<ActionResult<CompassAxis>> GetCompassAxisById(string id)
     {
         _logger.LogInformation("GET: Retrieving compass axis with id: {Id}", id);
-        var axis = await _compassAxisService.GetCompassAxisByIdAsync(id);
+        var axis = await _mediator.Send(new GetCompassAxisByIdQuery(id));
         if (axis == null)
         {
             _logger.LogWarning("Compass axis with id {Id} not found", id);
@@ -43,13 +45,7 @@ public class CompassAxesController : ControllerBase
     {
         _logger.LogInformation("POST: Creating compass axis with name: {Name}", request.Name);
         
-        var axis = new CompassAxis
-        {
-            Name = request.Name,
-            Description = request.Description
-        };
-
-        var created = await _compassAxisService.CreateCompassAxisAsync(axis);
+        var created = await _mediator.Send(new CreateCompassAxisCommand(request.Name, request.Description));
         return CreatedAtAction(nameof(GetCompassAxisById), new { id = created.Id }, created);
     }
 
@@ -58,13 +54,7 @@ public class CompassAxesController : ControllerBase
     {
         _logger.LogInformation("PUT: Updating compass axis with id: {Id}", id);
         
-        var axis = new CompassAxis
-        {
-            Name = request.Name,
-            Description = request.Description
-        };
-
-        var updated = await _compassAxisService.UpdateCompassAxisAsync(id, axis);
+        var updated = await _mediator.Send(new UpdateCompassAxisCommand(id, request.Name, request.Description));
         if (updated == null)
         {
             _logger.LogWarning("Compass axis with id {Id} not found", id);
@@ -78,7 +68,7 @@ public class CompassAxesController : ControllerBase
     {
         _logger.LogInformation("DELETE: Deleting compass axis with id: {Id}", id);
         
-        var success = await _compassAxisService.DeleteCompassAxisAsync(id);
+        var success = await _mediator.Send(new DeleteCompassAxisCommand(id));
         if (!success)
         {
             _logger.LogWarning("Compass axis with id {Id} not found", id);
