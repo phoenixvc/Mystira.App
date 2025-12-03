@@ -8,4 +8,5 @@ public interface IContentBundleAdminService
     Task<ContentBundle?> GetByIdAsync(string id);
     Task<ContentBundle> CreateAsync(ContentBundle bundle);
     Task<ContentBundle?> UpdateAsync(string id, ContentBundle bundle);
+    Task<bool> DeleteAsync(string id);
 }
