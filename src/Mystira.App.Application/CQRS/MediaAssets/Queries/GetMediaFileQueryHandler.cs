@@ -33,11 +33,11 @@ public class GetMediaFileQueryHandler
     {
         _logger.LogInformation("Retrieving media file for MediaId: {MediaId}", request.MediaId);
 
-        // 1. Get media asset metadata
-        var mediaAsset = await _repository.GetByIdAsync(request.MediaId);
+        // 1. Get media asset metadata by external MediaId (not DB primary key)
+        var mediaAsset = await _repository.GetByMediaIdAsync(request.MediaId);
         if (mediaAsset == null)
         {
-            _logger.LogWarning("Media asset not found: {MediaId}", request.MediaId);
+            _logger.LogWarning("Media asset not found by MediaId: {MediaId}", request.MediaId);
             return null;
         }
 
@@ -65,10 +65,31 @@ public class GetMediaFileQueryHandler
             var contentType = mediaAsset.MimeType ?? "application/octet-stream";
             var fileName = GetFileName(mediaAsset);
 
-            _logger.LogInformation(
-                "Successfully retrieved media file: {MediaId}, Size: {Size} bytes",
-                request.MediaId,
-                stream.Length);
+            // Some streams returned by cloud SDKs (e.g., Azure RetriableStream) do not support Length
+            // Avoid touching Length to prevent NotSupportedException
+            if (stream.CanSeek)
+            {
+                try
+                {
+                    var size = stream.Length; // safe when CanSeek == true
+                    _logger.LogInformation(
+                        "Successfully retrieved media file: {MediaId}, Size: {Size} bytes",
+                        request.MediaId,
+                        size);
+                }
+                catch (NotSupportedException)
+                {
+                    _logger.LogInformation(
+                        "Successfully retrieved media file: {MediaId}, Size: unknown (non-seekable)",
+                        request.MediaId);
+                }
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "Successfully retrieved media file: {MediaId}, Size: unknown (streaming)",
+                    request.MediaId);
+            }
 
             return (stream, contentType, fileName);
         }
