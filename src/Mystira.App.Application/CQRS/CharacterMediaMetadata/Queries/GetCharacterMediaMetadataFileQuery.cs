@@ -1,5 +1,4 @@
 using Mystira.App.Domain.Models;
-using Mystira.App.Application.Interfaces;
 
 namespace Mystira.App.Application.CQRS.CharacterMediaMetadata.Queries;
 

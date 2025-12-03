@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
-using Mystira.App.Application.Interfaces;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.UserProfiles.Commands;

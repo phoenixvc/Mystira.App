@@ -1,8 +1,6 @@
 using MediatR;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.CharacterMaps.Queries;
-using Mystira.App.Contracts.Requests.CharacterMaps;
 using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Domain.Models;
 

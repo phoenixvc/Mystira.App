@@ -1,6 +1,3 @@
-using Mystira.App.Application.Ports.Auth;
-using Mystira.App.Api.Services;
-
 namespace Mystira.App.Api.Adapters;
 
 /// <summary>

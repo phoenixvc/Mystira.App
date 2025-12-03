@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Nethereum.Web3;
 using Nethereum.Web3.Accounts;
-using Nethereum.Contracts;
 using Nethereum.Hex.HexTypes;
 using Mystira.App.Infrastructure.StoryProtocol.Configuration;
 

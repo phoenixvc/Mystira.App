@@ -1,4 +1,3 @@
-using Mystira.App.Application.Interfaces;
 using Mystira.App.Contracts.Requests.UserProfiles;
 using Mystira.App.Domain.Models;
 

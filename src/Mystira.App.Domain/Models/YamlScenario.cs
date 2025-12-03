@@ -1,4 +1,3 @@
-using System.Linq;
 using YamlDotNet.Serialization;
 
 namespace Mystira.App.Domain.Models;

@@ -1,10 +1,7 @@
 using MediatR;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Api.Models;
-using Mystira.App.Api.Services;
 using Mystira.App.Application.CQRS.MediaMetadata.Queries;
-using Mystira.App.Contracts.Responses.Common;
 using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
 
 namespace Mystira.App.Api.Controllers;
