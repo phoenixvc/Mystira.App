@@ -231,6 +231,8 @@ public class MasterDataSeederService
 
     private static string GetJsonFilePath(string fileName)
     {
+        // Ensure fileName is a safe single file name, not a path
+        fileName = Path.GetFileName(fileName);
         // Look for the JSON file in the Domain/Data directory
         var currentDir = AppDomain.CurrentDomain.BaseDirectory;
         
