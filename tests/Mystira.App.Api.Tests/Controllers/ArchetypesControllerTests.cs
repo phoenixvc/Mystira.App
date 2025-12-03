@@ -69,6 +69,7 @@ public class ArchetypesControllerTests
         result.Result.Should().BeOfType<OkObjectResult>();
         var ok = result.Result as OkObjectResult;
         var value = ok!.Value as List<ArchetypeDefinition>;
+        value.Should().NotBeNull();
         value.Should().BeEmpty();
     }
 
