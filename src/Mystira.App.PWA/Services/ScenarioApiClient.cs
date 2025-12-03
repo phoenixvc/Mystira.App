@@ -28,32 +28,75 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
 
             if (response.IsSuccessStatusCode)
             {
-                // Try to parse as ScenariosResponse first (object with Scenarios property)
+                // Try to parse as ScenarioListResponse first (object with Scenarios property containing ScenarioSummary)
+                try
+                {
+                    var scenarioListResponse = await response.Content.ReadFromJsonAsync<ScenarioListResponse>(JsonOptions);
+                    if (scenarioListResponse?.Scenarios != null)
+                    {
+                        // Convert ScenarioSummary to Scenario for backward compatibility
+                        var scenarios = scenarioListResponse.Scenarios.Select(summary => new Scenario
+                        {
+                            Id = summary.Id,
+                            Title = summary.Title,
+                            Description = summary.Description,
+                            Tags = summary.Tags?.ToArray() ?? Array.Empty<string>(),
+                            Difficulty = summary.Difficulty,
+                            SessionLength = summary.SessionLength,
+                            Archetypes = summary.Archetypes?.ToArray() ?? Array.Empty<string>(),
+                            MinimumAge = summary.MinimumAge,
+                            AgeGroup = summary.AgeGroup,
+                            CoreAxes = summary.CoreAxes ?? new List<string>(),
+                            CreatedAt = summary.CreatedAt,
+                            Scenes = new List<Scene>()  // Scenarios from list endpoint don't include scenes
+                        }).ToList();
+                        Logger.LogInformation("Successfully fetched {Count} scenarios", scenarios.Count);
+                        return scenarios;
+                    }
+                }
+                catch (System.Text.Json.JsonException ex)
+                {
+                    Logger.LogWarning(ex, "Failed to parse response as ScenarioListResponse, attempting fallback...");
+                }
+
+                // Fallback: Try to parse as ScenariosResponse (old format)
                 try
                 {
                     var scenariosResponse = await response.Content.ReadFromJsonAsync<ScenariosResponse>(JsonOptions);
                     var scenarios = scenariosResponse?.Scenarios ?? new List<Scenario>();
                     Logger.LogInformation("Successfully fetched {Count} scenarios (ScenariosResponse format)", scenarios.Count);
-                    return scenarios;
+                    if (scenarios.Any())
+                    {
+                        return scenarios;
+                    }
                 }
-                catch (System.Text.Json.JsonException)
+                catch (System.Text.Json.JsonException ex)
                 {
-                    // If that fails, try to parse as a direct array of scenarios
-                    Logger.LogInformation("Attempting to parse response as direct scenario array...");
+                    Logger.LogWarning(ex, "Failed to parse response as ScenariosResponse");
+                }
 
+                // Final fallback: Try to parse as direct array of scenarios
+                try
+                {
+                    Logger.LogInformation("Attempting to parse response as direct scenario array...");
+                    
                     // Re-fetch because the stream was consumed
                     using (var retryRequest = new HttpRequestMessage(HttpMethod.Get, "api/scenarios"))
                     {
                         retryRequest.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
                         var retryResponse = await HttpClient.SendAsync(retryRequest);
 
-                    if (retryResponse.IsSuccessStatusCode)
-                    {
-                        var scenarios = await retryResponse.Content.ReadFromJsonAsync<List<Scenario>>(JsonOptions);
-                        Logger.LogInformation("Successfully fetched {Count} scenarios (array format)", scenarios?.Count ?? 0);
-                        return scenarios ?? new List<Scenario>();
+                        if (retryResponse.IsSuccessStatusCode)
+                        {
+                            var scenarios = await retryResponse.Content.ReadFromJsonAsync<List<Scenario>>(JsonOptions);
+                            Logger.LogInformation("Successfully fetched {Count} scenarios (array format)", scenarios?.Count ?? 0);
+                            return scenarios ?? new List<Scenario>();
                         }
                     }
+                }
+                catch (System.Text.Json.JsonException ex)
+                {
+                    Logger.LogWarning(ex, "Failed to parse response as array format");
                 }
 
                 return new List<Scenario>();

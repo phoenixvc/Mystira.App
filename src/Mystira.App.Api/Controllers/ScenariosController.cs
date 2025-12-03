@@ -33,27 +33,54 @@ public class ScenariosController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<ScenarioListResponse>> GetScenarios([FromQuery] ScenarioQueryRequest request)
     {
-        try
-        {
-            var query = new GetPaginatedScenariosQuery(
-                request.Page,
-                request.PageSize,
-                request.Search,
-                request.AgeGroup,
-                request.Genre);
+       try
+       {
+           var query = new GetPaginatedScenariosQuery(
+               request.Page,
+               request.PageSize,
+               request.Search,
+               request.AgeGroup,
+               request.Genre);
 
-            var result = await _mediator.Send(query);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting scenarios");
-            return StatusCode(500, new ErrorResponse
-            {
-                Message = "Internal server error while fetching scenarios",
-                TraceId = HttpContext.TraceIdentifier
-            });
-        }
+           var scenarios = await _mediator.Send(query);
+           var scenariosList = scenarios.ToList();
+
+           // Convert to ScenarioSummary for the response
+           var scenarioSummaries = scenariosList.Select(s => new ScenarioSummary
+           {
+               Id = s.Id,
+               Title = s.Title,
+               Description = s.Description,
+               Tags = s.Tags?.ToList() ?? new List<string>(),
+               Difficulty = s.Difficulty,
+               SessionLength = s.SessionLength,
+               Archetypes = s.Archetypes.Select(a => a.Value).ToList(),
+               MinimumAge = s.MinimumAge,
+               AgeGroup = s.AgeGroup,
+               CoreAxes = s.CoreAxes.Select(c => c.Value).ToList(),
+               CreatedAt = s.CreatedAt
+           }).ToList();
+
+           var response = new ScenarioListResponse
+           {
+               Scenarios = scenarioSummaries,
+               TotalCount = scenariosList.Count,
+               Page = request.Page,
+               PageSize = request.PageSize,
+               HasNextPage = false
+           };
+
+           return Ok(response);
+       }
+       catch (Exception ex)
+       {
+           _logger.LogError(ex, "Error getting scenarios");
+           return StatusCode(500, new ErrorResponse
+           {
+               Message = "Internal server error while fetching scenarios",
+               TraceId = HttpContext.TraceIdentifier
+           });
+       }
     }
 
     /// <summary>
