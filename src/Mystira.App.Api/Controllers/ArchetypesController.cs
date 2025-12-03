@@ -1,5 +1,6 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Api.Services;
+using Mystira.App.Application.CQRS.Archetypes.Queries;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;
@@ -8,12 +9,12 @@ namespace Mystira.App.Api.Controllers;
 [Route("api/[controller]")]
 public class ArchetypesController : ControllerBase
 {
-    private readonly IArchetypeApiService _archetypeService;
+    private readonly IMediator _mediator;
     private readonly ILogger<ArchetypesController> _logger;
 
-    public ArchetypesController(IArchetypeApiService archetypeService, ILogger<ArchetypesController> logger)
+    public ArchetypesController(IMediator mediator, ILogger<ArchetypesController> logger)
     {
-        _archetypeService = archetypeService;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -21,7 +22,7 @@ public class ArchetypesController : ControllerBase
     public async Task<ActionResult<List<ArchetypeDefinition>>> GetAllArchetypes()
     {
         _logger.LogInformation("GET: Retrieving all archetypes");
-        var archetypes = await _archetypeService.GetAllArchetypesAsync();
+        var archetypes = await _mediator.Send(new GetAllArchetypesQuery());
         return Ok(archetypes);
     }
 
@@ -29,7 +30,7 @@ public class ArchetypesController : ControllerBase
     public async Task<ActionResult<ArchetypeDefinition>> GetArchetypeById(string id)
     {
         _logger.LogInformation("GET: Retrieving archetype with id: {Id}", id);
-        var archetype = await _archetypeService.GetArchetypeByIdAsync(id);
+        var archetype = await _mediator.Send(new GetArchetypeByIdQuery(id));
         if (archetype == null)
         {
             _logger.LogWarning("Archetype with id {Id} not found", id);
@@ -43,7 +44,7 @@ public class ArchetypesController : ControllerBase
     {
         _logger.LogInformation("POST: Validating archetype: {Name}", request.Name);
         
-        var isValid = await _archetypeService.IsValidArchetypeAsync(request.Name);
+        var isValid = await _mediator.Send(new ValidateArchetypeQuery(request.Name));
         return Ok(new { isValid });
     }
 }
