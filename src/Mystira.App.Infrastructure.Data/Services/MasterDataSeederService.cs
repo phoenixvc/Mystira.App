@@ -236,10 +236,12 @@ public class MasterDataSeederService
         // Look for the JSON file in the Domain/Data directory
         var currentDir = AppDomain.CurrentDomain.BaseDirectory;
         
-        // Try common paths relative to running directory
+        // Compute absolute path to the Data directory, then combine with fileName
+        var dataDir = Path.GetFullPath(Path.Combine(currentDir, "..", "..", "..", "..", "src", "Mystira.App.Domain", "Data"));
+        
         var possiblePaths = new[]
         {
-            Path.Combine(currentDir, "..", "..", "..", "..", "src", "Mystira.App.Domain", "Data", fileName),
+            Path.Combine(dataDir, fileName),
             Path.Combine(currentDir, "Data", fileName),
             Path.Combine(currentDir, fileName),
         };
@@ -253,8 +255,8 @@ public class MasterDataSeederService
             }
         }
 
-        // Return the most likely path even if it doesn't exist
-        return Path.GetFullPath(Path.Combine(currentDir, "..", "..", "..", "..", "src", "Mystira.App.Domain", "Data", fileName));
+        // Return the path in the dataDir even if it doesn't exist
+        return Path.Combine(dataDir, fileName);
     }
 
     private static JsonSerializerOptions GetJsonOptions()
