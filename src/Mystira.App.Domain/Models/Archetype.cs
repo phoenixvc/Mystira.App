@@ -1,8 +1,11 @@
+using System.Text.Json.Serialization;
+
 namespace Mystira.App.Domain.Models;
 
 /// <summary>
 /// Represents an archetype value used in scenarios and characters.
 /// </summary>
+[JsonConverter(typeof(ArchetypeJsonConverter))]
 public class Archetype
 {
     public string Value { get; set; }
