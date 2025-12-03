@@ -173,8 +173,6 @@ builder.Services.AddScoped<ICharacterMediaMetadataService, CharacterMediaMetadat
 builder.Services.AddScoped<IBadgeConfigurationApiService, BadgeConfigurationApiService>();
 builder.Services.AddScoped<IMediaApiService, MediaApiService>();
 builder.Services.AddScoped<IAvatarApiService, AvatarApiService>();
-builder.Services.AddScoped<ICompassAxisApiService, CompassAxisApiService>();
-builder.Services.AddScoped<IArchetypeApiService, ArchetypeApiService>();
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
 // Use infrastructure email service - not needed in Admin.Api unless used in Admin CQRS handlers
 // builder.Services.AddAzureEmailService(builder.Configuration);
