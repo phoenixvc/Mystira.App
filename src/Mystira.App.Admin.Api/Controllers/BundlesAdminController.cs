@@ -89,4 +89,24 @@ public class BundlesAdminController : ControllerBase
             return StatusCode(500, new { Message = "Internal server error while updating bundle", TraceId = HttpContext.TraceIdentifier });
         }
     }
+
+    [HttpDelete("{id}")]
+    public async Task<ActionResult> Delete(string id)
+    {
+        try
+        {
+            var deleted = await _service.DeleteAsync(id);
+            if (!deleted)
+            {
+                return NotFound(new { Message = $"Bundle not found: {id}", TraceId = HttpContext.TraceIdentifier });
+            }
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting bundle {BundleId}", id);
+            return StatusCode(500, new { Message = "Internal server error while deleting bundle", TraceId = HttpContext.TraceIdentifier });
+        }
+    }
 }

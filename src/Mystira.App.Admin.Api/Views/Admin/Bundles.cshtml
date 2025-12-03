@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Content Bundles";
 }
 
@@ -24,7 +24,7 @@
                                             <th>Age Group</th>
                                             <th>Scenarios</th>
                                             <th>Free</th>
-                                            <th></th>
+                                            <th colspan="2"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="bundlesTableBody">
@@ -93,7 +93,8 @@
                     <td>${b.ageGroup || ''}</td>
                     <td>${(b.scenarioIds || []).length}</td>
                     <td>${b.isFree ? 'Yes' : 'No'}</td>
-                    <td><button class="btn btn-sm btn-outline-primary" onclick='editBundle(${JSON.stringify(b)})'>Edit</button></td>`;
+                    <td><button class="btn btn-sm btn-outline-primary" onclick='editBundle(${JSON.stringify(b)})'>Edit</button></td>
+                    <td><button class="btn btn-sm btn-outline-danger" onclick='deleteBundle("${b.id}", "${b.title.replace(/"/g, '\\"')}')'>Delete</button></td>`;
                 tbody.appendChild(tr);
             });
         } catch (e) {
@@ -143,6 +144,27 @@
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
                 throw new Error(err.message || 'Failed to save bundle');
+            }
+            resetForm();
+            await loadBundles();
+        } catch (e) {
+            showError(e.message);
+        }
+    }
+
+    async function deleteBundle(bundleId, bundleTitle) {
+        if (!confirm(`Are you sure you want to delete the bundle "${bundleTitle}"?`)) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`${apiBase}/${bundleId}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.message || 'Failed to delete bundle');
             }
             resetForm();
             await loadBundles();
