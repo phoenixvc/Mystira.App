@@ -131,13 +131,12 @@ All 8 entities migrated with the following structure:
 - GetUserProfileQuery
 - GetProfilesByAccountQuery
 
-**Specifications:** 7
+**Specifications:** 6
 - ProfilesByAccountSpecification
 - GuestProfilesSpecification
 - NonGuestProfilesSpecification
 - NpcProfilesSpecification
 - OnboardedProfilesSpecification
-- ProfileByNameSpecification
 - ProfilesByAgeGroupSpecification
 
 #### 5. BadgeConfiguration (Read-Only)
