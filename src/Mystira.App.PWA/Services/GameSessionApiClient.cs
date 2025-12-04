@@ -60,7 +60,7 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
             Logger.LogError(ex, "Error parsing API response when starting game session for scenario: {ScenarioId}", scenarioId);
             return null;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (IsNonFatal(ex))
         {
             Logger.LogError(ex, "Unexpected error starting game session for scenario: {ScenarioId}", scenarioId);
             return null;
@@ -103,7 +103,7 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
             Logger.LogError(ex, "Error parsing API response when ending game session: {SessionId}", sessionId);
             return null;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (IsNonFatal(ex))
         {
             Logger.LogError(ex, "Error ending game session: {SessionId}", sessionId);
             return null;
@@ -236,5 +236,14 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
             return null;
         }
     }
+    /// <summary>
+    /// Returns true if the exception is non-fatal and can be safely caught.
+    /// </summary>
+    private static bool IsNonFatal(Exception ex)
+    {
+        return ex is not StackOverflowException
+            && ex is not OutOfMemoryException
+            && ex is not ThreadAbortException
+            && ex is not AccessViolationException;
+    }
 }
-
