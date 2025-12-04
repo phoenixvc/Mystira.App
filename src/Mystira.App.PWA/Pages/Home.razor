@@ -1128,8 +1128,8 @@
         }
         else if (selectedAgeGroups.Any())
         {
-            var pluralSuffix = filteredBundles.Count != 1 ? "s" : "";
-            return $"{filteredBundles.Count} bundle{pluralSuffix} match your filters";
+            var pluralSuffix = bundles.Count != 1 ? "s" : "";
+            return $"{filteredBundles.Count} of {bundles.Count} bundle{pluralSuffix} selected";
         }
         return string.Empty;
     }

@@ -1,5 +1,13 @@
 /* Filter Section Scoped Styles */
 
+/* Wrapper to ensure proper spacing for shadows and transforms */
+.filter-section-wrapper {
+    overflow: visible;
+    padding: 8px 4px; /* Space for shadows and transforms */
+    margin: -8px -4px; /* Compensate for padding to maintain layout */
+    margin-bottom: calc(1.5rem - 8px); /* Maintain mb-4 spacing */
+}
+
 .filter-card {
     border-radius: 20px;
     border: 1px solid rgba(147, 51, 234, 0.1);
