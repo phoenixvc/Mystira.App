@@ -5,10 +5,10 @@
     padding: 72px 28px;
     max-width: 520px;
     margin: 0 auto;
-    background: linear-gradient(135deg, #fdfcff 0%, #f5f0ff 100%);
+    background: linear-gradient(135deg, #faf9ff 0%, #f0edff 100%);
     border-radius: 24px;
-    border: 1px solid rgba(147, 51, 234, 0.08);
-    box-shadow: 0 4px 24px rgba(147, 51, 234, 0.05);
+    border: 1px solid rgba(124, 58, 237, 0.08);
+    box-shadow: 0 4px 24px rgba(124, 58, 237, 0.05);
 }
 
 .empty-state-icon {
@@ -19,7 +19,7 @@
 
 .empty-state-icon i {
     display: inline-block;
-    filter: drop-shadow(0 4px 8px rgba(147, 51, 234, 0.15));
+    filter: drop-shadow(0 4px 8px rgba(124, 58, 237, 0.15));
 }
 
 .empty-state-title {
@@ -56,29 +56,29 @@
 }
 
 .btn-clear-filters {
-    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
     color: white;
-    box-shadow: 0 6px 20px rgba(147, 51, 234, 0.3);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.3);
 }
 
 .btn-clear-filters:hover {
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%);
     transform: translateY(-3px);
-    box-shadow: 0 8px 28px rgba(147, 51, 234, 0.4);
+    box-shadow: 0 8px 28px rgba(124, 58, 237, 0.4);
 }
 
 .btn-retry {
     background: white;
-    color: #9333ea;
-    border: 2px solid #e9d5ff;
+    color: #7c3aed;
+    border: 2px solid #ddd6fe;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .btn-retry:hover {
-    background: #faf5ff;
-    border-color: #c084fc;
+    background: #f5f3ff;
+    border-color: #a78bfa;
     transform: translateY(-3px);
-    box-shadow: 0 6px 16px rgba(147, 51, 234, 0.15);
+    box-shadow: 0 6px 16px rgba(124, 58, 237, 0.15);
 }
 
 .empty-state-actions {

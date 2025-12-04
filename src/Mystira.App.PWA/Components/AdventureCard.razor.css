@@ -15,8 +15,8 @@
 
 .adventure-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(147, 51, 234, 0.2);
-    border-color: #9333ea;
+    box-shadow: 0 12px 24px rgba(124, 58, 237, 0.2);
+    border-color: #7c3aed;
 }
 
 .adventure-image-container {
@@ -192,7 +192,7 @@
 .btn-adventure-start {
     width: 100%;
     padding: 10px 16px;
-    background: #9333ea;
+    background: #7c3aed;
     color: white;
     border: none;
     border-radius: 12px;
@@ -208,7 +208,7 @@
 .btn-adventure-start:hover {
     background: #7c3aed;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
 }
 
 .btn-adventure-start:active {
@@ -217,7 +217,7 @@
 
 /* Accessibility */
 .adventure-card:focus-visible {
-    outline: 2px solid #9333ea;
+    outline: 2px solid #7c3aed;
     outline-offset: 2px;
 }
 
@@ -414,8 +414,8 @@ html[data-theme="light"] .adventure-card {
 }
 
 html[data-theme="light"] .adventure-card:hover {
-    box-shadow: 0 12px 24px rgba(147, 51, 234, 0.2);
-    border-color: #9333ea;
+    box-shadow: 0 12px 24px rgba(124, 58, 237, 0.2);
+    border-color: #7c3aed;
 }
 
 html[data-theme="light"] .adventure-image-container {

@@ -106,7 +106,7 @@
     border-radius: 50%;
     border: 2px solid rgba(147, 51, 234, 0.3);
     background: rgba(147, 51, 234, 0.1);
-    color: #9333ea;
+    color: #7c3aed;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -116,8 +116,8 @@
 }
 
 .btn-media:hover {
-    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
-    border-color: #9333ea;
+    background: linear-gradient(135deg, #7c3aed 0%, #7c3aed 100%);
+    border-color: #7c3aed;
     color: white;
     transform: scale(1.1);
 }
@@ -165,7 +165,7 @@
     border: 2px dashed rgba(147, 51, 234, 0.4);
     border-radius: 12px;
     background: rgba(147, 51, 234, 0.05);
-    color: #9333ea;
+    color: #7c3aed;
     font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
@@ -177,8 +177,8 @@
 
 .btn-assign-player:hover {
     border-style: solid;
-    border-color: #9333ea;
-    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+    border-color: #7c3aed;
+    background: linear-gradient(135deg, #7c3aed 0%, #7c3aed 100%);
     color: white;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3);
@@ -241,11 +241,11 @@
 
 .modal-body .nav-tabs .nav-link:hover {
     background: rgba(147, 51, 234, 0.1);
-    color: #9333ea;
+    color: #7c3aed;
 }
 
 .modal-body .nav-tabs .nav-link.active {
-    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #7c3aed 0%, #7c3aed 100%);
     color: white;
     border: none;
 }
@@ -261,7 +261,7 @@
 
 .modal-body .form-control:focus,
 .modal-body .form-select:focus {
-    border-color: #9333ea;
+    border-color: #7c3aed;
     box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.15);
 }
 
@@ -280,7 +280,7 @@
 }
 
 .assigned-player-card:hover {
-    border-color: #9333ea;
+    border-color: #7c3aed;
     box-shadow: 0 2px 8px rgba(147, 51, 234, 0.15);
 }
 

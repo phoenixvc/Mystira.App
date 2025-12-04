@@ -49,13 +49,13 @@
 }
 
 .avatar-thumbnail:hover {
-    border-color: #9333ea;
+    border-color: #7c3aed;
     box-shadow: 0 0 0 0.2rem rgba(147, 51, 234, 0.25);
 }
 
 .avatar-thumbnail.active {
-    border-color: #9333ea;
-    background: #f3e8ff;
+    border-color: #7c3aed;
+    background: #ede9fe;
 }
 
 .thumbnail-image {

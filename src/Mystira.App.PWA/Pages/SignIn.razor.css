@@ -34,7 +34,7 @@
 }
 
 .verification-code-input:focus {
-    border-color: #9333ea;
+    border-color: #7c3aed;
     box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.15);
 }
 

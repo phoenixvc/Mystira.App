@@ -1,8 +1,8 @@
 /* Mystira PWA Global Styles */
 
 :root {
-    --primary-color: #9333ea;
-    --primary-hover: #7c3aed;
+    --primary-color: #7c3aed;
+    --primary-hover: #6d28d9;
     --secondary-color: #1F2937;
     --success-color: #10B981;
     --danger-color: #EF4444;
@@ -254,16 +254,16 @@ p {
 }
 
 .btn-primary-custom {
-    background: linear-gradient(135deg, var(--primary-color) 0%, #7C3AED 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #6D28D9 100%);
     border: none;
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+    box-shadow: 0 4px 12px rgba(109, 40, 217, 0.25);
 }
 
 .btn-primary-custom:hover,
 .btn-primary-custom:focus {
-    background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+    background: linear-gradient(135deg, #6D28D9 0%, #5B21B6 100%);
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(139, 92, 246, 0.35);
+    box-shadow: 0 8px 20px rgba(109, 40, 217, 0.35);
 }
 
 .btn-primary-custom:active {
