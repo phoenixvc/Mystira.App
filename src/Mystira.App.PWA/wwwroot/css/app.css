@@ -238,7 +238,7 @@ p {
 }
 
 .lead {
-    color: var(--muted, #6b7280);
+    color: var(--fg, #111827);
 }
 
 /* Global Button Enhancements */
