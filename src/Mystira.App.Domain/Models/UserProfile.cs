@@ -173,6 +173,10 @@ public class AgeGroup : StringEnum<AgeGroup>
     /// <param name="value">The age range string in format "MinAge-MaxAge"</param>
     public AgeGroup(string value) : base(value)
     {
+        // Default to a sensible school-age range if parsing fails
+        MinimumAge = 6;
+        MaximumAge = 9;
+
         if (!string.IsNullOrEmpty(value))
         {
             var parts = value.Split('-');
@@ -194,6 +198,9 @@ public class AgeGroup : StringEnum<AgeGroup>
 
     public AgeGroup() : base("")
     {
+        // Default to a sensible school-age range
+        MinimumAge = 6;
+        MaximumAge = 9;
     }
 
     /// <summary>
