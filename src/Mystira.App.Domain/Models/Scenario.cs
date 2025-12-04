@@ -57,7 +57,8 @@ public class Scenario
 
                 foreach (var branch in scene.Branches)
                 {
-                    if (!sceneIds.Contains(branch.NextSceneId))
+                    // Skip validation for empty NextSceneId (story ending)
+                    if (!string.IsNullOrEmpty(branch.NextSceneId) && !sceneIds.Contains(branch.NextSceneId))
                     {
                         errors.Add($"Scene '{scene.Title}' has a branch with an invalid NextSceneId: {branch.NextSceneId}");
                     }

@@ -7,24 +7,56 @@
         @for (var i = 0; i < DiceCount; i++)
         {
             var value = i < Results.Count ? Results[i] : 1;
+            var dieIdx = i;
             <div class="die @(IsRolling ? "rolling" : "") clickable" 
                  style="@GetDieTransform(i)" 
                  @onclick="Roll" 
                  role="button" 
                  aria-label="Roll the dice">
+                @* Golden tube trail elements *@
+                <svg class="golden-tube tube-1" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="@($"goldGrad1-{dieIdx}")" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#FFD700" stop-opacity="0.8"/>
+                            <stop offset="50%" stop-color="#FFA500" stop-opacity="0.9"/>
+                            <stop offset="100%" stop-color="#FFD700" stop-opacity="0.7"/>
+                        </linearGradient>
+                    </defs>
+                    <path d="M10,50 Q25,10 50,50 T90,50" stroke="@($"url(#goldGrad1-{dieIdx})")" stroke-width="4" fill="none" stroke-linecap="round"/>
+                </svg>
+                <svg class="golden-tube tube-2" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="@($"goldGrad2-{dieIdx}")" x1="100%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#DAA520" stop-opacity="0.7"/>
+                            <stop offset="50%" stop-color="#FFD700" stop-opacity="0.9"/>
+                            <stop offset="100%" stop-color="#FFC125" stop-opacity="0.6"/>
+                        </linearGradient>
+                    </defs>
+                    <path d="M50,10 Q90,25 50,50 T50,90" stroke="@($"url(#goldGrad2-{dieIdx})")" stroke-width="3" fill="none" stroke-linecap="round"/>
+                </svg>
+                <svg class="golden-tube tube-3" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="@($"goldGrad3-{dieIdx}")" x1="0%" y1="100%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#FFE135" stop-opacity="0.6"/>
+                            <stop offset="50%" stop-color="#FFD700" stop-opacity="0.8"/>
+                            <stop offset="100%" stop-color="#B8860B" stop-opacity="0.7"/>
+                        </linearGradient>
+                    </defs>
+                    <path d="M10,90 Q50,50 90,10" stroke="@($"url(#goldGrad3-{dieIdx})")" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                </svg>
                 <div class="die-3d">
                     @if (Faces == 6)
                     {
                         <!-- Pretty pips for d6 -->
                         <svg viewBox="0 0 100 100" class="die-svg">
                             <defs>
-                                <filter id="shadow"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.3"/></filter>
-                                <radialGradient id="grad" cx="30%" cy="30%">
+                                <filter id="@($"shadow-{dieIdx}")"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.3"/></filter>
+                                <radialGradient id="@($"grad-{dieIdx}")" cx="30%" cy="30%">
                                     <stop offset="0%" stop-color="var(--die-grad1, #fff)"/>
                                     <stop offset="100%" stop-color="var(--die-grad2, #d4d4d8)"/>
                                 </radialGradient>
                             </defs>
-                            <rect x="5" y="5" width="90" height="90" rx="18" fill="url(#grad)" filter="url(#shadow)"/>
+                            <rect x="5" y="5" width="90" height="90" rx="18" fill="@($"url(#grad-{dieIdx})")" filter="@($"url(#shadow-{dieIdx})")"/>
                             @foreach (var (px, py, show) in PipLayout(value))
                             {
                                 if (show)
@@ -39,13 +71,13 @@
                         <!-- Generic faces: big number -->
                         <svg viewBox="0 0 100 100" class="die-svg">
                             <defs>
-                                <filter id="shadow2"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.3"/></filter>
-                                <linearGradient id="tagGrad" x1="0" x2="1" y1="0" y2="1">
+                                <filter id="@($"shadow2-{dieIdx}")"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.3"/></filter>
+                                <linearGradient id="@($"tagGrad-{dieIdx}")" x1="0" x2="1" y1="0" y2="1">
                                     <stop offset="0%" stop-color="var(--die-grad1, #fff)"/>
                                     <stop offset="100%" stop-color="var(--die-grad2, #d4d4d8)"/>
                                 </linearGradient>
                             </defs>
-                            <rect x="5" y="5" width="90" height="90" rx="18" fill="url(#tagGrad)" filter="url(#shadow2)"/>
+                            <rect x="5" y="5" width="90" height="90" rx="18" fill="@($"url(#tagGrad-{dieIdx})")" filter="@($"url(#shadow2-{dieIdx})")"/>
                             <text x="50" y="58" text-anchor="middle" class="big-num">@value</text>
                         </svg>
                     }
