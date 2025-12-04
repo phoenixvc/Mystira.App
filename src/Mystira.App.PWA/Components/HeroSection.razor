@@ -103,7 +103,7 @@
                        playsinline
                        preload="auto"
                        aria-label="Mystira logo introduction video">
-                    <source src="videos/logo-intro.mp4" type="video/mp4">
+                    <source src="videos/Logo-Twirling-Expansion.mp4" type="video/mp4">
                 </video>
                 <!-- Static Logo (shown initially, fades when video is ready) -->
                 <img src="images/mystira-logo.webp"
@@ -130,7 +130,36 @@
                         aria-label="Skip introduction video">
                     <i class="fas fa-step-forward"></i>
                 </button>
+                
+                <!-- Watch Full Intro button (shows the original extended intro video) -->
+                <button id="watch-full-intro-btn"
+                        class="watch-intro-btn @(showReplayButton && !showFullIntro ? "visible" : "hidden")"
+                        @onclick="ShowFullIntroVideo"
+                        title="Watch full intro"
+                        aria-label="Watch full introduction video">
+                    <i class="fas fa-film me-1"></i>Full Intro
+                </button>
             </div>
+            
+            <!-- Full Intro Modal -->
+            @if (showFullIntro)
+            {
+                <div class="full-intro-modal" @onclick="CloseFullIntro">
+                    <div class="full-intro-content" @onclick:stopPropagation="true">
+                        <button class="close-intro-btn" @onclick="CloseFullIntro" aria-label="Close full intro">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <video id="full-intro-video"
+                               class="full-intro-video"
+                               controls
+                               autoplay
+                               playsinline
+                               aria-label="Mystira full introduction video">
+                            <source src="videos/logo-intro.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                </div>
+            }
             @if (ShowDescription)
             {
                 <p class="hero-description mb-4">
@@ -179,6 +208,7 @@
     private bool _particlesInitialized = false;
     private bool showVideo = false; // Start with logo visible
     private bool showReplayButton = false;
+    private bool showFullIntro = false;
     private DotNetObjectReference<HeroSection>? _dotNetRef;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -267,6 +297,18 @@
         {
             await OnWatchDemoClick.InvokeAsync();
         }
+    }
+
+    private void ShowFullIntroVideo()
+    {
+        showFullIntro = true;
+        StateHasChanged();
+    }
+
+    private void CloseFullIntro()
+    {
+        showFullIntro = false;
+        StateHasChanged();
     }
 
     public async ValueTask DisposeAsync()
