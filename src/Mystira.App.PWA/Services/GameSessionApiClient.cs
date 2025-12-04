@@ -45,9 +45,24 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
                 return null;
             }
         }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Network error starting game session for scenario: {ScenarioId}", scenarioId);
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Logger.LogError(ex, "Request timed out starting game session for scenario: {ScenarioId}", scenarioId);
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogError(ex, "Error parsing API response when starting game session for scenario: {ScenarioId}", scenarioId);
+            return null;
+        }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error starting game session for scenario: {ScenarioId}", scenarioId);
+            Logger.LogError(ex, "Unexpected error starting game session for scenario: {ScenarioId}", scenarioId);
             return null;
         }
     }
