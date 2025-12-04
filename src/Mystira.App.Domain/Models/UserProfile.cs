@@ -166,7 +166,27 @@ public class AgeGroup : StringEnum<AgeGroup>
     public int MaximumAge { get; set; }
     public static string[] All { get; set; } = ["1-2", "3-5", "6-9", "10-12", "13-18"];
 
-    public AgeGroup(int minimumAge, int maximumAge) : base("")
+    /// <summary>
+    /// Constructor required by StringEnum&lt;T&gt; for parsing from embedded JSON resource.
+    /// Parses the age range from the value string (e.g., "6-9" → MinimumAge=6, MaximumAge=9).
+    /// </summary>
+    /// <param name="value">The age range string in format "MinAge-MaxAge"</param>
+    public AgeGroup(string value) : base(value)
+    {
+        if (!string.IsNullOrEmpty(value))
+        {
+            var parts = value.Split('-');
+            if (parts.Length == 2 &&
+                int.TryParse(parts[0], out var minAge) &&
+                int.TryParse(parts[1], out var maxAge))
+            {
+                MinimumAge = minAge;
+                MaximumAge = maxAge;
+            }
+        }
+    }
+
+    public AgeGroup(int minimumAge, int maximumAge) : base($"{minimumAge}-{maximumAge}")
     {
         MinimumAge = minimumAge;
         MaximumAge = maximumAge;
