@@ -78,21 +78,23 @@ else
                             </div>
 
                             <!-- Media Controls -->
-                            <div class="d-flex justify-content-center gap-2 mb-3">
+                            <div class="media-controls">
                                 @if (!string.IsNullOrEmpty(assignment.Image))
                                 {
-                                    <button class="btn btn-sm btn-outline-primary"
+                                    <button class="btn-media btn-media-view"
                                         @onclick="() => PreviewImage(ApiClient.GetMediaResourceEndpointUrl(assignment.Image))"
-                                        title="View Image">
-                                        &#128444;
+                                        @onclick:stopPropagation="true"
+                                        title="View full image">
+                                        <i class="fas fa-expand"></i>
                                     </button>
                                 }
                                 @if (!string.IsNullOrEmpty(assignment.Audio))
                                 {
-                                    <button class="btn btn-sm btn-outline-success"
+                                    <button class="btn-media btn-media-audio @(isPlayingAudio == assignment.Audio ? "playing" : "")"
                                         @onclick="() => PlayAudio(ApiClient.GetMediaResourceEndpointUrl(assignment.Audio))"
-                                        title="Play Audio">
-                                        @((MarkupString)(isPlayingAudio == assignment.Audio ? "&#x23F8;" : "&#128266;"))
+                                        @onclick:stopPropagation="true"
+                                        title="@(isPlayingAudio == assignment.Audio ? "Stop audio" : "Play character voice")">
+                                        <i class="fas @(isPlayingAudio == assignment.Audio ? "fa-pause" : "fa-volume-up")"></i>
                                     </button>
                                 }
                             </div>
@@ -111,9 +113,9 @@ else
                                     <div class="player-assignment">
                                         @if (assignment.PlayerAssignment == null)
                                         {
-                                            <button class="btn btn-outline-primary btn-sm w-100"
+                                            <button class="btn-assign-player"
                                                 @onclick="async () => await OpenPlayerAssignment(cardIndex)">
-                                                <i class="fas fa-user-plus me-1"></i>Assign Player
+                                                <i class="fas fa-user-plus me-2"></i>Assign Player
                                             </button>
                                         }
                                         else

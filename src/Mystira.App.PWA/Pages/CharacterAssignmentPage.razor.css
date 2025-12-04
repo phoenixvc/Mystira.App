@@ -92,17 +92,96 @@
     opacity: 1;
 }
 
-/* Media control buttons */
-.btn-outline-primary:hover,
-.btn-outline-success:hover {
-    transform: scale(1.05);
+/* Media Controls */
+.media-controls {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 12px;
 }
 
-/* Audio playing state */
-.btn-outline-success.fa-pause {
-    background-color: var(--success-color);
+.btn-media {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid rgba(147, 51, 234, 0.3);
+    background: rgba(147, 51, 234, 0.1);
+    color: #9333ea;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+}
+
+.btn-media:hover {
+    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+    border-color: #9333ea;
     color: white;
-    border-color: var(--success-color);
+    transform: scale(1.1);
+}
+
+.btn-media-view {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #3b82f6;
+}
+
+.btn-media-view:hover {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-color: #3b82f6;
+    color: white;
+}
+
+.btn-media-audio {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #10b981;
+}
+
+.btn-media-audio:hover {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-color: #10b981;
+    color: white;
+}
+
+.btn-media-audio.playing {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-color: #10b981;
+    color: white;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Assign Player Button */
+.btn-assign-player {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px dashed rgba(147, 51, 234, 0.4);
+    border-radius: 12px;
+    background: rgba(147, 51, 234, 0.05);
+    color: #9333ea;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-assign-player:hover {
+    border-style: solid;
+    border-color: #9333ea;
+    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3);
 }
 
 /* Character assignment specific responsive */
@@ -458,5 +537,102 @@ html[data-theme="dark"] .character-card .card-title {
 
 html[data-theme="dark"] .character-card .text-muted {
     color: #a5b4fc !important;
+}
+
+/* Dark mode for media and assign buttons */
+@media (prefers-color-scheme: dark) {
+    .btn-media {
+        background: rgba(99, 102, 241, 0.15);
+        border-color: rgba(99, 102, 241, 0.4);
+        color: #a5b4fc;
+    }
+
+    .btn-media:hover {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        border-color: #6366f1;
+        color: white;
+    }
+
+    .btn-media-view {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: rgba(59, 130, 246, 0.4);
+        color: #60a5fa;
+    }
+
+    .btn-media-view:hover {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        border-color: #3b82f6;
+    }
+
+    .btn-media-audio {
+        background: rgba(16, 185, 129, 0.15);
+        border-color: rgba(16, 185, 129, 0.4);
+        color: #34d399;
+    }
+
+    .btn-media-audio:hover,
+    .btn-media-audio.playing {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-color: #10b981;
+    }
+
+    .btn-assign-player {
+        background: rgba(99, 102, 241, 0.1);
+        border-color: rgba(99, 102, 241, 0.4);
+        color: #a5b4fc;
+    }
+
+    .btn-assign-player:hover {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        border-color: #6366f1;
+        color: white;
+    }
+}
+
+html[data-theme="dark"] .btn-media {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.4);
+    color: #a5b4fc;
+}
+
+html[data-theme="dark"] .btn-media:hover {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    border-color: #6366f1;
+    color: white;
+}
+
+html[data-theme="dark"] .btn-media-view {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #60a5fa;
+}
+
+html[data-theme="dark"] .btn-media-view:hover {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-color: #3b82f6;
+}
+
+html[data-theme="dark"] .btn-media-audio {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #34d399;
+}
+
+html[data-theme="dark"] .btn-media-audio:hover,
+html[data-theme="dark"] .btn-media-audio.playing {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-color: #10b981;
+}
+
+html[data-theme="dark"] .btn-assign-player {
+    background: rgba(99, 102, 241, 0.1);
+    border-color: rgba(99, 102, 241, 0.4);
+    color: #a5b4fc;
+}
+
+html[data-theme="dark"] .btn-assign-player:hover {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    border-color: #6366f1;
+    color: white;
 }
 
