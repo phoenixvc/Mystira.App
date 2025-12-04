@@ -101,9 +101,10 @@
                                        required 
                                        disabled="@isSubmitting" 
                                        @oninput="OnCodeInput" />
-                                <div class="form-text">
-                                    Check your email for 6-digit verification code.
-                                    <span class="d-block mt-1">Not seeing it? Check your spam or junk folder.</span>
+                                <div class="alert alert-success mt-3" role="alert">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    Check your email for the sign-in code
+                                    <span class="d-block mt-1 small text-muted">Not seeing it? Check your spam or junk folder.</span>
                                 </div>
                             </div>
 
@@ -112,14 +113,6 @@
                                 <div class="alert alert-danger" role="alert">
                                     <i class="fas fa-exclamation-triangle me-2"></i>
                                     @errorMessage
-                                </div>
-                            }
-
-                            @if (!string.IsNullOrEmpty(successMessage))
-                            {
-                                <div class="alert alert-success" role="alert">
-                                    <i class="fas fa-check-circle me-2"></i>
-                                    @successMessage
                                 </div>
                             }
 

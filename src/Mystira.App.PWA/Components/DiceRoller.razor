@@ -12,6 +12,37 @@
                  @onclick="Roll" 
                  role="button" 
                  aria-label="Roll the dice">
+                @* Golden tube trail elements *@
+                <svg class="golden-tube tube-1" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="goldGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#FFD700" stop-opacity="0.8"/>
+                            <stop offset="50%" stop-color="#FFA500" stop-opacity="0.9"/>
+                            <stop offset="100%" stop-color="#FFD700" stop-opacity="0.7"/>
+                        </linearGradient>
+                    </defs>
+                    <path d="M10,50 Q25,10 50,50 T90,50" stroke="url(#goldGrad1)" stroke-width="4" fill="none" stroke-linecap="round"/>
+                </svg>
+                <svg class="golden-tube tube-2" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="goldGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#DAA520" stop-opacity="0.7"/>
+                            <stop offset="50%" stop-color="#FFD700" stop-opacity="0.9"/>
+                            <stop offset="100%" stop-color="#FFC125" stop-opacity="0.6"/>
+                        </linearGradient>
+                    </defs>
+                    <path d="M50,10 Q90,25 50,50 T50,90" stroke="url(#goldGrad2)" stroke-width="3" fill="none" stroke-linecap="round"/>
+                </svg>
+                <svg class="golden-tube tube-3" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="goldGrad3" x1="0%" y1="100%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#FFE135" stop-opacity="0.6"/>
+                            <stop offset="50%" stop-color="#FFD700" stop-opacity="0.8"/>
+                            <stop offset="100%" stop-color="#B8860B" stop-opacity="0.7"/>
+                        </linearGradient>
+                    </defs>
+                    <path d="M10,90 Q50,50 90,10" stroke="url(#goldGrad3)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                </svg>
                 <div class="die-3d">
                     @if (Faces == 6)
                     {
