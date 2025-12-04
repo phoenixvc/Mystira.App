@@ -38,17 +38,25 @@ public class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUserProfile
         var request = command.Request;
 
         // Update profile fields
-        if (request.DateOfBirth.HasValue)
-        {
-            profile.DateOfBirth = request.DateOfBirth;
-            profile.UpdateAgeGroupFromBirthDate();
-        }
-
         if (request.PreferredFantasyThemes != null)
         {
             profile.PreferredFantasyThemes = request.PreferredFantasyThemes
                 .Select(t => new FantasyTheme(t))
                 .ToList();
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.AgeGroup))
+        {
+            if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
+                throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
+
+            profile.AgeGroupName = request.AgeGroup;
+        }
+
+        if (request.DateOfBirth.HasValue)
+        {
+            profile.DateOfBirth = request.DateOfBirth;
+            profile.UpdateAgeGroupFromBirthDate();
         }
 
         if (request.SelectedAvatarMediaId != null)
