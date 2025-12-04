@@ -191,8 +191,8 @@ else
                         @if (HasUnassignedCharacters)
                         {
                             <button class="btn btn-outline-info" @onclick="FillRemainingWithAI"
-                                title="Assign AI players to all remaining unassigned characters">
-                                <i class="fas fa-robot me-2"></i>Fill with AI
+                                title="Assign Guests players to all remaining unassigned characters">
+                                <i class="fas fa-robot me-2"></i>Fill with Guests
                             </button>
                         }
 
@@ -232,7 +232,7 @@ else
                             @UnassignedCount character@(UnassignedCount != 1 ? "s" : "") still need@(UnassignedCount == 1 ? "s" : "") a player assignment.
                         </div>
                         <button class="btn btn-sm btn-outline-warning" @onclick="FillRemainingWithAI">
-                            <i class="fas fa-robot me-2"></i>Assign AI to remaining
+                            <i class="fas fa-robot me-2"></i>Assign Guest to remaining
                         </button>
                     </div>
                 }
@@ -949,12 +949,12 @@ else
                 assignment.PlayerAssignment = new PlayerAssignment
                 {
                     Type = "AI",
-                    ProfileName = $"AI ({assignment.CharacterName})",
-                    GuestName = $"AI ({assignment.CharacterName})"
+                    ProfileName = $"Guest ({assignment.CharacterName})",
+                    GuestName = $"Guest ({assignment.CharacterName})"
                 };
             }
         }
         StateHasChanged();
-        Logger.LogInformation("Filled {Count} unassigned characters with AI players", UnassignedCount);
+        Logger.LogInformation("Filled {Count} unassigned characters with Guest players", UnassignedCount);
     }
 }
