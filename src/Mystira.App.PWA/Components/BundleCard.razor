@@ -12,8 +12,9 @@
             @if (Bundle.IsFree)
             {
                 <div class="bundle-free-badge">
-                    <span class="badge bg-success">
-                        <i class="fas fa-gift me-1"></i>Free
+                    <span class="bundle-pill pill-free" data-tooltip="This bundle is completely free to play!">
+                        <i class="fas fa-gift"></i>
+                        <span>Free</span>
                     </span>
                 </div>
             }
@@ -44,26 +45,26 @@
             }
             
             <div class="bundle-pills">
-                <span class="bundle-pill pill-adventures" title="@totalInBundle adventure@(totalInBundle != 1 ? "s" : "") in this bundle">
+                <span class="bundle-pill pill-adventures" data-tooltip="@totalInBundle adventure@(totalInBundle != 1 ? "s" : "") included in this bundle">
                     <i class="fas fa-book"></i>
-                    <span>@totalInBundle</span>
+                    <span>@totalInBundle adventure@(totalInBundle != 1 ? "s" : "")</span>
                 </span>
                 @if (ShowGameState)
                 {
                     <span class="bundle-pill @(completedInBundle > 0 ? "pill-completed" : "pill-pending")"
-                          title="@completedInBundle of @totalInBundle adventure@(totalInBundle != 1 ? "s" : "") completed">
+                          data-tooltip="@completedInBundle of @totalInBundle adventure@(totalInBundle != 1 ? "s" : "") completed">
                         <i class="fas @(completedInBundle > 0 ? "fa-check-circle" : "fa-clock")"></i>
-                        <span>@completedInBundle</span>
+                        <span>@completedInBundle completed</span>
                     </span>
                 }
             </div>
         </div>
         <div class="card-footer">
-            <span class="bundle-pill pill-age" title="Recommended for ages @Bundle.AgeGroup">
+            <span class="bundle-pill pill-age" data-tooltip="Recommended for children ages @Bundle.AgeGroup">
                 <i class="fas fa-users"></i>
-                <span>@Bundle.AgeGroup</span>
+                <span>Ages @Bundle.AgeGroup</span>
             </span>
-            <span class="explore-link" title="Explore this bundle">
+            <span class="explore-link">
                 <span>Explore</span>
                 <i class="fas fa-arrow-right"></i>
             </span>
