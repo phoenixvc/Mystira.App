@@ -51,7 +51,7 @@
     font-size: 0.875rem;
     font-weight: 600;
     border-radius: 20px;
-    background: linear-gradient(135deg, #7c3aed 0%, #7c3aed 100%) !important;
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
     color: white;
     border: 2px solid rgba(124, 58, 237, 0.3);
     box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25);
@@ -258,7 +258,7 @@
 }
 
 .completed-toggle-wrapper.active .toggle-icon {
-    background: linear-gradient(135deg, #7c3aed 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
     color: white;
 }
 
@@ -366,7 +366,7 @@
 }
 
 .btn-age-filter.btn-primary-custom {
-    background: linear-gradient(135deg, #7c3aed 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
     border: 2px solid #7c3aed;
     color: white;
     box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);

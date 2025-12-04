@@ -50,7 +50,7 @@
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #7c3aed 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -86,7 +86,7 @@
     font-weight: 700;
     color: #111827;
     margin-bottom: 8px;
-    background: linear-gradient(135deg, #7c3aed 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -173,7 +173,7 @@
 }
 
 .btn-edit:hover {
-    background: linear-gradient(135deg, #7c3aed 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
     border-color: #7c3aed;
     color: white;
     transform: translateY(-2px);
