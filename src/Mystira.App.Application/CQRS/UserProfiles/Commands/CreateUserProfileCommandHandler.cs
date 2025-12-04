@@ -34,12 +34,6 @@ public class CreateUserProfileCommandHandler : ICommandHandler<CreateUserProfile
         if (string.IsNullOrEmpty(request.Name))
             throw new ArgumentException("Profile name is required");
 
-        // Check if profile name already exists
-        var exists = await _repository.ExistsByNameAsync(request.Name);
-        if (exists)
-            throw new ArgumentException($"Profile name '{request.Name}' already exists");
-
-        // Create profile
         var profile = new UserProfile
         {
             Id = Guid.NewGuid().ToString(),

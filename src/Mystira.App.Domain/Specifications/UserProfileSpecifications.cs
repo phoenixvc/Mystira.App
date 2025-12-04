@@ -63,17 +63,6 @@ public class OnboardedProfilesSpecification : BaseSpecification<UserProfile>
 }
 
 /// <summary>
-/// Specification to filter profiles by name (exact match)
-/// </summary>
-public class ProfileByNameSpecification : BaseSpecification<UserProfile>
-{
-    public ProfileByNameSpecification(string name)
-        : base(p => p.Name == name)
-    {
-    }
-}
-
-/// <summary>
 /// Specification to filter profiles by age group
 /// </summary>
 public class ProfilesByAgeGroupSpecification : BaseSpecification<UserProfile>

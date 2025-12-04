@@ -9,11 +9,11 @@
     <meta http-equiv="expires" content="0" />
     <title>Mystira</title>
     <base href="/" />
-    
+
     <!-- Preload Critical Assets for Performance -->
     <link rel="preload" href="images/mystira-logo.webp" as="image" />
     <link rel="preload" href="css/app.css" as="style" />
-    
+
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#8B5CF6" />
@@ -32,21 +32,21 @@
     <link rel="icon" type="image/png" href="icons/icon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-icon-180.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
-    
+
     <!-- Open Graph / PWA Description -->
     <meta property="og:title" content="Mystira - Adventures for Children" />
-    <meta property="og:description" content="Dynamic D&D Style App for Dungeon Masters working with young players" />
+    <meta property="og:description" content="An interactive storytelling app that helps kids grow through play" />
     <meta property="og:image" content="icons/icon-512.png" />
-    
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:wght@400;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    
+
     <!-- Custom CSS -->
     <link href="css/app.css" rel="stylesheet" />
     <!-- Blazor Scoped CSS Bundle (component-specific styles from .razor.css files) -->
@@ -122,7 +122,7 @@
         // Function to clear all caches and reload
         async function clearCacheAndReload() {
             console.log('Clearing all caches and reloading...');
-            
+
             try {
                 // Clear service worker caches
                 if ('caches' in window) {
@@ -130,14 +130,14 @@
                     await Promise.all(cacheKeys.map(key => caches.delete(key)));
                     console.log('Cleared', cacheKeys.length, 'cache(s)');
                 }
-                
+
                 // Unregister service workers
                 if ('serviceWorker' in navigator) {
                     const registrations = await navigator.serviceWorker.getRegistrations();
                     await Promise.all(registrations.map(registration => registration.unregister()));
                     console.log('Unregistered', registrations.length, 'service worker(s)');
                 }
-                
+
                 // Reload with a timestamp to bypass browser cache
                 const timestamp = new Date().getTime();
                 window.location.href = window.location.pathname + '?t=' + timestamp;
@@ -152,18 +152,18 @@
         window.addEventListener('error', function(event) {
             const errorMessage = event.message || '';
             const errorUrl = event.filename || '';
-            
-            if (errorMessage.includes('integrity') || 
-                errorMessage.includes('SRI') || 
+
+            if (errorMessage.includes('integrity') ||
+                errorMessage.includes('SRI') ||
                 errorMessage.includes('digest') ||
                 (errorUrl.includes('.wasm') && errorMessage.includes('Failed to fetch'))) {
-                
+
                 console.log('SRI error detected:', errorMessage);
-                
+
                 // Show SRI-specific error message
                 const errorUi = document.getElementById('blazor-error-ui');
                 const sriMessage = document.getElementById('sri-error-message');
-                
+
                 if (errorUi) {
                     errorUi.style.display = 'block';
                     if (sriMessage) {
@@ -176,18 +176,18 @@
         // Also listen for unhandled promise rejections
         window.addEventListener('unhandledrejection', function(event) {
             const errorMessage = event.reason?.message || '';
-            
-            if (errorMessage.includes('integrity') || 
-                errorMessage.includes('SRI') || 
+
+            if (errorMessage.includes('integrity') ||
+                errorMessage.includes('SRI') ||
                 errorMessage.includes('digest') ||
                 errorMessage.includes('Mystira.App.Domain.wasm')) {
-                
+
                 console.log('SRI promise rejection detected:', errorMessage);
-                
+
                 // Show SRI-specific error message
                 const errorUi = document.getElementById('blazor-error-ui');
                 const sriMessage = document.getElementById('sri-error-message');
-                
+
                 if (errorUi) {
                     errorUi.style.display = 'block';
                     if (sriMessage) {
@@ -197,7 +197,7 @@
             }
         });
     </script>
-    
+
     <!-- Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
@@ -210,12 +210,12 @@
                         registration.addEventListener('updatefound', () => {
                             console.log('New service worker found, installing...');
                             const newWorker = registration.installing;
-                            
+
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                                     // New worker is installed, we have an old worker controlling the page
                                     console.log('New service worker ready, prompting user to refresh');
-                                    
+
                                     // Optionally, you could show a toast notification here
                                     // For now, we'll let the service worker activation handle cache clearing
                                 }
@@ -240,7 +240,7 @@
             });
         }
     </script>
-    
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

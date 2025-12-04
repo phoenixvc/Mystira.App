@@ -923,12 +923,12 @@ public async Task<Entity> Handle(CreateEntityCommand command, CancellationToken 
 
 ```csharp
 // Check if entity already exists
-var existing = await _repository.GetByNameAsync(command.Name);
+var existing = await _repository.GetByEmailAsync(command.Email);
 if (existing != null)
-    throw new InvalidOperationException($"Entity with name '{command.Name}' already exists");
+    throw new InvalidOperationException($"Entity with email '{command.Email}' already exists");
 ```
 
-#### 3. Always Use UnitOfWork in Commands
+
 
 ```csharp
 // ✅ CORRECT
