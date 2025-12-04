@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using Mystira.App.PWA.Models;
 
 namespace Mystira.App.PWA.Services;
@@ -48,9 +49,19 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
                 return null;
             }
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
-            Logger.LogError(ex, "Error starting game session for scenario: {ScenarioId}", scenarioId);
+            Logger.LogError(ex, "Network error starting game session for scenario: {ScenarioId}", scenarioId);
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Logger.LogError(ex, "Request timed out starting game session for scenario: {ScenarioId}", scenarioId);
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogError(ex, "Error parsing API response when starting game session for scenario: {ScenarioId}", scenarioId);
             return null;
         }
     }
@@ -79,9 +90,19 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
                 return null;
             }
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
-            Logger.LogError(ex, "Error ending game session: {SessionId}", sessionId);
+            Logger.LogError(ex, "Network error ending game session: {SessionId}", sessionId);
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Logger.LogError(ex, "Request timed out ending game session: {SessionId}", sessionId);
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogError(ex, "Error parsing API response when ending game session: {SessionId}", sessionId);
             return null;
         }
     }
@@ -111,9 +132,19 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
                 return null;
             }
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
-            Logger.LogError(ex, "Error progressing session {SessionId} to scene {SceneId}", sessionId, sceneId);
+            Logger.LogError(ex, "Network error progressing session {SessionId} to scene {SceneId}", sessionId, sceneId);
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Logger.LogError(ex, "Request timed out progressing session {SessionId} to scene {SceneId}", sessionId, sceneId);
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogError(ex, "Error parsing API response when progressing session {SessionId} to scene {SceneId}", sessionId, sceneId);
             return null;
         }
     }
@@ -142,9 +173,19 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
                 return null;
             }
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
-            Logger.LogError(ex, "Error fetching sessions for account: {AccountId}", accountId);
+            Logger.LogError(ex, "Network error fetching sessions for account: {AccountId}", accountId);
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Logger.LogError(ex, "Request timed out fetching sessions for account: {AccountId}", accountId);
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogError(ex, "Error parsing API response when fetching sessions for account: {AccountId}", accountId);
             return null;
         }
     }
@@ -172,11 +213,20 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
                 return null;
             }
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
-            Logger.LogError(ex, "Error fetching in-progress sessions for account: {AccountId}", accountId);
+            Logger.LogError(ex, "Network error fetching in-progress sessions for account: {AccountId}", accountId);
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Logger.LogError(ex, "Request timed out fetching in-progress sessions for account: {AccountId}", accountId);
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogError(ex, "Error parsing API response when fetching in-progress sessions for account: {AccountId}", accountId);
             return null;
         }
     }
 }
-
