@@ -251,6 +251,48 @@ public partial class MystiraAppDbContext : DbContext
             }
         });
 
+        // Configure EchoTypeDefinition
+        modelBuilder.Entity<EchoTypeDefinition>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            if (!isInMemoryDatabase)
+            {
+                // Existing containers use partition key path '/Id' (uppercase)
+                entity.Property<string>("PartitionKeyIdUpper").ToJsonProperty("Id");
+                entity.ToContainer("EchoTypeDefinitions")
+                      .HasPartitionKey("PartitionKeyIdUpper");
+            }
+        });
+
+        // Configure FantasyThemeDefinition
+        modelBuilder.Entity<FantasyThemeDefinition>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            if (!isInMemoryDatabase)
+            {
+                // Existing containers use partition key path '/Id' (uppercase)
+                entity.Property<string>("PartitionKeyIdUpper").ToJsonProperty("Id");
+                entity.ToContainer("FantasyThemeDefinitions")
+                      .HasPartitionKey("PartitionKeyIdUpper");
+            }
+        });
+
+        // Configure AgeGroupDefinition
+        modelBuilder.Entity<AgeGroupDefinition>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            if (!isInMemoryDatabase)
+            {
+                // Existing containers use partition key path '/Id' (uppercase)
+                entity.Property<string>("PartitionKeyIdUpper").ToJsonProperty("Id");
+                entity.ToContainer("AgeGroupDefinitions")
+                      .HasPartitionKey("PartitionKeyIdUpper");
+            }
+        });
+
         // Configure Scenario
         modelBuilder.Entity<Scenario>(entity =>
         {
