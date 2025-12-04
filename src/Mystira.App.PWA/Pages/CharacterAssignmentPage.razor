@@ -7,6 +7,7 @@
 @inject ILogger<CharacterAssignment> Logger
 @inject IJSRuntime JSRuntime
 @using System.Linq
+@using Mystira.App.PWA.Components
 
 <PageTitle>Assign Players - Mystira</PageTitle>
 
@@ -412,6 +413,13 @@ else
     </div>
 }
 
+<!-- Guest Warning Modal -->
+<GuestWarningModal 
+    ShowModal="showGuestWarningModal" 
+    OnContinue="ContinueWithGuestAssignments"
+    OnCancel="CancelGuestWarning">
+</GuestWarningModal>
+
 @code {
     [Parameter] public string ScenarioId { get; set; } = string.Empty;
 
@@ -424,6 +432,7 @@ else
     // Modal state
     private bool showPlayerAssignmentModal = false;
     private bool showImagePreview = false;
+    private bool showGuestWarningModal = false;
     private string assignmentTab = "profiles";
     private CharacterAssignment? currentAssignment;
     private int currentAssignmentIndex = -1;
@@ -690,6 +699,37 @@ else
 
         try
         {
+            // Check if only guests are assigned (no user profiles)
+            var assignedCharacters = characterAssignments
+                .Where(ca => !ca.IsUnused && ca.PlayerAssignment != null)
+                .ToList();
+
+            var hasOnlyGuests = assignedCharacters.All(ca => 
+                ca.PlayerAssignment!.Type == "Guest" || 
+                (ca.PlayerAssignment!.Type == "AI" && string.IsNullOrEmpty(ca.PlayerAssignment!.ProfileId)));
+
+            if (hasOnlyGuests)
+            {
+                // Show guest warning modal instead of starting immediately
+                showGuestWarningModal = true;
+                StateHasChanged();
+                return;
+            }
+
+            await ContinueWithGameSession();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error beginning session");
+            isStartingSession = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ContinueWithGameSession()
+    {
+        try
+        {
             isStartingSession = true;
             StateHasChanged();
 
@@ -760,13 +800,25 @@ else
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error beginning session");
+            Logger.LogError(ex, "Error starting game session");
         }
         finally
         {
             isStartingSession = false;
             StateHasChanged();
         }
+    }
+
+    private async Task ContinueWithGuestAssignments()
+    {
+        showGuestWarningModal = false;
+        await ContinueWithGameSession();
+    }
+
+    private void CancelGuestWarning()
+    {
+        showGuestWarningModal = false;
+        StateHasChanged();
     }
 
     private void ManageProfiles()
