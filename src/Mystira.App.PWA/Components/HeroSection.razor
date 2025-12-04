@@ -297,6 +297,11 @@
         {
             await OnWatchDemoClick.InvokeAsync();
         }
+        else
+        {
+            // Default behavior when OnWatchDemoClick is not provided: show the full intro video
+            ShowFullIntroVideo();
+        }
     }
 
     private void ShowFullIntroVideo()

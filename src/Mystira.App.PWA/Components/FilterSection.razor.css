@@ -83,11 +83,19 @@
 .input-group .form-control {
     border: 2px solid #e9d5ff;
     border-left: none;
-    border-right: none;
     padding: 14px 18px;
     font-size: 0.95rem;
     transition: all 0.3s ease;
     background: white;
+    border-top-right-radius: 14px;
+    border-bottom-right-radius: 14px;
+}
+
+/* When clear button is present, remove right border-radius from input */
+.input-group .form-control:not(:last-child) {
+    border-right: none;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 .input-group .form-control:focus {

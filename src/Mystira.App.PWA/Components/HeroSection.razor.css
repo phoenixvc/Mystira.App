@@ -452,7 +452,7 @@ html[data-theme="dark"] .mystira-tagline {
     position: relative;
     width: 400px;
     height: 400px;
-    margin: 0 auto 20px;
+    margin: 0 auto 60px;
     -webkit-animation: fadeIn 1s ease-in-out;
     animation: fadeIn 1s ease-in-out;
     overflow: visible;
