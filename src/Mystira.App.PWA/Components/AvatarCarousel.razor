@@ -5,7 +5,7 @@
     <div class="card">
         <div class="card-body text-center">
             <h5 class="card-title mb-4">Select an Avatar</h5>
-            
+
             @if (isLoading)
             {
                 <div class="avatar-display">
@@ -33,27 +33,27 @@
                 <div class="d-flex flex-column align-items-center gap-3">
                     <!-- Avatar Display -->
                     <div class="avatar-display">
-                        <CachedMystiraImage 
-                            MediaId="@(currentAvatarMediaId)" 
-                            Alt="Avatar" 
+                        <CachedMystiraImage
+                            MediaId="@(currentAvatarMediaId)"
+                            Alt="Avatar"
                             ImageClass="avatar-image"
-                            Width="200"
-                            Height="200" />
+                            Width="300"
+                            Height="300" />
                     </div>
 
                     <!-- Navigation Controls -->
                     <div class="avatar-controls d-flex gap-2 justify-content-center align-items-center">
-                        <button class="btn btn-outline-primary" 
+                        <button class="btn btn-outline-primary"
                                 @onclick="PreviousAvatar"
                                 disabled="@(avatarMediaIds.Count <= 1)">
                             <i class="fas fa-chevron-left"></i>
                         </button>
-                        
+
                         <span class="avatar-counter">
                             @(currentAvatarIndex + 1) / @(avatarMediaIds.Count)
                         </span>
-                        
-                        <button class="btn btn-outline-primary" 
+
+                        <button class="btn btn-outline-primary"
                                 @onclick="NextAvatar"
                                 disabled="@(avatarMediaIds.Count <= 1)">
                             <i class="fas fa-chevron-right"></i>
@@ -84,7 +84,7 @@
                     }
 
                     <!-- Selection Button -->
-                    <button class="btn btn-primary-custom w-100" 
+                    <button class="btn btn-primary-custom w-100"
                             @onclick="ConfirmSelection"
                             disabled="@(string.IsNullOrEmpty(currentAvatarMediaId))">
                         <i class="fas fa-check me-2"></i>
