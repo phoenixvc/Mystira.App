@@ -102,63 +102,68 @@ else
         }
         else
         {
-            <div class="row g-3">
+            <div class="row g-4">
                 @foreach (var profile in profiles)
                 {
                     <div class="col-md-6 col-lg-4">
-                        <div class="card h-100 shadow-sm">
-                            <div class="card-body">
-                                <!-- Profile Header -->
-                                <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <div class="d-flex align-items-start gap-2 profile-card-content">
-                                        @if (!string.IsNullOrEmpty(profile.SelectedAvatarMediaId))
-                                        {
-                                            <div class="profile-avatar-container">
-                                                @{
-                                                    var altText = $"{profile.Name} avatar";
-                                                }
-                                                <CachedMystiraImage MediaId="@profile.SelectedAvatarMediaId" Alt="@altText"
-                                                    ImageClass="thumbnail-image" Width="60" Height="60" />
-                                            </div>
-                                        }
-                                        <div>
-                                            <h6 class="card-title mb-1">@profile.Name</h6>
-                                            <small class="text-muted">
-                                                @GetAgeRangeDisplay(profile.AgeGroup)
-                                            </small>
-                                        </div>
-                                    </div>
-                                    @if (profile.IsGuest)
-                                    {
-                                        <span class="badge bg-info">Guest</span>
+                        <div class="profile-card h-100">
+                            <!-- Avatar Section -->
+                            <div class="profile-avatar-section">
+                                @if (!string.IsNullOrEmpty(profile.SelectedAvatarMediaId))
+                                {
+                                    @{
+                                        var altText = $"{profile.Name} avatar";
                                     }
-                                </div>
-
-                                <!-- Profile Details -->
-                                <div class="mb-3">
-                                    <div class="small">
-                                        <div class="mb-1">
-                                            <strong>Created:</strong> @FormatDate(profile.CreatedAt)
-                                        </div>
-                                        @if (profile.HasCompletedOnboarding)
-                                        {
-                                            <div class="mb-1">
-                                                <i class="fas fa-check-circle text-success me-1"></i>
-                                                <strong>Onboarding Complete</strong>
-                                            </div>
-                                        }
+                                    <CachedMystiraImage MediaId="@profile.SelectedAvatarMediaId" Alt="@altText"
+                                        ImageClass="profile-avatar-image" Width="80" Height="80" />
+                                }
+                                else
+                                {
+                                    <div class="profile-avatar-placeholder">
+                                        <i class="fas fa-user"></i>
                                     </div>
-                                </div>
+                                }
+                                @if (profile.IsGuest)
+                                {
+                                    <span class="guest-badge" title="Guest Profile">
+                                        <i class="fas fa-user-clock"></i>
+                                    </span>
+                                }
+                            </div>
 
-                                <!-- Action Buttons -->
-                                <div class="d-grid gap-2">
-                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenEditModal(profile)">
-                                        <i class="fas fa-edit me-1"></i>Edit
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(profile)">
-                                        <i class="fas fa-trash me-1"></i>Delete
-                                    </button>
+                            <!-- Profile Info -->
+                            <div class="profile-info">
+                                <h5 class="profile-name">@profile.Name</h5>
+                                <span class="profile-age-badge" title="Age Range">
+                                    <i class="fas fa-birthday-cake me-1"></i>@GetAgeRangeDisplay(profile.AgeGroup)
+                                </span>
+                            </div>
+
+                            <!-- Profile Meta -->
+                            <div class="profile-meta">
+                                <div class="meta-item" title="Profile created on @FormatDate(profile.CreatedAt)">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <span>@FormatDate(profile.CreatedAt)</span>
                                 </div>
+                                @if (profile.HasCompletedOnboarding)
+                                {
+                                    <div class="meta-item meta-success" title="This profile has completed onboarding">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Ready to play</span>
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="profile-actions">
+                                <button class="btn-profile-action btn-edit" @onclick="() => OpenEditModal(profile)" title="Edit profile">
+                                    <i class="fas fa-edit"></i>
+                                    <span>Edit</span>
+                                </button>
+                                <button class="btn-profile-action btn-delete" @onclick="() => ConfirmDelete(profile)" title="Delete profile">
+                                    <i class="fas fa-trash"></i>
+                                    <span>Delete</span>
+                                </button>
                             </div>
                         </div>
                     </div>

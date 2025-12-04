@@ -16,9 +16,16 @@
             }
             else if (avatarMediaIds == null || avatarMediaIds.Count == 0)
             {
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    No avatars available for this age group.
+                <div class="alert alert-warning mb-0">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-exclamation-circle me-2 mt-1"></i>
+                        <div>
+                            <strong>No avatars available for this age group.</strong>
+                            <p class="mb-0 mt-1 small">
+                                You can still continue without an avatar, or select a different age group.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             }
             else

@@ -43,21 +43,30 @@
                 </div>
             }
             
-            <div class="d-flex flex-wrap gap-1 mb-2">
-                <span class="badge bg-primary">
-                    <i class="fas fa-book me-1"></i>@totalInBundle
+            <div class="bundle-pills">
+                <span class="bundle-pill pill-adventures" title="@totalInBundle adventure@(totalInBundle != 1 ? "s" : "") in this bundle">
+                    <i class="fas fa-book"></i>
+                    <span>@totalInBundle</span>
                 </span>
                 @if (ShowGameState)
                 {
-                    <span class="badge @(completedInBundle > 0 ? "bg-success" : "bg-secondary")">
-                        <i class="fas fa-check me-1"></i>@completedInBundle
+                    <span class="bundle-pill @(completedInBundle > 0 ? "pill-completed" : "pill-pending")"
+                          title="@completedInBundle of @totalInBundle adventure@(totalInBundle != 1 ? "s" : "") completed">
+                        <i class="fas @(completedInBundle > 0 ? "fa-check-circle" : "fa-clock")"></i>
+                        <span>@completedInBundle</span>
                     </span>
                 }
             </div>
         </div>
-        <div class="card-footer d-flex justify-content-between align-items-center small">
-            <span><i class="fas fa-users me-1"></i><strong>@Bundle.AgeGroup</strong></span>
-            <span class="text-primary"><i class="fas fa-arrow-right"></i></span>
+        <div class="card-footer">
+            <span class="bundle-pill pill-age" title="Recommended for ages @Bundle.AgeGroup">
+                <i class="fas fa-users"></i>
+                <span>@Bundle.AgeGroup</span>
+            </span>
+            <span class="explore-link" title="Explore this bundle">
+                <span>Explore</span>
+                <i class="fas fa-arrow-right"></i>
+            </span>
         </div>
     </div>
 </div>
