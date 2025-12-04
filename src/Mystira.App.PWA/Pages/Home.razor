@@ -22,8 +22,7 @@
     <!-- Hero Section -->
     <HeroSection
         ShowDescription="@(!isAuthenticated)"
-        ShowCallToActions="@(!isAuthenticated)"
-        OnWatchDemoClick="@(() => { /* TODO: Implement demo video modal */ })" />
+        ShowCallToActions="@(!isAuthenticated)" />
 
     <!-- Feature Cards Section (shown when not authenticated) -->
     @if (!isAuthenticated)
