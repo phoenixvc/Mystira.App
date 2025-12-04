@@ -73,10 +73,17 @@ public class ValidateScenarioUseCase
             }
 
             // Check branch references
+            // Note: Empty NextSceneId is valid - it means the branch ends the story
             if (scene.Branches != null)
             {
                 foreach (var branch in scene.Branches)
                 {
+                    // Skip validation for empty NextSceneId (story ending)
+                    if (string.IsNullOrEmpty(branch.NextSceneId))
+                    {
+                        continue;
+                    }
+
                     if (!sceneIds.Contains(branch.NextSceneId))
                     {
                         throw new ArgumentException($"Scene '{scene.Id}' branch references non-existent scene '{branch.NextSceneId}'");

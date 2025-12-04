@@ -22,16 +22,13 @@ public static class BranchParser
         }
         branch.Choice = choiceObj.ToString() ?? string.Empty;
 
-        // Parse required NextSceneId field
+        // Parse optional NextSceneId field (null/empty means story ending)
         var nextSceneFound = branchDict.TryGetValue("nextSceneId", out var nextSceneObj) ||
                              branchDict.TryGetValue("next_scene_id", out nextSceneObj) ||
                              branchDict.TryGetValue("next_scene", out nextSceneObj);
 
-        if (!nextSceneFound || nextSceneObj == null)
-        {
-            throw new ArgumentException("Required field 'nextSceneId'/'next_scene' is missing or null in branch data");
-        }
-        var nextScene = nextSceneObj.ToString();
+        // NextSceneId is optional - if not found or null, the branch ends the story
+        var nextScene = nextSceneFound && nextSceneObj != null ? nextSceneObj.ToString() : null;
         branch.NextSceneId = string.IsNullOrWhiteSpace(nextScene) ? string.Empty : nextScene;
 
         // Parse EchoLog if available
