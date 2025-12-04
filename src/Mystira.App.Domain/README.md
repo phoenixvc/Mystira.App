@@ -71,7 +71,7 @@ Represents user authentication and authorization.
 - COPPA-compliant (no child accounts with PII)
 
 ### Scenario
-The central domain entity representing an interactive D&D-style story:
+The central domain entity representing an interactive story:
 - **Scenes**: Individual story moments with narrative text
 - **Choices**: Player decisions that branch the narrative
 - **Echo Logs**: Moral implications of choices

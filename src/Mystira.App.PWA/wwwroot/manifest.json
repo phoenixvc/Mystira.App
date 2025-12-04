@@ -53,7 +53,7 @@
     {
       "name": "Start Adventure",
       "short_name": "Adventure",
-      "description": "Start a new D&D adventure",
+      "description": "Start a new adventure",
       "url": "/",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
     }
