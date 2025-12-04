@@ -309,11 +309,13 @@
 /* Age Filter Buttons */
 .age-filter-container {
     overflow-x: auto;
+    overflow-y: visible; /* Prevent vertical clipping of hover effects */
     scrollbar-width: thin;
     scrollbar-color: #c4b5fd transparent;
     -webkit-overflow-scrolling: touch;
+    padding-top: 4px; /* Space for hover/focus effects at top */
     padding-bottom: 6px;
-    margin-top: 4px;
+    margin-top: 0;
 }
 
 .age-filter-container::-webkit-scrollbar {

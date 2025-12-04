@@ -14,6 +14,97 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* Featured Pills Container */
+.featured-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Base Featured Pill Styles */
+.featured-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: default;
+}
+
+.featured-pill i {
+    font-size: 0.75rem;
+}
+
+/* Adventures Pill */
+.featured-pill.pill-adventures {
+    background: linear-gradient(135deg, rgba(147, 51, 234, 0.12) 0%, rgba(124, 58, 237, 0.12) 100%);
+    border: 1px solid rgba(147, 51, 234, 0.25);
+    color: #9333ea;
+}
+
+.featured-pill.pill-adventures:hover {
+    background: linear-gradient(135deg, rgba(147, 51, 234, 0.2) 0%, rgba(124, 58, 237, 0.2) 100%);
+    border-color: rgba(147, 51, 234, 0.4);
+    transform: translateY(-1px);
+}
+
+/* Completed Pill */
+.featured-pill.pill-completed {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.12) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    color: #059669;
+}
+
+.featured-pill.pill-completed:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%);
+    border-color: rgba(16, 185, 129, 0.4);
+    transform: translateY(-1px);
+}
+
+/* Pending Pill */
+.featured-pill.pill-pending {
+    background: linear-gradient(135deg, rgba(107, 114, 128, 0.12) 0%, rgba(75, 85, 99, 0.12) 100%);
+    border: 1px solid rgba(107, 114, 128, 0.25);
+    color: #6b7280;
+}
+
+.featured-pill.pill-pending:hover {
+    background: linear-gradient(135deg, rgba(107, 114, 128, 0.2) 0%, rgba(75, 85, 99, 0.2) 100%);
+    border-color: rgba(107, 114, 128, 0.4);
+    transform: translateY(-1px);
+}
+
+/* Age Group Pill */
+.featured-pill.pill-age {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(37, 99, 235, 0.12) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    color: #2563eb;
+}
+
+.featured-pill.pill-age:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%);
+    border-color: rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
+}
+
+/* Free Pill */
+.featured-pill.pill-free {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.95) 0%, rgba(5, 150, 105, 0.95) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+}
+
+.featured-pill.pill-free:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 1) 0%, rgba(5, 150, 105, 1) 100%);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
+}
+
 @media (max-width: 768px) {
     .featured-bundle-card .row {
         flex-direction: column;
@@ -23,6 +114,15 @@
     .featured-bundle-card .col-md-8 {
         width: 100%;
         max-width: 100%;
+    }
+
+    .featured-pill {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+
+    .featured-pill i {
+        font-size: 0.7rem;
     }
 }
 
@@ -57,4 +157,61 @@ html[data-theme="dark"] .featured-bundle-card .btn-warning {
 
 html[data-theme="dark"] .featured-bundle-card .btn-warning:hover {
     background: linear-gradient(135deg, #fbbf24 0%, #eab308 100%);
+}
+
+/* Dark mode pill styles for featured card */
+html[data-theme="dark"] .featured-pill.pill-adventures {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(79, 70, 229, 0.15) 100%);
+    border-color: rgba(99, 102, 241, 0.3);
+    color: #a5b4fc;
+}
+
+html[data-theme="dark"] .featured-pill.pill-adventures:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(79, 70, 229, 0.25) 100%);
+    border-color: rgba(99, 102, 241, 0.5);
+}
+
+html[data-theme="dark"] .featured-pill.pill-completed {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.15) 100%);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #34d399;
+}
+
+html[data-theme="dark"] .featured-pill.pill-completed:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.25) 100%);
+    border-color: rgba(16, 185, 129, 0.5);
+}
+
+html[data-theme="dark"] .featured-pill.pill-pending {
+    background: linear-gradient(135deg, rgba(148, 163, 184, 0.15) 0%, rgba(100, 116, 139, 0.15) 100%);
+    border-color: rgba(148, 163, 184, 0.3);
+    color: #94a3b8;
+}
+
+html[data-theme="dark"] .featured-pill.pill-pending:hover {
+    background: linear-gradient(135deg, rgba(148, 163, 184, 0.25) 0%, rgba(100, 116, 139, 0.25) 100%);
+    border-color: rgba(148, 163, 184, 0.5);
+}
+
+html[data-theme="dark"] .featured-pill.pill-age {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.15) 100%);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+}
+
+html[data-theme="dark"] .featured-pill.pill-age:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(37, 99, 235, 0.25) 100%);
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+html[data-theme="dark"] .featured-pill.pill-free {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.9) 0%, rgba(5, 150, 105, 0.9) 100%);
+    border-color: rgba(52, 211, 153, 0.4);
+    color: white;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+html[data-theme="dark"] .featured-pill.pill-free:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 1) 0%, rgba(5, 150, 105, 1) 100%);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }

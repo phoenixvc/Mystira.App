@@ -26,13 +26,13 @@
         <p class="adventure-card-description">@GetTruncatedDescription()</p>
         
         <div class="adventure-metadata">
-            <span class="metadata-badge badge-age">
+            <span class="metadata-badge badge-age" title="Recommended for children ages @Adventure.AgeGroup">
                 <i class="fas fa-users me-1"></i>Ages @Adventure.AgeGroup
             </span>
-            <span class="metadata-badge badge-difficulty">
+            <span class="metadata-badge badge-difficulty" title="Difficulty level: @Adventure.Difficulty">
                 <i class="fas fa-signal me-1"></i>@Adventure.Difficulty
             </span>
-            <span class="metadata-badge badge-duration">
+            <span class="metadata-badge badge-duration" title="Estimated session length: @Adventure.SessionLength">
                 <i class="fas fa-clock me-1"></i>@Adventure.SessionLength
             </span>
         </div>
