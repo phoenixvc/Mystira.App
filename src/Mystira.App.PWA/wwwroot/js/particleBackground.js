@@ -9,7 +9,7 @@
 
     // Particle configuration
     const CONFIG = {
-        particleCount: 1,
+        particleCount: 4,
         connectionDistance: 120,
         mouseRadius: 150,
         particleSpeed: 0.3,

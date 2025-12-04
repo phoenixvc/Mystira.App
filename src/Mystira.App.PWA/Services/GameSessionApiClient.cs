@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using Mystira.App.PWA.Models;
 
 namespace Mystira.App.PWA.Services;
@@ -19,6 +20,9 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         {
             Logger.LogInformation("Starting game session for scenario: {ScenarioId}, Account: {AccountId}, Profile: {ProfileId}",
                 scenarioId, accountId, profileId);
+
+            // Set authorization header - required for the [Authorize] attribute on the API endpoint
+            await SetAuthorizationHeaderAsync();
 
             var requestData = new
             {
@@ -60,11 +64,6 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
             Logger.LogError(ex, "Error parsing API response when starting game session for scenario: {ScenarioId}", scenarioId);
             return null;
         }
-        catch (Exception ex) when (IsNonFatal(ex))
-        {
-            Logger.LogError(ex, "Unexpected error starting game session for scenario: {ScenarioId}", scenarioId);
-            return null;
-        }
     }
 
     public async Task<GameSession?> EndGameSessionAsync(string sessionId)
@@ -72,6 +71,9 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         try
         {
             Logger.LogInformation("Ending game session: {SessionId}", sessionId);
+
+            // Set authorization header - required for the [Authorize] attribute on the API endpoint
+            await SetAuthorizationHeaderAsync();
 
             var response = await HttpClient.PostAsync($"api/gamesessions/{sessionId}/end", null);
 
@@ -103,11 +105,6 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
             Logger.LogError(ex, "Error parsing API response when ending game session: {SessionId}", sessionId);
             return null;
         }
-        catch (Exception ex) when (IsNonFatal(ex))
-        {
-            Logger.LogError(ex, "Error ending game session: {SessionId}", sessionId);
-            return null;
-        }
     }
 
     public async Task<GameSession?> ProgressSessionSceneAsync(string sessionId, string sceneId)
@@ -115,6 +112,9 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         try
         {
             Logger.LogInformation("Progressing session {SessionId} to scene {SceneId}", sessionId, sceneId);
+
+            // Set authorization header - required for the [Authorize] attribute on the API endpoint
+            await SetAuthorizationHeaderAsync();
 
             var requestData = new { sceneId };
             var response = await HttpClient.PostAsJsonAsync($"api/gamesessions/{sessionId}/progress-scene", requestData, JsonOptions);
@@ -147,11 +147,6 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
             Logger.LogError(ex, "Error parsing API response when progressing session {SessionId} to scene {SceneId}", sessionId, sceneId);
             return null;
         }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error progressing session {SessionId} to scene {SceneId}", sessionId, sceneId);
-            return null;
-        }
     }
 
     public async Task<List<GameSession>?> GetSessionsByAccountAsync(string accountId)
@@ -160,6 +155,8 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         {
             Logger.LogInformation("Fetching sessions for account: {AccountId}", accountId);
 
+            // Set authorization header - required for the [Authorize] attribute on the API endpoint
+            await SetAuthorizationHeaderAsync();
             var response = await HttpClient.GetAsync($"api/gamesessions/account/{accountId}");
 
             if (response.IsSuccessStatusCode)
@@ -188,11 +185,6 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         }
         catch (JsonException ex)
         {
-            Logger.LogError(ex, "Error parsing API response when progressing session {SessionId} to scene {SceneId}", sessionId, sceneId);
-            return null;
-        }
-        catch (Exception ex)
-        {
             Logger.LogError(ex, "Error parsing API response when fetching sessions for account: {AccountId}", accountId);
             return null;
         }
@@ -204,6 +196,7 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         {
             Logger.LogInformation("Fetching in-progress sessions for account: {AccountId}", accountId);
 
+            await SetAuthorizationHeaderAsync();
             var response = await HttpClient.GetAsync($"api/gamesessions/account/{accountId}/in-progress");
 
             if (response.IsSuccessStatusCode)
@@ -236,6 +229,7 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
             return null;
         }
     }
+
     /// <summary>
     /// Returns true if the exception is non-fatal and can be safely caught.
     /// </summary>
