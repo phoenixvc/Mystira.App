@@ -31,8 +31,14 @@ public class CreateUserProfileCommandHandler : ICommandHandler<CreateUserProfile
         var request = command.Request;
 
         // Validate request
-        if (string.IsNullOrEmpty(request.Name))
+        if (string.IsNullOrWhiteSpace(request.Name))
             throw new ArgumentException("Profile name is required");
+
+        if (string.IsNullOrWhiteSpace(request.AgeGroup))
+            throw new ArgumentException("Age group is required");
+
+        if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
+            throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
 
         var profile = new UserProfile
         {
@@ -47,11 +53,14 @@ public class CreateUserProfileCommandHandler : ICommandHandler<CreateUserProfile
             PreferredFantasyThemes = request.PreferredFantasyThemes?
                 .Select(t => new FantasyTheme(t))
                 .ToList() ?? new List<FantasyTheme>(),
+            AvatarMediaId = request.SelectedAvatarMediaId,
             SelectedAvatarMediaId = request.SelectedAvatarMediaId,
             HasCompletedOnboarding = request.HasCompletedOnboarding,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
+
+        profile.AgeGroupName = request.AgeGroup;
 
         // Update age group from date of birth if provided
         if (request.DateOfBirth.HasValue)
