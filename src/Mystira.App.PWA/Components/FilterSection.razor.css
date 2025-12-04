@@ -39,10 +39,14 @@
 }
 
 .filter-results-count .badge {
-    padding: 6px 12px;
+    padding: 8px 16px;
     font-size: 0.875rem;
     font-weight: 600;
-    border-radius: 6px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%) !important;
+    color: white;
+    border: 2px solid rgba(147, 51, 234, 0.3);
+    box-shadow: 0 2px 8px rgba(147, 51, 234, 0.25);
 }
 
 /* Search Bar Styles */
@@ -107,26 +111,25 @@
 
 /* Compact Filter Row Layout */
 .filter-row {
-    display: grid;
-    grid-template-columns: 1fr auto auto;
+    display: flex;
+    flex-wrap: wrap;
     gap: 16px;
-    align-items: start;
-    overflow: visible;
+    align-items: center;
 }
 
 .filter-search {
     min-width: 0;
-    overflow: visible;
+    flex: 1 1 300px;
 }
 
 .filter-age-groups {
+    flex: 1 1 auto;
     min-width: 0;
-    overflow: visible;
 }
 
 .filter-toggle {
+    flex: 0 0 auto;
     white-space: nowrap;
-    padding-top: 4px;
 }
 
 /* Completed Toggle Wrapper */
@@ -259,14 +262,18 @@
 
 @media (max-width: 992px) {
     .filter-row {
-        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: stretch;
         gap: 12px;
     }
-    
+
+    .filter-search,
+    .filter-age-groups,
     .filter-toggle {
-        padding-top: 0;
+        flex: 1 1 100%;
+        width: 100%;
     }
-    
+
     .completed-toggle-wrapper {
         width: 100%;
         justify-content: center;
