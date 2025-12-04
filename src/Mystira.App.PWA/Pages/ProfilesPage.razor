@@ -111,10 +111,7 @@ else
                             <div class="profile-avatar-section">
                                 @if (!string.IsNullOrEmpty(profile.SelectedAvatarMediaId))
                                 {
-                                    @{
-                                        var altText = $"{profile.Name} avatar";
-                                    }
-                                    <CachedMystiraImage MediaId="@profile.SelectedAvatarMediaId" Alt="@altText"
+                                    <CachedMystiraImage MediaId="@profile.SelectedAvatarMediaId" Alt="@($"{profile.Name} avatar")"
                                         ImageClass="profile-avatar-image" Width="80" Height="80" />
                                 }
                                 else
