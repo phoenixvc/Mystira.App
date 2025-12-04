@@ -20,8 +20,8 @@ The Mystira repository hosts the full suite of services, libraries, and client a
 | **Production** | API | [prod-wus-app-mystira-api.azurewebsites.net](https://prod-wus-app-mystira-api.azurewebsites.net) |
 | **Production** | Admin API | [prod-wus-app-mystira-api-admin.azurewebsites.net](https://prod-wus-app-mystira-api-admin.azurewebsites.net) |
 | **Development** | PWA | [mango-water-04fdb1c03.3.azurestaticapps.net](https://mango-water-04fdb1c03.3.azurestaticapps.net) |
-| **Development** | API | [mystira-app-dev-api.azurewebsites.net/swagger](https://mystira-app-dev-api.azurewebsites.net/swagger) |
-| **Development** | Admin API | [dev-euw-app-mystira-admin-api.azurewebsites.net/swagger](https://dev-euw-app-mystira-admin-api.azurewebsites.net/swagger) |
+| **Development** | API | [dev-san-app-mystira-api.azurewebsites.net/swagger](https://dev-san-app-mystira-api.azurewebsites.net/swagger) |
+| **Development** | Admin API | [dev-san-app-mystira-admin-api.azurewebsites.net/swagger](https://dev-san-app-mystira-admin-api.azurewebsites.net/swagger) |
 
 ## Contents
 
@@ -63,7 +63,7 @@ The Mystira repository hosts the full suite of services, libraries, and client a
 | 🌐 Public API  | `src/Mystira.App.Api`                  | ASP.NET Core API serving Mystira clients on top of Cosmos DB.                           |
 | 🛡️ Admin API   | `src/Mystira.App.Admin.Api`            | Internal-facing API surface for moderation, content workflows, and tooling.             |
 | 📱 PWA         | `src/Mystira.App.PWA`                  | Blazor WebAssembly PWA with offline assets, IndexedDB sync, audio helpers, and haptics. |
-| 📊 Ops Console | `Mystira.App.CosmosConsole`            | Command-line utility for Cosmos DB exports, stats, and operational insights.            |
+| 📊 Ops Console | `tools/Mystira.App.CosmosConsole`    | Command-line utility for Cosmos DB exports, stats, and operational insights.            |
 
 ## Technology Stack
 
@@ -86,7 +86,7 @@ The Mystira repository hosts the full suite of services, libraries, and client a
 ### Build
 
 ```bash
-dotnet build Mystira.sln
+dotnet build Mystira.App.sln
 ```
 
 ### Setup Pre-commit Hooks
@@ -163,7 +163,7 @@ Configure `appsettings.Development.json`, user secrets, or environment variables
 | `src/Mystira.App.Api/Mystira.App.Api.csproj`                 | `net9.0`         | Public API upgraded to .NET 9 for C# 12 features and ASP.NET Core perf.        |
 | `src/Mystira.App.Admin.Api/Mystira.App.Admin.Api.csproj`     | `net9.0`         | Admin API matches the public surface to avoid dependency drift.                |
 | `src/Mystira.App.PWA/Mystira.App.PWA.csproj`                 | `net9.0`         | Blazor host upgraded; WebAssembly assets continue to run on latest runtime.    |
-| `Mystira.App.CosmosConsole/Mystira.App.CosmosConsole.csproj` | `net9.0`         | Operational tooling aligned so it benefits from the same SDK/tooling pipeline. |
+| `tools/Mystira.App.CosmosConsole/Mystira.App.CosmosConsole.csproj` | `net9.0`         | Operational tooling aligned so it benefits from the same SDK/tooling pipeline. |
 
 > **Packages refreshed:** Blazor WebAssembly client libraries (`Microsoft.AspNetCore.Components.WebAssembly`, DevServer, `Microsoft.Extensions.Http`, `System.Text.Json`) now target version 9.0.0 to match the runtime upgrade.
  **Tip:** If you upgrade additional projects, run `dotnet workload update` to keep WebAssembly and MAUI workloads in sync with the 9.0 SDK.
@@ -334,9 +334,9 @@ Comprehensive architectural documentation:
 
 | Stage                    | Command                                                                                                         | Purpose                                                  |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Unit / Integration Tests | `dotnet test Mystira.sln`                                                                                       | Runs cross-project tests (APIs, domain, infrastructure). |
+| Unit / Integration Tests | `dotnet test Mystira.App.sln`                                                                                       | Runs cross-project tests (APIs, domain, infrastructure). |
 | CQRS Integration Tests   | `dotnet test tests/Mystira.App.Application.Tests/`                                                             | Tests CQRS handlers, caching, and MediatR pipeline (23 tests). |
-| Formatting               | `dotnet format Mystira.sln` (automated via pre-commit hook)                                                     | Keeps C# style consistent before pushing a PR.           |
+| Formatting               | `dotnet format Mystira.App.sln` (automated via pre-commit hook)                                                     | Keeps C# style consistent before pushing a PR.           |
 | PWA Lint / Build         | `npm install` (once), `npm run lint` / `npm run build` (inside `src/Mystira.App.PWA` if JS assets are modified) | Ensures JS/service-worker assets remain valid.           |
 | Console Smoke Test       | `dotnet run --project tools/Mystira.App.CosmosConsole/... -- stats`                                             | Confirms Cosmos CLI still connects post-change.          |
 

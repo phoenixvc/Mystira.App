@@ -48,7 +48,7 @@ public class RequestPasswordlessSignupCommandHandler
             if (existingAccount != null)
             {
                 _logger.LogWarning("Signup requested for existing email: {Email}", email);
-                return (false, "An account with this email already exists", null, null);
+                return (false, "An account with this email already exists. Please sign in instead.", null, null);
             }
 
             // BELOW BLOCKS RESEND CODE. TODO: Fix.

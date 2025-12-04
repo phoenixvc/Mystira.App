@@ -46,6 +46,14 @@
                             {
                                 <div class="alert alert-danger" role="alert">
                                     <i class="fas fa-exclamation-circle me-2"></i>@generalError
+                                    @if (generalError.Contains("already exists"))
+                                    {
+                                        <div class="mt-2">
+                                            <a href="/signin" class="btn btn-outline-light btn-sm">
+                                                <i class="fas fa-sign-in-alt me-1"></i>Sign In
+                                            </a>
+                                        </div>
+                                    }
                                 </div>
                             }
 
