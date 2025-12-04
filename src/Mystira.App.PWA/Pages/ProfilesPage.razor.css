@@ -602,3 +602,83 @@ html[data-theme="dark"] .btn-delete:hover {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     border-color: #ef4444;
 }
+
+/* Light mode explicit overrides for Profile Cards */
+html[data-theme="light"] .profile-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.95) 100%);
+    border-color: rgba(124, 58, 237, 0.15);
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.08);
+}
+
+html[data-theme="light"] .profile-card:hover {
+    box-shadow: 0 12px 32px rgba(124, 58, 237, 0.18);
+    border-color: rgba(124, 58, 237, 0.3);
+}
+
+html[data-theme="light"] .profile-avatar-image {
+    border-color: rgba(124, 58, 237, 0.3);
+}
+
+html[data-theme="light"] .profile-avatar-placeholder {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+}
+
+html[data-theme="light"] .guest-badge {
+    border-color: white;
+}
+
+html[data-theme="light"] .profile-name {
+    color: #111827;
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+html[data-theme="light"] .profile-age-badge {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+    border-color: rgba(124, 58, 237, 0.2);
+    color: #7c3aed;
+}
+
+html[data-theme="light"] .meta-item {
+    background: rgba(124, 58, 237, 0.05);
+    color: #6b7280;
+}
+
+html[data-theme="light"] .meta-item i {
+    color: #7c3aed;
+}
+
+html[data-theme="light"] .meta-item.meta-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
+html[data-theme="light"] .meta-item.meta-success i {
+    color: #10b981;
+}
+
+html[data-theme="light"] .btn-edit {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+    border-color: rgba(124, 58, 237, 0.3);
+    color: #7c3aed;
+}
+
+html[data-theme="light"] .btn-edit:hover {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    border-color: #7c3aed;
+    color: white;
+}
+
+html[data-theme="light"] .btn-delete {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+html[data-theme="light"] .btn-delete:hover {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border-color: #ef4444;
+    color: white;
+}
