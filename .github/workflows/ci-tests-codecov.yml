@@ -34,6 +34,13 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
       - name: Install wasm-tools workload
         run: dotnet workload install wasm-tools
 
@@ -49,7 +56,16 @@ jobs:
             --collect:"XPlat Code Coverage" \
             --results-directory ./coverage \
             --settings coverlet.runsettings \
+            --logger "trx;LogFileName=test-results.trx" \
             -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: ./coverage/**/*.trx
+          retention-days: 30
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5

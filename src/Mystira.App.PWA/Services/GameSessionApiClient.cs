@@ -61,6 +61,9 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         {
             Logger.LogInformation("Ending game session: {SessionId}", sessionId);
 
+            // Set authorization header - required for the [Authorize] attribute on the API endpoint
+            await SetAuthorizationHeaderAsync();
+
             var response = await HttpClient.PostAsync($"api/gamesessions/{sessionId}/end", null);
 
             if (response.IsSuccessStatusCode)
@@ -88,6 +91,9 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         try
         {
             Logger.LogInformation("Progressing session {SessionId} to scene {SceneId}", sessionId, sceneId);
+
+            // Set authorization header - required for the [Authorize] attribute on the API endpoint
+            await SetAuthorizationHeaderAsync();
 
             var requestData = new { sceneId };
             var response = await HttpClient.PostAsJsonAsync($"api/gamesessions/{sessionId}/progress-scene", requestData, JsonOptions);
