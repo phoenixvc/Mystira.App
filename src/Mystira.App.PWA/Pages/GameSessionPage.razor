@@ -185,10 +185,9 @@ else
                                 }
                             </div>
                         }
-                        else if (gameSession.CurrentScene.SceneType == SceneType.Special && 
-                                 gameSession.CurrentScene.NextSceneId == null)
+                        else if (gameSession.CurrentScene.NextSceneId == null)
                         {
-                            <!-- Final Scene -->
+                            <!-- Final Scene (no more scenes to go to) -->
                             <div class="text-center">
                                 <div class="alert alert-success">
                                     <h4 class="alert-heading">
