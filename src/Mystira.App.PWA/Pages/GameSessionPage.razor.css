@@ -5,11 +5,20 @@
 }
 
 .scene-content {
-    background: white;
+    background: var(--card, rgba(255, 255, 255, 0.85));
     border-radius: 1rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08),
+                0 0 40px rgba(147, 51, 234, 0.06);
     padding: 2rem;
     margin-bottom: 2rem;
+    border: 1px solid var(--border, rgba(17, 24, 39, 0.08));
+    color: var(--fg, #111827);
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.scene-content:hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12),
+                0 0 50px rgba(147, 51, 234, 0.1);
 }
 
 /* Choice button styles */
@@ -41,6 +50,12 @@
     overflow: hidden;
     margin: 1rem 0;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border, rgba(17, 24, 39, 0.08));
+    transition: box-shadow 0.3s ease;
+}
+
+.media-container:hover {
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
 }
 
 .media-container img,
@@ -60,9 +75,128 @@
     max-width: 200px;
     margin: 0 auto;
     padding: 15px;
-    background-color: white;
+    background-color: var(--card, rgba(255, 255, 255, 0.85));
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border, rgba(17, 24, 39, 0.08));
+}
+
+/* Scene text visibility - ensure text is readable in both themes */
+.scene-content .lead {
+    color: var(--fg, #111827);
+    font-size: 1.1rem;
+    line-height: 1.8;
+}
+
+.scene-content .lead p {
+    color: var(--fg, #111827);
+}
+
+.scene-content h3,
+.scene-content h4,
+.scene-content h5 {
+    color: var(--fg, #111827);
+}
+
+.scene-content .text-muted {
+    color: var(--muted, #6b7280) !important;
+}
+
+.scene-content .markdown-content {
+    color: var(--fg, #111827);
+}
+
+.scene-content .markdown-content p {
+    color: var(--fg, #111827);
+}
+
+.scene-content .markdown-content em {
+    color: var(--muted, #6b7280);
+}
+
+/* Mystira logo styling */
+.mystira-logo {
+    border-radius: 0.5rem;
+    object-fit: contain;
+}
+
+/* Dark mode enhancements */
+@media (prefers-color-scheme: dark) {
+    .scene-content {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4),
+                    0 0 40px rgba(147, 51, 234, 0.08);
+    }
+
+    .scene-content:hover {
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5),
+                    0 0 60px rgba(147, 51, 234, 0.15);
+    }
+
+    .media-container {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        border: 1px solid var(--border, rgba(148, 163, 184, 0.1));
+    }
+
+    .media-container:hover {
+        box-shadow: 0 6px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    .dice-roller-container {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+}
+
+html[data-theme="dark"] .scene-content {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4),
+                0 0 40px rgba(147, 51, 234, 0.08);
+}
+
+html[data-theme="dark"] .scene-content:hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5),
+                0 0 60px rgba(147, 51, 234, 0.15);
+}
+
+html[data-theme="dark"] .media-container {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border, rgba(148, 163, 184, 0.1));
+}
+
+html[data-theme="dark"] .media-container:hover {
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme="dark"] .dice-roller-container {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Exit Adventure button improvements */
+::deep .btn-outline-danger {
+    border-width: 2px;
+    font-weight: 600;
+}
+
+@media (prefers-color-scheme: dark) {
+    ::deep .btn-outline-danger {
+        color: #fca5a5;
+        border-color: #fca5a5;
+    }
+
+    ::deep .btn-outline-danger:hover {
+        background-color: rgba(239, 68, 68, 0.15);
+        border-color: #f87171;
+        color: #f87171;
+    }
+}
+
+html[data-theme="dark"] ::deep .btn-outline-danger {
+    color: #fca5a5;
+    border-color: #fca5a5;
+}
+
+html[data-theme="dark"] ::deep .btn-outline-danger:hover {
+    background-color: rgba(239, 68, 68, 0.15);
+    border-color: #f87171;
+    color: #f87171;
 }
 
 /* Responsive Design */
@@ -71,12 +205,12 @@
         padding: 1.5rem;
         margin-bottom: 1rem;
     }
-    
+
     .choice-button {
         min-width: 100%;
         margin: 0.25rem 0;
     }
-    
+
     .game-content {
         padding: 1rem 0;
     }
