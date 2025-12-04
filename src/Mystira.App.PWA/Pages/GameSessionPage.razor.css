@@ -107,18 +107,79 @@
     object-fit: contain;
 }
 
+/* Dark mode enhancements */
+@media (prefers-color-scheme: dark) {
+    .scene-content {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4),
+                    0 0 40px rgba(147, 51, 234, 0.08);
+    }
+
+    .media-container {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        border: 1px solid var(--border, rgba(148, 163, 184, 0.1));
+    }
+
+    .dice-roller-container {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+}
+
+html[data-theme="dark"] .scene-content {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4),
+                0 0 40px rgba(147, 51, 234, 0.08);
+}
+
+html[data-theme="dark"] .media-container {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border, rgba(148, 163, 184, 0.1));
+}
+
+html[data-theme="dark"] .dice-roller-container {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Exit Adventure button improvements */
+::deep .btn-outline-danger {
+    border-width: 2px;
+    font-weight: 600;
+}
+
+@media (prefers-color-scheme: dark) {
+    ::deep .btn-outline-danger {
+        color: #fca5a5;
+        border-color: #fca5a5;
+    }
+
+    ::deep .btn-outline-danger:hover {
+        background-color: rgba(239, 68, 68, 0.15);
+        border-color: #f87171;
+        color: #f87171;
+    }
+}
+
+html[data-theme="dark"] ::deep .btn-outline-danger {
+    color: #fca5a5;
+    border-color: #fca5a5;
+}
+
+html[data-theme="dark"] ::deep .btn-outline-danger:hover {
+    background-color: rgba(239, 68, 68, 0.15);
+    border-color: #f87171;
+    color: #f87171;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .scene-content {
         padding: 1.5rem;
         margin-bottom: 1rem;
     }
-    
+
     .choice-button {
         min-width: 100%;
         margin: 0.25rem 0;
     }
-    
+
     .game-content {
         padding: 1rem 0;
     }
