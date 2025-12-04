@@ -15,20 +15,20 @@
 .profile-card {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.95) 100%);
     border-radius: 20px;
-    border: 1px solid rgba(147, 51, 234, 0.15);
+    border: 1px solid rgba(124, 58, 237, 0.15);
     padding: 24px;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 16px rgba(147, 51, 234, 0.08);
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.08);
 }
 
 .profile-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 32px rgba(147, 51, 234, 0.18);
-    border-color: rgba(147, 51, 234, 0.3);
+    box-shadow: 0 12px 32px rgba(124, 58, 237, 0.18);
+    border-color: rgba(124, 58, 237, 0.3);
 }
 
 /* Avatar Section */
@@ -42,21 +42,21 @@
     height: 80px;
     border-radius: 50%;
     object-fit: cover;
-    border: 3px solid rgba(147, 51, 234, 0.3);
-    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.2);
+    border: 3px solid rgba(124, 58, 237, 0.3);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
 }
 
 .profile-avatar-placeholder {
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
     font-size: 2rem;
-    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
 }
 
 .guest-badge {
@@ -86,7 +86,7 @@
     font-weight: 700;
     color: #111827;
     margin-bottom: 8px;
-    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -97,8 +97,8 @@
     align-items: center;
     gap: 4px;
     padding: 6px 14px;
-    background: linear-gradient(135deg, rgba(147, 51, 234, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
-    border: 1px solid rgba(147, 51, 234, 0.2);
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+    border: 1px solid rgba(124, 58, 237, 0.2);
     border-radius: 20px;
     font-size: 0.8rem;
     font-weight: 600;
@@ -122,13 +122,13 @@
     font-size: 0.8rem;
     color: #6b7280;
     padding: 6px 12px;
-    background: rgba(147, 51, 234, 0.05);
+    background: rgba(124, 58, 237, 0.05);
     border-radius: 8px;
 }
 
 .meta-item i {
     font-size: 0.75rem;
-    color: #9333ea;
+    color: #7c3aed;
 }
 
 .meta-item.meta-success {
@@ -167,17 +167,17 @@
 }
 
 .btn-edit {
-    background: linear-gradient(135deg, rgba(147, 51, 234, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
-    border-color: rgba(147, 51, 234, 0.3);
-    color: #9333ea;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+    border-color: rgba(124, 58, 237, 0.3);
+    color: #7c3aed;
 }
 
 .btn-edit:hover {
-    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
-    border-color: #9333ea;
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    border-color: #7c3aed;
     color: white;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(147, 51, 234, 0.3);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
 }
 
 .btn-delete {
@@ -402,9 +402,9 @@ html[data-theme="light"] .form-select {
 html[data-theme="light"] .form-control:focus,
 html[data-theme="light"] .form-select:focus {
     background-color: white;
-    border-color: #9333ea;
+    border-color: #7c3aed;
     color: #111827;
-    box-shadow: 0 0 0 0.25rem rgba(147, 51, 234, 0.25);
+    box-shadow: 0 0 0 0.25rem rgba(124, 58, 237, 0.25);
 }
 
 html[data-theme="light"] .form-control::placeholder {
@@ -601,4 +601,84 @@ html[data-theme="dark"] .btn-delete {
 html[data-theme="dark"] .btn-delete:hover {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     border-color: #ef4444;
+}
+
+/* Light mode explicit overrides for Profile Cards */
+html[data-theme="light"] .profile-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.95) 100%);
+    border-color: rgba(124, 58, 237, 0.15);
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.08);
+}
+
+html[data-theme="light"] .profile-card:hover {
+    box-shadow: 0 12px 32px rgba(124, 58, 237, 0.18);
+    border-color: rgba(124, 58, 237, 0.3);
+}
+
+html[data-theme="light"] .profile-avatar-image {
+    border-color: rgba(124, 58, 237, 0.3);
+}
+
+html[data-theme="light"] .profile-avatar-placeholder {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+}
+
+html[data-theme="light"] .guest-badge {
+    border-color: white;
+}
+
+html[data-theme="light"] .profile-name {
+    color: #111827;
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+html[data-theme="light"] .profile-age-badge {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+    border-color: rgba(124, 58, 237, 0.2);
+    color: #7c3aed;
+}
+
+html[data-theme="light"] .meta-item {
+    background: rgba(124, 58, 237, 0.05);
+    color: #6b7280;
+}
+
+html[data-theme="light"] .meta-item i {
+    color: #7c3aed;
+}
+
+html[data-theme="light"] .meta-item.meta-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
+html[data-theme="light"] .meta-item.meta-success i {
+    color: #10b981;
+}
+
+html[data-theme="light"] .btn-edit {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+    border-color: rgba(124, 58, 237, 0.3);
+    color: #7c3aed;
+}
+
+html[data-theme="light"] .btn-edit:hover {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    border-color: #7c3aed;
+    color: white;
+}
+
+html[data-theme="light"] .btn-delete {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+html[data-theme="light"] .btn-delete:hover {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border-color: #ef4444;
+    color: white;
 }
