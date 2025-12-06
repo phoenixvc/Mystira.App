@@ -31,7 +31,8 @@
                                        @bind="email" 
                                        placeholder="Enter your email"
                                        required 
-                                       disabled="@isSubmitting" />
+                                       disabled="@isSubmitting"
+                                       autocomplete="email" />
                             </div>
 
                             <div class="mb-3 form-check">
@@ -63,7 +64,8 @@
 
                             <button type="submit" 
                                     class="btn btn-primary-custom btn-lg w-100" 
-                                    disabled="@isSubmitting">
+                                    disabled="@isSubmitting"
+                                    @onclick="() => isSubmitting = true">
                                 @if (isSubmitting)
                                 {
                                     <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -100,7 +102,8 @@
                                        pattern="[0-9]{6}" 
                                        required 
                                        disabled="@isSubmitting" 
-                                       @oninput="OnCodeInput" />
+                                       @oninput="OnCodeInput"
+                                       autocomplete="one-time-code" />
                                 <div class="alert alert-success mt-3" role="alert" aria-live="polite">
                                     <i class="fas fa-check-circle me-2"></i>
                                     Check your email for the sign-in code
@@ -331,6 +334,7 @@
         errorMessage = string.Empty;
         successMessage = string.Empty;
         StopResendCountdown();
+        errorMessage = string.Empty;
     }
 
     private void StartResendCountdown()
@@ -366,19 +370,12 @@
         InvokeAsync(StateHasChanged);
     }
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
+        var isAuthenticated = await AuthService.IsAuthenticatedAsync();
+        if (isAuthenticated)
         {
-            // Check if user is already authenticated
-            _ = Task.Run(async () =>
-            {
-                var isAuthenticated = await AuthService.IsAuthenticatedAsync();
-                if (isAuthenticated)
-                {
-                    Navigation.NavigateTo("/");
-                }
-            });
+            Navigation.NavigateTo("/");
         }
     }
 

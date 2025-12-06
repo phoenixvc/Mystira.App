@@ -58,7 +58,8 @@
                             }
 
                             <button type="submit" class="btn btn-primary-custom btn-lg w-100"
-                                    disabled="@isSubmitting">
+                                    disabled="@isSubmitting"
+                                    @onclick="() => isSubmitting = true">
                                 @if (isSubmitting)
                                 {
                                     <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -96,7 +97,8 @@
                                 <input type="text" class="form-control form-control-lg text-center verification-code-input" 
                                        id="code" @bind="verificationCode" 
                                        placeholder="000000" maxlength="6"
-                                       disabled="@isVerifying" required />
+                                       disabled="@isVerifying" required
+                                       autocomplete="one-time-code" />
                                 <small class="form-text text-muted">Enter the 6-digit code from your email</small>
                                 @if (!string.IsNullOrEmpty(codeError))
                                 {
