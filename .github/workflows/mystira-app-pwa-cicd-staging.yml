@@ -51,6 +51,22 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
+      - name: Update version.json for cache invalidation
+        run: |
+          VERSION="1.0.${{ github.run_number }}"
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          COMMIT_SHA="${{ github.sha }}"
+          cat > src/Mystira.App.PWA/wwwroot/version.json << EOF
+          {
+            "version": "${VERSION}",
+            "buildDate": "${BUILD_DATE}",
+            "commitSha": "${COMMIT_SHA:0:7}",
+            "releaseNotes": "Build #${{ github.run_number }} from ${COMMIT_SHA:0:7}"
+          }
+          EOF
+          echo "Updated version.json to version ${VERSION}"
+          cat src/Mystira.App.PWA/wwwroot/version.json
+
       - name: Build PWA
         run: dotnet build src/Mystira.App.PWA/Mystira.App.PWA.csproj --configuration Release --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
