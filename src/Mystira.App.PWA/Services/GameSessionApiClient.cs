@@ -107,6 +107,86 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         }
     }
 
+    public async Task<GameSession?> PauseGameSessionAsync(string sessionId)
+    {
+        try
+        {
+            Logger.LogInformation("Pausing game session: {SessionId}", sessionId);
+
+            await SetAuthorizationHeaderAsync();
+
+            var response = await HttpClient.PostAsync($"api/gamesessions/{sessionId}/pause", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var gameSession = await response.Content.ReadFromJsonAsync<GameSession>(JsonOptions);
+                Logger.LogInformation("Game session paused successfully: {SessionId}", sessionId);
+                return gameSession;
+            }
+            else
+            {
+                Logger.LogWarning("Failed to pause game session with status: {StatusCode} for session: {SessionId}",
+                    response.StatusCode, sessionId);
+                return null;
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Network error pausing game session: {SessionId}", sessionId);
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Logger.LogError(ex, "Request timed out pausing game session: {SessionId}", sessionId);
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogError(ex, "Error parsing API response when pausing game session: {SessionId}", sessionId);
+            return null;
+        }
+    }
+
+    public async Task<GameSession?> ResumeGameSessionAsync(string sessionId)
+    {
+        try
+        {
+            Logger.LogInformation("Resuming game session: {SessionId}", sessionId);
+
+            await SetAuthorizationHeaderAsync();
+
+            var response = await HttpClient.PostAsync($"api/gamesessions/{sessionId}/resume", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var gameSession = await response.Content.ReadFromJsonAsync<GameSession>(JsonOptions);
+                Logger.LogInformation("Game session resumed successfully: {SessionId}", sessionId);
+                return gameSession;
+            }
+            else
+            {
+                Logger.LogWarning("Failed to resume game session with status: {StatusCode} for session: {SessionId}",
+                    response.StatusCode, sessionId);
+                return null;
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Network error resuming game session: {SessionId}", sessionId);
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Logger.LogError(ex, "Request timed out resuming game session: {SessionId}", sessionId);
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogError(ex, "Error parsing API response when resuming game session: {SessionId}", sessionId);
+            return null;
+        }
+    }
+
     public async Task<GameSession?> ProgressSessionSceneAsync(string sessionId, string sceneId)
     {
         try

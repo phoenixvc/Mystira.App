@@ -12,6 +12,9 @@ public interface IGameSessionService
     Task<bool> NavigateFromRollAsync(bool isSuccess);
     Task<bool> GoToNextSceneAsync();
     Task<bool> CompleteGameSessionAsync();
+    Task<bool> PauseGameSessionAsync();
+    Task<bool> ResumeGameSessionAsync();
+    bool IsPaused { get; }
     void ClearGameSession();
     void SetCurrentGameSession(GameSession? session);
 

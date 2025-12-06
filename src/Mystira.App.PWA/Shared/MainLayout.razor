@@ -143,14 +143,17 @@
     <footer class="py-3 mt-4">
         <div class="container-fluid text-center">
             <small class="text-muted">
-                Mystira v1.0 -
                 <span id="connection-status" class="text-success">Online</span>
+                <span class="version-indicator" id="app-version" title="Click for details"></span>
             </small>
         </div>
     </footer>
 
     <!-- Toast Notifications -->
     <ToastContainer />
+
+    <!-- Update Notification -->
+    <UpdateNotification />
 </div>
 
 @code {
@@ -298,12 +301,36 @@
     window.addEventListener('online', updateConnectionStatus);
     window.addEventListener('offline', updateConnectionStatus);
 
+    // Version display - subtle, you need to know to look for it
+    async function loadAppVersion() {
+        try {
+            const response = await fetch('./version.json?t=' + Date.now(), { cache: 'no-store' });
+            if (response.ok) {
+                const data = await response.json();
+                const versionEl = document.getElementById('app-version');
+                if (versionEl) {
+                    versionEl.textContent = 'v' + data.version;
+                    versionEl.title = `Build: ${data.version}\nDate: ${new Date(data.buildDate).toLocaleDateString()}\nCommit: ${data.commitSha || 'dev'}`;
+                    versionEl.style.cursor = 'help';
+                }
+            }
+        } catch (e) {
+            // Silently fail - version display is non-critical
+            const versionEl = document.getElementById('app-version');
+            if (versionEl) versionEl.textContent = 'v1.0.0';
+        }
+    }
+
     // Initial status check - run immediately and also after DOM is ready
     // This ensures status is updated whether script runs before or after DOM
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', updateConnectionStatus);
+        document.addEventListener('DOMContentLoaded', () => {
+            updateConnectionStatus();
+            loadAppVersion();
+        });
     } else {
         // DOM is already ready, update immediately
         updateConnectionStatus();
+        loadAppVersion();
     }
 </script>

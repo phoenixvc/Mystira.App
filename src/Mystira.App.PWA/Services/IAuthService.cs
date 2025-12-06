@@ -16,5 +16,21 @@ public interface IAuthService
     Task<(bool Success, string Message, string? Token, string? RefreshToken)> RefreshTokenAsync(string token, string refreshToken);
     Task<string?> GetCurrentTokenAsync();
     void SetRememberMe(bool rememberMe);
+
+    /// <summary>
+    /// Gets the token expiry time in UTC
+    /// </summary>
+    DateTime? GetTokenExpiryTime();
+
+    /// <summary>
+    /// Checks if token will expire within the specified minutes and refreshes if needed
+    /// </summary>
+    Task<bool> EnsureTokenValidAsync(int expiryBufferMinutes = 5);
+
+    /// <summary>
+    /// Event raised when token is about to expire (within 5 minutes)
+    /// </summary>
+    event EventHandler? TokenExpiryWarning;
+
     event EventHandler<bool>? AuthenticationStateChanged;
 }

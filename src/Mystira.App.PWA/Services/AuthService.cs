@@ -13,14 +13,19 @@ public class AuthService : IAuthService
     private const string TokenStorageKey = "mystira_auth_token";
     private const string RefreshTokenStorageKey = "mystira_refresh_token";
     private const string AccountStorageKey = "mystira_account";
+    private const string TokenExpiryStorageKey = "mystira_token_expiry";
 
     private bool _isAuthenticated;
     private string? _currentToken;
     private string? _currentRefreshToken;
     private Account? _currentAccount;
+    private DateTime? _tokenExpiryTime;
     private bool _rememberMe = false;
+    private bool _isRefreshing = false;
+    private readonly SemaphoreSlim _refreshLock = new(1, 1);
 
     public event EventHandler<bool>? AuthenticationStateChanged;
+    public event EventHandler? TokenExpiryWarning;
 
     public AuthService(ILogger<AuthService> logger, IApiClient apiClient, IJSRuntime jsRuntime)
     {
@@ -220,17 +225,43 @@ public class AuthService : IAuthService
         try
         {
             _currentToken = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", TokenStorageKey);
+            // Always load refresh token from localStorage (fix for session storage loss on page refresh)
             _currentRefreshToken = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", RefreshTokenStorageKey);
             var accountJson = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", AccountStorageKey);
+            var expiryString = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", TokenExpiryStorageKey);
 
             if (!string.IsNullOrEmpty(accountJson))
             {
                 _currentAccount = JsonSerializer.Deserialize<Account>(accountJson);
             }
+
+            if (!string.IsNullOrEmpty(expiryString) && DateTime.TryParse(expiryString, out var expiry))
+            {
+                _tokenExpiryTime = expiry;
+            }
+            else if (!string.IsNullOrEmpty(_currentToken))
+            {
+                // Extract expiry from token if not stored
+                _tokenExpiryTime = GetExpiryFromToken(_currentToken);
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading stored auth data");
+        }
+    }
+
+    private DateTime? GetExpiryFromToken(string token)
+    {
+        try
+        {
+            var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+            var jwtToken = handler.ReadJwtToken(token);
+            return jwtToken.ValidTo;
+        }
+        catch
+        {
+            return null;
         }
     }
 
@@ -240,47 +271,48 @@ public class AuthService : IAuthService
         if (!string.IsNullOrEmpty(token))
         {
             await _jsRuntime.InvokeVoidAsync("localStorage.setItem", TokenStorageKey, token);
+            // Store token expiry time
+            _tokenExpiryTime = GetExpiryFromToken(token);
+            if (_tokenExpiryTime.HasValue)
+            {
+                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", TokenExpiryStorageKey, _tokenExpiryTime.Value.ToString("O"));
+            }
         }
         else
         {
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", TokenStorageKey);
+            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", TokenExpiryStorageKey);
+            _tokenExpiryTime = null;
         }
     }
 
     private async Task SetStoredRefreshToken(string? refreshToken, bool rememberMe = false)
     {
         _currentRefreshToken = refreshToken;
+        // Always store in localStorage to prevent loss on page refresh
+        // The rememberMe flag is kept for API compatibility but localStorage is always used
         if (!string.IsNullOrEmpty(refreshToken))
         {
-            if (rememberMe)
-            {
-                // Store in persistent localStorage for "remember me" functionality
-                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", RefreshTokenStorageKey, refreshToken);
-            }
-            else
-            {
-                // Store in session storage for temporary login
-                await _jsRuntime.InvokeVoidAsync("sessionStorage.setItem", RefreshTokenStorageKey, refreshToken);
-            }
+            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", RefreshTokenStorageKey, refreshToken);
         }
         else
         {
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", RefreshTokenStorageKey);
-            await _jsRuntime.InvokeVoidAsync("sessionStorage.removeItem", RefreshTokenStorageKey);
         }
     }
 
     private async Task ClearStoredToken()
     {
         _currentToken = null;
+        _tokenExpiryTime = null;
         await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", TokenStorageKey);
+        await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", TokenExpiryStorageKey);
     }
 
     private async Task ClearStoredRefreshToken()
     {
         _currentRefreshToken = null;
         await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", RefreshTokenStorageKey);
-        await _jsRuntime.InvokeVoidAsync("sessionStorage.removeItem", RefreshTokenStorageKey);
     }
 
     private async Task SetStoredAccount(Account? account)
@@ -456,6 +488,97 @@ public class AuthService : IAuthService
         {
             _logger.LogError(ex, "Error getting current token");
             return null;
+        }
+    }
+
+    public DateTime? GetTokenExpiryTime()
+    {
+        if (_tokenExpiryTime.HasValue)
+        {
+            return _tokenExpiryTime;
+        }
+
+        if (!string.IsNullOrEmpty(_currentToken))
+        {
+            _tokenExpiryTime = GetExpiryFromToken(_currentToken);
+        }
+
+        return _tokenExpiryTime;
+    }
+
+    public async Task<bool> EnsureTokenValidAsync(int expiryBufferMinutes = 5)
+    {
+        // Prevent concurrent refresh attempts
+        await _refreshLock.WaitAsync();
+        try
+        {
+            if (_isRefreshing)
+            {
+                _logger.LogDebug("Token refresh already in progress, waiting...");
+                return true; // Another refresh is in progress
+            }
+
+            if (string.IsNullOrEmpty(_currentToken))
+            {
+                await LoadStoredAuthData();
+            }
+
+            if (string.IsNullOrEmpty(_currentToken))
+            {
+                return false; // No token available
+            }
+
+            var expiry = GetTokenExpiryTime();
+            if (!expiry.HasValue)
+            {
+                return true; // Can't determine expiry, assume valid
+            }
+
+            var timeUntilExpiry = expiry.Value - DateTime.UtcNow;
+
+            // Check if token is about to expire (within buffer time)
+            if (timeUntilExpiry.TotalMinutes <= expiryBufferMinutes)
+            {
+                // Raise warning event if within 5 minutes of expiry
+                if (timeUntilExpiry.TotalMinutes <= 5 && timeUntilExpiry.TotalMinutes > 0)
+                {
+                    _logger.LogInformation("Token expiring in {Minutes} minutes, raising warning", timeUntilExpiry.TotalMinutes);
+                    TokenExpiryWarning?.Invoke(this, EventArgs.Empty);
+                }
+
+                // If already expired or about to expire, try to refresh
+                if (string.IsNullOrEmpty(_currentRefreshToken))
+                {
+                    _logger.LogWarning("Token expired and no refresh token available");
+                    return false;
+                }
+
+                _isRefreshing = true;
+                try
+                {
+                    _logger.LogInformation("Proactively refreshing token before expiry");
+                    var (success, message, newToken, newRefreshToken) = await RefreshTokenAsync(_currentToken, _currentRefreshToken);
+
+                    if (success && !string.IsNullOrEmpty(newToken))
+                    {
+                        _logger.LogInformation("Proactive token refresh successful");
+                        return true;
+                    }
+
+                    _logger.LogWarning("Proactive token refresh failed: {Message}", message);
+                    return false;
+                }
+                finally
+                {
+                    _isRefreshing = false;
+                }
+            }
+
+            return true; // Token is still valid
+        }
+        finally
+        {
+            _refreshLock.Release();
         }
     }
 }

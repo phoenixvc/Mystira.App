@@ -88,6 +88,98 @@ public class GameSessionsController : ControllerBase
     }
 
     /// <summary>
+    /// Pause an active game session
+    /// </summary>
+    [HttpPost("{id}/pause")]
+    [Authorize]
+    public async Task<ActionResult<GameSession>> PauseSession(string id)
+    {
+        try
+        {
+            var accountId = User.FindFirst("sub")?.Value
+                ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? User.FindFirst("account_id")?.Value;
+
+            if (string.IsNullOrEmpty(accountId))
+            {
+                return Unauthorized(new ErrorResponse
+                {
+                    Message = "Account ID not found in authentication claims",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            var command = new PauseGameSessionCommand(id);
+            var session = await _mediator.Send(command);
+            if (session == null)
+            {
+                return NotFound(new ErrorResponse
+                {
+                    Message = $"Session not found or cannot be paused: {id}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            return Ok(session);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error pausing session {SessionId}", id);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = "Internal server error while pausing session",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
+    /// Resume a paused game session
+    /// </summary>
+    [HttpPost("{id}/resume")]
+    [Authorize]
+    public async Task<ActionResult<GameSession>> ResumeSession(string id)
+    {
+        try
+        {
+            var accountId = User.FindFirst("sub")?.Value
+                ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? User.FindFirst("account_id")?.Value;
+
+            if (string.IsNullOrEmpty(accountId))
+            {
+                return Unauthorized(new ErrorResponse
+                {
+                    Message = "Account ID not found in authentication claims",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            var command = new ResumeGameSessionCommand(id);
+            var session = await _mediator.Send(command);
+            if (session == null)
+            {
+                return NotFound(new ErrorResponse
+                {
+                    Message = $"Session not found or cannot be resumed: {id}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            return Ok(session);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resuming session {SessionId}", id);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = "Internal server error while resuming session",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
     /// End a game session
     /// </summary>
     [HttpPost("{id}/end")]

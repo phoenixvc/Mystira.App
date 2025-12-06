@@ -24,6 +24,10 @@ public class GameSessionService : IGameSessionService
     // Store character assignments for text replacement
     private List<CharacterAssignment> _characterAssignments = new();
 
+    // Track pause state
+    private bool _isPaused = false;
+    public bool IsPaused => _isPaused;
+
     public GameSessionService(ILogger<GameSessionService> logger, IApiClient apiClient, IAuthService authService)
     {
         _logger = logger;
@@ -247,6 +251,86 @@ public class GameSessionService : IGameSessionService
         }
     }
 
+    public async Task<bool> PauseGameSessionAsync()
+    {
+        try
+        {
+            if (CurrentGameSession == null)
+            {
+                _logger.LogWarning("Cannot pause game session - no active session");
+                return false;
+            }
+
+            if (_isPaused)
+            {
+                _logger.LogWarning("Game session is already paused");
+                return false;
+            }
+
+            _logger.LogInformation("Pausing game session: {SessionId}", CurrentGameSession.Id);
+
+            // Call the API to pause the session
+            var apiSession = await _apiClient.PauseGameSessionAsync(CurrentGameSession.Id);
+            if (apiSession == null)
+            {
+                _logger.LogWarning("Failed to pause game session via API, but updating local state");
+            }
+
+            _isPaused = true;
+
+            // Trigger the event to notify subscribers
+            GameSessionChanged?.Invoke(this, CurrentGameSession);
+
+            _logger.LogInformation("Game session paused successfully");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error pausing game session");
+            return false;
+        }
+    }
+
+    public async Task<bool> ResumeGameSessionAsync()
+    {
+        try
+        {
+            if (CurrentGameSession == null)
+            {
+                _logger.LogWarning("Cannot resume game session - no active session");
+                return false;
+            }
+
+            if (!_isPaused)
+            {
+                _logger.LogWarning("Game session is not paused");
+                return false;
+            }
+
+            _logger.LogInformation("Resuming game session: {SessionId}", CurrentGameSession.Id);
+
+            // Call the API to resume the session
+            var apiSession = await _apiClient.ResumeGameSessionAsync(CurrentGameSession.Id);
+            if (apiSession == null)
+            {
+                _logger.LogWarning("Failed to resume game session via API, but updating local state");
+            }
+
+            _isPaused = false;
+
+            // Trigger the event to notify subscribers
+            GameSessionChanged?.Invoke(this, CurrentGameSession);
+
+            _logger.LogInformation("Game session resumed successfully");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resuming game session");
+            return false;
+        }
+    }
+
     public async Task<bool> NavigateFromRollAsync(bool isSuccess)
     {
         try
@@ -349,6 +433,7 @@ public class GameSessionService : IGameSessionService
         _logger.LogInformation("Clearing game session");
         CurrentGameSession = null;
         _characterAssignments.Clear();
+        _isPaused = false;
     }
 
     public void SetCurrentGameSession(GameSession? session)

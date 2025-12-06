@@ -198,6 +198,40 @@
         });
     </script>
 
+    <!-- Update Notification Handler -->
+    <script>
+        // Reference to Blazor component for update notifications
+        let updateNotificationHandler = null;
+
+        function registerUpdateNotificationHandler(dotNetRef) {
+            updateNotificationHandler = dotNetRef;
+            console.log('[UpdateNotification] Handler registered');
+        }
+
+        function unregisterUpdateNotificationHandler() {
+            updateNotificationHandler = null;
+            console.log('[UpdateNotification] Handler unregistered');
+        }
+
+        // Listen for messages from service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                console.log('[UpdateNotification] Received message from service worker:', event.data);
+
+                if (event.data?.type === 'VERSION_UPDATE' && updateNotificationHandler) {
+                    updateNotificationHandler.invokeMethodAsync('OnVersionUpdate',
+                        event.data.oldVersion || null,
+                        event.data.newVersion || null
+                    );
+                }
+
+                if (event.data?.type === 'CACHES_CLEARED') {
+                    console.log('[UpdateNotification] Caches cleared by service worker');
+                }
+            });
+        }
+    </script>
+
     <!-- Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
@@ -205,6 +239,9 @@
                 navigator.serviceWorker.register('service-worker.js')
                     .then((registration) => {
                         console.log('ServiceWorker registration successful with scope: ', registration.scope);
+
+                        // Store registration for later use
+                        window.swRegistration = registration;
 
                         // Check for service worker updates periodically
                         registration.addEventListener('updatefound', () => {
@@ -216,8 +253,10 @@
                                     // New worker is installed, we have an old worker controlling the page
                                     console.log('New service worker ready, prompting user to refresh');
 
-                                    // Optionally, you could show a toast notification here
-                                    // For now, we'll let the service worker activation handle cache clearing
+                                    // Notify Blazor component if available
+                                    if (updateNotificationHandler) {
+                                        updateNotificationHandler.invokeMethodAsync('OnServiceWorkerUpdate');
+                                    }
                                 }
                             });
                         });
@@ -227,12 +266,23 @@
                         if (!navigator.serviceWorker.controller) {
                             console.log('First visit - waiting for service worker to activate');
                         } else if (registration.active && registration.active !== registration.installing) {
-                            // Service worker was already active, no need to clear caches
-                            console.log('Service worker already active - no cache clearing needed');
+                            // Service worker was already active, trigger version check
+                            console.log('Service worker already active - checking for version updates');
+                            if (navigator.serviceWorker.controller) {
+                                navigator.serviceWorker.controller.postMessage({ type: 'CHECK_VERSION' });
+                            }
                         }
 
                         // Force update check to ensure latest version
                         registration.update();
+
+                        // Periodic version check (every 5 minutes)
+                        setInterval(() => {
+                            registration.update();
+                            if (navigator.serviceWorker.controller) {
+                                navigator.serviceWorker.controller.postMessage({ type: 'CHECK_VERSION' });
+                            }
+                        }, 5 * 60 * 1000);
                     })
                     .catch((err) => {
                         console.log('ServiceWorker registration failed: ', err);
