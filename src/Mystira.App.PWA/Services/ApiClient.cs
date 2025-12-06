@@ -47,6 +47,8 @@ public class ApiClient : IApiClient
     public Task<GameSession?> StartGameSessionAsync(string scenarioId, string accountId, string profileId, List<string> playerNames, string targetAgeGroup) =>
         _gameSessionClient.StartGameSessionAsync(scenarioId, accountId, profileId, playerNames, targetAgeGroup);
     public Task<GameSession?> EndGameSessionAsync(string sessionId) => _gameSessionClient.EndGameSessionAsync(sessionId);
+    public Task<GameSession?> PauseGameSessionAsync(string sessionId) => _gameSessionClient.PauseGameSessionAsync(sessionId);
+    public Task<GameSession?> ResumeGameSessionAsync(string sessionId) => _gameSessionClient.ResumeGameSessionAsync(sessionId);
     public Task<GameSession?> ProgressSessionSceneAsync(string sessionId, string sceneId) => _gameSessionClient.ProgressSessionSceneAsync(sessionId, sceneId);
     public Task<List<GameSession>?> GetSessionsByAccountAsync(string accountId) => _gameSessionClient.GetSessionsByAccountAsync(accountId);
     public Task<List<GameSession>?> GetInProgressSessionsAsync(string accountId) => _gameSessionClient.GetInProgressSessionsAsync(accountId);

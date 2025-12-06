@@ -38,9 +38,21 @@ else
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-3">
+                        @if (GameSessionService.IsPaused)
+                        {
+                            <button class="btn btn-secondary-custom" @onclick="ResumeGame" disabled="@isProcessing">
+                                <i class="fas fa-play me-1"></i> Resume
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-outline-secondary-custom" @onclick="PauseGame" disabled="@isProcessing">
+                                <i class="fas fa-pause me-1"></i> Pause
+                            </button>
+                        }
                         <button class="btn btn-outline-danger" @onclick="ExitAdventure" disabled="@isProcessing">
                             <i class="fas fa-door-open me-1"></i> Exit Adventure
-                        </button>                        
+                        </button>
                         <img src="images/mystira-logo.webp"
                             alt="Mystira Logo"
                             width="120"
@@ -310,6 +322,68 @@ else
         finally
         {
             isProcessing = false;
+        }
+    }
+
+    private async Task PauseGame()
+    {
+        if (isProcessing)
+            return;
+
+        try
+        {
+            isProcessing = true;
+            StateHasChanged();
+
+            var success = await GameSessionService.PauseGameSessionAsync();
+            if (!success)
+            {
+                Logger.LogWarning("Failed to pause game session");
+            }
+            else
+            {
+                Logger.LogInformation("Game session paused");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error pausing game");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ResumeGame()
+    {
+        if (isProcessing)
+            return;
+
+        try
+        {
+            isProcessing = true;
+            StateHasChanged();
+
+            var success = await GameSessionService.ResumeGameSessionAsync();
+            if (!success)
+            {
+                Logger.LogWarning("Failed to resume game session");
+            }
+            else
+            {
+                Logger.LogInformation("Game session resumed");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error resuming game");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
         }
     }
 
