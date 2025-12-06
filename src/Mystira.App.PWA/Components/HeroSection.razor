@@ -96,22 +96,69 @@
             <p class="mystira-tagline mb-4">Where imagination meets growth</p>
             <div class="hero-logo-container mb-4">
                 <!-- Logo Intro Video (loads in background, plays when ready) -->
+                <!-- Theme-aware: loads hero-intro-light.mp4 or hero-intro-dark.mp4 based on theme -->
                 <video id="logo-intro-video"
                        class="hero-logo-video @(showVideo ? "visible" : "hidden")"
-                       controls
                        muted
                        playsinline
                        preload="auto"
                        aria-label="Mystira logo introduction video">
-                    <source src="videos/Logo-Twirling-Expansion.mp4" type="video/mp4">
+                    <source id="video-source" src="" type="video/mp4">
                 </video>
-                <!-- Static Logo (shown initially, fades when video is ready) -->
-                <img src="images/mystira-logo.webp"
-                     id="hero-logo-static"
-                     alt="Mystira - Where imagination meets growth"
-                     width="300"
-                     height="300"
-                     class="hero-logo @(showVideo ? "hidden" : "visible")" />
+
+                <!-- Static Logo with SVG Animation Overlay (shown when video ends) -->
+                <div class="logo-with-animation @(showLogoAnimation ? "animating" : "") @(showVideo ? "hidden" : "visible")">
+                    <img src="images/mystira-logo.webp"
+                         id="hero-logo-static"
+                         alt="Mystira - Where imagination meets growth"
+                         width="300"
+                         height="300"
+                         class="hero-logo-image" />
+
+                    <!-- SVG Animation Overlay - mimics video ending effect -->
+                    @if (showLogoAnimation)
+                    {
+                        <svg class="logo-animation-svg" viewBox="0 0 300 300" preserveAspectRatio="xMidYMid meet">
+                            <!-- Radiating rings that pulse outward from center -->
+                            <circle class="pulse-ring ring-1" cx="150" cy="150" r="80" fill="none" stroke="url(#pulseGradient)" stroke-width="2" />
+                            <circle class="pulse-ring ring-2" cx="150" cy="150" r="100" fill="none" stroke="url(#pulseGradient)" stroke-width="1.5" />
+                            <circle class="pulse-ring ring-3" cx="150" cy="150" r="120" fill="none" stroke="url(#pulseGradient)" stroke-width="1" />
+
+                            <!-- Sparkle particles -->
+                            <g class="sparkles">
+                                <circle class="sparkle s1" cx="75" cy="75" r="3" fill="#A78BFA" />
+                                <circle class="sparkle s2" cx="225" cy="75" r="2.5" fill="#7C3AED" />
+                                <circle class="sparkle s3" cx="225" cy="225" r="3" fill="#C4B5FD" />
+                                <circle class="sparkle s4" cx="75" cy="225" r="2" fill="#8B5CF6" />
+                                <circle class="sparkle s5" cx="150" cy="40" r="2.5" fill="#A78BFA" />
+                                <circle class="sparkle s6" cx="150" cy="260" r="2" fill="#7C3AED" />
+                                <circle class="sparkle s7" cx="40" cy="150" r="2.5" fill="#C4B5FD" />
+                                <circle class="sparkle s8" cx="260" cy="150" r="3" fill="#8B5CF6" />
+                            </g>
+
+                            <!-- Rotating glow arc -->
+                            <path class="glow-arc"
+                                  d="M 150 50 A 100 100 0 0 1 250 150"
+                                  fill="none"
+                                  stroke="url(#arcGradient)"
+                                  stroke-width="3"
+                                  stroke-linecap="round" />
+
+                            <defs>
+                                <linearGradient id="pulseGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#A78BFA;stop-opacity:0.6" />
+                                    <stop offset="50%" style="stop-color:#7C3AED;stop-opacity:0.4" />
+                                    <stop offset="100%" style="stop-color:#5B21B6;stop-opacity:0.2" />
+                                </linearGradient>
+                                <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#C4B5FD;stop-opacity:0" />
+                                    <stop offset="50%" style="stop-color:#A78BFA;stop-opacity:0.8" />
+                                    <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:0" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    }
+                </div>
 
                 <!-- Replay button (appears after video ends, positioned in corner) -->
                 <button id="replay-video-btn"
@@ -209,6 +256,8 @@
     private bool showVideo = false; // Start with logo visible
     private bool showReplayButton = false;
     private bool showFullIntro = false;
+    private bool showLogoAnimation = false; // SVG animation after video
+    private System.Threading.Timer? _animationTimer;
     private DotNetObjectReference<HeroSection>? _dotNetRef;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -221,6 +270,7 @@
                 await JSRuntime.InvokeVoidAsync("MystiraParticles.init", "particle-canvas");
 
                 // Initialize logo intro video - loads in background, plays when ready
+                // Video source is set based on current theme (light/dark)
                 _dotNetRef = DotNetObjectReference.Create(this);
                 await JSRuntime.InvokeVoidAsync("initLogoIntroVideo", _dotNetRef);
             }
@@ -237,16 +287,29 @@
         // Video is loaded and ready - transition from logo to video
         showVideo = true;
         showReplayButton = false;
+        showLogoAnimation = false;
         StateHasChanged();
     }
 
     [JSInvokable]
     public void OnVideoEnded()
     {
-        // Video finished - transition back to logo with replay button
+        // Video finished - transition back to logo with SVG animation
         showVideo = false;
         showReplayButton = true;
+        showLogoAnimation = true; // Start SVG animation
         StateHasChanged();
+
+        // Stop animation after 4 seconds
+        _animationTimer?.Dispose();
+        _animationTimer = new System.Threading.Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                showLogoAnimation = false;
+                StateHasChanged();
+            });
+        }, null, 4000, System.Threading.Timeout.Infinite);
     }
 
     [JSInvokable]
@@ -255,6 +318,7 @@
         // Video failed - stay on logo, no replay button
         showVideo = false;
         showReplayButton = false;
+        showLogoAnimation = false;
         StateHasChanged();
     }
 
@@ -262,8 +326,10 @@
     {
         showVideo = true;
         showReplayButton = false;
+        showLogoAnimation = false;
+        _animationTimer?.Dispose();
         StateHasChanged();
-        
+
         try
         {
             await JSRuntime.InvokeVoidAsync("replayLogoVideo");
@@ -327,7 +393,10 @@
         {
             // Silently fail if JS interop is not available
         }
-        
+
+        // Dispose the animation timer
+        _animationTimer?.Dispose();
+
         // Dispose the DotNetObjectReference to prevent memory leaks
         _dotNetRef?.Dispose();
     }

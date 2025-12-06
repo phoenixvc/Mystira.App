@@ -3,7 +3,9 @@
 :root {
     --primary-color: #7c3aed;
     --primary-hover: #6d28d9;
-    --secondary-color: #1F2937;
+    --secondary-color: #4b5563;
+    --secondary-hover: #374151;
+    --secondary-bg: #f3f4f6;
     --success-color: #10B981;
     --danger-color: #EF4444;
     --warning-color: #F59E0B;
@@ -43,6 +45,10 @@
         --glow: rgba(134, 239, 172, 0.25);
         --accent: #34d399;
 
+        --secondary-color: #9ca3af;
+        --secondary-hover: #d1d5db;
+        --secondary-bg: #374151;
+
         --die-grad1: #334155;
         --die-grad2: #1e293b;
         --pip: #f1f5f9;
@@ -68,6 +74,10 @@ html[data-theme="dark"] {
     --glow: rgba(134, 239, 172, 0.25);
     --accent: #34d399;
 
+    --secondary-color: #9ca3af;
+    --secondary-hover: #d1d5db;
+    --secondary-bg: #374151;
+
     --die-grad1: #334155;
     --die-grad2: #1e293b;
     --pip: #f1f5f9;
@@ -90,6 +100,10 @@ html[data-theme="light"] {
     --border: rgba(17,24,39,0.08);
     --glow: rgba(52,211,153,0.35);
     --accent: #22c55e;
+
+    --secondary-color: #4b5563;
+    --secondary-hover: #374151;
+    --secondary-bg: #f3f4f6;
 
     --die-grad1: #ffffff;
     --die-grad2: #d4d4d8;
@@ -147,6 +161,45 @@ html, body {
 .btn-primary-custom .fal,
 .btn-primary-custom .fab {
     color: #ffffff !important;
+}
+
+/* Secondary Custom Button */
+.btn-secondary-custom {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    --bs-btn-color: #ffffff;
+    --bs-btn-hover-color: #ffffff;
+    --bs-btn-active-color: #ffffff;
+    --bs-btn-disabled-color: #ffffff;
+    color: #ffffff !important;
+    text-decoration: none !important;
+}
+
+.btn-secondary-custom:hover {
+    background-color: var(--secondary-hover);
+    border-color: var(--secondary-hover);
+    color: #ffffff !important;
+}
+
+.btn-outline-secondary-custom {
+    background-color: transparent;
+    border-color: var(--secondary-color);
+    color: var(--secondary-color) !important;
+}
+
+.btn-outline-secondary-custom:hover {
+    background-color: var(--secondary-bg);
+    border-color: var(--secondary-hover);
+    color: var(--secondary-hover) !important;
+}
+
+/* Text utility classes for secondary color */
+.text-secondary-custom {
+    color: var(--secondary-color) !important;
+}
+
+.bg-secondary-custom {
+    background-color: var(--secondary-bg) !important;
 }
 
 @keyframes spin {
