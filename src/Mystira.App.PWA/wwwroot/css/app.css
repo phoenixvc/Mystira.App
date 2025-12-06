@@ -722,3 +722,17 @@ html[data-theme="dark"] .btn-outline-warning:focus {
     border-color: #fbbf24;
     color: #fbbf24;
 }
+
+/* Version indicator - subtle, you need to know to look for it */
+.version-indicator {
+    font-size: 0.65rem;
+    opacity: 0.4;
+    margin-left: 8px;
+    font-family: monospace;
+    letter-spacing: 0.5px;
+    transition: opacity 0.2s ease;
+}
+
+.version-indicator:hover {
+    opacity: 0.8;
+}
