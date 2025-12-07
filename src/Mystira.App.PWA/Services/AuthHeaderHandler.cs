@@ -19,10 +19,13 @@ public class AuthHeaderHandler : DelegatingHandler
     {
         var authService = _serviceProvider.GetService<IAuthService>();
 
-        // Skip auth for auth endpoints to avoid circular refresh attempts
-        var isAuthEndpoint = request.RequestUri?.PathAndQuery.Contains("/api/auth/") ?? false;
+        // Skip adding Authorization for specific public/auth endpoints to avoid circular failures
+        var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+        var isAuthEndpoint = path.StartsWith("/api/auth", StringComparison.OrdinalIgnoreCase);
+        var isPublicDiscordStatus = path.Equals("/api/discord/status", StringComparison.OrdinalIgnoreCase);
+        var shouldSkipAuthHeader = isAuthEndpoint || isPublicDiscordStatus;
 
-        if (authService != null && !isAuthEndpoint)
+        if (authService != null && !shouldSkipAuthHeader)
         {
             try
             {
@@ -46,21 +49,11 @@ public class AuthHeaderHandler : DelegatingHandler
                 _logger.LogError(ex, "Error adding auth header to request");
             }
         }
-        else if (isAuthEndpoint)
+        else if (shouldSkipAuthHeader)
         {
-            // For auth endpoints, just add existing token if available without refresh check
-            try
-            {
-                var token = await authService?.GetTokenAsync()!;
-                if (!string.IsNullOrEmpty(token))
-                {
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                }
-            }
-            catch
-            {
-                // Ignore errors for auth endpoints
-            }
+            // Ensure no Authorization header is sent to auth routes
+            request.Headers.Authorization = null;
+            _logger.LogDebug("Skipping Authorization header for route: {Uri}", request.RequestUri);
         }
 
         var response = await base.SendAsync(request, cancellationToken);
