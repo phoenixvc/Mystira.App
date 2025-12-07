@@ -69,8 +69,7 @@ public static class ApiConnectionHelper
             return false;
         }
 
-        // Check if the URI is a loopback address (127.0.0.1, ::1, localhost, etc.)
-        return uri.IsLoopback || 
-               uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase);
+        // Uri.IsLoopback returns true for localhost, 127.0.0.1, ::1, and other loopback addresses
+        return uri.IsLoopback;
     }
 }

@@ -13,7 +13,7 @@ public abstract class BaseApiClient
     protected readonly ILogger Logger;
     protected readonly JsonSerializerOptions JsonOptions;
     protected readonly ITokenProvider TokenProvider;
-    public bool IsDevelopment { get; set; }
+    public bool IsDevelopment { get; private set; }
 
     protected BaseApiClient(HttpClient httpClient, ILogger logger, ITokenProvider tokenProvider)
     {

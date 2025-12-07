@@ -224,9 +224,10 @@ static void SetDevelopmentModeForApiClients(IServiceProvider services, bool isDe
                 apiClient.SetDevelopmentMode(isDevelopment);
             }
         }
-        catch
+        catch (Exception)
         {
-            // Service may not be registered, skip it
+            // Service may not be registered or an error occurred during resolution
+            // This is acceptable as not all API clients may be configured
         }
     }
 }
