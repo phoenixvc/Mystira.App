@@ -223,7 +223,14 @@ else
                         <div class="mb-3">
                             <label class="form-label">Choose Avatar</label>
 
-                            @if (isAvatarSelected && !string.IsNullOrEmpty(formData.SelectedAvatarMediaId))
+                            @if (isSelectingAvatar)
+                            {
+                                <!-- Show avatar carousel while selecting -->
+                                <AvatarCarousel AgeGroup="@formData.AgeGroup"
+                                                OnAvatarSelected="OnAvatarSelected"
+                                                OnCancel="OnAvatarSelectionCanceled" />
+                            }
+                            else if (isAvatarSelected && !string.IsNullOrEmpty(formData.SelectedAvatarMediaId))
                             {
                                 <!-- Show selected avatar -->
                                 <div class="card">
@@ -240,8 +247,10 @@ else
                             }
                             else
                             {
-                                <!-- Show avatar carousel -->
-                                <AvatarCarousel AgeGroup="@formData.AgeGroup" OnAvatarSelected="OnAvatarSelected" />
+                                <!-- No avatar selected yet; offer to choose -->
+                                <button type="button" class="btn btn-outline-primary" @onclick="StartAvatarSelection">
+                                    <i class="fas fa-user-circle me-2"></i>Choose Avatar
+                                </button>
                             }
                         </div>
                     }
@@ -257,7 +266,7 @@ else
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
-                    <button type="button" class="btn btn-primary" @onclick="SaveProfile" disabled="@isSaving">
+                    <button type="button" class="btn btn-primary" @onclick="SaveProfile" disabled="@(isSaving || isSelectingAvatar)">
                         @if (isSaving)
                         {
                             <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -320,6 +329,7 @@ else
     private UserProfile? editingProfile;
     private ProfileFormData formData = new();
     private bool isAvatarSelected = false;
+    private bool isSelectingAvatar = false;
 
     // Delete confirmation
     private bool showDeleteConfirm = false;
@@ -392,6 +402,7 @@ else
         formData = new ProfileFormData();
         modalValidationMessage = string.Empty;
         isAvatarSelected = false;
+        isSelectingAvatar = false;
         showModal = true;
     }
 
@@ -408,6 +419,7 @@ else
         };
         modalValidationMessage = string.Empty;
         isAvatarSelected = !string.IsNullOrEmpty(profile.SelectedAvatarMediaId);
+        isSelectingAvatar = false;
         showModal = true;
     }
 
@@ -418,6 +430,7 @@ else
         formData = new ProfileFormData();
         modalValidationMessage = string.Empty;
         isAvatarSelected = false;
+        isSelectingAvatar = false;
     }
 
     private async Task SaveProfile()
@@ -574,6 +587,7 @@ else
         formData.SelectedAvatarMediaId = null;
         formData.AvatarMediaId = null;
         isAvatarSelected = false;
+        isSelectingAvatar = true; // prompt user to pick an avatar after changing age group
         StateHasChanged();
     }
 
@@ -582,6 +596,7 @@ else
         formData.AvatarMediaId = mediaId;
         formData.SelectedAvatarMediaId = mediaId;
         isAvatarSelected = true;
+        isSelectingAvatar = false;
         Logger.LogInformation("Avatar selected for profile: {MediaId}", mediaId);
         StateHasChanged();
         return Task.CompletedTask;
@@ -590,6 +605,32 @@ else
     private void ChangeAvatar()
     {
         isAvatarSelected = false;
+        isSelectingAvatar = true;
+        StateHasChanged();
+    }
+
+    private void StartAvatarSelection()
+    {
+        isSelectingAvatar = true;
+        StateHasChanged();
+    }
+
+    private void OnAvatarSelectionCanceled()
+    {
+        // User canceled selection; keep previous avatar if it existed
+        isSelectingAvatar = false;
+
+        // If we already had a selected avatar (tracked by the bound form data),
+        // ensure the UI returns to showing it instead of the "Choose Avatar" state.
+        if (!string.IsNullOrEmpty(formData?.SelectedAvatarMediaId))
+        {
+            isAvatarSelected = true;
+        }
+        else
+        {
+            isAvatarSelected = false;
+        }
+
         StateHasChanged();
     }
 

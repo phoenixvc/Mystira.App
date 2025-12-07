@@ -1,16 +1,29 @@
 @* Adventure Card Component - Enhanced visual design for scenarios *@
 
-<div class="adventure-card" 
+<div class="adventure-card"
      tabindex="0"
      role="article"
      aria-label="Adventure: @Adventure.Name"
      @onclick="OnCardClick"
      @onkeydown="HandleKeyDown">
     <div class="adventure-image-container">
-        <div class="adventure-card-placeholder">
-            <i class="fas fa-book-open fa-3x"></i>
-        </div>
-        
+        @if (!string.IsNullOrEmpty(Adventure?.Image))
+        {
+            <CachedMystiraImage
+                MediaId="@Adventure.Image"
+                Alt="@Adventure.Name"
+                ImageClass="adventure-card-image img-fluid"
+                Width="400"
+                Height="225"
+                Loading="lazy" />
+        }
+        else
+        {
+            <div class="adventure-card-placeholder">
+                <i class="fas fa-book-open fa-3x"></i>
+            </div>
+        }
+
         @if (IsCompleted)
         {
             <div class="adventure-completed-badge">
@@ -20,11 +33,11 @@
             </div>
         }
     </div>
-    
+
     <div class="adventure-card-body">
         <h6 class="adventure-card-title">@Adventure.Name</h6>
         <p class="adventure-card-description">@GetTruncatedDescription()</p>
-        
+
         <div class="adventure-metadata">
             <span class="metadata-badge badge-age" title="Recommended for children ages @Adventure.AgeGroup">
                 <i class="fas fa-users me-1"></i>Ages @Adventure.AgeGroup
@@ -36,7 +49,7 @@
                 <i class="fas fa-clock me-1"></i>@Adventure.SessionLength
             </span>
         </div>
-        
+
         @if (Adventure.Tags != null && Adventure.Tags.Length > 0)
         {
             <div class="adventure-tags">
@@ -50,7 +63,7 @@
                 }
             </div>
         }
-        
+
         @if (Themes != null && Themes.Any())
         {
             <div class="adventure-themes">
@@ -63,10 +76,10 @@
             </div>
         }
     </div>
-    
+
     <div class="adventure-card-footer">
-        <button class="btn-adventure-start" 
-                @onclick="OnStartClick" 
+        <button class="btn-adventure-start"
+                @onclick="OnStartClick"
                 @onclick:stopPropagation="true"
                 aria-label="@(IsCompleted ? "Play again" : "Start adventure") @Adventure.Name">
             <i class="fas fa-play me-2"></i>
@@ -85,19 +98,19 @@
 @code {
     [Parameter, EditorRequired]
     public Scenario Adventure { get; set; } = null!;
-    
+
     [Parameter]
     public bool IsCompleted { get; set; } = false;
-    
+
     [Parameter]
     public List<string>? Themes { get; set; }
-    
+
     [Parameter]
     public EventCallback<Scenario> OnClick { get; set; }
-    
+
     [Parameter]
     public EventCallback<Scenario> OnStartAdventure { get; set; }
-    
+
     private async Task OnCardClick()
     {
         if (OnClick.HasDelegate)
@@ -105,7 +118,7 @@
             await OnClick.InvokeAsync(Adventure);
         }
     }
-    
+
     private async Task OnStartClick()
     {
         if (OnStartAdventure.HasDelegate)
@@ -113,7 +126,7 @@
             await OnStartAdventure.InvokeAsync(Adventure);
         }
     }
-    
+
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter" || e.Key == " ")
@@ -121,16 +134,16 @@
             await OnCardClick();
         }
     }
-    
+
     private string GetTruncatedDescription()
     {
         if (string.IsNullOrEmpty(Adventure.Description))
             return string.Empty;
-            
+
         const int maxLength = 120;
         if (Adventure.Description.Length <= maxLength)
             return Adventure.Description;
-            
+
         return Adventure.Description.Substring(0, maxLength) + "...";
     }
 }

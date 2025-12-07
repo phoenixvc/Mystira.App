@@ -83,13 +83,23 @@
                         </div>
                     }
 
-                    <!-- Selection Button -->
-                    <button class="btn btn-primary-custom w-100"
-                            @onclick="ConfirmSelection"
-                            disabled="@(string.IsNullOrEmpty(currentAvatarMediaId))">
-                        <i class="fas fa-check me-2"></i>
-                        Select This Avatar
-                    </button>
+                    <!-- Action Buttons -->
+                    <div class="d-flex w-100 gap-2">
+                        <button class="btn btn-outline-secondary w-50"
+                                type="button"
+                                @onclick="CancelSelection">
+                            <i class="fas fa-times me-2"></i>
+                            Cancel
+                        </button>
+
+                        <button class="btn btn-primary-custom w-50"
+                                type="button"
+                                @onclick="ConfirmSelection"
+                                disabled="@(string.IsNullOrEmpty(currentAvatarMediaId))">
+                            <i class="fas fa-check me-2"></i>
+                            Select This Avatar
+                        </button>
+                    </div>
                 </div>
             }
         </div>
@@ -102,6 +112,9 @@
 
     [Parameter]
     public EventCallback<string> OnAvatarSelected { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
 
     private List<string>? avatarMediaIds;
     private int currentAvatarIndex = 0;
@@ -187,6 +200,14 @@
         if (!string.IsNullOrEmpty(currentAvatarMediaId))
         {
             await OnAvatarSelected.InvokeAsync(currentAvatarMediaId);
+        }
+    }
+
+    private async Task CancelSelection()
+    {
+        if (OnCancel.HasDelegate)
+        {
+            await OnCancel.InvokeAsync();
         }
     }
 }
