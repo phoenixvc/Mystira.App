@@ -162,6 +162,15 @@ try
     var logger = host.Services.GetRequiredService<ILogger<Program>>();
     logger.LogInformation("Mystira PWA starting up");
 
+    // Set IsDevelopment flag for all API clients
+    var isDevelopment = builder.HostEnvironment.IsDevelopment();
+    SetDevelopmentModeForApiClients(host.Services, isDevelopment);
+    
+    if (isDevelopment)
+    {
+        logger.LogInformation("Running in Development mode. API connection errors will include helpful startup instructions.");
+    }
+
     // Verify service registration
     var authService = host.Services.GetService<IAuthService>();
     var profileService = host.Services.GetService<IProfileService>();
@@ -183,4 +192,32 @@ catch (Exception ex)
     Console.Error.WriteLine($"Error starting Mystira: {ex.Message}");
     Console.Error.WriteLine($"Stack trace: {ex.StackTrace}");
     throw;
+}
+
+static void SetDevelopmentModeForApiClients(IServiceProvider services, bool isDevelopment)
+{
+    // Create a scope to get scoped services
+    using var scope = services.CreateScope();
+    var scopedServices = scope.ServiceProvider;
+    
+    // Get all API clients and set their IsDevelopment flag
+    var scenarioApiClient = scopedServices.GetService<IScenarioApiClient>() as ScenarioApiClient;
+    var gameSessionApiClient = scopedServices.GetService<IGameSessionApiClient>() as GameSessionApiClient;
+    var userProfileApiClient = scopedServices.GetService<IUserProfileApiClient>() as UserProfileApiClient;
+    var authApiClient = scopedServices.GetService<IAuthApiClient>() as AuthApiClient;
+    var mediaApiClient = scopedServices.GetService<IMediaApiClient>() as MediaApiClient;
+    var avatarApiClient = scopedServices.GetService<IAvatarApiClient>() as AvatarApiClient;
+    var contentBundleApiClient = scopedServices.GetService<IContentBundleApiClient>() as ContentBundleApiClient;
+    var characterApiClient = scopedServices.GetService<ICharacterApiClient>() as CharacterApiClient;
+    var discordApiClient = scopedServices.GetService<IDiscordApiClient>() as DiscordApiClient;
+    
+    if (scenarioApiClient != null) scenarioApiClient.IsDevelopment = isDevelopment;
+    if (gameSessionApiClient != null) gameSessionApiClient.IsDevelopment = isDevelopment;
+    if (userProfileApiClient != null) userProfileApiClient.IsDevelopment = isDevelopment;
+    if (authApiClient != null) authApiClient.IsDevelopment = isDevelopment;
+    if (mediaApiClient != null) mediaApiClient.IsDevelopment = isDevelopment;
+    if (avatarApiClient != null) avatarApiClient.IsDevelopment = isDevelopment;
+    if (contentBundleApiClient != null) contentBundleApiClient.IsDevelopment = isDevelopment;
+    if (characterApiClient != null) characterApiClient.IsDevelopment = isDevelopment;
+    if (discordApiClient != null) discordApiClient.IsDevelopment = isDevelopment;
 }

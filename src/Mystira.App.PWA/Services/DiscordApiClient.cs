@@ -21,8 +21,19 @@ public class DiscordApiClient : BaseApiClient, IDiscordApiClient
         }
         catch (HttpRequestException ex)
         {
-            // Log as warning since Discord integration is optional
-            Logger.LogWarning(ex, "Discord status API unavailable (this is expected if Discord integration is not configured).");
+            // Check if this is a connection refused error (API not running)
+            if (ApiConnectionHelper.IsConnectionRefused(ex))
+            {
+                var apiBaseUrl = GetApiBaseAddress();
+                var logMessage = ApiConnectionHelper.GetConnectionLogMessage(apiBaseUrl, IsDevelopment);
+                Logger.LogWarning("Discord status API unavailable: {Message}", logMessage);
+            }
+            else
+            {
+                // Log as warning since Discord integration is optional
+                Logger.LogWarning(ex, "Discord status API unavailable (this is expected if Discord integration is not configured).");
+            }
+            
             return new DiscordStatusResponse
             {
                 Enabled = false,
