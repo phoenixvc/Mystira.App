@@ -217,16 +217,49 @@ builder.Services.AddAuthentication(options =>
 
         options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
         {
+            OnMessageReceived = context =>
+            {
+                // Skip bearer processing for auth routes so expired tokens don't block refresh/sign-in
+                var path = context.HttpContext.Request.Path.Value ?? string.Empty;
+                // List of route prefixes to skip; keep in sync with PWA interceptor
+                // Include public, health-like endpoints where auth must not block request handling
+                string[] skipPrefixes = new[]
+                {
+                    "/api/auth/refresh",
+                    "/api/auth/signin",
+                    "/api/auth/verify",
+                    "/api/auth",
+                    "/api/discord/status"
+                };
+
+                if (skipPrefixes.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+                {
+                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                    logger.LogInformation("Skipping JWT bearer processing for auth route: {Path}", path);
+                    context.NoResult();
+                    return Task.CompletedTask;
+                }
+
+                return Task.CompletedTask;
+            },
             OnAuthenticationFailed = context =>
             {
                 var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                logger.LogError(context.Exception, "JWT authentication failed");
+                var ua = context.HttpContext.Request.Headers["User-Agent"].ToString();
+                var path = context.HttpContext.Request.Path;
+                logger.LogError(context.Exception, "JWT authentication failed on {Path} (UA: {UserAgent})", path, ua);
                 return Task.CompletedTask;
             },
             OnTokenValidated = context =>
             {
                 var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
                 logger.LogInformation("JWT token validated for user: {User}", context.Principal?.Identity?.Name);
+                return Task.CompletedTask;
+            },
+            OnChallenge = context =>
+            {
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogWarning("JWT challenge on {Path}: {Error} - {Description}", context.HttpContext.Request.Path, context.Error, context.ErrorDescription);
                 return Task.CompletedTask;
             }
         };

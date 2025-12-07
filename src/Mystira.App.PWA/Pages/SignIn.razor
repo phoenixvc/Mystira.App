@@ -20,25 +20,25 @@
 
                     @if (currentStep == SignInStep.Email)
                     {
-                        <form @onsubmit="RequestSigninCode">
+                        <form @onsubmit="RequestSigninCode" @onsubmit:preventDefault>
                             <div class="mb-3">
                                 <label for="email" class="form-label">
                                     <i class="fas fa-envelope me-2"></i>Email Address
                                 </label>
-                                <input type="email" 
-                                       class="form-control form-control-lg" 
-                                       id="email" 
-                                       @bind="email" 
+                                <input type="email"
+                                       class="form-control form-control-lg"
+                                       id="email"
+                                       @bind="email"
                                        placeholder="Enter your email"
-                                       required 
+                                       required
                                        disabled="@isSubmitting"
                                        autocomplete="email" />
                             </div>
 
                             <div class="mb-3 form-check">
-                                <input type="checkbox" 
-                                       class="form-check-input" 
-                                       id="rememberMe" 
+                                <input type="checkbox"
+                                       class="form-check-input"
+                                       id="rememberMe"
                                        @bind="rememberMe" />
                                 <label class="form-check-label" for="rememberMe">
                                     <i class="fas fa-heart me-2"></i>Remember me for 30 days
@@ -62,10 +62,9 @@
                                 </div>
                             }
 
-                            <button type="submit" 
-                                    class="btn btn-primary-custom btn-lg w-100" 
-                                    disabled="@isSubmitting"
-                                    @onclick="() => isSubmitting = true">
+                            <button type="submit"
+                                    class="btn btn-primary-custom btn-lg w-100"
+                                    disabled="@isSubmitting">
                                 @if (isSubmitting)
                                 {
                                     <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -81,7 +80,7 @@
                     }
                     else if (currentStep == SignInStep.Verification)
                     {
-                        <form @onsubmit="VerifySigninCode">
+                        <form @onsubmit="VerifySigninCode" @onsubmit:preventDefault>
                             <div class="mb-3">
                                 <label class="form-label">
                                     <i class="fas fa-envelope me-2"></i>Email Address
@@ -93,15 +92,15 @@
                                 <label for="inputCode" class="form-label">
                                     <i class="fas fa-key me-2"></i>Verification Code
                                 </label>
-                                <input type="text" 
-                                       class="form-control form-control-lg text-center verification-code-input" 
-                                       id="inputCode" 
-                                       @bind="inputCode" 
+                                <input type="text"
+                                       class="form-control form-control-lg text-center verification-code-input"
+                                       id="inputCode"
+                                       @bind="inputCode"
                                        placeholder="0 0 0 0 0 0"
-                                       maxlength="6" 
-                                       pattern="[0-9]{6}" 
-                                       required 
-                                       disabled="@isSubmitting" 
+                                       maxlength="6"
+                                       pattern="[0-9]{6}"
+                                       required
+                                       disabled="@isSubmitting"
                                        @oninput="OnCodeInput"
                                        autocomplete="one-time-code" />
                                 <div class="alert alert-success mt-3" role="alert" aria-live="polite">
@@ -171,7 +170,7 @@
 
                     <div class="text-center">
                         <p class="mb-0 text-muted">
-                            Don't have an account? 
+                            Don't have an account?
                             <a href="/signup" class="text-primary-custom text-decoration-none">
                                 Register
                             </a>
@@ -203,6 +202,10 @@
 
     private async Task RequestSigninCode()
     {
+        if (isSubmitting)
+        {
+            return; // guard against double submit
+        }
         try
         {
             isSubmitting = true;
@@ -281,6 +284,10 @@
 
     private async Task VerifySigninCode()
     {
+        if (isSubmitting)
+        {
+            return; // guard against double submit
+        }
         try
         {
             isSubmitting = true;
@@ -341,7 +348,7 @@
     {
         StopResendCountdown();
         resendCountdown = 15;
-        
+
         countdownTimer = new System.Timers.Timer(1000);
         countdownTimer.Elapsed += OnCountdownTimerElapsed;
         countdownTimer.AutoReset = true;
