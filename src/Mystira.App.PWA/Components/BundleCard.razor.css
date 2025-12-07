@@ -3,10 +3,10 @@
 .bundle-card {
     border-radius: 16px;
     overflow: hidden;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border, rgba(17,24,39,0.08));
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
-    background: white;
+    background: var(--card, rgba(255,255,255,0.85));
 }
 
 .bundle-card:hover {
@@ -66,13 +66,13 @@
 .card-title {
     font-size: 1.125rem;
     font-weight: 600;
-    color: #111827;
+    color: var(--fg, #111827);
     margin-bottom: 8px;
     line-height: 1.4;
 }
 
 .card-text {
-    color: #6b7280;
+    color: var(--muted, #6b7280);
     line-height: 1.5;
     margin-bottom: 12px;
 }
@@ -80,7 +80,7 @@
 .progress {
     border-radius: 4px;
     overflow: hidden;
-    background-color: #e5e7eb;
+    background-color: var(--secondary-bg, #f3f4f6);
 }
 
 .progress-bar {
