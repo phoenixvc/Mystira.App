@@ -13,9 +13,19 @@ param location string = 'westeurope'
 @description('Resource name prefix')
 param resourcePrefix string = 'dev-euw'
 
-@description('JWT secret key for API authentication')
+@description('JWT RSA Private Key (PEM format) for RS256 signing')
 @secure()
-param jwtSecretKey string
+param jwtRsaPrivateKey string
+
+@description('JWT RSA Public Key (PEM format) for RS256 verification')
+@secure()
+param jwtRsaPublicKey string
+
+@description('JWT Issuer')
+param jwtIssuer string = 'MystiraAPI'
+
+@description('JWT Audience')
+param jwtAudience string = 'MystiraPWA'
 
 @description('Azure Communication Services connection string')
 @secure()
@@ -170,7 +180,10 @@ module apiAppService 'modules/app-service.bicep' = if (!skipAppServiceCreation) 
     sku: 'F1' // Dev: Free tier for cost optimization
     cosmosDbConnectionString: skipCosmosCreation ? cosmosConnString : (cosmosDb.outputs.cosmosDbConnectionString)
     storageConnectionString: skipStorageCreation ? storageConnString : (storage.outputs.storageConnectionString)
-    jwtSecretKey: jwtSecretKey
+    jwtRsaPrivateKey: jwtRsaPrivateKey
+    jwtRsaPublicKey: jwtRsaPublicKey
+    jwtIssuer: jwtIssuer
+    jwtAudience: jwtAudience
     acsConnectionString: acsConnectionStringToUse
     acsSenderEmail: acsSenderEmail
     corsAllowedOrigins: corsAllowedOrigins
@@ -189,7 +202,10 @@ module adminApiAppService 'modules/app-service.bicep' = if (!skipAppServiceCreat
     sku: 'F1' // Dev: Free tier for cost optimization
     cosmosDbConnectionString: skipCosmosCreation ? cosmosConnString : (cosmosDb.outputs.cosmosDbConnectionString)
     storageConnectionString: skipStorageCreation ? storageConnString : (storage.outputs.storageConnectionString)
-    jwtSecretKey: jwtSecretKey
+    jwtRsaPrivateKey: jwtRsaPrivateKey
+    jwtRsaPublicKey: jwtRsaPublicKey
+    jwtIssuer: jwtIssuer
+    jwtAudience: jwtAudience
     acsConnectionString: acsConnectionStringToUse
     acsSenderEmail: acsSenderEmail
     corsAllowedOrigins: corsAllowedOrigins

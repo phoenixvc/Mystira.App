@@ -194,13 +194,51 @@ public class JwtService : IJwtService
     {
         try
         {
-            if (!ValidateToken(token))
+            // First, try normal validation (including lifetime)
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var validationParameters = new TokenValidationParameters
             {
-                return (false, null);
-            }
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = _signingCredentials.Key,
+                ValidateIssuer = true,
+                ValidIssuer = _issuer,
+                ValidateAudience = true,
+                ValidAudience = _audience,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+            };
 
-            var userId = GetUserIdFromToken(token);
-            return (true, userId);
+            try
+            {
+                var principal = tokenHandler.ValidateToken(token, validationParameters, out var _);
+                var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                             ?? principal.FindFirst("sub")?.Value;
+                return (true, userId);
+            }
+            catch (SecurityTokenExpiredException expiredEx)
+            {
+                // Token expired: allow extracting user id for refresh flows by re-validating without lifetime
+                _logger.LogInformation(expiredEx, "Access token expired; attempting to extract user id with lifetime validation disabled for refresh flow");
+
+                var relaxed = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = _signingCredentials.Key,
+                    ValidateIssuer = true,
+                    ValidIssuer = _issuer,
+                    ValidateAudience = true,
+                    ValidAudience = _audience,
+                    ValidateLifetime = false, // ignore expiration just to read claims after verifying signature/issuer/audience
+                    ClockSkew = TimeSpan.Zero
+                };
+
+                var principal = tokenHandler.ValidateToken(token, relaxed, out var _);
+                var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                             ?? principal.FindFirst("sub")?.Value;
+
+                // We still consider this a valid extraction even though the token is expired.
+                return (true, userId);
+            }
         }
         catch (Exception ex)
         {

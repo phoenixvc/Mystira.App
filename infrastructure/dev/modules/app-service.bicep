@@ -19,9 +19,22 @@ param cosmosDbConnectionString string
 @secure()
 param storageConnectionString string
 
-@description('JWT secret key')
+@description('JWT RSA Private Key (PEM format) - use Key Vault reference in production')
 @secure()
-param jwtSecretKey string
+param jwtRsaPrivateKey string = ''
+
+@description('JWT RSA Public Key (PEM format) - use Key Vault reference in production')
+@secure()
+param jwtRsaPublicKey string = ''
+
+@description('JWT Issuer')
+param jwtIssuer string = 'MystiraAPI'
+
+@description('JWT Audience')
+param jwtAudience string = 'MystiraPWA'
+
+@description('Key Vault name for secret references (optional)')
+param keyVaultName string = ''
 
 @description('Azure Communication Services connection string')
 @secure()
@@ -79,16 +92,20 @@ resource appService 'Microsoft.Web/sites@2023-01-01' = {
           value: storageConnectionString
         }
         {
-          name: 'JwtSettings__SecretKey'
-          value: jwtSecretKey
+          name: 'JwtSettings__RsaPrivateKey'
+          value: jwtRsaPrivateKey
+        }
+        {
+          name: 'JwtSettings__RsaPublicKey'
+          value: jwtRsaPublicKey
         }
         {
           name: 'JwtSettings__Issuer'
-          value: 'MystiraAPI'
+          value: jwtIssuer
         }
         {
           name: 'JwtSettings__Audience'
-          value: 'MystiraPWA'
+          value: jwtAudience
         }
         {
           name: 'AzureCommunicationServices__ConnectionString'
