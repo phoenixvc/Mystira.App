@@ -226,12 +226,12 @@ static void SetDevelopmentModeForApiClients(IServiceProvider services, bool isDe
         }
         catch (InvalidOperationException)
         {
-            // Service is not registered or has a configuration issue
-            // This is acceptable as not all API clients may be configured
+            // Service may not be registered or has an unresolved dependency
+            // This is acceptable as not all API clients may be configured in all environments
         }
         catch (Exception ex)
         {
-            // Log unexpected errors during service resolution
+            // Log unexpected errors during service resolution that are not related to registration
             logger.LogWarning(ex, "Unexpected error setting development mode for {ServiceType}", interfaceType.Name);
         }
     }
