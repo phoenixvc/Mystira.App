@@ -405,32 +405,24 @@ FQIDAQAB
         var service = new JwtService(_configuration, _mockLogger.Object);
 
         // Create a token with a different RSA key
-        using (var differentRsa = RSA.Create(2048))
+        using var differentRsa = RSA.Create(2048);
+        var differentKey = new RsaSecurityKey(differentRsa);
+        var credentials = new SigningCredentials(differentKey, SecurityAlgorithms.RsaSha256);
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var tokenDescriptor = new SecurityTokenDescriptor
         {
-            var differentKey = new RsaSecurityKey(differentRsa);
-            var credentials = new SigningCredentials(differentKey, SecurityAlgorithms.RsaSha256);
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var tokenDescriptor = new SecurityTokenDescriptor
+            Subject = new ClaimsIdentity(new[]
             {
-                Subject = new ClaimsIdentity(new[]
-                {
-                    new Claim(ClaimTypes.NameIdentifier, "test-user"),
-                    new Claim("sub", "test-user")
-                }),
-                Expires = DateTime.UtcNow.AddHours(6),
-                Issuer = "MystiraAPI",
-                Audience = "MystiraPWA",
-                SigningCredentials = credentials
-            };
-            var maliciousToken = tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));
-
-            // Act
-            var isValid = service.ValidateToken(maliciousToken);
-
-            // Assert
-            isValid.Should().BeFalse();
-        }
+                new Claim(ClaimTypes.NameIdentifier, "test-user"),
+                new Claim("sub", "test-user")
+            }),
+            Expires = DateTime.UtcNow.AddHours(6),
+            Issuer = "MystiraAPI",
+            Audience = "MystiraPWA",
+            SigningCredentials = credentials
+        };
+        var maliciousToken = tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));
 
         // Act
         var isValid = service.ValidateToken(maliciousToken);
