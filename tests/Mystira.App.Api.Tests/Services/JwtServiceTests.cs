@@ -16,6 +16,10 @@ public class JwtServiceTests
 {
     private readonly Mock<ILogger<JwtService>> _mockLogger;
     private readonly IConfiguration _configuration;
+    
+    // Test-only secret key - DO NOT use in production
+    // This is a long test secret for HS256 signing in unit tests only
+    private const string TestSecretKey = "ThisIsATestSecretKeyThatIsLongEnoughForHS256Signing123456789";
 
     public JwtServiceTests()
     {
@@ -27,7 +31,7 @@ public class JwtServiceTests
             {
                 ["JwtSettings:Issuer"] = "MystiraAPI",
                 ["JwtSettings:Audience"] = "MystiraPWA",
-                ["JwtSettings:SecretKey"] = "ThisIsATestSecretKeyThatIsLongEnoughForHS256Signing123456789"
+                ["JwtSettings:SecretKey"] = TestSecretKey
             })
             .Build();
     }
@@ -134,7 +138,8 @@ public class JwtServiceTests
         var expectedExpiration = beforeGeneration.AddHours(6);
         var tokenExpiration = jwtToken.ValidTo;
         
-        tokenExpiration.Should().BeCloseTo(expectedExpiration, TimeSpan.FromMinutes(1));
+        // Use 30-second tolerance for more precise timing validation
+        tokenExpiration.Should().BeCloseTo(expectedExpiration, TimeSpan.FromSeconds(30));
     }
 
     [Fact]
