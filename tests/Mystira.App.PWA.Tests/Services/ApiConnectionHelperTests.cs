@@ -147,4 +147,40 @@ public class ApiConnectionHelperTests
         Assert.Contains("Network error", message);
         Assert.DoesNotContain("dotnet run", message);
     }
+
+    [Theory]
+    [InlineData("http://localhost:5260/")]
+    [InlineData("https://localhost:7096/")]
+    [InlineData("http://127.0.0.1:5260/")]
+    [InlineData("http://[::1]:5260/")]
+    [InlineData("http://LOCALHOST:5260/")] // Case insensitive
+    public void GetConnectionErrorMessage_WithVariousLocalAddresses_ReturnsHelpfulMessage(string apiBaseUrl)
+    {
+        // Arrange
+        var isDevelopment = true;
+
+        // Act
+        var message = ApiConnectionHelper.GetConnectionErrorMessage(apiBaseUrl, isDevelopment);
+
+        // Assert
+        Assert.Contains("dotnet run", message);
+        Assert.Contains("API is running", message);
+    }
+
+    [Theory]
+    [InlineData("https://api.example.com/")]
+    [InlineData("http://192.168.1.100:5260/")]
+    [InlineData("https://dev-api.mystira.com/")]
+    public void GetConnectionErrorMessage_WithNonLocalAddresses_ReturnsGenericMessage(string apiBaseUrl)
+    {
+        // Arrange
+        var isDevelopment = true;
+
+        // Act
+        var message = ApiConnectionHelper.GetConnectionErrorMessage(apiBaseUrl, isDevelopment);
+
+        // Assert
+        Assert.DoesNotContain("dotnet run", message);
+        Assert.Contains("check your internet connection", message);
+    }
 }

@@ -30,7 +30,7 @@ public static class ApiConnectionHelper
     /// </summary>
     public static string GetConnectionErrorMessage(string apiBaseUrl, bool isDevelopment)
     {
-        if (isDevelopment && apiBaseUrl.Contains("localhost"))
+        if (isDevelopment && IsLocalDevelopmentUrl(apiBaseUrl))
         {
             return $"Unable to connect to the API server at {apiBaseUrl}. " +
                    "Please ensure the API is running. " +
@@ -45,12 +45,32 @@ public static class ApiConnectionHelper
     /// </summary>
     public static string GetConnectionLogMessage(string apiBaseUrl, bool isDevelopment)
     {
-        if (isDevelopment && apiBaseUrl.Contains("localhost"))
+        if (isDevelopment && IsLocalDevelopmentUrl(apiBaseUrl))
         {
             return $"Cannot connect to API at {apiBaseUrl}. The API server may not be running. " +
                    "Start it with: dotnet run --project src/Mystira.App.Api/Mystira.App.Api.csproj";
         }
         
         return $"Network error connecting to API at {apiBaseUrl}";
+    }
+
+    /// <summary>
+    /// Determines if a URL points to a local development server
+    /// </summary>
+    private static bool IsLocalDevelopmentUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return false;
+        }
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        // Check if the URI is a loopback address (127.0.0.1, ::1, localhost, etc.)
+        return uri.IsLoopback || 
+               uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase);
     }
 }
