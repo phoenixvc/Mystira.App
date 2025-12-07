@@ -27,7 +27,8 @@
     overflow: hidden;
 }
 
-.adventure-card-image {
+/* Image lives inside child component (CachedMystiraImage). Use ::deep to style it from this scoped CSS. */
+.adventure-image-container ::deep .adventure-card-image {
     position: absolute;
     top: 0;
     left: 0;
@@ -37,7 +38,7 @@
     transition: transform 0.3s ease;
 }
 
-.adventure-card:hover .adventure-card-image {
+.adventure-card:hover ::deep .adventure-card-image {
     transform: scale(1.05);
 }
 

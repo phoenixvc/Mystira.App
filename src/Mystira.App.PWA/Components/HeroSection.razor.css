@@ -12,10 +12,12 @@
 }
 
 .hero-section {
-    padding: 0 20px 80px;
+    /* Reduce vertical whitespace */
+    --hero-logo-size: 400px; /* default desktop logo footprint */
+    padding: 0 20px 28px;
     background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
     border-radius: 0 0 24px 24px;
-    margin-bottom: 40px;
+    margin-bottom: 20px;
     margin-top: 0;
     position: relative;
     overflow: hidden;
@@ -408,7 +410,7 @@ html[data-theme="dark"] .mystira-title .title-text {
     border-radius: 6px;
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
-    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.15), 
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.15),
                 inset 0 1px 0 rgba(255, 255, 255, 0.3);
     -webkit-animation: alphaPulse 3s ease-in-out infinite;
     animation: alphaPulse 3s ease-in-out infinite;
@@ -420,7 +422,7 @@ html[data-theme="dark"] .mystira-title .alpha-badge {
     -webkit-text-fill-color: #a78bfa;
     background: linear-gradient(135deg, rgba(167, 139, 250, 0.2) 0%, rgba(139, 92, 246, 0.15) 100%);
     border-color: rgba(167, 139, 250, 0.4);
-    box-shadow: 0 2px 12px rgba(139, 92, 246, 0.25), 
+    box-shadow: 0 2px 12px rgba(139, 92, 246, 0.25),
                 inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
@@ -430,7 +432,7 @@ html[data-theme="dark"] .mystira-title .alpha-badge {
         -webkit-text-fill-color: #a78bfa;
         background: linear-gradient(135deg, rgba(167, 139, 250, 0.2) 0%, rgba(139, 92, 246, 0.15) 100%);
         border-color: rgba(167, 139, 250, 0.4);
-        box-shadow: 0 2px 12px rgba(139, 92, 246, 0.25), 
+        box-shadow: 0 2px 12px rgba(139, 92, 246, 0.25),
                     inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
 }
@@ -461,9 +463,9 @@ html[data-theme="dark"] .mystira-tagline {
 /* Hero logo container - fixed size with visible overflow for button */
 .hero-logo-container {
     position: relative;
-    width: 400px;
-    height: 400px;
-    margin: 0 auto 20px;
+    width: var(--hero-logo-size);
+    height: var(--hero-logo-size);
+    margin: 0 auto 8px; /* tighter gap below logo */
     -webkit-animation: fadeIn 1s ease-in-out;
     animation: fadeIn 1s ease-in-out;
     overflow: visible;
@@ -478,17 +480,17 @@ html[data-theme="dark"] .mystira-tagline {
     transform: translate(-50%, -50%);
     width: 100%;
     height: 100%;
-    max-width: 400px;
-    max-height: 400px;
+    max-width: var(--hero-logo-size);
+    max-height: var(--hero-logo-size);
     object-fit: contain;
     -webkit-filter: drop-shadow(0 4px 20px rgba(139, 92, 246, 0.2));
     filter: drop-shadow(0 4px 20px rgba(139, 92, 246, 0.2));
     border-radius: 12px;
     z-index: 2;
-    -webkit-transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), 
+    -webkit-transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
                 -webkit-transform 0.8s cubic-bezier(0.4, 0, 0.2, 1),
                 -webkit-filter 0.5s ease;
-    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), 
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
                 transform 0.8s cubic-bezier(0.4, 0, 0.2, 1),
                 filter 0.5s ease;
 }
@@ -514,15 +516,15 @@ html[data-theme="dark"] .mystira-tagline {
     transform: translate(-50%, -50%);
     width: 100%;
     height: 100%;
-    max-width: 400px;
-    max-height: 400px;
+    max-width: var(--hero-logo-size);
+    max-height: var(--hero-logo-size);
     object-fit: contain;
     -webkit-filter: drop-shadow(0 4px 20px rgba(139, 92, 246, 0.2));
     filter: drop-shadow(0 4px 20px rgba(139, 92, 246, 0.2));
     z-index: 1;
-    -webkit-transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), 
+    -webkit-transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
                 -webkit-transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), 
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
                 transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -937,20 +939,22 @@ html[data-theme="dark"] .hero-description {
 /* Mobile responsiveness */
 @media (max-width: 768px) {
     .hero-section {
-        padding: 0 15px 40px;
-        margin-bottom: 32px;
-        min-height: 400px;
+        /* Compact spacing on tablets/large phones */
+        padding: 0 15px 20px;
+        margin-bottom: 16px;
+        min-height: 320px;
+        --hero-logo-size: 260px;
     }
 
     .hero-logo-container {
-        width: 280px;
-        height: 280px;
+        width: var(--hero-logo-size);
+        height: var(--hero-logo-size);
     }
 
     .hero-logo-video,
     .hero-logo {
-        max-width: 280px;
-        max-height: 280px;
+        max-width: var(--hero-logo-size);
+        max-height: var(--hero-logo-size);
     }
 
     .replay-btn {
@@ -1014,15 +1018,16 @@ html[data-theme="dark"] .hero-description {
     }
 
     .hero-logo-container {
-        width: 240px;
-        height: 240px;
-        margin-bottom: 16px;
+        width: var(--hero-logo-size);
+        height: var(--hero-logo-size);
+        margin-bottom: 12px;
     }
 
     .hero-logo-video,
     .hero-logo {
-        max-width: 240px;
-        max-height: 240px;
+        --hero-logo-size: 220px; /* smaller on very small phones */
+        max-width: var(--hero-logo-size);
+        max-height: var(--hero-logo-size);
     }
 
     .replay-btn {

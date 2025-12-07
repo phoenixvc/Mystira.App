@@ -16,6 +16,8 @@ public class Scenario
     public string Id { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    // Optional cover image media id for scenario cards (served from api/media/{id})
+    public string? Image { get; set; }
     public List<Scene> Scenes { get; set; } = new();
     public string[] Tags { get; set; } = [];
     public string Difficulty { get; set; } = string.Empty;

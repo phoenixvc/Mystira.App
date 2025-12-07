@@ -58,6 +58,7 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                         {
                             Id = s.Id,
                             Title = s.Title,
+                            Image = s.Image,
                             Description = s.Description,
                             Tags = s.Tags?.ToArray() ?? Array.Empty<string>(),
                             Difficulty = s.Difficulty ?? string.Empty,
@@ -143,6 +144,7 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                                     Id = GetString("id"),
                                     Title = GetString("title"),
                                     Description = GetString("description"),
+                                    Image = GetString("image"),
                                     Tags = GetStringArray("tags"),
                                     Difficulty = GetString("difficulty"),
                                     SessionLength = GetString("sessionLength"),
