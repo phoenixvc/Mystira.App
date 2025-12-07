@@ -183,6 +183,7 @@ public class GameSessionsController : ControllerBase
     /// End a game session
     /// </summary>
     [HttpPost("{id}/end")]
+    [Authorize]
     public async Task<ActionResult<GameSession>> EndSession(string id)
     {
         try
