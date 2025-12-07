@@ -220,5 +220,13 @@ public abstract class BaseApiClient
     {
         return GetApiBaseAddress();
     }
+
+    /// <summary>
+    /// Sets the development mode flag for enhanced error messaging
+    /// </summary>
+    public void SetDevelopmentMode(bool isDevelopment)
+    {
+        IsDevelopment = isDevelopment;
+    }
 }
 

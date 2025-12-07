@@ -200,24 +200,33 @@ static void SetDevelopmentModeForApiClients(IServiceProvider services, bool isDe
     using var scope = services.CreateScope();
     var scopedServices = scope.ServiceProvider;
     
-    // Get all API clients and set their IsDevelopment flag
-    var scenarioApiClient = scopedServices.GetService<IScenarioApiClient>() as ScenarioApiClient;
-    var gameSessionApiClient = scopedServices.GetService<IGameSessionApiClient>() as GameSessionApiClient;
-    var userProfileApiClient = scopedServices.GetService<IUserProfileApiClient>() as UserProfileApiClient;
-    var authApiClient = scopedServices.GetService<IAuthApiClient>() as AuthApiClient;
-    var mediaApiClient = scopedServices.GetService<IMediaApiClient>() as MediaApiClient;
-    var avatarApiClient = scopedServices.GetService<IAvatarApiClient>() as AvatarApiClient;
-    var contentBundleApiClient = scopedServices.GetService<IContentBundleApiClient>() as ContentBundleApiClient;
-    var characterApiClient = scopedServices.GetService<ICharacterApiClient>() as CharacterApiClient;
-    var discordApiClient = scopedServices.GetService<IDiscordApiClient>() as DiscordApiClient;
-    
-    if (scenarioApiClient != null) scenarioApiClient.IsDevelopment = isDevelopment;
-    if (gameSessionApiClient != null) gameSessionApiClient.IsDevelopment = isDevelopment;
-    if (userProfileApiClient != null) userProfileApiClient.IsDevelopment = isDevelopment;
-    if (authApiClient != null) authApiClient.IsDevelopment = isDevelopment;
-    if (mediaApiClient != null) mediaApiClient.IsDevelopment = isDevelopment;
-    if (avatarApiClient != null) avatarApiClient.IsDevelopment = isDevelopment;
-    if (contentBundleApiClient != null) contentBundleApiClient.IsDevelopment = isDevelopment;
-    if (characterApiClient != null) characterApiClient.IsDevelopment = isDevelopment;
-    if (discordApiClient != null) discordApiClient.IsDevelopment = isDevelopment;
+    // Get all registered services and check if they derive from BaseApiClient
+    var apiClientTypes = new[]
+    {
+        typeof(IScenarioApiClient),
+        typeof(IGameSessionApiClient),
+        typeof(IUserProfileApiClient),
+        typeof(IAuthApiClient),
+        typeof(IMediaApiClient),
+        typeof(IAvatarApiClient),
+        typeof(IContentBundleApiClient),
+        typeof(ICharacterApiClient),
+        typeof(IDiscordApiClient)
+    };
+
+    foreach (var interfaceType in apiClientTypes)
+    {
+        try
+        {
+            var service = scopedServices.GetService(interfaceType);
+            if (service is BaseApiClient apiClient)
+            {
+                apiClient.SetDevelopmentMode(isDevelopment);
+            }
+        }
+        catch
+        {
+            // Service may not be registered, skip it
+        }
+    }
 }
