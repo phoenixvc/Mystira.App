@@ -62,10 +62,9 @@
                                 </div>
                             }
 
-                            <button type="submit" 
-                                    class="btn btn-primary-custom btn-lg w-100" 
-                                    disabled="@isSubmitting"
-                                    @onclick="() => isSubmitting = true">
+                            <button type="submit"
+                                    class="btn btn-primary-custom btn-lg w-100"
+                                    disabled="@isSubmitting">
                                 @if (isSubmitting)
                                 {
                                     <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -208,6 +207,8 @@
             isSubmitting = true;
             errorMessage = string.Empty;
             successMessage = string.Empty;
+            StateHasChanged(); // Immediately show loading state
+            await Task.Yield(); // Allow UI to render before making API call
 
             Logger.LogInformation("Requesting sign-in code for email: {Email}", email);
 
