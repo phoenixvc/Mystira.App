@@ -130,6 +130,18 @@ jobs:
               {"name": "AzureCommunicationServices__SenderEmail", "value": "${{ secrets.AZURE_ACS_SENDER_EMAIL_DEV }}", "slotSetting": false}
             ]
 
+      - name: Configure JWT RS256 settings
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-settings-json: |
+            [
+              {"name": "JwtSettings__RsaPrivateKey", "value": "${{ secrets.JWT_RSA_PRIVATE_KEY }}", "slotSetting": false},
+              {"name": "JwtSettings__RsaPublicKey", "value": "${{ secrets.JWT_RSA_PUBLIC_KEY }}", "slotSetting": false},
+              {"name": "JwtSettings__Issuer", "value": "MystiraAPI", "slotSetting": false},
+              {"name": "JwtSettings__Audience", "value": "MystiraPWA", "slotSetting": false}
+            ]
+
       - name: Azure Logout
         if: always()
         run: az logout

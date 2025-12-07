@@ -104,3 +104,23 @@ jobs:
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
           package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Configure JWT RS256 settings
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-settings-json: |
+            [
+              {"name": "JwtSettings__RsaPrivateKey", "value": "${{ secrets.JWT_RSA_PRIVATE_KEY_STAGING }}", "slotSetting": false},
+              {"name": "JwtSettings__RsaPublicKey", "value": "${{ secrets.JWT_RSA_PUBLIC_KEY_STAGING }}", "slotSetting": false},
+              {"name": "JwtSettings__Issuer", "value": "MystiraAPI", "slotSetting": false},
+              {"name": "JwtSettings__Audience", "value": "MystiraPWA", "slotSetting": false}
+            ]
+
+      - name: Azure Logout
+        if: always()
+        run: az logout
