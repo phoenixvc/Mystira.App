@@ -85,11 +85,30 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
         }
         catch (HttpRequestException ex)
         {
+            var apiBaseUrl = GetApiBaseAddress();
+            
+            // Check if this is a connection refused error (API not running)
+            if (ApiConnectionHelper.IsConnectionRefused(ex))
+            {
+                var logMessage = ApiConnectionHelper.GetConnectionLogMessage(apiBaseUrl, IsDevelopment);
+                Logger.LogError("Network error requesting passwordless signup for email: {Email}. {Message}", email, logMessage);
+                
+                var userMessage = ApiConnectionHelper.GetConnectionErrorMessage(apiBaseUrl, IsDevelopment);
+                return new PasswordlessSignupResponse
+                {
+                    Success = false,
+                    Message = userMessage
+                };
+            }
+            
+            // Other network errors
             Logger.LogError(ex, "Network error requesting passwordless signup for email: {Email}", email);
+            
+            var genericMessage = ApiConnectionHelper.GetConnectionErrorMessage(apiBaseUrl, IsDevelopment);
             return new PasswordlessSignupResponse
             {
                 Success = false,
-                Message = "Unable to connect to the server. Please check your internet connection and try again."
+                Message = genericMessage
             };
         }
         catch (Exception ex)
@@ -128,11 +147,30 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
         }
         catch (HttpRequestException ex)
         {
+            var apiBaseUrl = GetApiBaseAddress();
+            
+            // Check if this is a connection refused error (API not running)
+            if (ApiConnectionHelper.IsConnectionRefused(ex))
+            {
+                var logMessage = ApiConnectionHelper.GetConnectionLogMessage(apiBaseUrl, IsDevelopment);
+                Logger.LogError("Network error verifying passwordless signup for email: {Email}. {Message}", email, logMessage);
+                
+                var userMessage = ApiConnectionHelper.GetConnectionErrorMessage(apiBaseUrl, IsDevelopment);
+                return new PasswordlessVerifyResponse
+                {
+                    Success = false,
+                    Message = userMessage
+                };
+            }
+            
+            // Other network errors
             Logger.LogError(ex, "Network error verifying passwordless signup for email: {Email}", email);
+            
+            var genericMessage = ApiConnectionHelper.GetConnectionErrorMessage(apiBaseUrl, IsDevelopment);
             return new PasswordlessVerifyResponse
             {
                 Success = false,
-                Message = "Unable to connect to the server. Please check your internet connection and try again."
+                Message = genericMessage
             };
         }
         catch (Exception ex)
@@ -190,11 +228,30 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
         }
         catch (HttpRequestException ex)
         {
+            var apiBaseUrl = GetApiBaseAddress();
+            
+            // Check if this is a connection refused error (API not running)
+            if (ApiConnectionHelper.IsConnectionRefused(ex))
+            {
+                var logMessage = ApiConnectionHelper.GetConnectionLogMessage(apiBaseUrl, IsDevelopment);
+                Logger.LogError("Network error requesting passwordless signin for email: {Email}. {Message}", email, logMessage);
+                
+                var userMessage = ApiConnectionHelper.GetConnectionErrorMessage(apiBaseUrl, IsDevelopment);
+                return new PasswordlessSigninResponse
+                {
+                    Success = false,
+                    Message = userMessage
+                };
+            }
+            
+            // Other network errors
             Logger.LogError(ex, "Network error requesting passwordless signin for email: {Email}", email);
+            
+            var genericMessage = ApiConnectionHelper.GetConnectionErrorMessage(apiBaseUrl, IsDevelopment);
             return new PasswordlessSigninResponse
             {
                 Success = false,
-                Message = "Unable to connect to the server. Please check your internet connection and try again."
+                Message = genericMessage
             };
         }
         catch (Exception ex)
@@ -233,11 +290,30 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
         }
         catch (HttpRequestException ex)
         {
+            var apiBaseUrl = GetApiBaseAddress();
+            
+            // Check if this is a connection refused error (API not running)
+            if (ApiConnectionHelper.IsConnectionRefused(ex))
+            {
+                var logMessage = ApiConnectionHelper.GetConnectionLogMessage(apiBaseUrl, IsDevelopment);
+                Logger.LogError("Network error verifying passwordless signin for email: {Email}. {Message}", email, logMessage);
+                
+                var userMessage = ApiConnectionHelper.GetConnectionErrorMessage(apiBaseUrl, IsDevelopment);
+                return new PasswordlessVerifyResponse
+                {
+                    Success = false,
+                    Message = userMessage
+                };
+            }
+            
+            // Other network errors
             Logger.LogError(ex, "Network error verifying passwordless signin for email: {Email}", email);
+            
+            var genericMessage = ApiConnectionHelper.GetConnectionErrorMessage(apiBaseUrl, IsDevelopment);
             return new PasswordlessVerifyResponse
             {
                 Success = false,
-                Message = "Unable to connect to the server. Please check your internet connection and try again."
+                Message = genericMessage
             };
         }
         catch (Exception ex)

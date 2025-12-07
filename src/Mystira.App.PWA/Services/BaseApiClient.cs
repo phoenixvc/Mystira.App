@@ -13,6 +13,7 @@ public abstract class BaseApiClient
     protected readonly ILogger Logger;
     protected readonly JsonSerializerOptions JsonOptions;
     protected readonly ITokenProvider TokenProvider;
+    public bool IsDevelopment { get; private set; }
 
     protected BaseApiClient(HttpClient httpClient, ILogger logger, ITokenProvider tokenProvider)
     {
@@ -25,6 +26,8 @@ public abstract class BaseApiClient
             PropertyNameCaseInsensitive = true,
             Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
         };
+        // Default to false, will be set by Program.cs during initialization
+        IsDevelopment = false;
     }
 
     protected async Task SetAuthorizationHeaderAsync()
@@ -216,6 +219,14 @@ public abstract class BaseApiClient
     public string GetApiBaseAddressPublic()
     {
         return GetApiBaseAddress();
+    }
+
+    /// <summary>
+    /// Sets the development mode flag for enhanced error messaging
+    /// </summary>
+    public void SetDevelopmentMode(bool isDevelopment)
+    {
+        IsDevelopment = isDevelopment;
     }
 }
 

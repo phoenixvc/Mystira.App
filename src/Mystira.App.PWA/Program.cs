@@ -162,6 +162,15 @@ try
     var logger = host.Services.GetRequiredService<ILogger<Program>>();
     logger.LogInformation("Mystira PWA starting up");
 
+    // Set IsDevelopment flag for all API clients
+    var isDevelopment = builder.HostEnvironment.IsDevelopment();
+    SetDevelopmentModeForApiClients(host.Services, isDevelopment, logger);
+    
+    if (isDevelopment)
+    {
+        logger.LogInformation("Running in Development mode. API connection errors will include helpful startup instructions.");
+    }
+
     // Verify service registration
     var authService = host.Services.GetService<IAuthService>();
     var profileService = host.Services.GetService<IProfileService>();
@@ -183,4 +192,47 @@ catch (Exception ex)
     Console.Error.WriteLine($"Error starting Mystira: {ex.Message}");
     Console.Error.WriteLine($"Stack trace: {ex.StackTrace}");
     throw;
+}
+
+static void SetDevelopmentModeForApiClients(IServiceProvider services, bool isDevelopment, ILogger logger)
+{
+    // Create a scope to get scoped services
+    using var scope = services.CreateScope();
+    var scopedServices = scope.ServiceProvider;
+    
+    // Get all registered services and check if they derive from BaseApiClient
+    var apiClientTypes = new[]
+    {
+        typeof(IScenarioApiClient),
+        typeof(IGameSessionApiClient),
+        typeof(IUserProfileApiClient),
+        typeof(IAuthApiClient),
+        typeof(IMediaApiClient),
+        typeof(IAvatarApiClient),
+        typeof(IContentBundleApiClient),
+        typeof(ICharacterApiClient),
+        typeof(IDiscordApiClient)
+    };
+
+    foreach (var interfaceType in apiClientTypes)
+    {
+        try
+        {
+            var service = scopedServices.GetService(interfaceType);
+            if (service is BaseApiClient apiClient)
+            {
+                apiClient.SetDevelopmentMode(isDevelopment);
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // Service may not be registered or has an unresolved dependency
+            // This is acceptable as not all API clients may be configured in all environments
+        }
+        catch (Exception ex)
+        {
+            // Log unexpected errors during service resolution that are not related to registration
+            logger.LogWarning(ex, "Unexpected error setting development mode for {ServiceType}", interfaceType.Name);
+        }
+    }
 }
