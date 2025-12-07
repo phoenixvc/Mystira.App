@@ -103,10 +103,12 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
             
             // Other network errors
             Logger.LogError(ex, "Network error requesting passwordless signup for email: {Email}", email);
+            
+            var genericMessage = ApiConnectionHelper.GetConnectionErrorMessage(apiBaseUrl, IsDevelopment);
             return new PasswordlessSignupResponse
             {
                 Success = false,
-                Message = "Unable to connect to the server. Please check your internet connection and try again."
+                Message = genericMessage
             };
         }
         catch (Exception ex)
@@ -163,10 +165,12 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
             
             // Other network errors
             Logger.LogError(ex, "Network error verifying passwordless signup for email: {Email}", email);
+            
+            var genericMessage = ApiConnectionHelper.GetConnectionErrorMessage(apiBaseUrl, IsDevelopment);
             return new PasswordlessVerifyResponse
             {
                 Success = false,
-                Message = "Unable to connect to the server. Please check your internet connection and try again."
+                Message = genericMessage
             };
         }
         catch (Exception ex)
@@ -242,10 +246,12 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
             
             // Other network errors
             Logger.LogError(ex, "Network error requesting passwordless signin for email: {Email}", email);
+            
+            var genericMessage = ApiConnectionHelper.GetConnectionErrorMessage(apiBaseUrl, IsDevelopment);
             return new PasswordlessSigninResponse
             {
                 Success = false,
-                Message = "Unable to connect to the server. Please check your internet connection and try again."
+                Message = genericMessage
             };
         }
         catch (Exception ex)
@@ -302,10 +308,12 @@ public class AuthApiClient : BaseApiClient, IAuthApiClient
             
             // Other network errors
             Logger.LogError(ex, "Network error verifying passwordless signin for email: {Email}", email);
+            
+            var genericMessage = ApiConnectionHelper.GetConnectionErrorMessage(apiBaseUrl, IsDevelopment);
             return new PasswordlessVerifyResponse
             {
                 Success = false,
-                Message = "Unable to connect to the server. Please check your internet connection and try again."
+                Message = genericMessage
             };
         }
         catch (Exception ex)

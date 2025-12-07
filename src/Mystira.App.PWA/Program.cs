@@ -164,7 +164,7 @@ try
 
     // Set IsDevelopment flag for all API clients
     var isDevelopment = builder.HostEnvironment.IsDevelopment();
-    SetDevelopmentModeForApiClients(host.Services, isDevelopment);
+    SetDevelopmentModeForApiClients(host.Services, isDevelopment, logger);
     
     if (isDevelopment)
     {
@@ -194,7 +194,7 @@ catch (Exception ex)
     throw;
 }
 
-static void SetDevelopmentModeForApiClients(IServiceProvider services, bool isDevelopment)
+static void SetDevelopmentModeForApiClients(IServiceProvider services, bool isDevelopment, ILogger logger)
 {
     // Create a scope to get scoped services
     using var scope = services.CreateScope();
@@ -224,10 +224,15 @@ static void SetDevelopmentModeForApiClients(IServiceProvider services, bool isDe
                 apiClient.SetDevelopmentMode(isDevelopment);
             }
         }
-        catch (Exception)
+        catch (InvalidOperationException)
         {
-            // Service may not be registered or an error occurred during resolution
+            // Service is not registered or has a configuration issue
             // This is acceptable as not all API clients may be configured
+        }
+        catch (Exception ex)
+        {
+            // Log unexpected errors during service resolution
+            logger.LogWarning(ex, "Unexpected error setting development mode for {ServiceType}", interfaceType.Name);
         }
     }
 }
