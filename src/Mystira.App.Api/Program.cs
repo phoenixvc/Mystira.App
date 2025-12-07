@@ -168,7 +168,11 @@ builder.Services.AddAuthentication(options =>
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtAudience,
-            ClockSkew = TimeSpan.FromMinutes(5)
+            ClockSkew = TimeSpan.FromMinutes(5),
+            // Map JWT claim names to ClaimTypes for proper authorization
+            // This allows simple claim names like "role" to work with [Authorize(Roles = "...")]
+            RoleClaimType = "role",  // Map "role" claim to ClaimTypes.Role
+            NameClaimType = "name"   // Map "name" claim to ClaimTypes.Name
         };
 
         if (!string.IsNullOrEmpty(jwksEndpoint))
