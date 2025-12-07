@@ -23,9 +23,10 @@
 
 /* Choice button styles */
 .choice-button {
-    min-width: 300px;
-    max-width: 600px;
-    text-align: left;
+    min-width: 200px;
+    max-width: 350px;
+    flex: 1 1 auto;
+    text-align: center;
     white-space: normal;
     word-wrap: break-word;
     -webkit-hyphens: auto;
@@ -255,7 +256,8 @@ html[data-theme="dark"] ::deep .btn-outline-danger:hover {
 
     .choice-button {
         min-width: 100%;
-        margin: 0.25rem 0;
+        max-width: 100%;
+        flex: 1 1 100%;
     }
 
     .game-content {
