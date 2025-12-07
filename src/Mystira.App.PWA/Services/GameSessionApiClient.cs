@@ -270,6 +270,48 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         }
     }
 
+    public async Task<GameSession?> MakeChoiceAsync(string sessionId, string sceneId, string choiceText, string nextSceneId)
+    {
+        try
+        {
+            Logger.LogInformation("Making choice in session {SessionId}: {ChoiceText} -> {NextSceneId}", sessionId, choiceText, nextSceneId);
+
+            // Set authorization header - required for the [Authorize] attribute on the API endpoint
+            await SetAuthorizationHeaderAsync();
+
+            var requestData = new { sceneId, choiceText, nextSceneId };
+            var response = await HttpClient.PostAsJsonAsync($"api/gamesessions/{sessionId}/choice", requestData, JsonOptions);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var gameSession = await response.Content.ReadFromJsonAsync<GameSession>(JsonOptions);
+                Logger.LogInformation("Choice recorded successfully in session: {SessionId}", sessionId);
+                return gameSession;
+            }
+            else
+            {
+                Logger.LogWarning("Failed to record choice with status: {StatusCode} for session: {SessionId}",
+                    response.StatusCode, sessionId);
+                return null;
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Network error making choice in session: {SessionId}", sessionId);
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Logger.LogError(ex, "Request timed out making choice in session: {SessionId}", sessionId);
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogError(ex, "Error parsing API response when making choice in session: {SessionId}", sessionId);
+            return null;
+        }
+    }
+
     public async Task<List<GameSession>?> GetInProgressSessionsAsync(string accountId)
     {
         try

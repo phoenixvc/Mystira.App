@@ -308,7 +308,7 @@ else
 
     private async Task HandleChoice(Choice choice)
     {
-        if (isProcessing || string.IsNullOrEmpty(choice.NextSceneTitle))
+        if (isProcessing || gameSession?.CurrentScene == null || string.IsNullOrEmpty(choice.NextSceneTitle))
             return;
 
         try
@@ -318,10 +318,13 @@ else
 
             Logger.LogInformation("Player chose: {ChoiceText} -> {NextScene}", choice.Text, choice.NextSceneTitle);
 
-            var success = await GameSessionService.NavigateToSceneAsync(choice.NextSceneTitle);
+            var success = await GameSessionService.MakeChoiceAsync(
+                gameSession.CurrentScene.Id, 
+                choice.Text, 
+                choice.NextSceneTitle);
             if (!success)
             {
-                Logger.LogError("Failed to navigate to scene: {NextScene}", choice.NextSceneTitle);
+                Logger.LogError("Failed to make choice and navigate to scene: {NextScene}", choice.NextSceneTitle);
             }
         }
         catch (Exception ex)
