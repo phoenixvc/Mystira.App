@@ -5,9 +5,9 @@
     padding: 72px 28px;
     max-width: 520px;
     margin: 0 auto;
-    background: linear-gradient(135deg, #faf9ff 0%, #f0edff 100%);
+    background: var(--card, rgba(255,255,255,0.85));
     border-radius: 24px;
-    border: 1px solid rgba(124, 58, 237, 0.08);
+    border: 1px solid var(--border, rgba(17,24,39,0.08));
     box-shadow: 0 4px 24px rgba(124, 58, 237, 0.05);
 }
 
@@ -25,7 +25,7 @@
 .empty-state-title {
     font-size: 1.625rem;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--fg, #1f2937);
     margin-bottom: 14px;
     animation: fadeIn 0.6s ease-in-out;
     letter-spacing: -0.01em;
@@ -33,7 +33,7 @@
 
 .empty-state-message {
     font-size: 1.05rem;
-    color: #6b7280;
+    color: var(--muted, #6b7280);
     line-height: 1.7;
     margin-bottom: 28px;
     max-width: 380px;
@@ -68,9 +68,9 @@
 }
 
 .btn-retry {
-    background: white;
-    color: #7c3aed;
-    border: 2px solid #ddd6fe;
+    background: var(--card, rgba(255,255,255,0.85));
+    color: var(--primary-color, #7c3aed);
+    border: 2px solid rgba(124, 58, 237, 0.2);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 

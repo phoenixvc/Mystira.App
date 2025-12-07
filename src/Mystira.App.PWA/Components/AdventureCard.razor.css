@@ -4,13 +4,13 @@
     height: 100%;
     border-radius: 16px;
     overflow: hidden;
-    background: white;
+    background: var(--card, rgba(255,255,255,0.85));
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border, rgba(17,24,39,0.08));
 }
 
 .adventure-card:hover {
@@ -50,7 +50,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #9ca3af;
+    color: var(--muted, #9ca3af);
 }
 
 .adventure-completed-badge {
@@ -79,7 +79,7 @@
 .adventure-card-title {
     font-size: 1rem;
     font-weight: 600;
-    color: #111827;
+    color: var(--fg, #111827);
     margin: 0;
     line-height: 1.4;
     display: -webkit-box;
@@ -90,7 +90,7 @@
 
 .adventure-card-description {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--muted, #6b7280);
     line-height: 1.5;
     margin: 0;
     flex-grow: 1;
@@ -186,7 +186,7 @@
 
 .adventure-card-footer {
     padding: 12px 16px;
-    border-top: 1px solid #f3f4f6;
+    border-top: 1px solid var(--border, rgba(17,24,39,0.08));
 }
 
 .btn-adventure-start {
@@ -408,8 +408,8 @@ html[data-theme="dark"] .theme-badge:hover {
 
 /* Light mode overrides */
 html[data-theme="light"] .adventure-card {
-    background: white;
-    border-color: #e5e7eb;
+    background: var(--card, rgba(255,255,255,0.85));
+    border-color: var(--border, rgba(17,24,39,0.08));
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
@@ -423,17 +423,17 @@ html[data-theme="light"] .adventure-image-container {
 }
 
 html[data-theme="light"] .adventure-card-placeholder {
-    color: #9ca3af;
+    color: var(--muted, #9ca3af);
 }
 
 html[data-theme="light"] .adventure-card-title {
-    color: #111827;
+    color: var(--fg, #111827);
 }
 
 html[data-theme="light"] .adventure-card-description {
-    color: #6b7280;
+    color: var(--muted, #6b7280);
 }
 
 html[data-theme="light"] .adventure-card-footer {
-    border-top-color: #f3f4f6;
+    border-top-color: var(--border, rgba(17,24,39,0.08));
 }
