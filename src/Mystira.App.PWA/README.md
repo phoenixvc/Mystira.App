@@ -360,6 +360,52 @@ Consider state management libraries:
 
 ## Configuration
 
+### Environment-Specific API URLs
+
+The PWA uses different `appsettings.{Environment}.json` files to connect to the appropriate API:
+
+- **`appsettings.Local.json`**: For true local development with API running on `http://localhost:5260/`
+  - **Not deployed** - only used when running locally with `dotnet run`
+  - Copy this file to use for local dev: `cp appsettings.Local.json appsettings.Development.json.local`
+  
+- **`appsettings.Development.json`**: Dev environment (deployed to Azure)
+  - API URL: `https://dev-san-app-mystira-api.azurewebsites.net/`
+  - Used by: Dev branch deployments to Azure Static Web Apps
+  
+- **`appsettings.Staging.json`**: Staging environment
+  - API URL: `https://mystira-app-staging-api.azurewebsites.net/`
+  - Used by: Staging branch deployments
+  
+- **`appsettings.Production.json`**: Production environment
+  - API URL: `https://prod-wus-app-mystira-api.azurewebsites.net/`
+  - Used by: Main branch deployments to production
+
+### Local Development Setup
+
+To run the PWA locally and connect to localhost API:
+
+1. **Start the API locally:**
+   ```bash
+   cd src/Mystira.App.Api
+   dotnet run
+   # API will be available at http://localhost:5260
+   ```
+
+2. **Configure PWA for local development:**
+   ```bash
+   cd src/Mystira.App.PWA
+   # Create a local-only appsettings file
+   cp wwwroot/appsettings.Local.json wwwroot/appsettings.Development.json
+   ```
+
+3. **Run the PWA:**
+   ```bash
+   dotnet run
+   # PWA will be available at http://localhost:5000
+   ```
+
+**Note:** The `appsettings.Development.json` file in the repository is configured for the deployed Dev environment, not localhost. For local development, you need to override it with the Local configuration or run with a different environment name.
+
 ### appsettings.json
 
 ```json

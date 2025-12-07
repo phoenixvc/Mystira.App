@@ -67,6 +67,12 @@ jobs:
           echo "Updated version.json to version ${VERSION}"
           cat src/Mystira.App.PWA/wwwroot/version.json
 
+      - name: Add Blazor environment meta tag for Staging
+        run: |
+          # Add meta tag to set Blazor environment to Staging
+          sed -i 's|<head>|<head>\n    <meta name="environment" content="Staging" />|' src/Mystira.App.PWA/wwwroot/index.html
+          echo "Added Blazor environment meta tag for Staging"
+
       - name: Build PWA
         run: dotnet build src/Mystira.App.PWA/Mystira.App.PWA.csproj --configuration Release --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
