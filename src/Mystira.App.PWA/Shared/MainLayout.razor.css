@@ -21,8 +21,28 @@
 
 .navbar-brand {
     font-weight: 700;
-    color: var(--primary-color) !important;
     font-size: 1.5rem;
+    background: linear-gradient(135deg, #a78bfa 0%, #c4b5fd 50%, #e9d5ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-decoration: none !important;
+    transition: all 0.3s ease;
+}
+
+.navbar-brand:hover {
+    background: linear-gradient(135deg, #c4b5fd 0%, #e9d5ff 50%, #f5f3ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    transform: scale(1.02);
+}
+
+.navbar-brand i {
+    background: linear-gradient(135deg, #a78bfa 0%, #c4b5fd 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .nav-link {
@@ -129,6 +149,42 @@ html[data-theme="dark"] .profile-menu-dropdown .dropdown-item i {
 
 html[data-theme="dark"] .profile-menu-dropdown .dropdown-item:hover i {
     color: #a5b4fc;
+}
+
+/* Navbar brand for light mode - use darker gradient */
+html[data-theme="light"] .navbar-brand,
+html[data-theme="light"] .navbar-brand i {
+    background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+html[data-theme="light"] .navbar-brand:hover,
+html[data-theme="light"] .navbar-brand:hover i {
+    background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 50%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Light mode via media query */
+@media (prefers-color-scheme: light) {
+    .navbar-brand,
+    .navbar-brand i {
+        background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a78bfa 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .navbar-brand:hover,
+    .navbar-brand:hover i {
+        background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 50%, #8b5cf6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
 }
 
 /* Navbar toggler icon for dark mode */

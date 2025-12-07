@@ -62,6 +62,8 @@ Each ADR follows this structure:
 | [ADR-0004](ADR-0004-use-mediatr-for-cqrs.md) | Use MediatR for Request/Response Handling | ✅ Accepted | 2025-11-24 | technology, mediatr, cqrs, request-response |
 | [ADR-0005](ADR-0005-separate-api-and-admin-api.md) | Separate API and Admin API | ✅ Accepted | 2025-11-24 | architecture, api, security, separation-of-concerns |
 | [ADR-0006](ADR-0006-phase-5-cqrs-migration.md) | Phase 5 - Complete CQRS Migration | ✅ Implemented | 2025-11-24 | migration, cqrs, implementation, phase-5 |
+| [ADR-0007](ADR-0007-implement-azure-front-door.md) | Implement Azure Front Door for Edge Security | 💭 Proposed | 2025-12-07 | infrastructure, security, azure, front-door, waf |
+| [ADR-0008](ADR-0008-separate-staging-environment.md) | Implement Separate Staging Environment | 💭 Proposed | 2025-12-07 | infrastructure, environments, staging, devops |
 
 ---
 

@@ -114,10 +114,10 @@ else
                             <!-- Choice Scene -->
                             <div class="text-center">
                                 <h5 class="mb-4 text-muted">What do you choose?</h5>
-                                <div class="d-flex flex-column align-items-center">
+                                <div class="d-flex flex-row flex-wrap justify-content-center gap-3">
                                     @foreach (var choice in gameSession.CurrentScene.Choices.OrderBy(c => c.Order))
                                     {
-                                        <button class="btn btn-primary-custom btn-lg mb-2 choice-button"
+                                        <button class="btn btn-primary-custom btn-lg choice-button"
                                                 @onclick="() => HandleChoice(choice)"
                                                 disabled="@isProcessing">
                                             @if (isProcessing)
