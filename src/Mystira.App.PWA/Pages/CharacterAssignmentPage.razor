@@ -233,7 +233,7 @@ else
                             @UnassignedCount character@(UnassignedCount != 1 ? "s" : "") still need@(UnassignedCount == 1 ? "s" : "") a player assignment.
                         </div>
                         <button class="btn btn-sm btn-outline-warning" @onclick="FillRemainingWithAI">
-                            <i class="fas fa-robot me-2"></i>Assign Guest to remaining
+                            <i class="fas fa-robot me-2"></i>Assign Guests to remaining
                         </button>
                     </div>
                 }
@@ -414,8 +414,8 @@ else
 }
 
 <!-- Guest Warning Modal -->
-<GuestWarningModal 
-    ShowModal="showGuestWarningModal" 
+<GuestWarningModal
+    ShowModal="showGuestWarningModal"
     OnContinue="ContinueWithGuestAssignments"
     OnCancel="CancelGuestWarning">
 </GuestWarningModal>
@@ -704,8 +704,8 @@ else
                 .Where(ca => !ca.IsUnused && ca.PlayerAssignment != null)
                 .ToList();
 
-            var hasOnlyGuests = assignedCharacters.All(ca => 
-                ca.PlayerAssignment!.Type == "Guest" || 
+            var hasOnlyGuests = assignedCharacters.All(ca =>
+                ca.PlayerAssignment!.Type == "Guest" ||
                 (ca.PlayerAssignment!.Type == "AI" && string.IsNullOrEmpty(ca.PlayerAssignment!.ProfileId)));
 
             if (hasOnlyGuests)
@@ -1001,8 +1001,8 @@ else
                 assignment.PlayerAssignment = new PlayerAssignment
                 {
                     Type = "AI",
-                    ProfileName = $"Guest ({assignment.CharacterName})",
-                    GuestName = $"Guest ({assignment.CharacterName})"
+                    ProfileName = $"{assignment.CharacterName}",
+                    GuestName = $"{assignment.CharacterName}"
                 };
             }
         }
