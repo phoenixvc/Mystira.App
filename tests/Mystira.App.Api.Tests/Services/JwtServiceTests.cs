@@ -128,7 +128,6 @@ public class JwtServiceTests
         // Act
         var beforeGeneration = DateTime.UtcNow;
         var token = service.GenerateAccessToken(userId, email, displayName);
-        var afterGeneration = DateTime.UtcNow;
 
         // Assert
         var tokenHandler = new JwtSecurityTokenHandler();
