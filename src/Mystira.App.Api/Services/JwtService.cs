@@ -140,7 +140,7 @@ public class JwtService : IJwtService
                 ValidateAudience = true,
                 ValidAudience = _audience,
                 ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero
+                ClockSkew = TimeSpan.FromMinutes(5)
             };
 
             tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
@@ -205,6 +205,37 @@ public class JwtService : IJwtService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error validating and extracting user ID from token");
+            return (false, null);
+        }
+    }
+
+    public (bool IsValid, string? UserId) ExtractUserIdIgnoringExpiry(string token)
+    {
+        try
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+
+            // Validate everything EXCEPT lifetime - for refresh token flow
+            var validationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = _signingCredentials.Key,
+                ValidateIssuer = true,
+                ValidIssuer = _issuer,
+                ValidateAudience = true,
+                ValidAudience = _audience,
+                ValidateLifetime = false, // Allow expired tokens
+                ClockSkew = TimeSpan.Zero
+            };
+
+            tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
+
+            var userId = GetUserIdFromToken(token);
+            return (true, userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Token validation failed (ignoring expiry)");
             return (false, null);
         }
     }

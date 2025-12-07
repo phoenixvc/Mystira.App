@@ -41,5 +41,10 @@ public class JwtServiceAdapter : Application.Ports.Auth.IJwtService
     {
         return _apiService.ValidateAndExtractUserId(token);
     }
+
+    public (bool IsValid, string? UserId) ExtractUserIdIgnoringExpiry(string token)
+    {
+        return _apiService.ExtractUserIdIgnoringExpiry(token);
+    }
 }
 

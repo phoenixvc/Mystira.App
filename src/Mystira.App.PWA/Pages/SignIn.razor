@@ -62,10 +62,9 @@
                                 </div>
                             }
 
-                            <button type="submit" 
-                                    class="btn btn-primary-custom btn-lg w-100" 
-                                    disabled="@isSubmitting"
-                                    @onclick="() => isSubmitting = true">
+                            <button type="submit"
+                                    class="btn btn-primary-custom btn-lg w-100"
+                                    disabled="@isSubmitting">
                                 @if (isSubmitting)
                                 {
                                     <span class="spinner-border spinner-border-sm me-2" role="status"></span>

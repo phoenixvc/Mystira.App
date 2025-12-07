@@ -31,12 +31,14 @@ public class RefreshTokenCommandHandler
     {
         try
         {
-            // Validate the current access token to get user info
-            var (isValid, userId) = _jwtService.ValidateAndExtractUserId(command.Token);
+            // Extract user ID from the access token, allowing expired tokens
+            // This is the refresh flow - the access token may be expired but we still
+            // need to extract the user ID to issue new tokens
+            var (isValid, userId) = _jwtService.ExtractUserIdIgnoringExpiry(command.Token);
 
             if (!isValid || string.IsNullOrEmpty(userId))
             {
-                _logger.LogWarning("Invalid access token during refresh attempt");
+                _logger.LogWarning("Invalid access token during refresh attempt (signature/issuer/audience validation failed)");
                 return (false, "Invalid access token", null, null);
             }
 
