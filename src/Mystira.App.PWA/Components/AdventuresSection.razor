@@ -273,7 +273,6 @@
 
     // Cache for performance optimization
     private Dictionary<string, int> _ageGroupBundleCounts = new();
-    private ContentBundle? _cachedFeaturedBundle;
 
     // Age group filter state
     private readonly HashSet<string> selectedAgeGroups = new();
@@ -939,17 +938,13 @@
     private void ClearSelectedBundle()
     {
         selectedBundleId = null;
-        _cachedFeaturedBundle = null;
         ApplyFilters();
     }
 
     private ContentBundle? GetFeaturedBundle()
     {
-        if (_cachedFeaturedBundle != null)
-        {
-            return _cachedFeaturedBundle;
-        }
-        _cachedFeaturedBundle = filteredBundles.FirstOrDefault();
-        return _cachedFeaturedBundle;
+        // Always derive the featured bundle from the current filtered list
+        // so it respects age-group/search filters.
+        return filteredBundles.FirstOrDefault();
     }
 }
