@@ -1,3 +1,4 @@
+@using System.Globalization
 @* Adventure Card Component - Enhanced visual design for scenarios *@
 
 <div class="adventure-card"
@@ -50,27 +51,14 @@
             </span>
         </div>
 
-        @if (Adventure.Tags != null && Adventure.Tags.Length > 0)
-        {
-            <div class="adventure-tags">
-                @foreach (var tag in Adventure.Tags.Take(3))
-                {
-                    <span class="tag-pill">@tag</span>
-                }
-                @if (Adventure.Tags.Length > 3)
-                {
-                    <span class="tag-pill tag-more">+@(Adventure.Tags.Length - 3)</span>
-                }
-            </div>
-        }
-
         @if (Themes != null && Themes.Any())
         {
             <div class="adventure-themes">
-                @foreach (var theme in Themes.Take(2))
+                @foreach (var theme in Themes.Take(3))
                 {
+                    var text = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(theme.ToLower());
                     <span class="theme-badge">
-                        <i class="fas fa-tag me-1"></i>@theme
+                        <i class="fas fa-tag me-1"></i>@text
                     </span>
                 }
             </div>
