@@ -11,6 +11,7 @@ public interface IGameSessionService
     Task<bool> NavigateToSceneAsync(string sceneId);
     Task<bool> NavigateFromRollAsync(bool isSuccess);
     Task<bool> GoToNextSceneAsync();
+    Task MakeChoiceAsync(string gameSessionId, string currentSceneId, string choiceText, string choiceNextSceneId);
     Task<bool> CompleteGameSessionAsync();
     Task<bool> PauseGameSessionAsync();
     Task<bool> ResumeGameSessionAsync();

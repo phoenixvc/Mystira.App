@@ -18,6 +18,7 @@ public interface IApiClient
     Task<GameSession?> PauseGameSessionAsync(string sessionId);
     Task<GameSession?> ResumeGameSessionAsync(string sessionId);
     Task<GameSession?> ProgressSessionSceneAsync(string sessionId, string sceneId);
+    Task<GameSession?> MakeChoiceAsync(string sessionId, string sceneId, string choiceText, string nextSceneId);
     Task<List<GameSession>?> GetSessionsByAccountAsync(string accountId);
     Task<Account?> GetAccountByEmailAsync(string email);
 

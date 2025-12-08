@@ -76,50 +76,7 @@
         </div>
     }
 
-    <!-- Active Adventures Section -->
-    @if (isAuthenticated && !isLoading && activeSessions.Any())
-    {
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card shadow-sm border-info">
-                    <div class="card-body">
-                        <h5 class="card-title mb-3">
-                            <i class="fas fa-gamepad me-2 text-info"></i>Continue Your Adventures
-                        </h5>
-                        <div class="row">
-                            @foreach (var activeSession in activeSessions)
-                            {
-                                var scenario = scenarios.FirstOrDefault(s => s.Id == activeSession.ScenarioId);
-                                if (scenario != null)
-                                {
-                                    <div class="col-md-6 col-lg-4 mb-3">
-                                        <div class="card h-100 border-info">
-                                            <div class="card-body">
-                                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                                    <h6 class="card-title mb-0">@scenario.Name</h6>
-                                                    <span class="badge bg-info">
-                                                        <i class="fas fa-play-circle me-1"></i>In Progress
-                                                    </span>
-                                                </div>
-                                                <p class="card-text small text-muted mb-3">
-                                                    Started: @activeSession.StartedAt.ToLocalTime().ToString("g")
-                                                </p>
-                                                <button class="btn btn-info w-100"
-                                                        @onclick="() => ContinueAdventure(activeSession, scenario)">
-                                                    <i class="fas fa-play me-2"></i>
-                                                    Continue
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
+    @* Active adventures are displayed below the Filter section *@
 
     <!-- Game Session Content (shown when user has profiles and active game) -->
     @if (isAuthenticated && hasProfiles && gameSession != null)
@@ -147,47 +104,7 @@
         </div>
     }
 
-    <!-- In-Progress Adventures Section -->
-    @if (isAuthenticated && hasProfiles && inProgressSessions.Any())
-    {
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card shadow-sm border-warning">
-                    <div class="card-body">
-                        <h6 class="card-title mb-3">
-                            <i class="fas fa-play-circle me-2"></i>Continue Your Adventures
-                        </h6>
-                        <div class="row">
-                            @foreach (var session in inProgressSessions)
-                            {
-                                var scenario = scenarios.FirstOrDefault(s => s.Id == session.ScenarioId);
-                                if (scenario != null)
-                                {
-                                    var scenarioProgress = (session.CurrentSceneId != null) ? $"{session.ChoiceCount} choices made" : "Just started";
-                                    <div class="col-md-6 col-lg-4 mb-3">
-                                        <div class="card h-100 border-warning">
-                                            <div class="card-body d-flex flex-column">
-                                                <h5 class="card-title">@scenario.Title</h5>
-                                                <p class="card-text small text-muted">@scenarioProgress</p>
-                                                <div class="mt-auto">
-                                                    <button class="btn btn-warning btn-sm w-100"
-                                                            @onclick="() => StartAdventure(scenario)"
-                                                            disabled="@isStartingAdventure">
-                                                        <i class="fas fa-redo me-2"></i>
-                                                        Resume
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
+    @* In-progress adventures are displayed below in the Active Adventures section *@
 
     <!-- Filter & Bundles (hidden when not logged in) -->
     @if (isAuthenticated && !isLoading)
@@ -209,6 +126,64 @@
             OnAgeGroupToggled="@ToggleAgeGroupFilter"
             OnClearAllFilters="@ClearAllFilters"
             OnSearchCleared="@ClearSearch" />
+
+        <!-- Active Adventures (below Filter, above Bundles) -->
+        @if (hasProfiles && inProgressSessions.Any())
+        {
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0">
+                            <i class="fas fa-play-circle me-2"></i>Active Adventures
+                            <span class="badge bg-secondary ms-2">@inProgressSessions.Count</span>
+                        </h6>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="toggleActiveAdventures"
+                                   @bind="showActiveAdventures" />
+                            <label class="form-check-label" for="toggleActiveAdventures">
+                                @(showActiveAdventures ? "Hide" : "Show")
+                            </label>
+                        </div>
+                    </div>
+
+                    @if (showActiveAdventures)
+                    {
+                        <div class="row">
+                            @foreach (var session in inProgressSessions)
+                            {
+                                var scenario = scenarios.FirstOrDefault(s => s.Id == session.ScenarioId);
+                                if (scenario != null)
+                                {
+                                    <div class="col-md-6 col-lg-4 mb-3">
+                                        <div class="card h-100 border-info">
+                                            <div class="card-body d-flex flex-column">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <h6 class="card-title mb-0">@scenario.Title</h6>
+                                                    <span class="badge bg-info">
+                                                        <i class="fas fa-hourglass-half me-1"></i>In Progress
+                                                    </span>
+                                                </div>
+                                                <p class="card-text small text-muted">
+                                                    Started: @session.StartedAt.ToLocalTime().ToString("dd-MMM-yy HH:mm")
+                                                </p>
+                                                <div class="mt-auto">
+                                                    <button class="btn btn-info w-100"
+                                                            @onclick="() => ContinueAdventure(session, scenario)"
+                                                            disabled="@isStartingAdventure">
+                                                        <i class="fas fa-play me-2"></i>
+                                                        Continue
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
 
         <!-- Content Bundles Grid -->
         <div class="row mb-4" id="adventures">
@@ -395,6 +370,34 @@
     }
 </div>
 
+@* In-Progress Session Confirmation Modal *@
+@if (showInProgressSessionModal && pendingInProgressSession != null)
+{
+    <div class="modal fade show d-block modal-backdrop">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Adventure Already In Progress</h5>
+                    <button type="button" class="btn-close" @onclick="CancelInProgressSessionModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        This adventure is already in progress. You cannot start a new session until the current game is completed.
+                    </div>
+                    <p>Would you like to continue your in-progress game now?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" @onclick="CancelInProgressSessionModal">Cancel</button>
+                    <button class="btn btn-primary" @onclick="ConfirmContinueInProgressSession">
+                        <i class="fas fa-play me-2"></i>Continue
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<Scenario> scenarios = new();
     private List<Scenario> filteredScenarios = new();
@@ -409,11 +412,11 @@
     private bool isAuthenticated = false;
     private bool showCompletedStories = true;
     private HashSet<string> completedScenarioIds = new();
-    private List<GameSession> activeSessions = new();
     private bool gameStateLoadingComplete = false;
     private bool hasProfiles = false;
     private bool isLoadingProfiles = false;
     private GameSession? gameSession;
+    private bool showActiveAdventures = true;
     private string _searchQuery = string.Empty;
     private string searchQuery
     {
@@ -439,6 +442,10 @@
 
     // Computed property for catalog visibility logic
     private bool ShouldShowCatalog => !isAuthenticated || (isAuthenticated && hasProfiles);
+
+    // Modal state for in-progress session confirmation
+    private bool showInProgressSessionModal = false;
+    private GameSession? pendingInProgressSession;
 
     protected override async Task OnInitializedAsync()
     {
@@ -508,7 +515,6 @@
                 inProgressSessions.Clear();
                 selectedAgeGroups.Clear();
                 completedScenarioIds.Clear();
-                activeSessions.Clear();
                 gameStateLoadingComplete = false;
                 hasProfiles = false;
                 gameSession = null;
@@ -639,16 +645,7 @@
                 var sessions = await ApiClient.GetSessionsByAccountAsync(account.Id);
                 if (sessions != null)
                 {
-                    // Filter active sessions (InProgress or Paused)
-                    activeSessions = sessions
-                        .Where(s => s.Status == SessionStatus.InProgress.ToString() || s.Status == SessionStatus.Paused.ToString())
-                        .OrderByDescending(s => s.StartedAt)
-                        .ToList();
-
-                    Logger.LogInformation("Found {Count} active session(s) for account {AccountId}",
-                        activeSessions.Count, account.Id);
-
-                    // Track completed scenarios
+                    // Track completed scenarios only; active sessions are loaded via GetInProgressSessionsAsync
                     completedScenarioIds = sessions
                         .Where(s => s.Status == SessionStatus.Completed.ToString())
                         .Select(s => s.ScenarioId)
@@ -736,9 +733,11 @@
             var inProgressSession = inProgressSessions.FirstOrDefault(s => s.ScenarioId == scenario.Id);
             if (inProgressSession != null)
             {
-                Logger.LogInformation("Found in-progress session {SessionId} for scenario {ScenarioId}, resuming it",
+                Logger.LogInformation("Found in-progress session {SessionId} for scenario {ScenarioId}. Prompting user to continue.",
                     inProgressSession.Id, scenario.Id);
-                await ResumeInProgressSession(inProgressSession);
+                pendingInProgressSession = inProgressSession;
+                showInProgressSessionModal = true;
+                StateHasChanged();
                 return;
             }
 
@@ -786,6 +785,36 @@
             isStartingAdventure = false;
             StateHasChanged();
         }
+    }
+
+    private async Task ConfirmContinueInProgressSession()
+    {
+        if (pendingInProgressSession == null)
+        {
+            showInProgressSessionModal = false;
+            return;
+        }
+
+        try
+        {
+            isStartingAdventure = true;
+            StateHasChanged();
+            await ResumeInProgressSession(pendingInProgressSession);
+        }
+        finally
+        {
+            showInProgressSessionModal = false;
+            pendingInProgressSession = null;
+            isStartingAdventure = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CancelInProgressSessionModal()
+    {
+        showInProgressSessionModal = false;
+        pendingInProgressSession = null;
+        StateHasChanged();
     }
 
     private async Task ResumeInProgressSession(GameSession session)

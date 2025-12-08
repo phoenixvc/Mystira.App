@@ -382,24 +382,6 @@ public class GameSessionsController : ControllerBase
     {
         try
         {
-            var requestingAccountId = User.FindFirst("sub")?.Value
-                ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                ?? User.FindFirst("account_id")?.Value;
-
-            if (string.IsNullOrEmpty(requestingAccountId))
-            {
-                return Unauthorized(new ErrorResponse
-                {
-                    Message = "Account ID not found in authentication claims",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            if (requestingAccountId != accountId && !User.IsInRole("Admin"))
-            {
-                return Forbid();
-            }
-
             var query = new GetInProgressSessionsQuery(accountId);
             var sessions = await _mediator.Send(query);
             return Ok(sessions);

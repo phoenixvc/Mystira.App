@@ -69,7 +69,7 @@ public class Scene
     {
         Id = i + 1,
         Text = b.Choice ?? "Continue",
-        NextSceneTitle = b.NextSceneId ?? "",
+        NextSceneId = b.NextSceneId ?? "",
         Order = i + 1
     }).Where(c => !string.IsNullOrEmpty(c.Text) && c.Text != "Continue").ToList();
     public bool IsStartingScene { get; set; } = false;
@@ -100,7 +100,7 @@ public class Choice
 {
     public int Id { get; set; }
     public string Text { get; set; } = string.Empty;
-    public string? NextSceneTitle { get; set; }
+    public string? NextSceneId { get; set; }
     public int Order { get; set; }
 }
 
