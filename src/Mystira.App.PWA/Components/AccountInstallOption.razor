@@ -7,7 +7,6 @@
         <i class="fas fa-download me-2"></i>
         Install App
     </button>
-    <div class="dropdown-divider"></div>
 }
 
 @code {
@@ -27,7 +26,7 @@
 
                 // Check if app is installed
                 await UpdateInstallOptionVisibility();
-                
+
                 // Start periodic check to detect installation changes
                 cts = new CancellationTokenSource();
                 _ = MonitorInstallationStateAsync(cts.Token);
@@ -42,7 +41,7 @@
     private async Task MonitorInstallationStateAsync(CancellationToken cancellationToken)
     {
         checkTimer = new PeriodicTimer(TimeSpan.FromSeconds(2));
-        
+
         try
         {
             while (await checkTimer.WaitForNextTickAsync(cancellationToken))
@@ -64,7 +63,7 @@
             {
                 var isInstalled = await jsModule.InvokeAsync<bool>("isAppInstalled");
                 var shouldShow = !isInstalled;
-                
+
                 if (showInstallOption != shouldShow)
                 {
                     showInstallOption = shouldShow;
@@ -100,7 +99,7 @@
         cts?.Cancel();
         cts?.Dispose();
         checkTimer?.Dispose();
-        
+
         if (jsModule != null)
         {
             try
