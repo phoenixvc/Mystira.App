@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
+using Mystira.App.Contracts.Models.GameSessions;
 
 namespace Mystira.App.Application.CQRS.GameSessions.Commands;
 
@@ -37,8 +38,9 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
             throw new ArgumentException("AccountId is required");
         if (string.IsNullOrEmpty(request.ProfileId))
             throw new ArgumentException("ProfileId is required");
-        if (request.PlayerNames == null || !request.PlayerNames.Any())
-            throw new ArgumentException("At least one player name is required");
+        if ((request.PlayerNames == null || !request.PlayerNames.Any())
+            && (request.CharacterAssignments == null || !request.CharacterAssignments.Any()))
+            throw new ArgumentException("At least one player or character assignment is required");
 
         // Create new game session
         var session = new GameSession
@@ -47,7 +49,7 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
             ScenarioId = request.ScenarioId,
             AccountId = request.AccountId,
             ProfileId = request.ProfileId,
-            PlayerNames = request.PlayerNames,
+            PlayerNames = request.PlayerNames ?? new List<string>(),
             TargetAgeGroup = AgeGroup.Parse(request.TargetAgeGroup) ?? new AgeGroup(6, 9),
             Status = SessionStatus.InProgress,
             StartTime = DateTime.UtcNow,
@@ -56,6 +58,21 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
             Achievements = new List<SessionAchievement>(),
             CompassValues = new Dictionary<string, CompassTracking>()
         };
+
+        // Map character assignments if provided
+        if (request.CharacterAssignments != null && request.CharacterAssignments.Any())
+        {
+            session.CharacterAssignments = request.CharacterAssignments.Select(MapToDomain).ToList();
+
+            // If PlayerNames not provided, derive from assignments (non-unused only)
+            if (session.PlayerNames == null || !session.PlayerNames.Any())
+            {
+                session.PlayerNames = session.CharacterAssignments
+                    .Where(ca => !ca.IsUnused && ca.PlayerAssignment != null)
+                    .Select(ca => ca.PlayerAssignment!.ProfileName ?? ca.PlayerAssignment!.GuestName ?? "Player")
+                    .ToList();
+            }
+        }
 
         // Add to repository
         await _repository.AddAsync(session);
@@ -68,5 +85,31 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
             session.Id, request.ScenarioId, request.AccountId);
 
         return session;
+    }
+
+    private static SessionCharacterAssignment MapToDomain(CharacterAssignmentDto dto)
+    {
+        return new SessionCharacterAssignment
+        {
+            CharacterId = dto.CharacterId,
+            CharacterName = dto.CharacterName,
+            Image = dto.Image,
+            Audio = dto.Audio,
+            Role = dto.Role,
+            Archetype = dto.Archetype,
+            IsUnused = dto.IsUnused,
+            PlayerAssignment = dto.PlayerAssignment == null ? null : new SessionPlayerAssignment
+            {
+                Type = dto.PlayerAssignment.Type,
+                ProfileId = dto.PlayerAssignment.ProfileId,
+                ProfileName = dto.PlayerAssignment.ProfileName,
+                ProfileImage = dto.PlayerAssignment.ProfileImage,
+                SelectedAvatarMediaId = dto.PlayerAssignment.SelectedAvatarMediaId,
+                GuestName = dto.PlayerAssignment.GuestName,
+                GuestAgeRange = dto.PlayerAssignment.GuestAgeRange,
+                GuestAvatar = dto.PlayerAssignment.GuestAvatar,
+                SaveAsProfile = dto.PlayerAssignment.SaveAsProfile
+            }
+        };
     }
 }

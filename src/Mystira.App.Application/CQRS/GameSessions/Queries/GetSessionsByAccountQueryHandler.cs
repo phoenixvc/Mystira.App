@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Contracts.Responses.GameSessions;
 using Mystira.App.Domain.Specifications;
+using Mystira.App.Contracts.Models.GameSessions;
 
 namespace Mystira.App.Application.CQRS.GameSessions.Queries;
 
@@ -39,6 +40,28 @@ public class GetSessionsByAccountQueryHandler : IQueryHandler<GetSessionsByAccou
             AccountId = s.AccountId,
             ProfileId = s.ProfileId,
             PlayerNames = s.PlayerNames,
+            CharacterAssignments = s.CharacterAssignments?.Select(ca => new CharacterAssignmentDto
+            {
+                CharacterId = ca.CharacterId,
+                CharacterName = ca.CharacterName,
+                Image = ca.Image,
+                Audio = ca.Audio,
+                Role = ca.Role,
+                Archetype = ca.Archetype,
+                IsUnused = ca.IsUnused,
+                PlayerAssignment = ca.PlayerAssignment == null ? null : new PlayerAssignmentDto
+                {
+                    Type = ca.PlayerAssignment.Type,
+                    ProfileId = ca.PlayerAssignment.ProfileId,
+                    ProfileName = ca.PlayerAssignment.ProfileName,
+                    ProfileImage = ca.PlayerAssignment.ProfileImage,
+                    SelectedAvatarMediaId = ca.PlayerAssignment.SelectedAvatarMediaId,
+                    GuestName = ca.PlayerAssignment.GuestName,
+                    GuestAgeRange = ca.PlayerAssignment.GuestAgeRange,
+                    GuestAvatar = ca.PlayerAssignment.GuestAvatar,
+                    SaveAsProfile = ca.PlayerAssignment.SaveAsProfile
+                }
+            }).ToList() ?? new List<CharacterAssignmentDto>(),
             Status = s.Status,
             CurrentSceneId = s.CurrentSceneId,
             ChoiceCount = s.ChoiceHistory?.Count ?? 0,

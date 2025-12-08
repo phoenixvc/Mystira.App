@@ -66,6 +66,48 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         }
     }
 
+    public async Task<GameSession?> StartGameSessionWithAssignmentsAsync(StartGameSessionRequest request)
+    {
+        try
+        {
+            Logger.LogInformation("Starting game session with assignments for scenario: {ScenarioId}, Account: {AccountId}, Profile: {ProfileId}",
+                request.ScenarioId, request.AccountId, request.ProfileId);
+
+            await SetAuthorizationHeaderAsync();
+
+            var response = await HttpClient.PostAsJsonAsync("api/gamesessions", request, JsonOptions);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var gameSession = await response.Content.ReadFromJsonAsync<GameSession>(JsonOptions);
+                Logger.LogInformation("Game session (with assignments) started successfully with ID: {SessionId}", gameSession?.Id);
+                return gameSession;
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Logger.LogWarning("Failed to start game session with assignments. Status: {StatusCode}. Error: {Error}",
+                    response.StatusCode, errorContent);
+                return null;
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Network error starting session with assignments for scenario: {ScenarioId}", request.ScenarioId);
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Logger.LogError(ex, "Request timed out starting session with assignments for scenario: {ScenarioId}", request.ScenarioId);
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogError(ex, "Error parsing API response when starting session with assignments for scenario: {ScenarioId}", request.ScenarioId);
+            return null;
+        }
+    }
+
     public async Task<GameSession?> EndGameSessionAsync(string sessionId)
     {
         try

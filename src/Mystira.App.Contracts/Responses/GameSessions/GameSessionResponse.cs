@@ -1,3 +1,4 @@
+using Mystira.App.Contracts.Models.GameSessions;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Contracts.Responses.GameSessions;
@@ -9,6 +10,7 @@ public class GameSessionResponse
     public string AccountId { get; set; } = string.Empty;
     public string ProfileId { get; set; } = string.Empty;
     public List<string> PlayerNames { get; set; } = new();
+    public List<CharacterAssignmentDto> CharacterAssignments { get; set; } = new();
     public SessionStatus Status { get; set; }
     public string CurrentSceneId { get; set; } = string.Empty;
     public int ChoiceCount { get; set; }

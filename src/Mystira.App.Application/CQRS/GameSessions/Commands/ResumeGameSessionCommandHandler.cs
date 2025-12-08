@@ -37,9 +37,8 @@ public class ResumeGameSessionCommandHandler : ICommandHandler<ResumeGameSession
 
         if (session.Status != SessionStatus.Paused)
         {
-            _logger.LogWarning("Cannot resume session {SessionId} - not paused. Current status: {Status}",
+            _logger.LogWarning("Session {SessionId} was not paused. Current status: {Status}. Proceeding anyway.",
                 command.SessionId, session.Status);
-            return null;
         }
 
         // Calculate elapsed time during pause and add to total

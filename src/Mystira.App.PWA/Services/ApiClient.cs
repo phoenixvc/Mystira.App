@@ -46,6 +46,12 @@ public class ApiClient : IApiClient
     // GameSession methods
     public Task<GameSession?> StartGameSessionAsync(string scenarioId, string accountId, string profileId, List<string> playerNames, string targetAgeGroup) =>
         _gameSessionClient.StartGameSessionAsync(scenarioId, accountId, profileId, playerNames, targetAgeGroup);
+
+    public Task<GameSession?> StartGameSessionWithAssignmentsAsync(StartGameSessionRequest request)
+    {
+        return _gameSessionClient.StartGameSessionWithAssignmentsAsync(request);
+    }
+
     public Task<GameSession?> EndGameSessionAsync(string sessionId) => _gameSessionClient.EndGameSessionAsync(sessionId);
     public Task<GameSession?> PauseGameSessionAsync(string sessionId) => _gameSessionClient.PauseGameSessionAsync(sessionId);
     public Task<GameSession?> ResumeGameSessionAsync(string sessionId) => _gameSessionClient.ResumeGameSessionAsync(sessionId);

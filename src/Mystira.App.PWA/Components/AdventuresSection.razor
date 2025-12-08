@@ -253,7 +253,6 @@
     private HashSet<string> completedScenarioIds = new();
     private bool gameStateLoadingComplete = false;
     private bool hasProfiles = false;
-    private bool isLoadingProfiles = false;
     private GameSession? gameSession;
     private bool showActiveAdventures = true;
     private string _searchQuery = string.Empty;
@@ -394,7 +393,6 @@
     {
         try
         {
-            isLoadingProfiles = true;
             StateHasChanged();
 
             var currentAccount = await AuthService.GetCurrentAccountAsync();
@@ -416,7 +414,6 @@
         }
         finally
         {
-            isLoadingProfiles = false;
             StateHasChanged();
         }
     }
@@ -696,7 +693,21 @@
                 IsCompleted = false
             };
 
+            // Hydrate character assignments cache if available on the in-progress session
+            if (activeSession.CharacterAssignments != null && activeSession.CharacterAssignments.Any())
+            {
+                GameSessionService.SetCharacterAssignments(activeSession.CharacterAssignments);
+            }
+
             GameSessionService.SetCurrentGameSession(localGameSession);
+
+            // Ensure server-side resume is called so assignments and state are restored
+            var resumed = await GameSessionService.ResumeGameSessionAsync();
+            if (!resumed)
+            {
+                Logger.LogWarning("Failed to resume session via API for session: {SessionId}. Continuing locally.", activeSession.Id);
+            }
+
             NavigationManager.NavigateTo("/game");
         }
         catch (AuthenticationException authEx)
@@ -763,7 +774,21 @@
                 IsCompleted = false
             };
 
+            // Hydrate character assignments cache if available on the in-progress session
+            if (session.CharacterAssignments != null && session.CharacterAssignments.Any())
+            {
+                GameSessionService.SetCharacterAssignments(session.CharacterAssignments);
+            }
+
             GameSessionService.SetCurrentGameSession(localSession);
+
+            // Ensure server-side resume is called so assignments and state are restored
+            var resumed = await GameSessionService.ResumeGameSessionAsync();
+            if (!resumed)
+            {
+                Logger.LogWarning("Failed to resume session via API for session: {SessionId}. Continuing locally.", session.Id);
+            }
+
             NavigationManager.NavigateTo("/game");
         }
         catch (Exception ex)

@@ -1,3 +1,4 @@
+using Mystira.App.Contracts.Models.GameSessions;
 using System.ComponentModel.DataAnnotations;
 
 namespace Mystira.App.Contracts.Requests.GameSessions;
@@ -15,8 +16,10 @@ public class StartGameSessionRequest
     [StringLength(100, MinimumLength = 1)]
     public string ProfileId { get; set; } = string.Empty;
 
-    [Required]
+    // Either PlayerNames or CharacterAssignments should be provided
     public List<string> PlayerNames { get; set; } = new();
+
+    public List<CharacterAssignmentDto> CharacterAssignments { get; set; } = new();
 
     [Required]
     public string TargetAgeGroup { get; set; } = string.Empty;
