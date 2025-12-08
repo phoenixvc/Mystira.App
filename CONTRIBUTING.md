@@ -15,6 +15,8 @@ We follow a standard GitHub fork-and-pull-request workflow.
   cd Mystira.App
   ```
 - **Follow the instructions** in the main `README.md` to set up your local development environment.
+- **Configure secrets** for local development using [User Secrets](docs/setup/SECRETS_MANAGEMENT.md) (never commit secrets!)
+- **For CI/CD contributions**: Review the [GitHub Secrets Configuration Guide](docs/setup/GITHUB_SECRETS_VARIABLES.md) to understand the deployment pipeline
 
 ### 2. Create a Branch
 

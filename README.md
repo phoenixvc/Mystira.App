@@ -82,6 +82,8 @@ The Mystira repository hosts the full suite of services, libraries, and client a
 - Node.js 18+ for PWA build tooling/service-worker bundling.
 - Azure resources (Cosmos DB account, Blob Storage) or emulators.
 - Repository secrets (connection strings, credentials) supplied via User Secrets, environment variables, or Azure Key Vault.
+  - **For CI/CD**: See [GitHub Secrets Configuration](docs/setup/GITHUB_SECRETS_VARIABLES.md) for complete setup instructions
+  - **For Local Development**: See [Secrets Management Guide](docs/setup/SECRETS_MANAGEMENT.md) for User Secrets setup
 
 ### Build
 

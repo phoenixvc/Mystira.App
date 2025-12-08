@@ -4,6 +4,8 @@
 
 This guide explains how to securely manage secrets and sensitive configuration values for the Mystira Application Suite. Following these practices is critical for maintaining security and COPPA compliance.
 
+> **📘 For GitHub Actions Configuration**: See [GitHub Secrets and Variables Guide](GITHUB_SECRETS_VARIABLES.md) for detailed instructions on configuring secrets for CI/CD pipelines across Development, Staging, and Production environments.
+
 ## ⚠️ CRITICAL: Never Commit Secrets to Version Control
 
 **NEVER** commit the following to Git:
@@ -135,21 +137,30 @@ The `<user_secrets_id>` is defined in your `.csproj` file after running `dotnet 
 
 For GitHub Actions or Azure DevOps pipelines, use environment variables or pipeline secrets.
 
-### GitHub Actions Example
+### GitHub Actions Configuration
 
-1. **Add secrets to your GitHub repository**:
-   - Go to Settings > Secrets and variables > Actions
-   - Add secrets: `COSMOS_DB_CONNECTION_STRING`, `AZURE_STORAGE_CONNECTION_STRING`, etc.
+For comprehensive GitHub Actions secrets configuration including all three environments (Development, Staging, Production), see the **[GitHub Secrets and Variables Guide](GITHUB_SECRETS_VARIABLES.md)**.
 
-2. **Reference in workflow**:
-   ```yaml
-   - name: Run tests
-     env:
-       ConnectionStrings__CosmosDb: ${{ secrets.COSMOS_DB_CONNECTION_STRING }}
-       ConnectionStrings__AzureStorage: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
-       Jwt__Key: ${{ secrets.JWT_SIGNING_KEY }}
-     run: dotnet test
-   ```
+**Quick Reference:**
+- Development environment: `dev` branch
+- Staging environment: `staging` branch  
+- Production environment: `main` branch
+
+Each environment requires specific secrets for:
+- Azure credentials and publish profiles
+- JWT RSA key pairs (environment-specific)
+- Azure Communication Services (Development only)
+- Static Web Apps deployment tokens
+
+**Example workflow reference**:
+```yaml
+- name: Run tests
+  env:
+    ConnectionStrings__CosmosDb: ${{ secrets.COSMOS_DB_CONNECTION_STRING }}
+    ConnectionStrings__AzureStorage: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+    Jwt__Key: ${{ secrets.JWT_SIGNING_KEY }}
+  run: dotnet test
+```
 
 ### Azure DevOps Example
 
@@ -274,10 +285,12 @@ Store this in Key Vault or User Secrets, never in appsettings.json.
 
 ## Additional Resources
 
+- **[GitHub Secrets and Variables Guide](GITHUB_SECRETS_VARIABLES.md)** - Complete guide for CI/CD secrets across all environments
 - [Azure Key Vault Documentation](https://learn.microsoft.com/en-us/azure/key-vault/)
 - [.NET User Secrets](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets)
 - [OWASP Secrets Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html)
 - [Azure Managed Identity](https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview)
+- [GitHub Actions Encrypted Secrets](https://docs.github.com/en/actions/security-guides/encrypted-secrets)
 
 ## Support
 
