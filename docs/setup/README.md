@@ -2,6 +2,8 @@
 
 This directory contains comprehensive setup and configuration guides for the Mystira Application Suite.
 
+> 📘 **Azure Naming Conventions**: All Azure resources follow the standardized naming pattern `[org]-[env]-[project]-[type]-[region]`. See [Azure Naming Conventions](../AZURE-NAMING-CONVENTIONS.md) for complete details on resource naming standards.
+
 ## Quick Navigation
 
 ### 🔐 Secrets & Security
@@ -17,6 +19,12 @@ This directory contains comprehensive setup and configuration guides for the Mys
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | **[Email Setup](EMAIL_SETUP.md)** | Azure Communication Services configuration | DevOps, Backend Developers |
+
+### 🏗️ Infrastructure & Naming
+
+| Document | Purpose | Audience |
+|----------|---------|----------|
+| **[Azure Naming Conventions](../AZURE-NAMING-CONVENTIONS.md)** | Standardized naming patterns for all Azure resources | DevOps, Infrastructure Team, Developers |
 
 ## Getting Started
 
@@ -39,13 +47,13 @@ This directory contains comprehensive setup and configuration guides for the Mys
 
 The Mystira application uses **three environments**:
 
-| Environment | Branch | Azure Region | Purpose |
-|------------|--------|--------------|---------|
-| **Development** | `dev` | South Africa North / West Europe | Active development and testing |
-| **Staging** | `staging` | TBD | Pre-production validation |
-| **Production** | `main` | West US | Live production environment |
+| Environment | Branch | Azure Region | Current Naming | New Standard Naming | Purpose |
+|------------|--------|--------------|----------------|---------------------|---------|
+| **Development** | `dev` | South Africa North | `dev-san-*` | `mys-dev-mystira-*-san` | Active development and testing |
+| **Staging** | `staging` | West US | `mystira-app-staging-*` | `mys-staging-mystira-*-wus` | Pre-production validation |
+| **Production** | `main` | West US | `prod-wus-*` | `mys-prod-mystira-*-wus` | Live production environment |
 
-Each environment requires its own set of secrets and configuration.
+Each environment requires its own set of secrets and configuration. See [Azure Naming Conventions](../AZURE-NAMING-CONVENTIONS.md) for the standardized resource naming pattern.
 
 ## Document Hierarchy
 

@@ -21,11 +21,13 @@ This document provides a comprehensive guide to configuring GitHub Secrets and V
 
 The Mystira application uses three distinct environments, each with its own set of Azure resources and configuration:
 
-| Environment | Branch | Purpose | Azure Resource Prefix |
-|------------|--------|---------|---------------------|
-| **Development** | `dev` | Active development and testing | `dev-san-*` (South Africa North) / `dev-euw-*` (West Europe) |
-| **Staging** | `staging` | Pre-production validation | `staging-*` |
-| **Production** | `main` | Live production environment | `prod-wus-*` (West US) |
+| Environment | Branch | Purpose | Azure Region | Current Naming | New Standard Naming |
+|------------|--------|---------|--------------|----------------|---------------------|
+| **Development** | `dev` | Active development and testing | South Africa North | `dev-san-*` | `mys-dev-mystira-*-san` |
+| **Staging** | `staging` | Pre-production validation | West US | `mystira-app-staging-*` | `mys-staging-mystira-*-wus` |
+| **Production** | `main` | Live production environment | West US | `prod-wus-*` | `mys-prod-mystira-*-wus` |
+
+> 📘 **Azure Naming Conventions**: Mystira follows the standardized naming pattern `[org]-[env]-[project]-[type]-[region]` for all Azure resources. See [Azure Naming Conventions](../AZURE-NAMING-CONVENTIONS.md) for complete details. New resources will use the standard naming, while existing resources will be migrated gradually.
 
 ## Required GitHub Secrets
 
@@ -68,9 +70,13 @@ az ad sp create-for-rbac \
 
 These secrets contain the publish profile XML for deploying to Azure App Services.
 
+> 📘 **Resource Naming**: The table below shows both current and new standard resource names following the `[org]-[env]-[project]-[type]-[region]` pattern. See [Azure Naming Conventions](../AZURE-NAMING-CONVENTIONS.md) for details.
+
 #### Development Environment
-- **`AZURE_WEBAPP_PUBLISH_PROFILE_DEV`** - For main API (`dev-san-app-mystira-api`)
-- **`AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN`** - For admin API (`dev-san-app-mystira-admin-api`)
+| Secret Name | Service | Current Resource Name | New Standard Name |
+|-------------|---------|----------------------|-------------------|
+| `AZURE_WEBAPP_PUBLISH_PROFILE_DEV` | Main API | `dev-san-app-mystira-api` | `mys-dev-mystira-api-san` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN` | Admin API | `dev-san-app-mystira-admin-api` | `mys-dev-mystira-admin-api-san` |
 
 #### Staging Environment
 > ⚠️ **Configuration Issue Detected**: The current staging workflows all reference the same secret (`AZURE_WEBAPP_PUBLISH_PROFILE_STAGING`) but deploy to three different App Services. Each App Service requires its own unique publish profile. The workflows should be updated to use separate secrets.
@@ -79,15 +85,20 @@ These secrets contain the publish profile XML for deploying to Azure App Service
 - **`AZURE_WEBAPP_PUBLISH_PROFILE_STAGING`** - Referenced by API, Admin API, and PWA workflows (shared - **this doesn't work**)
 
 **Required (Correct) Configuration:**
-- **`AZURE_WEBAPP_PUBLISH_PROFILE_STAGING_API`** - For main API (`mystira-app-staging-api`)
-- **`AZURE_WEBAPP_PUBLISH_PROFILE_STAGING_ADMIN`** - For admin API (`mystira-app-staging-admin-api`)
-- **`AZURE_WEBAPP_PUBLISH_PROFILE_STAGING_PWA`** - For PWA (`mystira-app-staging-pwa`)
+
+| Secret Name | Service | Current Resource Name | New Standard Name |
+|-------------|---------|----------------------|-------------------|
+| `AZURE_WEBAPP_PUBLISH_PROFILE_STAGING_API` | Main API | `mystira-app-staging-api` | `mys-staging-mystira-api-wus` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_STAGING_ADMIN` | Admin API | `mystira-app-staging-admin-api` | `mys-staging-mystira-admin-api-wus` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_STAGING_PWA` | PWA | `mystira-app-staging-pwa` | `mys-staging-mystira-swa-wus` |
 
 **To Fix:** Update the staging workflow files to use the separate secrets above instead of the shared `AZURE_WEBAPP_PUBLISH_PROFILE_STAGING`.
 
 #### Production Environment
-- **`AZURE_WEBAPP_PUBLISH_PROFILE_PROD`** - For main API (`prod-wus-app-mystira-api`)
-- **`AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN`** - For admin API (`prod-wus-app-mystira-api-admin`)
+| Secret Name | Service | Current Resource Name | New Standard Name |
+|-------------|---------|----------------------|-------------------|
+| `AZURE_WEBAPP_PUBLISH_PROFILE_PROD` | Main API | `prod-wus-app-mystira-api` | `mys-prod-mystira-api-wus` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN` | Admin API | `prod-wus-app-mystira-api-admin` | `mys-prod-mystira-admin-api-wus` |
 
 **How to obtain:**
 ```bash
@@ -162,15 +173,14 @@ az communication list-key \
 
 ### 5. Azure Static Web Apps Deployment Tokens
 
-#### `AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_WATER_0EAB7991E` (Production PWA)
-- **Type**: Deployment token
-- **Purpose**: Deploys Blazor PWA to production Static Web App
-- **Static Web App**: `blue-water-0eab7991e` (mystira.app)
+> 📘 **Resource Naming**: Static Web Apps will follow the naming pattern `mys-[env]-mystira-swa-[region]` in the new standard.
 
-#### `AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_SAN_MYSTIRA_APP` (Development PWA)
-- **Type**: Deployment token
-- **Purpose**: Deploys Blazor PWA to development Static Web App
-- **Static Web App**: `mango-water-04fdb1c03`
+| Secret Name | Environment | Current Resource Name | New Standard Name | Domain |
+|-------------|-------------|-----------------------|-------------------|--------|
+| `AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_SAN_MYSTIRA_APP` | Development | `mango-water-04fdb1c03` (auto-generated) | `mys-dev-mystira-swa-san` | dev.mystira.app |
+| `AZURE_STATIC_WEB_APPS_API_TOKEN_BLUE_WATER_0EAB7991E` | Production | `blue-water-0eab7991e` (auto-generated) | `mys-prod-mystira-swa-wus` | mystira.app |
+
+**Note:** Staging environment uses App Service for PWA hosting (not Static Web Apps), hence no Static Web App token is required.
 
 **How to obtain:**
 ```bash
@@ -326,8 +336,10 @@ done
 
 ### Step 3: Download Publish Profiles
 
+> 📘 **Note**: Examples show current resource names. For new standard names following `[org]-[env]-[project]-[type]-[region]` pattern, see [Azure Naming Conventions](../AZURE-NAMING-CONVENTIONS.md).
+
 ```bash
-# Development environment
+# Development environment (current names)
 az webapp deployment list-publishing-profiles \
   --name dev-san-app-mystira-api \
   --resource-group dev-euw-rg-mystira-app \
@@ -338,13 +350,35 @@ az webapp deployment list-publishing-profiles \
   --resource-group dev-euw-rg-mystira-app \
   --xml > dev-admin-api-publish-profile.xml
 
-# Staging environment
+# Development environment (new standard names - when migrated)
+# az webapp deployment list-publishing-profiles \
+#   --name mys-dev-mystira-api-san \
+#   --resource-group mys-dev-mystira-rg-san \
+#   --xml > dev-api-publish-profile.xml
+
+# Staging environment (current names)
 az webapp deployment list-publishing-profiles \
   --name mystira-app-staging-api \
   --resource-group staging-rg-mystira-app \
-  --xml > staging-publish-profile.xml
+  --xml > staging-api-publish-profile.xml
 
-# Production environment
+az webapp deployment list-publishing-profiles \
+  --name mystira-app-staging-admin-api \
+  --resource-group staging-rg-mystira-app \
+  --xml > staging-admin-api-publish-profile.xml
+
+az webapp deployment list-publishing-profiles \
+  --name mystira-app-staging-pwa \
+  --resource-group staging-rg-mystira-app \
+  --xml > staging-pwa-publish-profile.xml
+
+# Staging environment (new standard names - when migrated)
+# az webapp deployment list-publishing-profiles \
+#   --name mys-staging-mystira-api-wus \
+#   --resource-group mys-staging-mystira-rg-wus \
+#   --xml > staging-api-publish-profile.xml
+
+# Production environment (current names)
 az webapp deployment list-publishing-profiles \
   --name prod-wus-app-mystira-api \
   --resource-group prod-rg-mystira-app \
@@ -354,20 +388,38 @@ az webapp deployment list-publishing-profiles \
   --name prod-wus-app-mystira-api-admin \
   --resource-group prod-rg-mystira-app \
   --xml > prod-admin-api-publish-profile.xml
+
+# Production environment (new standard names - when migrated)
+# az webapp deployment list-publishing-profiles \
+#   --name mys-prod-mystira-api-wus \
+#   --resource-group mys-prod-mystira-rg-wus \
+#   --xml > prod-api-publish-profile.xml
 ```
 
 ### Step 4: Get Static Web App Tokens
 
+> 📘 **Note**: Current resource names are auto-generated by Azure. New deployments should use the standard naming pattern `mys-[env]-mystira-swa-[region]`.
+
 ```bash
-# Development PWA
+# Development PWA (current name - auto-generated)
 az staticwebapp secrets list \
   --name mango-water-04fdb1c03 \
   --query "properties.apiKey" -o tsv
 
-# Production PWA
+# Development PWA (new standard name - when migrated)
+# az staticwebapp secrets list \
+#   --name mys-dev-mystira-swa-san \
+#   --query "properties.apiKey" -o tsv
+
+# Production PWA (current name - auto-generated)
 az staticwebapp secrets list \
   --name blue-water-0eab7991e \
   --query "properties.apiKey" -o tsv
+
+# Production PWA (new standard name - when migrated)
+# az staticwebapp secrets list \
+#   --name mys-prod-mystira-swa-wus \
+#   --query "properties.apiKey" -o tsv
 ```
 
 ### Step 5: Configure Azure Communication Services (Dev Only)

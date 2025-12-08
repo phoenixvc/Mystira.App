@@ -2,6 +2,8 @@
 
 > **📘 Full Documentation**: For detailed setup instructions and security best practices, see [GitHub Secrets and Variables Guide](GITHUB_SECRETS_VARIABLES.md)
 
+> **📘 Azure Naming Conventions**: Mystira follows the standardized naming pattern `[org]-[env]-[project]-[type]-[region]` for all Azure resources. See [Azure Naming Conventions](../AZURE-NAMING-CONVENTIONS.md) for complete details.
+
 > ⚠️ **Staging Configuration Issue**: The staging workflows currently use a shared secret for all services, which is incorrect. See corrected requirements below.
 
 ## Secrets Required by Environment
@@ -103,11 +105,15 @@ az staticwebapp secrets list \
 | Aspect | Development | Staging | Production |
 |--------|------------|---------|-----------|
 | **Branch** | `dev` | `staging` | `main` |
-| **Azure Region** | South Africa North / West Europe | TBD | West US |
+| **Azure Region** | South Africa North | West US | West US |
+| **Current Naming** | `dev-san-*` | `mystira-app-staging-*` | `prod-wus-*` |
+| **New Standard Naming** | `mys-dev-mystira-*-san` | `mys-staging-mystira-*-wus` | `mys-prod-mystira-*-wus` |
 | **Email Service** | ACS via GitHub secrets | App Service settings | App Service settings |
 | **JWT Keys** | Separate RSA pair | Separate RSA pair | Separate RSA pair |
 | **Publish Profiles** | 2 separate (API/Admin) | ⚠️ **Should be 3 separate** (API/Admin/PWA)<br>Currently using 1 shared (incorrect) | 2 separate (API/Admin) |
-| **Static Web App** | mango-water-04fdb1c03 | N/A (uses App Service for PWA) | blue-water-0eab7991e |
+| **Static Web App** | `mango-water-04fdb1c03`<br>(→ `mys-dev-mystira-swa-san`) | N/A (uses App Service for PWA) | `blue-water-0eab7991e`<br>(→ `mys-prod-mystira-swa-wus`) |
+
+> 📘 **Resource Naming**: New resources follow `[org]-[env]-[project]-[type]-[region]` pattern. See [Azure Naming Conventions](../AZURE-NAMING-CONVENTIONS.md).
 
 ## Validation
 
