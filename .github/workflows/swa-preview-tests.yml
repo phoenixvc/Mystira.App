@@ -9,8 +9,8 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read  # Required to read PR comments
-  issues: read         # Required for github.rest.issues.listComments
+  pull-requests: write  # Required to read PR comments AND post results
+  issues: write         # Required for github.rest.issues.listComments and createComment
 
 jobs:
   wait-for-preview:

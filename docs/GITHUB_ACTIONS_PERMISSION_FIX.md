@@ -12,17 +12,21 @@
 
 ### 1. SWA Preview Tests Workflow (`swa-preview-tests.yml`)
 
-**Problem**: Workflow tried to read PR comments using `github.rest.issues.listComments` without proper permissions.
+**Problem**: Workflow tried to read PR comments and post results using `github.rest.issues.listComments` and `github.rest.issues.createComment` without proper permissions.
 
 **Fix**: Added permissions block:
 ```yaml
 permissions:
   contents: read
-  pull-requests: read  # Required to read PR comments
-  issues: read         # Required for github.rest.issues.listComments
+  pull-requests: write  # Required to read PR comments AND post results
+  issues: write         # Required for github.rest.issues.listComments and createComment
 ```
 
-**Why**: The `github-script` action needs to read PR comments to extract the SWA preview URL. Without `pull-requests: read` and `issues: read` permissions, it gets a 403 Forbidden error.
+**Why**: 
+- The `github-script` action needs to **read** PR comments to extract the SWA preview URL
+- The `comment-results` job needs to **write** comments to post test results
+- Without `pull-requests: write` and `issues: write` permissions, both operations get 403 Forbidden errors
+- **CRITICAL**: Read operations (`listComments`) still require `write` permission when done via `issues` API on pull requests
 
 ---
 
@@ -89,9 +93,12 @@ This indicates missing permissions for the GitHub API call.
 
 ### 2. Identify the API Call
 Look at the workflow logs to see which GitHub API endpoint failed:
-- `github.rest.issues.listComments` → needs `issues: read`
+- `github.rest.issues.listComments` → needs `issues: write` (on PRs)
+- `github.rest.issues.createComment` → needs `issues: write`
 - `gh secret set` → needs `secrets: write`
 - `github.rest.pulls.create` → needs `pull-requests: write`
+
+**IMPORTANT**: When working with pull requests, `issues` API calls require `write` permission even for read operations!
 
 ### 3. Add Required Permission
 Add the permission to the workflow's `permissions` block:
@@ -115,13 +122,15 @@ Only grant permissions that are actually needed:
 # ✅ Good - Only what's needed
 permissions:
   contents: read
-  issues: read
+  issues: write  # Note: write needed for issues API on PRs
 
-# ❌ Too broad - Unnecessary write access
+# ❌ Too broad - Unnecessary permissions
 permissions:
   contents: write
-  issues: write
+  packages: write
 ```
+
+**Special Case**: When working with pull requests via the `issues` API, you need `write` permission even for read operations like `listComments`. This is a GitHub API quirk.
 
 ### 2. Job-Level Permissions (Optional)
 You can set permissions at the job level instead of workflow level:
@@ -139,9 +148,9 @@ jobs:
 ### 3. Document Why Permissions Are Needed
 ```yaml
 permissions:
-  contents: read        # Checkout code
-  pull-requests: read   # Read PR comments for SWA URL
-  issues: read          # Access PR comments (PRs are issues)
+  contents: read         # Checkout code
+  pull-requests: write   # Read and comment on PRs
+  issues: write          # Access PR comments (PRs use issues API, requires write even for reads)
 ```
 
 ---
@@ -154,11 +163,43 @@ After applying these fixes:
    - ✅ Successfully read PR comments
    - ✅ Extract SWA preview URLs
    - ✅ Run smoke tests
+   - ✅ Post test results back to PR
 
 2. **Automated Staging Setup** should now:
    - ✅ Set GitHub secrets
    - ✅ Trigger workflows
    - ✅ Complete full automation
+
+---
+
+## Common Permission Scenarios
+
+### Reading PR Comments
+```yaml
+permissions:
+  pull-requests: write  # Needs write on PRs
+  issues: write         # PRs use issues API, requires write
+```
+
+### Posting PR Comments
+```yaml
+permissions:
+  pull-requests: write
+  issues: write         # createComment requires write
+```
+
+### Setting Secrets
+```yaml
+permissions:
+  secrets: write
+```
+
+### Triggering Workflows
+```yaml
+permissions:
+  actions: write
+  workflows: write
+```
 
 ---
 
