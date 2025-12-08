@@ -2,7 +2,7 @@
 @using System.Timers
 @implements IDisposable
 
-<PageTitle>Sign Up - Mystira</PageTitle>
+<PageTitle>Sign Up • Mystira</PageTitle>
 
 <div class="container-fluid py-4">
     <div class="row justify-content-center">
@@ -93,8 +93,8 @@
                         <form @onsubmit="HandleVerifyCode">
                             <div class="mb-3">
                                 <label for="code" class="form-label">Verification Code</label>
-                                <input type="text" class="form-control form-control-lg text-center verification-code-input" 
-                                       id="code" @bind="verificationCode" 
+                                <input type="text" class="form-control form-control-lg text-center verification-code-input"
+                                       id="code" @bind="verificationCode"
                                        placeholder="000000" maxlength="6"
                                        disabled="@isVerifying" required
                                        autocomplete="one-time-code" />
@@ -112,7 +112,7 @@
                                 </div>
                             }
 
-                            <button type="submit" class="btn btn-primary-custom btn-lg w-100" 
+                            <button type="submit" class="btn btn-primary-custom btn-lg w-100"
                                     disabled="@isVerifying">
                                 @if (isVerifying)
                                 {
@@ -126,8 +126,8 @@
                                 }
                             </button>
 
-                            <button type="button" 
-                                    class="btn btn-outline-primary btn-lg w-100 mt-2" 
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-lg w-100 mt-2"
                                     @onclick="ResendCode"
                                     disabled="@(isVerifying || resendCountdown > 0 || isResendingCode)">
                                 @if (isResendingCode)
@@ -147,7 +147,7 @@
                                 }
                             </button>
 
-                            <button type="button" class="btn btn-outline-secondary btn-lg w-100 mt-2" 
+                            <button type="button" class="btn btn-outline-secondary btn-lg w-100 mt-2"
                                     @onclick="ResetForm" disabled="@isVerifying">
                                 <i class="fas fa-arrow-left me-2"></i>Back
                             </button>
@@ -194,13 +194,13 @@
     private string email = string.Empty;
     private string displayName = string.Empty;
     private string verificationCode = string.Empty;
-    
+
     private bool isSubmitting = false;
     private bool isVerifying = false;
     private bool isResendingCode = false;
     private int resendCountdown = 0;
     private System.Timers.Timer? resendTimer;
-    
+
     private string emailError = string.Empty;
     private string displayNameError = string.Empty;
     private string codeError = string.Empty;
@@ -211,7 +211,7 @@
         try
         {
             Logger.LogInformation("SignUp page initializing");
-            
+
             var isAuthenticated = await AuthService.IsAuthenticatedAsync();
             if (isAuthenticated)
             {
@@ -227,13 +227,13 @@
     private void ValidateEmail()
     {
         emailError = string.Empty;
-        
+
         if (string.IsNullOrWhiteSpace(email))
         {
             emailError = "Email is required";
             return;
         }
-        
+
         if (!email.Contains("@") || !email.Contains("."))
         {
             emailError = "Please enter a valid email address";
@@ -244,19 +244,19 @@
     private void ValidateDisplayName()
     {
         displayNameError = string.Empty;
-        
+
         if (string.IsNullOrWhiteSpace(displayName))
         {
             displayNameError = "Display name is required";
             return;
         }
-        
+
         if (displayName.Length < 2)
         {
             displayNameError = "Display name must be at least 2 characters";
             return;
         }
-        
+
         if (displayName.Length > 100)
         {
             displayNameError = "Display name must be less than 100 characters";
@@ -271,7 +271,7 @@
             generalError = string.Empty;
             ValidateEmail();
             ValidateDisplayName();
-            
+
             if (!string.IsNullOrEmpty(emailError) || !string.IsNullOrEmpty(displayNameError))
             {
                 return;
@@ -281,9 +281,9 @@
             StateHasChanged();
 
             Logger.LogInformation("Requesting passwordless signup for: {Email}", email);
-            
+
             var (success, message) = await AuthService.RequestPasswordlessSignupAsync(email, displayName);
-            
+
             if (success)
             {
                 signupStep = SignupStep.CodeSent;
@@ -331,9 +331,9 @@
             StateHasChanged();
 
             Logger.LogInformation("Verifying signup code for: {Email}", email);
-            
+
             var (success, message, account) = await AuthService.VerifyPasswordlessSignupAsync(email, verificationCode);
-            
+
             if (success && account != null)
             {
                 StopResendCountdown();
@@ -420,7 +420,7 @@
     {
         StopResendCountdown();
         resendCountdown = 15;
-        
+
         resendTimer = new System.Timers.Timer(1000);
         resendTimer.Elapsed += OnResendTimerElapsed;
         resendTimer.AutoReset = true;
