@@ -2,6 +2,8 @@
 
 > **📘 Full Documentation**: For detailed setup instructions and security best practices, see [GitHub Secrets and Variables Guide](GITHUB_SECRETS_VARIABLES.md)
 
+> ⚠️ **Staging Configuration Issue**: The staging workflows currently use a shared secret for all services, which is incorrect. See corrected requirements below.
+
 ## Secrets Required by Environment
 
 ### Development (dev branch)
@@ -19,11 +21,15 @@
 | `AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_SAN_MYSTIRA_APP` | PWA deployment | `az staticwebapp secrets list` |
 
 ### Staging (staging branch)
+> ⚠️ **Workflows need update**: Currently reference `AZURE_WEBAPP_PUBLISH_PROFILE_STAGING` for all services (incorrect)
+
 | Secret Name | Purpose | Generate With |
 |------------|---------|---------------|
 | `AZURE_CREDENTIALS` | Azure CLI auth | `az ad sp create-for-rbac --sdk-auth` |
 | `AZURE_SUBSCRIPTION_ID` | Azure subscription | Azure Portal |
-| `AZURE_WEBAPP_PUBLISH_PROFILE_STAGING` | API/Admin/PWA deployment | `az webapp deployment list-publishing-profiles --xml` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_STAGING_API` | API deployment (**workflow update needed**) | `az webapp deployment list-publishing-profiles --xml` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_STAGING_ADMIN` | Admin API deployment (**workflow update needed**) | `az webapp deployment list-publishing-profiles --xml` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_STAGING_PWA` | PWA deployment (**workflow update needed**) | `az webapp deployment list-publishing-profiles --xml` |
 | `JWT_SECRET_KEY` | Infrastructure setup | `openssl rand -base64 64` |
 | `JWT_RSA_PRIVATE_KEY_STAGING` | JWT signing | `openssl genrsa 2048` |
 | `JWT_RSA_PUBLIC_KEY_STAGING` | JWT verification | `openssl rsa -pubout` |
@@ -100,8 +106,8 @@ az staticwebapp secrets list \
 | **Azure Region** | South Africa North / West Europe | TBD | West US |
 | **Email Service** | ACS via GitHub secrets | App Service settings | App Service settings |
 | **JWT Keys** | Separate RSA pair | Separate RSA pair | Separate RSA pair |
-| **Publish Profiles** | Separate for API/Admin | Shared profile | Separate for API/Admin |
-| **Static Web App** | mango-water-04fdb1c03 | N/A | blue-water-0eab7991e |
+| **Publish Profiles** | 2 separate (API/Admin) | ⚠️ **Should be 3 separate** (API/Admin/PWA)<br>Currently using 1 shared (incorrect) | 2 separate (API/Admin) |
+| **Static Web App** | mango-water-04fdb1c03 | N/A (uses App Service for PWA) | blue-water-0eab7991e |
 
 ## Validation
 
