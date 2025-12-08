@@ -523,6 +523,7 @@ html[data-theme="dark"] .hero-logo-video {
     opacity: 1;
     -webkit-transform: translate(-50%, -50%) scale(1);
     transform: translate(-50%, -50%) scale(1);
+    visibility: visible;
 }
 
 .hero-logo-video.hidden {
@@ -530,6 +531,7 @@ html[data-theme="dark"] .hero-logo-video {
     -webkit-transform: translate(-50%, -50%) scale(0.8);
     transform: translate(-50%, -50%) scale(0.8);
     pointer-events: none;
+    visibility: hidden;
 }
 
 .hero-logo {
