@@ -16,6 +16,12 @@ param deployStorage bool = true
 param deployCosmos bool = true
 @description('Deploy App Service')
 param deployAppService bool = true
+@description('Deploy Static Web App (PWA)')
+param deployStaticWebApp bool = true
+
+@description('GitHub repository token for SWA deployment')
+@secure()
+param githubToken string = ''
 
 @description('Object ID for Key Vault admin access (optional)')
 param keyVaultAdminObjectId string = ''
@@ -27,6 +33,7 @@ param shortLocation string = 'san'
 var resourcePrefix = '${environment}-san-app-mystira' // Standardized format: {env}-{location}-app-{name}
 var cosmosDbName = replace('${resourcePrefix}cosmos', '-', '')  // Remove hyphens for Cosmos DB name
 var appServiceName = '${resourcePrefix}-api' // App Service name with -api suffix
+var staticWebAppName = '${resourcePrefix}-pwa' // Static Web App name with -pwa suffix
 
 // Deploy Key Vault for Story Protocol secrets (conditional - only if keyVaultAdminObjectId is provided)
 module keyVault 'key-vault.bicep' = if (keyVaultAdminObjectId != '') {
@@ -73,6 +80,23 @@ module appService 'app-service.bicep' = if (deployAppService) {
   }
 }
 
+// Deploy Static Web App (PWA) for Staging (conditional)
+module staticWebApp 'static-web-app.bicep' = if (deployStaticWebApp && githubToken != '') {
+  name: 'staticwebapp-deployment'
+  params: {
+    staticWebAppName: staticWebAppName
+    environment: environment
+    location: location
+    repositoryUrl: 'https://github.com/phoenixvc/Mystira.App'
+    repositoryBranch: 'staging'
+    repositoryToken: githubToken
+    tags: {
+      Environment: environment
+      Project: 'Mystira'
+    }
+  }
+}
+
 // Outputs (conditional based on what was deployed)
 // Use null-forgiving operator (!) since we check the condition before accessing
 output appServiceUrl string = deployAppService ? appService!.outputs.appServiceUrl : ''
@@ -81,3 +105,7 @@ output cosmosDbAccountName string = deployCosmos ? cosmosDb!.outputs.cosmosDbAcc
 output mediaContainerUrl string = deployStorage ? storage!.outputs.mediaContainerUrl : ''
 output keyVaultName string = (keyVaultAdminObjectId != '') ? keyVault!.outputs.keyVaultName : ''
 output keyVaultUri string = (keyVaultAdminObjectId != '') ? keyVault!.outputs.keyVaultUri : ''
+output staticWebAppUrl string = (deployStaticWebApp && githubToken != '') ? staticWebApp!.outputs.staticWebAppUrl : ''
+output staticWebAppHostname string = (deployStaticWebApp && githubToken != '') ? staticWebApp!.outputs.staticWebAppDefaultHostname : ''
+output staticWebAppDeploymentToken string = (deployStaticWebApp && githubToken != '') ? staticWebApp!.outputs.deploymentToken : ''
+output appInsightsConnectionString string = (deployStaticWebApp && githubToken != '') ? staticWebApp!.outputs.appInsightsConnectionString : ''
