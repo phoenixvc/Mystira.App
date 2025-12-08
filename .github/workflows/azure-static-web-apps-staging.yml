@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - staging
+  workflow_dispatch:
   # Note: PR staging deployments disabled to avoid hitting Azure SWA staging environment limit
   # See: https://learn.microsoft.com/en-us/azure/static-web-apps/
 
