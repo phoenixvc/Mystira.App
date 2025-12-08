@@ -5,7 +5,7 @@
 @inject IGameSessionService GameSessionService
 @inject IApiClient ApiClient
 @inject ILogger<AdventuresSection> Logger
-
+@using System.Security.Authentication
 @using SessionStatus = Mystira.App.Domain.Models.SessionStatus
 @implements IDisposable
 
@@ -318,9 +318,27 @@
                 StateHasChanged();
             }
         }
+        catch (OperationCanceledException ocex)
+        {
+            Logger.LogWarning(ocex, "Initialization canceled during AdventuresSection initialization");
+            isLoading = false;
+            StateHasChanged();
+        }
+        catch (AuthenticationException aex)
+        {
+            Logger.LogWarning(aex, "Authentication failed during AdventuresSection initialization");
+            isLoading = false;
+            StateHasChanged();
+        }
+        catch (HttpRequestException hex)
+        {
+            Logger.LogError(hex, "Network or API error during AdventuresSection initialization");
+            isLoading = false;
+            StateHasChanged();
+        }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error during AdventuresSection initialization");
+            Logger.LogError(ex, "Unexpected error during AdventuresSection initialization");
             isLoading = false;
             StateHasChanged();
         }
