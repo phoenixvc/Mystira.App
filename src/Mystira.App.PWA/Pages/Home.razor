@@ -635,21 +635,21 @@
             var account = await AuthService.GetCurrentAccountAsync();
             if (account != null)
             {
-                // Get sessions for this account
-                var sessions = await ApiClient.GetSessionsByAccountAsync(account.Id);
-                if (sessions != null)
+                // Get active sessions for this account using the new API
+                var activeSessionsResponse = await ApiClient.GetActiveSessionsAsync(account.Id);
+                if (activeSessionsResponse != null)
                 {
-                    // Filter active sessions (InProgress or Paused)
-                    activeSessions = sessions
-                        .Where(s => s.Status == SessionStatus.InProgress.ToString() || s.Status == SessionStatus.Paused.ToString())
-                        .OrderByDescending(s => s.StartedAt)
-                        .ToList();
-
+                    activeSessions = activeSessionsResponse.OrderByDescending(s => s.StartedAt).ToList();
                     Logger.LogInformation("Found {Count} active session(s) for account {AccountId}",
                         activeSessions.Count, account.Id);
+                }
 
+                // Get all sessions to track completed scenarios
+                var allSessions = await ApiClient.GetSessionsByAccountAsync(account.Id);
+                if (allSessions != null)
+                {
                     // Track completed scenarios
-                    completedScenarioIds = sessions
+                    completedScenarioIds = allSessions
                         .Where(s => s.Status == SessionStatus.Completed.ToString())
                         .Select(s => s.ScenarioId)
                         .ToHashSet();
@@ -970,7 +970,7 @@
         };
     }
 
-    private void OnSortChanged(string sort)
+    ""
     {
         currentSort = sort;
         ApplyFilters();
@@ -1131,5 +1131,21 @@
             return $"{filteredBundles.Count} of {bundles.Count} bundle{pluralSuffix} selected";
         }
         return string.Empty;
+    }
+
+    private async Task ContinueAdventure(GameSession activeSession, Scenario scenario)
+    {
+        try
+        {
+            Logger.LogInformation("Continuing adventure for session {SessionId}, scenario {ScenarioId}", 
+                activeSession.Id, scenario.Id);
+
+            // Resume the in-progress session
+            await ResumeInProgressSession(activeSession);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error continuing adventure for session {SessionId}", activeSession.Id);
+        }
     }
 }

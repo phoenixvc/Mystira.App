@@ -352,6 +352,46 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         }
     }
 
+    public async Task<List<GameSession>?> GetActiveSessionsAsync(string accountId)
+    {
+        try
+        {
+            Logger.LogInformation("Fetching active sessions for account: {AccountId}", accountId);
+
+            await SetAuthorizationHeaderAsync();
+            var response = await HttpClient.GetAsync($"api/gamesessions/account/{accountId}/active");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var sessions = await response.Content.ReadFromJsonAsync<List<GameSession>>(JsonOptions);
+                Logger.LogInformation("Successfully fetched {Count} active sessions for account: {AccountId}",
+                    sessions?.Count ?? 0, accountId);
+                return sessions;
+            }
+            else
+            {
+                Logger.LogWarning("Failed to fetch active sessions with status: {StatusCode} for account: {AccountId}",
+                    response.StatusCode, accountId);
+                return null;
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Network error fetching active sessions for account: {AccountId}", accountId);
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Logger.LogError(ex, "Request timed out fetching active sessions for account: {AccountId}", accountId);
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogError(ex, "Error parsing API response when fetching active sessions for account: {AccountId}", accountId);
+            return null;
+        }
+    }
+
     /// <summary>
     /// Returns true if the exception is non-fatal and can be safely caught.
     /// </summary>
