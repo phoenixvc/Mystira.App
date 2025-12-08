@@ -112,12 +112,12 @@
         <FilterSection
             AgeGroups="@availableAgeGroups"
             SelectedAgeGroups="@selectedAgeGroups"
-            AgeGroupCounts="@_ageGroupBundleCounts"
+            AgeGroupCounts="@GetAgeGroupCounts()"
             SearchQuery="@searchQuery"
             SearchQueryChanged="@((value) => { searchQuery = value; })"
             ShowCompleted="@showCompletedStories"
             ShowCompletedChanged="@OnShowCompletedChanged"
-            HiddenCount="@completedScenarioIds.Count"
+            HiddenCount="@GetHiddenCount()"
             ResultCount="@GetResultCount()"
             ResultCountLabel="@GetResultCountLabel()"
             ShowSortOptions="@(!string.IsNullOrEmpty(selectedBundleId))"
@@ -125,7 +125,8 @@
             OnSortChanged="@OnSortChanged"
             OnAgeGroupToggled="@ToggleAgeGroupFilter"
             OnClearAllFilters="@ClearAllFilters"
-            OnSearchCleared="@ClearSearch" />
+            OnSearchCleared="@ClearSearch"
+            FilterTitle="@GetFilterTitle()" />
 
         <!-- Active Adventures (below Filter, above Bundles) -->
         @if (hasProfiles && inProgressSessions.Any())
@@ -903,61 +904,135 @@
 
     private void ApplyFilters()
     {
-        // Filter bundles by selected age groups and search
-        var bundleFiltered = bundles.AsEnumerable();
-        if (selectedAgeGroups.Any())
+        // In bundle view: filter bundles with completion logic
+        if (string.IsNullOrEmpty(selectedBundleId))
         {
-            bundleFiltered = bundleFiltered.Where(b => selectedAgeGroups.Contains(b.AgeGroup));
-        }
-        if (!string.IsNullOrEmpty(searchQuery))
-        {
-            bundleFiltered = bundleFiltered.Where(b =>
-                b.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                b.Description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
-        }
-        filteredBundles = bundleFiltered.ToList();
+            var bundleFiltered = bundles.AsEnumerable();
+            if (selectedAgeGroups.Any())
+            {
+                bundleFiltered = bundleFiltered.Where(b => selectedAgeGroups.Contains(b.AgeGroup));
+            }
+            if (!string.IsNullOrEmpty(searchQuery))
+            {
+                bundleFiltered = bundleFiltered.Where(b =>
+                    b.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                    b.Description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+            }
 
-        // Invalidate featured bundle cache when filters change
-        _cachedFeaturedBundle = null;
+            // Apply completed bundles filter
+            if (!showCompletedStories)
+            {
+                bundleFiltered = bundleFiltered.Where(b => !IsBundleCompleted(b));
+            }
 
-        // Filter scenarios, optionally by selected bundle
-        var filtered = scenarios.AsEnumerable();
-        if (!string.IsNullOrEmpty(selectedBundleId))
+            filteredBundles = bundleFiltered.ToList();
+            _cachedFeaturedBundle = null;
+            filteredScenarios = new();
+
+            Logger.LogInformation("Applied bundle filters. Age groups: [{SelectedFilters}], Search: '{SearchQuery}', Show completed: {ShowCompleted}, Showing {Count} of {Total} bundles",
+                string.Join(", ", selectedAgeGroups), searchQuery, showCompletedStories, filteredBundles.Count, bundles.Count);
+        }
+        else
         {
+            // In adventure view: filter scenarios within selected bundle
+            var filtered = scenarios.AsEnumerable();
             var selected = bundles.FirstOrDefault(b => b.Id == selectedBundleId);
             var ids = selected?.ScenarioIds ?? new List<string>();
             filtered = filtered.Where(s => ids.Contains(s.Id));
-        }
 
-        // Apply age group filter
-        if (selectedAgeGroups.Any())
+            // Apply age group filter
+            if (selectedAgeGroups.Any())
+            {
+                filtered = filtered.Where(s => selectedAgeGroups.Contains(s.AgeGroup));
+            }
+
+            // Apply search filter (optimized)
+            if (!string.IsNullOrEmpty(searchQuery))
+            {
+                var query = searchQuery.ToLowerInvariant();
+                filtered = filtered.Where(s =>
+                    s.Name.ToLowerInvariant().Contains(query) ||
+                    s.Description.ToLowerInvariant().Contains(query) ||
+                    (s.Tags != null && s.Tags.Any(t => t.ToLowerInvariant().Contains(query))));
+            }
+
+            // Apply completed stories filter
+            if (!showCompletedStories)
+            {
+                filtered = filtered.Where(s => !completedScenarioIds.Contains(s.Id));
+            }
+
+            // Apply sorting
+            filtered = ApplySorting(filtered);
+
+            filteredScenarios = filtered.ToList();
+            filteredBundles = new();
+
+            Logger.LogInformation("Applied adventure filters. Age groups: [{SelectedFilters}], Search: '{SearchQuery}', Sort: '{Sort}', Show completed: {ShowCompleted}, Showing {Count} of {Total} scenarios",
+                string.Join(", ", selectedAgeGroups), searchQuery, currentSort, showCompletedStories, filteredScenarios.Count, scenarios.Count);
+        }
+    }
+
+    private bool IsBundleCompleted(ContentBundle bundle)
+    {
+        if (bundle.ScenarioIds == null || bundle.ScenarioIds.Count == 0)
+            return false;
+
+        return bundle.ScenarioIds.All(scenarioId => completedScenarioIds.Contains(scenarioId));
+    }
+
+    private string GetFilterTitle()
+    {
+        return string.IsNullOrEmpty(selectedBundleId) ? "Filter Bundles" : "Filter Adventures";
+    }
+
+    private Dictionary<string, int> GetAgeGroupCounts()
+    {
+        if (string.IsNullOrEmpty(selectedBundleId))
         {
-            filtered = filtered.Where(s => selectedAgeGroups.Contains(s.AgeGroup));
-        }
+            var filteredBundlesForCounting = bundles.AsEnumerable();
+            if (!showCompletedStories)
+            {
+                filteredBundlesForCounting = filteredBundlesForCounting.Where(b => !IsBundleCompleted(b));
+            }
 
-        // Apply search filter (optimized)
-        if (!string.IsNullOrEmpty(searchQuery))
+            return availableAgeGroups
+                .ToDictionary(
+                    ageGroup => ageGroup,
+                    ageGroup => filteredBundlesForCounting.Count(b => b.AgeGroup == ageGroup)
+                );
+        }
+        else
         {
-            var query = searchQuery.ToLowerInvariant();
-            filtered = filtered.Where(s =>
-                s.Name.ToLowerInvariant().Contains(query) ||
-                s.Description.ToLowerInvariant().Contains(query) ||
-                (s.Tags != null && s.Tags.Any(t => t.ToLowerInvariant().Contains(query))));
-        }
+            var selectedBundle = bundles.FirstOrDefault(b => b.Id == selectedBundleId);
+            var bundleScenarioIds = selectedBundle?.ScenarioIds ?? new List<string>();
+            var bundleScenarios = scenarios.Where(s => bundleScenarioIds.Contains(s.Id));
 
-        // Apply completed stories filter
-        if (!showCompletedStories)
+            var filteredScenariosForCounting = bundleScenarios.AsEnumerable();
+            if (!showCompletedStories)
+            {
+                filteredScenariosForCounting = filteredScenariosForCounting.Where(s => !completedScenarioIds.Contains(s.Id));
+            }
+
+            return availableAgeGroups
+                .ToDictionary(
+                    ageGroup => ageGroup,
+                    ageGroup => filteredScenariosForCounting.Count(s => s.AgeGroup == ageGroup)
+                );
+        }
+    }
+
+    private int GetHiddenCount()
+    {
+        if (string.IsNullOrEmpty(selectedBundleId))
         {
-            filtered = filtered.Where(s => !completedScenarioIds.Contains(s.Id));
+            return bundles.Count(b => IsBundleCompleted(b));
         }
-
-        // Apply sorting
-        filtered = ApplySorting(filtered);
-
-        filteredScenarios = filtered.ToList();
-
-        Logger.LogInformation("Applied filters. Age groups: [{SelectedFilters}], Search: '{SearchQuery}', Sort: '{Sort}', Show completed: {ShowCompleted}, Showing {Count} of {Total} scenarios",
-            string.Join(", ", selectedAgeGroups), searchQuery, currentSort, showCompletedStories, filteredScenarios.Count, scenarios.Count);
+        else
+        {
+            return completedScenarioIds.Count(id =>
+                scenarios.Any(s => s.Id == id && filteredScenarios.Any(fs => fs.Id == s.Id)));
+        }
     }
 
     private IEnumerable<Scenario> ApplySorting(IEnumerable<Scenario> scenarios)
@@ -1156,8 +1231,9 @@
         }
         else if (selectedAgeGroups.Any())
         {
-            var pluralSuffix = bundles.Count != 1 ? "s" : "";
-            return $"{filteredBundles.Count} of {bundles.Count} bundle{pluralSuffix} selected";
+            var totalBundles = showCompletedStories ? bundles.Count : bundles.Count(b => !IsBundleCompleted(b));
+            var pluralSuffix = totalBundles != 1 ? "s" : "";
+            return $"{filteredBundles.Count} of {totalBundles} bundle{pluralSuffix} selected";
         }
         return string.Empty;
     }

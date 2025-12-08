@@ -6,7 +6,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="card-title mb-0 filter-title">
-                        <i class="fas fa-filter me-2"></i>Filter Adventures
+                        <i class="fas fa-filter me-2"></i>@FilterTitle
                     </h5>
                     @if (ResultCount.HasValue)
                     {
@@ -203,12 +203,15 @@
     
     [Parameter]
     public bool ShowSortOptions { get; set; } = false;
-    
+
     [Parameter]
     public string CurrentSort { get; set; } = "newest";
-    
+
     [Parameter]
     public EventCallback<string> OnSortChanged { get; set; }
+
+    [Parameter]
+    public string FilterTitle { get; set; } = "Filter Adventures";
     
     private readonly List<SortOption> SortOptions = new()
     {
