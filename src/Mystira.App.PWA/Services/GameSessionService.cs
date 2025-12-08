@@ -108,7 +108,10 @@ public class GameSessionService : IGameSessionService
                 CurrentScene = startingScene,
                 StartedAt = apiGameSession.StartedAt,
                 CompletedScenes = new List<Scene>(),
-                IsCompleted = false
+                IsCompleted = false,
+                CharacterAssignments = _characterAssignments?.Any() == true
+                    ? new List<CharacterAssignment>(_characterAssignments)
+                    : new List<CharacterAssignment>()
             };
 
             // Set empty character assignments for scenarios that skip character assignment
@@ -136,6 +139,17 @@ public class GameSessionService : IGameSessionService
             {
                 _logger.LogWarning("Cannot navigate to scene - no active game session");
                 return false;
+            }
+
+            // If the session is paused, attempt to resume on the server before navigating
+            if (_isPaused)
+            {
+                _logger.LogInformation("Session is paused locally. Attempting to resume before navigating to scene: {SceneId}", sceneId);
+                var resumed = await ResumeGameSessionAsync();
+                if (!resumed)
+                {
+                    _logger.LogWarning("Failed to resume session before navigation. Proceeding may fail.");
+                }
             }
 
             _logger.LogInformation("Navigating to scene: {SceneId}", sceneId);
@@ -301,10 +315,10 @@ public class GameSessionService : IGameSessionService
                 return false;
             }
 
+            // Even if local flag isn't paused (e.g., after app reload), attempt resume on server
             if (!_isPaused)
             {
-                _logger.LogWarning("Game session is not paused");
-                return false;
+                _logger.LogInformation("Local session not marked paused; attempting server resume anyway for session: {SessionId}", CurrentGameSession.Id);
             }
 
             _logger.LogInformation("Resuming game session: {SessionId}", CurrentGameSession.Id);
@@ -317,6 +331,26 @@ public class GameSessionService : IGameSessionService
             }
 
             _isPaused = false;
+
+            // If API returned session data, merge essential fields and hydrate assignments
+            if (apiSession != null)
+            {
+                // Preserve local scenario/scenes, but update metadata
+                CurrentGameSession.IsCompleted = apiSession.IsCompleted;
+                CurrentGameSession.StartedAt = apiSession.StartedAt;
+
+                if (apiSession.CharacterAssignments != null && apiSession.CharacterAssignments.Any())
+                {
+                    CurrentGameSession.CharacterAssignments = new List<CharacterAssignment>(apiSession.CharacterAssignments);
+                    SetCharacterAssignments(CurrentGameSession.CharacterAssignments);
+                    _logger.LogInformation("Hydrated {Count} character assignments from resumed session", CurrentGameSession.CharacterAssignments.Count);
+                }
+                else
+                {
+                    _logger.LogInformation("No character assignments returned from resume API; retaining existing assignments cache ({Count})",
+                        CurrentGameSession.CharacterAssignments?.Count ?? 0);
+                }
+            }
 
             // Trigger the event to notify subscribers
             GameSessionChanged?.Invoke(this, CurrentGameSession);
@@ -489,6 +523,10 @@ public class GameSessionService : IGameSessionService
     {
         _logger.LogInformation("Setting current game session: {SessionId}", session?.Id ?? "null");
         CurrentGameSession = session;
+        // Hydrate character assignments cache for text replacement
+        _characterAssignments = session?.CharacterAssignments?.Any() == true
+            ? new List<CharacterAssignment>(session!.CharacterAssignments)
+            : new List<CharacterAssignment>();
     }
 
     /// <summary>
@@ -512,12 +550,17 @@ public class GameSessionService : IGameSessionService
 
         foreach (var assignment in _characterAssignments)
         {
+            var characterName = assignment.CharacterName.ToLower();
             if (assignment.PlayerAssignment != null)
             {
                 string playerName = assignment.PlayerAssignment.Type switch
                 {
-                    "Profile" => assignment.PlayerAssignment.ProfileName ?? "Player",
-                    "Guest" => assignment.PlayerAssignment.GuestName ?? "Player",
+                    "Player" => assignment.PlayerAssignment.ProfileName?.ToLower() == characterName
+                        ? "Player"
+                        : assignment.PlayerAssignment.ProfileName ?? "Player",
+                    "Guest" => assignment.PlayerAssignment.GuestName?.ToLower() == characterName
+                        ? "Guest"
+                        : assignment.PlayerAssignment.GuestName ?? "Guest",
                     _ => "Player"
                 };
 

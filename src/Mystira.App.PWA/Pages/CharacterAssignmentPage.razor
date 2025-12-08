@@ -191,7 +191,7 @@ else
                     <div class="d-flex gap-2 flex-wrap">
                         @if (HasUnassignedCharacters)
                         {
-                            <button class="btn btn-outline-info" @onclick="FillRemainingWithAI"
+                            <button class="btn btn-outline-info" @onclick="FillRemainingWithGuests"
                                 title="Assign Guests players to all remaining unassigned characters">
                                 <i class="fas fa-robot me-2"></i>Fill with Guests
                             </button>
@@ -232,7 +232,7 @@ else
                             <i class="fas fa-exclamation-triangle me-2"></i>
                             @UnassignedCount character@(UnassignedCount != 1 ? "s" : "") still need@(UnassignedCount == 1 ? "s" : "") a player assignment.
                         </div>
-                        <button class="btn btn-sm btn-outline-warning" @onclick="FillRemainingWithAI">
+                        <button class="btn btn-sm btn-outline-warning" @onclick="FillRemainingWithGuests">
                             <i class="fas fa-robot me-2"></i>Assign Guests to remaining
                         </button>
                     </div>
@@ -278,16 +278,18 @@ else
                         </li>
                         <li class="nav-item">
                             <button class="nav-link @(assignmentTab == "guest" ? "active" : "")"
-                                @onclick="@(() => SetAssignmentTab("guest"))">
+                                    @onclick="@(() => SetAssignmentTab("guest"))">
                                 <i class="fas fa-user-circle me-1"></i>Guest
                             </button>
                         </li>
+                    <!--
                         <li class="nav-item">
                             <button class="nav-link @(assignmentTab == "ai" ? "active" : "")"
                                 @onclick="@(() => SetAssignmentTab("ai"))">
                                 <i class="fas fa-robot me-1"></i>AI Player
                             </button>
                         </li>
+                        -->
                     </ul>
 
                     @if (assignmentTab == "profiles")
@@ -992,6 +994,24 @@ else
         }
     }
 
+    private void FillRemainingWithGuests()
+    {
+        foreach (var assignment in characterAssignments)
+        {
+            if (!assignment.IsUnused && assignment.PlayerAssignment == null)
+            {
+                assignment.PlayerAssignment = new PlayerAssignment
+                {
+                    Type = "Guest",
+                    ProfileName = $"{assignment.CharacterName}",
+                    GuestName = $"{assignment.CharacterName}"
+                };
+            }
+        }
+        StateHasChanged();
+        Logger.LogInformation("Filled {Count} unassigned characters with Guest players", UnassignedCount);
+    }
+
     private void FillRemainingWithAI()
     {
         foreach (var assignment in characterAssignments)
@@ -1007,6 +1027,6 @@ else
             }
         }
         StateHasChanged();
-        Logger.LogInformation("Filled {Count} unassigned characters with Guest players", UnassignedCount);
+        Logger.LogInformation("Filled {Count} unassigned characters with AI players", UnassignedCount);
     }
 }

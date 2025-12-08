@@ -40,8 +40,8 @@
                                        class="form-control"
                                        placeholder="Search by story, character, or skill..."
                                        aria-label="Search adventures"
-                                       @bind="SearchQuery"
-                                       @bind:event="oninput" />
+                                       value="@SearchQuery"
+                                       @oninput="HandleSearchInput" />
                                 @if (!string.IsNullOrEmpty(SearchQuery))
                                 {
                                     <button class="btn btn-outline-secondary"
@@ -165,26 +165,8 @@
     [Parameter]
     public Dictionary<string, int> AgeGroupCounts { get; set; } = new();
 
-    private string _searchQuery = string.Empty;
-
     [Parameter]
-    public string SearchQuery
-    {
-        get => _searchQuery;
-        set
-        {
-            if (_searchQuery == value)
-            {
-                return;
-            }
-            _searchQuery = value ?? string.Empty;
-            // Propagate changes immediately so parent can filter as the user types
-            if (SearchQueryChanged.HasDelegate)
-            {
-                _ = SearchQueryChanged.InvokeAsync(_searchQuery);
-            }
-        }
-    }
+    public string SearchQuery { get; set; } = string.Empty;
 
     [Parameter]
     public EventCallback<string> SearchQueryChanged { get; set; }
@@ -283,6 +265,19 @@
         if (ShowCompletedChanged.HasDelegate)
         {
             await ShowCompletedChanged.InvokeAsync(value);
+        }
+    }
+
+    private async Task HandleSearchInput(ChangeEventArgs e)
+    {
+        var newValue = e.Value?.ToString() ?? string.Empty;
+        if (!string.Equals(newValue, SearchQuery, StringComparison.Ordinal))
+        {
+            SearchQuery = newValue;
+            if (SearchQueryChanged.HasDelegate)
+            {
+                await SearchQueryChanged.InvokeAsync(SearchQuery);
+            }
         }
     }
 

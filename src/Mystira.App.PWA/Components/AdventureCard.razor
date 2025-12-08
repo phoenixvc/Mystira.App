@@ -36,18 +36,18 @@
     </div>
 
     <div class="adventure-card-body">
-        <h6 class="adventure-card-title">@Adventure.Name</h6>
+        <h6 class="adventure-card-title">@(Adventure?.Name ?? string.Empty)</h6>
         <p class="adventure-card-description">@GetTruncatedDescription()</p>
 
         <div class="adventure-metadata">
-            <span class="metadata-badge badge-age" title="Recommended for children ages @Adventure.AgeGroup">
-                <i class="fas fa-users me-1"></i>Ages @Adventure.AgeGroup
+            <span class="metadata-badge badge-age" title="Recommended for children ages @(Adventure?.AgeGroup ?? string.Empty)">
+                <i class="fas fa-users me-1"></i>Ages @(Adventure?.AgeGroup ?? string.Empty)
             </span>
-            <span class="metadata-badge badge-difficulty" title="Difficulty level: @Adventure.Difficulty">
-                <i class="fas fa-signal me-1"></i>@Adventure.Difficulty
+            <span class="metadata-badge badge-difficulty" title="Difficulty level: @(Adventure?.Difficulty ?? string.Empty)">
+                <i class="fas fa-signal me-1"></i>@(Adventure?.Difficulty ?? string.Empty)
             </span>
-            <span class="metadata-badge badge-duration" title="Estimated session length: @Adventure.SessionLength">
-                <i class="fas fa-clock me-1"></i>@Adventure.SessionLength
+            <span class="metadata-badge badge-duration" title="Estimated session length: @(Adventure?.SessionLength ?? string.Empty)">
+                <i class="fas fa-clock me-1"></i>@(Adventure?.SessionLength ?? string.Empty)
             </span>
         </div>
 
@@ -69,7 +69,7 @@
         <button class="btn-adventure-start"
                 @onclick="OnStartClick"
                 @onclick:stopPropagation="true"
-                aria-label="@(IsCompleted ? "Play again" : "Start adventure") @Adventure.Name">
+                aria-label="@(IsCompleted ? "Play again" : "Start adventure") @(Adventure?.Name ?? string.Empty)">
             <i class="fas fa-play me-2"></i>
             @if (IsCompleted)
             {
@@ -125,7 +125,7 @@
 
     private string GetTruncatedDescription()
     {
-        if (string.IsNullOrEmpty(Adventure.Description))
+        if (Adventure == null || string.IsNullOrEmpty(Adventure.Description))
             return string.Empty;
 
         const int maxLength = 120;

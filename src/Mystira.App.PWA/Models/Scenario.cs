@@ -119,6 +119,8 @@ public class GameSession
     public string CurrentSceneId { get; set; } = string.Empty;
     public int ChoiceCount { get; set; }
     public string Status { get; set; } = string.Empty;
+    // Selected character assignments for this session (story character -> player)
+    public List<CharacterAssignment> CharacterAssignments { get; set; } = new();
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

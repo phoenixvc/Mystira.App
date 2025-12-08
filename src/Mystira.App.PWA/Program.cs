@@ -125,17 +125,6 @@ builder.Services.Configure<JsonSerializerOptions>(options =>
     options.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 });
 
-// In Program.cs for development only, bypass CORS
-// if (builder.HostEnvironment.IsDevelopment())
-// {
-//     builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
-//     {
-//         client.BaseAddress = new Uri("https://cors-anywhere.herokuapp.com/https://mystira-app-dev-api.azurewebsites.net//");
-//         client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
-//         client.DefaultRequestHeaders.Add("Origin", "http://localhost:7000");
-//     });
-// }
-
 // Register services
 builder.Services.AddScoped<ITokenProvider, LocalStorageTokenProvider>();
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -165,7 +154,7 @@ try
     // Set IsDevelopment flag for all API clients
     var isDevelopment = builder.HostEnvironment.IsDevelopment();
     SetDevelopmentModeForApiClients(host.Services, isDevelopment, logger);
-    
+
     if (isDevelopment)
     {
         logger.LogInformation("Running in Development mode. API connection errors will include helpful startup instructions.");
@@ -199,7 +188,7 @@ static void SetDevelopmentModeForApiClients(IServiceProvider services, bool isDe
     // Create a scope to get scoped services
     using var scope = services.CreateScope();
     var scopedServices = scope.ServiceProvider;
-    
+
     // Get all registered services and check if they derive from BaseApiClient
     var apiClientTypes = new[]
     {

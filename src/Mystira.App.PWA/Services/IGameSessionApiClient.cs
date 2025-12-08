@@ -5,6 +5,7 @@ namespace Mystira.App.PWA.Services;
 public interface IGameSessionApiClient
 {
     Task<GameSession?> StartGameSessionAsync(string scenarioId, string accountId, string profileId, List<string> playerNames, string targetAgeGroup);
+    Task<GameSession?> StartGameSessionWithAssignmentsAsync(StartGameSessionRequest request);
     Task<GameSession?> EndGameSessionAsync(string sessionId);
     Task<GameSession?> PauseGameSessionAsync(string sessionId);
     Task<GameSession?> ResumeGameSessionAsync(string sessionId);

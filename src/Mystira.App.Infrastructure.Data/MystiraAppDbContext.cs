@@ -443,6 +443,32 @@ public partial class MystiraAppDbContext : DbContext
             });
             entity.OwnsMany(e => e.Achievements);
 
+            // CharacterAssignments owned collection with nested owned PlayerAssignment
+            entity.OwnsMany(e => e.CharacterAssignments, assignment =>
+            {
+                assignment.WithOwner();
+                assignment.Property(a => a.CharacterId).IsRequired();
+                assignment.Property(a => a.CharacterName).IsRequired(false);
+                assignment.Property(a => a.Role).IsRequired(false);
+                assignment.Property(a => a.Archetype).IsRequired(false);
+                assignment.Property(a => a.Image).IsRequired(false);
+                assignment.Property(a => a.Audio).IsRequired(false);
+                assignment.Property(a => a.IsUnused).IsRequired();
+
+                assignment.OwnsOne(a => a.PlayerAssignment, pa =>
+                {
+                    pa.Property(p => p.Type).IsRequired(false);
+                    pa.Property(p => p.ProfileId).IsRequired(false);
+                    pa.Property(p => p.ProfileName).IsRequired(false);
+                    pa.Property(p => p.ProfileImage).IsRequired(false);
+                    pa.Property(p => p.SelectedAvatarMediaId).IsRequired(false);
+                    pa.Property(p => p.GuestName).IsRequired(false);
+                    pa.Property(p => p.GuestAgeRange).IsRequired(false);
+                    pa.Property(p => p.GuestAvatar).IsRequired(false);
+                    pa.Property(p => p.SaveAsProfile).IsRequired();
+                });
+            });
+
             // Configure CompassValues as a JSON property
             entity.Property(e => e.CompassValues)
                   .HasConversion(

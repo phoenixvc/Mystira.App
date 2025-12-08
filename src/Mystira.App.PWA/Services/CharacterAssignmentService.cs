@@ -78,20 +78,8 @@ public class CharacterAssignmentService : ICharacterAssignmentService
             _logger.LogInformation("Starting game session with {Count} character assignments for scenario: {ScenarioId}",
                 request.CharacterAssignments.Count, request.ScenarioId);
 
-            // Convert character assignments to player names list for backward compatibility
-            var playerNames = request.CharacterAssignments
-                .Where(ca => ca.PlayerAssignment != null && !ca.IsUnused)
-                .Select(ca => ca.PlayerAssignment!.ProfileName ?? ca.PlayerAssignment!.GuestName ?? "Unknown Player")
-                .ToList();
-
-            // Use the existing API client method for now - this will need to be updated on the backend
-            // to support character assignments
-            var apiGameSession = await _apiClient.StartGameSessionAsync(
-                request.ScenarioId,
-                request.AccountId,
-                request.ProfileId,
-                playerNames,
-                request.TargetAgeGroup);
+            // Call backend API that supports character assignments
+            var apiGameSession = await _apiClient.StartGameSessionWithAssignmentsAsync(request);
 
             if (apiGameSession == null)
             {
@@ -147,11 +135,19 @@ public class CharacterAssignmentService : ICharacterAssignmentService
                         CurrentScene = startingScene,
                         StartedAt = apiGameSession.StartedAt,
                         CompletedScenes = new List<Scene>(),
-                        IsCompleted = false
+                        IsCompleted = false,
+                        CharacterAssignments = apiGameSession.CharacterAssignments?.Any() == true
+                            ? new List<CharacterAssignment>(apiGameSession.CharacterAssignments)
+                            : (request.CharacterAssignments?.Any() == true
+                                ? new List<CharacterAssignment>(request.CharacterAssignments)
+                                : new List<CharacterAssignment>())
                     };
 
                     // Set the current game session in GameSessionService
                     _gameSessionService.SetCurrentGameSession(localGameSession);
+
+                    // Also store assignments in the session service for placeholder replacement
+                    _gameSessionService.SetCharacterAssignments(localGameSession.CharacterAssignments);
 
                     _logger.LogInformation("Local game session populated with starting scene: {SceneTitle}", startingScene.Title);
                 }
@@ -165,9 +161,17 @@ public class CharacterAssignmentService : ICharacterAssignmentService
                 _logger.LogWarning("No scenario provided in request, local game session will not be populated");
             }
 
-            // TODO: Feature - Persist character assignments to the game session
-            // This should update the game session's SelectedCharacterId and player assignments
-            // This would require a new API endpoint to update the game session with character assignments
+            // Set character assignments in the session service for scenarios where local population didn't occur
+            if ((request.Scenario == null))
+            {
+                var assignments = apiGameSession.CharacterAssignments?.Any() == true
+                    ? apiGameSession.CharacterAssignments
+                    : request.CharacterAssignments;
+                if (assignments.Any())
+                {
+                    _gameSessionService.SetCharacterAssignments(assignments);
+                }
+            }
 
             _logger.LogInformation("Game session started successfully with ID: {SessionId}", apiGameSession.Id);
             return true;
