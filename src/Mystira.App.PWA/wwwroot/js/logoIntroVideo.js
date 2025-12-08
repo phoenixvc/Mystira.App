@@ -4,17 +4,44 @@
 // Supports theme-aware video loading (light/dark mode)
 
 // Store reference per video element to support multiple instances
+// Always store an object: { dotNetRef, observer }
 const videoRefs = new Map();
+
+function setVideoRef(video, dotNetRef, observer = null) {
+    videoRefs.set(video, { dotNetRef, observer });
+}
+
+function getDotNetRef(video) {
+    const entry = videoRefs.get(video);
+    if (!entry) return null;
+    // Backward compatibility if older shape was stored
+    return entry.dotNetRef ? entry.dotNetRef : entry;
+}
+
+function getObserver(video) {
+    const entry = videoRefs.get(video);
+    return entry && entry.observer ? entry.observer : null;
+}
 
 // Detect current theme
 function getCurrentTheme() {
-    // Check for explicit theme setting
+    // Highest priority: persisted preference
+    try {
+        const stored = window.localStorage ? localStorage.getItem('theme') : null;
+        if (stored === 'dark' || stored === 'light') {
+            return stored;
+        }
+    } catch (_) {
+        // ignore storage errors
+    }
+
+    // Next: explicit theme attribute on <html>
     const explicitTheme = document.documentElement.getAttribute('data-theme');
     if (explicitTheme) {
         return explicitTheme;
     }
 
-    // Fall back to system preference
+    // Fallback: system preference
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         return 'dark';
     }
@@ -40,28 +67,36 @@ window.initLogoIntroVideo = function(dotNetRef) {
     }
 
     // Store the reference for this video
-    videoRefs.set(video, dotNetRef);
+    setVideoRef(video, dotNetRef);
 
-    // Set the video source based on current theme
-    const themeSrc = getVideoSource();
-    console.log('Loading theme-aware video:', themeSrc);
-
-    if (videoSource) {
-        videoSource.src = themeSrc;
-    } else {
-        // Fallback: create source element if it doesn't exist
-        const source = document.createElement('source');
-        source.id = 'video-source';
-        source.src = themeSrc;
-        source.type = 'video/mp4';
-        video.appendChild(source);
+    // Helper to update the video source when theme changes
+    function updateVideoSourceIfChanged() {
+        const themeSrc = getVideoSource();
+        const currentSrc = videoSource ? videoSource.getAttribute('src') : '';
+        if (currentSrc !== themeSrc) {
+            console.log('Updating theme-aware video src ->', themeSrc);
+            if (videoSource) {
+                videoSource.setAttribute('src', themeSrc);
+            } else {
+                const source = document.createElement('source');
+                source.id = 'video-source';
+                source.src = themeSrc;
+                source.type = 'video/mp4';
+                video.appendChild(source);
+            }
+            // Reload the video to apply new source
+            video.load();
+        }
     }
+
+    // Initial set based on current theme
+    updateVideoSourceIfChanged();
 
     // Handle video load error - stay on logo
     video.addEventListener('error', function() {
         console.log('Logo intro video failed to load, staying on static logo');
-        const ref = videoRefs.get(video);
-        if (ref) {
+        const ref = getDotNetRef(video);
+        if (ref && typeof ref.invokeMethodAsync === 'function') {
             ref.invokeMethodAsync('OnVideoError');
         }
     });
@@ -69,8 +104,8 @@ window.initLogoIntroVideo = function(dotNetRef) {
     // Handle video end - transition back to logo with animation
     video.addEventListener('ended', function() {
         console.log('Video ended, transitioning back to logo with animation');
-        const ref = videoRefs.get(video);
-        if (ref) {
+        const ref = getDotNetRef(video);
+        if (ref && typeof ref.invokeMethodAsync === 'function') {
             ref.invokeMethodAsync('OnVideoEnded');
         }
     });
@@ -78,8 +113,8 @@ window.initLogoIntroVideo = function(dotNetRef) {
     // Handle video ready to play - transition from logo to video
     video.addEventListener('canplaythrough', function() {
         console.log('Video loaded and ready to play');
-        const ref = videoRefs.get(video);
-        if (ref) {
+        const ref = getDotNetRef(video);
+        if (ref && typeof ref.invokeMethodAsync === 'function') {
             // Notify Blazor that video is ready
             ref.invokeMethodAsync('OnVideoReady');
 
@@ -88,14 +123,35 @@ window.initLogoIntroVideo = function(dotNetRef) {
                 video.play().catch(function(error) {
                     console.log('Video autoplay prevented:', error);
                     // If autoplay fails, stay on logo
-                    ref.invokeMethodAsync('OnVideoError');
+                    try {
+                        ref.invokeMethodAsync('OnVideoError');
+                    } catch (_) {
+                        // ignore
+                    }
                 });
             }, 100);
         }
     }, { once: true }); // Only trigger once on first load
 
-    // Start loading the video
+    // Start loading the video (after source set)
     video.load();
+
+    // Watch for theme changes (via data-theme attribute changes)
+    try {
+        const observer = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                if (m.type === 'attributes' && m.attributeName === 'data-theme') {
+                    updateVideoSourceIfChanged();
+                }
+            }
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        // Keep a reference to disconnect on cleanup
+        setVideoRef(video, dotNetRef, observer);
+    } catch (e) {
+        // MutationObserver not available; ignore
+        setVideoRef(video, dotNetRef);
+    }
 };
 
 // Function to replay the logo video with transition effect
@@ -110,9 +166,9 @@ window.replayLogoVideo = function() {
 
     // Update video source in case theme changed
     const themeSrc = getVideoSource();
-    if (videoSource && videoSource.src !== themeSrc) {
+    if (videoSource && videoSource.getAttribute('src') !== themeSrc) {
         console.log('Theme changed, updating video source to:', themeSrc);
-        videoSource.src = themeSrc;
+        videoSource.setAttribute('src', themeSrc);
         video.load();
     }
 
@@ -122,8 +178,8 @@ window.replayLogoVideo = function() {
     // Play the video
     video.play().catch(function(error) {
         console.log('Video replay failed:', error);
-        const ref = videoRefs.get(video);
-        if (ref) {
+        const ref = getDotNetRef(video);
+        if (ref && typeof ref.invokeMethodAsync === 'function') {
             ref.invokeMethodAsync('OnVideoError');
         }
     });
@@ -147,6 +203,14 @@ window.skipLogoVideo = function() {
 window.cleanupLogoIntroVideo = function() {
     const video = document.getElementById('logo-intro-video');
     if (video) {
+        const observer = getObserver(video);
+        try {
+            if (observer && typeof observer.disconnect === 'function') {
+                observer.disconnect();
+            }
+        } catch (_) {
+            // ignore
+        }
         videoRefs.delete(video);
     }
 };
