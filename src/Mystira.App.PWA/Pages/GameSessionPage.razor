@@ -1,3 +1,5 @@
+@inject IGameSessionApiClient GameSessionApi
+
 @page "/game"
 
 <PageTitle>@GetPageTitle()</PageTitle>
@@ -318,11 +320,12 @@ else
 
             Logger.LogInformation("Player chose: {ChoiceText} -> {NextScene}", choice.Text, choice.NextSceneTitle);
 
-            var success = await GameSessionService.MakeChoiceAsync(
-                gameSession.CurrentScene.Id, 
-                choice.Text, 
+            var madeChoiceGameSessions = await GameSessionApi.MakeChoiceAsync(gameSession.Id,
+                gameSession.CurrentScene.Id,
+                choice.Text,
                 choice.NextSceneTitle);
-            if (!success)
+
+            if (madeChoiceGameSessions == null)
             {
                 Logger.LogError("Failed to make choice and navigate to scene: {NextScene}", choice.NextSceneTitle);
             }
