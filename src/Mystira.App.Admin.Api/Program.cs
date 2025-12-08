@@ -174,8 +174,8 @@ builder.Services.AddScoped<IBadgeConfigurationApiService, BadgeConfigurationApiS
 builder.Services.AddScoped<IMediaApiService, MediaApiService>();
 builder.Services.AddScoped<IAvatarApiService, AvatarApiService>();
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
-// Use infrastructure email service - not needed in Admin.Api unless used in Admin CQRS handlers
-// builder.Services.AddAzureEmailService(builder.Configuration);
+// Register email service for consistency across all APIs
+builder.Services.AddAzureEmailService(builder.Configuration);
 // Register Application.Ports.IMediaMetadataService for use cases
 builder.Services.AddScoped<Mystira.App.Application.Ports.IMediaMetadataService, MediaMetadataServiceAdapter>();
 // Register repositories

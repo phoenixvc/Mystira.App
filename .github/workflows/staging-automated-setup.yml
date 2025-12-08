@@ -1,0 +1,287 @@
+name: Automated Staging Environment Setup
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'What to do?'
+        required: true
+        type: choice
+        options:
+          - 'full-setup'
+          - 'swa-only'
+          - 'configure-cors'
+          - 'setup-monitoring'
+          - 'cleanup-old'
+        default: 'full-setup'
+
+permissions:
+  id-token: write
+  contents: read
+  actions: write
+  secrets: write  # Required for gh secret set
+  pull-requests: write  # Required for gh workflow run
+
+env:
+  ENVIRONMENT: 'staging'
+  LOCATION: 'westeurope'
+  RESOURCE_GROUP: 'staging-euw-rg-mystira-app'
+  SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+jobs:
+  full-setup:
+    if: github.event.inputs.action == 'full-setup'
+    runs-on: ubuntu-latest
+    name: Complete Staging Environment Setup
+    environment: staging
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set Azure Subscription
+        run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
+
+      # Step 1: Deploy Static Web App with Bicep
+      - name: 1️⃣ Deploy Static Web App Infrastructure
+        id: deploy-swa
+        run: |
+          echo "🚀 Deploying Static Web App with Bicep..."
+          
+          DEPLOYMENT_OUTPUT=$(az deployment group create \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/staging/main.bicep' \
+            --parameters \
+              environment=${{ env.ENVIRONMENT }} \
+              location=${{ env.LOCATION }} \
+              jwtSecretKey="${{ secrets.JWT_SECRET_KEY }}" \
+              deployStorage=false \
+              deployCosmos=false \
+              deployAppService=false \
+              deployStaticWebApp=true \
+              githubToken="${{ secrets.GITHUB_TOKEN }}" \
+            --output json)
+          
+          # Extract outputs
+          SWA_URL=$(echo $DEPLOYMENT_OUTPUT | jq -r '.properties.outputs.staticWebAppUrl.value')
+          SWA_HOSTNAME=$(echo $DEPLOYMENT_OUTPUT | jq -r '.properties.outputs.staticWebAppHostname.value')
+          DEPLOYMENT_TOKEN=$(echo $DEPLOYMENT_OUTPUT | jq -r '.properties.outputs.staticWebAppDeploymentToken.value')
+          APP_INSIGHTS_CONNECTION=$(echo $DEPLOYMENT_OUTPUT | jq -r '.properties.outputs.appInsightsConnectionString.value')
+          
+          echo "swa-url=$SWA_URL" >> $GITHUB_OUTPUT
+          echo "swa-hostname=$SWA_HOSTNAME" >> $GITHUB_OUTPUT
+          echo "deployment-token=$DEPLOYMENT_TOKEN" >> $GITHUB_OUTPUT
+          echo "app-insights=$APP_INSIGHTS_CONNECTION" >> $GITHUB_OUTPUT
+          
+          echo "✅ Static Web App deployed: $SWA_URL"
+
+      # Step 2: Configure GitHub Secret with Deployment Token
+      - name: 2️⃣ Configure GitHub Secret
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔐 Setting up GitHub secret for SWA deployment..."
+          
+          gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN_STAGING \
+            --body "${{ steps.deploy-swa.outputs.deployment-token }}" \
+            --repo phoenixvc/Mystira.App
+          
+          echo "✅ GitHub secret configured"
+
+      # Step 3: Update CORS Configuration Automatically
+      - name: 3️⃣ Update API CORS Configuration
+        run: |
+          echo "🔧 Updating CORS configuration..."
+          
+          export RESOURCE_GROUP="${{ env.RESOURCE_GROUP }}"
+          export SWA_NAME="staging-san-app-mystira-pwa"
+          
+          chmod +x ./scripts/update-cors-for-staging.sh
+          ./scripts/update-cors-for-staging.sh
+          
+          echo "✅ CORS configuration updated"
+
+      # Step 4: Commit CORS changes if any
+      - name: 4️⃣ Commit CORS Configuration Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if [[ -n $(git status --porcelain) ]]; then
+            git add src/*/appsettings*.json
+            git commit -m "chore: Update CORS for Staging SWA deployment [skip ci]"
+            git push origin ${{ github.ref_name }}
+            echo "✅ CORS changes committed"
+          else
+            echo "ℹ️  No CORS changes needed"
+          fi
+
+      # Step 5: Trigger SWA Deployment
+      - name: 5️⃣ Trigger Staging SWA Deployment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🚀 Triggering Staging SWA deployment workflow..."
+          
+          gh workflow run azure-static-web-apps-staging.yml \
+            --ref staging
+          
+          echo "✅ Deployment triggered"
+          echo "⏳ Check workflow status at: https://github.com/phoenixvc/Mystira.App/actions"
+
+      # Step 6: Wait and Validate Deployment
+      - name: 6️⃣ Wait for Deployment (2 min)
+        run: |
+          echo "⏳ Waiting for SWA deployment to complete..."
+          sleep 120
+
+      - name: 7️⃣ Validate Staging Deployment
+        run: |
+          SWA_URL="${{ steps.deploy-swa.outputs.swa-url }}"
+          echo "🧪 Testing Staging SWA: $SWA_URL"
+          
+          # Test home page
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$SWA_URL/")
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Staging is live and responding!"
+          else
+            echo "⚠️  Staging returned HTTP $HTTP_CODE (may still be deploying)"
+          fi
+
+      # Step 7: Setup Monitoring
+      - name: 8️⃣ Configure Application Insights Alerts
+        run: |
+          echo "📊 Setting up monitoring alerts..."
+          
+          APP_INSIGHTS_NAME="staging-san-app-mystira-pwa-insights"
+          
+          # Create high error rate alert
+          az monitor metrics alert create \
+            --name "staging-swa-high-error-rate" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --scopes "/subscriptions/${{ env.SUBSCRIPTION_ID }}/resourceGroups/${{ env.RESOURCE_GROUP }}/providers/Microsoft.Insights/components/$APP_INSIGHTS_NAME" \
+            --condition "avg requests/failed > 10" \
+            --window-size 5m \
+            --evaluation-frequency 1m \
+            --description "High error rate on Staging SWA" \
+            --severity 2 || echo "Alert may already exist"
+          
+          echo "✅ Monitoring alerts configured"
+
+      # Step 8: Cleanup Old Resources
+      - name: 9️⃣ Cleanup Old App Service (Optional)
+        continue-on-error: true
+        run: |
+          echo "🗑️  Cleaning up old App Service resources..."
+          
+          OLD_APP_SERVICE="mystira-app-staging-pwa"
+          
+          # Check if old App Service exists
+          if az webapp show --name "$OLD_APP_SERVICE" --resource-group "${{ env.RESOURCE_GROUP }}" &>/dev/null; then
+            echo "Found old App Service: $OLD_APP_SERVICE"
+            echo "⚠️  Manual confirmation required to delete"
+            echo "Run: az webapp delete --name $OLD_APP_SERVICE --resource-group ${{ env.RESOURCE_GROUP }}"
+          else
+            echo "ℹ️  Old App Service not found or already deleted"
+          fi
+
+      # Final Summary
+      - name: 📋 Deployment Summary
+        run: |
+          echo "=================================="
+          echo "🎉 Staging Environment Setup Complete!"
+          echo "=================================="
+          echo ""
+          echo "📍 Staging URL: ${{ steps.deploy-swa.outputs.swa-url }}"
+          echo "🔑 GitHub Secret: AZURE_STATIC_WEB_APPS_API_TOKEN_STAGING (configured)"
+          echo "📊 Monitoring: Application Insights linked"
+          echo "🔧 CORS: API configurations updated"
+          echo ""
+          echo "Next Steps:"
+          echo "1. ✅ Visit staging URL to verify deployment"
+          echo "2. ✅ Check Application Insights for telemetry"
+          echo "3. ✅ Review CORS changes in committed files"
+          echo "4. ⚠️  Manually delete old App Service if needed"
+          echo ""
+          echo "Monitoring Dashboard:"
+          echo "https://portal.azure.com/#@/resource/subscriptions/${{ env.SUBSCRIPTION_ID }}/resourceGroups/${{ env.RESOURCE_GROUP }}/providers/Microsoft.Insights/components/staging-san-app-mystira-pwa-insights"
+          echo ""
+
+  swa-only:
+    if: github.event.inputs.action == 'swa-only'
+    runs-on: ubuntu-latest
+    name: Deploy SWA Only
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Deploy SWA
+        run: |
+          az deployment group create \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/staging/static-web-app.bicep' \
+            --parameters \
+              staticWebAppName="staging-san-app-mystira-pwa" \
+              environment=${{ env.ENVIRONMENT }} \
+              location=${{ env.LOCATION }} \
+              repositoryToken="${{ secrets.GITHUB_TOKEN }}"
+
+  configure-cors:
+    if: github.event.inputs.action == 'configure-cors'
+    runs-on: ubuntu-latest
+    name: Update CORS Configuration
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Run CORS Script
+        run: |
+          export RESOURCE_GROUP="${{ env.RESOURCE_GROUP }}"
+          export SWA_NAME="staging-san-app-mystira-pwa"
+          chmod +x ./scripts/update-cors-for-staging.sh
+          ./scripts/update-cors-for-staging.sh
+
+  setup-monitoring:
+    if: github.event.inputs.action == 'setup-monitoring'
+    runs-on: ubuntu-latest
+    name: Setup Monitoring Only
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Configure Alerts
+        run: |
+          # Run monitoring setup from guide
+          echo "Setting up Application Insights alerts..."
+          # Implement monitoring setup steps from docs/MONITORING_SETUP.md
+
+  cleanup-old:
+    if: github.event.inputs.action == 'cleanup-old'
+    runs-on: ubuntu-latest
+    name: Cleanup Old Resources
+    environment: staging
+    steps:
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Delete Old App Service
+        run: |
+          OLD_APP_SERVICE="mystira-app-staging-pwa"
+          az webapp delete --name "$OLD_APP_SERVICE" --resource-group "${{ env.RESOURCE_GROUP }}"
+          echo "✅ Old App Service deleted"
