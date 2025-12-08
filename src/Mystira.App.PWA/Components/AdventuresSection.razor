@@ -709,17 +709,6 @@
             Logger.LogWarning(cancelEx, "Operation canceled while continuing adventure for session: {SessionId}", activeSession.Id);
             // Swallow or handle cancellation gracefully (do nothing or inform user)
         }
-        catch (AuthenticationException authEx)
-        {
-            Logger.LogError(ex, "Unexpected error continuing adventure for session: {SessionId}", activeSession.Id);
-            throw;
-            // Optionally, provide user feedback or redirect to login
-        }
-        catch (OperationCanceledException cancelEx)
-        {
-            Logger.LogWarning(cancelEx, "Operation canceled while continuing adventure for session: {SessionId}", activeSession.Id);
-            // Swallow or handle cancellation gracefully (do nothing or inform user)
-        }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Unexpected error continuing adventure for session: {SessionId}", activeSession.Id);
