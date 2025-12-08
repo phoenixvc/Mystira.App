@@ -411,6 +411,9 @@ public class GameSessionService : IGameSessionService
             var currentScene = CurrentGameSession.CurrentScene;
             var nextSceneId = currentScene.NextSceneId;
 
+            // Progression is handled inside NavigateToSceneAsync which
+            // calls the API to progress the session with proper identifiers
+
             if (string.IsNullOrEmpty(nextSceneId))
             {
                 _logger.LogInformation("No next scene available, completing game session");
@@ -425,6 +428,52 @@ public class GameSessionService : IGameSessionService
         {
             _logger.LogError(ex, "Error advancing to next scene");
             return false;
+        }
+    }
+
+    public async Task MakeChoiceAsync(string gameSessionId, string currentSceneId, string choiceText, string choiceNextSceneId)
+    {
+        try
+        {
+            if (CurrentGameSession == null)
+            {
+                _logger.LogWarning("Cannot make choice - no active game session");
+                return;
+            }
+
+            // Resolve the next scene by its Id
+            var nextScene = CurrentGameSession.Scenario.Scenes
+                .FirstOrDefault(s => string.Equals(s.Id, choiceNextSceneId, StringComparison.OrdinalIgnoreCase));
+
+            if (nextScene == null)
+            {
+                _logger.LogWarning("Next scene with id '{NextSceneId}' not found in scenario {ScenarioId}",
+                    choiceNextSceneId, CurrentGameSession.ScenarioId);
+                return;
+            }
+
+            _logger.LogInformation("Making choice '{ChoiceText}' to navigate to scene '{NextSceneTitle}' ({NextSceneId})",
+                choiceText, nextScene.Title, nextScene.Id);
+
+            // Notify the server about the choice that was made
+            var updatedSession = await _apiClient.MakeChoiceAsync(gameSessionId, currentSceneId, choiceText, nextScene.Id);
+            if (updatedSession == null)
+            {
+                _logger.LogWarning("API did not return an updated session after making choice. Continuing locally.");
+            }
+            else
+            {
+                // Optionally update any server-side fields (keep local scenario and scenes)
+                CurrentGameSession.StartedAt = updatedSession.StartedAt;
+                CurrentGameSession.IsCompleted = updatedSession.IsCompleted;
+            }
+
+            // Then navigate to the resolved next scene (this will also progress the session on the server)
+            await NavigateToSceneAsync(nextScene.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error making choice '{ChoiceText}' and navigating to next scene", choiceText);
         }
     }
 
