@@ -1,0 +1,272 @@
+name: SWA Preview - Smoke Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "src/Mystira.App.PWA/**"
+      - ".github/workflows/swa-preview-tests.yml"
+
+jobs:
+  wait-for-preview:
+    runs-on: ubuntu-latest
+    name: Wait for SWA Preview Deployment
+    outputs:
+      preview-url: ${{ steps.get-url.outputs.url }}
+    steps:
+      - name: Wait for Preview to be Ready
+        run: |
+          echo "Waiting 90 seconds for Azure SWA to deploy preview..."
+          sleep 90
+
+      - name: Get Preview URL from PR Comments
+        id: get-url
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            // Find the SWA deployment comment
+            const swaComment = comments.data.find(comment => 
+              comment.user.login === 'github-actions[bot]' && 
+              comment.body.includes('Azure Static Web Apps')
+            );
+            
+            if (!swaComment) {
+              console.log('No SWA preview comment found yet');
+              return '';
+            }
+            
+            // Extract URL from comment
+            const urlMatch = swaComment.body.match(/https:\/\/[^\s]+\.azurestaticapps\.net/);
+            if (urlMatch) {
+              core.setOutput('url', urlMatch[0]);
+              console.log(`Found preview URL: ${urlMatch[0]}`);
+            }
+
+  smoke-tests:
+    runs-on: ubuntu-latest
+    needs: wait-for-preview
+    if: needs.wait-for-preview.outputs.preview-url != ''
+    name: Run SWA Smoke Tests
+    env:
+      PREVIEW_URL: ${{ needs.wait-for-preview.outputs.preview-url }}
+    
+    steps:
+      - name: Test Home Page Loads
+        run: |
+          echo "Testing: $PREVIEW_URL"
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$PREVIEW_URL/")
+          if [ "$response" != "200" ]; then
+            echo "❌ Home page returned $response"
+            exit 1
+          fi
+          echo "✅ Home page loads successfully"
+
+      - name: Test SPA Routes
+        run: |
+          # Test key application routes
+          routes=("/" "/adventures" "/profile")
+          
+          for route in "${routes[@]}"; do
+            echo "Testing route: $route"
+            response=$(curl -s -o /dev/null -w "%{http_code}" "$PREVIEW_URL$route")
+            if [ "$response" != "200" ]; then
+              echo "❌ Route $route returned $response"
+              exit 1
+            fi
+            echo "✅ Route $route works"
+          done
+
+      - name: Test Blazor Framework Assets
+        run: |
+          echo "Testing Blazor WebAssembly assets..."
+          
+          # Test blazor.boot.json exists
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$PREVIEW_URL/_framework/blazor.boot.json")
+          if [ "$response" != "200" ]; then
+            echo "❌ blazor.boot.json not found"
+            exit 1
+          fi
+          echo "✅ blazor.boot.json found"
+          
+          # Verify it's not cached (should have no-cache header)
+          cache_header=$(curl -s -I "$PREVIEW_URL/_framework/blazor.boot.json" | grep -i "cache-control" || echo "")
+          if [[ ! "$cache_header" =~ "no-cache" ]]; then
+            echo "⚠️  Warning: blazor.boot.json should have no-cache header"
+          else
+            echo "✅ blazor.boot.json has correct cache headers"
+          fi
+
+      - name: Test Static Asset Caching
+        run: |
+          echo "Testing static asset cache headers..."
+          
+          # WASM files should be cached with immutable
+          wasm_cache=$(curl -s -I "$PREVIEW_URL/_framework/dotnet.wasm" 2>/dev/null | grep -i "cache-control" || echo "not-found")
+          if [[ "$wasm_cache" =~ "immutable" ]]; then
+            echo "✅ WASM files have immutable cache headers"
+          else
+            echo "⚠️  Warning: WASM files should be cached as immutable"
+          fi
+          
+          # Index.html should NOT be cached
+          index_cache=$(curl -s -I "$PREVIEW_URL/" | grep -i "cache-control" || echo "")
+          if [[ "$index_cache" =~ "no-cache" ]] || [[ "$index_cache" =~ "no-store" ]]; then
+            echo "✅ Index.html has correct no-cache headers"
+          else
+            echo "⚠️  Warning: Index.html should not be cached"
+          fi
+
+      - name: Test Blazor Environment Header
+        run: |
+          echo "Testing Blazor environment detection..."
+          
+          # Check for Blazor-Environment header in response
+          env_header=$(curl -s -I "$PREVIEW_URL/" | grep -i "blazor-environment" || echo "")
+          
+          if [ -n "$env_header" ]; then
+            echo "✅ Blazor-Environment header found: $env_header"
+          else
+            echo "⚠️  Warning: Blazor-Environment header not found"
+          fi
+
+      - name: Test PWA Manifest
+        run: |
+          echo "Testing PWA manifest..."
+          
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$PREVIEW_URL/manifest.json")
+          if [ "$response" != "200" ]; then
+            echo "❌ manifest.json not found"
+            exit 1
+          fi
+          echo "✅ PWA manifest.json found"
+
+      - name: Test Service Worker
+        run: |
+          echo "Testing service worker files..."
+          
+          # Check service-worker.js exists
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$PREVIEW_URL/service-worker.js" 2>/dev/null || echo "404")
+          if [ "$response" = "200" ]; then
+            echo "✅ service-worker.js found"
+            
+            # Should have no-cache header
+            sw_cache=$(curl -s -I "$PREVIEW_URL/service-worker.js" | grep -i "cache-control" || echo "")
+            if [[ "$sw_cache" =~ "no-cache" ]]; then
+              echo "✅ Service worker has correct no-cache header"
+            else
+              echo "⚠️  Warning: Service worker should not be cached"
+            fi
+          else
+            echo "ℹ️  Service worker not found (may not be published yet)"
+          fi
+
+      - name: Test Version Info
+        run: |
+          echo "Testing version.json..."
+          
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$PREVIEW_URL/version.json")
+          if [ "$response" != "200" ]; then
+            echo "❌ version.json not found"
+            exit 1
+          fi
+          
+          # Get version info
+          version_info=$(curl -s "$PREVIEW_URL/version.json")
+          echo "✅ Version info: $version_info"
+
+      - name: Test Security Headers
+        run: |
+          echo "Testing security headers..."
+          
+          headers=$(curl -s -I "$PREVIEW_URL/")
+          
+          # Check for common security headers
+          if [[ "$headers" =~ "x-content-type-options" ]]; then
+            echo "✅ X-Content-Type-Options header present"
+          else
+            echo "⚠️  Warning: X-Content-Type-Options header missing"
+          fi
+          
+          if [[ "$headers" =~ "x-frame-options" ]]; then
+            echo "✅ X-Frame-Options header present"
+          else
+            echo "⚠️  Warning: X-Frame-Options header missing"
+          fi
+
+      - name: Test MIME Types
+        run: |
+          echo "Testing MIME types for WebAssembly..."
+          
+          # .wasm files should have correct MIME type
+          wasm_mime=$(curl -s -I "$PREVIEW_URL/_framework/dotnet.wasm" 2>/dev/null | grep -i "content-type" || echo "not-found")
+          
+          if [[ "$wasm_mime" =~ "application/wasm" ]]; then
+            echo "✅ WASM files have correct MIME type"
+          else
+            echo "⚠️  Warning: WASM MIME type may be incorrect: $wasm_mime"
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo ""
+          echo "================================"
+          echo "SWA Preview Smoke Tests Complete"
+          echo "================================"
+          echo "Preview URL: $PREVIEW_URL"
+          echo ""
+          echo "Next steps:"
+          echo "1. Manually test the preview URL in your browser"
+          echo "2. Verify auth flows work (if applicable)"
+          echo "3. Test PWA offline functionality"
+          echo "4. Check browser console for errors"
+
+  comment-results:
+    runs-on: ubuntu-latest
+    needs: [wait-for-preview, smoke-tests]
+    if: always()
+    name: Post Results to PR
+    steps:
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const success = '${{ needs.smoke-tests.result }}' === 'success';
+            const previewUrl = '${{ needs.wait-for-preview.outputs.preview-url }}';
+            
+            const icon = success ? '✅' : '❌';
+            const status = success ? 'passed' : 'failed';
+            
+            let body = `## ${icon} SWA Preview Smoke Tests ${status}\n\n`;
+            
+            if (previewUrl) {
+              body += `**Preview URL**: ${previewUrl}\n\n`;
+            }
+            
+            if (success) {
+              body += `### ✅ All smoke tests passed!\n\n`;
+              body += `**Manual Testing Checklist**:\n`;
+              body += `- [ ] Test auth flows (if applicable)\n`;
+              body += `- [ ] Test PWA offline mode\n`;
+              body += `- [ ] Verify service worker updates\n`;
+              body += `- [ ] Check browser console for errors\n`;
+            } else {
+              body += `### ❌ Some smoke tests failed\n\n`;
+              body += `Please check the [workflow logs](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.\n\n`;
+            }
+            
+            body += `\n---\n`;
+            body += `💡 **Tip**: These automated tests validate SWA-specific behaviors (routing, caching, headers) that differ from App Service.`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
