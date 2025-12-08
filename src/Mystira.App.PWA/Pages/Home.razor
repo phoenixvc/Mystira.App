@@ -209,11 +209,12 @@
                     }
                 </div>
 
-                @if (isLoadingBundles)
+                @* Only show loading/empty states when no bundle is currently selected *@
+                @if (isLoadingBundles && string.IsNullOrEmpty(selectedBundleId))
                 {
                     <SkeletonLoader Count="6" />
                 }
-                else if (!filteredBundles.Any())
+                else if (string.IsNullOrEmpty(selectedBundleId) && !filteredBundles.Any())
                 {
                     <EmptyState
                         IconClass="fas fa-box-open fa-4x"

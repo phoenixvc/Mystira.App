@@ -17,7 +17,7 @@
                         </div>
                     }
                 </div>
-                
+
                 <!-- Screen reader announcement for filter changes -->
                 <div role="status" aria-live="polite" class="sr-only">
                     @if (ResultCount.HasValue)
@@ -25,7 +25,7 @@
                         <span>@ResultCountLabel</span>
                     }
                 </div>
-                
+
                 @* Compact Filter Row *@
                 <div class="filter-row">
                     @* Search Bar *@
@@ -36,16 +36,16 @@
                                 <span class="input-group-text">
                                     <i class="fas fa-search"></i>
                                 </span>
-                                <input type="text" 
-                                       class="form-control" 
+                                <input type="text"
+                                       class="form-control"
                                        placeholder="Search by story, character, or skill..."
                                        aria-label="Search adventures"
                                        @bind="SearchQuery"
                                        @bind:event="oninput" />
                                 @if (!string.IsNullOrEmpty(SearchQuery))
                                 {
-                                    <button class="btn btn-outline-secondary" 
-                                            type="button" 
+                                    <button class="btn btn-outline-secondary"
+                                            type="button"
                                             @onclick="OnClearSearch"
                                             aria-label="Clear search">
                                         <i class="fas fa-times"></i>
@@ -54,7 +54,7 @@
                             </div>
                         </div>
                     }
-                    
+
                     @* Age Group Filters *@
                     <div class="filter-age-groups">
                         <div class="age-filter-container d-flex flex-wrap gap-2" role="group" aria-label="Age group filters">
@@ -77,7 +77,7 @@
                             }
                             @if (SelectedAgeGroups.Any())
                             {
-                                <button class="btn btn-outline-danger btn-sm" 
+                                <button class="btn btn-outline-danger btn-sm"
                                         @onclick="OnClearAll"
                                         aria-label="Clear all age group filters">
                                     <i class="fas fa-times me-1"></i>Clear
@@ -85,19 +85,19 @@
                             }
                         </div>
                     </div>
-                    
+
                     @* Show Completed Toggle - Compact *@
                     @if (ShowCompletedToggle)
                     {
                         <div class="filter-toggle">
                             <div class="completed-toggle-wrapper @(ShowCompleted ? "active" : "")">
                                 <div class="form-check form-switch mb-0">
-                                    <input class="form-check-input completed-switch" 
-                                           type="checkbox" 
-                                           id="showCompletedToggle" 
+                                    <input class="form-check-input completed-switch"
+                                           type="checkbox"
+                                           id="showCompletedToggle"
                                            role="switch"
                                            aria-label="Toggle completed stories visibility"
-                                           checked="@(ShowCompleted ? true : (bool?)null)" 
+                                           checked="@(ShowCompleted ? true : (bool?)null)"
                                            @onchange="OnShowCompletedChanged">
                                     <label class="form-check-label toggle-label" for="showCompletedToggle">
                                         <span class="toggle-icon">
@@ -125,7 +125,7 @@
                         </div>
                     }
                 </div>
-                
+
                 @* Sort Options *@
                 @if (ShowSortOptions && !string.IsNullOrEmpty(CurrentSort))
                 {
@@ -158,49 +158,67 @@
 @code {
     [Parameter]
     public string[] AgeGroups { get; set; } = Array.Empty<string>();
-    
+
     [Parameter]
     public HashSet<string> SelectedAgeGroups { get; set; } = new();
-    
+
     [Parameter]
     public Dictionary<string, int> AgeGroupCounts { get; set; } = new();
-    
+
+    private string _searchQuery = string.Empty;
+
     [Parameter]
-    public string SearchQuery { get; set; } = string.Empty;
-    
+    public string SearchQuery
+    {
+        get => _searchQuery;
+        set
+        {
+            if (_searchQuery == value)
+            {
+                return;
+            }
+            _searchQuery = value ?? string.Empty;
+            // Propagate changes immediately so parent can filter as the user types
+            if (SearchQueryChanged.HasDelegate)
+            {
+                _ = SearchQueryChanged.InvokeAsync(_searchQuery);
+            }
+        }
+    }
+
     [Parameter]
     public EventCallback<string> SearchQueryChanged { get; set; }
-    
+
     [Parameter]
     public bool ShowSearch { get; set; } = true;
-    
+
     [Parameter]
     public bool ShowCompletedToggle { get; set; } = true;
-    
+
     [Parameter]
     public bool ShowCompleted { get; set; } = true;
-    
+
     [Parameter]
     public EventCallback<bool> ShowCompletedChanged { get; set; }
-    
+
     [Parameter]
     public int HiddenCount { get; set; } = 0;
-    
+
     [Parameter]
     public int? ResultCount { get; set; }
-    
+
     [Parameter]
     public string ResultCountLabel { get; set; } = string.Empty;
-    
+
     [Parameter]
     public EventCallback<string> OnAgeGroupToggled { get; set; }
-    
+
     [Parameter]
     public EventCallback OnClearAllFilters { get; set; }
-    
+
     [Parameter]
     public EventCallback OnSearchCleared { get; set; }
-    
+
     [Parameter]
     public bool ShowSortOptions { get; set; } = false;
 
@@ -212,7 +230,7 @@
 
     [Parameter]
     public string FilterTitle { get; set; } = "Filter Adventures";
-    
+
     private readonly List<SortOption> SortOptions = new()
     {
         new SortOption { Label = "Newest", Value = "newest", Icon = "fas fa-clock" },
@@ -222,14 +240,14 @@
         new SortOption { Label = "Short First", Value = "duration-asc", Icon = "fas fa-hourglass-start" },
         new SortOption { Label = "Long First", Value = "duration-desc", Icon = "fas fa-hourglass-end" }
     };
-    
+
     private class SortOption
     {
         public string Label { get; set; } = string.Empty;
         public string Value { get; set; } = string.Empty;
         public string Icon { get; set; } = string.Empty;
     }
-    
+
     private async Task OnAgeGroupToggle(string ageGroup)
     {
         if (OnAgeGroupToggled.HasDelegate)
@@ -237,7 +255,7 @@
             await OnAgeGroupToggled.InvokeAsync(ageGroup);
         }
     }
-    
+
     private async Task OnClearAll()
     {
         if (OnClearAllFilters.HasDelegate)
@@ -245,7 +263,7 @@
             await OnClearAllFilters.InvokeAsync();
         }
     }
-    
+
     private async Task OnClearSearch()
     {
         SearchQuery = string.Empty;
@@ -258,7 +276,7 @@
             await SearchQueryChanged.InvokeAsync(SearchQuery);
         }
     }
-    
+
     private async Task OnShowCompletedChanged(ChangeEventArgs e)
     {
         var value = (bool)(e.Value ?? false);
@@ -267,7 +285,7 @@
             await ShowCompletedChanged.InvokeAsync(value);
         }
     }
-    
+
     private async Task OnSortChange(string sortValue)
     {
         if (OnSortChanged.HasDelegate)
