@@ -40,6 +40,50 @@ public interface IDiscordBotService
     /// Get bot status information
     /// </summary>
     BotStatus GetStatus();
+
+    // ─────────────────────────────────────────────────────────────────
+    // Broadcast / First Responder Pattern
+    // ─────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Send a message to multiple channels and await the first response.
+    /// Useful for support escalation, load balancing, or failover scenarios.
+    /// </summary>
+    /// <param name="channelIds">Channels to broadcast to</param>
+    /// <param name="message">Message content</param>
+    /// <param name="timeout">How long to wait for a response</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Result containing first responder info, or TimedOut=true if no response</returns>
+    Task<FirstResponderResult> SendAndAwaitFirstResponseAsync(
+        IEnumerable<ulong> channelIds,
+        string message,
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Send an embed to multiple channels and await the first response.
+    /// </summary>
+    Task<FirstResponderResult> SendEmbedAndAwaitFirstResponseAsync(
+        IEnumerable<ulong> channelIds,
+        EmbedData embed,
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Broadcast to multiple channels with a response handler callback.
+    /// Handler returns true to stop listening for more responses.
+    /// </summary>
+    /// <param name="channelIds">Channels to broadcast to</param>
+    /// <param name="message">Message content</param>
+    /// <param name="onResponse">Callback for each response; return true to stop listening</param>
+    /// <param name="timeout">Maximum time to listen for responses</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task BroadcastWithResponseHandlerAsync(
+        IEnumerable<ulong> channelIds,
+        string message,
+        Func<ResponseEvent, Task<bool>> onResponse,
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -76,4 +120,119 @@ public class BotStatus
     public string? BotName { get; set; }
     public ulong? BotId { get; set; }
     public int GuildCount { get; set; }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Broadcast / First Responder Types
+// ─────────────────────────────────────────────────────────────────
+
+/// <summary>
+/// Result from a broadcast-and-await-first-response operation.
+/// </summary>
+public class FirstResponderResult
+{
+    /// <summary>
+    /// Whether the operation timed out without receiving a response.
+    /// </summary>
+    public bool TimedOut { get; set; }
+
+    /// <summary>
+    /// The channel ID that responded first.
+    /// </summary>
+    public ulong RespondingChannelId { get; set; }
+
+    /// <summary>
+    /// The channel name that responded first.
+    /// </summary>
+    public string? RespondingChannelName { get; set; }
+
+    /// <summary>
+    /// The message ID of the response.
+    /// </summary>
+    public ulong ResponseMessageId { get; set; }
+
+    /// <summary>
+    /// The content of the response message.
+    /// </summary>
+    public string ResponseContent { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The user ID of the responder.
+    /// </summary>
+    public ulong ResponderId { get; set; }
+
+    /// <summary>
+    /// The username of the responder.
+    /// </summary>
+    public string? ResponderName { get; set; }
+
+    /// <summary>
+    /// Time elapsed from broadcast to first response.
+    /// </summary>
+    public TimeSpan ResponseTime { get; set; }
+
+    /// <summary>
+    /// IDs of messages sent to channels (for cleanup/reference).
+    /// </summary>
+    public List<SentMessage> SentMessages { get; set; } = new();
+}
+
+/// <summary>
+/// Represents a message sent during a broadcast operation.
+/// </summary>
+public class SentMessage
+{
+    public ulong ChannelId { get; set; }
+    public ulong MessageId { get; set; }
+}
+
+/// <summary>
+/// Event data for response handler callbacks.
+/// </summary>
+public class ResponseEvent
+{
+    /// <summary>
+    /// The channel ID where the response was received.
+    /// </summary>
+    public ulong ChannelId { get; set; }
+
+    /// <summary>
+    /// The channel name where the response was received.
+    /// </summary>
+    public string? ChannelName { get; set; }
+
+    /// <summary>
+    /// The message ID of the response.
+    /// </summary>
+    public ulong MessageId { get; set; }
+
+    /// <summary>
+    /// The content of the response.
+    /// </summary>
+    public string Content { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The user ID of the responder.
+    /// </summary>
+    public ulong ResponderId { get; set; }
+
+    /// <summary>
+    /// The username of the responder.
+    /// </summary>
+    public string? ResponderName { get; set; }
+
+    /// <summary>
+    /// Time elapsed since the broadcast was sent.
+    /// </summary>
+    public TimeSpan ElapsedTime { get; set; }
+
+    /// <summary>
+    /// The original message ID this is responding to (if it's a reply).
+    /// </summary>
+    public ulong? ReplyToMessageId { get; set; }
+
+    /// <summary>
+    /// Whether this response is a direct reply to the broadcast message.
+    /// </summary>
+    public bool IsDirectReply { get; set; }
 }

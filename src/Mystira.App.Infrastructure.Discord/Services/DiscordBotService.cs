@@ -453,4 +453,343 @@ public class DiscordBotService : IMessagingService, Application.Ports.Messaging.
     /// Internal access to InteractionService for Infrastructure layer use.
     /// </summary>
     internal InteractionService Interactions => _interactions;
+
+    // ─────────────────────────────────────────────────────────────────
+    // Broadcast / First Responder Implementation
+    // ─────────────────────────────────────────────────────────────────
+
+    /// <inheritdoc />
+    public async Task<FirstResponderResult> SendAndAwaitFirstResponseAsync(
+        IEnumerable<ulong> channelIds,
+        string message,
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected)
+        {
+            throw new InvalidOperationException("Discord bot is not connected");
+        }
+
+        var tcs = new TaskCompletionSource<FirstResponderResult>();
+        var sentMessages = new List<SentMessage>();
+        var startTime = DateTime.UtcNow;
+        var channelList = channelIds.ToList();
+
+        _logger.LogInformation("Broadcasting message to {ChannelCount} channels", channelList.Count);
+
+        // Send messages to all channels
+        foreach (var channelId in channelList)
+        {
+            try
+            {
+                var channel = _client.GetChannel(channelId) as IMessageChannel;
+                if (channel != null)
+                {
+                    var sentMsg = await channel.SendMessageAsync(message);
+                    sentMessages.Add(new SentMessage { ChannelId = channelId, MessageId = sentMsg.Id });
+                    _logger.LogDebug("Broadcast sent to channel {ChannelId}", channelId);
+                }
+                else
+                {
+                    _logger.LogWarning("Channel {ChannelId} not found or not a message channel", channelId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send broadcast to channel {ChannelId}", channelId);
+            }
+        }
+
+        if (sentMessages.Count == 0)
+        {
+            return new FirstResponderResult
+            {
+                TimedOut = true,
+                SentMessages = sentMessages
+            };
+        }
+
+        var sentMessageIds = sentMessages.Select(m => m.MessageId).ToHashSet();
+        var sentChannelIds = sentMessages.Select(m => m.ChannelId).ToHashSet();
+
+        // Handler for incoming messages
+        Task OnMessageReceived(SocketMessage msg)
+        {
+            // Ignore bot messages
+            if (msg.Author.IsBot)
+                return Task.CompletedTask;
+
+            // Check if message is in one of our broadcast channels
+            if (!sentChannelIds.Contains(msg.Channel.Id))
+                return Task.CompletedTask;
+
+            // Check if it's a reply to one of our messages OR just any message in the channel
+            var isDirectReply = msg.Reference?.MessageId is { } replyToId && sentMessageIds.Contains(replyToId.Value);
+
+            // Accept either direct replies or any message in the broadcast channels
+            tcs.TrySetResult(new FirstResponderResult
+            {
+                TimedOut = false,
+                RespondingChannelId = msg.Channel.Id,
+                RespondingChannelName = msg.Channel.Name,
+                ResponseMessageId = msg.Id,
+                ResponseContent = msg.Content,
+                ResponderId = msg.Author.Id,
+                ResponderName = msg.Author.Username,
+                ResponseTime = DateTime.UtcNow - startTime,
+                SentMessages = sentMessages
+            });
+
+            return Task.CompletedTask;
+        }
+
+        _client.MessageReceived += OnMessageReceived;
+
+        try
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(timeout);
+
+            var completedTask = await Task.WhenAny(
+                tcs.Task,
+                Task.Delay(Timeout.Infinite, cts.Token)
+            ).ConfigureAwait(false);
+
+            if (completedTask == tcs.Task)
+            {
+                var result = await tcs.Task;
+                _logger.LogInformation("First response received from {Responder} in channel {Channel} after {Time}ms",
+                    result.ResponderName, result.RespondingChannelName, result.ResponseTime.TotalMilliseconds);
+                return result;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Timeout or cancellation
+        }
+        finally
+        {
+            _client.MessageReceived -= OnMessageReceived;
+        }
+
+        _logger.LogInformation("Broadcast timed out after {Timeout}ms with no response", timeout.TotalMilliseconds);
+        return new FirstResponderResult
+        {
+            TimedOut = true,
+            SentMessages = sentMessages
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<FirstResponderResult> SendEmbedAndAwaitFirstResponseAsync(
+        IEnumerable<ulong> channelIds,
+        EmbedData embedData,
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected)
+        {
+            throw new InvalidOperationException("Discord bot is not connected");
+        }
+
+        var embed = new EmbedBuilder()
+            .WithTitle(embedData.Title)
+            .WithDescription(embedData.Description)
+            .WithColor(new Color(embedData.ColorRed, embedData.ColorGreen, embedData.ColorBlue));
+
+        if (!string.IsNullOrEmpty(embedData.Footer))
+        {
+            embed.WithFooter(embedData.Footer);
+        }
+
+        if (embedData.Fields != null)
+        {
+            foreach (var field in embedData.Fields)
+            {
+                embed.AddField(field.Name, field.Value, field.Inline);
+            }
+        }
+
+        var builtEmbed = embed.Build();
+        var tcs = new TaskCompletionSource<FirstResponderResult>();
+        var sentMessages = new List<SentMessage>();
+        var startTime = DateTime.UtcNow;
+        var channelList = channelIds.ToList();
+
+        _logger.LogInformation("Broadcasting embed to {ChannelCount} channels", channelList.Count);
+
+        // Send embeds to all channels
+        foreach (var channelId in channelList)
+        {
+            try
+            {
+                var channel = _client.GetChannel(channelId) as IMessageChannel;
+                if (channel != null)
+                {
+                    var sentMsg = await channel.SendMessageAsync(embed: builtEmbed);
+                    sentMessages.Add(new SentMessage { ChannelId = channelId, MessageId = sentMsg.Id });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send broadcast embed to channel {ChannelId}", channelId);
+            }
+        }
+
+        if (sentMessages.Count == 0)
+        {
+            return new FirstResponderResult { TimedOut = true, SentMessages = sentMessages };
+        }
+
+        var sentChannelIds = sentMessages.Select(m => m.ChannelId).ToHashSet();
+
+        Task OnMessageReceived(SocketMessage msg)
+        {
+            if (msg.Author.IsBot || !sentChannelIds.Contains(msg.Channel.Id))
+                return Task.CompletedTask;
+
+            tcs.TrySetResult(new FirstResponderResult
+            {
+                TimedOut = false,
+                RespondingChannelId = msg.Channel.Id,
+                RespondingChannelName = msg.Channel.Name,
+                ResponseMessageId = msg.Id,
+                ResponseContent = msg.Content,
+                ResponderId = msg.Author.Id,
+                ResponderName = msg.Author.Username,
+                ResponseTime = DateTime.UtcNow - startTime,
+                SentMessages = sentMessages
+            });
+            return Task.CompletedTask;
+        }
+
+        _client.MessageReceived += OnMessageReceived;
+
+        try
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(timeout);
+
+            var completedTask = await Task.WhenAny(
+                tcs.Task,
+                Task.Delay(Timeout.Infinite, cts.Token)
+            ).ConfigureAwait(false);
+
+            if (completedTask == tcs.Task)
+            {
+                return await tcs.Task;
+            }
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            _client.MessageReceived -= OnMessageReceived;
+        }
+
+        return new FirstResponderResult { TimedOut = true, SentMessages = sentMessages };
+    }
+
+    /// <inheritdoc />
+    public async Task BroadcastWithResponseHandlerAsync(
+        IEnumerable<ulong> channelIds,
+        string message,
+        Func<ResponseEvent, Task<bool>> onResponse,
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsConnected)
+        {
+            throw new InvalidOperationException("Discord bot is not connected");
+        }
+
+        var sentMessages = new List<SentMessage>();
+        var startTime = DateTime.UtcNow;
+        var channelList = channelIds.ToList();
+        var stopListening = false;
+
+        _logger.LogInformation("Broadcasting with handler to {ChannelCount} channels", channelList.Count);
+
+        // Send messages to all channels
+        foreach (var channelId in channelList)
+        {
+            try
+            {
+                var channel = _client.GetChannel(channelId) as IMessageChannel;
+                if (channel != null)
+                {
+                    var sentMsg = await channel.SendMessageAsync(message);
+                    sentMessages.Add(new SentMessage { ChannelId = channelId, MessageId = sentMsg.Id });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send broadcast to channel {ChannelId}", channelId);
+            }
+        }
+
+        if (sentMessages.Count == 0)
+        {
+            return;
+        }
+
+        var sentMessageIds = sentMessages.Select(m => m.MessageId).ToHashSet();
+        var sentChannelIds = sentMessages.Select(m => m.ChannelId).ToHashSet();
+
+        async Task OnMessageReceived(SocketMessage msg)
+        {
+            if (stopListening || msg.Author.IsBot || !sentChannelIds.Contains(msg.Channel.Id))
+                return;
+
+            var isDirectReply = msg.Reference?.MessageId is { } replyToId && sentMessageIds.Contains(replyToId.Value);
+
+            var responseEvent = new ResponseEvent
+            {
+                ChannelId = msg.Channel.Id,
+                ChannelName = msg.Channel.Name,
+                MessageId = msg.Id,
+                Content = msg.Content,
+                ResponderId = msg.Author.Id,
+                ResponderName = msg.Author.Username,
+                ElapsedTime = DateTime.UtcNow - startTime,
+                ReplyToMessageId = msg.Reference?.MessageId.GetValueOrDefault(),
+                IsDirectReply = isDirectReply
+            };
+
+            try
+            {
+                stopListening = await onResponse(responseEvent);
+                if (stopListening)
+                {
+                    _logger.LogDebug("Handler requested to stop listening after response from {Responder}",
+                        responseEvent.ResponderName);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in response handler");
+            }
+        }
+
+        _client.MessageReceived += OnMessageReceived;
+
+        try
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(timeout);
+
+            // Wait for timeout or cancellation while handler processes responses
+            while (!stopListening && !cts.Token.IsCancellationRequested)
+            {
+                await Task.Delay(100, cts.Token).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogDebug("Broadcast handler finished (timeout or cancellation)");
+        }
+        finally
+        {
+            _client.MessageReceived -= OnMessageReceived;
+        }
+    }
 }
