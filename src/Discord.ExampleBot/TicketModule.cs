@@ -107,16 +107,22 @@ public class TicketModule : InteractionModuleBase<SocketInteractionContext>
     private static string MakeSafeChannelSlug(string input)
     {
         // Very small sanitiser for Discord channel naming
+        // Only allow ASCII letters (a-z, A-Z) and digits (0-9)
         var lower = input.ToLowerInvariant();
         var cleaned = new string(lower
-            .Select(ch => char.IsLetterOrDigit(ch) ? ch : '-')
+            .Select(ch => (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') ? ch : '-')
             .ToArray());
 
         cleaned = cleaned.Trim('-');
 
-        // Collapse doubles
+        // Collapse consecutive dashes
         while (cleaned.Contains("--"))
             cleaned = cleaned.Replace("--", "-");
+
+        // Limit length to 88 characters (leaving room for "ticket-" prefix and "-####" suffix)
+        const int maxLength = 88;
+        if (cleaned.Length > maxLength)
+            cleaned = cleaned.Substring(0, maxLength).TrimEnd('-');
 
         return string.IsNullOrWhiteSpace(cleaned) ? "user" : cleaned;
     }
