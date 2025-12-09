@@ -536,7 +536,6 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
             };
         }
 
-        var sentMessageIds = sentMessages.Select(m => m.MessageId).ToHashSet();
         var sentChannelIds = sentMessages.Select(m => m.ChannelId).ToHashSet();
 
         // Handler for incoming messages
