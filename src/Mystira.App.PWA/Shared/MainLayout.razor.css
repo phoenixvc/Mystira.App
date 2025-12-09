@@ -55,6 +55,50 @@
     color: var(--primary-color) !important;
 }
 
+/* Current Adventure Indicator */
+.current-adventure-indicator {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem !important;
+    margin: 0 0.5rem;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%);
+    border: 2px solid rgba(34, 197, 94, 0.4);
+    border-radius: 25px;
+    color: #16a34a !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem;
+    text-decoration: none !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.current-adventure-indicator:hover {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(16, 185, 129, 0.2) 100%);
+    border-color: rgba(34, 197, 94, 0.6);
+    color: #15803d !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+}
+
+.current-adventure-indicator i {
+    color: #22c55e;
+    font-size: 0.9rem;
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.current-adventure-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* Offline Indicator */
 .offline-indicator {
     display: none;
@@ -204,4 +248,67 @@ html[data-theme="dark"] .navbar-toggler {
 
 html[data-theme="dark"] .navbar-toggler-icon {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28241, 245, 249, 0.9%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+/* Current Adventure Indicator - Dark Mode */
+@media (prefers-color-scheme: dark) {
+    .current-adventure-indicator {
+        background: linear-gradient(135deg, rgba(52, 211, 153, 0.2) 0%, rgba(16, 185, 129, 0.15) 100%);
+        border-color: rgba(52, 211, 153, 0.4);
+        color: #6ee7b7 !important;
+    }
+
+    .current-adventure-indicator:hover {
+        background: linear-gradient(135deg, rgba(52, 211, 153, 0.3) 0%, rgba(16, 185, 129, 0.25) 100%);
+        border-color: rgba(52, 211, 153, 0.6);
+        color: #86efac !important;
+        box-shadow: 0 4px 12px rgba(52, 211, 153, 0.2);
+    }
+
+    .current-adventure-indicator i {
+        color: #34d399;
+    }
+}
+
+html[data-theme="dark"] .current-adventure-indicator {
+    background: linear-gradient(135deg, rgba(52, 211, 153, 0.2) 0%, rgba(16, 185, 129, 0.15) 100%);
+    border-color: rgba(52, 211, 153, 0.4);
+    color: #6ee7b7 !important;
+}
+
+html[data-theme="dark"] .current-adventure-indicator:hover {
+    background: linear-gradient(135deg, rgba(52, 211, 153, 0.3) 0%, rgba(16, 185, 129, 0.25) 100%);
+    border-color: rgba(52, 211, 153, 0.6);
+    color: #86efac !important;
+    box-shadow: 0 4px 12px rgba(52, 211, 153, 0.2);
+}
+
+html[data-theme="dark"] .current-adventure-indicator i {
+    color: #34d399;
+}
+
+/* Light mode explicit overrides for current adventure indicator */
+html[data-theme="light"] .current-adventure-indicator {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%);
+    border-color: rgba(34, 197, 94, 0.4);
+    color: #16a34a !important;
+}
+
+html[data-theme="light"] .current-adventure-indicator:hover {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(16, 185, 129, 0.2) 100%);
+    border-color: rgba(34, 197, 94, 0.6);
+    color: #15803d !important;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+}
+
+html[data-theme="light"] .current-adventure-indicator i {
+    color: #22c55e;
+}
+
+/* Mobile responsiveness for current adventure indicator */
+@media (max-width: 991px) {
+    .current-adventure-indicator {
+        margin: 0.5rem 0;
+        max-width: 100%;
+    }
 }
