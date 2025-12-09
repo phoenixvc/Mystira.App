@@ -98,9 +98,10 @@ param tags object = {}
 // Helper: Check if Key Vault is configured
 var useKeyVault = !empty(keyVaultUri)
 
-// Helper: Build Key Vault reference
+// Helper: Key Vault reference prefix for building secret URIs
 // Format: @Microsoft.KeyVault(SecretUri=https://vault.vault.azure.net/secrets/secretname/)
-func kvRef(secretName string) string => '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/${secretName}/)'
+var kvRefPrefix = '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/'
+var kvRefSuffix = '/)'
 
 // App Service Plan - uses existing if already deployed
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
@@ -181,19 +182,19 @@ resource appService 'Microsoft.Web/sites@2023-01-01' = {
         useKeyVault ? [
           {
             name: 'JwtSettings__RsaPrivateKey'
-            value: kvRef('JwtSettings--RsaPrivateKey')
+            value: '${kvRefPrefix}JwtSettings--RsaPrivateKey${kvRefSuffix}'
           }
           {
             name: 'JwtSettings__RsaPublicKey'
-            value: kvRef('JwtSettings--RsaPublicKey')
+            value: '${kvRefPrefix}JwtSettings--RsaPublicKey${kvRefSuffix}'
           }
           {
             name: 'JwtSettings__Issuer'
-            value: kvRef('JwtSettings--Issuer')
+            value: '${kvRefPrefix}JwtSettings--Issuer${kvRefSuffix}'
           }
           {
             name: 'JwtSettings__Audience'
-            value: kvRef('JwtSettings--Audience')
+            value: '${kvRefPrefix}JwtSettings--Audience${kvRefSuffix}'
           }
         ] : [
           {
@@ -228,37 +229,37 @@ resource appService 'Microsoft.Web/sites@2023-01-01' = {
         !empty(discordBotToken) || useKeyVault ? [
           {
             name: 'Discord__BotToken'
-            value: useKeyVault ? kvRef('Discord--BotToken') : discordBotToken
+            value: useKeyVault ? '${kvRefPrefix}Discord--BotToken${kvRefSuffix}' : discordBotToken
           }
         ] : [],
         // Bot Settings (if configured)
         !empty(botMicrosoftAppId) || useKeyVault ? [
           {
             name: 'Bot__MicrosoftAppId'
-            value: useKeyVault ? kvRef('Bot--MicrosoftAppId') : botMicrosoftAppId
+            value: useKeyVault ? '${kvRefPrefix}Bot--MicrosoftAppId${kvRefSuffix}' : botMicrosoftAppId
           }
           {
             name: 'Bot__MicrosoftAppPassword'
-            value: useKeyVault ? kvRef('Bot--MicrosoftAppPassword') : botMicrosoftAppPassword
+            value: useKeyVault ? '${kvRefPrefix}Bot--MicrosoftAppPassword${kvRefSuffix}' : botMicrosoftAppPassword
           }
         ] : [],
         // WhatsApp Settings (if configured)
         !empty(whatsAppChannelRegistrationId) || useKeyVault ? [
           {
             name: 'WhatsApp__ChannelRegistrationId'
-            value: useKeyVault ? kvRef('WhatsApp--ChannelRegistrationId') : whatsAppChannelRegistrationId
+            value: useKeyVault ? '${kvRefPrefix}WhatsApp--ChannelRegistrationId${kvRefSuffix}' : whatsAppChannelRegistrationId
           }
           {
             name: 'WhatsApp__PhoneNumberId'
-            value: useKeyVault ? kvRef('WhatsApp--PhoneNumberId') : whatsAppPhoneNumberId
+            value: useKeyVault ? '${kvRefPrefix}WhatsApp--PhoneNumberId${kvRefSuffix}' : whatsAppPhoneNumberId
           }
           {
             name: 'WhatsApp__BusinessAccountId'
-            value: useKeyVault ? kvRef('WhatsApp--BusinessAccountId') : whatsAppBusinessAccountId
+            value: useKeyVault ? '${kvRefPrefix}WhatsApp--BusinessAccountId${kvRefSuffix}' : whatsAppBusinessAccountId
           }
           {
             name: 'WhatsApp__WebhookVerifyToken'
-            value: useKeyVault ? kvRef('WhatsApp--WebhookVerifyToken') : whatsAppWebhookVerifyToken
+            value: useKeyVault ? '${kvRefPrefix}WhatsApp--WebhookVerifyToken${kvRefSuffix}' : whatsAppWebhookVerifyToken
           }
           {
             name: 'WhatsApp__WebhookUrl'
