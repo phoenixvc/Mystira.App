@@ -301,9 +301,10 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
                 {
                     await interaction.RespondAsync("An error occurred while processing this command.", ephemeral: true);
                 }
-                catch
+                catch (Exception innerEx)
                 {
                     // Interaction may have already been responded to
+                    _logger.LogError(innerEx, "Failed to send error response to interaction");
                 }
             }
         }
