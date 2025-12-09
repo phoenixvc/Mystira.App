@@ -110,7 +110,7 @@ public class TicketModuleTests
         var channelName = $"ticket-{safeName}-1234";
 
         // Assert
-        channelName.Length.Should().BeLessOrEqualTo(maxChannelLength);
+        channelName.Length.Should().BeLessThanOrEqualTo(maxChannelLength);
         safeName.Length.Should().Be(maxSafeNameLength);
     }
 
@@ -139,7 +139,7 @@ public class TicketModuleTests
 
         // Full channel name should never exceed 100
         var channelName = $"ticket-{safeName}-9999";
-        channelName.Length.Should().BeLessOrEqualTo(100);
+        channelName.Length.Should().BeLessThanOrEqualTo(100);
     }
 
     [Fact]

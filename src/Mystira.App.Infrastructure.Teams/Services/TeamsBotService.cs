@@ -163,7 +163,7 @@ public class TeamsBotService : IMessagingService, IChatBotService, IBotCommandSe
 
             await connectorClient.Conversations.SendToConversationAsync(
                 conversationRef.Conversation.Id,
-                activity,
+                (Activity)activity,  // Cast IMessageActivity to Activity
                 timeoutCts.Token);
 
             _logger.LogDebug("Sent embed to Teams conversation {ConversationId}", conversationRef.Conversation.Id);
