@@ -289,8 +289,7 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
         }
         catch (Exception ex) when (
             ex is not OutOfMemoryException &&
-            ex is not StackOverflowException &&
-            ex is not ThreadAbortException
+            ex is not StackOverflowException
         )
         {
             _logger.LogError(ex, "Error handling interaction");
