@@ -19,8 +19,7 @@ permissions:
   id-token: write
   contents: read
   actions: write
-  secrets: write  # Required for gh secret set
-  pull-requests: write  # Required for gh workflow run
+  pull-requests: write
 
 env:
   ENVIRONMENT: 'staging'
