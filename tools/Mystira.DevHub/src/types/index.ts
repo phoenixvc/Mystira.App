@@ -115,10 +115,10 @@ export interface WhatIfChange {
 
 export interface ResourceGroupConvention {
   pattern: string; // e.g., "mys-{env}-mystira-rg-{region}"
-  defaultResourceGroup: string; // e.g., "mys-dev-mystira-rg-euw"
-  resourceTypeMappings?: Record<string, string>; // e.g., { "Microsoft.Storage/storageAccounts": "mys-dev-storage-rg-euw" }
+  defaultResourceGroup: string; // e.g., "mys-dev-mystira-rg-san"
+  resourceTypeMappings?: Record<string, string>; // e.g., { "Microsoft.Storage/storageAccounts": "mys-dev-storage-rg-san" }
   environment?: string; // e.g., "dev", "staging", "prod"
-  region?: string; // e.g., "euw", "eus", "san"
+  region?: string; // e.g., "san", "euw", "eus"
   projectName?: string; // e.g., "mystira"
 }
 

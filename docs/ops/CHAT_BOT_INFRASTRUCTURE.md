@@ -76,7 +76,7 @@ Save the output:
 ```bash
 # Dev environment (naming: [org]-[env]-[project]-[type]-[region])
 az deployment group create \
-  --resource-group mys-dev-mystira-rg-euw \
+  --resource-group mys-dev-mystira-rg-san \
   --template-file infrastructure/main.bicep \
   --parameters @infrastructure/params.dev.json \
   --parameters \
@@ -146,12 +146,12 @@ az ad app credential reset --id $APP_ID --years 2
 
 # Update Key Vault (naming: [org]-[env]-[project]-kv-[region])
 az keyvault secret set \
-  --vault-name mys-dev-mystira-kv-euw \
+  --vault-name mys-dev-mystira-kv-san \
   --name BOT-MICROSOFT-APP-PASSWORD \
   --value $NEW_SECRET
 
 # Restart App Service to pick up new secret
-az webapp restart --name mys-dev-mystira-api-euw --resource-group mys-dev-mystira-rg-euw
+az webapp restart --name mys-dev-mystira-api-san --resource-group mys-dev-mystira-rg-san
 ```
 
 ### Rotate Discord Bot Token

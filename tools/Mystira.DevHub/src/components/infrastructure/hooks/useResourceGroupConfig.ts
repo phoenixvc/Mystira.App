@@ -3,8 +3,8 @@ import type { ResourceGroupConvention } from '../../../types';
 
 // Naming convention: [org]-[env]-[project]-rg-[region]
 const DEFAULT_CONFIG: ResourceGroupConvention = {
-  pattern: 'mys-{env}-mystira-rg-euw',
-  defaultResourceGroup: 'mys-dev-mystira-rg-euw',
+  pattern: 'mys-{env}-mystira-rg-san',
+  defaultResourceGroup: 'mys-dev-mystira-rg-san',
   resourceTypeMappings: {},
 };
 

@@ -23,9 +23,9 @@ The Mystira application uses three distinct environments, each with its own set 
 
 | Environment | Branch | Purpose | Azure Region | Resource Naming |
 |------------|--------|---------|--------------|-----------------|
-| **Development** | `dev` | Active development and testing | West Europe | `mys-dev-mystira-[type]-euw` |
-| **Staging** | `staging` | Pre-production validation | West Europe | `mys-staging-mystira-[type]-euw` |
-| **Production** | `main` | Live production environment | West Europe | `mys-prod-mystira-[type]-euw` |
+| **Development** | `dev` | Active development and testing | South Africa North | `mys-dev-mystira-[type]-san` |
+| **Staging** | `staging` | Pre-production validation | South Africa North | `mys-staging-mystira-[type]-san` |
+| **Production** | `main` | Live production environment | South Africa North | `mys-prod-mystira-[type]-san` |
 
 > 📘 **Azure Naming Conventions**: Mystira follows the standardized naming pattern `[org]-[env]-[project]-[type]-[region]` for all Azure resources. See [Azure Naming Conventions](../AZURE-NAMING-CONVENTIONS.md) for complete details. New resources will use the standard naming, while existing resources will be migrated gradually.
 
@@ -75,8 +75,8 @@ These secrets contain the publish profile XML for deploying to Azure App Service
 #### Development Environment
 | Secret Name | Service | Resource Name |
 |-------------|---------|---------------|
-| `AZURE_WEBAPP_PUBLISH_PROFILE_DEV` | Main API | `mys-dev-mystira-api-euw` |
-| `AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN` | Admin API | `mys-dev-mystira-adminapi-euw` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_DEV` | Main API | `mys-dev-mystira-api-san` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN` | Admin API | `mys-dev-mystira-adminapi-san` |
 
 #### Staging Environment
 > ⚠️ **Configuration Issue Detected**: The current staging workflows all reference the same secret (`AZURE_WEBAPP_PUBLISH_PROFILE_STAGING`) but deploy to three different App Services. Each App Service requires its own unique publish profile. The workflows should be updated to use separate secrets.
@@ -341,35 +341,35 @@ done
 ```bash
 # Development environment
 az webapp deployment list-publishing-profiles \
-  --name mys-dev-mystira-api-euw \
-  --resource-group mys-dev-mystira-rg-euw \
+  --name mys-dev-mystira-api-san \
+  --resource-group mys-dev-mystira-rg-san \
   --xml > dev-api-publish-profile.xml
 
 az webapp deployment list-publishing-profiles \
-  --name mys-dev-mystira-adminapi-euw \
-  --resource-group mys-dev-mystira-rg-euw \
+  --name mys-dev-mystira-adminapi-san \
+  --resource-group mys-dev-mystira-rg-san \
   --xml > dev-admin-api-publish-profile.xml
 
 # Staging environment
 az webapp deployment list-publishing-profiles \
-  --name mys-staging-mystira-api-euw \
-  --resource-group mys-staging-mystira-rg-euw \
+  --name mys-staging-mystira-api-san \
+  --resource-group mys-staging-mystira-rg-san \
   --xml > staging-api-publish-profile.xml
 
 az webapp deployment list-publishing-profiles \
-  --name mys-staging-mystira-adminapi-euw \
-  --resource-group mys-staging-mystira-rg-euw \
+  --name mys-staging-mystira-adminapi-san \
+  --resource-group mys-staging-mystira-rg-san \
   --xml > staging-admin-api-publish-profile.xml
 
 # Production environment
 az webapp deployment list-publishing-profiles \
-  --name mys-prod-mystira-api-euw \
-  --resource-group mys-prod-mystira-rg-euw \
+  --name mys-prod-mystira-api-san \
+  --resource-group mys-prod-mystira-rg-san \
   --xml > prod-api-publish-profile.xml
 
 az webapp deployment list-publishing-profiles \
-  --name mys-prod-mystira-adminapi-euw \
-  --resource-group mys-prod-mystira-rg-euw \
+  --name mys-prod-mystira-adminapi-san \
+  --resource-group mys-prod-mystira-rg-san \
   --xml > prod-admin-api-publish-profile.xml
 ```
 
@@ -404,8 +404,8 @@ az staticwebapp secrets list \
 ```bash
 # Get ACS connection string (naming: [org]-[env]-[project]-acs-[region])
 az communication list-key \
-  --name mys-dev-mystira-acs-euw \
-  --resource-group mys-dev-mystira-rg-euw \
+  --name mys-dev-mystira-acs-san \
+  --resource-group mys-dev-mystira-rg-san \
   --query primaryConnectionString -o tsv
 
 # Get verified sender email from ACS Email Communication Service

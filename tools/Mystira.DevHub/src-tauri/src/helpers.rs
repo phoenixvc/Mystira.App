@@ -152,20 +152,22 @@ mod tests {
         use crate::azure::deployment::helpers::get_resource_group_name;
 
         // Naming convention: [org]-[env]-[project]-rg-[region]
-        assert_eq!(get_resource_group_name("dev"), "mys-dev-mystira-rg-euw");
-        assert_eq!(get_resource_group_name("staging"), "mys-staging-mystira-rg-euw");
-        assert_eq!(get_resource_group_name("prod"), "mys-prod-mystira-rg-euw");
-        assert_eq!(get_resource_group_name("test"), "mys-test-mystira-rg-euw");
+        // Default region: South Africa North (san)
+        assert_eq!(get_resource_group_name("dev"), "mys-dev-mystira-rg-san");
+        assert_eq!(get_resource_group_name("staging"), "mys-staging-mystira-rg-san");
+        assert_eq!(get_resource_group_name("prod"), "mys-prod-mystira-rg-san");
+        assert_eq!(get_resource_group_name("test"), "mys-test-mystira-rg-san");
     }
 
     #[test]
     fn test_get_deployment_path() {
         use crate::azure::deployment::helpers::get_deployment_path;
 
+        // New infrastructure uses single main.bicep in infrastructure folder
         let path = get_deployment_path("/repo", "dev");
-        assert_eq!(path, "/repo/src/Mystira.App.Infrastructure.Azure/Deployment/dev");
+        assert_eq!(path, "/repo/infrastructure");
 
         let path2 = get_deployment_path("C:\\repo", "prod");
-        assert!(path2.contains("prod") && path2.contains("Deployment"));
+        assert_eq!(path2, "C:\\repo/infrastructure");
     }
 }

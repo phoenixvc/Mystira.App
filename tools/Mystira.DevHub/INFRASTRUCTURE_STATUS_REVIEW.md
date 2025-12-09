@@ -76,7 +76,7 @@
 - Service availability
 
 ### 2. **Resource Group Detection**
-**Current**: Uses hardcoded fallback `mys-dev-mystira-rg-euw` (naming: [org]-[env]-[project]-rg-[region])
+**Current**: Uses hardcoded fallback `mys-dev-mystira-rg-san` (naming: [org]-[env]-[project]-rg-[region])
 **Recommendation**: Should derive from `environment` and `resourceGroupConfig` more intelligently
 
 ### 3. **Multiple Resource Instances**

@@ -37,7 +37,7 @@ pub async fn azure_validate_infrastructure(
     
     // Create resource group if it doesn't exist (needed for validation)
     let _ = ensure_resource_group(&rg, "southafricanorth");
-    
+
     let deploy_storage_val = deploy_storage.unwrap_or(true);
     let deploy_cosmos_val = deploy_cosmos.unwrap_or(true);
     let deploy_app_service_val = deploy_app_service.unwrap_or(true);
