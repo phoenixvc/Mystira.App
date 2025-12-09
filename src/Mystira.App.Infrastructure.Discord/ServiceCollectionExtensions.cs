@@ -8,12 +8,14 @@ using Mystira.App.Infrastructure.Discord.Services;
 namespace Mystira.App.Infrastructure.Discord;
 
 /// <summary>
-/// Extension methods for registering Discord services
+/// Extension methods for registering Discord services.
+/// Follows clean/hexagonal architecture - registers as Application port interfaces.
 /// </summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Adds Discord bot services to the service collection
+    /// Adds Discord bot services to the service collection.
+    /// Registers the service as Application port interfaces (IMessagingService, IDiscordBotService).
     /// </summary>
     /// <param name="services">The service collection</param>
     /// <param name="configuration">The configuration instance</param>
@@ -26,18 +28,17 @@ public static class ServiceCollectionExtensions
     {
         // Register configuration
         services.Configure<DiscordOptions>(configuration.GetSection(DiscordOptions.SectionName));
-        
+
         if (configureOptions != null)
         {
             services.Configure(configureOptions);
         }
 
         // Register Discord bot service as singleton (maintains persistent connection)
-        // Register as both IMessagingService (Application port) and IDiscordBotService (backwards compatibility)
+        // Register as Application port interfaces for clean architecture
         services.AddSingleton<DiscordBotService>();
         services.AddSingleton<IMessagingService>(sp => sp.GetRequiredService<DiscordBotService>());
-        services.AddSingleton<Services.IDiscordBotService>(sp => sp.GetRequiredService<DiscordBotService>());
-        services.AddSingleton<Application.Ports.Messaging.IDiscordBotService>(sp => sp.GetRequiredService<DiscordBotService>());
+        services.AddSingleton<IDiscordBotService>(sp => sp.GetRequiredService<DiscordBotService>());
 
         return services;
     }

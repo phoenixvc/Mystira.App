@@ -74,5 +74,6 @@ public class BotStatus
     public bool IsEnabled { get; set; }
     public bool IsConnected { get; set; }
     public string? BotName { get; set; }
+    public ulong? BotId { get; set; }
     public int GuildCount { get; set; }
 }

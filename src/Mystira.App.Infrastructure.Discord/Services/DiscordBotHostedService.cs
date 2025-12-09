@@ -1,11 +1,13 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Mystira.App.Application.Ports.Messaging;
 
 namespace Mystira.App.Infrastructure.Discord.Services;
 
 /// <summary>
-/// Background service that manages the Discord bot lifecycle
-/// This can be used in Azure App Service WebJobs, Container Apps, or as a standalone service
+/// Background service that manages the Discord bot lifecycle.
+/// This can be used in Azure App Service WebJobs, Container Apps, or as a standalone service.
+/// Uses the Application port interface for clean architecture compliance.
 /// </summary>
 public class DiscordBotHostedService : BackgroundService
 {

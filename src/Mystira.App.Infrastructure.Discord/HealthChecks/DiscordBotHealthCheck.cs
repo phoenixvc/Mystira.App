@@ -1,10 +1,11 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Mystira.App.Infrastructure.Discord.Services;
+using Mystira.App.Application.Ports.Messaging;
 
 namespace Mystira.App.Infrastructure.Discord.HealthChecks;
 
 /// <summary>
-/// Health check to verify Discord bot connectivity
+/// Health check to verify Discord bot connectivity.
+/// Uses the Application port interface for clean architecture compliance.
 /// </summary>
 public class DiscordBotHealthCheck : IHealthCheck
 {
@@ -21,19 +22,21 @@ public class DiscordBotHealthCheck : IHealthCheck
     {
         try
         {
-            if (!_discordBotService.IsConnected)
+            var status = _discordBotService.GetStatus();
+
+            if (!status.IsConnected)
             {
                 return Task.FromResult(
                     HealthCheckResult.Unhealthy(
                         "Discord bot is not connected",
                         data: new Dictionary<string, object>
                         {
-                            ["IsConnected"] = false
+                            ["IsConnected"] = false,
+                            ["IsEnabled"] = status.IsEnabled
                         }));
             }
 
-            var currentUser = _discordBotService.CurrentUser;
-            if (currentUser == null)
+            if (string.IsNullOrEmpty(status.BotName))
             {
                 return Task.FromResult(
                     HealthCheckResult.Degraded(
@@ -45,15 +48,22 @@ public class DiscordBotHealthCheck : IHealthCheck
                         }));
             }
 
+            var data = new Dictionary<string, object>
+            {
+                ["IsConnected"] = true,
+                ["BotUsername"] = status.BotName,
+                ["GuildCount"] = status.GuildCount
+            };
+
+            if (status.BotId.HasValue)
+            {
+                data["BotId"] = status.BotId.Value;
+            }
+
             return Task.FromResult(
                 HealthCheckResult.Healthy(
                     "Discord bot is connected and operational",
-                    data: new Dictionary<string, object>
-                    {
-                        ["IsConnected"] = true,
-                        ["BotUsername"] = currentUser.Username,
-                        ["BotId"] = currentUser.Id
-                    }));
+                    data: data));
         }
         catch (Exception ex)
         {

@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Mystira.App.Application.Ports.Messaging;
 using Mystira.App.Infrastructure.Discord.Configuration;
 using Mystira.App.Infrastructure.Discord.Services;
 

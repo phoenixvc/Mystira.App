@@ -8,9 +8,10 @@ using Mystira.App.Infrastructure.Discord.Configuration;
 namespace Mystira.App.Infrastructure.Discord.Services;
 
 /// <summary>
-/// Implementation of Discord bot service using Discord.NET
+/// Implementation of Discord bot service using Discord.NET.
+/// Implements the Application port interfaces for clean architecture compliance.
 /// </summary>
-public class DiscordBotService : IMessagingService, IDiscordBotService, Application.Ports.Messaging.IDiscordBotService, IDisposable
+public class DiscordBotService : IMessagingService, Application.Ports.Messaging.IDiscordBotService, IDisposable
 {
     private readonly DiscordSocketClient _client;
     private readonly ILogger<DiscordBotService> _logger;
@@ -299,6 +300,7 @@ public class DiscordBotService : IMessagingService, IDiscordBotService, Applicat
             IsEnabled = !string.IsNullOrWhiteSpace(_options.BotToken),
             IsConnected = IsConnected,
             BotName = _client.CurrentUser?.Username,
+            BotId = _client.CurrentUser?.Id,
             GuildCount = _client.Guilds.Count
         };
     }
