@@ -34,6 +34,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.Infrastructure.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.Shared", "src\Mystira.App.Shared\Mystira.App.Shared.csproj", "{F12B6395-0DBF-45DA-B0D0-FAADA1C635FE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Discord.ExampleBot", "src\Discord.ExampleBot\Discord.ExampleBot.csproj", "{B9985F52-F312-4292-841C-D33F86C8317A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -224,6 +226,18 @@ Global
 		{F12B6395-0DBF-45DA-B0D0-FAADA1C635FE}.Release|x64.Build.0 = Release|Any CPU
 		{F12B6395-0DBF-45DA-B0D0-FAADA1C635FE}.Release|x86.ActiveCfg = Release|Any CPU
 		{F12B6395-0DBF-45DA-B0D0-FAADA1C635FE}.Release|x86.Build.0 = Release|Any CPU
+		{B9985F52-F312-4292-841C-D33F86C8317A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9985F52-F312-4292-841C-D33F86C8317A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9985F52-F312-4292-841C-D33F86C8317A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B9985F52-F312-4292-841C-D33F86C8317A}.Debug|x64.Build.0 = Debug|Any CPU
+		{B9985F52-F312-4292-841C-D33F86C8317A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B9985F52-F312-4292-841C-D33F86C8317A}.Debug|x86.Build.0 = Debug|Any CPU
+		{B9985F52-F312-4292-841C-D33F86C8317A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9985F52-F312-4292-841C-D33F86C8317A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9985F52-F312-4292-841C-D33F86C8317A}.Release|x64.ActiveCfg = Release|Any CPU
+		{B9985F52-F312-4292-841C-D33F86C8317A}.Release|x64.Build.0 = Release|Any CPU
+		{B9985F52-F312-4292-841C-D33F86C8317A}.Release|x86.ActiveCfg = Release|Any CPU
+		{B9985F52-F312-4292-841C-D33F86C8317A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -244,5 +258,6 @@ Global
 		{87BE6F3D-3BD1-4BE5-ACB7-59257BA9F5D8} = {636A8ADA-1901-4A23-88BB-A86586F1F765}
 		{8B73C65E-F2D4-40CE-88B5-8363EDA6364D} = {07610817-4AC8-456C-AAE7-764888044CCD}
 		{F12B6395-0DBF-45DA-B0D0-FAADA1C635FE} = {636A8ADA-1901-4A23-88BB-A86586F1F765}
+		{B9985F52-F312-4292-841C-D33F86C8317A} = {636A8ADA-1901-4A23-88BB-A86586F1F765}
 	EndGlobalSection
 EndGlobal
