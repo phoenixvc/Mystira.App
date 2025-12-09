@@ -25,6 +25,17 @@ param jwtIssuer string = 'MystiraAPI'
 @description('JWT Audience')
 param jwtAudience string = 'MystiraPWA'
 
+@description('Discord bot token (from Discord Developer Portal)')
+@secure()
+param discordBotToken string = ''
+
+@description('Bot Microsoft App ID (for Teams)')
+param botMicrosoftAppId string = ''
+
+@description('Bot Microsoft App Password (client secret)')
+@secure()
+param botMicrosoftAppPassword string = ''
+
 // Key Vault resource
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: keyVaultName
@@ -123,6 +134,45 @@ resource jwtAudienceSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   name: 'JwtSettings--Audience'
   properties: {
     value: jwtAudience
+    contentType: 'text/plain'
+    attributes: {
+      enabled: true
+    }
+  }
+}
+
+// Discord Bot Token secret
+resource discordBotTokenSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (discordBotToken != '') {
+  parent: keyVault
+  name: 'Discord--BotToken'
+  properties: {
+    value: discordBotToken
+    contentType: 'text/plain'
+    attributes: {
+      enabled: true
+    }
+  }
+}
+
+// Bot Microsoft App ID secret
+resource botAppIdSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (botMicrosoftAppId != '') {
+  parent: keyVault
+  name: 'Bot--MicrosoftAppId'
+  properties: {
+    value: botMicrosoftAppId
+    contentType: 'text/plain'
+    attributes: {
+      enabled: true
+    }
+  }
+}
+
+// Bot Microsoft App Password secret
+resource botAppPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (botMicrosoftAppPassword != '') {
+  parent: keyVault
+  name: 'Bot--MicrosoftAppPassword'
+  properties: {
+    value: botMicrosoftAppPassword
     contentType: 'text/plain'
     attributes: {
       enabled: true

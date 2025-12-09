@@ -12,10 +12,13 @@
       "value": "mystira"
     },
     "region": {
-      "value": "euw"
+      "value": "san"
     },
     "location": {
-      "value": "westeurope"
+      "value": "southafricanorth"
+    },
+    "fallbackRegion": {
+      "value": "eastus2"
     },
     "appServiceSku": {
       "value": "F1"
@@ -49,6 +52,12 @@
     },
     "enableWhatsApp": {
       "value": false
+    },
+    "deployStaticWebApp": {
+      "value": false
+    },
+    "staticWebAppSku": {
+      "value": "Free"
     }
   }
 }

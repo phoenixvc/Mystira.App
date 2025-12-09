@@ -11,24 +11,61 @@ All resources follow the pattern: `[org]-[env]-[project]-[type]-[region]`
 | `org` | Organisation code | `mys` (Mystira), `nl` (NeuralLiquid), `pvc` (Phoenix VC), `tws` (Twines & Straps) |
 | `env` | Environment | `dev`, `staging`, `prod` |
 | `project` | Project name | `mystira`, `mystira-story` |
-| `type` | Resource type | `api`, `app`, `log`, `cosmos`, `storage`, `kv`, `acs`, `bot`, etc. |
-| `region` | Region code | `euw` (West Europe), `san` (South Africa North), `wus` (West US), etc. |
+| `type` | Resource type | `api`, `app`, `log`, `cosmos`, `storage`, `kv`, `acs`, `bot`, `swa`, etc. |
+| `region` | Region code | `san` (South Africa North - **primary**), `eus2` (East US 2 - fallback), `euw` (West Europe), etc. |
 
 ### Resource Group Pattern
 ```
 [org]-[env]-[project]-rg-[region]
 ```
 
-### Examples
+### Examples (South Africa North)
 
 | Resource | Name |
 |----------|------|
-| Dev Resource Group | `mys-dev-mystira-rg-euw` |
-| Dev API App Service | `mys-dev-mystira-api-euw` |
-| Dev Cosmos DB | `mys-dev-mystira-cosmos-euw` |
-| Dev Log Analytics | `mys-dev-mystira-log-euw` |
-| Prod API App Service | `mys-prod-mystira-api-euw` |
-| Prod Storage Account | `mysprodmystirasteruw` (no dashes for storage) |
+| Dev Resource Group | `mys-dev-mystira-rg-san` |
+| Dev API App Service | `mys-dev-mystira-api-san` |
+| Dev Cosmos DB | `mys-dev-mystira-cosmos-san` |
+| Dev Log Analytics | `mys-dev-mystira-log-san` |
+| Dev Static Web App | `mys-dev-mystira-swa-eus2` (fallback region - see below) |
+| Prod API App Service | `mys-prod-mystira-api-san` |
+| Prod Storage Account | `mysprodmystirstsan` (no dashes for storage) |
+
+## Regional Availability
+
+**Primary Region: South Africa North (southafricanorth / san)**
+
+Not all Azure services are available in South Africa North. The infrastructure uses fallback regions for services that aren't available locally.
+
+### Service Availability Matrix
+
+| Service | South Africa North | Fallback Region | Notes |
+|---------|-------------------|-----------------|-------|
+| **App Service** | ✅ Available | - | Primary compute |
+| **Cosmos DB** | ✅ Available | - | NoSQL database |
+| **Storage Account** | ✅ Available | - | Blob storage |
+| **Key Vault** | ✅ Available | - | Secret management |
+| **Log Analytics** | ✅ Available | - | Monitoring |
+| **App Insights** | ✅ Available | - | APM |
+| **Azure Bot** | ✅ Available (global) | - | Teams/Discord bots |
+| **Communication Services** | ✅ Available (global) | - | Email/SMS/WhatsApp |
+| **Static Web Apps** | ❌ NOT Available | **eastus2** | PWA hosting |
+
+### Fallback Region Strategy
+
+For services not available in South Africa North, we use **East US 2 (eastus2)** as the fallback region because:
+1. It has full service availability
+2. Good connectivity to Africa via Azure backbone
+3. Lower latency than other fully-featured regions
+
+Static Web Apps are CDN-accelerated globally, so the backend region has minimal impact on user experience.
+
+### ACS Data Location
+
+Azure Communication Services data is stored in **Europe** (closest supported data location to Africa). Supported data locations are:
+- United States, Europe, UK, Australia, Japan, Canada, India, France
+
+"Africa" is not yet a supported data location for ACS.
 
 ## Overview
 
@@ -40,15 +77,16 @@ infrastructure/
 ├── modules/                # Shared Bicep modules
 │   ├── app-service.bicep
 │   ├── application-insights.bicep
-│   ├── azure-bot.bicep
-│   ├── communication-services.bicep
+│   ├── azure-bot.bicep        # Teams/Discord bot (global)
+│   ├── communication-services.bicep  # ACS Email/SMS/WhatsApp (global)
 │   ├── cosmos-db.bicep
-│   ├── key-vault.bicep
+│   ├── key-vault.bicep        # Stores secrets (JWT, Discord, Bot credentials)
 │   ├── log-analytics.bicep
+│   ├── static-web-app.bicep   # PWA hosting (fallback region)
 │   └── storage.bicep
-├── params.dev.json         # Development environment parameters
-├── params.staging.json     # Staging environment parameters
-└── params.prod.json        # Production environment parameters
+├── params.dev.json         # Development environment parameters (san)
+├── params.staging.json     # Staging environment parameters (san)
+└── params.prod.json        # Production environment parameters (san)
 ```
 
 This approach provides:

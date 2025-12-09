@@ -32,20 +32,24 @@ param project string = 'mystira'
 
 @description('Short region code')
 @allowed([
+  'san'   // South Africa North (southafricanorth) - PRIMARY
   'euw'   // West Europe (westeurope)
   'eun'   // North Europe (northeurope)
   'wus'   // West US (westus)
   'eus'   // East US (eastus)
-  'san'   // South Africa North (southafricanorth)
+  'eus2'  // East US 2 (eastus2) - FALLBACK for SWA/global services
   'swe'   // Sweden Central (swedencentral)
   'uks'   // UK South (uksouth)
   'usw'   // US West 2 (westus2)
   'glob'  // Global / regionless
 ])
-param region string = 'euw'
+param region string = 'san'
 
 @description('Azure location for resources')
-param location string = 'westeurope'
+param location string = 'southafricanorth'
+
+@description('Fallback region for services not available in primary region (e.g., Static Web Apps)')
+param fallbackRegion string = 'eastus2'
 
 @description('Tags applied to all resources')
 param tags object = {
@@ -62,18 +66,21 @@ param tags object = {
 
 var namePrefix = '${org}-${environment}-${project}'
 
+// Fallback region code for services not available in South Africa North
+var fallbackRegionCode = fallbackRegion == 'eastus2' ? 'eus2' : (fallbackRegion == 'westeurope' ? 'euw' : 'eus2')
+
 // Resource names following convention
 var names = {
   // Monitoring
   logAnalytics: '${namePrefix}-log-${region}'
   appInsights: '${namePrefix}-appins-${region}'
 
-  // Communication
-  communicationService: '${namePrefix}-acs-${region}'
-  emailService: '${namePrefix}-email-${region}'
+  // Communication (global service)
+  communicationService: '${namePrefix}-acs-glob'
+  emailService: '${namePrefix}-email-glob'
 
-  // Bot
-  azureBot: '${namePrefix}-bot-${region}'
+  // Bot (global service)
+  azureBot: '${namePrefix}-bot-glob'
 
   // Storage & Data
   // Note: Storage accounts have strict naming (lowercase, no dashes, 3-24 chars)
@@ -84,6 +91,9 @@ var names = {
   appServicePlan: '${namePrefix}-plan-${region}'
   apiApp: '${namePrefix}-api-${region}'
   adminApiApp: '${namePrefix}-adminapi-${region}'
+
+  // Static Web App (NOT available in South Africa North - uses fallback region)
+  staticWebApp: '${namePrefix}-swa-${fallbackRegionCode}'
 
   // Security
   keyVault: '${namePrefix}-kv-${region}'
@@ -225,6 +235,35 @@ param enableWhatsApp bool = false
 param whatsAppPhoneNumberId string = ''
 
 // ─────────────────────────────────────────────────────────────────
+// Discord Bot Parameters
+// ─────────────────────────────────────────────────────────────────
+
+@description('Discord bot token (from Discord Developer Portal)')
+@secure()
+param discordBotToken string = ''
+
+// ─────────────────────────────────────────────────────────────────
+// Static Web App Parameters
+// Note: SWA is NOT available in South Africa North - deploys to fallback region
+// ─────────────────────────────────────────────────────────────────
+
+@description('Deploy Static Web App (uses fallback region since SWA is not available in South Africa North)')
+param deployStaticWebApp bool = false
+
+@description('Static Web App SKU')
+@allowed([
+  'Free'
+  'Standard'
+])
+param staticWebAppSku string = 'Free'
+
+@description('GitHub repository URL for Static Web App (optional - can be linked later)')
+param staticWebAppRepositoryUrl string = ''
+
+@description('GitHub branch for Static Web App deployment')
+param staticWebAppBranch string = 'dev'
+
+// ─────────────────────────────────────────────────────────────────
 // Computed Values
 // ─────────────────────────────────────────────────────────────────
 
@@ -258,7 +297,7 @@ module appInsights 'modules/application-insights.bicep' = {
   }
 }
 
-// Key Vault (stores JWT secrets securely)
+// Key Vault (stores JWT secrets, Discord token, and Bot credentials)
 module keyVault 'modules/key-vault.bicep' = {
   name: 'deploy-key-vault'
   params: {
@@ -268,6 +307,9 @@ module keyVault 'modules/key-vault.bicep' = {
     jwtRsaPublicKey: jwtRsaPublicKey
     jwtIssuer: jwtIssuer
     jwtAudience: jwtAudience
+    discordBotToken: discordBotToken
+    botMicrosoftAppId: botMicrosoftAppId
+    botMicrosoftAppPassword: botMicrosoftAppPassword
   }
 }
 
@@ -372,6 +414,19 @@ module adminApiAppService 'modules/app-service.bicep' = if (!skipAppServiceCreat
   }
 }
 
+// Static Web App (conditional - deploys to fallback region since not available in South Africa North)
+module staticWebApp 'modules/static-web-app.bicep' = if (deployStaticWebApp) {
+  name: 'deploy-static-web-app'
+  params: {
+    staticWebAppName: names.staticWebApp
+    location: fallbackRegion
+    sku: staticWebAppSku
+    repositoryUrl: staticWebAppRepositoryUrl
+    branch: staticWebAppBranch
+    tags: tags
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────
 // Outputs
 // ─────────────────────────────────────────────────────────────────
@@ -412,6 +467,19 @@ output azureBotEndpoint string = deployAzureBot && botMicrosoftAppId != '' ? azu
 // WhatsApp
 output whatsAppEnabled bool = enableWhatsApp
 
+// Discord
+output discordBotConfigured bool = discordBotToken != ''
+
+// Static Web App
+output staticWebAppUrl string = deployStaticWebApp ? staticWebApp.outputs.staticWebAppUrl : ''
+output staticWebAppName string = deployStaticWebApp ? staticWebApp.outputs.staticWebAppName : ''
+output staticWebAppFallbackRegion string = fallbackRegion
+
 // Key Vault
 output keyVaultName string = keyVault.outputs.keyVaultName
 output keyVaultUri string = keyVault.outputs.keyVaultUri
+
+// Region information
+output primaryRegion string = location
+output primaryRegionCode string = region
+output fallbackRegionForSWA string = fallbackRegion
