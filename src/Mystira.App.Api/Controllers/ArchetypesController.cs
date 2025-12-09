@@ -43,7 +43,7 @@ public class ArchetypesController : ControllerBase
     public async Task<ActionResult<dynamic>> ValidateArchetype([FromBody] ValidateArchetypeRequest request)
     {
         _logger.LogInformation("POST: Validating archetype: {Name}", request.Name);
-        
+
         var isValid = await _mediator.Send(new ValidateArchetypeQuery(request.Name));
         return Ok(new { isValid });
     }

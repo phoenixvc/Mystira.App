@@ -1,5 +1,5 @@
-using Mystira.App.Contracts.Models.GameSessions;
 using System.ComponentModel.DataAnnotations;
+using Mystira.App.Contracts.Models.GameSessions;
 
 namespace Mystira.App.Contracts.Requests.GameSessions;
 

@@ -76,7 +76,7 @@ public class StoryProtocolMetadata
                 .Where(g => g.Count() > 1)
                 .Select(g => g.Key)
                 .ToList();
-            
+
             errors.Add($"Duplicate wallet addresses found: {string.Join(", ", duplicateWallets)}");
         }
 

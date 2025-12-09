@@ -186,13 +186,13 @@ public class MediaMetadataService : IMediaMetadataService
         try
         {
             List<MediaMetadataEntry> importedEntries;
-            
+
             if (string.IsNullOrWhiteSpace(jsonData))
             {
                 throw new ArgumentException("JSON data cannot be empty");
             }
 
-            importedEntries = JsonSerializer.Deserialize<List<MediaMetadataEntry>>(jsonData) 
+            importedEntries = JsonSerializer.Deserialize<List<MediaMetadataEntry>>(jsonData)
                 ?? new List<MediaMetadataEntry>();
 
             if (importedEntries.Count == 0)

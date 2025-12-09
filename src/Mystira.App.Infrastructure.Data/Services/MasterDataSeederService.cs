@@ -235,10 +235,10 @@ public class MasterDataSeederService
         fileName = Path.GetFileName(fileName);
         // Look for the JSON file in the Domain/Data directory
         var currentDir = AppDomain.CurrentDomain.BaseDirectory;
-        
+
         // Compute absolute path to the Data directory, then combine with fileName
         var dataDir = Path.GetFullPath(Path.Combine(currentDir, "..", "..", "..", "..", "src", "Mystira.App.Domain", "Data"));
-        
+
         var possiblePaths = new[]
         {
             Path.Combine(dataDir, fileName),
@@ -347,13 +347,40 @@ public class MasterDataSeederService
             "helper_captain_coop", "rhythm_explorer"
         };
 
-        if (moralTypes.Contains(echoType)) return "moral";
-        if (emotionalTypes.Contains(echoType)) return "emotional";
-        if (behavioralTypes.Contains(echoType)) return "behavioral";
-        if (socialTypes.Contains(echoType)) return "social";
-        if (cognitiveTypes.Contains(echoType)) return "cognitive";
-        if (identityTypes.Contains(echoType)) return "identity";
-        if (metaTypes.Contains(echoType)) return "meta";
+        if (moralTypes.Contains(echoType))
+        {
+            return "moral";
+        }
+
+        if (emotionalTypes.Contains(echoType))
+        {
+            return "emotional";
+        }
+
+        if (behavioralTypes.Contains(echoType))
+        {
+            return "behavioral";
+        }
+
+        if (socialTypes.Contains(echoType))
+        {
+            return "social";
+        }
+
+        if (cognitiveTypes.Contains(echoType))
+        {
+            return "cognitive";
+        }
+
+        if (identityTypes.Contains(echoType))
+        {
+            return "identity";
+        }
+
+        if (metaTypes.Contains(echoType))
+        {
+            return "meta";
+        }
 
         return "other";
     }

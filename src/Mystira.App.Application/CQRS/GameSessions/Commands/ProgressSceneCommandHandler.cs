@@ -32,9 +32,14 @@ public class ProgressSceneCommandHandler : ICommandHandler<ProgressSceneCommand,
 
         // Validate request
         if (string.IsNullOrEmpty(request.SessionId))
+        {
             throw new ArgumentException("SessionId is required");
+        }
+
         if (string.IsNullOrEmpty(request.SceneId))
+        {
             throw new ArgumentException("SceneId is required");
+        }
 
         var session = await _repository.GetByIdAsync(request.SessionId);
         if (session == null)

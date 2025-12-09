@@ -26,12 +26,12 @@ public class GetArchetypeByIdQueryHandler : IQueryHandler<GetArchetypeByIdQuery,
     {
         _logger.LogInformation("Retrieving archetype with id: {Id}", query.Id);
         var archetype = await _repository.GetByIdAsync(query.Id);
-        
+
         if (archetype == null)
         {
             _logger.LogWarning("Archetype with id {Id} not found", query.Id);
         }
-        
+
         return archetype;
     }
 }

@@ -4,13 +4,16 @@ using Mystira.App.Infrastructure.Discord.Services;
 namespace Mystira.App.Infrastructure.Discord.HealthChecks;
 
 /// <summary>
-/// Health check to verify Discord bot connectivity
+/// Health check to verify Discord bot connectivity.
+/// Uses concrete DiscordBotService to ensure correct service is injected in multi-platform setups.
 /// </summary>
 public class DiscordBotHealthCheck : IHealthCheck
 {
-    private readonly IDiscordBotService _discordBotService;
+    private readonly DiscordBotService _discordBotService;
 
-    public DiscordBotHealthCheck(IDiscordBotService discordBotService)
+    // FIX: Inject concrete DiscordBotService instead of IChatBotService
+    // to avoid incorrect service resolution in multi-platform DI container
+    public DiscordBotHealthCheck(DiscordBotService discordBotService)
     {
         _discordBotService = discordBotService;
     }
@@ -21,19 +24,21 @@ public class DiscordBotHealthCheck : IHealthCheck
     {
         try
         {
-            if (!_discordBotService.IsConnected)
+            var status = _discordBotService.GetStatus();
+
+            if (!status.IsConnected)
             {
                 return Task.FromResult(
                     HealthCheckResult.Unhealthy(
                         "Discord bot is not connected",
                         data: new Dictionary<string, object>
                         {
-                            ["IsConnected"] = false
+                            ["IsConnected"] = false,
+                            ["IsEnabled"] = status.IsEnabled
                         }));
             }
 
-            var currentUser = _discordBotService.CurrentUser;
-            if (currentUser == null)
+            if (string.IsNullOrEmpty(status.BotName))
             {
                 return Task.FromResult(
                     HealthCheckResult.Degraded(
@@ -45,15 +50,22 @@ public class DiscordBotHealthCheck : IHealthCheck
                         }));
             }
 
+            var data = new Dictionary<string, object>
+            {
+                ["IsConnected"] = true,
+                ["BotUsername"] = status.BotName,
+                ["ServerCount"] = status.ServerCount
+            };
+
+            if (status.BotId.HasValue)
+            {
+                data["BotId"] = status.BotId.Value;
+            }
+
             return Task.FromResult(
                 HealthCheckResult.Healthy(
                     "Discord bot is connected and operational",
-                    data: new Dictionary<string, object>
-                    {
-                        ["IsConnected"] = true,
-                        ["BotUsername"] = currentUser.Username,
-                        ["BotId"] = currentUser.Id
-                    }));
+                    data: data));
         }
         catch (Exception ex)
         {

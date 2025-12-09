@@ -166,20 +166,20 @@ public class ScenarioApiService : IScenarioApiService
 
         var scenario = new Scenario
         {
-             Id = Guid.NewGuid().ToString(),
-             Title = request.Title,
-             Description = request.Description,
-             Tags = request.Tags,
-             Difficulty = request.Difficulty,
-             SessionLength = request.SessionLength,
-             Archetypes = ParseArchetypesOrThrow(request.Archetypes),
-             AgeGroup = request.AgeGroup,
-             MinimumAge = request.MinimumAge,
-             CoreAxes = ParseCoreAxesOrThrow(request.CoreAxes),
-             Characters = request.Characters,
-             Scenes = request.Scenes,
-             Image = request.Image,
-             CreatedAt = DateTime.UtcNow
+            Id = Guid.NewGuid().ToString(),
+            Title = request.Title,
+            Description = request.Description,
+            Tags = request.Tags,
+            Difficulty = request.Difficulty,
+            SessionLength = request.SessionLength,
+            Archetypes = ParseArchetypesOrThrow(request.Archetypes),
+            AgeGroup = request.AgeGroup,
+            MinimumAge = request.MinimumAge,
+            CoreAxes = ParseCoreAxesOrThrow(request.CoreAxes),
+            Characters = request.Characters,
+            Scenes = request.Scenes,
+            Image = request.Image,
+            CreatedAt = DateTime.UtcNow
         };
 
         _context.Scenarios.Add(scenario);
@@ -361,16 +361,16 @@ public class ScenarioApiService : IScenarioApiService
 
         var payload = new
         {
-             request.Title,
-             request.Description,
-             Tags = tags,
-             Difficulty = request.Difficulty.ToString(),
-             SessionLength = request.SessionLength.ToString(),
-             request.AgeGroup,
-             request.MinimumAge,
-             CoreAxes = coreAxes,
-             Archetypes = archetypes,
-             request.Image,
+            request.Title,
+            request.Description,
+            Tags = tags,
+            Difficulty = request.Difficulty.ToString(),
+            SessionLength = request.SessionLength.ToString(),
+            request.AgeGroup,
+            request.MinimumAge,
+            CoreAxes = coreAxes,
+            Archetypes = archetypes,
+            request.Image,
             Characters = characters.Select(character =>
             {
                 var meta = character.Metadata;

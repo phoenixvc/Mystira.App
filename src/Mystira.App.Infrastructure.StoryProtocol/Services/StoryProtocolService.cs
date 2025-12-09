@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Mystira.App.Application.Ports;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.StoryProtocol.Configuration;
@@ -54,7 +54,7 @@ public class StoryProtocolService : IStoryProtocolService
         try
         {
             // Get private key from Azure Key Vault or configuration
-            
+
             // TODO: Implement actual Story Protocol SDK integration
             // This is a placeholder that should be replaced with actual blockchain calls
             // Example steps:
@@ -150,7 +150,7 @@ public class StoryProtocolService : IStoryProtocolService
             try
             {
                 var secret = await _secretClient.GetSecretAsync("StoryProtocol--PrivateKey");
-                if (!string.IsNullOrEmpty(secret.Value.Value) && 
+                if (!string.IsNullOrEmpty(secret.Value.Value) &&
                     secret.Value.Value != "PLACEHOLDER-UPDATE-WITH-ACTUAL-PRIVATE-KEY")
                 {
                     _logger.LogDebug("Retrieved private key from Azure Key Vault");

@@ -43,7 +43,7 @@ public class FantasyThemesController : ControllerBase
     public async Task<ActionResult<dynamic>> ValidateFantasyTheme([FromBody] ValidateFantasyThemeRequest request)
     {
         _logger.LogInformation("POST: Validating fantasy theme: {Name}", request.Name);
-        
+
         var isValid = await _mediator.Send(new ValidateFantasyThemeQuery(request.Name));
         return Ok(new { isValid });
     }

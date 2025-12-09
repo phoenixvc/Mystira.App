@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Mystira.App.Application.Ports.Messaging;
 using Mystira.App.Infrastructure.Discord.Configuration;
 using Mystira.App.Infrastructure.Discord.Services;
 
@@ -30,11 +31,11 @@ public class ServiceCollectionExtensionsTests
 
         // Assert
         var serviceProvider = services.BuildServiceProvider();
-        
-        // Check that IDiscordBotService is registered
-        var discordService = serviceProvider.GetService<IDiscordBotService>();
-        discordService.Should().NotBeNull();
-        discordService.Should().BeOfType<DiscordBotService>();
+
+        // Check that IChatBotService is registered
+        var chatBotService = serviceProvider.GetService<IChatBotService>();
+        chatBotService.Should().NotBeNull();
+        chatBotService.Should().BeOfType<DiscordBotService>();
     }
 
     [Fact]
@@ -60,7 +61,7 @@ public class ServiceCollectionExtensionsTests
         // Assert
         var serviceProvider = services.BuildServiceProvider();
         var options = serviceProvider.GetRequiredService<IOptions<DiscordOptions>>().Value;
-        
+
         options.BotToken.Should().Be("test-token-123");
         options.EnableMessageContentIntent.Should().BeFalse();
         options.CommandPrefix.Should().Be("?");
@@ -88,7 +89,7 @@ public class ServiceCollectionExtensionsTests
         // Assert
         var serviceProvider = services.BuildServiceProvider();
         var hostedServices = serviceProvider.GetServices<Microsoft.Extensions.Hosting.IHostedService>();
-        
+
         hostedServices.Should().Contain(s => s.GetType() == typeof(DiscordBotHostedService));
     }
 
@@ -115,7 +116,94 @@ public class ServiceCollectionExtensionsTests
         // Assert
         var serviceProvider = services.BuildServiceProvider();
         var healthCheckService = serviceProvider.GetService<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckService>();
-        
+
         healthCheckService.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void AddDiscordBot_ShouldRegisterIMessagingService()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Discord:BotToken"] = "test-token"
+            })
+            .Build();
+
+        services.AddLogging();
+
+        // Act
+        services.AddDiscordBot(configuration);
+
+        // Assert
+        var serviceProvider = services.BuildServiceProvider();
+        var messagingService = serviceProvider.GetService<IMessagingService>();
+
+        messagingService.Should().NotBeNull();
+        messagingService.Should().BeOfType<DiscordBotService>();
+    }
+
+    [Fact]
+    public void AddDiscordBotKeyed_ShouldRegisterKeyedServices()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Discord:BotToken"] = "test-token"
+            })
+            .Build();
+
+        services.AddLogging();
+
+        // Act
+        services.AddDiscordBotKeyed(configuration, "discord");
+
+        // Assert
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Verify keyed services are registered
+        var keyedMessaging = serviceProvider.GetKeyedService<IMessagingService>("discord");
+        var keyedChatBot = serviceProvider.GetKeyedService<IChatBotService>("discord");
+        var keyedBotCommand = serviceProvider.GetKeyedService<IBotCommandService>("discord");
+
+        keyedMessaging.Should().NotBeNull();
+        keyedChatBot.Should().NotBeNull();
+        keyedBotCommand.Should().NotBeNull();
+
+        // All should be the same singleton instance
+        keyedMessaging.Should().BeSameAs(keyedChatBot);
+        keyedChatBot.Should().BeSameAs(keyedBotCommand);
+    }
+
+    [Fact]
+    public void AddDiscordBotKeyed_WithCustomKey_ShouldUseCustomKey()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Discord:BotToken"] = "test-token"
+            })
+            .Build();
+
+        services.AddLogging();
+
+        // Act
+        services.AddDiscordBotKeyed(configuration, "my-discord-bot");
+
+        // Assert
+        var serviceProvider = services.BuildServiceProvider();
+
+        var keyedService = serviceProvider.GetKeyedService<IChatBotService>("my-discord-bot");
+        keyedService.Should().NotBeNull();
+
+        // Default key should not be registered
+        var defaultKeyService = serviceProvider.GetKeyedService<IChatBotService>("discord");
+        defaultKeyService.Should().BeNull();
     }
 }

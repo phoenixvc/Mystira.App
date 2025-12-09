@@ -26,12 +26,12 @@ public class GetFantasyThemeByIdQueryHandler : IQueryHandler<GetFantasyThemeById
     {
         _logger.LogInformation("Retrieving fantasy theme with id: {Id}", query.Id);
         var fantasyTheme = await _repository.GetByIdAsync(query.Id);
-        
+
         if (fantasyTheme == null)
         {
             _logger.LogWarning("Fantasy theme with id {Id} not found", query.Id);
         }
-        
+
         return fantasyTheme;
     }
 }
