@@ -47,12 +47,10 @@ public class TicketModule : InteractionModuleBase<SocketInteractionContext>
             var entry = kvp.Value;
             // Only remove if not actively in use and idle past timeout
             if (Interlocked.CompareExchange(ref entry.ActiveCount, 0, 0) == 0 &&
-                entry.LastAccess < cutoff)
+                entry.LastAccess < cutoff &&
+                _userLocks.TryRemove(kvp.Key, out var removed))
             {
-                if (_userLocks.TryRemove(kvp.Key, out var removed))
-                {
-                    removed.Semaphore.Dispose();
-                }
+                removed.Semaphore.Dispose();
             }
         }
     }

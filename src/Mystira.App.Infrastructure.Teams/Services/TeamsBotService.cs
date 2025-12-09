@@ -103,7 +103,7 @@ public class TeamsBotService : IMessagingService, IChatBotService, IBotCommandSe
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutCts.CancelAfter(TimeSpan.FromSeconds(_options.DefaultTimeoutSeconds));
 
-            var connectorClient = new ConnectorClient(
+            using var connectorClient = new ConnectorClient(
                 new Uri(conversationRef.ServiceUrl),
                 _credentials);
 
@@ -147,7 +147,7 @@ public class TeamsBotService : IMessagingService, IChatBotService, IBotCommandSe
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutCts.CancelAfter(TimeSpan.FromSeconds(_options.DefaultTimeoutSeconds));
 
-            var connectorClient = new ConnectorClient(
+            using var connectorClient = new ConnectorClient(
                 new Uri(conversationRef.ServiceUrl),
                 _credentials);
 
@@ -199,7 +199,7 @@ public class TeamsBotService : IMessagingService, IChatBotService, IBotCommandSe
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeoutCts.CancelAfter(TimeSpan.FromSeconds(_options.DefaultTimeoutSeconds));
 
-            var connectorClient = new ConnectorClient(
+            using var connectorClient = new ConnectorClient(
                 new Uri(conversationRef.ServiceUrl),
                 _credentials);
 

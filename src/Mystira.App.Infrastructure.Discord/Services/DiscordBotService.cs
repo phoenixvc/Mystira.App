@@ -273,7 +273,7 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
                     _logger.LogWarning("Slash commands enabled but no GuildId/ServerId configured and RegisterCommandsGlobally is false");
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException && ex is not AccessViolationException)
             {
                 _logger.LogError(ex, "Failed to register slash commands");
             }
@@ -287,7 +287,10 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
             var context = new SocketInteractionContext(_client, interaction);
             await _interactions.ExecuteCommandAsync(context, _serviceProvider);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (
+            ex is not OutOfMemoryException &&
+            ex is not StackOverflowException
+        )
         {
             _logger.LogError(ex, "Error handling interaction");
 
@@ -540,9 +543,6 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
             if (!sentChannelIds.Contains(msg.Channel.Id))
                 return Task.CompletedTask;
 
-            // Check if it's a reply to one of our messages OR just any message in the channel
-            var isDirectReply = msg.Reference?.MessageId is { } replyToId && sentMessageIds.Contains(replyToId.Value);
-
             // Accept either direct replies or any message in the broadcast channels
             tcs.TrySetResult(new FirstResponderResult
             {
@@ -697,7 +697,10 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
                 return await tcs.Task;
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogWarning(ex, "Broadcast operation was canceled (timeout or cancellation requested).");
+        }
         finally
         {
             _client.MessageReceived -= OnMessageReceived;
