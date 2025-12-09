@@ -21,11 +21,11 @@ This document provides a comprehensive guide to configuring GitHub Secrets and V
 
 The Mystira application uses three distinct environments, each with its own set of Azure resources and configuration:
 
-| Environment | Branch | Purpose | Azure Region | Current Naming | New Standard Naming |
-|------------|--------|---------|--------------|----------------|---------------------|
-| **Development** | `dev` | Active development and testing | South Africa North | `dev-san-*` | `mys-dev-mystira-*-san` |
-| **Staging** | `staging` | Pre-production validation | West US | `mystira-app-staging-*` | `mys-staging-mystira-*-wus` |
-| **Production** | `main` | Live production environment | West US | `prod-wus-*` | `mys-prod-mystira-*-wus` |
+| Environment | Branch | Purpose | Azure Region | Resource Naming |
+|------------|--------|---------|--------------|-----------------|
+| **Development** | `dev` | Active development and testing | West Europe | `mys-dev-mystira-[type]-euw` |
+| **Staging** | `staging` | Pre-production validation | West Europe | `mys-staging-mystira-[type]-euw` |
+| **Production** | `main` | Live production environment | West Europe | `mys-prod-mystira-[type]-euw` |
 
 > 📘 **Azure Naming Conventions**: Mystira follows the standardized naming pattern `[org]-[env]-[project]-[type]-[region]` for all Azure resources. See [Azure Naming Conventions](../AZURE-NAMING-CONVENTIONS.md) for complete details. New resources will use the standard naming, while existing resources will be migrated gradually.
 
@@ -73,10 +73,10 @@ These secrets contain the publish profile XML for deploying to Azure App Service
 > 📘 **Resource Naming**: The table below shows both current and new standard resource names following the `[org]-[env]-[project]-[type]-[region]` pattern. See [Azure Naming Conventions](../AZURE-NAMING-CONVENTIONS.md) for details.
 
 #### Development Environment
-| Secret Name | Service | Current Resource Name | New Standard Name |
-|-------------|---------|----------------------|-------------------|
-| `AZURE_WEBAPP_PUBLISH_PROFILE_DEV` | Main API | `dev-san-app-mystira-api` | `mys-dev-mystira-api-san` |
-| `AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN` | Admin API | `dev-san-app-mystira-admin-api` | `mys-dev-mystira-admin-api-san` |
+| Secret Name | Service | Resource Name |
+|-------------|---------|---------------|
+| `AZURE_WEBAPP_PUBLISH_PROFILE_DEV` | Main API | `mys-dev-mystira-api-euw` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN` | Admin API | `mys-dev-mystira-adminapi-euw` |
 
 #### Staging Environment
 > ⚠️ **Configuration Issue Detected**: The current staging workflows all reference the same secret (`AZURE_WEBAPP_PUBLISH_PROFILE_STAGING`) but deploy to three different App Services. Each App Service requires its own unique publish profile. The workflows should be updated to use separate secrets.
@@ -336,64 +336,41 @@ done
 
 ### Step 3: Download Publish Profiles
 
-> 📘 **Note**: Examples show current resource names. For new standard names following `[org]-[env]-[project]-[type]-[region]` pattern, see [Azure Naming Conventions](../AZURE-NAMING-CONVENTIONS.md).
+> 📘 **Naming Convention**: Resources follow `[org]-[env]-[project]-[type]-[region]` pattern.
 
 ```bash
-# Development environment (current names)
+# Development environment
 az webapp deployment list-publishing-profiles \
-  --name dev-san-app-mystira-api \
-  --resource-group dev-euw-rg-mystira-app \
+  --name mys-dev-mystira-api-euw \
+  --resource-group mys-dev-mystira-rg-euw \
   --xml > dev-api-publish-profile.xml
 
 az webapp deployment list-publishing-profiles \
-  --name dev-san-app-mystira-admin-api \
-  --resource-group dev-euw-rg-mystira-app \
+  --name mys-dev-mystira-adminapi-euw \
+  --resource-group mys-dev-mystira-rg-euw \
   --xml > dev-admin-api-publish-profile.xml
 
-# Development environment (new standard names - when migrated)
-# az webapp deployment list-publishing-profiles \
-#   --name mys-dev-mystira-api-san \
-#   --resource-group mys-dev-mystira-rg-san \
-#   --xml > dev-api-publish-profile.xml
-
-# Staging environment (current names)
+# Staging environment
 az webapp deployment list-publishing-profiles \
-  --name mystira-app-staging-api \
-  --resource-group staging-rg-mystira-app \
+  --name mys-staging-mystira-api-euw \
+  --resource-group mys-staging-mystira-rg-euw \
   --xml > staging-api-publish-profile.xml
 
 az webapp deployment list-publishing-profiles \
-  --name mystira-app-staging-admin-api \
-  --resource-group staging-rg-mystira-app \
+  --name mys-staging-mystira-adminapi-euw \
+  --resource-group mys-staging-mystira-rg-euw \
   --xml > staging-admin-api-publish-profile.xml
 
+# Production environment
 az webapp deployment list-publishing-profiles \
-  --name mystira-app-staging-pwa \
-  --resource-group staging-rg-mystira-app \
-  --xml > staging-pwa-publish-profile.xml
-
-# Staging environment (new standard names - when migrated)
-# az webapp deployment list-publishing-profiles \
-#   --name mys-staging-mystira-api-wus \
-#   --resource-group mys-staging-mystira-rg-wus \
-#   --xml > staging-api-publish-profile.xml
-
-# Production environment (current names)
-az webapp deployment list-publishing-profiles \
-  --name prod-wus-app-mystira-api \
-  --resource-group prod-rg-mystira-app \
+  --name mys-prod-mystira-api-euw \
+  --resource-group mys-prod-mystira-rg-euw \
   --xml > prod-api-publish-profile.xml
 
 az webapp deployment list-publishing-profiles \
-  --name prod-wus-app-mystira-api-admin \
-  --resource-group prod-rg-mystira-app \
+  --name mys-prod-mystira-adminapi-euw \
+  --resource-group mys-prod-mystira-rg-euw \
   --xml > prod-admin-api-publish-profile.xml
-
-# Production environment (new standard names - when migrated)
-# az webapp deployment list-publishing-profiles \
-#   --name mys-prod-mystira-api-wus \
-#   --resource-group mys-prod-mystira-rg-wus \
-#   --xml > prod-api-publish-profile.xml
 ```
 
 ### Step 4: Get Static Web App Tokens
@@ -422,13 +399,13 @@ az staticwebapp secrets list \
 #   --query "properties.apiKey" -o tsv
 ```
 
-### Step 5: Configure Azure Communication Services (Dev Only)
+### Step 5: Configure Azure Communication Services
 
 ```bash
-# Get ACS connection string
+# Get ACS connection string (naming: [org]-[env]-[project]-acs-[region])
 az communication list-key \
-  --name {your-acs-resource-name} \
-  --resource-group dev-euw-rg-mystira-app \
+  --name mys-dev-mystira-acs-euw \
+  --resource-group mys-dev-mystira-rg-euw \
   --query primaryConnectionString -o tsv
 
 # Get verified sender email from ACS Email Communication Service

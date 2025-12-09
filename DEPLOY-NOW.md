@@ -215,7 +215,7 @@ All errors are formatted consistently with:
 
 ``` text
 [2024-01-15 10:30:45] [INFO] Starting infrastructure deployment
-[2024-01-15 10:30:45] [INFO] Resource Group: dev-euw-rg-mystira-app, Location: westeurope
+[2024-01-15 10:30:45] [INFO] Resource Group: mys-dev-mystira-rg-euw, Location: westeurope
 [2024-01-15 10:31:20] [INFO] Step: Deployment succeeded in 35.2 seconds
 [2024-01-15 10:31:20] [ERROR] Error at step: Infrastructure deployment
 ```
