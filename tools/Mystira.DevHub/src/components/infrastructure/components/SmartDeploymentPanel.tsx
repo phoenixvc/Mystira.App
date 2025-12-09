@@ -104,7 +104,7 @@ export function SmartDeploymentPanel({ repoRoot }: SmartDeploymentPanelProps) {
   const currentStatus = regionStatuses.get(currentRegion);
 
   // Determine the current resource group and region for config panel
-  const currentResourceGroup = selectedResourceGroup?.name || `dev-san-rg-mystira-app`;
+  const currentResourceGroup = selectedResourceGroup?.name || `mys-dev-mystira-rg-euw`;
   const currentRegionCode = selectedResourceGroup?.location || 'southafricanorth';
 
   return (

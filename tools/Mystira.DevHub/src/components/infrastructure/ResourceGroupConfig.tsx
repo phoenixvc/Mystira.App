@@ -135,7 +135,7 @@ function ResourceGroupConfig({ environment, onSave, onClose }: ResourceGroupConf
                 setConfig({ ...config, defaultResourceGroup: e.target.value })
               }
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-              placeholder="dev-san-rg-mystira-app"
+              placeholder="mys-dev-mystira-rg-euw"
             />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Default resource group used when no specific mapping exists

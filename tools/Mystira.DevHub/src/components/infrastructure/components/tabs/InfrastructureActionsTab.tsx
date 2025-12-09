@@ -119,7 +119,7 @@ export default function InfrastructureActionsTab({
       <div className="mb-6">
         <InfrastructureStatusComponent
           environment={environment}
-          resourceGroup={resourceGroupConfig.defaultResourceGroup || `dev-san-rg-mystira-app`}
+          resourceGroup={resourceGroupConfig.defaultResourceGroup || `mys-dev-mystira-rg-euw`}
           onStatusChange={() => {
             onInfrastructureLoadingChange(false);
           }}

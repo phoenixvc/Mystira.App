@@ -152,7 +152,7 @@ function InfrastructurePanel() {
     setShowDeployConfirm(false);
     await handleDeployConfirm(async () => {
       try {
-        const resourceGroup = resourceGroupConfig.defaultResourceGroup || `dev-san-rg-mystira-app`;
+        const resourceGroup = resourceGroupConfig.defaultResourceGroup || `mys-dev-mystira-rg-euw`;
         const statusResponse = await invoke<any>('check_infrastructure_status', {
           environment,
           resourceGroup,
