@@ -69,6 +69,9 @@ var namePrefix = '${org}-${environment}-${project}'
 // Fallback region code for services not available in South Africa North
 var fallbackRegionCode = fallbackRegion == 'eastus2' ? 'eus2' : (fallbackRegion == 'westeurope' ? 'euw' : 'eus2')
 
+// Short environment code for resources with strict name limits (Key Vault: 24 chars max)
+var envShort = environment == 'staging' ? 'stg' : (environment == 'prod' ? 'prd' : 'dev')
+
 // Resource names following convention
 var names = {
   // Monitoring
@@ -95,8 +98,9 @@ var names = {
   // Static Web App (NOT available in South Africa North - uses fallback region)
   staticWebApp: '${namePrefix}-swa-${fallbackRegionCode}'
 
-  // Security
-  keyVault: '${namePrefix}-kv-${region}'
+  // Security (Key Vault has 24 char limit, use shorter env code)
+  // Format: [org]-[envShort]-[project]-kv-[region]
+  keyVault: '${org}-${envShort}-${project}-kv-${region}'
 }
 
 // ─────────────────────────────────────────────────────────────────
