@@ -2,6 +2,34 @@
 
 This directory contains Bicep templates for deploying the Mystira application infrastructure to Azure.
 
+## Naming Convention
+
+All resources follow the pattern: `[org]-[env]-[project]-[type]-[region]`
+
+| Segment | Description | Values |
+|---------|-------------|--------|
+| `org` | Organisation code | `mys` (Mystira), `nl` (NeuralLiquid), `pvc` (Phoenix VC), `tws` (Twines & Straps) |
+| `env` | Environment | `dev`, `staging`, `prod` |
+| `project` | Project name | `mystira`, `mystira-story` |
+| `type` | Resource type | `api`, `app`, `log`, `cosmos`, `storage`, `kv`, `acs`, `bot`, etc. |
+| `region` | Region code | `euw` (West Europe), `san` (South Africa North), `wus` (West US), etc. |
+
+### Resource Group Pattern
+```
+[org]-[env]-[project]-rg-[region]
+```
+
+### Examples
+
+| Resource | Name |
+|----------|------|
+| Dev Resource Group | `mys-dev-mystira-rg-euw` |
+| Dev API App Service | `mys-dev-mystira-api-euw` |
+| Dev Cosmos DB | `mys-dev-mystira-cosmos-euw` |
+| Dev Log Analytics | `mys-dev-mystira-log-euw` |
+| Prod API App Service | `mys-prod-mystira-api-euw` |
+| Prod Storage Account | `mysprodsystirastoreuw` (no dashes for storage) |
+
 ## Overview
 
 The infrastructure uses a single `main.bicep` template with environment-specific parameter files:
@@ -23,17 +51,18 @@ infrastructure/
 └── params.prod.json        # Production environment parameters
 ```
 
-This "Option B" approach provides:
+This approach provides:
 - **One template, multiple environments** - Same infrastructure code, different configurations
 - **Environment parity** - Dev, staging, and prod use identical resource structure
 - **Simple CI/CD** - Pipelines choose the right parameter file per environment
+- **Consistent naming** - All resources follow `[org]-[env]-[project]-[type]-[region]`
 
 ## Prerequisites
 
 ### Azure Setup
 
 1. **Azure Subscription**: Phoenix Azure Sponsorship (ID: `22f9eb18-6553-4b7d-9451-47d0195085fe`)
-2. **Resource Group**: `dev-euw-rg-mystira` (Development) - must be created manually
+2. **Resource Group**: `mys-dev-mystira-rg-euw` (Development) - must be created manually
 3. **Service Principal**: For GitHub Actions authentication
 
 ### Required Secrets Setup
@@ -343,20 +372,22 @@ az login
 az account set --subscription 22f9eb18-6553-4b7d-9451-47d0195085fe
 
 # Create resource group (if it doesn't exist)
+# Pattern: [org]-[env]-[project]-rg-[region]
+
 # Dev
-az group create --name dev-euw-rg-mystira --location westeurope
+az group create --name mys-dev-mystira-rg-euw --location westeurope
 
 # Staging
-az group create --name staging-euw-rg-mystira --location westeurope
+az group create --name mys-staging-mystira-rg-euw --location westeurope
 
 # Prod
-az group create --name prod-euw-rg-mystira --location westeurope
+az group create --name mys-prod-mystira-rg-euw --location westeurope
 
 # Deploy infrastructure (choose the appropriate environment)
 
 # Dev deployment
 az deployment group create \
-  --resource-group dev-euw-rg-mystira \
+  --resource-group mys-dev-mystira-rg-euw \
   --template-file infrastructure/main.bicep \
   --parameters @infrastructure/params.dev.json \
   --parameters jwtRsaPrivateKey="<your-private-key>" \
@@ -364,7 +395,7 @@ az deployment group create \
 
 # Staging deployment
 az deployment group create \
-  --resource-group staging-euw-rg-mystira \
+  --resource-group mys-staging-mystira-rg-euw \
   --template-file infrastructure/main.bicep \
   --parameters @infrastructure/params.staging.json \
   --parameters jwtRsaPrivateKey="<your-private-key>" \
@@ -372,7 +403,7 @@ az deployment group create \
 
 # Prod deployment
 az deployment group create \
-  --resource-group prod-euw-rg-mystira \
+  --resource-group mys-prod-mystira-rg-euw \
   --template-file infrastructure/main.bicep \
   --parameters @infrastructure/params.prod.json \
   --parameters jwtRsaPrivateKey="<your-private-key>" \
@@ -406,7 +437,7 @@ Before deploying, you can preview what changes will be made:
 ```bash
 # Dev environment preview
 az deployment group what-if \
-  --resource-group dev-euw-rg-mystira \
+  --resource-group mys-dev-mystira-rg-euw \
   --template-file infrastructure/main.bicep \
   --parameters @infrastructure/params.dev.json \
   --parameters jwtRsaPrivateKey="<your-private-key>" \
@@ -414,7 +445,7 @@ az deployment group what-if \
 
 # Staging environment preview
 az deployment group what-if \
-  --resource-group staging-euw-rg-mystira \
+  --resource-group mys-staging-mystira-rg-euw \
   --template-file infrastructure/main.bicep \
   --parameters @infrastructure/params.staging.json \
   --parameters jwtRsaPrivateKey="<your-private-key>" \
@@ -422,7 +453,7 @@ az deployment group what-if \
 
 # Prod environment preview
 az deployment group what-if \
-  --resource-group prod-euw-rg-mystira \
+  --resource-group mys-prod-mystira-rg-euw \
   --template-file infrastructure/main.bicep \
   --parameters @infrastructure/params.prod.json \
   --parameters jwtRsaPrivateKey="<your-private-key>" \

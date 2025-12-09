@@ -1,12 +1,23 @@
 // Mystira App Infrastructure
-// Single main.bicep with environment-specific parameter files
+// Naming Convention: [org]-[env]-[project]-[type]-[region]
+// Resource Groups:   [org]-[env]-[project]-rg-[region]
 // Usage: az deployment group create --template-file main.bicep --parameters @params.<env>.json
 
 targetScope = 'resourceGroup'
 
 // ─────────────────────────────────────────────────────────────────
-// Core Environment Parameters
+// Naming Convention Parameters
+// Pattern: [org]-[env]-[project]-[type]-[region]
 // ─────────────────────────────────────────────────────────────────
+
+@description('Organisation code')
+@allowed([
+  'mys'   // Mystira (Eben)
+  'nl'    // NeuralLiquid (Jurie)
+  'pvc'   // Phoenix VC (Eben)
+  'tws'   // Twines & Straps (Martyn)
+])
+param org string = 'mys'
 
 @description('Environment name')
 @allowed([
@@ -16,16 +27,65 @@ targetScope = 'resourceGroup'
 ])
 param environment string
 
-@description('Location for all resources')
-param location string = 'westeurope'
+@description('Project name')
+param project string = 'mystira'
 
-@description('Resource name prefix (e.g., dev-euw, staging-euw, prod-euw)')
-param resourcePrefix string
+@description('Short region code')
+@allowed([
+  'euw'   // West Europe
+  'eun'   // North Europe
+  'wus'   // West US
+  'eus'   // East US
+  'san'   // South Africa North
+  'saf'   // South Africa West
+  'swe'   // Sweden Central/North
+  'uks'   // UK South
+  'usw'   // US West
+  'glob'  // Global / regionless
+])
+param region string = 'euw'
+
+@description('Azure location for resources')
+param location string = 'westeurope'
 
 @description('Tags applied to all resources')
 param tags object = {
+  org: org
   environment: environment
+  project: project
   application: 'mystira-app'
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Naming Helper Variables
+// Pattern: [org]-[env]-[project]-[type]-[region]
+// ─────────────────────────────────────────────────────────────────
+
+var namePrefix = '${org}-${environment}-${project}'
+
+// Resource names following convention
+var names = {
+  // Monitoring
+  logAnalytics: '${namePrefix}-log-${region}'
+  appInsights: '${namePrefix}-appins-${region}'
+
+  // Communication
+  communicationService: '${namePrefix}-acs-${region}'
+  emailService: '${namePrefix}-email-${region}'
+
+  // Bot
+  azureBot: '${namePrefix}-bot-${region}'
+
+  // Storage & Data
+  // Note: Storage accounts have strict naming (lowercase, no dashes, 3-24 chars)
+  storageAccount: replace(toLower('${org}${environment}${project}st${region}'), '-', '')
+  cosmosDb: '${namePrefix}-cosmos-${region}'
+
+  // App Services
+  apiApp: '${namePrefix}-api-${region}'
+  apiPlan: '${namePrefix}-api-plan-${region}'
+  adminApiApp: '${namePrefix}-adminapi-${region}'
+  adminApiPlan: '${namePrefix}-adminapi-plan-${region}'
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -164,20 +224,23 @@ param enableWhatsApp bool = false
 param whatsAppPhoneNumberId string = ''
 
 // ─────────────────────────────────────────────────────────────────
-// Module Deployments
+// Computed Values
 // ─────────────────────────────────────────────────────────────────
 
-// Computed values
-var storageAccountName = skipStorageCreation ? 'placeholder' : replace(toLower('${resourcePrefix}stmystira'), '-', '')
+var storageAccountName = skipStorageCreation ? 'placeholder' : names.storageAccount
 var cosmosConnString = skipCosmosCreation && existingCosmosConnectionString != '' ? existingCosmosConnectionString : ''
 var storageConnString = skipStorageCreation && existingStorageConnectionString != '' ? existingStorageConnectionString : ''
 var acsConnStringToUse = skipCommServiceCreation ? acsConnectionString : ''
 
+// ─────────────────────────────────────────────────────────────────
+// Module Deployments
+// ─────────────────────────────────────────────────────────────────
+
 // Log Analytics Workspace
 module logAnalytics 'modules/log-analytics.bicep' = {
-  name: 'log-analytics-${environment}'
+  name: 'deploy-log-analytics'
   params: {
-    workspaceName: '${resourcePrefix}-log-mystira'
+    workspaceName: names.logAnalytics
     location: location
     retentionInDays: logRetentionDays
     dailyQuotaGb: logDailyQuotaGb
@@ -186,9 +249,9 @@ module logAnalytics 'modules/log-analytics.bicep' = {
 
 // Application Insights
 module appInsights 'modules/application-insights.bicep' = {
-  name: 'app-insights-${environment}'
+  name: 'deploy-app-insights'
   params: {
-    appInsightsName: '${resourcePrefix}-ai-mystira'
+    appInsightsName: names.appInsights
     location: location
     logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
   }
@@ -196,10 +259,10 @@ module appInsights 'modules/application-insights.bicep' = {
 
 // Communication Services (conditional)
 module communicationServices 'modules/communication-services.bicep' = if (!skipCommServiceCreation) {
-  name: 'communication-services-${environment}'
+  name: 'deploy-communication-services'
   params: {
-    communicationServiceName: '${resourcePrefix}-acs-mystira'
-    emailServiceName: '${resourcePrefix}-email-mystira'
+    communicationServiceName: names.communicationService
+    emailServiceName: names.emailService
     domainName: emailDomainName
     location: 'global'
     dataLocation: 'Europe'
@@ -211,13 +274,13 @@ module communicationServices 'modules/communication-services.bicep' = if (!skipC
 
 // Azure Bot (conditional)
 module azureBot 'modules/azure-bot.bicep' = if (deployAzureBot && botMicrosoftAppId != '') {
-  name: 'azure-bot-${environment}'
+  name: 'deploy-azure-bot'
   params: {
-    botName: '${resourcePrefix}-bot-mystira'
+    botName: names.azureBot
     botDisplayName: 'Mystira Bot'
     microsoftAppId: botMicrosoftAppId
     microsoftAppPassword: botMicrosoftAppPassword
-    botEndpoint: botEndpoint != '' ? botEndpoint : 'https://${resourcePrefix}-app-mystira-api.azurewebsites.net/api/messages/teams'
+    botEndpoint: botEndpoint != '' ? botEndpoint : 'https://${names.apiApp}.azurewebsites.net/api/messages/teams'
     location: 'global'
     sku: botSku
     appInsightsInstrumentationKey: appInsights.outputs.instrumentationKey
@@ -229,7 +292,7 @@ module azureBot 'modules/azure-bot.bicep' = if (deployAzureBot && botMicrosoftAp
 
 // Storage Account (conditional)
 module storage 'modules/storage.bicep' = if (!skipStorageCreation) {
-  name: 'storage-${environment}'
+  name: 'deploy-storage'
   params: {
     storageAccountName: storageAccountName
     location: location
@@ -239,9 +302,9 @@ module storage 'modules/storage.bicep' = if (!skipStorageCreation) {
 
 // Cosmos DB (conditional)
 module cosmosDb 'modules/cosmos-db.bicep' = if (!skipCosmosCreation) {
-  name: 'cosmos-${environment}'
+  name: 'deploy-cosmos-db'
   params: {
-    cosmosDbAccountName: '${resourcePrefix}-cosmos-mystira'
+    cosmosDbAccountName: names.cosmosDb
     location: location
     databaseName: 'MystiraAppDb'
     serverless: cosmosServerless
@@ -250,10 +313,10 @@ module cosmosDb 'modules/cosmos-db.bicep' = if (!skipCosmosCreation) {
 
 // Main API App Service (conditional)
 module apiAppService 'modules/app-service.bicep' = if (!skipAppServiceCreation) {
-  name: 'api-appservice-${environment}'
+  name: 'deploy-api-app-service'
   params: {
-    appServiceName: '${resourcePrefix}-app-mystira-api'
-    appServicePlanName: '${resourcePrefix}-asp-mystira-api'
+    appServiceName: names.apiApp
+    appServicePlanName: names.apiPlan
     location: location
     sku: appServiceSku
     aspnetEnvironment: environment == 'prod' ? 'Production' : (environment == 'staging' ? 'Staging' : 'Development')
@@ -273,10 +336,10 @@ module apiAppService 'modules/app-service.bicep' = if (!skipAppServiceCreation) 
 
 // Admin API App Service (conditional)
 module adminApiAppService 'modules/app-service.bicep' = if (!skipAppServiceCreation) {
-  name: 'admin-api-appservice-${environment}'
+  name: 'deploy-admin-api-app-service'
   params: {
-    appServiceName: '${resourcePrefix}-app-mystira-admin-api'
-    appServicePlanName: '${resourcePrefix}-asp-mystira-admin-api'
+    appServiceName: names.adminApiApp
+    appServicePlanName: names.adminApiPlan
     location: location
     sku: appServiceSku
     aspnetEnvironment: environment == 'prod' ? 'Production' : (environment == 'staging' ? 'Staging' : 'Development')
@@ -298,8 +361,12 @@ module adminApiAppService 'modules/app-service.bicep' = if (!skipAppServiceCreat
 // Outputs
 // ─────────────────────────────────────────────────────────────────
 
+// Naming info
+output namingPattern string = '[org]-[env]-[project]-[type]-[region]'
+output org string = org
 output environment string = environment
-output resourcePrefix string = resourcePrefix
+output project string = project
+output region string = region
 
 // Monitoring
 output logAnalyticsWorkspaceId string = logAnalytics.outputs.workspaceId

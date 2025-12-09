@@ -2,20 +2,28 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "org": {
+      "value": "mys"
+    },
     "environment": {
       "value": "prod"
+    },
+    "project": {
+      "value": "mystira"
+    },
+    "region": {
+      "value": "euw"
     },
     "location": {
       "value": "westeurope"
     },
-    "resourcePrefix": {
-      "value": "prod-euw"
-    },
     "tags": {
       "value": {
+        "org": "mys",
         "environment": "prod",
+        "project": "mystira",
         "application": "mystira-app",
-        "owner": "mystira-team"
+        "owner": "Eben"
       }
     },
     "appServiceSku": {
