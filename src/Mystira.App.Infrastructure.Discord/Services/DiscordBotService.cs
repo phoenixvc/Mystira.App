@@ -192,7 +192,8 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
             }
             catch (global::Discord.Net.HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.TooManyRequests && attempt < maxAttempts)
             {
-                var retryAfter = ex.RetryAfter ?? TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                // Discord.Net 3.17.1+ doesn't expose RetryAfter, use exponential backoff
+                var retryAfter = TimeSpan.FromSeconds(Math.Pow(2, attempt));
                 _logger.LogWarning(ex, "Rate limited during {Operation}, retrying in {RetryAfter}s (attempt {Attempt}/{MaxAttempts})",
                     operationDescription, retryAfter.TotalSeconds, attempt, maxAttempts);
                 await Task.Delay(retryAfter, cancellationToken);
