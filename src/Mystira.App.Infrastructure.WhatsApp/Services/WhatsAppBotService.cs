@@ -1,4 +1,7 @@
+using System.Collections.Concurrent;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using Azure;
 using Azure.Communication.Messages;
 using Microsoft.Extensions.Logging;
@@ -26,7 +29,8 @@ public class WhatsAppBotService : IChatBotService, IBotCommandService, IDisposab
     private bool _isConnected;
 
     // Track active conversations (phone numbers that have messaged us recently)
-    private readonly Dictionary<ulong, string> _activeConversations = new();
+    // FIX: Use ConcurrentDictionary for thread safety (Phase 2)
+    private readonly ConcurrentDictionary<ulong, string> _activeConversations = new();
 
     public WhatsAppBotService(
         IOptions<WhatsAppOptions> options,
@@ -39,6 +43,11 @@ public class WhatsAppBotService : IChatBotService, IBotCommandService, IDisposab
     public bool IsConnected => _isConnected && _client != null;
 
     public bool IsEnabled => _options.Enabled;
+
+    /// <summary>
+    /// Gets the platform identifier for this service.
+    /// </summary>
+    public ChatPlatform Platform => ChatPlatform.WhatsApp;
 
     public int RegisteredModuleCount => 0; // WhatsApp doesn't have command modules like Discord
 
@@ -96,33 +105,64 @@ public class WhatsAppBotService : IChatBotService, IBotCommandService, IDisposab
             throw new InvalidOperationException($"No phone number found for channel ID {channelId}. WhatsApp requires a registered conversation.");
         }
 
-        try
-        {
-            var textContent = new TextNotificationContent(
-                _options.ChannelRegistrationId,
-                new[] { phoneNumber },
-                message);
+        var textContent = new TextNotificationContent(
+            _options.ChannelRegistrationId,
+            new[] { phoneNumber },
+            message);
 
-            var result = await _client.SendAsync(textContent, cancellationToken);
+        // FIX: Add retry logic for transient failures (Phase 6)
+        var attempt = 0;
+        var maxAttempts = _options.MaxRetryAttempts > 0 ? _options.MaxRetryAttempts : 3;
 
-            _logger.LogDebug("Sent WhatsApp message to {PhoneNumber}, MessageId: {MessageId}",
-                phoneNumber, result.Value.Receipts.FirstOrDefault()?.MessageId);
-        }
-        catch (RequestFailedException ex)
+        while (true)
         {
-            _logger.LogError(ex, "Azure Communication Services error sending WhatsApp message: {Code}", ex.ErrorCode);
-            throw new InvalidOperationException($"WhatsApp API error: {ex.Message}", ex);
+            attempt++;
+            try
+            {
+                var result = await _client.SendAsync(textContent, cancellationToken);
+
+                _logger.LogDebug("Sent WhatsApp message to {PhoneNumber}, MessageId: {MessageId}",
+                    phoneNumber, result.Value.Receipts.FirstOrDefault()?.MessageId);
+                return;
+            }
+            catch (RequestFailedException ex) when (IsTransientError(ex) && attempt < maxAttempts)
+            {
+                var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt)); // Exponential backoff
+                _logger.LogWarning(ex, "Transient error sending WhatsApp message (attempt {Attempt}/{MaxAttempts}), retrying in {Delay}s",
+                    attempt, maxAttempts, delay.TotalSeconds);
+                await Task.Delay(delay, cancellationToken);
+            }
+            catch (RequestFailedException ex)
+            {
+                _logger.LogError(ex, "Azure Communication Services error sending WhatsApp message: {Code}", ex.ErrorCode);
+                throw new InvalidOperationException($"WhatsApp API error: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error sending WhatsApp message");
+                throw;
+            }
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error sending WhatsApp message");
-            throw;
-        }
+    }
+
+    /// <summary>
+    /// Determine if a RequestFailedException is transient and can be retried.
+    /// </summary>
+    private static bool IsTransientError(RequestFailedException ex)
+    {
+        // HTTP 429 (Too Many Requests), 5xx errors are typically transient
+        return ex.Status == 429 || (ex.Status >= 500 && ex.Status < 600);
     }
 
     public async Task SendEmbedAsync(ulong channelId, EmbedData embed, CancellationToken cancellationToken = default)
     {
         // WhatsApp doesn't support rich embeds like Discord
+        // FIX: Add warning for embed color being ignored (Phase 4)
+        if (embed.ColorRed != 0 || embed.ColorGreen != 0 || embed.ColorBlue != 0)
+        {
+            _logger.LogDebug("WhatsApp does not support embed colors. Color information will be ignored.");
+        }
+
         // Convert to formatted text message
         var messageText = FormatEmbedAsText(embed);
         await SendMessageAsync(channelId, messageText, cancellationToken);
@@ -273,16 +313,23 @@ public class WhatsAppBotService : IChatBotService, IBotCommandService, IDisposab
 
     /// <summary>
     /// Get a channel ID from a phone number.
+    /// FIX: Use SHA256 for deterministic, collision-resistant ID generation (Phase 2)
     /// </summary>
     public static ulong GetChannelIdFromPhoneNumber(string phoneNumber)
     {
         // Create a consistent hash from the phone number
         var normalized = phoneNumber.Replace("+", "").Replace(" ", "").Replace("-", "");
+
+        // Try to parse as numeric first (most phone numbers are all digits)
         if (ulong.TryParse(normalized, out var result))
         {
             return result;
         }
-        return (ulong)normalized.GetHashCode();
+
+        // Fall back to SHA256 hash for non-numeric formats
+        // FIX: Use SHA256 instead of GetHashCode() to avoid negative values and collisions
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
+        return BitConverter.ToUInt64(bytes, 0);
     }
 
     /// <summary>

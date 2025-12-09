@@ -1,4 +1,7 @@
+using System.Collections.Concurrent;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Bot.Connector;
@@ -23,8 +26,13 @@ public class TeamsBotService : IChatBotService, IBotCommandService, IDisposable
     private bool _disposed;
     private bool _isConnected;
 
-    // Track conversation references for proactive messaging
-    private readonly Dictionary<string, ConversationReference> _conversationReferences = new();
+    // Thread-safe bidirectional mapping for conversation references
+    // FIX: Use ConcurrentDictionary for thread safety (Phase 2)
+    // FIX: Use bidirectional mapping to avoid hash collision issues (Phase 1)
+    private readonly ConcurrentDictionary<ulong, string> _idToKey = new();
+    private readonly ConcurrentDictionary<string, ConversationReference> _keyToRef = new();
+    private ulong _nextChannelId = 1;
+    private readonly object _idLock = new();
 
     public TeamsBotService(
         IOptions<TeamsOptions> options,
@@ -42,6 +50,11 @@ public class TeamsBotService : IChatBotService, IBotCommandService, IDisposable
     public bool IsConnected => _isConnected && !string.IsNullOrWhiteSpace(_options.MicrosoftAppId);
 
     public bool IsEnabled => _options.Enabled;
+
+    /// <summary>
+    /// Gets the platform identifier for this service.
+    /// </summary>
+    public ChatPlatform Platform => ChatPlatform.Teams;
 
     public int RegisteredModuleCount => 0; // Teams uses different command registration
 
@@ -77,8 +90,6 @@ public class TeamsBotService : IChatBotService, IBotCommandService, IDisposable
             throw new InvalidOperationException("Teams bot is not connected");
         }
 
-        // Teams uses conversation references for proactive messaging
-        // The channelId is expected to be a hash of the conversation reference key
         var conversationRef = FindConversationReference(channelId);
         if (conversationRef == null)
         {
@@ -87,6 +98,9 @@ public class TeamsBotService : IChatBotService, IBotCommandService, IDisposable
 
         try
         {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(_options.DefaultTimeoutSeconds));
+
             var connectorClient = new ConnectorClient(
                 new Uri(conversationRef.ServiceUrl),
                 _credentials);
@@ -97,9 +111,14 @@ public class TeamsBotService : IChatBotService, IBotCommandService, IDisposable
             await connectorClient.Conversations.SendToConversationAsync(
                 conversationRef.Conversation.Id,
                 activity,
-                cancellationToken);
+                timeoutCts.Token);
 
             _logger.LogDebug("Sent message to Teams conversation {ConversationId}", conversationRef.Conversation.Id);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning("Timeout sending message to Teams conversation after {Timeout}s", _options.DefaultTimeoutSeconds);
+            throw new TimeoutException($"Teams API request timed out after {_options.DefaultTimeoutSeconds} seconds");
         }
         catch (Exception ex)
         {
@@ -123,11 +142,19 @@ public class TeamsBotService : IChatBotService, IBotCommandService, IDisposable
 
         try
         {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(_options.DefaultTimeoutSeconds));
+
             var connectorClient = new ConnectorClient(
                 new Uri(conversationRef.ServiceUrl),
                 _credentials);
 
-            // Convert EmbedData to Teams Adaptive Card or Hero Card
+            // Convert EmbedData to Teams Hero Card (color info logged as warning since HeroCard doesn't support it)
+            if (embed.ColorRed != 0 || embed.ColorGreen != 0 || embed.ColorBlue != 0)
+            {
+                _logger.LogDebug("Teams HeroCard does not support embed colors. Color information will be ignored.");
+            }
+
             var card = CreateHeroCardFromEmbed(embed);
             var activity = MessageFactory.Attachment(card);
             activity.Conversation = conversationRef.Conversation;
@@ -135,9 +162,14 @@ public class TeamsBotService : IChatBotService, IBotCommandService, IDisposable
             await connectorClient.Conversations.SendToConversationAsync(
                 conversationRef.Conversation.Id,
                 activity,
-                cancellationToken);
+                timeoutCts.Token);
 
             _logger.LogDebug("Sent embed to Teams conversation {ConversationId}", conversationRef.Conversation.Id);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning("Timeout sending embed to Teams conversation after {Timeout}s", _options.DefaultTimeoutSeconds);
+            throw new TimeoutException($"Teams API request timed out after {_options.DefaultTimeoutSeconds} seconds");
         }
         catch (Exception ex)
         {
@@ -146,11 +178,55 @@ public class TeamsBotService : IChatBotService, IBotCommandService, IDisposable
         }
     }
 
+    // FIX: Actually create threaded reply using ReplyToId (Phase 4)
     public async Task ReplyToMessageAsync(ulong messageId, ulong channelId, string reply, CancellationToken cancellationToken = default)
     {
-        // For Teams, we send a reply in the same conversation
-        // The messageId can be used to set up a reply chain
-        await SendMessageAsync(channelId, reply, cancellationToken);
+        if (!IsConnected)
+        {
+            throw new InvalidOperationException("Teams bot is not connected");
+        }
+
+        var conversationRef = FindConversationReference(channelId);
+        if (conversationRef == null)
+        {
+            throw new InvalidOperationException($"No conversation reference found for channel {channelId}");
+        }
+
+        try
+        {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(_options.DefaultTimeoutSeconds));
+
+            var connectorClient = new ConnectorClient(
+                new Uri(conversationRef.ServiceUrl),
+                _credentials);
+
+            var activity = MessageFactory.Text(reply);
+            activity.Conversation = conversationRef.Conversation;
+
+            // Set ReplyToId to create a threaded reply if messageId is provided
+            if (messageId != 0)
+            {
+                activity.ReplyToId = messageId.ToString();
+            }
+
+            await connectorClient.Conversations.SendToConversationAsync(
+                conversationRef.Conversation.Id,
+                activity,
+                timeoutCts.Token);
+
+            _logger.LogDebug("Sent reply to message {MessageId} in Teams conversation {ConversationId}",
+                messageId, conversationRef.Conversation.Id);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new TimeoutException($"Teams API request timed out after {_options.DefaultTimeoutSeconds} seconds");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send reply to Teams conversation");
+            throw new InvalidOperationException($"Teams API error: {ex.Message}", ex);
+        }
     }
 
     public BotStatus GetStatus()
@@ -161,7 +237,7 @@ public class TeamsBotService : IChatBotService, IBotCommandService, IDisposable
             IsConnected = IsConnected,
             BotName = "Teams Bot",
             BotId = null, // Teams doesn't expose a numeric bot ID
-            ServerCount = _conversationReferences.Count
+            ServerCount = _keyToRef.Count
         };
     }
 
@@ -282,38 +358,87 @@ public class TeamsBotService : IChatBotService, IBotCommandService, IDisposable
     /// <summary>
     /// Store a conversation reference for proactive messaging.
     /// Call this when receiving a message from a user.
+    /// Returns the channel ID that can be used to send messages to this conversation.
     /// </summary>
-    public void AddOrUpdateConversationReference(Activity activity)
+    public ulong AddOrUpdateConversationReference(Activity activity)
     {
         var conversationRef = activity.GetConversationReference();
         var key = GetConversationKey(conversationRef);
-        _conversationReferences[key] = conversationRef;
-        _logger.LogDebug("Stored conversation reference for {Key}", key);
+
+        // Update or add the conversation reference
+        _keyToRef[key] = conversationRef;
+
+        // Get or create a stable channel ID for this conversation
+        var channelId = GetOrCreateChannelId(key);
+
+        _logger.LogDebug("Stored conversation reference for {Key} with channelId {ChannelId}", key, channelId);
+        return channelId;
     }
 
     /// <summary>
-    /// Get a channel ID hash for a conversation reference.
+    /// Get a stable channel ID for a conversation reference.
+    /// FIX: No longer uses GetHashCode() which could cause collisions (Phase 1)
     /// </summary>
     public ulong GetChannelIdForConversation(ConversationReference conversationRef)
     {
         var key = GetConversationKey(conversationRef);
-        return (ulong)key.GetHashCode();
+        return GetOrCreateChannelId(key);
     }
 
-    private string GetConversationKey(ConversationReference conversationRef)
+    /// <summary>
+    /// Get a stable channel ID for a conversation key, creating one if necessary.
+    /// Uses deterministic ID generation to avoid hash collisions.
+    /// </summary>
+    private ulong GetOrCreateChannelId(string key)
+    {
+        // Check if we already have an ID for this key
+        foreach (var kvp in _idToKey)
+        {
+            if (kvp.Value == key)
+            {
+                return kvp.Key;
+            }
+        }
+
+        // Generate a new stable ID using deterministic hash
+        // FIX: Use SHA256 for deterministic, collision-resistant ID generation (Phase 1)
+        var channelId = GenerateDeterministicId(key);
+
+        // Handle potential (unlikely) collision by incrementing
+        lock (_idLock)
+        {
+            while (!_idToKey.TryAdd(channelId, key))
+            {
+                channelId++;
+            }
+        }
+
+        return channelId;
+    }
+
+    /// <summary>
+    /// Generate a deterministic ulong ID from a string key using SHA256.
+    /// This avoids the issues with GetHashCode() returning negative values
+    /// and potential collisions.
+    /// </summary>
+    private static ulong GenerateDeterministicId(string key)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(key));
+        // Take first 8 bytes and convert to ulong
+        return BitConverter.ToUInt64(bytes, 0);
+    }
+
+    private static string GetConversationKey(ConversationReference conversationRef)
     {
         return $"{conversationRef.ChannelId}:{conversationRef.Conversation.Id}";
     }
 
     private ConversationReference? FindConversationReference(ulong channelId)
     {
-        // Find by hash match
-        foreach (var kvp in _conversationReferences)
+        // FIX: Use bidirectional mapping for O(1) lookup without hash collision risk (Phase 1)
+        if (_idToKey.TryGetValue(channelId, out var key) && _keyToRef.TryGetValue(key, out var conversationRef))
         {
-            if ((ulong)kvp.Key.GetHashCode() == channelId)
-            {
-                return kvp.Value;
-            }
+            return conversationRef;
         }
         return null;
     }
@@ -345,7 +470,8 @@ public class TeamsBotService : IChatBotService, IBotCommandService, IDisposable
     public void Dispose()
     {
         if (_disposed) return;
-        _conversationReferences.Clear();
+        _idToKey.Clear();
+        _keyToRef.Clear();
         _disposed = true;
         GC.SuppressFinalize(this);
     }

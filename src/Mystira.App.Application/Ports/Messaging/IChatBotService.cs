@@ -1,11 +1,27 @@
 namespace Mystira.App.Application.Ports.Messaging;
 
 /// <summary>
+/// Identifies the chat platform for platform-specific logic.
+/// </summary>
+public enum ChatPlatform
+{
+    Discord,
+    Teams,
+    WhatsApp,
+    Slack
+}
+
+/// <summary>
 /// Port interface for chat bot operations.
 /// Platform-agnostic interface that can be implemented by Discord, Teams, Slack, etc.
 /// </summary>
 public interface IChatBotService
 {
+    /// <summary>
+    /// Gets the platform identifier for this service.
+    /// </summary>
+    ChatPlatform Platform { get; }
+
     /// <summary>
     /// Start the chat bot connection
     /// </summary>

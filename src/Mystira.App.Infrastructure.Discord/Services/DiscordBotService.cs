@@ -71,6 +71,11 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
     public bool IsConnected => _client.ConnectionState == ConnectionState.Connected;
 
     /// <summary>
+    /// Gets the platform identifier for this service.
+    /// </summary>
+    public ChatPlatform Platform => ChatPlatform.Discord;
+
+    /// <summary>
     /// Internal access to Discord client for Infrastructure layer use only.
     /// Do not expose Discord.NET types outside this assembly.
     /// </summary>
@@ -706,7 +711,8 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
         var sentMessages = new List<SentMessage>();
         var startTime = DateTime.UtcNow;
         var channelList = channelIds.ToList();
-        var stopListening = false;
+        // FIX: Use int with Interlocked for thread-safe flag (Phase 3)
+        var stopListening = 0; // 0 = false, 1 = true
 
         _logger.LogInformation("Broadcasting with handler to {ChannelCount} channels", channelList.Count);
 
@@ -738,7 +744,9 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
 
         async Task OnMessageReceived(SocketMessage msg)
         {
-            if (stopListening || msg.Author.IsBot || !sentChannelIds.Contains(msg.Channel.Id))
+            // FIX: Use Interlocked.CompareExchange to prevent race condition (Phase 3)
+            // Only process if we haven't stopped listening yet
+            if (Interlocked.CompareExchange(ref stopListening, 0, 0) == 1 || msg.Author.IsBot || !sentChannelIds.Contains(msg.Channel.Id))
                 return;
 
             var isDirectReply = msg.Reference?.MessageId is { } replyToId && sentMessageIds.Contains(replyToId.Value);
@@ -758,9 +766,11 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
 
             try
             {
-                stopListening = await onResponse(responseEvent);
-                if (stopListening)
+                var shouldStop = await onResponse(responseEvent);
+                if (shouldStop)
                 {
+                    // FIX: Atomically set stopListening to prevent multiple handler invocations (Phase 3)
+                    Interlocked.Exchange(ref stopListening, 1);
                     _logger.LogDebug("Handler requested to stop listening after response from {Responder}",
                         responseEvent.ResponderName);
                 }
@@ -779,7 +789,8 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
             cts.CancelAfter(timeout);
 
             // Wait for timeout or cancellation while handler processes responses
-            while (!stopListening && !cts.Token.IsCancellationRequested)
+            // FIX: Use Interlocked read for thread-safe check (Phase 3)
+            while (Interlocked.CompareExchange(ref stopListening, 0, 0) == 0 && !cts.Token.IsCancellationRequested)
             {
                 await Task.Delay(100, cts.Token).ConfigureAwait(false);
             }
