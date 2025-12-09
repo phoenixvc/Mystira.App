@@ -8,7 +8,7 @@ public static class BadgeThresholds
     public static readonly Dictionary<AgeGroup, Dictionary<string, float>> AgeGroupThresholds = new()
     {
         {
-            AgeGroup.School, // Ages 6-9
+            AgeGroup.Parse("school")!, // Ages 6-9
             new Dictionary<string, float>
             {
                 { "kindness", 0.5f },
@@ -18,7 +18,7 @@ public static class BadgeThresholds
             }
         },
         {
-            AgeGroup.Preteens, // Ages 10-12
+            AgeGroup.Parse("preteens")!, // Ages 10-12
             new Dictionary<string, float>
             {
                 { "loyalty", 0.6f },
@@ -29,7 +29,7 @@ public static class BadgeThresholds
             }
         },
         {
-            AgeGroup.Teens, // Ages 13-18
+            AgeGroup.Parse("teens")!, // Ages 13-18
             new Dictionary<string, float>
             {
                 { "integrity", 0.7f },
@@ -40,7 +40,7 @@ public static class BadgeThresholds
             }
         }
     };
-    
+
     /// <summary>
     /// Get the appropriate badge thresholds for a given age group
     /// </summary>
@@ -48,11 +48,11 @@ public static class BadgeThresholds
     /// <returns>Dictionary of compass axis to threshold values</returns>
     public static Dictionary<string, float> GetThresholdsForAgeGroup(AgeGroup ageGroup)
     {
-        return AgeGroupThresholds.TryGetValue(ageGroup, out var thresholds) 
-            ? thresholds 
+        return AgeGroupThresholds.TryGetValue(ageGroup, out var thresholds)
+            ? thresholds
             : new Dictionary<string, float>();
     }
-    
+
     /// <summary>
     /// Get the threshold for a specific compass axis and age group
     /// </summary>
@@ -64,7 +64,7 @@ public static class BadgeThresholds
         var thresholds = GetThresholdsForAgeGroup(ageGroup);
         return thresholds.TryGetValue(axis, out var threshold) ? threshold : 0f;
     }
-    
+
     /// <summary>
     /// Check if a value meets the threshold for a specific axis and age group
     /// </summary>

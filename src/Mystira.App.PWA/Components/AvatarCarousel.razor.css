@@ -1,0 +1,150 @@
+/* Avatar Carousel Component Styles */
+
+.avatar-carousel-container {
+    margin: 1rem 0;
+}
+
+.avatar-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 220px;
+    background: var(--secondary-bg, #f3f4f6);
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+}
+
+.avatar-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 0.5rem;
+}
+
+.avatar-controls {
+    gap: 1rem;
+}
+
+.avatar-counter {
+    min-width: 80px;
+    font-weight: 600;
+    color: var(--muted, #6b7280);
+}
+
+.avatar-thumbnails {
+    gap: 0.5rem;
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 0.5rem 0;
+}
+
+.avatar-thumbnail {
+    padding: 4px;
+    border-radius: 0.25rem;
+    background: var(--card, rgba(255,255,255,0.85));
+    border: 2px solid var(--border, rgba(17,24,39,0.08));
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.avatar-thumbnail:hover {
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 0.2rem rgba(147, 51, 234, 0.25);
+}
+
+.avatar-thumbnail.active {
+    border-color: var(--primary-color, #7c3aed);
+    background: rgba(124, 58, 237, 0.1);
+}
+
+.thumbnail-image {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    display: block;
+}
+
+.avatar-thumbnail .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .avatar-display {
+        background: #1e1b4b;
+    }
+    
+    .avatar-counter {
+        color: #a5b4fc;
+    }
+    
+    .avatar-thumbnail {
+        background: #14122b;
+        border-color: #2d2a5e;
+    }
+    
+    .avatar-thumbnail:hover {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+    }
+    
+    .avatar-thumbnail.active {
+        border-color: #6366f1;
+        background: #1e1b4b;
+    }
+    
+    .avatar-carousel-container .card {
+        background: linear-gradient(135deg, #1e1b4b 0%, #2d2a5e 100%);
+        border-color: #2d2a5e;
+    }
+    
+    .avatar-carousel-container .card-title {
+        color: #f1f5f9;
+    }
+    
+    .avatar-carousel-container .alert-warning {
+        background-color: rgba(234, 179, 8, 0.15);
+        border-color: #eab308;
+        color: #fef08a;
+    }
+}
+
+html[data-theme="dark"] .avatar-display {
+    background: #1e1b4b;
+}
+
+html[data-theme="dark"] .avatar-counter {
+    color: #a5b4fc;
+}
+
+html[data-theme="dark"] .avatar-thumbnail {
+    background: #14122b;
+    border-color: #2d2a5e;
+}
+
+html[data-theme="dark"] .avatar-thumbnail:hover {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+}
+
+html[data-theme="dark"] .avatar-thumbnail.active {
+    border-color: #6366f1;
+    background: #1e1b4b;
+}
+
+html[data-theme="dark"] .avatar-carousel-container .card {
+    background: linear-gradient(135deg, #1e1b4b 0%, #2d2a5e 100%);
+    border-color: #2d2a5e;
+}
+
+html[data-theme="dark"] .avatar-carousel-container .card-title {
+    color: #f1f5f9;
+}
+
+html[data-theme="dark"] .avatar-carousel-container .alert-warning {
+    background-color: rgba(234, 179, 8, 0.15);
+    border-color: #eab308;
+    color: #fef08a;
+}

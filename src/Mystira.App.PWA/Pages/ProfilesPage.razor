@@ -5,11 +5,11 @@
 @inject ILogger<ProfilesPage> Logger
 @using System.Linq
 
-<PageTitle>Manage Profiles - Mystira</PageTitle>
+<PageTitle>Manage Profiles • Mystira</PageTitle>
 
 @if (isLoading)
 {
-    <div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="d-flex justify-content-center align-items-center loading-container">
         <div class="text-center">
             <div class="spinner-border text-primary-custom mb-3" role="status">
                 <span class="visually-hidden">Loading...</span>
@@ -20,7 +20,7 @@
 }
 else if (!isAuthenticated)
 {
-    <div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="d-flex justify-content-center align-items-center loading-container">
         <div class="text-center">
             <i class="fas fa-lock fa-3x text-warning mb-3"></i>
             <h3>Authentication Required</h3>
@@ -90,7 +90,8 @@ else
                         <div class="card-body py-5">
                             <i class="fas fa-users fa-3x text-muted mb-3"></i>
                             <h5 class="card-title">No Profiles Yet</h5>
-                            <p class="text-muted mb-4">You haven't created any profiles yet. Create your first profile to get started!</p>
+                            <p class="text-muted mb-4">You haven't created any profiles yet. Create your first profile to get
+                                started!</p>
                             <button class="btn btn-primary-custom" @onclick="OpenCreateModal">
                                 <i class="fas fa-user-plus me-2"></i>Create Your First Profile
                             </button>
@@ -101,51 +102,65 @@ else
         }
         else
         {
-            <div class="row g-3">
+            <div class="row g-4">
                 @foreach (var profile in profiles)
                 {
                     <div class="col-md-6 col-lg-4">
-                        <div class="card h-100 shadow-sm">
-                            <div class="card-body">
-                                <!-- Profile Header -->
-                                <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <div>
-                                        <h6 class="card-title mb-1">@profile.Name</h6>
-                                        <small class="text-muted">
-                                            @GetAgeRangeDisplay(profile.AgeGroup)
-                                        </small>
+                        <div class="profile-card h-100">
+                            <!-- Avatar Section -->
+                            <div class="profile-avatar-section">
+                                @if (!string.IsNullOrEmpty(profile.SelectedAvatarMediaId))
+                                {
+                                    <CachedMystiraImage MediaId="@profile.SelectedAvatarMediaId" Alt="@($"{profile.Name} avatar")"
+                                        ImageClass="profile-avatar-image" Width="80" Height="80" />
+                                }
+                                else
+                                {
+                                    <div class="profile-avatar-placeholder">
+                                        <i class="fas fa-user"></i>
                                     </div>
-                                    @if (profile.IsGuest)
-                                    {
-                                        <span class="badge bg-info">Guest</span>
-                                    }
-                                </div>
+                                }
+                                @if (profile.IsGuest)
+                                {
+                                    <span class="guest-badge" title="Guest Profile">
+                                        <i class="fas fa-user-clock"></i>
+                                    </span>
+                                }
+                            </div>
 
-                                <!-- Profile Details -->
-                                <div class="mb-3">
-                                    <div class="small">
-                                        <div class="mb-1">
-                                            <strong>Created:</strong> @FormatDate(profile.CreatedAt)
-                                        </div>
-                                        @if (profile.HasCompletedOnboarding)
-                                        {
-                                            <div class="mb-1">
-                                                <i class="fas fa-check-circle text-success me-1"></i>
-                                                <strong>Onboarding Complete</strong>
-                                            </div>
-                                        }
+                            <!-- Profile Info -->
+                            <div class="profile-info">
+                                <h5 class="profile-name">@profile.Name</h5>
+                                <span class="profile-age-badge" title="Age Range">
+                                    <i class="fas fa-birthday-cake me-1"></i>@GetAgeRangeDisplay(profile.AgeGroup)
+                                </span>
+                            </div>
+
+                            <!-- Profile Meta -->
+                            <div class="profile-meta">
+                                <div class="meta-item" title="Profile created on @FormatDate(profile.CreatedAt)">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <span>@FormatDate(profile.CreatedAt)</span>
+                                </div>
+                                @if (profile.HasCompletedOnboarding)
+                                {
+                                    <div class="meta-item meta-success" title="This profile has completed onboarding">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Ready to play</span>
                                     </div>
-                                </div>
+                                }
+                            </div>
 
-                                <!-- Action Buttons -->
-                                <div class="d-grid gap-2">
-                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenEditModal(profile)">
-                                        <i class="fas fa-edit me-1"></i>Edit
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(profile)">
-                                        <i class="fas fa-trash me-1"></i>Delete
-                                    </button>
-                                </div>
+                            <!-- Action Buttons -->
+                            <div class="profile-actions">
+                                <button class="btn-profile-action btn-edit" @onclick="() => OpenEditModal(profile)" title="Edit profile">
+                                    <i class="fas fa-edit"></i>
+                                    <span>Edit</span>
+                                </button>
+                                <button class="btn-profile-action btn-delete" @onclick="() => ConfirmDelete(profile)" title="Delete profile">
+                                    <i class="fas fa-trash"></i>
+                                    <span>Delete</span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -158,7 +173,7 @@ else
 <!-- Create/Edit Modal -->
 @if (showModal)
 {
-    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal fade show d-block modal-backdrop">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
@@ -193,7 +208,7 @@ else
                     <!-- Age Group -->
                     <div class="mb-3">
                         <label class="form-label">Age Range*</label>
-                        <select class="form-select" @bind="formData.AgeGroup">
+                        <select class="form-select" @bind="formData.AgeGroup" @bind:after="OnAgeGroupChanged">
                             <option value="">Select age range...</option>
                             @foreach (var ageRange in AgeRanges.All)
                             {
@@ -201,10 +216,57 @@ else
                             }
                         </select>
                     </div>
+
+                    <!-- Avatar Selection -->
+                    @if (!string.IsNullOrEmpty(formData.AgeGroup))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Choose Avatar</label>
+
+                            @if (isSelectingAvatar)
+                            {
+                                <!-- Show avatar carousel while selecting -->
+                                <AvatarCarousel AgeGroup="@formData.AgeGroup"
+                                                OnAvatarSelected="OnAvatarSelected"
+                                                OnCancel="OnAvatarSelectionCanceled" />
+                            }
+                            else if (isAvatarSelected && !string.IsNullOrEmpty(formData.SelectedAvatarMediaId))
+                            {
+                                <!-- Show selected avatar -->
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <div class="mb-3">
+                                            <CachedMystiraImage MediaId="@formData.SelectedAvatarMediaId" Alt="Selected Avatar"
+                                                ImageClass="thumbnail-image" Width="150" Height="150" />
+                                        </div>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ChangeAvatar">
+                                            <i class="fas fa-sync-alt me-2"></i>Change Avatar
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <!-- No avatar selected yet; offer to choose -->
+                                <button type="button" class="btn btn-outline-primary" @onclick="StartAvatarSelection">
+                                    <i class="fas fa-user-circle me-2"></i>Choose Avatar
+                                </button>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Please select an age range first to see available avatars.
+                            </div>
+                        </div>
+                    }
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
-                    <button type="button" class="btn btn-primary" @onclick="SaveProfile" disabled="@isSaving">
+                    <button type="button" class="btn btn-primary" @onclick="SaveProfile" disabled="@(isSaving || isSelectingAvatar)">
                         @if (isSaving)
                         {
                             <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -224,7 +286,7 @@ else
 <!-- Delete Confirmation Modal -->
 @if (showDeleteConfirm)
 {
-    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal fade show d-block modal-backdrop">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
@@ -266,6 +328,8 @@ else
     private bool isSaving = false;
     private UserProfile? editingProfile;
     private ProfileFormData formData = new();
+    private bool isAvatarSelected = false;
+    private bool isSelectingAvatar = false;
 
     // Delete confirmation
     private bool showDeleteConfirm = false;
@@ -276,13 +340,14 @@ else
     private string successMessage = string.Empty;
     private string errorMessage = string.Empty;
     private string modalValidationMessage = string.Empty;
+    private string selectedAvatar = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             Logger.LogInformation("Initializing Profiles page");
-            
+
             currentAccount = await AuthService.GetCurrentAccountAsync();
             if (currentAccount == null)
             {
@@ -312,9 +377,9 @@ else
         try
         {
             Logger.LogInformation("Loading profiles for account {AccountId}", currentAccount?.Id);
-            
+
             if (currentAccount == null) return;
-            
+
             profiles = await ApiClient.GetProfilesByAccountAsync(currentAccount.Id) ?? new List<UserProfile>();
             Logger.LogInformation("Loaded {Count} profiles", profiles.Count);
         }
@@ -336,6 +401,8 @@ else
         editingProfile = null;
         formData = new ProfileFormData();
         modalValidationMessage = string.Empty;
+        isAvatarSelected = false;
+        isSelectingAvatar = false;
         showModal = true;
     }
 
@@ -347,8 +414,12 @@ else
         {
             Name = profile.Name,
             AgeGroup = profile.AgeGroup,
+            AvatarMediaId = profile.SelectedAvatarMediaId,
+            SelectedAvatarMediaId = profile.SelectedAvatarMediaId
         };
         modalValidationMessage = string.Empty;
+        isAvatarSelected = !string.IsNullOrEmpty(profile.SelectedAvatarMediaId);
+        isSelectingAvatar = false;
         showModal = true;
     }
 
@@ -358,6 +429,8 @@ else
         editingProfile = null;
         formData = new ProfileFormData();
         modalValidationMessage = string.Empty;
+        isAvatarSelected = false;
+        isSelectingAvatar = false;
     }
 
     private async Task SaveProfile()
@@ -379,7 +452,7 @@ else
                 modalValidationMessage = "Age Range is required";
                 return;
             }
-            
+
             isSaving = true;
             StateHasChanged();
 
@@ -388,7 +461,9 @@ else
                 // Update existing profile
                 var updateRequest = new UpdateUserProfileRequest
                 {
-                    AgeGroup = formData.AgeGroup
+                    Name = formData.Name,
+                    AgeGroup = formData.AgeGroup,
+                    SelectedAvatarMediaId = formData.SelectedAvatarMediaId
                 };
 
                 var updated = await ApiClient.UpdateProfileAsync(editingProfile.Id, updateRequest);
@@ -412,9 +487,11 @@ else
                 {
                     Name = formData.Name,
                     AgeGroup = formData.AgeGroup,
+                    AvatarMediaId = formData.AvatarMediaId,
                     AccountId = currentAccount.Id,
                     IsGuest = false,
-                    HasCompletedOnboarding = false
+                    HasCompletedOnboarding = false,
+                    SelectedAvatarMediaId = formData.SelectedAvatarMediaId
                 };
 
                 var created = await ApiClient.CreateProfileAsync(createRequest);
@@ -505,9 +582,63 @@ else
         return date?.ToString("MMM d, yyyy") ?? "Unknown";
     }
 
+    private void OnAgeGroupChanged()
+    {
+        formData.SelectedAvatarMediaId = null;
+        formData.AvatarMediaId = null;
+        isAvatarSelected = false;
+        isSelectingAvatar = true; // prompt user to pick an avatar after changing age group
+        StateHasChanged();
+    }
+
+    private Task OnAvatarSelected(string mediaId)
+    {
+        formData.AvatarMediaId = mediaId;
+        formData.SelectedAvatarMediaId = mediaId;
+        isAvatarSelected = true;
+        isSelectingAvatar = false;
+        Logger.LogInformation("Avatar selected for profile: {MediaId}", mediaId);
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void ChangeAvatar()
+    {
+        isAvatarSelected = false;
+        isSelectingAvatar = true;
+        StateHasChanged();
+    }
+
+    private void StartAvatarSelection()
+    {
+        isSelectingAvatar = true;
+        StateHasChanged();
+    }
+
+    private void OnAvatarSelectionCanceled()
+    {
+        // User canceled selection; keep previous avatar if it existed
+        isSelectingAvatar = false;
+
+        // If we already had a selected avatar (tracked by the bound form data),
+        // ensure the UI returns to showing it instead of the "Choose Avatar" state.
+        if (!string.IsNullOrEmpty(formData?.SelectedAvatarMediaId))
+        {
+            isAvatarSelected = true;
+        }
+        else
+        {
+            isAvatarSelected = false;
+        }
+
+        StateHasChanged();
+    }
+
     private class ProfileFormData
     {
         public string Name { get; set; } = string.Empty;
         public string? AgeGroup { get; set; }
+        public string? AvatarMediaId { get; set; }
+        public string? SelectedAvatarMediaId { get; set; }
     }
 }

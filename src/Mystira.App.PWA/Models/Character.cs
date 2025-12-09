@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace Mystira.App.PWA.Models;
 
 /// <summary>
@@ -14,7 +12,7 @@ public class Character
     public CharacterMetadata Metadata { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    
+
     // Convenience properties
     public string? Role => Metadata.Roles?.FirstOrDefault();
     public string? Archetype => Metadata.Archetypes?.FirstOrDefault();
@@ -23,9 +21,21 @@ public class Character
         get
         {
             var parts = new List<string>();
-            if (!string.IsNullOrEmpty(Role)) parts.Add(Role);
-            if (!string.IsNullOrEmpty(Archetype)) parts.Add(Archetype);
-            if (!string.IsNullOrEmpty(Metadata.Species)) parts.Add(Metadata.Species);
+            if (!string.IsNullOrEmpty(Role))
+            {
+                parts.Add(Role);
+            }
+
+            if (!string.IsNullOrEmpty(Archetype))
+            {
+                parts.Add(Archetype);
+            }
+
+            if (!string.IsNullOrEmpty(Metadata.Species))
+            {
+                parts.Add(Metadata.Species);
+            }
+
             return parts.Count > 0 ? string.Join(" • ", parts) : "Character";
         }
     }

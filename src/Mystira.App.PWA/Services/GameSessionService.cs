@@ -7,12 +7,12 @@ public class GameSessionService : IGameSessionService
     private readonly ILogger<GameSessionService> _logger;
     private readonly IApiClient _apiClient;
     private readonly IAuthService _authService;
-    
+
     public event EventHandler<GameSession?>? GameSessionChanged;
-    
+
     private GameSession? _currentGameSession;
-    public GameSession? CurrentGameSession 
-    { 
+    public GameSession? CurrentGameSession
+    {
         get => _currentGameSession;
         private set
         {
@@ -23,6 +23,10 @@ public class GameSessionService : IGameSessionService
 
     // Store character assignments for text replacement
     private List<CharacterAssignment> _characterAssignments = new();
+
+    // Track pause state
+    private bool _isPaused = false;
+    public bool IsPaused => _isPaused;
 
     public GameSessionService(ILogger<GameSessionService> logger, IApiClient apiClient, IAuthService authService)
     {
@@ -36,20 +40,20 @@ public class GameSessionService : IGameSessionService
         try
         {
             _logger.LogInformation("Starting game session for scenario: {ScenarioName}", scenario.Title);
-            
+
             // Get account information from auth service
             var account = await _authService.GetCurrentAccountAsync();
             string accountId = account?.Id ?? "default-account";
             string profileId = "default-profile";
-            
+
             // If account has profiles, use the first one as default
             if (account?.UserProfileIds != null && account.UserProfileIds.Any())
             {
                 profileId = account.UserProfileIds.First();
             }
-            
+
             _logger.LogInformation("Starting session with AccountId: {AccountId}, ProfileId: {ProfileId}", accountId, profileId);
-            
+
             // Start session via API
             var apiGameSession = await _apiClient.StartGameSessionAsync(
                 scenario.Id,
@@ -75,21 +79,21 @@ public class GameSessionService : IGameSessionService
                     .Select(b => b.NextSceneId))
                 .Where(id => !string.IsNullOrEmpty(id))
                 .ToHashSet();
-            
+
             var startingScene = scenario.Scenes.FirstOrDefault(s => !allReferencedSceneIds.Contains(s.Id));
-            
+
             if (startingScene == null)
             {
                 // Fallback to first scene if we can't determine the starting scene
                 startingScene = scenario.Scenes.FirstOrDefault();
             }
-            
+
             if (startingScene == null)
             {
                 _logger.LogError("No starting scene found for scenario: {ScenarioName}", scenario.Title);
                 return false;
             }
-            
+
             startingScene.AudioUrl = !string.IsNullOrEmpty(startingScene.Media?.Audio) ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Audio) : null;
             startingScene.ImageUrl = !string.IsNullOrEmpty(startingScene.Media?.Image) ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Image) : null;
             startingScene.VideoUrl = !string.IsNullOrEmpty(startingScene.Media?.Video) ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Video) : null;
@@ -104,12 +108,15 @@ public class GameSessionService : IGameSessionService
                 CurrentScene = startingScene,
                 StartedAt = apiGameSession.StartedAt,
                 CompletedScenes = new List<Scene>(),
-                IsCompleted = false
+                IsCompleted = false,
+                CharacterAssignments = _characterAssignments?.Any() == true
+                    ? new List<CharacterAssignment>(_characterAssignments)
+                    : new List<CharacterAssignment>()
             };
 
             // Set empty character assignments for scenarios that skip character assignment
             // This ensures text replacement functionality works (even though no replacements will occur)
-            if (!_characterAssignments.Any())
+            if (_characterAssignments?.Any() != true)
             {
                 _characterAssignments = new List<CharacterAssignment>();
             }
@@ -134,6 +141,17 @@ public class GameSessionService : IGameSessionService
                 return false;
             }
 
+            // If the session is paused, attempt to resume on the server before navigating
+            if (_isPaused)
+            {
+                _logger.LogInformation("Session is paused locally. Attempting to resume before navigating to scene: {SceneId}", sceneId);
+                var resumed = await ResumeGameSessionAsync();
+                if (!resumed)
+                {
+                    _logger.LogWarning("Failed to resume session before navigation. Proceeding may fail.");
+                }
+            }
+
             _logger.LogInformation("Navigating to scene: {SceneId}", sceneId);
 
             // Add current scene to completed scenes if it exists
@@ -144,20 +162,35 @@ public class GameSessionService : IGameSessionService
 
             // Try to get the scene from API
             var scene = CurrentGameSession.Scenario.Scenes.Find(x => x.Id == sceneId);
-            
+
             if (scene == null)
             {
                 _logger.LogError("Scene not found: {SceneId}", sceneId);
                 return false;
             }
 
+            // Call API to progress the session to the new scene
+            var updatedSession = await _apiClient.ProgressSessionSceneAsync(CurrentGameSession.Id, sceneId);
+            if (updatedSession == null)
+            {
+                _logger.LogWarning("Failed to progress session via API for scene: {SceneId}, continuing with local state", sceneId);
+            }
+
             // Resolve Media URLs
             scene.AudioUrl = !string.IsNullOrEmpty(scene.Media?.Audio) ? await _apiClient.GetMediaUrlFromId(scene.Media.Audio) : null;
             scene.ImageUrl = !string.IsNullOrEmpty(scene.Media?.Image) ? await _apiClient.GetMediaUrlFromId(scene.Media.Image) : null;
             scene.VideoUrl = !string.IsNullOrEmpty(scene.Media?.Video) ? await _apiClient.GetMediaUrlFromId(scene.Media.Video) : null;
-            
+
             CurrentGameSession.CurrentScene = scene;
-            
+            CurrentGameSession.CurrentSceneId = sceneId;
+
+            // Progress the session on the server
+            var progressedSession = await _apiClient.ProgressSessionSceneAsync(CurrentGameSession.Id, sceneId);
+            if (progressedSession == null)
+            {
+                _logger.LogWarning("Failed to progress session on server, but continuing locally for scene: {SceneId}", sceneId);
+            }
+
             // Check if this is a final scene
             if (scene is { SceneType: SceneType.Special, NextSceneId: null })
             {
@@ -205,7 +238,7 @@ public class GameSessionService : IGameSessionService
                 var success = await _apiClient.CompleteScenarioForAccountAsync(account.Id, CurrentGameSession.ScenarioId);
                 if (success)
                 {
-                    _logger.LogInformation("Marked scenario {ScenarioId} as completed for account {AccountId}", 
+                    _logger.LogInformation("Marked scenario {ScenarioId} as completed for account {AccountId}",
                         CurrentGameSession.ScenarioId, account.Id);
                 }
                 else
@@ -232,6 +265,106 @@ public class GameSessionService : IGameSessionService
         }
     }
 
+    public async Task<bool> PauseGameSessionAsync()
+    {
+        try
+        {
+            if (CurrentGameSession == null)
+            {
+                _logger.LogWarning("Cannot pause game session - no active session");
+                return false;
+            }
+
+            if (_isPaused)
+            {
+                _logger.LogWarning("Game session is already paused");
+                return false;
+            }
+
+            _logger.LogInformation("Pausing game session: {SessionId}", CurrentGameSession.Id);
+
+            // Call the API to pause the session
+            var apiSession = await _apiClient.PauseGameSessionAsync(CurrentGameSession.Id);
+            if (apiSession == null)
+            {
+                _logger.LogWarning("Failed to pause game session via API, but updating local state");
+            }
+
+            _isPaused = true;
+
+            // Trigger the event to notify subscribers
+            GameSessionChanged?.Invoke(this, CurrentGameSession);
+
+            _logger.LogInformation("Game session paused successfully");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error pausing game session");
+            return false;
+        }
+    }
+
+    public async Task<bool> ResumeGameSessionAsync()
+    {
+        try
+        {
+            if (CurrentGameSession == null)
+            {
+                _logger.LogWarning("Cannot resume game session - no active session");
+                return false;
+            }
+
+            // Even if local flag isn't paused (e.g., after app reload), attempt resume on server
+            if (!_isPaused)
+            {
+                _logger.LogInformation("Local session not marked paused; attempting server resume anyway for session: {SessionId}", CurrentGameSession.Id);
+            }
+
+            _logger.LogInformation("Resuming game session: {SessionId}", CurrentGameSession.Id);
+
+            // Call the API to resume the session
+            var apiSession = await _apiClient.ResumeGameSessionAsync(CurrentGameSession.Id);
+            if (apiSession == null)
+            {
+                _logger.LogWarning("Failed to resume game session via API, but updating local state");
+            }
+
+            _isPaused = false;
+
+            // If API returned session data, merge essential fields and hydrate assignments
+            if (apiSession != null)
+            {
+                // Preserve local scenario/scenes, but update metadata
+                CurrentGameSession.IsCompleted = apiSession.IsCompleted;
+                CurrentGameSession.StartedAt = apiSession.StartedAt;
+
+                if (apiSession.CharacterAssignments != null && apiSession.CharacterAssignments.Any())
+                {
+                    CurrentGameSession.CharacterAssignments = new List<CharacterAssignment>(apiSession.CharacterAssignments);
+                    SetCharacterAssignments(CurrentGameSession.CharacterAssignments);
+                    _logger.LogInformation("Hydrated {Count} character assignments from resumed session", CurrentGameSession.CharacterAssignments.Count);
+                }
+                else
+                {
+                    _logger.LogInformation("No character assignments returned from resume API; retaining existing assignments cache ({Count})",
+                        CurrentGameSession.CharacterAssignments?.Count ?? 0);
+                }
+            }
+
+            // Trigger the event to notify subscribers
+            GameSessionChanged?.Invoke(this, CurrentGameSession);
+
+            _logger.LogInformation("Game session resumed successfully");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resuming game session");
+            return false;
+        }
+    }
+
     public async Task<bool> NavigateFromRollAsync(bool isSuccess)
     {
         try
@@ -243,7 +376,7 @@ public class GameSessionService : IGameSessionService
             }
 
             var currentScene = CurrentGameSession.CurrentScene;
-            
+
             if (currentScene.SceneType != SceneType.Roll)
             {
                 _logger.LogWarning("Current scene is not a roll scene");
@@ -253,43 +386,43 @@ public class GameSessionService : IGameSessionService
             // For roll scenes, use the branches collection to determine next scene
             // First branch = success path, second branch = failure path
             var branches = currentScene.Branches;
-            
+
             if (branches == null || !branches.Any())
             {
                 _logger.LogWarning("Roll scene has no branches defined");
-                
+
                 // Fallback to NextSceneId if available
                 if (!string.IsNullOrEmpty(currentScene.NextSceneId))
                 {
                     return await NavigateToSceneAsync(currentScene.NextSceneId);
                 }
-                
+
                 _logger.LogInformation("No navigation path available for roll scene. Completing game session.");
                 return await CompleteGameSessionAsync();
             }
-            
+
             // Select the appropriate branch based on success/failure
-            var selectedBranch = isSuccess 
+            var selectedBranch = isSuccess
                 ? branches.FirstOrDefault()                // First branch for success
                 : branches.Skip(1).FirstOrDefault();       // Second branch for failure
-                
+
             if (selectedBranch == null)
             {
                 _logger.LogWarning("Could not find appropriate branch for roll outcome (Success: {IsSuccess})", isSuccess);
                 return await CompleteGameSessionAsync();
             }
-            
+
             var nextSceneId = selectedBranch.NextSceneId;
-            
+
             if (string.IsNullOrEmpty(nextSceneId))
             {
                 _logger.LogInformation("Selected branch has no next scene specified (Success: {IsSuccess}). Completing game session.", isSuccess);
                 return await CompleteGameSessionAsync();
             }
 
-            _logger.LogInformation("Navigating from roll scene. Success: {IsSuccess}, Branch choice: '{BranchChoice}', Next scene: {NextSceneId}", 
+            _logger.LogInformation("Navigating from roll scene. Success: {IsSuccess}, Branch choice: '{BranchChoice}', Next scene: {NextSceneId}",
                 isSuccess, selectedBranch.Choice, nextSceneId);
-            
+
             return await NavigateToSceneAsync(nextSceneId);
         }
         catch (Exception ex)
@@ -311,7 +444,10 @@ public class GameSessionService : IGameSessionService
 
             var currentScene = CurrentGameSession.CurrentScene;
             var nextSceneId = currentScene.NextSceneId;
-            
+
+            // Progression is handled inside NavigateToSceneAsync which
+            // calls the API to progress the session with proper identifiers
+
             if (string.IsNullOrEmpty(nextSceneId))
             {
                 _logger.LogInformation("No next scene available, completing game session");
@@ -319,7 +455,7 @@ public class GameSessionService : IGameSessionService
             }
 
             _logger.LogInformation("Advancing to next scene: {NextSceneId}", nextSceneId);
-            
+
             return await NavigateToSceneAsync(nextSceneId);
         }
         catch (Exception ex)
@@ -329,17 +465,68 @@ public class GameSessionService : IGameSessionService
         }
     }
 
+    public async Task MakeChoiceAsync(string gameSessionId, string currentSceneId, string choiceText, string choiceNextSceneId)
+    {
+        try
+        {
+            if (CurrentGameSession == null)
+            {
+                _logger.LogWarning("Cannot make choice - no active game session");
+                return;
+            }
+
+            // Resolve the next scene by its Id
+            var nextScene = CurrentGameSession.Scenario.Scenes
+                .FirstOrDefault(s => string.Equals(s.Id, choiceNextSceneId, StringComparison.OrdinalIgnoreCase));
+
+            if (nextScene == null)
+            {
+                _logger.LogWarning("Next scene with id '{NextSceneId}' not found in scenario {ScenarioId}",
+                    choiceNextSceneId, CurrentGameSession.ScenarioId);
+                return;
+            }
+
+            _logger.LogInformation("Making choice '{ChoiceText}' to navigate to scene '{NextSceneTitle}' ({NextSceneId})",
+                choiceText, nextScene.Title, nextScene.Id);
+
+            // Notify the server about the choice that was made
+            var updatedSession = await _apiClient.MakeChoiceAsync(gameSessionId, currentSceneId, choiceText, nextScene.Id);
+            if (updatedSession == null)
+            {
+                _logger.LogWarning("API did not return an updated session after making choice. Continuing locally.");
+            }
+            else
+            {
+                // Optionally update any server-side fields (keep local scenario and scenes)
+                CurrentGameSession.StartedAt = updatedSession.StartedAt;
+                CurrentGameSession.IsCompleted = updatedSession.IsCompleted;
+            }
+
+            // Then navigate to the resolved next scene (this will also progress the session on the server)
+            await NavigateToSceneAsync(nextScene.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error making choice '{ChoiceText}' and navigating to next scene", choiceText);
+        }
+    }
+
     public void ClearGameSession()
     {
         _logger.LogInformation("Clearing game session");
         CurrentGameSession = null;
         _characterAssignments.Clear();
+        _isPaused = false;
     }
 
     public void SetCurrentGameSession(GameSession? session)
     {
         _logger.LogInformation("Setting current game session: {SessionId}", session?.Id ?? "null");
         CurrentGameSession = session;
+        // Hydrate character assignments cache for text replacement
+        _characterAssignments = session?.CharacterAssignments?.Any() == true
+            ? new List<CharacterAssignment>(session!.CharacterAssignments)
+            : new List<CharacterAssignment>();
     }
 
     /// <summary>
@@ -357,16 +544,23 @@ public class GameSessionService : IGameSessionService
     public string ReplaceCharacterPlaceholders(string text)
     {
         if (string.IsNullOrEmpty(text) || !_characterAssignments.Any())
+        {
             return text;
+        }
 
         foreach (var assignment in _characterAssignments)
         {
+            var characterName = assignment.CharacterName.ToLower();
             if (assignment.PlayerAssignment != null)
             {
                 string playerName = assignment.PlayerAssignment.Type switch
                 {
-                    "Profile" => assignment.PlayerAssignment.ProfileName ?? "Player",
-                    "Guest" => assignment.PlayerAssignment.GuestName ?? "Player",
+                    "Player" => assignment.PlayerAssignment.ProfileName?.ToLower() == characterName
+                        ? "Player"
+                        : assignment.PlayerAssignment.ProfileName ?? "Player",
+                    "Guest" => assignment.PlayerAssignment.GuestName?.ToLower() == characterName
+                        ? "Guest"
+                        : assignment.PlayerAssignment.GuestName ?? "Guest",
                     _ => "Player"
                 };
 

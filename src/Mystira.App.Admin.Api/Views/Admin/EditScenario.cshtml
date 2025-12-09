@@ -1,3 +1,4 @@
+@using Mystira.App.Domain.Models
 @model Mystira.App.Domain.Models.Scenario
 @{
     ViewData["Title"] = "Edit Scenario";
@@ -39,9 +40,9 @@
                                                 <div class="form-group mb-3">
                                                     <label for="difficulty">Difficulty</label>
                                                     <select class="form-control" id="difficulty" name="difficulty">
-                                                        <option value="Easy" selected="@(Model.Difficulty == Mystira.App.Domain.Models.DifficultyLevel.Easy)">Easy</option>
-                                                        <option value="Medium" selected="@(Model.Difficulty == Mystira.App.Domain.Models.DifficultyLevel.Medium)">Medium</option>
-                                                        <option value="Hard" selected="@(Model.Difficulty == Mystira.App.Domain.Models.DifficultyLevel.Hard)">Hard</option>
+                                                        <option value="Easy" selected="@(Model.Difficulty == DifficultyLevel.Easy)">Easy</option>
+                                                        <option value="Medium" selected="@(Model.Difficulty == DifficultyLevel.Medium)">Medium</option>
+                                                        <option value="Hard" selected="@(Model.Difficulty == DifficultyLevel.Hard)">Hard</option>
                                                     </select>
                                                 </div>
                                             </div>
@@ -49,9 +50,9 @@
                                                 <div class="form-group mb-3">
                                                     <label for="sessionLength">Session Length</label>
                                                     <select class="form-control" id="sessionLength" name="sessionLength">
-                                                        <option value="Short" selected="@(Model.SessionLength == Mystira.App.Domain.Models.SessionLength.Short)">Short (~30 min)</option>
-                                                        <option value="Medium" selected="@(Model.SessionLength == Mystira.App.Domain.Models.SessionLength.Medium)">Medium (~60 min)</option>
-                                                        <option value="Long" selected="@(Model.SessionLength == Mystira.App.Domain.Models.SessionLength.Long)">Long (~90+ min)</option>
+                                                        <option value="Short" selected="@(Model.SessionLength == SessionLength.Short)">Short (~30 min)</option>
+                                                        <option value="Medium" selected="@(Model.SessionLength == SessionLength.Medium)">Medium (~60 min)</option>
+                                                        <option value="Long" selected="@(Model.SessionLength == SessionLength.Long)">Long (~90+ min)</option>
                                                     </select>
                                                 </div>
                                             </div>
@@ -77,8 +78,14 @@
                                             <label for="compassAxes">Compass Axes (comma-separated, max 4)</label>
                                             <input type="text" class="form-control" id="compassAxes" name="compassAxes" value="@string.Join(", ", Model.CoreAxes)">
                                         </div>
-                                    </div>
-                                </div>
+
+                                        <div class="form-group mb-3">
+                                            <label for="image">Cover Image ID</label>
+                                            <input type="text" class="form-control" id="image" name="image" value="@Model.Image" placeholder="e.g., img_scenario_cover_001">
+                                            <small class="form-text text-muted">The image ID that corresponds to the cover picture of the scenario</small>
+                                        </div>
+                                        </div>
+                                        </div>
                                 
                                 <!-- Scenes Section -->
                                 <div class="card">
@@ -108,10 +115,10 @@
                                                             <div class="form-group mb-2">
                                                                 <label>Type</label>
                                                                 <select class="form-control form-control-sm" name="scenes[@i].Type">
-                                                                    <option value="Narrative" selected="@(scene.Type == Mystira.App.Domain.Models.SceneType.Narrative)">Narrative</option>
-                                                                    <option value="Choice" selected="@(scene.Type == Mystira.App.Domain.Models.SceneType.Choice)">Choice</option>
-                                                                    <option value="Roll" selected="@(scene.Type == Mystira.App.Domain.Models.SceneType.Roll)">Roll</option>
-                                                                    <option value="Special" selected="@(scene.Type == Mystira.App.Domain.Models.SceneType.Special)">Special</option>
+                                                                    <option value="Narrative" selected="@(scene.Type == SceneType.Narrative)">Narrative</option>
+                                                                    <option value="Choice" selected="@(scene.Type == SceneType.Choice)">Choice</option>
+                                                                    <option value="Roll" selected="@(scene.Type == SceneType.Roll)">Roll</option>
+                                                                    <option value="Special" selected="@(scene.Type == SceneType.Special)">Special</option>
                                                                 </select>
                                                             </div>
                                                         </div>

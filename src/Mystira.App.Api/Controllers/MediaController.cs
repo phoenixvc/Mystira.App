@@ -1,6 +1,8 @@
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Api.Models;
-using Mystira.App.Api.Services;
+using Mystira.App.Application.CQRS.MediaAssets.Queries;
+using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
 
 namespace Mystira.App.Api.Controllers;
 
@@ -9,14 +11,12 @@ namespace Mystira.App.Api.Controllers;
 [Produces("application/json")]
 public class MediaController : ControllerBase
 {
-    private readonly IMediaApiService _mediaService;
-    private readonly IMediaMetadataService _mediaMetadataService;
+    private readonly IMediator _mediator;
     private readonly ILogger<MediaController> _logger;
 
-    public MediaController(IMediaApiService mediaService, IMediaMetadataService mediaMetadataService, ILogger<MediaController> logger)
+    public MediaController(IMediator mediator, ILogger<MediaController> logger)
     {
-        _mediaService = mediaService;
-        _mediaMetadataService = mediaMetadataService;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -24,15 +24,17 @@ public class MediaController : ControllerBase
     /// Gets a specific media asset metadata by ID
     /// </summary>
     [HttpGet("{mediaId}/info")]
-    public async Task<ActionResult<MediaAsset>> GetMediaById(string mediaId)
+    [AllowAnonymous]
+    public async Task<ActionResult<Domain.Models.MediaAsset>> GetMediaById(string mediaId)
     {
         try
         {
-            var media = await _mediaService.GetMediaByIdAsync(mediaId);
+            var query = new GetMediaAssetQuery(mediaId);
+            var media = await _mediator.Send(query);
             if (media == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Media not found: {mediaId}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -42,8 +44,8 @@ public class MediaController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting media: {MediaId}", mediaId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while getting media",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -54,15 +56,18 @@ public class MediaController : ControllerBase
     /// Serves the actual media file content by ID
     /// </summary>
     [HttpGet("{mediaId}")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetMediaFile(string mediaId)
     {
         try
         {
-            var result = await _mediaService.GetMediaFileAsync(mediaId);
+            var query = new GetMediaFileQuery(mediaId);
+            var result = await _mediator.Send(query);
+
             if (result == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Media file not found: {mediaId}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -74,8 +79,8 @@ public class MediaController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error serving media file: {MediaId}", mediaId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while serving media file",
                 TraceId = HttpContext.TraceIdentifier
             });

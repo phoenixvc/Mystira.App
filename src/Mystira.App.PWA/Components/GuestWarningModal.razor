@@ -1,0 +1,44 @@
+@if (ShowModal)
+{
+    <div class="modal-backdrop fade show" style="display: block;"></div>
+    <div class="modal fade show" style="display: block;" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-circle text-warning me-2"></i>
+                        Guest-Only Adventure
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="OnCancel" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">
+                        You've assigned only guest players to this adventure. Without user profiles, <strong>progress will not be tracked</strong> for this session.
+                    </p>
+                    <p class="text-muted mb-0">
+                        Guest sessions are perfect for trying out adventures, but consider creating user profiles to save your progress.
+                    </p>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" @onclick="OnCancel">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Assignment
+                    </button>
+                    <button type="button" class="btn btn-primary-custom" @onclick="OnContinue">
+                        <i class="fas fa-play me-2"></i>Continue Adventure
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool ShowModal { get; set; } = false;
+
+    [Parameter]
+    public EventCallback OnContinue { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+}

@@ -1,24 +1,27 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Api.Models;
-using Mystira.App.Api.Services;
+using Microsoft.AspNetCore.RateLimiting;
+using Mystira.App.Application.CQRS.Auth.Commands;
+using Mystira.App.Contracts.Requests.Auth;
+using Mystira.App.Contracts.Responses.Auth;
+using Mystira.App.Shared.Logging;
 
 namespace Mystira.App.Api.Controllers
 {
     [Route("api/auth")]
     [ApiController]
+    [EnableRateLimiting("auth")] // Apply strict rate limiting to all auth endpoints (BUG-5)
     public class AuthController : ControllerBase
     {
-        private readonly IConfiguration _configuration;
-        private readonly IPasswordlessAuthService _passwordlessAuthService;
-        private readonly IJwtService _jwtService;
+        private readonly IMediator _mediator;
         private readonly ILogger<AuthController> _logger;
+        private readonly IWebHostEnvironment _environment;
 
-        public AuthController(IConfiguration configuration, IPasswordlessAuthService passwordlessAuthService, IJwtService jwtService, ILogger<AuthController> logger)
+        public AuthController(IMediator mediator, ILogger<AuthController> logger, IWebHostEnvironment environment)
         {
-            _configuration = configuration;
-            _passwordlessAuthService = passwordlessAuthService;
-            _jwtService = jwtService;
+            _mediator = mediator;
             _logger = logger;
+            _environment = environment;
         }
 
         [HttpPost("passwordless/signup")]
@@ -26,22 +29,29 @@ namespace Mystira.App.Api.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new PasswordlessSignupResponse 
-                { 
-                    Success = false, 
-                    Message = "Invalid email or display name" 
+                return BadRequest(new PasswordlessSignupResponse
+                {
+                    Success = false,
+                    Message = "Invalid email or display name"
                 });
             }
 
-            var (success, message, code) = await _passwordlessAuthService.RequestSignupAsync(request.Email, request.DisplayName);
-            
-            _logger.LogInformation("Passwordless signup request: email={Email}, success={Success}", request.Email, success);
-            
-            return Ok(new PasswordlessSignupResponse 
-            { 
-                Success = success, 
+            var command = new RequestPasswordlessSignupCommand(request.Email, request.DisplayName);
+            var (success, message, code, errorDetails) = await _mediator.Send(command);
+
+            // Use PII redaction for COPPA/GDPR compliance
+            _logger.LogInformation("Passwordless signup request: user={UserHash}, domain={EmailDomain}, success={Success}",
+                PiiRedactor.HashEmail(request.Email),
+                PiiRedactor.RedactEmail(request.Email),
+                success);
+
+            return Ok(new PasswordlessSignupResponse
+            {
+                Success = success,
                 Message = message,
-                Email = success ? request.Email : null
+                Email = success ? request.Email : null,
+                // Only include error details in development mode for debugging
+                ErrorDetails = _environment.IsDevelopment() ? errorDetails : null
             });
         }
 
@@ -50,33 +60,35 @@ namespace Mystira.App.Api.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new PasswordlessVerifyResponse 
-                { 
-                    Success = false, 
-                    Message = "Invalid email or code" 
+                return BadRequest(new PasswordlessVerifyResponse
+                {
+                    Success = false,
+                    Message = "Invalid email or code"
                 });
             }
 
-            var (success, message, account) = await _passwordlessAuthService.VerifySignupAsync(request.Email, request.Code);
-            
+            var command = new VerifyPasswordlessSignupCommand(request.Email, request.Code);
+            var (success, message, account, accessToken, refreshToken, errorDetails) = await _mediator.Send(command);
+
             if (!success || account == null)
             {
-                return Ok(new PasswordlessVerifyResponse 
-                { 
-                    Success = false, 
-                    Message = message 
+                return Ok(new PasswordlessVerifyResponse
+                {
+                    Success = false,
+                    Message = message,
+                    // Only include error details in development mode for debugging
+                    ErrorDetails = _environment.IsDevelopment() ? errorDetails : null
                 });
             }
 
-            _logger.LogInformation("Passwordless signup verified: email={Email}", request.Email);
+            // Use PII redaction for COPPA/GDPR compliance
+            _logger.LogInformation("Passwordless signup verified: user={UserHash}",
+                PiiRedactor.HashEmail(request.Email));
 
-            var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName);
-            var refreshToken = _jwtService.GenerateRefreshToken();
-
-            return Ok(new PasswordlessVerifyResponse 
-            { 
-                Success = true, 
-                Message = "Account created successfully",
+            return Ok(new PasswordlessVerifyResponse
+            {
+                Success = true,
+                Message = message,
                 Account = account,
                 Token = accessToken,
                 RefreshToken = refreshToken,
@@ -90,22 +102,29 @@ namespace Mystira.App.Api.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new PasswordlessSigninResponse 
-                { 
-                    Success = false, 
-                    Message = "Invalid email address" 
+                return BadRequest(new PasswordlessSigninResponse
+                {
+                    Success = false,
+                    Message = "Invalid email address"
                 });
             }
 
-            var (success, message, code) = await _passwordlessAuthService.RequestSigninAsync(request.Email);
-            
-            _logger.LogInformation("Passwordless signin request: email={Email}, success={Success}", request.Email, success);
-            
-            return Ok(new PasswordlessSigninResponse 
-            { 
-                Success = success, 
+            var command = new RequestPasswordlessSigninCommand(request.Email);
+            var (success, message, _, errorDetails) = await _mediator.Send(command);
+
+            // Use PII redaction for COPPA/GDPR compliance
+            _logger.LogInformation("Passwordless signin request: user={UserHash}, domain={EmailDomain}, success={Success}",
+                PiiRedactor.HashEmail(request.Email),
+                PiiRedactor.RedactEmail(request.Email),
+                success);
+
+            return Ok(new PasswordlessSigninResponse
+            {
+                Success = success,
                 Message = message,
-                Email = success ? request.Email : null
+                Email = success ? request.Email : null,
+                // Only include error details in development mode for debugging
+                ErrorDetails = _environment.IsDevelopment() ? errorDetails : null
             });
         }
 
@@ -114,33 +133,35 @@ namespace Mystira.App.Api.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new PasswordlessVerifyResponse 
-                { 
-                    Success = false, 
-                    Message = "Invalid email or code" 
+                return BadRequest(new PasswordlessVerifyResponse
+                {
+                    Success = false,
+                    Message = "Invalid email or code"
                 });
             }
 
-            var (success, message, account) = await _passwordlessAuthService.VerifySigninAsync(request.Email, request.Code);
-            
+            var command = new VerifyPasswordlessSigninCommand(request.Email, request.Code);
+            var (success, message, account, accessToken, refreshToken, errorDetails) = await _mediator.Send(command);
+
             if (!success || account == null)
             {
-                return Ok(new PasswordlessVerifyResponse 
-                { 
-                    Success = false, 
-                    Message = message 
+                return Ok(new PasswordlessVerifyResponse
+                {
+                    Success = false,
+                    Message = message,
+                    // Only include error details in development mode for debugging
+                    ErrorDetails = _environment.IsDevelopment() ? errorDetails : null
                 });
             }
 
-            _logger.LogInformation("Passwordless signin verified: email={Email}", request.Email);
+            // Use PII redaction for COPPA/GDPR compliance
+            _logger.LogInformation("Passwordless signin verified: user={UserHash}",
+                PiiRedactor.HashEmail(request.Email));
 
-            var accessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName);
-            var refreshToken = _jwtService.GenerateRefreshToken();
-
-            return Ok(new PasswordlessVerifyResponse 
-            { 
-                Success = true, 
-                Message = "Sign-in successful",
+            return Ok(new PasswordlessVerifyResponse
+            {
+                Success = true,
+                Message = message,
                 Account = account,
                 Token = accessToken,
                 RefreshToken = refreshToken,
@@ -152,74 +173,36 @@ namespace Mystira.App.Api.Controllers
         [HttpPost("refresh")]
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
         {
-            try
+            if (!ModelState.IsValid)
             {
-                if (!ModelState.IsValid)
+                return BadRequest(new RefreshTokenResponse
                 {
-                    return BadRequest(new RefreshTokenResponse 
-                    { 
-                        Success = false, 
-                        Message = "Invalid token data" 
-                    });
-                }
-
-                // Validate the current access token to get user info
-                var (isValid, userId) = _jwtService.ValidateAndExtractUserId(request.Token);
-                
-                if (!isValid || string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized(new RefreshTokenResponse 
-                    { 
-                        Success = false, 
-                        Message = "Invalid access token" 
-                    });
-                }
-
-                // In a real implementation, you would validate the refresh token against stored data
-                // For now, we'll just generate new tokens (this is a simplified approach)
-                // In production, you should store refresh tokens in a database and validate them
-                
-                // Get user account info
-                var account = await _passwordlessAuthService.GetAccountByUserIdAsync(userId);
-                if (account == null)
-                {
-                    return Unauthorized(new RefreshTokenResponse 
-                    { 
-                        Success = false, 
-                        Message = "User not found" 
-                    });
-                }
-
-                // Generate new tokens
-                var newAccessToken = _jwtService.GenerateAccessToken(account.Auth0UserId, account.Email, account.DisplayName);
-                var newRefreshToken = _jwtService.GenerateRefreshToken();
-
-                _logger.LogInformation("Token refreshed successfully for user: {UserId}", userId);
-
-                return Ok(new RefreshTokenResponse 
-                { 
-                    Success = true, 
-                    Message = "Token refreshed successfully",
-                    Token = newAccessToken,
-                    RefreshToken = newRefreshToken,
-                    TokenExpiresAt = DateTime.UtcNow.AddHours(6),
-                    RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(30)
+                    Success = false,
+                    Message = "Invalid token data"
                 });
             }
-            catch (Exception ex)
+
+            var command = new RefreshTokenCommand(request.Token, request.RefreshToken);
+            var (success, message, newAccessToken, newRefreshToken) = await _mediator.Send(command);
+
+            if (!success)
             {
-                _logger.LogError(ex, "Error refreshing token");
-                return StatusCode(500, new RefreshTokenResponse 
-                { 
-                    Success = false, 
-                    Message = "An error occurred while refreshing token" 
+                return Unauthorized(new RefreshTokenResponse
+                {
+                    Success = false,
+                    Message = message
                 });
             }
-        }
 
-        private string GenerateDemoToken(string userId)
-        {
-            return $"demo_token_{userId}_{Guid.NewGuid():N}";
+            return Ok(new RefreshTokenResponse
+            {
+                Success = true,
+                Message = message,
+                Token = newAccessToken,
+                RefreshToken = newRefreshToken,
+                TokenExpiresAt = DateTime.UtcNow.AddHours(6),
+                RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(30)
+            });
         }
     }
 

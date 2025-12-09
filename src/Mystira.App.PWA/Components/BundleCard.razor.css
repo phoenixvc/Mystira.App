@@ -1,0 +1,427 @@
+/* Bundle Card Scoped Styles */
+
+.bundle-card {
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border, rgba(17,24,39,0.08));
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    background: var(--card, rgba(255,255,255,0.85));
+}
+
+.bundle-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(124, 58, 237, 0.2);
+    border-color: #7c3aed;
+}
+
+.bundle-image-container {
+    position: relative;
+    overflow: hidden;
+}
+
+.bundle-card-image {
+    width: 100%;
+    height: 250px;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.bundle-card:hover .bundle-card-image {
+    transform: scale(1.05);
+}
+
+.bundle-free-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+}
+
+/* Tooltip for free badge appears to the left on small cards */
+.bundle-free-badge .bundle-pill[data-tooltip]::after {
+    left: auto;
+    right: 0;
+    transform: translateX(0) translateY(4px);
+}
+
+.bundle-free-badge .bundle-pill[data-tooltip]:hover::after {
+    transform: translateX(0) translateY(0);
+}
+
+.bundle-free-badge .bundle-pill[data-tooltip]::before {
+    left: auto;
+    right: 20px;
+    transform: translateX(0) translateY(4px);
+}
+
+.bundle-free-badge .bundle-pill[data-tooltip]:hover::before {
+    transform: translateX(0) translateY(0);
+}
+
+.card-body {
+    padding: 16px;
+}
+
+.card-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--fg, #111827);
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.card-text {
+    color: var(--muted, #6b7280);
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.progress {
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: var(--secondary-bg, #f3f4f6);
+}
+
+.progress-bar {
+    transition: width 0.6s ease;
+}
+
+/* Bundle Pills Container */
+.bundle-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+/* Base Bundle Pill Styles */
+.bundle-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: default;
+    position: relative;
+}
+
+/* Custom Tooltip Styles */
+.bundle-pill[data-tooltip] {
+    cursor: help;
+}
+
+.bundle-pill[data-tooltip]::before,
+.bundle-pill[data-tooltip]::after {
+    position: absolute;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+}
+
+/* Tooltip text container */
+.bundle-pill[data-tooltip]::after {
+    content: attr(data-tooltip);
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    color: #f9fafb;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+    border-radius: 8px;
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.2),
+        0 4px 12px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(255, 255, 255, 0.1);
+    max-width: 250px;
+    white-space: normal;
+    text-align: center;
+}
+
+/* Tooltip arrow */
+.bundle-pill[data-tooltip]::before {
+    content: '';
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    border: 8px solid transparent;
+    border-top-color: #1f2937;
+    border-bottom: 0;
+}
+
+/* Show tooltip on hover */
+.bundle-pill[data-tooltip]:hover::before,
+.bundle-pill[data-tooltip]:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Tooltip animation keyframes */
+@keyframes tooltipFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.bundle-pill i {
+    font-size: 0.7rem;
+}
+
+/* Adventures Pill */
+.pill-adventures {
+    background: rgba(124, 58, 237, 0.12);
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    color: #7c3aed;
+}
+
+.pill-adventures:hover {
+    background: rgba(124, 58, 237, 0.2);
+    border-color: rgba(124, 58, 237, 0.4);
+    transform: translateY(-1px);
+}
+
+/* Completed Pill */
+.pill-completed {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.12) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    color: #059669;
+}
+
+.pill-completed:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%);
+    border-color: rgba(16, 185, 129, 0.4);
+    transform: translateY(-1px);
+}
+
+/* Pending Pill */
+.pill-pending {
+    background: linear-gradient(135deg, rgba(107, 114, 128, 0.12) 0%, rgba(75, 85, 99, 0.12) 100%);
+    border: 1px solid rgba(107, 114, 128, 0.25);
+    color: #6b7280;
+}
+
+.pill-pending:hover {
+    background: linear-gradient(135deg, rgba(107, 114, 128, 0.2) 0%, rgba(75, 85, 99, 0.2) 100%);
+    border-color: rgba(107, 114, 128, 0.4);
+    transform: translateY(-1px);
+}
+
+/* Age Group Pill */
+.pill-age {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(37, 99, 235, 0.12) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    color: #2563eb;
+}
+
+.pill-age:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%);
+    border-color: rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
+}
+
+/* Free Pill */
+.pill-free {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.95) 0%, rgba(5, 150, 105, 0.95) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+}
+
+.pill-free:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 1) 0%, rgba(5, 150, 105, 1) 100%);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
+}
+
+/* Card Footer */
+.card-footer {
+    background: linear-gradient(135deg, rgba(249, 250, 251, 0.9) 0%, rgba(243, 244, 246, 0.9) 100%);
+    border-top: 1px solid rgba(124, 58, 237, 0.1);
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.explore-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #7c3aed;
+    transition: all 0.2s ease;
+}
+
+.explore-link i {
+    transition: transform 0.2s ease;
+}
+
+.bundle-card:hover .explore-link i {
+    transform: translateX(4px);
+}
+
+.bundle-card:hover .explore-link {
+    color: #7c3aed;
+}
+
+/* Accessibility */
+.bundle-card:focus-visible {
+    outline: 2px solid #7c3aed;
+    outline-offset: 2px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 12px;
+    }
+
+    .card-title {
+        font-size: 1rem;
+    }
+
+    .card-text {
+        font-size: 0.875rem;
+    }
+
+    /* Hide tooltips on touch devices - they work poorly with touch */
+    .bundle-pill[data-tooltip]::before,
+    .bundle-pill[data-tooltip]::after {
+        display: none;
+    }
+
+    /* Adjust pill sizing for mobile */
+    .bundle-pill {
+        padding: 5px 10px;
+        font-size: 0.75rem;
+    }
+
+    .bundle-pill i {
+        font-size: 0.65rem;
+    }
+}
+
+/* Dark mode support */
+html[data-theme="dark"] .bundle-card {
+    background: #14122b;
+    border-color: #2d2a5e;
+}
+
+html[data-theme="dark"] .bundle-card:hover {
+    box-shadow: 0 12px 24px rgba(99, 102, 241, 0.2);
+    border-color: #6366f1;
+}
+
+html[data-theme="dark"] .card-title {
+    color: #f1f5f9;
+}
+
+html[data-theme="dark"] .card-text {
+    color: #94a3b8;
+}
+
+html[data-theme="dark"] .progress {
+    background-color: #1e1b4b;
+}
+
+html[data-theme="dark"] .card-footer {
+    background: linear-gradient(135deg, rgba(30, 27, 75, 0.9) 0%, rgba(20, 18, 43, 0.9) 100%);
+    border-top-color: rgba(99, 102, 241, 0.2);
+}
+
+/* Dark mode pill styles */
+html[data-theme="dark"] .pill-adventures {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(79, 70, 229, 0.15) 100%);
+    border-color: rgba(99, 102, 241, 0.3);
+    color: #a5b4fc;
+}
+
+html[data-theme="dark"] .pill-adventures:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(79, 70, 229, 0.25) 100%);
+    border-color: rgba(99, 102, 241, 0.5);
+}
+
+html[data-theme="dark"] .pill-completed {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.15) 100%);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #34d399;
+}
+
+html[data-theme="dark"] .pill-completed:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.25) 100%);
+    border-color: rgba(16, 185, 129, 0.5);
+}
+
+html[data-theme="dark"] .pill-pending {
+    background: linear-gradient(135deg, rgba(148, 163, 184, 0.15) 0%, rgba(100, 116, 139, 0.15) 100%);
+    border-color: rgba(148, 163, 184, 0.3);
+    color: #94a3b8;
+}
+
+html[data-theme="dark"] .pill-pending:hover {
+    background: linear-gradient(135deg, rgba(148, 163, 184, 0.25) 0%, rgba(100, 116, 139, 0.25) 100%);
+    border-color: rgba(148, 163, 184, 0.5);
+}
+
+html[data-theme="dark"] .pill-age {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.15) 100%);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+}
+
+html[data-theme="dark"] .pill-age:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(37, 99, 235, 0.25) 100%);
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+html[data-theme="dark"] .explore-link {
+    color: #a5b4fc;
+}
+
+html[data-theme="dark"] .bundle-card:hover .explore-link {
+    color: #c7d2fe;
+}
+
+/* Dark mode tooltip styles */
+html[data-theme="dark"] .bundle-pill[data-tooltip]::after {
+    background: linear-gradient(135deg, #312e81 0%, #1e1b4b 100%);
+    color: #e0e7ff;
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.4),
+        0 4px 12px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(99, 102, 241, 0.3);
+}
+
+html[data-theme="dark"] .bundle-pill[data-tooltip]::before {
+    border-top-color: #312e81;
+}
+
+/* Dark mode free pill - keep it vibrant for visibility */
+html[data-theme="dark"] .pill-free {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.9) 0%, rgba(5, 150, 105, 0.9) 100%);
+    border-color: rgba(52, 211, 153, 0.4);
+    color: white;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+html[data-theme="dark"] .pill-free:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 1) 0%, rgba(5, 150, 105, 1) 100%);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}

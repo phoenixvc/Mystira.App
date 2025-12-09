@@ -1,0 +1,314 @@
+/* Main Layout Styles */
+
+.page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Navigation Styles - Fixed with transparency */
+.navbar {
+    background-color: var(--navbar-bg) !important;
+    backdrop-filter: blur(10px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+    border-bottom: 1px solid var(--navbar-border);
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: var(--navbar-shadow);
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+}
+
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.5rem;
+    background: linear-gradient(135deg, #a78bfa 0%, #c4b5fd 50%, #e9d5ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-decoration: none !important;
+    transition: all 0.3s ease;
+}
+
+.navbar-brand:hover {
+    background: linear-gradient(135deg, #c4b5fd 0%, #e9d5ff 50%, #f5f3ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    transform: scale(1.02);
+}
+
+.navbar-brand i {
+    background: linear-gradient(135deg, #a78bfa 0%, #c4b5fd 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.nav-link {
+    color: var(--nav-link-color) !important;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.nav-link:hover {
+    color: var(--primary-color) !important;
+}
+
+/* Current Adventure Indicator */
+.current-adventure-indicator {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem !important;
+    margin: 0 0.5rem;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%);
+    border: 2px solid rgba(34, 197, 94, 0.4);
+    border-radius: 25px;
+    color: #16a34a !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem;
+    text-decoration: none !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.current-adventure-indicator:hover {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(16, 185, 129, 0.2) 100%);
+    border-color: rgba(34, 197, 94, 0.6);
+    color: #15803d !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+}
+
+.current-adventure-indicator i {
+    color: #22c55e;
+    font-size: 0.9rem;
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.current-adventure-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Offline Indicator */
+.offline-indicator {
+    display: none;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    background-color: var(--danger-color);
+    color: white;
+    text-align: center;
+    padding: 0.5rem;
+    z-index: 1020;
+    font-size: 0.875rem;
+}
+
+/* Footer */
+footer {
+    background-color: var(--card, rgba(255,255,255,0.85)) !important;
+    border-top: 1px solid var(--border, rgba(17,24,39,0.08));
+    color: var(--fg, #111827) !important;
+}
+
+.profile-menu-dropdown {
+    position: absolute;
+    right: 0;
+}
+
+/* Dark Mode Support for Profile Dropdown Menu */
+@media (prefers-color-scheme: dark) {
+    .profile-menu-dropdown {
+        background: linear-gradient(135deg, #14122b 0%, #1e1b4b 100%);
+        border: 1px solid #2d2a5e;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+    
+    .profile-menu-dropdown .dropdown-header {
+        color: #a5b4fc;
+        background: transparent;
+    }
+    
+    .profile-menu-dropdown .dropdown-divider {
+        border-top-color: #2d2a5e;
+    }
+    
+    .profile-menu-dropdown .dropdown-item {
+        color: #f1f5f9;
+    }
+    
+    .profile-menu-dropdown .dropdown-item:hover,
+    .profile-menu-dropdown .dropdown-item:focus {
+        background: linear-gradient(135deg, #1e1b4b 0%, #2d2a5e 100%);
+        color: #c7d2fe;
+    }
+    
+    .profile-menu-dropdown .dropdown-item i {
+        color: #818cf8;
+    }
+    
+    .profile-menu-dropdown .dropdown-item:hover i {
+        color: #a5b4fc;
+    }
+}
+
+html[data-theme="dark"] .profile-menu-dropdown {
+    background: linear-gradient(135deg, #14122b 0%, #1e1b4b 100%);
+    border: 1px solid #2d2a5e;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+html[data-theme="dark"] .profile-menu-dropdown .dropdown-header {
+    color: #a5b4fc;
+    background: transparent;
+}
+
+html[data-theme="dark"] .profile-menu-dropdown .dropdown-divider {
+    border-top-color: #2d2a5e;
+}
+
+html[data-theme="dark"] .profile-menu-dropdown .dropdown-item {
+    color: #f1f5f9;
+}
+
+html[data-theme="dark"] .profile-menu-dropdown .dropdown-item:hover,
+html[data-theme="dark"] .profile-menu-dropdown .dropdown-item:focus {
+    background: linear-gradient(135deg, #1e1b4b 0%, #2d2a5e 100%);
+    color: #c7d2fe;
+}
+
+html[data-theme="dark"] .profile-menu-dropdown .dropdown-item i {
+    color: #818cf8;
+}
+
+html[data-theme="dark"] .profile-menu-dropdown .dropdown-item:hover i {
+    color: #a5b4fc;
+}
+
+/* Navbar brand for light mode - use darker gradient */
+html[data-theme="light"] .navbar-brand,
+html[data-theme="light"] .navbar-brand i {
+    background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+html[data-theme="light"] .navbar-brand:hover,
+html[data-theme="light"] .navbar-brand:hover i {
+    background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 50%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Light mode via media query */
+@media (prefers-color-scheme: light) {
+    .navbar-brand,
+    .navbar-brand i {
+        background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a78bfa 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .navbar-brand:hover,
+    .navbar-brand:hover i {
+        background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 50%, #8b5cf6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+}
+
+/* Navbar toggler icon for dark mode */
+@media (prefers-color-scheme: dark) {
+    .navbar-toggler {
+        border-color: rgba(148, 163, 184, 0.3);
+    }
+
+    .navbar-toggler-icon {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28241, 245, 249, 0.9%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+    }
+}
+
+html[data-theme="dark"] .navbar-toggler {
+    border-color: rgba(148, 163, 184, 0.3);
+}
+
+html[data-theme="dark"] .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28241, 245, 249, 0.9%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+/* Current Adventure Indicator - Dark Mode */
+@media (prefers-color-scheme: dark) {
+    .current-adventure-indicator {
+        background: linear-gradient(135deg, rgba(52, 211, 153, 0.2) 0%, rgba(16, 185, 129, 0.15) 100%);
+        border-color: rgba(52, 211, 153, 0.4);
+        color: #6ee7b7 !important;
+    }
+
+    .current-adventure-indicator:hover {
+        background: linear-gradient(135deg, rgba(52, 211, 153, 0.3) 0%, rgba(16, 185, 129, 0.25) 100%);
+        border-color: rgba(52, 211, 153, 0.6);
+        color: #86efac !important;
+        box-shadow: 0 4px 12px rgba(52, 211, 153, 0.2);
+    }
+
+    .current-adventure-indicator i {
+        color: #34d399;
+    }
+}
+
+html[data-theme="dark"] .current-adventure-indicator {
+    background: linear-gradient(135deg, rgba(52, 211, 153, 0.2) 0%, rgba(16, 185, 129, 0.15) 100%);
+    border-color: rgba(52, 211, 153, 0.4);
+    color: #6ee7b7 !important;
+}
+
+html[data-theme="dark"] .current-adventure-indicator:hover {
+    background: linear-gradient(135deg, rgba(52, 211, 153, 0.3) 0%, rgba(16, 185, 129, 0.25) 100%);
+    border-color: rgba(52, 211, 153, 0.6);
+    color: #86efac !important;
+    box-shadow: 0 4px 12px rgba(52, 211, 153, 0.2);
+}
+
+html[data-theme="dark"] .current-adventure-indicator i {
+    color: #34d399;
+}
+
+/* Light mode explicit overrides for current adventure indicator */
+html[data-theme="light"] .current-adventure-indicator {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%);
+    border-color: rgba(34, 197, 94, 0.4);
+    color: #16a34a !important;
+}
+
+html[data-theme="light"] .current-adventure-indicator:hover {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(16, 185, 129, 0.2) 100%);
+    border-color: rgba(34, 197, 94, 0.6);
+    color: #15803d !important;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+}
+
+html[data-theme="light"] .current-adventure-indicator i {
+    color: #22c55e;
+}
+
+/* Mobile responsiveness for current adventure indicator */
+@media (max-width: 991px) {
+    .current-adventure-indicator {
+        margin: 0.5rem 0;
+        max-width: 100%;
+    }
+}

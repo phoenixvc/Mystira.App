@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Editor directories
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Tauri specific
+src-tauri/target/
+# Note: Cargo.lock should be committed for applications
+
+# .NET projects (should not be in DevHub)
+Mystira.App.*/
+src/Mystira.App.*/
+*.sln
+global.json
+*.csproj
+*.cs
+*.razor
+*.cshtml
+
+# GitHub workflows (should be at repo root, not in DevHub)
+.github/
+
+# Aider AI editor files
+.aider.*
+.aider/
+
+# Documentation that might be misplaced
+docs/
+MEDIA_*.md
+PWA_*.md
+SRI_*.md
+tools/

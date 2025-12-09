@@ -1,8 +1,11 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Mystira.App.Domain.Models;
+using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Domain.Models;
+using CreateScenarioRequest = Mystira.App.Contracts.Requests.Scenarios.CreateScenarioRequest;
+using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
+using ValidationErrorResponse = Mystira.App.Contracts.Responses.Common.ValidationErrorResponse;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
@@ -48,8 +51,8 @@ public class ScenariosAdminController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error creating scenario");
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -57,8 +60,8 @@ public class ScenariosAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating scenario");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while creating scenario",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -89,8 +92,8 @@ public class ScenariosAdminController : ControllerBase
             var scenario = await _scenarioService.UpdateScenarioAsync(id, request);
             if (scenario == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Scenario not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -101,8 +104,8 @@ public class ScenariosAdminController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error updating scenario {ScenarioId}", id);
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -110,8 +113,8 @@ public class ScenariosAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating scenario {ScenarioId}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while updating scenario",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -129,8 +132,8 @@ public class ScenariosAdminController : ControllerBase
             var deleted = await _scenarioService.DeleteScenarioAsync(id);
             if (!deleted)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Scenario not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -141,8 +144,8 @@ public class ScenariosAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting scenario {ScenarioId}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while deleting scenario",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -163,8 +166,8 @@ public class ScenariosAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error validating scenario");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while validating scenario",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -182,8 +185,8 @@ public class ScenariosAdminController : ControllerBase
             var scenario = await _scenarioService.GetScenarioByIdAsync(id);
             if (scenario == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Scenario not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -194,8 +197,8 @@ public class ScenariosAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting scenario {ScenarioId}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching scenario",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -216,8 +219,8 @@ public class ScenariosAdminController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Scenario not found: {ScenarioId}", id);
-            return NotFound(new ErrorResponse 
-            { 
+            return NotFound(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -225,8 +228,8 @@ public class ScenariosAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error validating scenario references: {ScenarioId}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while validating scenario references",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -247,8 +250,8 @@ public class ScenariosAdminController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error validating all scenario references");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while validating all scenario references",
                 TraceId = HttpContext.TraceIdentifier
             });

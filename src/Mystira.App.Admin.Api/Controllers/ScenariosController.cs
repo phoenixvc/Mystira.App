@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Domain.Models;
+using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
+using ScenarioListResponse = Mystira.App.Contracts.Responses.Scenarios.ScenarioListResponse;
+using ScenarioQueryRequest = Mystira.App.Contracts.Requests.Scenarios.ScenarioQueryRequest;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
@@ -33,8 +35,8 @@ public class ScenariosController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting scenarios");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching scenarios",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -52,8 +54,8 @@ public class ScenariosController : ControllerBase
             var scenario = await _scenarioService.GetScenarioByIdAsync(id);
             if (scenario == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Scenario not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -64,8 +66,8 @@ public class ScenariosController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting scenario {ScenarioId}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching scenario",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -86,8 +88,8 @@ public class ScenariosController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting scenarios for age group {AgeGroup}", ageGroup);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching scenarios by age group",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -108,8 +110,8 @@ public class ScenariosController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting featured scenarios");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching featured scenarios",
                 TraceId = HttpContext.TraceIdentifier
             });

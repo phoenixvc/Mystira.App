@@ -1,0 +1,48 @@
+@* COPPA Compliance Pillbox with Tooltip *@
+
+<div class="coppa-pill-container" @onmouseenter="ShowTooltip" @onmouseleave="HideTooltip">
+    @if (showTooltip)
+    {
+        <div class="coppa-tooltip" @onclick:stopPropagation="true">
+            <div class="coppa-tooltip-header">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>COPPA Compliance</strong>
+            </div>
+            <div class="coppa-tooltip-content">
+                <p class="coppa-tooltip-message">
+                    This platform is being updated to meet Children's Online Privacy Protection Act (COPPA) requirements.
+                    Parental consent, age verification, and privacy controls are currently being implemented.
+                </p>
+                <p class="coppa-tooltip-warning">
+                    <strong>Do not collect children's data until compliance features are complete.</strong>
+                </p>
+                <div class="coppa-tooltip-links">
+                    <a href="/coppa-status" class="coppa-tooltip-link">
+                        <i class="fas fa-chart-line me-1"></i>Implementation Status
+                    </a>
+                    <a href="https://www.ftc.gov/business-guidance/privacy-security/childrens-privacy"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="coppa-tooltip-link">
+                        <i class="fas fa-external-link-alt me-1"></i>COPPA Requirements (FTC)
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool showTooltip = false;
+
+    private void ShowTooltip()
+    {
+        showTooltip = true;
+    }
+
+    private void HideTooltip()
+    {
+        showTooltip = false;
+    }
+}
+

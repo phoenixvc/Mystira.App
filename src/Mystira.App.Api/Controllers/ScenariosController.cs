@@ -1,21 +1,28 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Mystira.App.Application.CQRS.Scenarios.Queries;
+using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.App.Contracts.Responses.Common;
+using Mystira.App.Contracts.Responses.Scenarios;
 using Mystira.App.Domain.Models;
-using Mystira.App.Api.Models;
-using Mystira.App.Api.Services;
 
 namespace Mystira.App.Api.Controllers;
 
+/// <summary>
+/// Controller for scenario management.
+/// Follows hexagonal architecture - uses only IMediator (CQRS pattern).
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class ScenariosController : ControllerBase
 {
-    private readonly IScenarioApiService _scenarioService;
+    private readonly IMediator _mediator;
     private readonly ILogger<ScenariosController> _logger;
 
-    public ScenariosController(IScenarioApiService scenarioService, ILogger<ScenariosController> logger)
+    public ScenariosController(IMediator mediator, ILogger<ScenariosController> logger)
     {
-        _scenarioService = scenarioService;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -27,14 +34,21 @@ public class ScenariosController : ControllerBase
     {
         try
         {
-            var result = await _scenarioService.GetScenariosAsync(request);
+            var query = new GetPaginatedScenariosQuery(
+                request.Page,
+                request.PageSize,
+                request.Search,
+                request.AgeGroup,
+                request.Genre);
+
+            var result = await _mediator.Send(query);
             return Ok(result);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting scenarios");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching scenarios",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -49,11 +63,13 @@ public class ScenariosController : ControllerBase
     {
         try
         {
-            var scenario = await _scenarioService.GetScenarioByIdAsync(id);
+            var query = new GetScenarioQuery(id);
+            var scenario = await _mediator.Send(query);
+
             if (scenario == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Scenario not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -64,8 +80,8 @@ public class ScenariosController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting scenario {ScenarioId}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching scenario",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -80,14 +96,15 @@ public class ScenariosController : ControllerBase
     {
         try
         {
-            var scenarios = await _scenarioService.GetScenariosByAgeGroupAsync(ageGroup);
+            var query = new GetScenariosByAgeGroupQuery(ageGroup);
+            var scenarios = await _mediator.Send(query);
             return Ok(scenarios);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting scenarios for age group {AgeGroup}", ageGroup);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching scenarios by age group",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -102,14 +119,15 @@ public class ScenariosController : ControllerBase
     {
         try
         {
-            var scenarios = await _scenarioService.GetFeaturedScenariosAsync();
+            var query = new GetFeaturedScenariosQuery();
+            var scenarios = await _mediator.Send(query);
             return Ok(scenarios);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting featured scenarios");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching featured scenarios",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -125,15 +143,17 @@ public class ScenariosController : ControllerBase
         try
         {
             _logger.LogInformation("Fetching scenarios with game state for account: {AccountId}", accountId);
-            
-            var result = await _scenarioService.GetScenariosWithGameStateAsync(accountId);
+
+            var query = new GetScenariosWithGameStateQuery(accountId);
+            var result = await _mediator.Send(query);
+
             return Ok(result);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting scenarios with game state for account {AccountId}", accountId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching scenarios with game state",
                 TraceId = HttpContext.TraceIdentifier
             });

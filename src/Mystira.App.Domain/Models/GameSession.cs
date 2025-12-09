@@ -13,6 +13,8 @@ public class GameSession
     public List<EchoLog> EchoHistory { get; set; } = new();
     public Dictionary<string, CompassTracking> CompassValues { get; set; } = new();
     public List<SessionAchievement> Achievements { get; set; } = new();
+    // Character assignments for this session (who plays which story character)
+    public List<SessionCharacterAssignment> CharacterAssignments { get; set; } = new();
     public DateTime StartTime { get; set; }
     public DateTime? EndTime { get; set; }
     public TimeSpan ElapsedTime { get; set; }
@@ -20,20 +22,34 @@ public class GameSession
     public DateTime? PausedAt { get; set; }
     public int SceneCount { get; set; }
     // Store as string for database compatibility, but provide AgeGroup access
-    private string _targetAgeGroup = AgeGroup.School.Name;
-    public string TargetAgeGroupName 
-    { 
-        get => _targetAgeGroup; 
-        set => _targetAgeGroup = value; 
+    private string _targetAgeGroup = "school";
+    public string TargetAgeGroupName
+    {
+        get => _targetAgeGroup;
+        set => _targetAgeGroup = value;
     }
-    
+
     // Convenience property to get AgeGroup object
-    public AgeGroup TargetAgeGroup 
-    { 
-        get => AgeGroup.GetByName(_targetAgeGroup) ?? AgeGroup.School;
-        set => _targetAgeGroup = value?.Name ?? AgeGroup.School.Name;
+    public AgeGroup TargetAgeGroup
+    {
+        get => AgeGroup.Parse(_targetAgeGroup) ?? new AgeGroup(6, 9);
+        set => _targetAgeGroup = value?.Value ?? "6-9";
     }
     public string? SelectedCharacterId { get; set; } // Character selected from character map
+
+    public TimeSpan GetTotalElapsedTime()
+    {
+        var totalTime = ElapsedTime;
+        if (IsPaused && PausedAt.HasValue)
+        {
+            totalTime += DateTime.UtcNow - PausedAt.Value;
+        }
+        else if (Status == SessionStatus.InProgress)
+        {
+            totalTime += DateTime.UtcNow - StartTime;
+        }
+        return totalTime;
+    }
 }
 
 public class SessionChoice
@@ -58,6 +74,40 @@ public class SessionAchievement
     public float ThresholdValue { get; set; }
     public DateTime EarnedAt { get; set; } = DateTime.UtcNow;
     public bool IsVisible { get; set; } = true;
+}
+
+/// <summary>
+/// Represents an assignment of a player (profile or guest) to a story character within a game session
+/// </summary>
+public class SessionCharacterAssignment
+{
+    public string CharacterId { get; set; } = string.Empty;
+    public string CharacterName { get; set; } = string.Empty;
+    public string? Image { get; set; }
+    public string? Audio { get; set; }
+    public string Role { get; set; } = string.Empty;
+    public string Archetype { get; set; } = string.Empty;
+    public SessionPlayerAssignment? PlayerAssignment { get; set; }
+    public bool IsUnused { get; set; }
+}
+
+/// <summary>
+/// Player metadata for a character assignment in the session
+/// </summary>
+public class SessionPlayerAssignment
+{
+    // "Player" (profile) or "Guest"
+    public string Type { get; set; } = string.Empty;
+    public string? ProfileId { get; set; }
+    public string? ProfileName { get; set; }
+    public string? ProfileImage { get; set; }
+    public string? SelectedAvatarMediaId { get; set; }
+
+    // Guest fields
+    public string? GuestName { get; set; }
+    public string? GuestAgeRange { get; set; }
+    public string? GuestAvatar { get; set; }
+    public bool SaveAsProfile { get; set; }
 }
 
 public enum SessionStatus

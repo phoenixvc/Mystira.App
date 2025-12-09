@@ -1,27 +1,31 @@
-using Microsoft.AspNetCore.Mvc;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Mystira.App.Application.CQRS.UserProfiles.Commands;
+using Mystira.App.Application.CQRS.UserProfiles.Queries;
+using Mystira.App.Contracts.Requests.UserProfiles;
+using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Domain.Models;
-using Mystira.App.Api.Models;
-using Mystira.App.Api.Services;
 
 namespace Mystira.App.Api.Controllers;
 
+/// <summary>
+/// Controller for user profile management.
+/// Follows hexagonal architecture - uses only IMediator (CQRS pattern).
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class UserProfilesController : ControllerBase
 {
-    private readonly IUserProfileApiService _profileService;
-    private readonly IAccountApiService _accountService;
+    private readonly IMediator _mediator;
     private readonly ILogger<UserProfilesController> _logger;
 
     public UserProfilesController(
-        IUserProfileApiService profileService, 
-        IAccountApiService accountService,
+        IMediator mediator,
         ILogger<UserProfilesController> logger)
     {
-        _profileService = profileService;
-        _accountService = accountService;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -46,14 +50,15 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-            var profile = await _profileService.CreateProfileAsync(request);
+            var command = new CreateUserProfileCommand(request);
+            var profile = await _mediator.Send(command);
             return CreatedAtAction(nameof(GetProfileById), new { id = profile.Id }, profile);
         }
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error creating profile");
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -61,8 +66,8 @@ public class UserProfilesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating profile");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while creating profile",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -78,15 +83,16 @@ public class UserProfilesController : ControllerBase
         try
         {
             _logger.LogInformation("Getting profiles for account {AccountId}", accountId);
-            
-            var profiles = await _accountService.GetUserProfilesForAccountAsync(accountId);
+
+            var query = new GetProfilesByAccountQuery(accountId);
+            var profiles = await _mediator.Send(query);
             return Ok(profiles);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting profiles for account {AccountId}", accountId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching profiles",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -101,11 +107,12 @@ public class UserProfilesController : ControllerBase
     {
         try
         {
-            var profile = await _profileService.GetProfileByIdAsync(id);
+            var query = new GetUserProfileQuery(id);
+            var profile = await _mediator.Send(query);
             if (profile == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Profile not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -116,8 +123,8 @@ public class UserProfilesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting profile {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching profile",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -145,11 +152,12 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-            var updatedProfile = await _profileService.UpdateProfileByIdAsync(id, request);
+            var command = new UpdateUserProfileCommand(id, request);
+            var updatedProfile = await _mediator.Send(command);
             if (updatedProfile == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Profile not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -160,8 +168,8 @@ public class UserProfilesController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error updating profile {Id}", id);
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -169,8 +177,8 @@ public class UserProfilesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating profile {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while updating profile",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -198,11 +206,12 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-            var updatedProfile = await _profileService.UpdateProfileByIdAsync(profileId, request);
+            var command = new UpdateUserProfileCommand(profileId, request);
+            var updatedProfile = await _mediator.Send(command);
             if (updatedProfile == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Profile not found: {profileId}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -213,8 +222,8 @@ public class UserProfilesController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error updating profile {ProfileId}", profileId);
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -222,8 +231,8 @@ public class UserProfilesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating profile {ProfileId}", profileId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while updating profile",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -238,21 +247,12 @@ public class UserProfilesController : ControllerBase
     {
         try
         {
-            var profile = await _profileService.GetProfileByIdAsync(id);
-            if (profile == null)
-            {
-                return NotFound(new ErrorResponse 
-                { 
-                    Message = $"Profile not found: {id}",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            var deleted = await _profileService.DeleteProfileAsync(profile.Id);
+            var command = new DeleteUserProfileCommand(id);
+            var deleted = await _mediator.Send(command);
             if (!deleted)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Profile not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -263,8 +263,8 @@ public class UserProfilesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting profile {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while deleting profile",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -279,21 +279,12 @@ public class UserProfilesController : ControllerBase
     {
         try
         {
-            var profile = await _profileService.GetProfileByIdAsync(id);
-            if (profile == null)
-            {
-                return NotFound(new ErrorResponse 
-                { 
-                    Message = $"Profile not found: {id}",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            var success = await _profileService.CompleteOnboardingAsync(profile.Name);
+            var command = new CompleteOnboardingCommand(id);
+            var success = await _mediator.Send(command);
             if (!success)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Profile not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -304,8 +295,8 @@ public class UserProfilesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error completing onboarding for {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while completing onboarding",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -334,14 +325,15 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-            var profiles = await _profileService.CreateMultipleProfilesAsync(request);
+            var command = new CreateMultipleProfilesCommand(request);
+            var profiles = await _mediator.Send(command);
             return Ok(profiles);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating multiple profiles");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while creating multiple profiles",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -369,13 +361,16 @@ public class UserProfilesController : ControllerBase
                 });
             }
 
-            var success = await _profileService.AssignCharacterToProfileAsync(
-                request.ProfileId, request.CharacterId, request.IsNpcAssignment);
+            var command = new AssignCharacterToProfileCommand(
+                request.ProfileId,
+                request.CharacterId,
+                request.IsNpcAssignment);
+            var success = await _mediator.Send(command);
 
             if (!success)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Profile or character not found",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -385,10 +380,10 @@ public class UserProfilesController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error assigning character {CharacterId} to profile {ProfileId}", 
+            _logger.LogError(ex, "Error assigning character {CharacterId} to profile {ProfileId}",
                 request.CharacterId, request.ProfileId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while assigning character",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -404,30 +399,15 @@ public class UserProfilesController : ControllerBase
     {
         try
         {
-            var profile = await _profileService.GetProfileByIdAsync(profileId);
-            if (profile == null)
+            var command = new RemoveProfileFromAccountCommand(profileId);
+            var success = await _mediator.Send(command);
+
+            if (!success)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Profile with ID {profileId} not found",
                     TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            if (!string.IsNullOrEmpty(profile.AccountId))
-            {
-                // Remove profile from account
-                var account = await _accountService.GetAccountByIdAsync(profile.AccountId);
-                if (account != null)
-                {
-                    account.UserProfileIds.Remove(profileId);
-                    await _accountService.UpdateAccountAsync(account);
-                }
-
-                // Clear profile's account ID
-                await _profileService.UpdateProfileByIdAsync(profileId, new UpdateUserProfileRequest
-                {
-                    AccountId = null
                 });
             }
 
@@ -436,8 +416,8 @@ public class UserProfilesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error removing profile {ProfileId} from account", profileId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while removing profile from account",
                 TraceId = HttpContext.TraceIdentifier
             });

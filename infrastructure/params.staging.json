@@ -1,0 +1,69 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "org": {
+      "value": "mys"
+    },
+    "environment": {
+      "value": "staging"
+    },
+    "project": {
+      "value": "mystira"
+    },
+    "region": {
+      "value": "san"
+    },
+    "location": {
+      "value": "southafricanorth"
+    },
+    "fallbackRegion": {
+      "value": "eastus2"
+    },
+    "appServiceSku": {
+      "value": "B1"
+    },
+    "storageSku": {
+      "value": "Standard_GRS"
+    },
+    "cosmosServerless": {
+      "value": true
+    },
+    "logRetentionDays": {
+      "value": 60
+    },
+    "logDailyQuotaGb": {
+      "value": 5
+    },
+    "acsSenderEmail": {
+      "value": "DoNotReply@mystira.app"
+    },
+    "emailDomainName": {
+      "value": "mystira.app"
+    },
+    "corsAllowedOrigins": {
+      "value": "https://staging.mystira.app,https://mystira.app"
+    },
+    "deployAzureBot": {
+      "value": false
+    },
+    "botSku": {
+      "value": "F0"
+    },
+    "enableWhatsApp": {
+      "value": false
+    },
+    "deployStaticWebApp": {
+      "value": true
+    },
+    "staticWebAppSku": {
+      "value": "Free"
+    },
+    "staticWebAppRepositoryUrl": {
+      "value": "https://github.com/phoenixvc/Mystira.App"
+    },
+    "staticWebAppBranch": {
+      "value": "staging"
+    }
+  }
+}

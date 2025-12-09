@@ -1,7 +1,6 @@
-using Mystira.App.Domain.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Mystira.App.Admin.Api.Data;
+using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -130,7 +129,7 @@ public class AccountApiService : IAccountApiService
             _context.Accounts.Remove(account);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Deleted account {AccountId} and unlinked {ProfileCount} profiles", 
+            _logger.LogInformation("Deleted account {AccountId} and unlinked {ProfileCount} profiles",
                 accountId, userProfiles.Count);
             return true;
         }
@@ -164,7 +163,7 @@ public class AccountApiService : IAccountApiService
             account.UserProfileIds = userProfileIds;
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Linked {ProfileCount} profiles to account {AccountId}", 
+            _logger.LogInformation("Linked {ProfileCount} profiles to account {AccountId}",
                 profiles.Count, accountId);
             return true;
         }

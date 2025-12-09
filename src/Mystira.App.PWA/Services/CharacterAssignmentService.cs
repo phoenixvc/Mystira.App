@@ -1,4 +1,3 @@
-using System.Linq;
 using Mystira.App.PWA.Models;
 
 namespace Mystira.App.PWA.Services;
@@ -43,18 +42,25 @@ public class CharacterAssignmentService : ICharacterAssignmentService
             // Create character assignments (always 4 slots)
             var characterAssignments = await CreateCharacterAssignmentsAsync(scenario);
 
-            // Update character assignments with existing  data
+            // Update character assignments with existing data
             foreach (var assignment in existingAssignments)
             {
-                if (assignment.PlayerAssignment == null) continue; // Skip unused assignments
+                if (assignment.PlayerAssignment == null)
+                {
+                    continue; // Skip unused assignments
+                }
 
                 var existingAssignment = characterAssignments.FirstOrDefault(a => a.CharacterId == assignment.CharacterId);
-                if (existingAssignment == null) continue;
+                if (existingAssignment == null)
+                {
+                    continue;
+                }
+
                 existingAssignment.PlayerAssignment = assignment.PlayerAssignment;
                 existingAssignment.IsUnused = assignment.IsUnused;
             }
 
-            _logger.LogInformation("Created {Count} character assignments for scenario: {ScenarioId}", 
+            _logger.LogInformation("Created {Count} character assignments for scenario: {ScenarioId}",
                 characterAssignments.Count, scenarioId);
 
             return new CharacterAssignmentResponse
@@ -75,23 +81,11 @@ public class CharacterAssignmentService : ICharacterAssignmentService
     {
         try
         {
-            _logger.LogInformation("Starting game session with {Count} character assignments for scenario: {ScenarioId}", 
+            _logger.LogInformation("Starting game session with {Count} character assignments for scenario: {ScenarioId}",
                 request.CharacterAssignments.Count, request.ScenarioId);
 
-            // Convert character assignments to player names list for backward compatibility
-            var playerNames = request.CharacterAssignments
-                .Where(ca => ca.PlayerAssignment != null && !ca.IsUnused)
-                .Select(ca => ca.PlayerAssignment!.ProfileName ?? ca.PlayerAssignment!.GuestName ?? "Unknown Player")
-                .ToList();
-
-            // Use the existing API client method for now - this will need to be updated on the backend
-            // to support character assignments
-            var apiGameSession = await _apiClient.StartGameSessionAsync(
-                request.ScenarioId,
-                request.AccountId,
-                request.ProfileId,
-                playerNames,
-                request.TargetAgeGroup);
+            // Call backend API that supports character assignments
+            var apiGameSession = await _apiClient.StartGameSessionWithAssignmentsAsync(request);
 
             if (apiGameSession == null)
             {
@@ -103,7 +97,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
             if (request.Scenario != null)
             {
                 _logger.LogInformation("Populating local game session with scenario data");
-                
+
                 // Find the starting scene - look for a scene that's not referenced by any other scene
                 var scenario = request.Scenario;
                 var allReferencedSceneIds = scenario.Scenes
@@ -115,26 +109,26 @@ public class CharacterAssignmentService : ICharacterAssignmentService
                         .Select(b => b.NextSceneId))
                     .Where(id => !string.IsNullOrEmpty(id))
                     .ToHashSet();
-                
+
                 var startingScene = scenario.Scenes.FirstOrDefault(s => !allReferencedSceneIds.Contains(s.Id));
-                
+
                 if (startingScene == null)
                 {
                     // Fallback to first scene if we can't determine the starting scene
                     startingScene = scenario.Scenes.FirstOrDefault();
                 }
-                
+
                 if (startingScene != null)
                 {
                     // Resolve media URLs for the starting scene
-                    startingScene.AudioUrl = !string.IsNullOrEmpty(startingScene.Media?.Audio) 
-                        ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Audio) 
+                    startingScene.AudioUrl = !string.IsNullOrEmpty(startingScene.Media?.Audio)
+                        ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Audio)
                         : null;
-                    startingScene.ImageUrl = !string.IsNullOrEmpty(startingScene.Media?.Image) 
-                        ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Image) 
+                    startingScene.ImageUrl = !string.IsNullOrEmpty(startingScene.Media?.Image)
+                        ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Image)
                         : null;
-                    startingScene.VideoUrl = !string.IsNullOrEmpty(startingScene.Media?.Video) 
-                        ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Video) 
+                    startingScene.VideoUrl = !string.IsNullOrEmpty(startingScene.Media?.Video)
+                        ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Video)
                         : null;
 
                     // Create local game session
@@ -147,12 +141,20 @@ public class CharacterAssignmentService : ICharacterAssignmentService
                         CurrentScene = startingScene,
                         StartedAt = apiGameSession.StartedAt,
                         CompletedScenes = new List<Scene>(),
-                        IsCompleted = false
+                        IsCompleted = false,
+                        CharacterAssignments = apiGameSession.CharacterAssignments?.Any() == true
+                            ? new List<CharacterAssignment>(apiGameSession.CharacterAssignments)
+                            : (request.CharacterAssignments?.Any() == true
+                                ? new List<CharacterAssignment>(request.CharacterAssignments)
+                                : new List<CharacterAssignment>())
                     };
 
                     // Set the current game session in GameSessionService
                     _gameSessionService.SetCurrentGameSession(localGameSession);
-                    
+
+                    // Also store assignments in the session service for placeholder replacement
+                    _gameSessionService.SetCharacterAssignments(localGameSession.CharacterAssignments);
+
                     _logger.LogInformation("Local game session populated with starting scene: {SceneTitle}", startingScene.Title);
                 }
                 else
@@ -165,15 +167,24 @@ public class CharacterAssignmentService : ICharacterAssignmentService
                 _logger.LogWarning("No scenario provided in request, local game session will not be populated");
             }
 
-            // TODO: Save character assignments to the game session
-            // This would require a new API endpoint to update the game session with character assignments
+            // Set character assignments in the session service for scenarios where local population didn't occur
+            if ((request.Scenario == null))
+            {
+                var assignments = apiGameSession.CharacterAssignments?.Any() == true
+                    ? apiGameSession.CharacterAssignments
+                    : request.CharacterAssignments;
+                if (assignments?.Any() == true)
+                {
+                    _gameSessionService.SetCharacterAssignments(assignments);
+                }
+            }
 
             _logger.LogInformation("Game session started successfully with ID: {SessionId}", apiGameSession.Id);
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error starting game session with character assignments for scenario: {ScenarioId}", 
+            _logger.LogError(ex, "Error starting game session with character assignments for scenario: {ScenarioId}",
                 request.ScenarioId);
             return false;
         }
@@ -195,7 +206,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
             };
 
             var profile = await _apiClient.CreateProfileAsync(createRequest);
-            
+
             if (profile != null)
             {
                 _logger.LogInformation("Successfully created guest profile: {Name} with ID: {Id}", request.Name, profile.Id);
@@ -224,7 +235,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
             }
 
             var profiles = await _apiClient.GetProfilesByAccountAsync(account.Id);
-            
+
             if (profiles != null)
             {
                 _logger.LogInformation("Found {Count} profiles for account: {AccountId}", profiles.Count, account.Id);
@@ -244,9 +255,9 @@ public class CharacterAssignmentService : ICharacterAssignmentService
         try
         {
             _logger.LogInformation("Getting character details: {CharacterId}", characterId);
-            
+
             var character = await _apiClient.GetCharacterAsync(characterId);
-            
+
             if (character != null)
             {
                 _logger.LogInformation("Successfully retrieved character: {CharacterName}", character.Name);
@@ -261,7 +272,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
         }
     }
 
-    private async Task<List<CharacterAssignment>> CreateCharacterAssignmentsAsync(Scenario scenario)
+    private Task<List<CharacterAssignment>> CreateCharacterAssignmentsAsync(Scenario scenario)
     {
         var assignments = new List<CharacterAssignment>();
 
@@ -280,7 +291,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
                 Archetype = scenarioChar.Metadata?.Archetype?.FirstOrDefault() ?? "",
                 IsUnused = false
             };
-            
+
             assignments.Add(assignment);
         }
 
@@ -297,6 +308,6 @@ public class CharacterAssignmentService : ICharacterAssignmentService
             });
         }
 
-        return assignments;
+        return Task.FromResult(assignments);
     }
 }

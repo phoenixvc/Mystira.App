@@ -53,23 +53,10 @@
     {
       "name": "Start Adventure",
       "short_name": "Adventure",
-      "description": "Start a new D&D adventure",
+      "description": "Start a new adventure",
       "url": "/",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
     }
   ],
-  "screenshots": [
-    {
-      "src": "screenshot-wide.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide"
-    },
-    {
-      "src": "screenshot-narrow.png",
-      "sizes": "375x812",
-      "type": "image/png",
-      "form_factor": "narrow"
-    }
-  ]
+  "screenshots": []
 }

@@ -1,7 +1,4 @@
 @page "/game"
-@using Mystira.App.PWA.Components
-@using Mystira.App.PWA.Services
-@using Mystira.App.PWA.Models
 
 <PageTitle>@GetPageTitle()</PageTitle>
 
@@ -32,18 +29,36 @@ else
     <div class="container-fluid py-4">
         <div class="row">
             <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <h2 class="text-primary-custom mb-1">
-                            <MarkdownRenderer Content="@gameSession.CurrentScene.Title" />
+                <div class="game-session-header">
+                    <div class="game-session-title-area">
+                        <h2 class="game-session-title">
+                            @gameSession.Scenario.Title
                         </h2>
-                        <small class="text-muted">@gameSession.ScenarioName</small>
                     </div>
-                    <div>
-                        <a href="/" class="btn btn-outline-secondary">
-                            <i class="fas fa-home me-1"></i>
-                            Exit
-                        </a>
+                    <div class="game-session-controls">
+                        @if (GameSessionService.IsPaused)
+                        {
+                            <button class="btn-game-control btn-resume" @onclick="ResumeGame" disabled="@isProcessing">
+                                <i class="fas fa-play"></i>
+                                <span>Resume</span>
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn-game-control btn-pause" @onclick="PauseGame" disabled="@isProcessing">
+                                <i class="fas fa-pause"></i>
+                                <span>Pause</span>
+                            </button>
+                        }
+                        <button class="btn-game-control btn-exit" @onclick="ExitAdventure" disabled="@isProcessing">
+                            <i class="fas fa-door-open"></i>
+                            <span>Exit Adventure</span>
+                        </button>
+                        <img src="images/mystira-logo.webp"
+                            alt="Mystira Logo"
+                            width="80"
+                            height="80"
+                            class="mystira-logo" />
                     </div>
                 </div>
             </div>
@@ -52,16 +67,16 @@ else
             <div class="row justify-content-center">
                 <div class="col-lg-8">
                     <div class="scene-content">
-                        
+
                         <!-- Media Display -->
-                        @if (!string.IsNullOrEmpty(gameSession.CurrentScene.ImageUrl) || 
+                        @if (!string.IsNullOrEmpty(gameSession.CurrentScene.ImageUrl) ||
                              !string.IsNullOrEmpty(gameSession.CurrentScene.VideoUrl) ||
                              !string.IsNullOrEmpty(gameSession.CurrentScene.AudioUrl))
                         {
                             <div class="media-container mb-4">
                                 @if (!string.IsNullOrEmpty(gameSession.CurrentScene.ImageUrl))
                                 {
-                                    <img src="@gameSession.CurrentScene.ImageUrl" 
+                                    <img src="@gameSession.CurrentScene.ImageUrl"
                                          alt="Scene media"
                                          @key="gameSession.CurrentScene.ImageUrl"
                                          class="img-fluid rounded" />
@@ -73,7 +88,7 @@ else
                                         Your browser does not support the video tag.
                                     </video>
                                 }
-                                
+
                                 @if (!string.IsNullOrEmpty(gameSession.CurrentScene.AudioUrl))
                                 {
                                     <div class="p-4 bg-dark rounded text-center">
@@ -100,10 +115,10 @@ else
                             <!-- Choice Scene -->
                             <div class="text-center">
                                 <h5 class="mb-4 text-muted">What do you choose?</h5>
-                                <div class="d-flex flex-column align-items-center">
+                                <div class="d-flex flex-row flex-wrap justify-content-center gap-3">
                                     @foreach (var choice in gameSession.CurrentScene.Choices.OrderBy(c => c.Order))
                                     {
-                                        <button class="btn btn-primary-custom btn-lg mb-2 choice-button" 
+                                        <button class="btn btn-primary-custom btn-lg choice-button"
                                                 @onclick="() => HandleChoice(choice)"
                                                 disabled="@isProcessing">
                                             @if (isProcessing)
@@ -123,22 +138,14 @@ else
                                 @if (!rollResult.HasValue)
                                 {
                                     <h5 class="mb-4 text-muted">Time to test your luck!</h5>
-                                    <p class="mb-4">You need to roll @gameSession.CurrentScene.RollTarget or higher.</p>
+                                    if (gameSession.Scenario.AgeGroup != "1-2")
+                                    {
+                                        <p class="mb-4">You need to roll @gameSession.CurrentScene.RollTarget or higher.</p>
+                                    }
                                     <div class="dice-roller-container">
-                                        <DiceRoller DiceCount="1" Faces="20" SoundOn="true" HapticsOn="true" DarkMode="false" 
+                                        <DiceRoller DiceCount="1" Faces="20" SoundOn="true" HapticsOn="true" DarkMode="false"
                                                     RollDurationMs="1500" WaitAfterRollDuration="500" OnRollResult="HandleRollResult"/>
                                     </div>
-
-                                    <style>
-                                        .dice-roller-container {
-                                            max-width: 200px; /* Adjust this value to control the width */
-                                            margin: 0 auto; /* This centers the container horizontally */
-                                            padding: 15px;
-                                            background-color: var(--bs-body-bg, white);
-                                            border-radius: 8px;
-                                            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-                                        }
-                                    </style>
                                 }
                                 else
                                 {
@@ -155,17 +162,12 @@ else
                                                     string[] youngExclamations = new[] { "Yipee!", "Hooray!", "Wow!" };
                                                     successMsg = youngExclamations[new Random().Next(youngExclamations.Length)];
                                                 }
-                                                else if (gameSession.Scenario.AgeGroup == "3-5")
-                                                {
-                                                    string[] olderExclamations = new[] { "Yipee!", "Hooray!", "Wow!", "Neat!", "Tada!", "Whoa!", "Good Job!", "Amazing!" };
-                                                    successMsg = olderExclamations[new Random().Next(olderExclamations.Length)];
-                                                }
                                                 else
                                                 {
                                                     successMsg = "Success!";
                                                 }
                                             }
-    
+
                                             @if (gameSession.Scenario.AgeGroup == "1-2" || gameSession.Scenario.AgeGroup == "3-5" || rollResult >= gameSession.CurrentScene.RollTarget)
                                             {
                                                 <h5 class="mb-2">@successMsg</h5>
@@ -196,10 +198,9 @@ else
                                 }
                             </div>
                         }
-                        else if (gameSession.CurrentScene.SceneType == SceneType.Special && 
-                                 gameSession.CurrentScene.NextSceneId == null)
+                        else if (gameSession.CurrentScene.NextSceneId == null)
                         {
-                            <!-- Final Scene -->
+                            <!-- Final Scene (no more scenes to go to) -->
                             <div class="text-center">
                                 <div class="alert alert-success">
                                     <h4 class="alert-heading">
@@ -208,10 +209,17 @@ else
                                     </h4>
                                     <p class="mb-0">Congratulations on completing this adventure!</p>
                                 </div>
-                                
+
                                 <div class="mt-4">
-                                    <button class="btn btn-primary-custom btn-lg" @onclick="FinishAdventure">
-                                        <i class="fas fa-flag-checkered me-2"></i>
+                                    <button class="btn btn-primary-custom btn-lg" @onclick="FinishAdventure" disabled="@isProcessing">
+                                        @if (isProcessing)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                        }
+                                        else
+                                        {
+                                            <i class="fas fa-flag-checkered me-2"></i>
+                                        }
                                         Finish Adventure
                                     </button>
                                 </div>
@@ -221,7 +229,7 @@ else
                         {
                             <!-- Story Scene - just continue -->
                             <div class="text-center">
-                                <button class="btn btn-primary-custom btn-lg mb-2" 
+                                <button class="btn btn-primary-custom btn-lg mb-2"
                                         @onclick="ContinueStory"
                                         disabled="@isProcessing">
                                     @if (isProcessing)
@@ -232,7 +240,7 @@ else
                                 </button>
                             </div>
                         }
-                        
+
                     </div>
                 </div>
             </div>
@@ -248,27 +256,45 @@ else
     private GameSession? gameSession;
     private bool isProcessing = false;
     private int? rollResult = null;
+    private bool hasNavigatedHome = false;
 
     protected override void OnInitialized()
     {
         // Get current game session
         gameSession = GameSessionService.CurrentGameSession;
-        
+
         // Subscribe to changes
         GameSessionService.GameSessionChanged += OnGameSessionChanged;
-        
+
         // If no game session, redirect to home
-        if (gameSession == null)
-        {
-            Logger.LogWarning("No active game session found, redirecting to home");
-            Navigation.NavigateTo("/");
-        }
+        // if (gameSession == null)
+        // {
+        //     Logger.LogWarning("No active game session found, redirecting to home");
+        //     Navigation.NavigateTo("/");
+        // }
     }
 
     private void OnGameSessionChanged(object? sender, GameSession? session)
     {
         gameSession = session;
         rollResult = null; // Reset roll result when scene changes
+
+        // If the session has been completed elsewhere (e.g., via Continue when no next scene),
+        // automatically navigate back to Home once, to finish the adventure flow.
+        if (!hasNavigatedHome && session?.IsCompleted == true)
+        {
+            hasNavigatedHome = true; // guard against double navigation
+            // Ensure any local state is cleared
+            try
+            {
+                GameSessionService.ClearGameSession();
+            }
+            catch { /* ignore */ }
+
+            // Force-load home to reset any transient state
+            Navigation.NavigateTo("/", true);
+        }
+
         InvokeAsync(StateHasChanged);
     }
 
@@ -278,30 +304,107 @@ else
         {
             return $"{gameSession.CurrentScene.Title} - {gameSession.ScenarioName}";
         }
-        return "Game Session - Mystira";
+        return "Game Session • Mystira";
     }
 
     private async Task HandleChoice(Choice choice)
     {
-        if (isProcessing || string.IsNullOrEmpty(choice.NextSceneTitle))
+        if (gameSession?.CurrentScene == null || string.IsNullOrEmpty(choice.NextSceneId))
             return;
 
         try
         {
             isProcessing = true;
             StateHasChanged();
-            
-            Logger.LogInformation("Player chose: {ChoiceText} -> {NextScene}", choice.Text, choice.NextSceneTitle);
-            
-            var success = await GameSessionService.NavigateToSceneAsync(choice.NextSceneTitle);
-            if (!success)
-            {
-                Logger.LogError("Failed to navigate to scene: {NextScene}", choice.NextSceneTitle);
-            }
+
+            Logger.LogInformation("Player chose: {ChoiceText} -> {NextScene}", choice.Text, choice.NextSceneId);
+
+            await GameSessionService.MakeChoiceAsync(
+                gameSession.Id,
+                gameSession.CurrentScene.Id,
+                choice.Text,
+                choice.NextSceneId);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error handling choice: {ChoiceText}", choice.Text);
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ExitAdventure()
+    {
+        try
+        {
+            isProcessing = true;
+            // Clear the current game session and navigate back to Home
+            GameSessionService.ClearGameSession();
+            Navigation.NavigateTo("/");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task PauseGame()
+    {
+        if (isProcessing)
+            return;
+
+        try
+        {
+            isProcessing = true;
+            StateHasChanged();
+
+            var success = await GameSessionService.PauseGameSessionAsync();
+            if (!success)
+            {
+                Logger.LogWarning("Failed to pause game session");
+            }
+            else
+            {
+                Logger.LogInformation("Game session paused");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error pausing game");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ResumeGame()
+    {
+        if (isProcessing)
+            return;
+
+        try
+        {
+            isProcessing = true;
+            StateHasChanged();
+
+            var success = await GameSessionService.ResumeGameSessionAsync();
+            if (!success)
+            {
+                Logger.LogWarning("Failed to resume game session");
+            }
+            else
+            {
+                Logger.LogInformation("Game session resumed");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error resuming game");
         }
         finally
         {
@@ -319,16 +422,16 @@ else
         {
             isProcessing = true;
             StateHasChanged();
-            
+
             // Determine if the roll was successful
             bool isSuccess = rollResult.Value >= (gameSession.CurrentScene.RollTarget ?? 0);
-            
-            Logger.LogInformation("Processing roll result: {RollResult}, Target: {Target}, Success: {IsSuccess}", 
+
+            Logger.LogInformation("Processing roll result: {RollResult}, Target: {Target}, Success: {IsSuccess}",
                 rollResult.Value, gameSession.CurrentScene.RollTarget, isSuccess);
-            
+
             // Navigate based on success/failure
             var success = await GameSessionService.NavigateFromRollAsync(isSuccess);
-            
+
             if (!success)
             {
                 Logger.LogError("Failed to navigate from roll scene");
@@ -354,14 +457,14 @@ else
         {
             isProcessing = true;
             StateHasChanged();
-            
+
             // For story scenes, advance to the next scene
             var success = await GameSessionService.GoToNextSceneAsync();
             if (!success)
             {
                 Logger.LogError("Failed to advance to next scene");
             }
-            
+
             Logger.LogInformation("Story scene advanced");
         }
         catch (Exception ex)
@@ -395,25 +498,37 @@ else
         }
     }
 
-    
+
     private async Task FinishAdventure()
     {
+        if (isProcessing)
+            return;
+
         try
         {
+            isProcessing = true;
+            StateHasChanged();
+
             Logger.LogInformation("Finishing adventure and returning to main menu");
 
             // Complete the session
             await CompleteSession();
-            
+
             // Clear the current game session
             GameSessionService.ClearGameSession();
-            
+
             // Navigate back to home
-            Navigation.NavigateTo("/");
+            hasNavigatedHome = true;
+            Navigation.NavigateTo("/", true);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error finishing adventure");
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
         }
     }
 }

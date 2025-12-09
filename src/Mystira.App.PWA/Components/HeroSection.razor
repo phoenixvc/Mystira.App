@@ -1,0 +1,403 @@
+@* Hero Section Component *@
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<div class="row" style="margin-top: 0;">
+    <div class="col-12 text-center mb-5 hero-section" style="position: relative; margin-top: 0;">
+        <!-- Particle Background Canvas -->
+        <canvas id="particle-canvas" class="particle-canvas" aria-hidden="true"
+                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: auto;"></canvas>
+
+        <!-- Golden Light Tubes - vine-like tubes that twine around the logo/video area (hidden for now) -->
+        @* TODO: Re-enable golden tubes when ready
+        <div class="golden-lights @(showVideo ? "video-mode" : "logo-mode")" aria-hidden="true" id="golden-lights-container">
+            <svg class="golden-light-svg" viewBox="0 0 600 500" preserveAspectRatio="xMidYMid meet">
+                <!-- Twining vine tubes that wrap around center -->
+                <g class="light-tube-group light-tube-group-1">
+                    <!-- Left twining vine - wraps around from top-left -->
+                    <path class="light-tube light-tube-1"
+                          d="M 80 120 C 120 80, 180 100, 220 160 C 260 220, 240 260, 280 280 C 320 300, 340 260, 320 220 C 300 180, 340 140, 380 160 C 420 180, 400 240, 360 280"
+                          fill="none" stroke="url(#goldenGradient1)" stroke-width="3" stroke-linecap="round" />
+                    <path class="light-tube light-tube-1-glow"
+                          d="M 80 120 C 120 80, 180 100, 220 160 C 260 220, 240 260, 280 280 C 320 300, 340 260, 320 220 C 300 180, 340 140, 380 160 C 420 180, 400 240, 360 280"
+                          fill="none" stroke="url(#goldenGradient1)" stroke-width="12" opacity="0.25" stroke-linecap="round" />
+                </g>
+
+                <g class="light-tube-group light-tube-group-2">
+                    <!-- Right twining vine - wraps around from top-right -->
+                    <path class="light-tube light-tube-2"
+                          d="M 520 140 C 480 100, 420 120, 380 180 C 340 240, 360 280, 320 300 C 280 320, 260 280, 280 240 C 300 200, 260 160, 220 180 C 180 200, 200 260, 240 300"
+                          fill="none" stroke="url(#goldenGradient2)" stroke-width="3" stroke-linecap="round" />
+                    <path class="light-tube light-tube-2-glow"
+                          d="M 520 140 C 480 100, 420 120, 380 180 C 340 240, 360 280, 320 300 C 280 320, 260 280, 280 240 C 300 200, 260 160, 220 180 C 180 200, 200 260, 240 300"
+                          fill="none" stroke="url(#goldenGradient2)" stroke-width="12" opacity="0.25" stroke-linecap="round" />
+                </g>
+
+                <g class="light-tube-group light-tube-group-3">
+                    <!-- Inner wrapping spiral - tighter around logo center -->
+                    <path class="light-tube light-tube-3"
+                          d="M 240 200 C 260 160, 340 160, 360 200 C 380 240, 360 280, 320 300 C 280 320, 240 300, 240 260 C 240 220, 280 200, 300 220 C 320 240, 300 280, 280 280"
+                          fill="none" stroke="url(#goldenGradient3)" stroke-width="2.5" stroke-linecap="round" />
+                    <path class="light-tube light-tube-3-glow"
+                          d="M 240 200 C 260 160, 340 160, 360 200 C 380 240, 360 280, 320 300 C 280 320, 240 300, 240 260 C 240 220, 280 200, 300 220 C 320 240, 300 280, 280 280"
+                          fill="none" stroke="url(#goldenGradient3)" stroke-width="10" opacity="0.2" stroke-linecap="round" />
+                </g>
+
+                <!-- Additional subtle tendril -->
+                <g class="light-tube-group light-tube-group-4">
+                    <path class="light-tube light-tube-4"
+                          d="M 180 320 C 220 340, 280 340, 300 300 C 320 260, 300 220, 340 200 C 380 180, 420 220, 400 280"
+                          fill="none" stroke="url(#goldenGradient4)" stroke-width="2" stroke-linecap="round" />
+                    <path class="light-tube light-tube-4-glow"
+                          d="M 180 320 C 220 340, 280 340, 300 300 C 320 260, 300 220, 340 200 C 380 180, 420 220, 400 280"
+                          fill="none" stroke="url(#goldenGradient4)" stroke-width="8" opacity="0.15" stroke-linecap="round" />
+                </g>
+
+                <!-- Gradients with brighter golden colors -->
+                <defs>
+                    <linearGradient id="goldenGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#FFD700;stop-opacity:0.9" />
+                        <stop offset="50%" style="stop-color:#FFA500;stop-opacity:0.7" />
+                        <stop offset="100%" style="stop-color:#FF8C00;stop-opacity:0.5" />
+                    </linearGradient>
+                    <linearGradient id="goldenGradient2" x1="100%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#FFD700;stop-opacity:0.85" />
+                        <stop offset="50%" style="stop-color:#FFA500;stop-opacity:0.65" />
+                        <stop offset="100%" style="stop-color:#FF8C00;stop-opacity:0.45" />
+                    </linearGradient>
+                    <linearGradient id="goldenGradient3" x1="50%" y1="0%" x2="50%" y2="100%">
+                        <stop offset="0%" style="stop-color:#FFE066;stop-opacity:0.75" />
+                        <stop offset="50%" style="stop-color:#FFD700;stop-opacity:0.6" />
+                        <stop offset="100%" style="stop-color:#FFA500;stop-opacity:0.4" />
+                    </linearGradient>
+                    <linearGradient id="goldenGradient4" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#FFE066;stop-opacity:0.6" />
+                        <stop offset="50%" style="stop-color:#FFD700;stop-opacity:0.5" />
+                        <stop offset="100%" style="stop-color:#FFA500;stop-opacity:0.35" />
+                    </linearGradient>
+
+                    <!-- Filter for extra glow effect -->
+                    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                        <feMerge>
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+            </svg>
+        </div>
+        *@
+
+        <div class="hero-content" style="position: relative; z-index: 1;">
+            <h1 class="mystira-title mb-2">
+                <span class="title-text">Mystira</span><span class="alpha-badge">ALPHA</span>
+            </h1>
+            <p class="mystira-tagline mb-4">Where imagination meets growth</p>
+            <div class="hero-logo-container mb-4">
+                <!-- Logo Intro Video (loads in background, plays when ready) -->
+                <!-- Theme-aware: loads hero-intro-light.mp4 or hero-intro-dark.mp4 based on theme -->
+                <video id="logo-intro-video"
+                       class="hero-logo-video @(showVideo ? "visible" : "hidden")"
+                       muted
+                       playsinline
+                       preload="auto"
+                       aria-label="Mystira logo introduction video">
+                    <source id="video-source" src="" type="video/mp4">
+                </video>
+
+                <!-- Static Logo with SVG Animation Overlay (shown when video ends) -->
+                <div class="logo-with-animation @(showLogoAnimation ? "animating" : "") @(showVideo ? "hidden" : "visible")">
+                    <img src="images/mystira-logo.webp"
+                         id="hero-logo-static"
+                         alt="Mystira - Where imagination meets growth"
+                         width="300"
+                         height="300"
+                         class="hero-logo-image" />
+
+                    <!-- SVG Animation Overlay - mimics video ending effect -->
+                    @if (showLogoAnimation)
+                    {
+                        <svg class="logo-animation-svg" viewBox="0 0 300 300" preserveAspectRatio="xMidYMid meet">
+                            <!-- Radiating rings that pulse outward from center -->
+                            <circle class="pulse-ring ring-1" cx="150" cy="150" r="80" fill="none" stroke="url(#pulseGradient)" stroke-width="2" />
+                            <circle class="pulse-ring ring-2" cx="150" cy="150" r="100" fill="none" stroke="url(#pulseGradient)" stroke-width="1.5" />
+                            <circle class="pulse-ring ring-3" cx="150" cy="150" r="120" fill="none" stroke="url(#pulseGradient)" stroke-width="1" />
+
+                            <!-- Sparkle particles -->
+                            <g class="sparkles">
+                                <circle class="sparkle s1" cx="75" cy="75" r="3" fill="#A78BFA" />
+                                <circle class="sparkle s2" cx="225" cy="75" r="2.5" fill="#7C3AED" />
+                                <circle class="sparkle s3" cx="225" cy="225" r="3" fill="#C4B5FD" />
+                                <circle class="sparkle s4" cx="75" cy="225" r="2" fill="#8B5CF6" />
+                                <circle class="sparkle s5" cx="150" cy="40" r="2.5" fill="#A78BFA" />
+                                <circle class="sparkle s6" cx="150" cy="260" r="2" fill="#7C3AED" />
+                                <circle class="sparkle s7" cx="40" cy="150" r="2.5" fill="#C4B5FD" />
+                                <circle class="sparkle s8" cx="260" cy="150" r="3" fill="#8B5CF6" />
+                            </g>
+
+                            <!-- Rotating glow arc -->
+                            <path class="glow-arc"
+                                  d="M 150 50 A 100 100 0 0 1 250 150"
+                                  fill="none"
+                                  stroke="url(#arcGradient)"
+                                  stroke-width="3"
+                                  stroke-linecap="round" />
+
+                            <defs>
+                                <linearGradient id="pulseGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#A78BFA;stop-opacity:0.6" />
+                                    <stop offset="50%" style="stop-color:#7C3AED;stop-opacity:0.4" />
+                                    <stop offset="100%" style="stop-color:#5B21B6;stop-opacity:0.2" />
+                                </linearGradient>
+                                <linearGradient id="arcGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#C4B5FD;stop-opacity:0" />
+                                    <stop offset="50%" style="stop-color:#A78BFA;stop-opacity:0.8" />
+                                    <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:0" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    }
+                </div>
+
+                <!-- Replay button (appears after video ends, positioned in corner) -->
+                <button id="replay-video-btn"
+                        class="replay-btn @(showReplayButton ? "visible" : "hidden")"
+                        @onclick="ReplayVideo"
+                        title="Replay intro"
+                        aria-label="Replay introduction video">
+                    <i class="fas fa-redo-alt"></i>
+                </button>
+
+                <!-- Skip button (appears when video is playing, positioned opposite to replay) -->
+                <button id="skip-video-btn"
+                        class="skip-btn @(showVideo ? "visible" : "hidden")"
+                        @onclick="SkipVideo"
+                        title="Skip intro"
+                        aria-label="Skip introduction video">
+                    <i class="fas fa-step-forward"></i>
+                </button>
+
+                <!-- Watch Full Intro button (shows the original extended intro video) -->
+                <button id="watch-full-intro-btn"
+                        class="watch-intro-btn @(showReplayButton && !showFullIntro ? "visible" : "hidden")"
+                        @onclick="ShowFullIntroVideo"
+                        title="Watch full intro"
+                        aria-label="Watch full introduction video">
+                    <i class="fas fa-film me-1"></i>Full Intro
+                </button>
+            </div>
+
+            <!-- Full Intro Modal -->
+            @if (showFullIntro)
+            {
+                <div class="full-intro-modal" @onclick="CloseFullIntro">
+                    <div class="full-intro-content" @onclick:stopPropagation="true">
+                        <button class="close-intro-btn" @onclick="CloseFullIntro" aria-label="Close full intro">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <video id="full-intro-video"
+                               class="full-intro-video"
+                               controls
+                               autoplay
+                               playsinline
+                               aria-label="Mystira full introduction video">
+                            <source src="videos/logo-intro.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                </div>
+            }
+            @if (ShowDescription)
+            {
+                <p class="hero-description mb-4">
+                    Bring stories to life with Mystira — an interactive adventure platform that helps children, parents, and group leaders explore imagination, teamwork, and growth through guided storytelling and play.
+                </p>
+
+                @if (ShowCallToActions)
+                {
+                    <div class="hero-cta-buttons d-flex gap-3 justify-content-center flex-wrap mb-4">
+                        <a href="/signup" class="btn btn-primary-custom btn-lg px-5 py-3">
+                            <i class="fas fa-rocket me-2"></i>Get Started
+                        </a>
+                        <button class="btn btn-outline-primary btn-lg px-5 py-3" @onclick="OnWatchDemo">
+                            <i class="fas fa-play-circle me-2"></i>Watch Demo (2 min)
+                        </button>
+                    </div>
+
+                    <!-- Trust Indicators -->
+                    <!--
+                    <div class="trust-badges">
+                        <span class="trust-badge">
+                            <i class="fas fa-shield-alt me-1"></i>Safe for Kids
+                        </span>
+                        <span class="trust-badge">
+                            <i class="fas fa-ban me-1"></i>No Ads
+                        </span>
+                        <CoppaCompliancePill />
+                    </div>
+                    -->
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public bool ShowDescription { get; set; } = false;
+
+    [Parameter]
+    public bool ShowCallToActions { get; set; } = false;
+
+    [Parameter]
+    public EventCallback OnWatchDemoClick { get; set; }
+
+    private bool _particlesInitialized = false;
+    private bool showVideo = false; // Start with logo visible
+    private bool showReplayButton = false;
+    private bool showFullIntro = false;
+    private bool showLogoAnimation = false; // SVG animation after video
+    private System.Threading.Timer? _animationTimer;
+    private DotNetObjectReference<HeroSection>? _dotNetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_particlesInitialized)
+        {
+            _particlesInitialized = true;
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("MystiraParticles.init", "particle-canvas");
+
+                // Initialize logo intro video - loads in background, plays when ready
+                // Video source is set based on current theme (light/dark)
+                _dotNetRef = DotNetObjectReference.Create(this);
+                await JSRuntime.InvokeVoidAsync("initLogoIntroVideo", _dotNetRef);
+            }
+            catch (Exception)
+            {
+                // Silently fail if JS interop is not available (e.g., during prerendering)
+            }
+        }
+    }
+
+    [JSInvokable]
+    public void OnVideoReady()
+    {
+        // Video is loaded and ready - transition from logo to video
+        showVideo = true;
+        showReplayButton = false;
+        showLogoAnimation = false;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void OnVideoEnded()
+    {
+        // Video finished - transition back to logo with SVG animation
+        showVideo = false;
+        showReplayButton = true;
+        showLogoAnimation = true; // Start SVG animation
+        StateHasChanged();
+
+        // Stop animation after 4 seconds
+        _animationTimer?.Dispose();
+        _animationTimer = new System.Threading.Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                showLogoAnimation = false;
+                StateHasChanged();
+            });
+        }, null, 4000, System.Threading.Timeout.Infinite);
+    }
+
+    [JSInvokable]
+    public void OnVideoError()
+    {
+        // Video failed - stay on logo, no replay button
+        showVideo = false;
+        showReplayButton = false;
+        showLogoAnimation = false;
+        StateHasChanged();
+    }
+
+    private async Task ReplayVideo()
+    {
+        showVideo = true;
+        showReplayButton = false;
+        showLogoAnimation = false;
+        _animationTimer?.Dispose();
+        StateHasChanged();
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("replayLogoVideo");
+        }
+        catch (JSException)
+        {
+            // Silently fail
+        }
+    }
+
+    private async Task SkipVideo()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("skipLogoVideo");
+        }
+        catch (JSException)
+        {
+            // Silently fail
+        }
+
+        // Transition back to logo
+        showVideo = false;
+        showReplayButton = true;
+        StateHasChanged();
+    }
+
+    private async Task OnWatchDemo()
+    {
+        if (OnWatchDemoClick.HasDelegate)
+        {
+            await OnWatchDemoClick.InvokeAsync();
+        }
+        else
+        {
+            // Default behavior when OnWatchDemoClick is not provided: show the full intro video
+            ShowFullIntroVideo();
+        }
+    }
+
+    private void ShowFullIntroVideo()
+    {
+        showFullIntro = true;
+        StateHasChanged();
+    }
+
+    private void CloseFullIntro()
+    {
+        showFullIntro = false;
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("MystiraParticles.destroy");
+            await JSRuntime.InvokeVoidAsync("cleanupLogoIntroVideo");
+        }
+        catch (Exception)
+        {
+            // Silently fail if JS interop is not available
+        }
+
+        // Dispose the animation timer
+        _animationTimer?.Dispose();
+
+        // Dispose the DotNetObjectReference to prevent memory leaks
+        _dotNetRef?.Dispose();
+    }
+}

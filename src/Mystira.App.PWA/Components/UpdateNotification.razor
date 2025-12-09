@@ -1,0 +1,102 @@
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@if (showUpdateNotification)
+{
+    <div class="update-notification @(isAnimatingOut ? "fade-out" : "")">
+        <div class="update-notification-content">
+            <div class="update-icon">
+                <i class="fas fa-sync-alt"></i>
+            </div>
+            <div class="update-message">
+                <strong>New version available!</strong>
+                <span>@updateMessage</span>
+            </div>
+            <div class="update-actions">
+                <button class="btn btn-primary-custom btn-sm" @onclick="ReloadApp" disabled="@isReloading">
+                    @if (isReloading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    <i class="fas fa-refresh me-1"></i>
+                    Update Now
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="DismissNotification">
+                    Later
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool showUpdateNotification = false;
+    private bool isReloading = false;
+    private bool isAnimatingOut = false;
+    private string updateMessage = "Click 'Update Now' to get the latest features.";
+    private DotNetObjectReference<UpdateNotification>? dotNetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("registerUpdateNotificationHandler", dotNetRef);
+        }
+    }
+
+    [JSInvokable]
+    public void OnVersionUpdate(string? oldVersion, string? newVersion)
+    {
+        if (!string.IsNullOrEmpty(oldVersion) && !string.IsNullOrEmpty(newVersion))
+        {
+            updateMessage = $"Version {newVersion} is ready. You're on {oldVersion}.";
+        }
+        else
+        {
+            updateMessage = "A new version is available with improvements.";
+        }
+
+        showUpdateNotification = true;
+        InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public void OnServiceWorkerUpdate()
+    {
+        updateMessage = "A new version has been installed and is ready.";
+        showUpdateNotification = true;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ReloadApp()
+    {
+        isReloading = true;
+        StateHasChanged();
+
+        // Clear caches and reload
+        await JS.InvokeVoidAsync("clearCacheAndReload");
+    }
+
+    private async Task DismissNotification()
+    {
+        isAnimatingOut = true;
+        StateHasChanged();
+
+        // Wait for animation
+        await Task.Delay(300);
+
+        showUpdateNotification = false;
+        isAnimatingOut = false;
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (dotNetRef != null)
+        {
+            await JS.InvokeVoidAsync("unregisterUpdateNotificationHandler");
+            dotNetRef.Dispose();
+        }
+    }
+}

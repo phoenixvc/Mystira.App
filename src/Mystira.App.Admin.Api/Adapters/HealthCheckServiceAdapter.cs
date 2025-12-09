@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Mystira.App.Admin.Api.Services;
 
 namespace Mystira.App.Admin.Api.Adapters;

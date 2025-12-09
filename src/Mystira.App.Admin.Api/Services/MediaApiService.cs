@@ -1,22 +1,34 @@
-using Mystira.App.Infrastructure.Azure.Services;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
-using System.Text;
 using System.IO.Compression;
-using Mystira.App.Admin.Api.Data;
+using System.Security.Cryptography;
+using Microsoft.EntityFrameworkCore;
 using Mystira.App.Admin.Api.Models;
+using Mystira.App.Application.Ports.Media;
+using Mystira.App.Application.Ports.Storage;
+using Mystira.App.Application.UseCases.Media;
+using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data;
 
 namespace Mystira.App.Admin.Api.Services;
 
 /// <summary>
-/// Service for managing media assets
+/// Service for managing media assets - delegates to use cases
+/// NOTE: This service violates architectural rules (services should not exist in API layer).
+/// Controllers should call use cases directly. This is kept temporarily for backward compatibility.
 /// </summary>
 public class MediaApiService : IMediaApiService
 {
+    private readonly GetMediaUseCase _getMediaUseCase;
+    private readonly GetMediaByFilenameUseCase _getMediaByFilenameUseCase;
+    private readonly ListMediaUseCase _listMediaUseCase;
+    private readonly UploadMediaUseCase _uploadMediaUseCase;
+    private readonly UpdateMediaMetadataUseCase _updateMediaMetadataUseCase;
+    private readonly DeleteMediaUseCase _deleteMediaUseCase;
+    private readonly DownloadMediaUseCase _downloadMediaUseCase;
     private readonly MystiraAppDbContext _context;
-    private readonly IAzureBlobService _blobStorageService;
+    private readonly IBlobService _blobStorageService;
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ILogger<MediaApiService> _logger;
+    private readonly IAudioTranscodingService _audioTranscodingService;
 
     private readonly Dictionary<string, string> _mimeTypeMap = new()
     {
@@ -26,6 +38,7 @@ public class MediaApiService : IMediaApiService
         { ".ogg", "audio/ogg" },
         { ".aac", "audio/aac" },
         { ".m4a", "audio/mp4" },
+        { ".waptt", "audio/ogg" },
         
         // Video
         { ".mp4", "video/mp4" },
@@ -44,77 +57,64 @@ public class MediaApiService : IMediaApiService
     };
 
     public MediaApiService(
+        GetMediaUseCase getMediaUseCase,
+        GetMediaByFilenameUseCase getMediaByFilenameUseCase,
+        ListMediaUseCase listMediaUseCase,
+        UploadMediaUseCase uploadMediaUseCase,
+        UpdateMediaMetadataUseCase updateMediaMetadataUseCase,
+        DeleteMediaUseCase deleteMediaUseCase,
+        DownloadMediaUseCase downloadMediaUseCase,
         MystiraAppDbContext context,
-        IAzureBlobService blobStorageService,
+        IBlobService blobStorageService,
         IMediaMetadataService mediaMetadataService,
-        ILogger<MediaApiService> logger)
+        ILogger<MediaApiService> logger,
+        IAudioTranscodingService audioTranscodingService)
     {
+        _getMediaUseCase = getMediaUseCase;
+        _getMediaByFilenameUseCase = getMediaByFilenameUseCase;
+        _listMediaUseCase = listMediaUseCase;
+        _uploadMediaUseCase = uploadMediaUseCase;
+        _updateMediaMetadataUseCase = updateMediaMetadataUseCase;
+        _deleteMediaUseCase = deleteMediaUseCase;
+        _downloadMediaUseCase = downloadMediaUseCase;
         _context = context;
         _blobStorageService = blobStorageService;
         _mediaMetadataService = mediaMetadataService;
         _logger = logger;
+        _audioTranscodingService = audioTranscodingService;
     }
 
     /// <inheritdoc />
     public async Task<MediaQueryResponse> GetMediaAsync(MediaQueryRequest request)
     {
-        var query = _context.MediaAssets.AsQueryable();
-
-        // Apply filters
-        if (!string.IsNullOrEmpty(request.Search))
+        // Convert Admin.Api.Models.MediaQueryRequest to Contracts.MediaQueryRequest
+        var contractsRequest = new Contracts.Requests.Media.MediaQueryRequest
         {
-            query = query.Where(m => m.MediaId.Contains(request.Search) ||
-                                    m.Url.Contains(request.Search) ||
-                                    (m.Description != null && m.Description.Contains(request.Search)));
-        }
-
-        if (!string.IsNullOrEmpty(request.MediaType))
-        {
-            query = query.Where(m => m.MediaType == request.MediaType);
-        }
-
-        if (request.Tags != null && request.Tags.Count > 0)
-        {
-            foreach (var tag in request.Tags)
-            {
-                query = query.Where(m => m.Tags.Contains(tag));
-            }
-        }
-
-        // Apply sorting
-        query = request.SortBy?.ToLower() switch
-        {
-            "filename" => request.SortDescending ? query.OrderByDescending(m => m.Url) : query.OrderBy(m => m.Url),
-            "mediatype" => request.SortDescending ? query.OrderByDescending(m => m.MediaType) : query.OrderBy(m => m.MediaType),
-            "filesize" => request.SortDescending ? query.OrderByDescending(m => m.FileSizeBytes) : query.OrderBy(m => m.FileSizeBytes),
-            "updatedat" => request.SortDescending ? query.OrderByDescending(m => m.UpdatedAt) : query.OrderBy(m => m.UpdatedAt),
-            _ => request.SortDescending ? query.OrderByDescending(m => m.CreatedAt) : query.OrderBy(m => m.CreatedAt)
-        };
-
-        var totalCount = await query.CountAsync();
-        var totalPages = (int)Math.Ceiling((double)totalCount / request.PageSize);
-
-        var media = await query
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
-            .ToListAsync();
-
-        return new MediaQueryResponse
-        {
-            Media = media,
-            TotalCount = totalCount,
             Page = request.Page,
             PageSize = request.PageSize,
-            TotalPages = totalPages
+            Search = request.Search,
+            MediaType = request.MediaType,
+            Tags = request.Tags,
+            SortBy = request.SortBy,
+            SortDescending = request.SortDescending
+        };
+
+        var contractsResponse = await _listMediaUseCase.ExecuteAsync(contractsRequest);
+
+        // Convert Contracts.MediaQueryResponse back to Admin.Api.Models.MediaQueryResponse
+        return new MediaQueryResponse
+        {
+            Media = contractsResponse.Media,
+            TotalCount = contractsResponse.TotalCount,
+            Page = contractsResponse.Page,
+            PageSize = contractsResponse.PageSize,
+            TotalPages = contractsResponse.TotalPages
         };
     }
 
     /// <inheritdoc />
-    public async Task<MediaAsset?> GetMediaByIdAsync(string mediaId)
-    {
-        return await _context.MediaAssets
-            .FirstOrDefaultAsync(m => m.MediaId == mediaId);
-    }
+    public Task<MediaAsset?> GetMediaByIdAsync(string mediaId) =>
+        _getMediaUseCase.ExecuteAsync(mediaId);
 
     /// <inheritdoc />
     public async Task<MediaAsset> UploadMediaAsync(IFormFile file, string mediaId, string mediaType, string? description = null, List<string>? tags = null)
@@ -131,11 +131,14 @@ public class MediaApiService : IMediaApiService
             throw new InvalidOperationException($"Media with ID '{resolvedMediaId}' already exists");
         }
 
-        // Calculate file hash
-        var hash = await CalculateFileHashAsync(file);
+        await using var processedStream = await PrepareMediaStreamAsync(file);
+
+        var fileSizeBytes = processedStream.Stream.Length;
+        var hash = await CalculateStreamHashAsync(processedStream.Stream);
+        processedStream.Stream.Position = 0;
 
         // Upload to blob storage and get URL
-        var url = await _blobStorageService.UploadMediaAsync(file.OpenReadStream(), file.FileName, file.ContentType ?? GetMimeType(file.FileName));
+        var url = await _blobStorageService.UploadMediaAsync(processedStream.Stream, processedStream.FileName, processedStream.ContentType);
 
         // Create media asset record
         var mediaAsset = new MediaAsset
@@ -144,8 +147,8 @@ public class MediaApiService : IMediaApiService
             MediaId = resolvedMediaId,
             Url = url,
             MediaType = mediaType,
-            MimeType = file.ContentType ?? GetMimeType(file.FileName),
-            FileSizeBytes = file.Length,
+            MimeType = processedStream.ContentType,
+            FileSizeBytes = fileSizeBytes,
             Description = description,
             Tags = tags ?? new List<string>(),
             Hash = hash,
@@ -235,63 +238,20 @@ public class MediaApiService : IMediaApiService
     /// <inheritdoc />
     public async Task<MediaAsset> UpdateMediaAsync(string mediaId, MediaUpdateRequest updateData)
     {
-        var mediaAsset = await GetMediaByIdAsync(mediaId);
-        if (mediaAsset == null)
+        // Convert Admin.Api.Models.MediaUpdateRequest to Contracts.MediaUpdateRequest
+        var contractsRequest = new Contracts.Requests.Media.MediaUpdateRequest
         {
-            throw new KeyNotFoundException($"Media with ID '{mediaId}' not found");
-        }
+            Description = updateData.Description,
+            Tags = updateData.Tags,
+            MediaType = updateData.MediaType
+        };
 
-        // Update properties
-        if (updateData.Description != null)
-            mediaAsset.Description = updateData.Description;
-
-        if (updateData.Tags != null)
-            mediaAsset.Tags = updateData.Tags;
-
-        if (!string.IsNullOrEmpty(updateData.MediaType))
-            mediaAsset.MediaType = updateData.MediaType;
-
-        mediaAsset.UpdatedAt = DateTime.UtcNow;
-        mediaAsset.Version = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
-
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("Media updated successfully: {MediaId}", mediaId);
-
-        return mediaAsset;
+        return await _updateMediaMetadataUseCase.ExecuteAsync(mediaId, contractsRequest);
     }
 
     /// <inheritdoc />
-    public async Task<bool> DeleteMediaAsync(string mediaId)
-    {
-        var mediaAsset = await GetMediaByIdAsync(mediaId);
-        if (mediaAsset == null)
-        {
-            return false;
-        }
-
-        try
-        {
-            // Extract blob name from URL for deletion
-            var uri = new Uri(mediaAsset.Url);
-            var blobName = Path.GetFileName(uri.LocalPath);
-
-            // Delete from blob storage
-            await _blobStorageService.DeleteMediaAsync(blobName);
-
-            // Delete from database
-            _context.MediaAssets.Remove(mediaAsset);
-            await _context.SaveChangesAsync();
-
-            _logger.LogInformation("Media deleted successfully: {MediaId}", mediaId);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete media: {MediaId}", mediaId);
-            throw;
-        }
-    }
+    public Task<bool> DeleteMediaAsync(string mediaId) =>
+        _deleteMediaUseCase.ExecuteAsync(mediaId);
 
     /// <inheritdoc />
     public async Task<MediaValidationResult> ValidateMediaReferencesAsync(List<string> mediaReferences)
@@ -372,7 +332,7 @@ public class MediaApiService : IMediaApiService
         var extension = Path.GetExtension(file.FileName).ToLower();
         var allowedExtensions = mediaType switch
         {
-            "audio" => new[] { ".mp3", ".wav", ".ogg", ".aac", ".m4a" },
+            "audio" => new[] { ".mp3", ".wav", ".ogg", ".aac", ".m4a", ".waptt" },
             "video" => new[] { ".mp4", ".avi", ".mov", ".wmv", ".mkv" },
             "image" => new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" },
             _ => new string[0]
@@ -394,14 +354,20 @@ public class MediaApiService : IMediaApiService
     {
         var extension = Path.GetExtension(fileName).ToLower();
 
-        if (new[] { ".mp3", ".wav", ".ogg", ".aac", ".m4a" }.Contains(extension))
+        if (new[] { ".mp3", ".wav", ".ogg", ".aac", ".m4a", ".waptt" }.Contains(extension))
+        {
             return "audio";
+        }
 
         if (new[] { ".mp4", ".avi", ".mov", ".wmv", ".mkv" }.Contains(extension))
+        {
             return "video";
+        }
 
         if (new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" }.Contains(extension))
+        {
             return "image";
+        }
 
         return "unknown";
     }
@@ -412,14 +378,6 @@ public class MediaApiService : IMediaApiService
         return _mimeTypeMap.TryGetValue(extension, out var mimeType) ? mimeType : "application/octet-stream";
     }
 
-    private async Task<string> CalculateFileHashAsync(IFormFile file)
-    {
-        using var stream = file.OpenReadStream();
-        using var sha256 = SHA256.Create();
-        var hashBytes = await Task.Run(() => sha256.ComputeHash(stream));
-        return Convert.ToBase64String(hashBytes);
-    }
-
     private string FormatBytes(long bytes)
     {
         const long kb = 1024;
@@ -427,13 +385,87 @@ public class MediaApiService : IMediaApiService
         const long gb = mb * 1024;
 
         if (bytes >= gb)
+        {
             return $"{bytes / (double)gb:F2} GB";
+        }
+
         if (bytes >= mb)
+        {
             return $"{bytes / (double)mb:F2} MB";
+        }
+
         if (bytes >= kb)
+        {
             return $"{bytes / (double)kb:F2} KB";
+        }
 
         return $"{bytes} bytes";
+    }
+
+    private async Task<ProcessedMediaStream> PrepareMediaStreamAsync(IFormFile file, CancellationToken cancellationToken = default)
+    {
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+
+        if (extension == ".waptt")
+        {
+            await using var sourceStream = file.OpenReadStream();
+            var conversion = await _audioTranscodingService.ConvertWhatsAppVoiceNoteAsync(sourceStream, file.FileName, cancellationToken);
+
+            if (conversion == null)
+            {
+                throw new InvalidOperationException($"Failed to convert WhatsApp audio file '{file.FileName}'. Ensure ffmpeg is available on the host.");
+            }
+
+            return new ProcessedMediaStream(conversion.Stream, conversion.FileName, conversion.ContentType, conversion);
+        }
+
+        var memoryStream = new MemoryStream();
+        await using (var sourceStream = file.OpenReadStream())
+        {
+            await sourceStream.CopyToAsync(memoryStream, cancellationToken);
+        }
+
+        memoryStream.Position = 0;
+        var contentType = !string.IsNullOrWhiteSpace(file.ContentType) ? file.ContentType : GetMimeType(file.FileName);
+        return new ProcessedMediaStream(memoryStream, file.FileName, contentType);
+    }
+
+    private static Task<string> CalculateStreamHashAsync(Stream stream)
+    {
+        if (!stream.CanSeek)
+        {
+            throw new InvalidOperationException("Stream must support seeking for hash calculation.");
+        }
+
+        stream.Position = 0;
+        using var sha256 = SHA256.Create();
+        var hashBytes = sha256.ComputeHash(stream);
+        stream.Position = 0;
+        return Task.FromResult(Convert.ToBase64String(hashBytes));
+    }
+
+    private sealed class ProcessedMediaStream : IAsyncDisposable
+    {
+        private readonly IDisposable? _additionalDisposable;
+
+        public ProcessedMediaStream(Stream stream, string fileName, string contentType, IDisposable? additionalDisposable = null)
+        {
+            Stream = stream;
+            FileName = fileName;
+            ContentType = contentType;
+            _additionalDisposable = additionalDisposable;
+        }
+
+        public Stream Stream { get; }
+        public string FileName { get; }
+        public string ContentType { get; }
+
+        public ValueTask DisposeAsync()
+        {
+            Stream.Dispose();
+            _additionalDisposable?.Dispose();
+            return ValueTask.CompletedTask;
+        }
     }
 
     /// <summary>
@@ -452,7 +484,16 @@ public class MediaApiService : IMediaApiService
         var metadataEntry = metadataFile.Entries.FirstOrDefault(e => e.Id == mediaId);
         if (metadataEntry == null)
         {
-            metadataEntry = metadataFile.Entries.FirstOrDefault(e => e.FileName == fileName);
+            metadataEntry = metadataFile.Entries.FirstOrDefault(e =>
+                string.Equals(e.FileName, fileName, StringComparison.OrdinalIgnoreCase));
+
+            if (metadataEntry == null)
+            {
+                var fileNameStem = Path.GetFileNameWithoutExtension(fileName);
+                metadataEntry = metadataFile.Entries.FirstOrDefault(e =>
+                    string.Equals(Path.GetFileNameWithoutExtension(e.FileName), fileNameStem, StringComparison.OrdinalIgnoreCase));
+            }
+
             if (metadataEntry == null)
             {
                 throw new InvalidOperationException($"No media metadata entry found for media ID '{mediaId}' or filename '{fileName}'. Please ensure the media metadata file contains an entry for this media before uploading.");
@@ -466,69 +507,17 @@ public class MediaApiService : IMediaApiService
         return mediaId;
     }
 
-    public async Task<(Stream stream, string contentType, string fileName)?> GetMediaFileAsync(string mediaId)
-    {
-        try
-        {
-            var mediaAsset = await GetMediaByIdAsync(mediaId);
-            if (mediaAsset == null)
-            {
-                return null;
-            }
-
-            // Download the file from the URL
-            using var httpClient = new HttpClient();
-            var response = await httpClient.GetAsync(mediaAsset.Url);
-            if (!response.IsSuccessStatusCode)
-            {
-                return null;
-            }
-
-            var stream = await response.Content.ReadAsStreamAsync();
-            var fileName = Path.GetFileName(new Uri(mediaAsset.Url).LocalPath);
-
-            return (stream, mediaAsset.MimeType, fileName);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting media file: {MediaId}", mediaId);
-            return null;
-        }
-    }
+    public Task<(Stream stream, string contentType, string fileName)?> GetMediaFileAsync(string mediaId) =>
+        _downloadMediaUseCase.ExecuteAsync(mediaId);
 
     /// <inheritdoc />
-    public async Task<MediaAsset?> GetMediaByFileNameAsync(string fileName)
-    {
-        try
-        {
-            // Get metadata file to resolve filename to media ID
-            var metadataFile = await _mediaMetadataService.GetMediaMetadataFileAsync();
-            if (metadataFile == null)
-            {
-                return null;
-            }
-
-            // Find metadata entry by filename
-            var metadataEntry = metadataFile.Entries.FirstOrDefault(e => e.FileName == fileName);
-            if (metadataEntry == null)
-            {
-                return null;
-            }
-
-            // Get the media asset by the resolved media ID
-            return await GetMediaByIdAsync(metadataEntry.Id);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting media by filename: {FileName}", fileName);
-            return null;
-        }
-    }
+    public Task<MediaAsset?> GetMediaByFileNameAsync(string fileName) =>
+        _getMediaByFilenameUseCase.ExecuteAsync(fileName);
 
     /// <inheritdoc />
     public async Task<string?> GetMediaUrlAsync(string fileName)
     {
-        var mediaAsset = await GetMediaByFileNameAsync(fileName);
+        var mediaAsset = await _getMediaByFilenameUseCase.ExecuteAsync(fileName);
         return mediaAsset?.Url;
     }
 

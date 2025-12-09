@@ -1,365 +1,115 @@
-@inject NavigationManager NavigationManager
 
+@inject IAuthService AuthService
+@inject ILogger<Home> Logger
 @page "/"
 @page "/home"
-@using Mystira.App.PWA.Models
-@using Mystira.App.PWA.Services
-@using Mystira.App.PWA.Components
 @implements IDisposable
 
 <PageTitle>Mystira</PageTitle>
 
-<div class="container-fluid py-4">
-    <div class="row">
-        <div class="col-12 text-center mb-4">
-            <h1 class="display-4 text-primary-custom">
-                <i class="fas fa-dragon me-3"></i>
-                Mystira <small class="text-muted" style="font-size: 0.5em; vertical-align: super;">ALPHA</small>
-            </h1>
-            <p class="lead text-muted mb-3">
-                Where imagination meets growth
-            </p>
-            <div class="row">
-                <div class="col-12 text-center mb-4">
-                    <CachedMystiraImage 
-                        MediaId="image-final-logo-fe3f75db"
-                        Alt="This is a magical picture, but it seems to be having a difficult time loading!"
-                        Width="600"
-                        Height="600" />
-                </div>
-            </div>
-            <div class="row justify-content-center">
-                <div class="col-md-8 col-lg-6">
-                    <p class="text-muted mb-4">
-                        Bring stories to life with Mystira — an interactive adventure platform that helps children, parents, and group leaders explore imagination, teamwork, and growth through guided storytelling and play.
-                    </p>
-                </div>
-            </div>
-            @if (!isAuthenticated)
-            {
-                <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
-                    <a href="/signin" class="btn btn-primary-custom btn-lg">
-                        <i class="fas fa-sign-in-alt me-2"></i>
-                        Sign In
-                    </a>
-                    <a href="/signup" class="btn btn-outline-primary btn-lg">
-                        <i class="fas fa-user-plus me-2"></i>
-                        Register
-                    </a>
-                </div>
-            }
-        </div>
-    </div>
-    
-    <!-- Age Group Filters -->
-    @if (isAuthenticated && !isLoading)
+<!-- Skip Navigation Link -->
+@if (isAuthenticated)
+{
+    <a href="#adventures" class="skip-link">Skip to adventures</a>
+}
+
+<div class="container-fluid pb-4" style="padding-top: 0; margin-top: 0;">
+    <!-- Hero Section -->
+    <HeroSection
+        ShowDescription="@(!isAuthenticated)"
+        ShowCallToActions="@(!isAuthenticated)" />
+
+    <!-- Feature Cards Section (shown when not authenticated) -->
+    @if (!isAuthenticated)
     {
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h6 class="card-title mb-3">
-                            <i class="fas fa-filter me-2"></i>Filter Adventures
-                        </h6>
-                        
-                        <!-- Show Completed Stories Toggle -->
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="showCompletedToggle" 
-                                       checked="@showCompletedStories" @onchange="ToggleCompletedStories">
-                                <label class="form-check-label" for="showCompletedToggle">
-                                    <i class="fas fa-check-circle me-1"></i>
-                                    Show Completed Stories
-                                </label>
+        <div class="row g-4 mb-5">
+            <div class="col-md-4">
+                <div class="card feature-card h-100 border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="text-center mb-3">
+                            <div class="feature-icon mb-3">
+                                <i class="fas fa-compass fa-3x text-primary-custom"></i>
                             </div>
+                            <h5 class="card-title mb-3">Interactive Adventures</h5>
+                            <p class="card-text text-muted">
+                                Dive into guided quests that adapt to every group, helping facilitators lead unforgettable storytelling sessions with ease.
+                            </p>
                         </div>
-                        
-                        <!-- Age Group Filters -->
-                        <div class="mb-2">
-                            <small class="text-muted d-block mb-2">Filter by Age Group:</small>
-                            <div class="d-flex flex-wrap gap-2">
-                                @foreach (var ageGroup in availableAgeGroups)
-                                {
-                                    var isSelected = selectedAgeGroups.Contains(ageGroup);
-                                    <button class="btn @(isSelected ? "btn-primary-custom" : "btn-outline-secondary")"
-                                            @onclick="() => ToggleAgeGroupFilter(ageGroup)">
-                                        <i class="fas fa-users me-1"></i>
-                                        Ages @ageGroup
-                                        @if (isSelected)
-                                        {
-                                            <i class="fas fa-check ms-1"></i>
-                                        }
-                                    </button>
-                                }
-                                @if (selectedAgeGroups.Any())
-                                {
-                                    <button class="btn btn-outline-danger" @onclick="ClearAllFilters">
-                                        <i class="fas fa-times me-1"></i>Clear All
-                                    </button>
-                                }
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card feature-card h-100 border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="text-center mb-3">
+                            <div class="feature-icon mb-3">
+                                <i class="fas fa-users fa-3x text-success"></i>
                             </div>
+                            <h5 class="card-title mb-3">Built for Teamwork</h5>
+                            <p class="card-text text-muted">
+                                Foster empathy, cooperation, and problem-solving with collaborative prompts that keep every child engaged.
+                            </p>
                         </div>
-                        
-                        @if (selectedAgeGroups.Any())
-                        {
-                            <div class="mt-2 text-muted small">
-                                Showing @filteredScenarios.Count of @scenarios.Count adventures
-                                @if (!showCompletedStories)
-                                {
-                                    <text> (@completedScenarioIds.Count completed hidden)</text>
-                                }
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card feature-card h-100 border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="text-center mb-3">
+                            <div class="feature-icon mb-3">
+                                <i class="fas fa-book-open fa-3x text-info"></i>
                             </div>
-                        }
+                            <h5 class="card-title mb-3">Guided Storytelling</h5>
+                            <p class="card-text text-muted">
+                                Use curated visuals, music, and facilitator tips to spark imagination anywhere—from living rooms to after-school clubs.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     }
-    
+
+    @* Adventures section composed as a standalone component *@
+    <AdventuresSection />
+
     <style>
         .dice-roller-container {
             max-width: 300px; /* Adjust this value to control the width */
             margin: 0 auto; /* This centers the container horizontally */
             padding: 15px;
-            background-color: var(--bs-body-bg, white);
+            /* Using a solid fallback to avoid unresolved custom prop errors */
+            background-color: #ffffff;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
     </style>
-    
-    @if (isLoading)
-    {
-        <div class="row justify-content-center">
-            <div class="col-auto text-center">
-                <div class="loading-spinner mb-3"></div>
-                <p class="text-muted">Loading adventures...</p>
-            </div>
-        </div>
-    }
-    else if (!isAuthenticated)
-    {
-        <div class="row g-4 justify-content-center">
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm text-center p-4">
-                    <div class="mb-3 text-primary-custom">
-                        <i class="fas fa-book-open fa-3x"></i>
-                    </div>
-                    <h4 class="mb-3">Interactive Adventures</h4>
-                    <p class="text-muted mb-0">
-                        Dive into guided quests that adapt to every group, helping facilitators lead unforgettable storytelling sessions with ease.
-                    </p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm text-center p-4">
-                    <div class="mb-3 text-success">
-                        <i class="fas fa-hands-helping fa-3x"></i>
-                    </div>
-                    <h4 class="mb-3">Built for Teamwork</h4>
-                    <p class="text-muted mb-0">
-                        Foster empathy, cooperation, and problem-solving with collaborative prompts that keep every child engaged.
-                    </p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card h-100 border-0 shadow-sm text-center p-4">
-                    <div class="mb-3 text-info">
-                        <i class="fas fa-magic fa-3x"></i>
-                    </div>
-                    <h4 class="mb-3">Guided Storytelling</h4>
-                    <p class="text-muted mb-0">
-                        Use curated visuals, music, and facilitator tips to spark imagination anywhere—from living rooms to after-school clubs.
-                    </p>
-                </div>
-            </div>
-        </div>
-    }
-    else if (filteredScenarios.Any())
-    {
-        <div class="row">
-            @foreach (var scenario in filteredScenarios)
-            {
-                var isCompleted = completedScenarioIds.Contains(scenario.Id);
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card scenario-card h-100 @(isCompleted ? "border-success" : "")">
-                        <div class="card-body d-flex flex-column">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h5 class="card-title">@scenario.Name</h5>
-                                @if (isCompleted)
-                                {
-                                    <span class="badge bg-success">
-                                        <i class="fas fa-check me-1"></i>Completed
-                                    </span>
-                                }
-                            </div>
-                            <p class="card-text flex-grow-1">@scenario.Description</p>
-                            
-                            <div class="mt-auto">
-                                <!-- Scenario Metadata -->
-                                <div class="scenario-metadata mb-3">
-                                    <!-- Group AgeGroup, Difficulty, and Session Length badges in one row -->
-                                    <div class="d-flex flex-wrap mb-2">
-                                        <span class="badge bg-info text-dark me-1 mb-1">
-                                            <i class="fas fa-users me-1"></i>Ages @scenario.AgeGroup
-                                        </span>
-                                        <span class="badge bg-warning me-1 mb-1">
-                                            <i class="fas fa-signal me-1"></i>@scenario.Difficulty
-                                        </span>
-                                        <span class="badge bg-success me-1 mb-1">
-                                            <i class="fas fa-clock me-1"></i>@scenario.SessionLength
-                                        </span>
-                                    </div>
-        
-                                    <!-- Core Axes in a separate row -->
-                                    @if (scenario.CoreAxes != null && scenario.CoreAxes.Any())
-                                    {
-                                        <div class="d-flex flex-wrap mb-2">
-                                            @foreach (var axis in scenario.CoreAxes.Take(4))
-                                            {
-                                                <span class="badge bg-primary me-1 mb-1">@axis</span>
-                                            }
-                                            @if (scenario.CoreAxes.Count > 4)
-                                            {
-                                                <span class="badge bg-primary mb-1">+@(scenario.CoreAxes.Count - 4)</span>
-                                            }
-                                        </div>
-                                    }
-        
-                                    <!-- Tags in a separate row -->
-                                    @if (scenario.Tags?.Any() == true)
-                                    {
-                                        <div class="d-flex flex-wrap">
-                                            @foreach (var tag in scenario.Tags.Take(3))
-                                            {
-                                                <span class="badge bg-secondary me-1 mb-1">@System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(tag.ToLower())</span>
-                                            }
-                                            @if (scenario.Tags.Length > 3)
-                                            {
-                                                <span class="badge bg-secondary mb-1">+@(scenario.Tags.Length - 3)</span>
-                                            }
-                                        </div>
-                                    }
-                                </div>
-                                
-                                <button class="btn btn-primary-custom btn-lg w-100" 
-                                        @onclick="() => StartAdventure(scenario)"
-                                        disabled="@isStartingAdventure">
-                                    @if (isStartingAdventure)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                        <span>Starting...</span>
-                                    }
-                                    else
-                                    {
-                                        <i class="fas fa-play me-2"></i>
-                                        <span>Start Adventure</span>
-                                    }
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            }
-        </div>
-    }
-    else
-    {
-        <div class="row justify-content-center">
-            <div class="col-md-6 text-center">
-                <div class="card border-0 shadow">
-                    <div class="card-body p-5">
-                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-                        <h3>No Adventures Available</h3>
-                        <p class="text-muted mb-4">
-                            We couldn't load any adventures right now. This might be due to a connection issue.
-                        </p>
-                        <button class="btn btn-primary-custom" @onclick="LoadScenarios">
-                            <i class="fas fa-refresh me-2"></i>
-                            Try Again
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-</div>
+
+</div> @* close container-fluid *@
 
 @code {
-    [Inject] private IAuthService AuthService { get; set; } = default!;
-    [Inject] private IApiClient ApiClient { get; set; } = default!;
-    [Inject] private IGameSessionService GameSessionService { get; set; } = default!;
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
-    [Inject] private ILogger<Home> Logger { get; set; } = default!;
-
-    private List<Scenario> scenarios = new();
-    private List<Scenario> filteredScenarios = new();
-    private bool isLoading = true;
-    private bool isStartingAdventure = false;
     private bool isAuthenticated = false;
-    private bool showCompletedStories = true;
-    private HashSet<string> completedScenarioIds = new();
-    private bool isLoadingGameState = false;
-    private bool gameStateLoadingComplete = false;
-    
-    // Age group filter state
-    private readonly HashSet<string> selectedAgeGroups = new();
-    private readonly string[] availableAgeGroups = { "1-2", "3-5", "6-9", "10-12", "13-18", "19+" };
 
     protected override async Task OnInitializedAsync()
     {
-        try 
+        try
         {
             Logger.LogInformation("Home component initializing...");
-            
-            // Subscribe to authentication state changes
             AuthService.AuthenticationStateChanged += OnAuthenticationStateChanged;
-            
-            // Check current authentication status
             isAuthenticated = await AuthService.IsAuthenticatedAsync();
-            
-            Logger.LogInformation("Auth service initialized. IsAuthenticated: {IsAuthenticated}", isAuthenticated);
-            
-            // Load scenarios only if authenticated
-            if (isAuthenticated) 
-            {
-                await LoadScenarios();
-                // Start loading game state in background
-                _ = LoadGameStateAsync();
-            }
-            else 
-            {
-                isLoading = false;
-                StateHasChanged();
-            }
+            Logger.LogInformation("Auth initialized. IsAuthenticated: {IsAuthenticated}", isAuthenticated);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error during component initialization");
-            isLoading = false;
-            StateHasChanged();
+            Logger.LogError(ex, "Error during Home initialization");
         }
     }
 
     private void OnAuthenticationStateChanged(object? sender, bool authenticated)
     {
         isAuthenticated = authenticated;
-        InvokeAsync(async () => 
-        {
-            if (authenticated)
-            {
-                await LoadScenarios();
-                _ = LoadGameStateAsync();
-            }
-            else 
-            {
-                scenarios.Clear();
-                filteredScenarios.Clear();
-                selectedAgeGroups.Clear();
-                completedScenarioIds.Clear();
-                gameStateLoadingComplete = false;
-            }
-            StateHasChanged();
-        });
+        InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
@@ -368,199 +118,5 @@
         {
             AuthService.AuthenticationStateChanged -= OnAuthenticationStateChanged;
         }
-    }
-
-    private async Task LoadScenarios()
-    {
-        try
-        {
-            isLoading = true;
-            StateHasChanged();
-            
-            Logger.LogInformation("Loading scenarios...");
-            scenarios = await ApiClient.GetScenariosAsync();
-            Logger.LogInformation("Loaded {Count} scenarios", scenarios.Count);
-            
-            // Apply filters after loading scenarios
-            ApplyFilters();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error loading scenarios");
-        }
-        finally
-        {
-            isLoading = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task LoadGameStateAsync()
-    {
-        try
-        {
-            isLoadingGameState = true;
-            StateHasChanged();
-            
-            Logger.LogInformation("Loading game state for scenarios...");
-            
-            var account = await AuthService.GetCurrentAccountAsync();
-            if (account == null)
-            {
-                Logger.LogWarning("No account found for loading game state");
-                gameStateLoadingComplete = true;
-                isLoadingGameState = false;
-                StateHasChanged();
-                return;
-            }
-
-            var gameStateResponse = await ApiClient.GetScenariosWithGameStateAsync(account.Id);
-            if (gameStateResponse != null)
-            {
-                completedScenarioIds = gameStateResponse.Scenarios
-                    .Where(s => s.GameState == ScenarioGameState.Completed)
-                    .Select(s => s.ScenarioId)
-                    .ToHashSet();
-                
-                Logger.LogInformation("Loaded game state for {Count} scenarios, {CompletedCount} completed", 
-                    gameStateResponse.TotalCount, completedScenarioIds.Count);
-            }
-            
-            gameStateLoadingComplete = true;
-            
-            // Apply filters once game state is loaded
-            ApplyFilters();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error loading game state");
-            gameStateLoadingComplete = true;
-        }
-        finally
-        {
-            isLoadingGameState = false;
-            StateHasChanged();
-        }
-    }
-
-    private async void ToggleCompletedStories(ChangeEventArgs e)
-    {
-        showCompletedStories = (bool)e.Value!;
-        
-        // Wait for game state to load if it hasn't finished yet
-        if (isLoadingGameState && !gameStateLoadingComplete)
-        {
-            Logger.LogInformation("Game state loading in progress, waiting for completion...");
-            await Task.Run(async () =>
-            {
-                var timeout = DateTime.UtcNow.AddSeconds(5);
-                while (isLoadingGameState && !gameStateLoadingComplete && DateTime.UtcNow < timeout)
-                {
-                    await Task.Delay(100);
-                }
-            });
-        }
-        
-        ApplyFilters();
-        StateHasChanged();
-    }
-
-    private async Task StartAdventure(Scenario scenario)
-    {
-        try
-        {
-            isStartingAdventure = true;
-            StateHasChanged();
-            
-            Logger.LogInformation("Starting adventure: {ScenarioName}", scenario.Name);
-            
-            // Clear any existing game session
-            GameSessionService.ClearGameSession();
-            
-            // Check if we should skip character assignment for young age groups
-            if (scenario.AgeGroup == "1-2")
-            {
-                Logger.LogInformation("Skipping character assignment for age group {AgeGroup}, starting game directly", scenario.AgeGroup);
-                
-                // Get the full scenario with scenes
-                var fullScenario = await ApiClient.GetScenarioAsync(scenario.Id);
-                if (fullScenario == null)
-                {
-                    Logger.LogError("Failed to load full scenario details for: {ScenarioName}", scenario.Name);
-                    return;
-                }
-                
-                // Start game session directly without character assignment
-                var success = await GameSessionService.StartGameSessionAsync(fullScenario);
-                if (success)
-                {
-                    Navigation.NavigateTo("/game");
-                }
-                else
-                {
-                    Logger.LogError("Failed to start game session directly for scenario: {ScenarioName}", scenario.Name);
-                }
-            }
-            else
-            {
-                // Navigate to character assignment page
-                Logger.LogInformation("Navigating to character assignment for scenario: {ScenarioId}", scenario.Id);
-                await Task.CompletedTask;
-                Navigation.NavigateTo($"/character-assignment/{scenario.Id}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error starting adventure: {ScenarioName}", scenario.Name);
-        }
-        finally
-        {
-            isStartingAdventure = false;
-            StateHasChanged();
-        }
-    }
-
-    private void ToggleAgeGroupFilter(string ageGroup)
-    {
-        if (selectedAgeGroups.Contains(ageGroup))
-        {
-            selectedAgeGroups.Remove(ageGroup);
-        }
-        else
-        {
-            selectedAgeGroups.Add(ageGroup);
-        }
-        
-        ApplyFilters();
-        StateHasChanged();
-    }
-
-    private void ClearAllFilters()
-    {
-        selectedAgeGroups.Clear();
-        ApplyFilters();
-        StateHasChanged();
-    }
-
-    private void ApplyFilters()
-    {
-        var filtered = scenarios.AsEnumerable();
-        
-        // Apply age group filter
-        if (selectedAgeGroups.Any())
-        {
-            filtered = filtered.Where(s => selectedAgeGroups.Contains(s.AgeGroup));
-        }
-        
-        // Apply completed stories filter
-        if (!showCompletedStories)
-        {
-            filtered = filtered.Where(s => !completedScenarioIds.Contains(s.Id));
-        }
-        
-        filteredScenarios = filtered.ToList();
-        
-        Logger.LogInformation("Applied filters. Age groups: [{SelectedFilters}], Show completed: {ShowCompleted}, Showing {Count} of {Total} scenarios", 
-            string.Join(", ", selectedAgeGroups), showCompletedStories, filteredScenarios.Count, scenarios.Count);
     }
 }

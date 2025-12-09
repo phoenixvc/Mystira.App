@@ -1,251 +1,500 @@
 # Mystira.App Admin API
 
-Administrative API for content management and system administration.
+Administrative API adapter for content management and system administration. This project serves as a **primary adapter** in the hexagonal architecture, providing admin-specific HTTP endpoints separate from the client-facing API.
 
-## Overview
+## ✅ Hexagonal Architecture - FULLY COMPLIANT
 
-The Mystira.App Admin API provides backend services for administrative and content management operations, separate from the client-facing API. This separation ensures better security, scalability, and maintainability.
+**Layer**: **Presentation - Admin REST API Adapter (Primary/Driver)**
 
-**Key Features:**
-- **Content Management**: Create, update, and delete scenarios, media, and characters
-- **Admin Dashboard**: Web-based UI for system administration
-- **Media Upload**: Bulk upload and management of multimedia assets
-- **System Configuration**: Badge configurations, character maps, and app status
-- **Data Import/Export**: YAML-based import/export for content management
+The Mystira.App.Admin.Api layer is a **primary adapter** (driver adapter) that:
+- **Receives** HTTP requests from admin clients (web dashboard, admin tools)
+- **Translates** HTTP requests into application use case calls
+- **Delegates** all business logic to Application use cases
+- **Returns** HTTP responses with appropriate status codes
+- **Provides** admin-specific UI views (MVC)
+- **Contains** ZERO business logic (thin controllers)
 
-## Architecture
+**Dependency Flow** (Correct ✅):
+```
+Admin Clients (Dashboard, Tools)
+    ↓ HTTP requests
+Admin API Controllers (THIS - Primary Adapter)
+    ↓ invokes
+Application Use Cases
+    ↓ uses
+Application.Ports (Interfaces)
+    ↑ implemented by (DI at runtime)
+Infrastructure Implementations
+```
 
-- **.NET 9.0 Web API** with Azure App Service deployment
-- **Shared Azure Cosmos DB** with client API for data persistence
-- **Azure Blob Storage** for multimedia assets
-- **JWT Authentication** for admin access
-- **RESTful API Design** with OpenAPI/Swagger documentation
-- **MVC Views** for admin dashboard UI
-- **Port 7001** for local development (client API uses 7000)
+**Key Principles**:
+- ✅ **Thin Controllers** - Only HTTP concerns, zero business logic
+- ✅ **Use Case Orchestration** - Delegates to Application layer
+- ✅ **Dependency Injection** - Wires Infrastructure implementations
+- ✅ **Clean Architecture** - No direct Infrastructure references in controllers
+- ✅ **Composition Root** - Program.cs is the only place that knows about Infrastructure
+- ✅ **Separation from Client API** - Independent deployment and scaling
 
 ## Separation from Client API
 
-This Admin API is separate from the client-facing API (`Mystira.App.Api`) to:
-- **Enhance Security**: Admin operations isolated from public endpoints
-- **Independent Scaling**: Admin and client can scale separately
-- **Better Maintainability**: Clear separation of concerns
-- **Flexible Deployment**: Can deploy to different infrastructure
+This Admin API is **separate** from the client-facing API (`Mystira.App.Api`) to:
+- ✅ **Enhanced Security** - Admin operations isolated from public endpoints
+- ✅ **Independent Scaling** - Admin and client can scale separately
+- ✅ **Better Maintainability** - Clear separation of concerns
+- ✅ **Flexible Deployment** - Can deploy to different infrastructure
+- ✅ **Shared Database** - Both APIs use same Cosmos DB (different concerns, same data)
 
 See [Admin API Separation](../../docs/features/ADMIN_API_SEPARATION.md) for architectural details.
 
-## Prerequisites
+## Project Structure
 
-- .NET 9.0 SDK
-- Azure subscription (for cloud deployment)
-- Visual Studio 2022 or VS Code
+```
+Mystira.App.Admin.Api/
+├── Controllers/
+│   ├── AdminController.cs              # Admin dashboard endpoints
+│   ├── ScenariosAdminController.cs     # Scenario admin operations
+│   ├── MediaAdminController.cs         # Media admin operations
+│   └── SystemAdminController.cs        # System configuration
+├── Views/
+│   └── Admin/                          # MVC views for dashboard
+├── Services/
+│   ├── IYamlImportService.cs           # Thin service interfaces
+│   └── YamlImportService.cs            # Delegates to use cases
+├── Program.cs                          # DI composition root
+└── appsettings.json                    # Configuration
+```
 
-## Getting Started
+**What Admin Controllers Do** (Thin Layer ✅):
+- Accept HTTP requests
+- Validate model binding
+- Call Application use cases
+- Return HTTP status codes
+- Render admin UI views
+- Handle exceptions → HTTP errors
 
-### Local Development
+**What Admin Controllers Do NOT Do** (Zero Business Logic ✅):
+- ❌ Business validation (Application does that)
+- ❌ Database access (Infrastructure.Data does that)
+- ❌ Complex orchestration (Use cases do that)
+- ❌ YAML parsing logic (Use cases/parsers do that)
 
-1. **Navigate to Admin API directory**
-   ```bash
-   cd src/Mystira.App.Admin.Api
-   ```
+## Example: Thin Admin Controller
 
-2. **Restore dependencies**
-   ```bash
-   dotnet restore
-   ```
+### Media Admin Controller (Primary Adapter)
 
-3. **Configure settings**
-   Update `appsettings.Development.json` with your Azure connection strings:
-   ```json
-   {
-     "ConnectionStrings": {
-       "CosmosDb": "your-cosmos-db-connection-string",
-       "AzureStorage": "your-azure-storage-connection-string"
-     },
-     "Jwt": {
-       "Key": "your-jwt-secret-key"
-     }
-   }
-   ```
-   
-   **Note**: Use the same connection strings as the client API since they share the database.
+```csharp
+// Location: Admin.Api/Controllers/MediaAdminController.cs
+using Mystira.App.Application.UseCases.Media;  // Use cases ✅
+using Mystira.App.Contracts.Requests.Media;
 
-4. **Run the application**
-   ```bash
-   dotnet run
-   ```
+[Authorize(Roles = "Admin")]
+[ApiController]
+[Route("admin/api/[controller]")]
+public class MediaAdminController : ControllerBase
+{
+    private readonly UploadMediaUseCase _uploadMediaUseCase;
+    private readonly DeleteMediaUseCase _deleteMediaUseCase;
+    private readonly GetMediaMetadataUseCase _getMediaMetadataUseCase;
+    private readonly ILogger<MediaAdminController> _logger;
 
-5. **Access Admin Dashboard**
-   Navigate to `https://localhost:7001/admin` or `http://localhost:7001/admin`
+    public MediaAdminController(
+        UploadMediaUseCase uploadMediaUseCase,      // Use case ✅
+        DeleteMediaUseCase deleteMediaUseCase,       // Use case ✅
+        GetMediaMetadataUseCase getMediaMetadataUseCase,
+        ILogger<MediaAdminController> logger)
+    {
+        _uploadMediaUseCase = uploadMediaUseCase;
+        _deleteMediaUseCase = deleteMediaUseCase;
+        _getMediaMetadataUseCase = getMediaMetadataUseCase;
+        _logger = logger;
+    }
 
-### Docker Deployment
+    [HttpPost("upload")]
+    public async Task<IActionResult> UploadMedia(IFormFile file)
+    {
+        try
+        {
+            // Validate HTTP input ✅
+            if (file == null || file.Length == 0)
+                return BadRequest("No file provided");
 
-1. **Build Docker image**
-   ```bash
-   docker build -t mystira-app-api .
-   ```
+            // Delegate to use case ✅
+            using var stream = file.OpenReadStream();
+            var mediaAsset = await _uploadMediaUseCase.ExecuteAsync(
+                stream,
+                file.FileName,
+                file.ContentType);
 
-2. **Run container**
-   ```bash
-   docker run -p 8080:80 -e ConnectionStrings__CosmosDb="your-connection-string" mystira-app-api
-   ```
+            // Return HTTP response ✅
+            return Ok(new {
+                id = mediaAsset.Id,
+                url = mediaAsset.Url
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error uploading media");
+            return StatusCode(500, "Upload failed");
+        }
+    }
+
+    [HttpDelete("{blobName}")]
+    public async Task<IActionResult> DeleteMedia(string blobName)
+    {
+        try
+        {
+            // Thin delegation ✅
+            await _deleteMediaUseCase.ExecuteAsync(blobName);
+            return NoContent();
+        }
+        catch (NotFoundException)
+        {
+            return NotFound();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting media {BlobName}", blobName);
+            return StatusCode(500, "Delete failed");
+        }
+    }
+}
+```
+
+## Admin Dashboard (MVC Views)
+
+Admin API also provides web UI for administration:
+
+```csharp
+// Location: Admin.Api/Controllers/AdminController.cs
+[Authorize(Roles = "Admin")]
+public class AdminController : Controller
+{
+    private readonly GetAllScenariosUseCase _getAllScenariosUseCase;
+
+    public AdminController(GetAllScenariosUseCase getAllScenariosUseCase)
+    {
+        _getAllScenariosUseCase = getAllScenariosUseCase;
+    }
+
+    [HttpGet]
+    public IActionResult Index()
+    {
+        return View();  // Renders admin dashboard
+    }
+
+    [HttpGet("scenarios")]
+    public async Task<IActionResult> Scenarios()
+    {
+        // Delegate to use case ✅
+        var scenarios = await _getAllScenariosUseCase.ExecuteAsync();
+        return View(scenarios);  // Renders scenario management page
+    }
+}
+```
+
+## YAML Import Service
+
+Admin API includes YAML import for bulk content management:
+
+```csharp
+// Location: Admin.Api/Services/YamlImportService.cs
+using Mystira.App.Application.UseCases.Scenarios;  // Use cases ✅
+using Mystira.App.Application.Parsers;              // Parsers ✅
+
+public class YamlImportService : IYamlImportService
+{
+    private readonly IYamlParser _yamlParser;
+    private readonly CreateScenarioUseCase _createScenarioUseCase;
+    private readonly ILogger<YamlImportService> _logger;
+
+    public async Task<ImportResult> ImportScenariosAsync(Stream yamlStream)
+    {
+        // Parse YAML (parser handles this) ✅
+        var scenarios = await _yamlParser.ParseScenariosAsync(yamlStream);
+
+        var result = new ImportResult();
+
+        foreach (var scenario in scenarios)
+        {
+            try
+            {
+                // Delegate to use case ✅
+                await _createScenarioUseCase.ExecuteAsync(scenario);
+                result.SuccessCount++;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to import scenario {Title}", scenario.Title);
+                result.Failures.Add(scenario.Title);
+            }
+        }
+
+        return result;
+    }
+}
+```
+
+**Service Responsibilities**:
+- Coordinate YAML parsing and use case invocation
+- Handle bulk operations
+- Still ZERO business logic (delegation only)
+
+## Dependency Injection (Composition Root)
+
+Like the main API, `Program.cs` is the **only** file that knows about Infrastructure:
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+// Register use cases (from Application)
+builder.Services.AddScoped<UploadMediaUseCase>();
+builder.Services.AddScoped<DeleteMediaUseCase>();
+builder.Services.AddScoped<CreateScenarioUseCase>();
+builder.Services.AddScoped<GetAllScenariosUseCase>();
+// ... more use cases
+
+// Register parsers (from Application)
+builder.Services.AddScoped<IYamlParser, YamlParser>();
+
+// Wire port interfaces to Infrastructure implementations
+builder.Services.AddScoped<IScenarioRepository, ScenarioRepository>();
+builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IBlobService, AzureBlobService>();
+
+// Register admin services
+builder.Services.AddScoped<IYamlImportService, YamlImportService>();
+
+// Shared DbContext with client API
+builder.Services.AddDbContext<MystiraAppDbContext>(options =>
+    options.UseCosmos(
+        builder.Configuration.GetConnectionString("CosmosDb"),
+        databaseName: "MystiraAppDb"));  // Same DB as client API ✅
+
+var app = builder.Build();
+app.Run();
+```
 
 ## API Endpoints
 
 ### Admin Dashboard (UI)
 - `GET /admin` - Main dashboard
 - `GET /admin/login` - Login page
-- `GET /admin/scenarios` - Scenario management page
-- `GET /admin/media` - Media management page
-- `GET /admin/media-metadata` - Media metadata management
-- `GET /admin/charactermaps` - Character maps management
-- `GET /admin/status` - App status management
-- `POST /admin/status` - Update app status
+- `GET /admin/scenarios` - Scenario management
+- `GET /admin/media` - Media management
+- `GET /admin/charactermaps` - Character maps
 
-### Scenario Management (API)
-- `POST /api/admin/scenariosadmin` - Create scenario
-- `PUT /api/admin/scenariosadmin/{id}` - Update scenario
-- `DELETE /api/admin/scenariosadmin/{id}` - Delete scenario
-- `POST /api/admin/scenariosadmin/validate` - Validate scenario
-- `GET /api/admin/scenariosadmin/{id}` - Get scenario details
+### Scenario Admin
+- `GET /admin/api/scenarios` - List all scenarios
+- `POST /admin/api/scenarios` - Create scenario
+- `PUT /admin/api/scenarios/{id}` - Update scenario
+- `DELETE /admin/api/scenarios/{id}` - Delete scenario
+- `POST /admin/api/scenarios/import` - Bulk import from YAML
 
-### Media Management (API)
-- `POST /api/admin/mediaadmin/upload` - Upload single media file
-- `POST /api/admin/mediaadmin/bulk-upload` - Bulk upload media
-- `PUT /api/admin/mediaadmin/{mediaId}` - Update media asset
-- `DELETE /api/admin/mediaadmin/{mediaId}` - Delete media asset
-- `POST /api/admin/mediaadmin/validate` - Validate media references
-- `GET /api/admin/mediaadmin/statistics` - Get usage statistics
+### Media Admin
+- `POST /admin/api/media/upload` - Upload media file
+- `DELETE /admin/api/media/{blobName}` - Delete media
+- `GET /admin/api/media` - List all media
+- `POST /admin/api/media/bulk-upload` - Bulk media upload
 
-### Character Management (API)
-- `POST /api/admin/characteradmin` - Add character
-- `PUT /api/admin/characteradmin/{id}` - Update character
-- `DELETE /api/admin/characteradmin/{id}` - Delete character
-
-### Character Map Management (API)
-- `POST /api/admin/charactermapsadmin` - Create character map
-- `PUT /api/admin/charactermapsadmin/{id}` - Update character map
-- `DELETE /api/admin/charactermapsadmin/{id}` - Delete character map
-- `POST /api/admin/charactermapsadmin/import` - Import from YAML
-- `GET /api/admin/charactermapsadmin/export` - Export to YAML
-
-### Badge Configuration (API)
-- `POST /api/badgeconfigurationsadmin` - Create badge configuration
-- `PUT /api/badgeconfigurationsadmin/{id}` - Update badge configuration
-- `DELETE /api/badgeconfigurationsadmin/{id}` - Delete badge configuration
-- `POST /api/badgeconfigurationsadmin/import` - Import from YAML
-- `GET /api/badgeconfigurationsadmin/export` - Export to YAML
-
-## Authentication
-
-The Admin API uses JWT Bearer token authentication for admin access. Include the token in the Authorization header:
-
-```
-Authorization: Bearer <your-jwt-token>
-```
-
-Admin authentication is required for all content management operations.
-
-## Running with Client API
-
-For full functionality, run both APIs simultaneously:
-
-```bash
-# Terminal 1 - Client API (port 7000)
-cd src/Mystira.App.Api
-dotnet run
-
-# Terminal 2 - Admin API (port 7001)
-cd src/Mystira.App.Admin.Api
-dotnet run
-```
-
-Both APIs connect to the same database, so changes in the Admin API are immediately available in the Client API.
-
-## Data Models
-
-### Admin-Managed Entities
-
-- **Scenario** - Interactive story definitions with scenes and choices
-- **MediaAsset** - Multimedia files stored in Azure Blob Storage
-- **Character** - Character definitions for scenarios
-- **CharacterMap** - Mappings of characters to media assets
-- **BadgeConfiguration** - Achievement badge definitions
-
-All models are shared with the Client API through the Domain project.
-
-## Azure Deployment
-
-### Infrastructure
-
-The Admin API should be deployed separately from the Client API:
-
-- **Client API**: `mystiraapp.azurewebsites.net`
-- **Admin API**: `admin-mystiraapp.azurewebsites.net` or subdomain
-
-Both connect to the same Cosmos DB database and Azure Blob Storage.
-
-### CI/CD Pipeline
-
-Configure GitHub Actions workflow to deploy Admin API to its own App Service:
-
-```yaml
-- name: Deploy Admin API
-  uses: azure/webapps-deploy@v2
-  with:
-    app-name: 'mystira-admin-api'
-    package: './admin-api-package'
-```
+### System Admin
+- `GET /admin/api/system/status` - System health status
+- `POST /admin/api/system/badge-config` - Configure badges
+- `GET /admin/api/system/stats` - System statistics
 
 ## Configuration
 
-### Environment Variables
+### appsettings.json
 
-- `ASPNETCORE_ENVIRONMENT` - Environment name (Development, Staging, Production)
-- `ConnectionStrings__CosmosDb` - Cosmos DB connection string (shared with Client API)
-- `ConnectionStrings__AzureStorage` - Azure Storage connection string (shared with Client API)
-- `Jwt__Key` - JWT signing key (must match Client API)
-- `Jwt__Issuer` - JWT issuer claim
-- `Jwt__Audience` - JWT audience claim
+```json
+{
+  "ConnectionStrings": {
+    "CosmosDb": "AccountEndpoint=https://...;AccountKey=...;",
+    "AzureStorage": "DefaultEndpointsProtocol=https;AccountName=..."
+  },
+  "Jwt": {
+    "Key": "your-secret-key-here",
+    "Issuer": "https://mystira.app",
+    "Audience": "https://mystira.app"
+  },
+  "AdminSettings": {
+    "RequireHttps": true,
+    "AllowedOrigins": ["https://admin.mystira.app"]
+  }
+}
+```
 
-**Important**: Use the same database and storage credentials as the Client API.
+**Note**: Use the **same connection strings** as the client API since they share the database.
 
-## CORS Configuration
+## Authentication & Authorization
 
-The Admin API has a separate CORS policy (`MystiraAdminPolicy`) that allows:
-- `http://localhost:7001`
-- `https://localhost:7001`
-- `https://admin.mystiraapp.azurewebsites.net`
-- `https://admin.mystira.app`
+### Admin-Only Access
 
-## Security
+```csharp
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+        };
+    });
 
-- **HTTPS Only** - All endpoints require HTTPS in production
-- **JWT Authentication** - Admin-only access with token validation
-- **CORS Configuration** - Restricted to admin domains only
-- **Input Validation** - Comprehensive validation on all endpoints
-- **Isolated from Client API** - Enhanced security through separation
-- **Data Encryption** - All data encrypted in transit and at rest
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy =>
+        policy.RequireRole("Admin"));
+});
+```
 
-## Development Guidelines
+All admin controllers require `[Authorize(Roles = "Admin")]`.
 
-### Code Structure
-- **Controllers** - Admin API endpoints and dashboard views
-- **Services** - Business logic for content management
-- **Models** - Request/response DTOs and view models
-- **Views** - Razor views for admin dashboard UI
+## Deployment
 
-### Admin Dashboard Features
-- Scenario creation and editing
-- Media upload and management
-- Character map configuration
-- Badge configuration
-- System status monitoring
+### Local Development
+
+```bash
+dotnet restore
+dotnet run
+```
+
+Admin dashboard: `https://localhost:7001/admin`
+
+**Port**: 7001 (Client API uses 7000)
+
+### Docker
+
+```bash
+docker build -t mystira-admin-api .
+docker run -p 8081:80 mystira-admin-api
+```
+
+### Azure App Service
+
+```bash
+az webapp up \
+  --name mystira-admin-api \
+  --resource-group mystira-rg \
+  --runtime "DOTNETCORE:9.0"
+```
+
+Deploy to **separate App Service** from client API for better security and scaling.
+
+## Security Considerations
+
+### Admin API Isolation
+
+- ✅ **Separate deployment** - Not exposed to public internet directly
+- ✅ **Role-based auth** - Only admin users can access
+- ✅ **HTTPS only** - Enforce secure connections
+- ✅ **IP restrictions** - Limit access to known IPs (Azure App Service)
+- ✅ **Audit logging** - Track all admin operations
+
+### Shared Database Access
+
+- ✅ **Same Cosmos DB** - Shared with client API
+- ✅ **Same entities** - No data duplication
+- ✅ **Different concerns** - Admin writes, client reads
+- ✅ **Cosmos DB partition strategy** - Optimized for both access patterns
+
+## Architectural Compliance Verification
+
+Verify the Admin API layer follows hexagonal architecture:
+
+```bash
+# Check controllers only reference Application (use cases)
+grep -r "using Mystira.App.Infrastructure" Controllers/
+# Expected: (no output - controllers don't reference Infrastructure)
+
+# Check Program.cs is the only file with Infrastructure references
+find . -name "*.cs" -exec grep -l "Infrastructure\.(Data|Azure)" {} \; | grep -v Program.cs
+# Expected: (no output - only Program.cs knows about Infrastructure)
+
+# Check controllers are thin (delegate to use cases)
+grep -r "new DbContext\|SaveChangesAsync\|BlobClient" Controllers/
+# Expected: (no output - controllers don't do data access)
+```
+
+**Results**:
+- ✅ Controllers reference Application.UseCases, not Infrastructure
+- ✅ Program.cs is the only composition root
+- ✅ Controllers are thin (no business logic)
+- ✅ Full hexagonal architecture compliance
+
+## Testing
+
+### Admin Controller Testing
+
+```csharp
+[Fact]
+public async Task UploadMedia_WithValidFile_ReturnsOk()
+{
+    // Arrange
+    var mockUseCase = new Mock<UploadMediaUseCase>();
+    var mockFile = new Mock<IFormFile>();
+
+    mockFile.Setup(f => f.FileName).Returns("test.mp3");
+    mockFile.Setup(f => f.ContentType).Returns("audio/mpeg");
+    mockFile.Setup(f => f.Length).Returns(1024);
+    mockFile.Setup(f => f.OpenReadStream()).Returns(new MemoryStream());
+
+    mockUseCase
+        .Setup(u => u.ExecuteAsync(It.IsAny<Stream>(), "test.mp3", "audio/mpeg"))
+        .ReturnsAsync(new MediaAsset { Id = "test-123", Url = "https://..." });
+
+    var controller = new MediaAdminController(
+        mockUseCase.Object,
+        Mock.Of<DeleteMediaUseCase>(),
+        Mock.Of<GetMediaMetadataUseCase>(),
+        mockLogger.Object);
+
+    // Act
+    var result = await controller.UploadMedia(mockFile.Object);
+
+    // Assert
+    var okResult = Assert.IsType<OkObjectResult>(result);
+    Assert.NotNull(okResult.Value);
+}
+```
 
 ## Related Documentation
 
-- **[Admin API Separation](../../docs/features/ADMIN_API_SEPARATION.md)** - Architecture details
-- **[Client API README](../Mystira.App.Api/README.md)** - Client API documentation
-- **[Main README](../../README.md)** - Project overview
+- **[Application](../Mystira.App.Application/README.md)** - Use cases invoked by this API
+- **[API](../Mystira.App.Api/README.md)** - Client-facing API (same pattern)
+- **[Infrastructure.Data](../Mystira.App.Infrastructure.Data/README.md)** - Shared data layer
+- **[Infrastructure.Azure](../Mystira.App.Infrastructure.Azure/README.md)** - Shared Azure services
+- **[Admin API Separation](../../docs/features/ADMIN_API_SEPARATION.md)** - Architectural details
+
+## Summary
+
+**What This Layer Does**:
+- ✅ Receives HTTP requests from admin clients
+- ✅ Translates requests into use case invocations
+- ✅ Provides admin dashboard UI (MVC views)
+- ✅ Returns HTTP responses with proper status codes
+- ✅ Wires Infrastructure implementations via DI
+- ✅ Deployed separately from client API
+
+**What This Layer Does NOT Do**:
+- ❌ Contain business logic (Application/Domain does that)
+- ❌ Access databases directly (Infrastructure.Data does that)
+- ❌ Access cloud storage directly (Infrastructure.Azure does that)
+- ❌ Perform validations (Application/Domain does that)
+
+**Key Success Metrics**:
+- ✅ **Thin controllers** - Zero business logic, only HTTP concerns
+- ✅ **Use case delegation** - All logic in Application layer
+- ✅ **Composition root** - Only Program.cs knows Infrastructure
+- ✅ **Testability** - Mock use cases, not infrastructure
+- ✅ **Security isolation** - Separate from client API
+- ✅ **Shared data** - Same database, different access patterns
 
 ## License
 

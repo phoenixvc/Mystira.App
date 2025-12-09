@@ -1,4 +1,5 @@
 using Mystira.App.Admin.Api.Models;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Admin.Api.Services;
 

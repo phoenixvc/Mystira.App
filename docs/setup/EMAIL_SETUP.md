@@ -4,6 +4,49 @@
 
 This guide covers the complete setup and configuration of passwordless email authentication for Mystira using Azure Communication Services (ACS).
 
+## Required Configuration Summary
+
+| Setting | Config Key | Description | Required |
+|---------|------------|-------------|----------|
+| **ACS Connection String** | `AzureCommunicationServices:ConnectionString` | Azure Communication Services connection string | For email sending |
+| **Sender Email** | `AzureCommunicationServices:SenderEmail` | Verified email address in ACS | For email sending |
+
+### Environment Variables (for Azure App Service)
+
+```bash
+# Azure Communication Services
+AzureCommunicationServices__ConnectionString="endpoint=https://YOUR_ACS.communication.azure.com/;accesskey=YOUR_ACCESS_KEY"
+AzureCommunicationServices__SenderEmail="DoNotReply@YOUR_DOMAIN.azurecomm.net"
+```
+
+### User Secrets (for local development)
+
+```bash
+cd src/Mystira.App.Api
+dotnet user-secrets set "AzureCommunicationServices:ConnectionString" "endpoint=https://YOUR_ACS.communication.azure.com/;accesskey=YOUR_ACCESS_KEY"
+dotnet user-secrets set "AzureCommunicationServices:SenderEmail" "DoNotReply@YOUR_DOMAIN.azurecomm.net"
+```
+
+### Logging Configuration
+
+Logging is already configured in `appsettings.json`. The email service logs:
+- **Information**: Successful email sends, initialization status
+- **Warning**: When ACS is not configured (dev mode)
+- **Error**: Failed email sends with error codes and details
+- **Debug**: Detailed email sending parameters
+
+To enable debug logging for email:
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Mystira.App.Infrastructure.Azure.Services.AzureEmailService": "Debug"
+    }
+  }
+}
+```
+
 ## Quick Start
 
 ### Development Mode (No Azure Required)
@@ -59,19 +102,20 @@ Follow the [Azure Communication Services Setup](#azure-communication-services-se
 
 ### Components
 
-1. **IEmailService Interface** (`src/Mystira.App.Api/Services/IEmailService.cs`)
-   - Abstraction for email sending
-   - Allows alternative implementations
+1. **IEmailService Interface** (`src/Mystira.App.Application/Ports/Auth/IEmailService.cs`)
+   - Application layer port (abstraction) for email sending
+   - Defines the contract for email service implementations
 
-2. **AzureEmailService** (`src/Mystira.App.Api/Services/AzureEmailService.cs`)
-   - Azure Communication Services implementation
+2. **AzureEmailService** (`src/Mystira.App.Infrastructure.Azure/Services/AzureEmailService.cs`)
+   - Infrastructure layer implementation using Azure Communication Services
    - HTML email template generation
+   - Comprehensive logging with operation IDs
    - Graceful degradation when not configured
 
-3. **PasswordlessAuthService** (`src/Mystira.App.Api/Services/PasswordlessAuthService.cs`)
-   - Integrates email service
-   - Generates verification codes
-   - Manages pending signups
+3. **CQRS Command Handlers** (`src/Mystira.App.Application/CQRS/Auth/Commands/`)
+   - `RequestPasswordlessSignupCommandHandler` - Handles signup flow
+   - `RequestPasswordlessSigninCommandHandler` - Handles signin flow
+   - Both use `IEmailService` port for sending verification codes
 
 ### Email Flow
 
@@ -285,13 +329,22 @@ See Azure documentation for Event Grid setup.
 
 ### Alternative Email Providers
 
-To use a different email provider (e.g., SendGrid), implement `IEmailService`:
+To use a different email provider (e.g., SendGrid), implement `IEmailService` in the Infrastructure layer:
 
 ```csharp
+// src/Mystira.App.Infrastructure.SendGrid/Services/SendGridEmailService.cs
+using Mystira.App.Application.Ports.Auth;
+
 public class SendGridEmailService : IEmailService
 {
     public async Task<(bool Success, string? ErrorMessage)> 
         SendSignupCodeAsync(string toEmail, string displayName, string code)
+    {
+        // Implementation using SendGrid API
+    }
+
+    public async Task<(bool Success, string? ErrorMessage)> 
+        SendSigninCodeAsync(string toEmail, string displayName, string code)
     {
         // Implementation using SendGrid API
     }
@@ -300,6 +353,9 @@ public class SendGridEmailService : IEmailService
 
 Register in `Program.cs`:
 ```csharp
+// Instead of:
+// builder.Services.AddAzureEmailService(builder.Configuration);
+// Use:
 builder.Services.AddScoped<IEmailService, SendGridEmailService>();
 ```
 

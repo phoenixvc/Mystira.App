@@ -4,6 +4,9 @@ using Azure.Storage.Blobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Mystira.App.Application.Ports.Auth;
+using Mystira.App.Application.Ports.Media;
+using Mystira.App.Application.Ports.Storage;
 using Mystira.App.Infrastructure.Azure.Configuration;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
@@ -21,6 +24,9 @@ public static class ServiceCollectionExtensions
         services.Configure<AzureOptions>(_ => configuration.GetSection(AzureOptions.SectionName));
         var azureOptions = new AzureOptions();
         configuration.GetSection(AzureOptions.SectionName).Bind(azureOptions);
+
+        services.Configure<AudioTranscodingOptions>(configuration.GetSection(AudioTranscodingOptions.SectionName));
+        services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingService>();
 
         // Add Cosmos DB
         services.AddCosmosDb(configuration, azureOptions.CosmosDb);
@@ -41,7 +47,7 @@ public static class ServiceCollectionExtensions
         where TContext : DbContext
     {
         var cosmosConnectionString = configuration.GetConnectionString("CosmosDb");
-        
+
         if (!string.IsNullOrEmpty(cosmosConnectionString))
         {
             services.AddDbContext<TContext>(options =>
@@ -63,7 +69,7 @@ public static class ServiceCollectionExtensions
     private static IServiceCollection AddCosmosDb(this IServiceCollection services, IConfiguration configuration, CosmosDbOptions options)
     {
         var cosmosConnectionString = configuration.GetConnectionString("CosmosDb");
-        
+
         if (!string.IsNullOrEmpty(cosmosConnectionString) && !options.UseInMemoryDatabase)
         {
             // Cosmos DB will be configured by the specific DbContext in the API project
@@ -79,7 +85,7 @@ public static class ServiceCollectionExtensions
     private static IServiceCollection AddBlobStorage(this IServiceCollection services, IConfiguration configuration, BlobStorageOptions options)
     {
         var blobConnectionString = configuration.GetConnectionString("AzureStorage");
-        
+
         if (!string.IsNullOrEmpty(blobConnectionString))
         {
             services.AddSingleton(new BlobServiceClient(blobConnectionString));
@@ -96,7 +102,7 @@ public static class ServiceCollectionExtensions
             });
         }
 
-        services.AddScoped<IAzureBlobService, AzureBlobService>();
+        services.AddScoped<IBlobService, AzureBlobService>();
 
         return services;
     }
@@ -119,7 +125,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddAzureBlobStorage(this IServiceCollection services, IConfiguration configuration)
     {
         var blobConnectionString = configuration.GetConnectionString("AzureStorage");
-        
+
         if (!string.IsNullOrEmpty(blobConnectionString))
         {
             services.AddSingleton(new BlobServiceClient(blobConnectionString));
@@ -136,8 +142,19 @@ public static class ServiceCollectionExtensions
             });
         }
 
-        services.AddScoped<IAzureBlobService, AzureBlobService>();
+        services.AddScoped<IBlobService, AzureBlobService>();
 
+        return services;
+    }
+
+    /// <summary>
+    /// Add Azure Communication Services email service.
+    /// Registers IEmailService from Application.Ports.Auth.
+    /// Configuration is read from AzureCommunicationServices:ConnectionString and AzureCommunicationServices:SenderEmail.
+    /// </summary>
+    public static IServiceCollection AddAzureEmailService(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddScoped<IEmailService, AzureEmailService>();
         return services;
     }
 }

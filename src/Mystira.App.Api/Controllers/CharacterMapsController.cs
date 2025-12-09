@@ -1,21 +1,26 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Mystira.App.Application.CQRS.CharacterMaps.Queries;
+using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Domain.Models;
-using Mystira.App.Api.Models;
-using Mystira.App.Api.Services;
 
 namespace Mystira.App.Api.Controllers;
 
+/// <summary>
+/// Controller for character map management.
+/// Follows hexagonal architecture - uses only IMediator (CQRS pattern).
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class CharacterMapsController : ControllerBase
 {
-    private readonly ICharacterMapApiService _characterMapService;
+    private readonly IMediator _mediator;
     private readonly ILogger<CharacterMapsController> _logger;
 
-    public CharacterMapsController(ICharacterMapApiService characterMapService, ILogger<CharacterMapsController> logger)
+    public CharacterMapsController(IMediator mediator, ILogger<CharacterMapsController> logger)
     {
-        _characterMapService = characterMapService;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -27,14 +32,15 @@ public class CharacterMapsController : ControllerBase
     {
         try
         {
-            var characterMaps = await _characterMapService.GetAllCharacterMapsAsync();
+            var query = new GetAllCharacterMapsQuery();
+            var characterMaps = await _mediator.Send(query);
             return Ok(characterMaps);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting all character maps");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching character maps",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -49,11 +55,12 @@ public class CharacterMapsController : ControllerBase
     {
         try
         {
-            var characterMap = await _characterMapService.GetCharacterMapAsync(id);
+            var query = new GetCharacterMapQuery(id);
+            var characterMap = await _mediator.Send(query);
             if (characterMap == null)
             {
-                return NotFound(new ErrorResponse 
-                { 
+                return NotFound(new ErrorResponse
+                {
                     Message = $"Character map not found: {id}",
                     TraceId = HttpContext.TraceIdentifier
                 });
@@ -64,8 +71,8 @@ public class CharacterMapsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting character map {Id}", id);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching character map",
                 TraceId = HttpContext.TraceIdentifier
             });

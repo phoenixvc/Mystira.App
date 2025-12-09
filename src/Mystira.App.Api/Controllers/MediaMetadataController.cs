@@ -1,6 +1,8 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Api.Models;
-using Mystira.App.Api.Services;
+using Mystira.App.Application.CQRS.MediaMetadata.Queries;
+using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
 
 namespace Mystira.App.Api.Controllers;
 
@@ -9,12 +11,12 @@ namespace Mystira.App.Api.Controllers;
 [Produces("application/json")]
 public class MediaMetadataController : ControllerBase
 {
-    private readonly IMediaMetadataService _mediaMetadataService;
+    private readonly IMediator _mediator;
     private readonly ILogger<MediaMetadataController> _logger;
 
-    public MediaMetadataController(IMediaMetadataService mediaMetadataService, ILogger<MediaMetadataController> logger)
+    public MediaMetadataController(IMediator mediator, ILogger<MediaMetadataController> logger)
     {
-        _mediaMetadataService = mediaMetadataService;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -26,14 +28,15 @@ public class MediaMetadataController : ControllerBase
     {
         try
         {
-            var metadataFile = await _mediaMetadataService.GetMediaMetadataFileAsync();
+            var query = new GetMediaMetadataFileQuery();
+            var metadataFile = await _mediator.Send(query);
             return Ok(metadataFile);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting media metadata file");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while getting media metadata file",
                 TraceId = HttpContext.TraceIdentifier
             });

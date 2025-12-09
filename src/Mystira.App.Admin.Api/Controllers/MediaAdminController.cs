@@ -1,7 +1,10 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Domain.Models;
+using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
+using MediaMetadataEntry = Mystira.App.Admin.Api.Models.MediaMetadataEntry;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
@@ -354,10 +357,8 @@ public class MediaAdminController : ControllerBase
             {
                 return Ok(result);
             }
-            else
-            {
-                return BadRequest(result);
-            }
+
+            return BadRequest(result);
         }
         catch (Exception ex)
         {

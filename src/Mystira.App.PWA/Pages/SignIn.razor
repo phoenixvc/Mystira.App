@@ -1,18 +1,16 @@
 @page "/signin"
-@using Mystira.App.PWA.Models
-@using Mystira.App.PWA.Services
 @using System.Timers
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject ILogger<SignIn> Logger
 @implements IDisposable
 
-<PageTitle>Sign In - Mystira</PageTitle>
+<PageTitle>Sign In • Mystira</PageTitle>
 
-<div class="container-fluid py-4">
+<div class="container-fluid py-3">
     <div class="row justify-content-center">
         <div class="col-md-6 col-lg-5">
-            <div class="card shadow-lg">
+            <div class="card shadow-lg auth-card">
                 <div class="card-body p-5">
                     <div class="text-center mb-4">
                         <i class="fas fa-dragon fa-4x text-primary-custom mb-3"></i>
@@ -22,24 +20,25 @@
 
                     @if (currentStep == SignInStep.Email)
                     {
-                        <form @onsubmit="RequestSigninCode">
+                        <form @onsubmit="RequestSigninCode" @onsubmit:preventDefault>
                             <div class="mb-3">
                                 <label for="email" class="form-label">
                                     <i class="fas fa-envelope me-2"></i>Email Address
                                 </label>
-                                <input type="email" 
-                                       class="form-control form-control-lg" 
-                                       id="email" 
-                                       @bind="email" 
+                                <input type="email"
+                                       class="form-control form-control-lg"
+                                       id="email"
+                                       @bind="email"
                                        placeholder="Enter your email"
-                                       required 
-                                       disabled="@isSubmitting" />
+                                       required
+                                       disabled="@isSubmitting"
+                                       autocomplete="email" />
                             </div>
 
                             <div class="mb-3 form-check">
-                                <input type="checkbox" 
-                                       class="form-check-input" 
-                                       id="rememberMe" 
+                                <input type="checkbox"
+                                       class="form-check-input"
+                                       id="rememberMe"
                                        @bind="rememberMe" />
                                 <label class="form-check-label" for="rememberMe">
                                     <i class="fas fa-heart me-2"></i>Remember me for 30 days
@@ -63,8 +62,8 @@
                                 </div>
                             }
 
-                            <button type="submit" 
-                                    class="btn btn-primary-custom btn-lg w-100" 
+                            <button type="submit"
+                                    class="btn btn-primary-custom btn-lg w-100"
                                     disabled="@isSubmitting">
                                 @if (isSubmitting)
                                 {
@@ -81,29 +80,34 @@
                     }
                     else if (currentStep == SignInStep.Verification)
                     {
-                        <form @onsubmit="VerifySigninCode">
+                        <form @onsubmit="VerifySigninCode" @onsubmit:preventDefault>
                             <div class="mb-3">
                                 <label class="form-label">
                                     <i class="fas fa-envelope me-2"></i>Email Address
                                 </label>
-                                <div class="form-control bg-light">@email</div>
+                                <div class="form-control email-display">@email</div>
                             </div>
 
                             <div class="mb-4">
                                 <label for="inputCode" class="form-label">
                                     <i class="fas fa-key me-2"></i>Verification Code
                                 </label>
-                                <input type="text" 
-                                       class="form-control form-control-lg text-center" 
-                                       id="inputCode" 
-                                       @bind="inputCode" 
-                                       placeholder="Enter 6-digit code"
-                                       maxlength="6" 
-                                       pattern="[0-9]{6}" 
-                                       required 
-                                       disabled="@isSubmitting" 
-                                       @oninput="OnCodeInput" />
-                                <div class="form-text">Check your email for 6-digit verification code</div>
+                                <input type="text"
+                                       class="form-control form-control-lg text-center verification-code-input"
+                                       id="inputCode"
+                                       @bind="inputCode"
+                                       placeholder="0 0 0 0 0 0"
+                                       maxlength="6"
+                                       pattern="[0-9]{6}"
+                                       required
+                                       disabled="@isSubmitting"
+                                       @oninput="OnCodeInput"
+                                       autocomplete="one-time-code" />
+                                <div class="alert alert-success mt-3" role="alert" aria-live="polite">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    Check your email for the sign-in code
+                                    <span class="d-block mt-1 small text-muted">Not seeing it? Check your spam or junk folder.</span>
+                                </div>
                             </div>
 
                             @if (!string.IsNullOrEmpty(errorMessage))
@@ -111,14 +115,6 @@
                                 <div class="alert alert-danger" role="alert">
                                     <i class="fas fa-exclamation-triangle me-2"></i>
                                     @errorMessage
-                                </div>
-                            }
-
-                            @if (!string.IsNullOrEmpty(successMessage))
-                            {
-                                <div class="alert alert-success" role="alert">
-                                    <i class="fas fa-check-circle me-2"></i>
-                                    @successMessage
                                 </div>
                             }
 
@@ -174,7 +170,7 @@
 
                     <div class="text-center">
                         <p class="mb-0 text-muted">
-                            Don't have an account? 
+                            Don't have an account?
                             <a href="/signup" class="text-primary-custom text-decoration-none">
                                 Register
                             </a>
@@ -206,11 +202,17 @@
 
     private async Task RequestSigninCode()
     {
+        if (isSubmitting)
+        {
+            return; // guard against double submit
+        }
         try
         {
             isSubmitting = true;
             errorMessage = string.Empty;
             successMessage = string.Empty;
+            StateHasChanged(); // Immediately show loading state
+            await Task.Yield(); // Allow UI to render before making API call
 
             Logger.LogInformation("Requesting sign-in code for email: {Email}", email);
 
@@ -284,6 +286,10 @@
 
     private async Task VerifySigninCode()
     {
+        if (isSubmitting)
+        {
+            return; // guard against double submit
+        }
         try
         {
             isSubmitting = true;
@@ -337,13 +343,14 @@
         errorMessage = string.Empty;
         successMessage = string.Empty;
         StopResendCountdown();
+        errorMessage = string.Empty;
     }
 
     private void StartResendCountdown()
     {
         StopResendCountdown();
         resendCountdown = 15;
-        
+
         countdownTimer = new System.Timers.Timer(1000);
         countdownTimer.Elapsed += OnCountdownTimerElapsed;
         countdownTimer.AutoReset = true;
@@ -372,19 +379,12 @@
         InvokeAsync(StateHasChanged);
     }
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
+        var isAuthenticated = await AuthService.IsAuthenticatedAsync();
+        if (isAuthenticated)
         {
-            // Check if user is already authenticated
-            _ = Task.Run(async () =>
-            {
-                var isAuthenticated = await AuthService.IsAuthenticatedAsync();
-                if (isAuthenticated)
-                {
-                    Navigation.NavigateTo("/");
-                }
-            });
+            Navigation.NavigateTo("/");
         }
     }
 

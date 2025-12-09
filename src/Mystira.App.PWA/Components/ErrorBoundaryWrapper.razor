@@ -1,0 +1,100 @@
+@* ErrorBoundaryWrapper.razor - Enhanced error boundary with recovery options *@
+
+<ErrorBoundary @ref="errorBoundary">
+    <ChildContent>
+        @ChildContent
+    </ChildContent>
+    <ErrorContent Context="exception">
+        <div class="error-boundary-container" role="alert" aria-live="assertive">
+            <div class="error-boundary-content">
+                <div class="error-icon">⚠️</div>
+                <h2 class="error-title">@ErrorTitle</h2>
+                <p class="error-message">@ErrorMessage</p>
+
+                @if (ShowDetails && exception != null)
+                {
+                    <details class="error-details">
+                        <summary>Technical Details</summary>
+                        <pre class="error-stack">@exception.Message</pre>
+                    </details>
+                }
+
+                <div class="error-actions">
+                    <button class="btn-primary" @onclick="Recover">
+                        @RecoverButtonText
+                    </button>
+                    @if (ShowReloadButton)
+                    {
+                        <button class="btn-secondary" @onclick="ReloadPage">
+                            Reload Page
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    private ErrorBoundary? errorBoundary;
+
+    /// <summary>
+    /// Content to wrap with error boundary
+    /// </summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Custom error title
+    /// </summary>
+    [Parameter]
+    public string ErrorTitle { get; set; } = "Something went wrong";
+
+    /// <summary>
+    /// Custom error message
+    /// </summary>
+    [Parameter]
+    public string ErrorMessage { get; set; } = "We're sorry, but something unexpected happened. Please try again.";
+
+    /// <summary>
+    /// Text for the recover button
+    /// </summary>
+    [Parameter]
+    public string RecoverButtonText { get; set; } = "Try Again";
+
+    /// <summary>
+    /// Whether to show technical error details
+    /// </summary>
+    [Parameter]
+    public bool ShowDetails { get; set; } = false;
+
+    /// <summary>
+    /// Whether to show the reload page button
+    /// </summary>
+    [Parameter]
+    public bool ShowReloadButton { get; set; } = true;
+
+    /// <summary>
+    /// Callback when user clicks recover
+    /// </summary>
+    [Parameter]
+    public EventCallback OnRecover { get; set; }
+
+    private async Task Recover()
+    {
+        errorBoundary?.Recover();
+
+        if (OnRecover.HasDelegate)
+        {
+            await OnRecover.InvokeAsync();
+        }
+    }
+
+    private void ReloadPage()
+    {
+        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+    }
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+}

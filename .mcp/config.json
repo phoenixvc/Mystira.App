@@ -1,0 +1,165 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schema/config.json",
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "."
+      ],
+      "description": "Access to repository files and directories"
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "description": "GitHub repository operations and issue tracking"
+    },
+    "git": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-git"],
+      "description": "Git operations for version control"
+    }
+  },
+  "resources": {
+    "documentation": {
+      "uri": "file://./docs",
+      "name": "Project Documentation",
+      "description": "Comprehensive project documentation including architecture, features, setup guides, and use cases"
+    },
+    "readme": {
+      "uri": "file://./README.md",
+      "name": "Main README",
+      "description": "Primary project overview and getting started guide"
+    },
+    "architecture-rules": {
+      "uri": "file://./docs/architecture/ARCHITECTURAL_RULES.md",
+      "name": "Architectural Rules",
+      "description": "Strict architectural rules enforcing Hexagonal/Clean Architecture"
+    },
+    "best-practices": {
+      "uri": "file://./docs/best-practices.md",
+      "name": "Development Best Practices",
+      "description": "Coding standards, security requirements, and development guidelines"
+    },
+    "contributing": {
+      "uri": "file://./CONTRIBUTING.md",
+      "name": "Contributing Guidelines",
+      "description": "How to contribute to the project"
+    },
+    "solution": {
+      "uri": "file://./Mystira.App.sln",
+      "name": "Solution File",
+      "description": "Visual Studio solution containing all projects"
+    }
+  },
+  "prompts": {
+    "architecture-check": {
+      "name": "Verify Architecture Compliance",
+      "description": "Check if code follows Hexagonal/Clean Architecture rules",
+      "arguments": [
+        {
+          "name": "code",
+          "description": "Code to verify",
+          "required": true
+        }
+      ]
+    },
+    "create-api-endpoint": {
+      "name": "Create API Endpoint",
+      "description": "Generate a new API endpoint following project patterns",
+      "arguments": [
+        {
+          "name": "entity",
+          "description": "Entity name (e.g., GameSession)",
+          "required": true
+        },
+        {
+          "name": "action",
+          "description": "Action name (e.g., Create, Update, Delete)",
+          "required": true
+        },
+        {
+          "name": "isAdmin",
+          "description": "Is this an admin endpoint?",
+          "required": false
+        }
+      ]
+    },
+    "create-use-case": {
+      "name": "Create Use Case",
+      "description": "Generate a new use case following the Application layer pattern",
+      "arguments": [
+        {
+          "name": "name",
+          "description": "Use case name (e.g., CreateGameSession)",
+          "required": true
+        },
+        {
+          "name": "description",
+          "description": "What does this use case do?",
+          "required": true
+        }
+      ]
+    }
+  },
+  "tools": {
+    "build": {
+      "command": "dotnet",
+      "args": ["build", "Mystira.App.sln"],
+      "description": "Build the entire solution"
+    },
+    "test": {
+      "command": "dotnet",
+      "args": ["test", "Mystira.App.sln"],
+      "description": "Run all tests in the solution"
+    },
+    "format": {
+      "command": "dotnet",
+      "args": ["format", "Mystira.App.sln"],
+      "description": "Format code according to project standards"
+    },
+    "run-api": {
+      "command": "dotnet",
+      "args": ["run", "--project", "src/Mystira.App.Api/Mystira.App.Api.csproj"],
+      "description": "Run the public API"
+    },
+    "run-admin-api": {
+      "command": "dotnet",
+      "args": ["run", "--project", "src/Mystira.App.Admin.Api/Mystira.App.Admin.Api.csproj"],
+      "description": "Run the admin API"
+    },
+    "run-pwa": {
+      "command": "dotnet",
+      "args": ["run", "--project", "src/Mystira.App.PWA/Mystira.App.PWA.csproj"],
+      "description": "Run the Blazor PWA"
+    }
+  },
+  "context": {
+    "projectType": "monorepo",
+    "architecture": "hexagonal-clean-architecture",
+    "primaryLanguage": "csharp",
+    "framework": "dotnet9",
+    "frontend": "blazor-wasm",
+    "database": "cosmos-db",
+    "cloud": "azure",
+    "keyPrinciples": [
+      "Strict layer separation (Domain, Application, Infrastructure, API)",
+      "No business logic in controllers",
+      "Dependency injection throughout",
+      "Async/await for all I/O operations",
+      "Security-first approach",
+      "PII awareness and protection"
+    ],
+    "importantFiles": [
+      "docs/architecture/ARCHITECTURAL_RULES.md",
+      "docs/best-practices.md",
+      "README.md",
+      "CONTRIBUTING.md",
+      ".github/copilot-instructions.md"
+    ]
+  }
+}

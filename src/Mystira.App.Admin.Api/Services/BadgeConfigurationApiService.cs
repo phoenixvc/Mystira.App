@@ -1,8 +1,10 @@
-using Mystira.App.Domain.Models;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Admin.Api.Data;
-using Mystira.App.Admin.Api.Models;
+using Mystira.App.Contracts.Requests.Badges;
+using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data;
 using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -20,14 +22,14 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
     public async Task<List<BadgeConfiguration>> GetAllBadgeConfigurationsAsync()
     {
         var badgeConfigs = await _context.BadgeConfigurations.ToListAsync();
-        
+
         // Initialize with default data if empty
         if (!badgeConfigs.Any())
         {
             await InitializeDefaultBadgeConfigurationsAsync();
             badgeConfigs = await _context.BadgeConfigurations.ToListAsync();
         }
-        
+
         return badgeConfigs;
     }
 
@@ -114,9 +116,9 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
         }
 
         // Validate that the axis is from the master list
-        if (!MasterLists.CoreAxes.Contains(request.Axis))
+        if (CoreAxis.Parse(request.Axis) == null)
         {
-            throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", MasterLists.CoreAxes)}");
+            throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", GetAllCoreAxisNames())}");
         }
 
         var badgeConfig = new BadgeConfiguration
@@ -158,9 +160,9 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
 
         if (!string.IsNullOrWhiteSpace(request.Axis))
         {
-            if (!MasterLists.CoreAxes.Contains(request.Axis))
+            if (CoreAxis.Parse(request.Axis) == null)
             {
-                throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", MasterLists.CoreAxes)}");
+                throw new ArgumentException($"Invalid compass axis: {request.Axis}. Must be one of: {string.Join(", ", GetAllCoreAxisNames())}");
             }
             badgeConfig.Axis = request.Axis;
         }
@@ -215,7 +217,7 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
         };
 
         var serializer = new SerializerBuilder()
-            .WithNamingConvention(YamlDotNet.Serialization.NamingConventions.UnderscoredNamingConvention.Instance)
+            .WithNamingConvention(UnderscoredNamingConvention.Instance)
             .Build();
 
         return serializer.Serialize(badgeConfigYaml);
@@ -225,22 +227,22 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
     {
         var deserializer = new DeserializerBuilder()
             .WithCaseInsensitivePropertyMatching()
-            .WithNamingConvention(YamlDotNet.Serialization.NamingConventions.UnderscoredNamingConvention.Instance)
+            .WithNamingConvention(UnderscoredNamingConvention.Instance)
             .Build();
 
         using var reader = new StreamReader(yamlStream);
         var yamlContent = await reader.ReadToEndAsync();
 
         var badgeConfigYaml = deserializer.Deserialize<BadgeConfigurationYaml>(yamlContent);
-        
+
         var importedBadgeConfigs = new List<BadgeConfiguration>();
 
         foreach (var yamlEntry in badgeConfigYaml.Badges)
         {
             // Validate axis
-            if (!MasterLists.CoreAxes.Contains(yamlEntry.Axis))
+            if (CoreAxis.Parse(yamlEntry.Axis) == null)
             {
-                throw new ArgumentException($"Invalid compass axis in YAML: {yamlEntry.Axis}. Must be one of: {string.Join(", ", MasterLists.CoreAxes)}");
+                throw new ArgumentException($"Invalid compass axis in YAML: {yamlEntry.Axis}. Must be one of: {string.Join(", ", GetAllCoreAxisNames())}");
             }
 
             var badgeConfig = new BadgeConfiguration
@@ -261,7 +263,7 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
             {
                 _context.BadgeConfigurations.Remove(existing);
             }
-            
+
             _context.BadgeConfigurations.Add(badgeConfig);
             importedBadgeConfigs.Add(badgeConfig);
         }
@@ -269,5 +271,17 @@ public class BadgeConfigurationApiService : IBadgeConfigurationApiService
         await _context.SaveChangesAsync();
         _logger.LogInformation("Imported {Count} badge configurations from YAML", importedBadgeConfigs.Count);
         return importedBadgeConfigs;
+    }
+
+    private static IEnumerable<string> GetAllCoreAxisNames()
+    {
+        var filePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "Mystira.App.Domain", "Data", "CoreAxes.json");
+        if (!File.Exists(filePath))
+        {
+            return Array.Empty<string>();
+        }
+
+        var json = File.ReadAllText(filePath);
+        return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
     }
 }

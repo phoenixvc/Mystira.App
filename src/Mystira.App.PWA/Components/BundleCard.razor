@@ -1,0 +1,95 @@
+@* Bundle Card Component *@
+
+<div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
+    <div class="card h-100 bundle-card" style="cursor: pointer;" @onclick="OnCardClick">
+        <div class="bundle-image-container">
+            <CachedMystiraImage 
+                MediaId="@Bundle.ImageId"
+                Alt="@Bundle.Title"
+                Width="400"
+                Height="250"
+                ImageClass="card-img-top bundle-card-image" />
+            @if (Bundle.IsFree)
+            {
+                <div class="bundle-free-badge">
+                    <span class="bundle-pill pill-free" data-tooltip="This bundle is completely free to play!">
+                        <i class="fas fa-gift"></i>
+                        <span>Free</span>
+                    </span>
+                </div>
+            }
+        </div>
+        <div class="card-body">
+            <h6 class="card-title mb-1">@Bundle.Title</h6>
+            <p class="card-text small text-muted">@Bundle.Description</p>
+            
+            @{
+                var totalInBundle = Bundle.ScenarioIds?.Count ?? 0;
+                var completedInBundle = CompletedScenarioIds.Count == 0 
+                    ? 0 
+                    : (Bundle.ScenarioIds?.Count(id => CompletedScenarioIds.Contains(id)) ?? 0);
+                var progressPercent = totalInBundle > 0 ? (completedInBundle * 100 / totalInBundle) : 0;
+            }
+            
+            @* Progress Bar *@
+            @if (ShowGameState && completedInBundle > 0)
+            {
+                <div class="progress mb-2" style="height: 6px;">
+                    <div class="progress-bar bg-success" 
+                         role="progressbar" 
+                         style="width: @progressPercent%"
+                         aria-valuenow="@progressPercent" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100"></div>
+                </div>
+            }
+            
+            <div class="bundle-pills">
+                <span class="bundle-pill pill-adventures" data-tooltip="@totalInBundle adventure@(totalInBundle != 1 ? "s" : "") included in this bundle">
+                    <i class="fas fa-book"></i>
+                    <span>@totalInBundle adventure@(totalInBundle != 1 ? "s" : "")</span>
+                </span>
+                @if (ShowGameState)
+                {
+                    <span class="bundle-pill @(completedInBundle > 0 ? "pill-completed" : "pill-pending")"
+                          data-tooltip="@completedInBundle of @totalInBundle adventure@(totalInBundle != 1 ? "s" : "") completed">
+                        <i class="fas @(completedInBundle > 0 ? "fa-check-circle" : "fa-clock")"></i>
+                        <span>@completedInBundle completed</span>
+                    </span>
+                }
+            </div>
+        </div>
+        <div class="card-footer">
+            <span class="bundle-pill pill-age" data-tooltip="Recommended for children ages @Bundle.AgeGroup">
+                <i class="fas fa-users"></i>
+                <span>Ages @Bundle.AgeGroup</span>
+            </span>
+            <span class="explore-link">
+                <span>Explore</span>
+                <i class="fas fa-arrow-right"></i>
+            </span>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ContentBundle Bundle { get; set; } = null!;
+    
+    [Parameter]
+    public HashSet<string> CompletedScenarioIds { get; set; } = new();
+    
+    [Parameter]
+    public bool ShowGameState { get; set; } = false;
+    
+    [Parameter]
+    public EventCallback<ContentBundle> OnClick { get; set; }
+    
+    private async Task OnCardClick()
+    {
+        if (OnClick.HasDelegate)
+        {
+            await OnClick.InvokeAsync(Bundle);
+        }
+    }
+}

@@ -1,0 +1,183 @@
+using System.Text.Json;
+using Microsoft.Extensions.Configuration;
+using Mystira.DevHub.CLI.Models;
+using Mystira.DevHub.Services.Migration;
+
+namespace Mystira.DevHub.CLI.Commands;
+
+public class MigrationCommands
+{
+    private readonly IMigrationService _migrationService;
+    private readonly IConfiguration _configuration;
+
+    public MigrationCommands(IMigrationService migrationService, IConfiguration configuration)
+    {
+        _migrationService = migrationService;
+        _configuration = configuration;
+    }
+
+    public async Task<CommandResponse> RunAsync(JsonElement argsJson)
+    {
+        try
+        {
+            var args = JsonSerializer.Deserialize<MigrationArgs>(argsJson.GetRawText());
+            if (args == null || string.IsNullOrEmpty(args.Type))
+            {
+                return CommandResponse.Fail("Type is required (scenarios, bundles, media-metadata, blobs, master-data, all)");
+            }
+
+            // Get connection strings from args, environment, or configuration
+            var sourceCosmosConnection = args.SourceCosmosConnection
+                ?? Environment.GetEnvironmentVariable("SOURCE_COSMOS_CONNECTION")
+                ?? _configuration.GetConnectionString("SourceCosmosDb")
+                ?? "";
+
+            var destCosmosConnection = args.DestCosmosConnection
+                ?? Environment.GetEnvironmentVariable("DEST_COSMOS_CONNECTION")
+                ?? _configuration.GetConnectionString("DestCosmosDb")
+                ?? _configuration.GetConnectionString("CosmosDb")
+                ?? "";
+
+            var sourceStorageConnection = args.SourceStorageConnection
+                ?? Environment.GetEnvironmentVariable("SOURCE_STORAGE_CONNECTION")
+                ?? _configuration.GetConnectionString("SourceStorage")
+                ?? "";
+
+            var destStorageConnection = args.DestStorageConnection
+                ?? Environment.GetEnvironmentVariable("DEST_STORAGE_CONNECTION")
+                ?? _configuration.GetConnectionString("DestStorage")
+                ?? _configuration.GetConnectionString("AzureStorage")
+                ?? "";
+
+            var jsonFilesPath = args.JsonFilesPath
+                ?? Environment.GetEnvironmentVariable("MASTER_DATA_JSON_PATH")
+                ?? FindMasterDataJsonPath();
+
+            var results = new List<MigrationResult>();
+
+            switch (args.Type.ToLower())
+            {
+                case "scenarios":
+                    if (string.IsNullOrEmpty(sourceCosmosConnection) || string.IsNullOrEmpty(destCosmosConnection))
+                    {
+                        return CommandResponse.Fail("Source and destination Cosmos DB connection strings are required");
+                    }
+                    var scenarioResult = await _migrationService.MigrateScenariosAsync(sourceCosmosConnection, destCosmosConnection, args.DatabaseName);
+                    results.Add(scenarioResult);
+                    break;
+
+                case "bundles":
+                    if (string.IsNullOrEmpty(sourceCosmosConnection) || string.IsNullOrEmpty(destCosmosConnection))
+                    {
+                        return CommandResponse.Fail("Source and destination Cosmos DB connection strings are required");
+                    }
+                    var bundleResult = await _migrationService.MigrateContentBundlesAsync(sourceCosmosConnection, destCosmosConnection, args.DatabaseName);
+                    results.Add(bundleResult);
+                    break;
+
+                case "media-metadata":
+                    if (string.IsNullOrEmpty(sourceCosmosConnection) || string.IsNullOrEmpty(destCosmosConnection))
+                    {
+                        return CommandResponse.Fail("Source and destination Cosmos DB connection strings are required");
+                    }
+                    var mediaResult = await _migrationService.MigrateMediaAssetsAsync(sourceCosmosConnection, destCosmosConnection, args.DatabaseName);
+                    results.Add(mediaResult);
+                    break;
+
+                case "blobs":
+                    if (string.IsNullOrEmpty(sourceStorageConnection) || string.IsNullOrEmpty(destStorageConnection))
+                    {
+                        return CommandResponse.Fail("Source and destination storage connection strings are required");
+                    }
+                    var blobResult = await _migrationService.MigrateBlobStorageAsync(sourceStorageConnection, destStorageConnection, args.ContainerName);
+                    results.Add(blobResult);
+                    break;
+
+                case "master-data":
+                    if (string.IsNullOrEmpty(destCosmosConnection))
+                    {
+                        return CommandResponse.Fail("Destination Cosmos DB connection string is required");
+                    }
+                    var masterDataResult = await _migrationService.SeedMasterDataAsync(destCosmosConnection, args.DatabaseName, jsonFilesPath);
+                    results.Add(masterDataResult);
+                    break;
+
+                case "all":
+                    // Migrate all Cosmos DB data
+                    if (!string.IsNullOrEmpty(sourceCosmosConnection) && !string.IsNullOrEmpty(destCosmosConnection))
+                    {
+                        results.Add(await _migrationService.MigrateScenariosAsync(sourceCosmosConnection, destCosmosConnection, args.DatabaseName));
+                        results.Add(await _migrationService.MigrateContentBundlesAsync(sourceCosmosConnection, destCosmosConnection, args.DatabaseName));
+                        results.Add(await _migrationService.MigrateMediaAssetsAsync(sourceCosmosConnection, destCosmosConnection, args.DatabaseName));
+                    }
+
+                    // Seed master data
+                    if (!string.IsNullOrEmpty(destCosmosConnection))
+                    {
+                        results.Add(await _migrationService.SeedMasterDataAsync(destCosmosConnection, args.DatabaseName, jsonFilesPath));
+                    }
+
+                    // Migrate Blob Storage
+                    if (!string.IsNullOrEmpty(sourceStorageConnection) && !string.IsNullOrEmpty(destStorageConnection))
+                    {
+                        results.Add(await _migrationService.MigrateBlobStorageAsync(sourceStorageConnection, destStorageConnection, args.ContainerName));
+                    }
+                    break;
+
+                default:
+                    return CommandResponse.Fail($"Unknown migration type: {args.Type}");
+            }
+
+            var overallSuccess = results.All(r => r.Success);
+            var totalItems = results.Sum(r => r.TotalItems);
+            var totalSuccess = results.Sum(r => r.SuccessCount);
+            var totalFailures = results.Sum(r => r.FailureCount);
+
+            return CommandResponse.Ok(new
+            {
+                overallSuccess,
+                totalItems,
+                totalSuccess,
+                totalFailures,
+                results
+            }, $"Migration completed: {totalSuccess}/{totalItems} successful");
+        }
+        catch (Exception ex)
+        {
+            return CommandResponse.Fail(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Searches for the master data JSON files directory by looking for known files.
+    /// </summary>
+    private static string FindMasterDataJsonPath()
+    {
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        
+        // Search for the Data directory containing CoreAxes.json
+        var searchPaths = new[]
+        {
+            // When running from tools/Mystira.DevHub.CLI/bin
+            Path.Combine(baseDir, "..", "..", "..", "..", "src", "Mystira.App.Domain", "Data"),
+            // When running from solution root
+            Path.Combine(baseDir, "src", "Mystira.App.Domain", "Data"),
+            // When running from src directory
+            Path.Combine(baseDir, "Mystira.App.Domain", "Data"),
+            // Relative to current directory
+            Path.Combine(Directory.GetCurrentDirectory(), "src", "Mystira.App.Domain", "Data"),
+        };
+
+        foreach (var path in searchPaths)
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (Directory.Exists(fullPath) && File.Exists(Path.Combine(fullPath, "CoreAxes.json")))
+            {
+                return fullPath;
+            }
+        }
+
+        // Fallback to most likely path
+        return Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "src", "Mystira.App.Domain", "Data"));
+    }
+}

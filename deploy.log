@@ -1,0 +1,36 @@
+=== Deployment Log Started: 2025-12-01 15:00:32 ===
+ℹ️  No GitHub PAT found. Static Web App will be created without GitHub integration.
+   To add GitHub integration later, set GITHUB_PAT environment variable or use -GitHubPat parameter.
+   To create a PAT:
+Checking for SWA CLI...
+✅ SWA CLI is installed via npm
+[2025-12-01 15:00:33] [INFO] SWA CLI found
+🚀 Deploy Now - Smart Deployment
+No resources found
+🏗️  Infrastructure not deployed. Deploying infrastructure...
+🚀 Deploying infrastructure...
+🚀 Starting infrastructure deployment...
+[2025-12-01 15:00:41] [INFO] Starting infrastructure deployment
+[2025-12-01 15:00:41] [INFO] Resource Group: dev-san-rg-mystira-app, Location: southafricanorth, Template: C:\Users\smitj\repos\Mystira.App\infrastructure\dev\main.bicep
+[2025-12-01 15:00:41] [INFO] Step: Executing Bicep deployment
+   [VERBOSE] Parameters file contents:
+[2025-12-01 15:03:00] [INFO] Step: Deployment succeeded in 138.45 seconds
+=== Deployment Log Ended: 2025-12-01 15:03:00 ===
+   [VERBOSE] After error handling - deploymentSuccess=True, shouldRetry=False
+================================================
+  Infrastructure deployment successful!
+================================================
+JWT Secret (save this!):
+[2025-12-01 15:03:00] [INFO] Step: Checking Static Web App existence
+[2025-12-01 15:03:02] [INFO] Step: Creating Static Web App
+📱 Creating Static Web App...
+[2025-12-01 15:03:02] [INFO] Step: Checking Static Web App name availability
+[2025-12-01 15:03:06] [INFO] GitHub repository: phoenixvc/Mystira.App
+[2025-12-01 15:03:06] [INFO] Creating Static Web App: dev-san-swa-mystira-app
+⚠️  Static Web App creation may have failed. Check Azure portal.
+[2025-12-01 15:03:09] [WARN] Warning: Static Web App creation may have failed
+[2025-12-01 15:03:09] [WARN] Warning: Static Web App creation may have failed
+================================================
+  📊 Resource Summary
+================================================
+================================================

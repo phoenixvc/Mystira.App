@@ -1,0 +1,137 @@
+@using System.Globalization
+@* Adventure Card Component - Enhanced visual design for scenarios *@
+
+<div class="adventure-card"
+     tabindex="0"
+     role="article"
+     aria-label="Adventure: @Adventure.Name"
+     @onclick="OnCardClick"
+     @onkeydown="HandleKeyDown">
+    <div class="adventure-image-container">
+        @if (!string.IsNullOrEmpty(Adventure?.Image))
+        {
+            <CachedMystiraImage
+                MediaId="@Adventure.Image"
+                Alt="@Adventure.Name"
+                ImageClass="adventure-card-image img-fluid"
+                Width="400"
+                Height="225"
+                Loading="lazy" />
+        }
+        else
+        {
+            <div class="adventure-card-placeholder">
+                <i class="fas fa-book-open fa-3x"></i>
+            </div>
+        }
+
+        @if (IsCompleted)
+        {
+            <div class="adventure-completed-badge">
+                <span class="badge bg-success">
+                    <i class="fas fa-check-circle me-1"></i>Completed
+                </span>
+            </div>
+        }
+    </div>
+
+    <div class="adventure-card-body">
+        <h6 class="adventure-card-title">@(Adventure?.Name ?? string.Empty)</h6>
+        <p class="adventure-card-description">@GetTruncatedDescription()</p>
+
+        <div class="adventure-metadata">
+            <span class="metadata-badge badge-age" title="Recommended for children ages @(Adventure?.AgeGroup ?? string.Empty)">
+                <i class="fas fa-users me-1"></i>Ages @(Adventure?.AgeGroup ?? string.Empty)
+            </span>
+            <span class="metadata-badge badge-difficulty" title="Difficulty level: @(Adventure?.Difficulty ?? string.Empty)">
+                <i class="fas fa-signal me-1"></i>@(Adventure?.Difficulty ?? string.Empty)
+            </span>
+            <span class="metadata-badge badge-duration" title="Estimated session length: @(Adventure?.SessionLength ?? string.Empty)">
+                <i class="fas fa-clock me-1"></i>@(Adventure?.SessionLength ?? string.Empty)
+            </span>
+        </div>
+
+        @if (Themes != null && Themes.Any())
+        {
+            <div class="adventure-themes">
+                @foreach (var theme in Themes.Take(3))
+                {
+                    var text = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(theme.ToLower());
+                    <span class="theme-badge">
+                        <i class="fas fa-tag me-1"></i>@text
+                    </span>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="adventure-card-footer">
+        <button class="btn-adventure-start"
+                @onclick="OnStartClick"
+                @onclick:stopPropagation="true"
+                aria-label="@(IsCompleted ? "Play again" : "Start adventure") @(Adventure?.Name ?? string.Empty)">
+            <i class="fas fa-play me-2"></i>
+            @if (IsCompleted)
+            {
+                <span>Play Again</span>
+            }
+            else
+            {
+                <span>Start Adventure</span>
+            }
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Scenario Adventure { get; set; } = null!;
+
+    [Parameter]
+    public bool IsCompleted { get; set; } = false;
+
+    [Parameter]
+    public List<string>? Themes { get; set; }
+
+    [Parameter]
+    public EventCallback<Scenario> OnClick { get; set; }
+
+    [Parameter]
+    public EventCallback<Scenario> OnStartAdventure { get; set; }
+
+    private async Task OnCardClick()
+    {
+        if (OnClick.HasDelegate)
+        {
+            await OnClick.InvokeAsync(Adventure);
+        }
+    }
+
+    private async Task OnStartClick()
+    {
+        if (OnStartAdventure.HasDelegate)
+        {
+            await OnStartAdventure.InvokeAsync(Adventure);
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Key == " ")
+        {
+            await OnCardClick();
+        }
+    }
+
+    private string GetTruncatedDescription()
+    {
+        if (Adventure == null || string.IsNullOrEmpty(Adventure.Description))
+            return string.Empty;
+
+        const int maxLength = 120;
+        if (Adventure.Description.Length <= maxLength)
+            return Adventure.Description;
+
+        return Adventure.Description.Substring(0, maxLength) + "...";
+    }
+}

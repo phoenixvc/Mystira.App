@@ -1,26 +1,30 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Mystira.App.Application.CQRS.UserBadges.Commands;
+using Mystira.App.Application.CQRS.UserBadges.Queries;
+using Mystira.App.Contracts.Requests.Badges;
+using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Domain.Models;
-using Mystira.App.Api.Models;
-using Mystira.App.Api.Services;
 
 namespace Mystira.App.Api.Controllers;
 
+/// <summary>
+/// Controller for user badge management.
+/// Follows hexagonal architecture - uses only IMediator (CQRS pattern).
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class UserBadgesController : ControllerBase
 {
-    private readonly IUserBadgeApiService _badgeService;
-    private readonly IAccountApiService _accountService;
+    private readonly IMediator _mediator;
     private readonly ILogger<UserBadgesController> _logger;
 
     public UserBadgesController(
-        IUserBadgeApiService badgeService, 
-        IAccountApiService accountService,
+        IMediator mediator,
         ILogger<UserBadgesController> logger)
     {
-        _badgeService = badgeService;
-        _accountService = accountService;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -45,15 +49,16 @@ public class UserBadgesController : ControllerBase
                 });
             }
 
-            var badge = await _badgeService.AwardBadgeAsync(request);
-            return CreatedAtAction(nameof(GetUserBadges), 
+            var command = new AwardBadgeCommand(request);
+            var badge = await _mediator.Send(command);
+            return CreatedAtAction(nameof(GetUserBadges),
                 new { userProfileId = request.UserProfileId }, badge);
         }
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Validation error awarding badge");
-            return BadRequest(new ErrorResponse 
-            { 
+            return BadRequest(new ErrorResponse
+            {
                 Message = ex.Message,
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -61,8 +66,8 @@ public class UserBadgesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error awarding badge");
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while awarding badge",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -77,14 +82,15 @@ public class UserBadgesController : ControllerBase
     {
         try
         {
-            var badges = await _badgeService.GetUserBadgesAsync(userProfileId);
+            var query = new GetUserBadgesQuery(userProfileId);
+            var badges = await _mediator.Send(query);
             return Ok(badges);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting badges for user {UserProfileId}", userProfileId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching badges",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -99,15 +105,16 @@ public class UserBadgesController : ControllerBase
     {
         try
         {
-            var badges = await _badgeService.GetUserBadgesForAxisAsync(userProfileId, axis);
+            var query = new GetUserBadgesForAxisQuery(userProfileId, axis);
+            var badges = await _mediator.Send(query);
             return Ok(badges);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting badges for user {UserProfileId} and axis {Axis}", 
+            _logger.LogError(ex, "Error getting badges for user {UserProfileId} and axis {Axis}",
                 userProfileId, axis);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching badges for axis",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -122,15 +129,16 @@ public class UserBadgesController : ControllerBase
     {
         try
         {
-            var hasEarned = await _badgeService.HasUserEarnedBadgeAsync(userProfileId, badgeConfigurationId);
+            var query = new HasUserEarnedBadgeQuery(userProfileId, badgeConfigurationId);
+            var hasEarned = await _mediator.Send(query);
             return Ok(new { hasEarned });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking if user {UserProfileId} has badge {BadgeId}", 
+            _logger.LogError(ex, "Error checking if user {UserProfileId} has badge {BadgeId}",
                 userProfileId, badgeConfigurationId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while checking badge status",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -145,14 +153,15 @@ public class UserBadgesController : ControllerBase
     {
         try
         {
-            var statistics = await _badgeService.GetBadgeStatisticsAsync(userProfileId);
+            var query = new GetBadgeStatisticsQuery(userProfileId);
+            var statistics = await _mediator.Send(query);
             return Ok(statistics);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting badge statistics for user {UserProfileId}", userProfileId);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while fetching badge statistics",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -167,32 +176,25 @@ public class UserBadgesController : ControllerBase
     {
         try
         {
-            var account = await _accountService.GetAccountByEmailAsync(email);
-            if (account == null)
+            var query = new GetBadgesForAccountByEmailQuery(email);
+            var badges = await _mediator.Send(query);
+
+            if (!badges.Any())
             {
-                return NotFound(new ErrorResponse 
-                { 
-                    Message = $"Account with email {email} not found",
+                return NotFound(new ErrorResponse
+                {
+                    Message = $"Account with email {email} not found or has no badges",
                     TraceId = HttpContext.TraceIdentifier
                 });
             }
 
-            var allBadges = new List<UserBadge>();
-            var profiles = await _accountService.GetUserProfilesForAccountAsync(account.Id);
-
-            foreach (var profile in profiles)
-            {
-                var badges = await _badgeService.GetUserBadgesAsync(profile.Id);
-                allBadges.AddRange(badges);
-            }
-
-            return Ok(allBadges);
+            return Ok(badges);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting badges for account {Email}", email);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while getting account badges",
                 TraceId = HttpContext.TraceIdentifier
             });
@@ -207,42 +209,16 @@ public class UserBadgesController : ControllerBase
     {
         try
         {
-            var account = await _accountService.GetAccountByEmailAsync(email);
-            if (account == null)
-            {
-                return NotFound(new ErrorResponse 
-                { 
-                    Message = $"Account with email {email} not found",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
+            var query = new GetBadgeStatisticsForAccountByEmailQuery(email);
+            var statistics = await _mediator.Send(query);
 
-            var combinedStatistics = new Dictionary<string, int>();
-            var profiles = await _accountService.GetUserProfilesForAccountAsync(account.Id);
-
-            foreach (var profile in profiles)
-            {
-                var profileStats = await _badgeService.GetBadgeStatisticsAsync(profile.Id);
-                foreach (var stat in profileStats)
-                {
-                    if (combinedStatistics.ContainsKey(stat.Key))
-                    {
-                        combinedStatistics[stat.Key] += stat.Value;
-                    }
-                    else
-                    {
-                        combinedStatistics[stat.Key] = stat.Value;
-                    }
-                }
-            }
-
-            return Ok(combinedStatistics);
+            return Ok(statistics);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting badge statistics for account {Email}", email);
-            return StatusCode(500, new ErrorResponse 
-            { 
+            return StatusCode(500, new ErrorResponse
+            {
                 Message = "Internal server error while getting account badge statistics",
                 TraceId = HttpContext.TraceIdentifier
             });

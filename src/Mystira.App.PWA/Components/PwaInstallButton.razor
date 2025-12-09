@@ -5,9 +5,15 @@
 @if (showInstallButton && IsOnHomePage && !IsAuthenticated)
 {
     <div class="pwa-install-container">
-        <button class="btn btn-pwa-install" @onclick="InstallPwaAsync">
-            <i class="fas fa-download me-2"></i>
-            Install App
+        <button class="btn-pwa-install" @onclick="InstallPwaAsync">
+            <div class="install-content">
+                <i class="fas fa-download me-2"></i>
+                <div class="install-text">
+                    <strong>Install Mystira</strong>
+                    <small>Works offline</small>
+                </div>
+            </div>
+            <!--<span class="badge badge-pwa">PWA</span>-->
         </button>
     </div>
 }
@@ -45,7 +51,7 @@
                 objRef = DotNetObjectReference.Create(this);
 
                 await jsModule.InvokeVoidAsync("initializePwaInstall", objRef);
-                
+
                 // Start periodic check to detect installation changes
                 cts = new CancellationTokenSource();
                 _ = MonitorInstallationStateAsync(cts.Token);
@@ -60,7 +66,7 @@
     private async Task MonitorInstallationStateAsync(CancellationToken cancellationToken)
     {
         checkTimer = new PeriodicTimer(TimeSpan.FromSeconds(2));
-        
+
         try
         {
             while (await checkTimer.WaitForNextTickAsync(cancellationToken))
@@ -76,6 +82,12 @@
 
     private async Task CheckInstallationState()
     {
+        // Add cancellation check
+        if (cts?.Token.IsCancellationRequested == true)
+        {
+            return;
+        }
+
         try
         {
             if (jsModule != null)
@@ -85,9 +97,18 @@
                 {
                     // App is installed, hide the button
                     showInstallButton = false;
-                    StateHasChanged();
+                    await InvokeAsync(StateHasChanged);
                 }
             }
+        }
+        catch (JSDisconnectedException)
+        {
+            // Browser disconnected - stop the timer
+            cts?.Cancel();
+        }
+        catch (TaskCanceledException)
+        {
+            // Expected during disposal
         }
         catch (Exception ex)
         {
@@ -128,10 +149,15 @@
 
     public async ValueTask DisposeAsync()
     {
+        // Cancel first to stop any pending operations
         cts?.Cancel();
-        cts?.Dispose();
+
+        // Small delay to allow cancellation to propagate
+        await Task.Delay(50);
+
         checkTimer?.Dispose();
-        
+        cts?.Dispose();
+
         if (jsModule != null)
         {
             try
@@ -139,9 +165,13 @@
                 await jsModule.InvokeVoidAsync("cleanup");
                 await jsModule.DisposeAsync();
             }
+            catch (JSDisconnectedException)
+            {
+                // Expected - browser already disconnected
+            }
             catch
             {
-                // Ignore disposal errors
+                // Ignore other disposal errors
             }
         }
 

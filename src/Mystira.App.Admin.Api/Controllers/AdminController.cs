@@ -1,11 +1,20 @@
-using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Domain.Models;
-using Mystira.App.Admin.Api.Data;
 using Mystira.App.Admin.Api.Models;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
+using Character = Mystira.App.Admin.Api.Models.Character;
+using CharacterMediaMetadataEntry = Mystira.App.Domain.Models.CharacterMediaMetadataEntry;
+using CharacterMediaMetadataFile = Mystira.App.Domain.Models.CharacterMediaMetadataFile;
 using CharacterMetadata = Mystira.App.Admin.Api.Models.CharacterMetadata;
+using MediaMetadataEntry = Mystira.App.Domain.Models.MediaMetadataEntry;
+using MediaMetadataFile = Mystira.App.Domain.Models.MediaMetadataFile;
+using ScenarioQueryRequest = Mystira.App.Contracts.Requests.Scenarios.ScenarioQueryRequest;
 
 namespace Mystira.App.Admin.Api.Controllers;
 
@@ -58,7 +67,7 @@ public class AdminController : Controller
         {
             return RedirectToAction("Dashboard");
         }
-        
+
         return View("Login");
     }
 
@@ -105,6 +114,24 @@ public class AdminController : Controller
     public IActionResult CharacterMediaMetadata()
     {
         return View("CharacterMediaMetadata");
+    }
+
+    /// <summary>
+    /// Content bundles management page
+    /// </summary>
+    [HttpGet("bundles")]
+    public IActionResult Bundles()
+    {
+        return View("Bundles");
+    }
+
+    /// <summary>
+    /// Avatar management page
+    /// </summary>
+    [HttpGet("avatars")]
+    public IActionResult AvatarManagement()
+    {
+        return View("AvatarManagement");
     }
 
     /// <summary>
@@ -163,6 +190,51 @@ public class AdminController : Controller
     public IActionResult ImportBadges()
     {
         return View("ImportBadges");
+    }
+
+    /// <summary>
+    /// Compass Axes management page
+    /// </summary>
+    [HttpGet("compassaxes")]
+    public IActionResult CompassAxes()
+    {
+        return View("CompassAxes");
+    }
+
+    /// <summary>
+    /// Archetypes management page
+    /// </summary>
+    [HttpGet("archetypes")]
+    public IActionResult Archetypes()
+    {
+        return View("Archetypes");
+    }
+
+    /// <summary>
+    /// Echo Types management page
+    /// </summary>
+    [HttpGet("echotypes")]
+    public IActionResult EchoTypes()
+    {
+        return View("EchoTypes");
+    }
+
+    /// <summary>
+    /// Fantasy Themes management page
+    /// </summary>
+    [HttpGet("fantasythemes")]
+    public IActionResult FantasyThemes()
+    {
+        return View("FantasyThemes");
+    }
+
+    /// <summary>
+    /// Age Groups management page
+    /// </summary>
+    [HttpGet("agegroups")]
+    public IActionResult AgeGroups()
+    {
+        return View("AgeGroups");
     }
 
     /// <summary>
@@ -234,7 +306,7 @@ public class AdminController : Controller
             // Ensure nullable strings are never null
             config.MaintenanceMessage ??= string.Empty;
             config.UpdateMessage ??= string.Empty;
-            
+
             await _appStatusService.UpdateAppStatusAsync(config);
             TempData["SuccessMessage"] = "App status configuration updated successfully.";
             return RedirectToAction("AppStatus");
@@ -268,7 +340,7 @@ public class AdminController : Controller
             // For now, return success - implement YAML parsing in the character map service
             using var stream = yamlFile.OpenReadStream();
             var characterMaps = await _characterMapService.ImportCharacterMapsFromYamlAsync(stream);
-            
+
             return Ok(new { success = true, message = $"Successfully imported {characterMaps.Count} character map(s)", count = characterMaps.Count });
         }
         catch (Exception ex)
@@ -292,7 +364,7 @@ public class AdminController : Controller
             }
 
             var result = await _bundleService.ValidateBundleAsync(bundleFile);
-            return Ok(new { success = result.IsValid, result = result });
+            return Ok(new { success = result.IsValid, result });
         }
         catch (Exception ex)
         {
@@ -321,7 +393,7 @@ public class AdminController : Controller
             };
 
             var result = await _bundleService.UploadBundleAsync(bundleFile, request);
-            return Ok(new { success = result.Success, result = result });
+            return Ok(new { success = result.Success, result });
         }
         catch (Exception ex)
         {
@@ -340,13 +412,13 @@ public class AdminController : Controller
         {
             // Initialize sample characters
             await InitializeSampleCharacters();
-            
+
             // Initialize sample media metadata
             await InitializeSampleMediaMetadata();
-            
+
             // Initialize sample character media metadata
             await InitializeSampleCharacterMediaMetadata();
-            
+
             return Ok(new { success = true, message = "Sample data initialized successfully" });
         }
         catch (Exception ex)
@@ -546,7 +618,7 @@ public class AdminController : Controller
         };
 
         await _mediaMetadataService.ImportMediaMetadataEntriesAsync(
-            System.Text.Json.JsonSerializer.Serialize(sampleEntries), true);
+            JsonSerializer.Serialize(sampleEntries), true);
     }
 
     private async Task InitializeSampleCharacterMediaMetadata()
@@ -578,7 +650,7 @@ public class AdminController : Controller
         };
 
         await _characterMediaMetadataService.ImportCharacterMediaMetadataEntriesAsync(
-            System.Text.Json.JsonSerializer.Serialize(sampleEntries), true);
+            JsonSerializer.Serialize(sampleEntries), true);
     }
 
     /// <summary>
@@ -600,28 +672,30 @@ public class AdminController : Controller
             var yamlContent = await reader.ReadToEndAsync();
 
             // Parse and create the scenario
-            var deserializer = new YamlDotNet.Serialization.DeserializerBuilder()
-                .WithNamingConvention(YamlDotNet.Serialization.NamingConventions.CamelCaseNamingConvention.Instance)
+            var deserializer = new DeserializerBuilder()
+                .WithNamingConvention(CamelCaseNamingConvention.Instance)
                 .Build();
 
-            var scenarioData = (Dictionary<object, object>) deserializer.Deserialize<dynamic>(yamlContent);
+            var scenarioData = (Dictionary<object, object>)deserializer.Deserialize<dynamic>(yamlContent);
             var createRequest = ScenarioRequestCreator.Create(scenarioData);
 
             // Check for existing scenario with same title
             var existingScenarios = await _scenarioService.GetScenariosAsync(new ScenarioQueryRequest { PageSize = 1000 });
-            var existingScenario = existingScenarios.Scenarios.FirstOrDefault(s => 
+            var existingScenario = existingScenarios.Scenarios.FirstOrDefault(s =>
                 s.Title.Equals(createRequest.Title, StringComparison.OrdinalIgnoreCase));
 
-            Scenario scenario;
+            Scenario? scenario;
             if (existingScenario != null && !overwriteExisting)
             {
-                return BadRequest(new { 
-                    success = false, 
+                return BadRequest(new
+                {
+                    success = false,
                     message = $"Scenario with title '{createRequest.Title}' already exists. Set overwriteExisting=true to update it.",
                     existingScenarioId = existingScenario.Id
                 });
             }
-            else if (existingScenario != null && overwriteExisting)
+
+            if (existingScenario != null && overwriteExisting)
             {
                 // Update existing scenario
                 scenario = await _scenarioService.UpdateScenarioAsync(existingScenario.Id, createRequest);
@@ -634,13 +708,24 @@ public class AdminController : Controller
             {
                 // Create new scenario
                 scenario = await _scenarioService.CreateScenarioAsync(createRequest);
+                if (scenario == null)
+                {
+                    return BadRequest(new { success = false, message = "Failed to create new scenario" });
+                }
             }
 
-            return Ok(new { 
-                success = true, 
-                message = "Scenario uploaded successfully", 
+            // Null check to satisfy compiler's nullable reference type analysis
+            if (scenario == null)
+            {
+                return BadRequest(new { success = false, message = "Failed to process scenario" });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                message = "Scenario uploaded successfully",
                 scenarioId = scenario.Id,
-                scenarioTitle = scenario.Title 
+                scenarioTitle = scenario.Title
             });
         }
         catch (Exception ex)

@@ -1,8 +1,9 @@
-using Mystira.App.Domain.Models;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Admin.Api.Data;
-using Mystira.App.Admin.Api.Models;
+using Mystira.App.Contracts.Requests.CharacterMaps;
+using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data;
 using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -20,14 +21,14 @@ public class CharacterMapApiService : ICharacterMapApiService
     public async Task<List<CharacterMap>> GetAllCharacterMapsAsync()
     {
         var characterMaps = await _context.CharacterMaps.ToListAsync();
-        
+
         // Initialize with default data if empty
         if (!characterMaps.Any())
         {
             await InitializeDefaultCharacterMapsAsync();
             characterMaps = await _context.CharacterMaps.ToListAsync();
         }
-        
+
         return characterMaps;
     }
 
@@ -39,7 +40,7 @@ public class CharacterMapApiService : ICharacterMapApiService
             Name = "Elarion the Wise",
             Image = "media/images/elarion.jpg",
             Audio = "media/audio/elarion_voice.mp3",
-            Metadata = new App.Domain.Models.CharacterMetadata
+            Metadata = new CharacterMetadata
             {
                 Roles = ["mentor", "peacemaker"],
                 Archetypes = ["guardian", "quiet strength"],
@@ -56,7 +57,7 @@ public class CharacterMapApiService : ICharacterMapApiService
             Name = "Grubb the Goblin",
             Image = "media/images/grubb.png",
             Audio = "media/audio/grubb_laugh.mp3",
-            Metadata = new App.Domain.Models.CharacterMetadata
+            Metadata = new CharacterMetadata
             {
                 Roles = ["trickster", "sly"],
                 Archetypes = ["sneaky foe"],
@@ -155,7 +156,7 @@ public class CharacterMapApiService : ICharacterMapApiService
     public async Task<string> ExportCharacterMapsAsYamlAsync()
     {
         var characterMaps = await _context.CharacterMaps.ToListAsync();
-        
+
         var characterMapYaml = new CharacterMapYaml
         {
             Characters = characterMaps.Select(cm => new CharacterMapYamlEntry
@@ -169,7 +170,7 @@ public class CharacterMapApiService : ICharacterMapApiService
         };
 
         var serializer = new SerializerBuilder()
-            .WithNamingConvention(YamlDotNet.Serialization.NamingConventions.UnderscoredNamingConvention.Instance)
+            .WithNamingConvention(UnderscoredNamingConvention.Instance)
             .Build();
 
         return serializer.Serialize(characterMapYaml);
@@ -179,14 +180,14 @@ public class CharacterMapApiService : ICharacterMapApiService
     {
         var deserializer = new DeserializerBuilder()
             .WithCaseInsensitivePropertyMatching()
-            .WithNamingConvention(YamlDotNet.Serialization.NamingConventions.UnderscoredNamingConvention.Instance)
+            .WithNamingConvention(UnderscoredNamingConvention.Instance)
             .Build();
 
         using var reader = new StreamReader(yamlStream);
         var yamlContent = await reader.ReadToEndAsync();
 
         var characterMapYaml = deserializer.Deserialize<CharacterMapYaml>(yamlContent);
-        
+
         var importedCharacterMaps = new List<CharacterMap>();
 
         foreach (var yamlEntry in characterMapYaml.Characters)
@@ -208,7 +209,7 @@ public class CharacterMapApiService : ICharacterMapApiService
             {
                 _context.CharacterMaps.Remove(existing);
             }
-            
+
             _context.CharacterMaps.Add(characterMap);
             importedCharacterMaps.Add(characterMap);
         }
