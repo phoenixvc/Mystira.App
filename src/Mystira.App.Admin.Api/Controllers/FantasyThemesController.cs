@@ -44,7 +44,7 @@ public class FantasyThemesController : ControllerBase
     public async Task<ActionResult<FantasyThemeDefinition>> CreateFantasyTheme([FromBody] CreateFantasyThemeRequest request)
     {
         _logger.LogInformation("POST: Creating fantasy theme with name: {Name}", request.Name);
-        
+
         var created = await _mediator.Send(new CreateFantasyThemeCommand(request.Name, request.Description));
         return CreatedAtAction(nameof(GetFantasyThemeById), new { id = created.Id }, created);
     }
@@ -53,7 +53,7 @@ public class FantasyThemesController : ControllerBase
     public async Task<ActionResult<FantasyThemeDefinition>> UpdateFantasyTheme(string id, [FromBody] UpdateFantasyThemeRequest request)
     {
         _logger.LogInformation("PUT: Updating fantasy theme with id: {Id}", id);
-        
+
         var updated = await _mediator.Send(new UpdateFantasyThemeCommand(id, request.Name, request.Description));
         if (updated == null)
         {
@@ -67,7 +67,7 @@ public class FantasyThemesController : ControllerBase
     public async Task<IActionResult> DeleteFantasyTheme(string id)
     {
         _logger.LogInformation("DELETE: Deleting fantasy theme with id: {Id}", id);
-        
+
         var success = await _mediator.Send(new DeleteFantasyThemeCommand(id));
         if (!success)
         {

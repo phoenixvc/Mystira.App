@@ -48,7 +48,9 @@ public class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUserProfile
         if (!string.IsNullOrWhiteSpace(request.AgeGroup))
         {
             if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
+            {
                 throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
+            }
 
             profile.AgeGroupName = request.AgeGroup;
         }
@@ -60,25 +62,39 @@ public class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUserProfile
         }
 
         if (request.SelectedAvatarMediaId != null)
+        {
             profile.SelectedAvatarMediaId = request.SelectedAvatarMediaId;
+        }
 
         if (request.Pronouns != null)
+        {
             profile.Pronouns = request.Pronouns;
+        }
 
         if (request.Bio != null)
+        {
             profile.Bio = request.Bio;
+        }
 
         if (request.AccountId != null)
+        {
             profile.AccountId = request.AccountId;
+        }
 
         if (request.HasCompletedOnboarding.HasValue)
+        {
             profile.HasCompletedOnboarding = request.HasCompletedOnboarding.Value;
+        }
 
         if (request.IsGuest.HasValue)
+        {
             profile.IsGuest = request.IsGuest.Value;
+        }
 
         if (request.IsNpc.HasValue)
+        {
             profile.IsNpc = request.IsNpc.Value;
+        }
 
         profile.UpdatedAt = DateTime.UtcNow;
 

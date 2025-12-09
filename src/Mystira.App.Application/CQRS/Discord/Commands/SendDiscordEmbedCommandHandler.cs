@@ -5,36 +5,31 @@ namespace Mystira.App.Application.CQRS.Discord.Commands;
 
 /// <summary>
 /// Handler for sending rich embeds to Discord channels.
-/// Builds embed from command parameters and sends via Discord bot service.
+/// Builds embed from command parameters and sends via the platform-agnostic IChatBotService.
 /// </summary>
 public class SendDiscordEmbedCommandHandler
     : ICommandHandler<SendDiscordEmbedCommand, (bool Success, string Message)>
 {
-    private readonly IDiscordBotService? _discordBotService;
+    // FIX: Remove optional dependency anti-pattern - require the service
+    private readonly IChatBotService _chatBotService;
     private readonly ILogger<SendDiscordEmbedCommandHandler> _logger;
 
     public SendDiscordEmbedCommandHandler(
         ILogger<SendDiscordEmbedCommandHandler> logger,
-        IDiscordBotService? discordBotService = null)
+        IChatBotService chatBotService)
     {
         _logger = logger;
-        _discordBotService = discordBotService;
+        _chatBotService = chatBotService ?? throw new ArgumentNullException(nameof(chatBotService));
     }
 
     public async Task<(bool Success, string Message)> Handle(
         SendDiscordEmbedCommand command,
         CancellationToken cancellationToken)
     {
-        if (_discordBotService == null)
+        if (!_chatBotService.IsConnected)
         {
-            _logger.LogWarning("Attempted to send Discord embed but bot service is not enabled");
-            return (false, "Discord bot is not enabled");
-        }
-
-        if (!_discordBotService.IsConnected)
-        {
-            _logger.LogWarning("Attempted to send Discord embed but bot is not connected");
-            return (false, "Discord bot is not connected");
+            _logger.LogWarning("Attempted to send embed but chat bot is not connected");
+            return (false, "Chat bot is not connected");
         }
 
         try
@@ -56,7 +51,7 @@ public class SendDiscordEmbedCommandHandler
                 }).ToList()
             };
 
-            await _discordBotService.SendEmbedAsync(command.ChannelId, embedData);
+            await _chatBotService.SendEmbedAsync(command.ChannelId, embedData, cancellationToken);
 
             _logger.LogInformation("Successfully sent Discord embed to channel {ChannelId}", command.ChannelId);
             return (true, "Embed sent successfully");

@@ -78,6 +78,48 @@ param skipAppServiceCreation bool = false
 @description('Resource group where existing App Services are located (if skipAppServiceCreation is true)')
 param existingAppServiceResourceGroup string = ''
 
+// ─────────────────────────────────────────────────────────────────
+// Azure Bot Parameters (for Teams integration)
+// ─────────────────────────────────────────────────────────────────
+
+@description('Deploy Azure Bot for Teams integration')
+param deployAzureBot bool = false
+
+@description('Microsoft App ID for the bot (from Azure AD App Registration)')
+param botMicrosoftAppId string = ''
+
+@description('Microsoft App Password (client secret from Azure AD)')
+@secure()
+param botMicrosoftAppPassword string = ''
+
+@description('Bot messaging endpoint URL')
+param botEndpoint string = ''
+
+@description('Bot SKU (F0 = Free, S1 = Standard)')
+@allowed([
+  'F0'
+  'S1'
+])
+param botSku string = 'F0'
+
+// ─────────────────────────────────────────────────────────────────
+// Discord Bot Parameters
+// ─────────────────────────────────────────────────────────────────
+
+@description('Discord bot token')
+@secure()
+param discordBotToken string = ''
+
+// ─────────────────────────────────────────────────────────────────
+// WhatsApp Parameters (via ACS)
+// ─────────────────────────────────────────────────────────────────
+
+@description('Enable WhatsApp channel in Communication Services')
+param enableWhatsApp bool = false
+
+@description('WhatsApp phone number ID (from Meta Business Suite)')
+param whatsAppPhoneNumberId string = ''
+
 // Deploy Log Analytics Workspace
 module logAnalytics 'modules/log-analytics.bicep' = {
   name: 'log-analytics-deployment'
@@ -106,6 +148,33 @@ module communicationServices 'modules/communication-services.bicep' = if (!skipC
     domainName: 'mystira.app'
     location: 'global'
     dataLocation: 'Europe'
+    enableWhatsApp: enableWhatsApp
+    whatsAppPhoneNumberId: whatsAppPhoneNumberId
+    tags: {
+      environment: environment
+      application: 'mystira-app'
+    }
+  }
+}
+
+// Deploy Azure Bot for Teams integration (conditional)
+module azureBot 'modules/azure-bot.bicep' = if (deployAzureBot && botMicrosoftAppId != '') {
+  name: 'azure-bot-deployment'
+  params: {
+    botName: '${resourcePrefix}-bot-mystira'
+    botDisplayName: 'Mystira Bot'
+    microsoftAppId: botMicrosoftAppId
+    microsoftAppPassword: botMicrosoftAppPassword
+    botEndpoint: botEndpoint != '' ? botEndpoint : 'https://${resourcePrefix}-app-mystira-api.azurewebsites.net/api/messages/teams'
+    location: 'global'
+    sku: botSku
+    appInsightsInstrumentationKey: appInsights.outputs.instrumentationKey
+    enableTeamsChannel: true
+    enableWebChatChannel: true
+    tags: {
+      environment: environment
+      application: 'mystira-app'
+    }
   }
 }
 
@@ -219,6 +288,7 @@ output logAnalyticsWorkspaceId string = logAnalytics.outputs.workspaceId
 output appInsightsInstrumentationKey string = appInsights.outputs.instrumentationKey
 output appInsightsConnectionString string = appInsights.outputs.connectionString
 output communicationServiceId string = skipCommServiceCreation ? existingCommService.id : communicationServices.outputs.communicationServiceId
+output communicationServiceConnectionString string = skipCommServiceCreation ? acsConnectionString : communicationServices.outputs.communicationServiceConnectionString
 output emailServiceId string = skipCommServiceCreation ? '' : (communicationServices.outputs.emailServiceId)
 output storageAccountName string = skipStorageCreation ? existingStorageAccountName : (storage.outputs.storageAccountName)
 output storageConnectionString string = skipStorageCreation ? storageConnString : (storage.outputs.storageConnectionString)
@@ -226,3 +296,12 @@ output cosmosDbAccountName string = skipCosmosCreation ? existingCosmosDbAccount
 output cosmosDbConnectionString string = skipCosmosCreation ? cosmosConnString : (cosmosDb.outputs.cosmosDbConnectionString)
 output apiAppServiceUrl string = skipAppServiceCreation ? 'https://${existingApiAppService.properties.defaultHostName}' : apiAppService.outputs.appServiceUrl
 output adminApiAppServiceUrl string = skipAppServiceCreation ? 'https://${existingAdminApiAppService.properties.defaultHostName}' : adminApiAppService.outputs.appServiceUrl
+
+// Azure Bot Outputs
+output azureBotId string = deployAzureBot && botMicrosoftAppId != '' ? azureBot.outputs.botId : ''
+output azureBotName string = deployAzureBot && botMicrosoftAppId != '' ? azureBot.outputs.botName : ''
+output azureBotEndpoint string = deployAzureBot && botMicrosoftAppId != '' ? azureBot.outputs.botEndpoint : ''
+
+// WhatsApp Outputs
+output whatsAppEnabled bool = enableWhatsApp
+output whatsAppPhoneNumberId string = whatsAppPhoneNumberId

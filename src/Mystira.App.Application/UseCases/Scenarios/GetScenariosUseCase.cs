@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Mystira.App.Application.Ports.Data;
 using Mystira.App.Contracts.Requests.Scenarios;
 using Mystira.App.Contracts.Responses.Scenarios;
 using Mystira.App.Domain.Models;
-using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Application.UseCases.Scenarios;
 

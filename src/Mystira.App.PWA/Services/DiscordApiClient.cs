@@ -33,7 +33,7 @@ public class DiscordApiClient : BaseApiClient, IDiscordApiClient
                 // Log as warning since Discord integration is optional
                 Logger.LogWarning(ex, "Discord status API unavailable (this is expected if Discord integration is not configured).");
             }
-            
+
             return new DiscordStatusResponse
             {
                 Enabled = false,

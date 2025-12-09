@@ -40,7 +40,10 @@ public class EchoType
     public static EchoType? Parse(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
+        {
             return null;
+        }
+
         return new EchoType(value);
     }
 }

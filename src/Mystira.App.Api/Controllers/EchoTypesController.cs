@@ -43,7 +43,7 @@ public class EchoTypesController : ControllerBase
     public async Task<ActionResult<dynamic>> ValidateEchoType([FromBody] ValidateEchoTypeRequest request)
     {
         _logger.LogInformation("POST: Validating echo type: {Name}", request.Name);
-        
+
         var isValid = await _mediator.Send(new ValidateEchoTypeQuery(request.Name));
         return Ok(new { isValid });
     }

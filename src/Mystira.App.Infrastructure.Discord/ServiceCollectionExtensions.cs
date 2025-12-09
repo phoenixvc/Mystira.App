@@ -8,12 +8,17 @@ using Mystira.App.Infrastructure.Discord.Services;
 namespace Mystira.App.Infrastructure.Discord;
 
 /// <summary>
-/// Extension methods for registering Discord services
+/// Extension methods for registering Discord services.
+/// Follows clean/hexagonal architecture - registers as Application port interfaces.
 /// </summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Adds Discord bot services to the service collection
+    /// Adds Discord bot services to the service collection.
+    /// Registers the service as Application port interfaces:
+    /// - IMessagingService (platform-agnostic messaging)
+    /// - IChatBotService (platform-agnostic chat bot operations)
+    /// - IBotCommandService (platform-agnostic command support)
     /// </summary>
     /// <param name="services">The service collection</param>
     /// <param name="configuration">The configuration instance</param>
@@ -26,18 +31,49 @@ public static class ServiceCollectionExtensions
     {
         // Register configuration
         services.Configure<DiscordOptions>(configuration.GetSection(DiscordOptions.SectionName));
-        
+
         if (configureOptions != null)
         {
             services.Configure(configureOptions);
         }
 
         // Register Discord bot service as singleton (maintains persistent connection)
-        // Register as both IMessagingService (Application port) and IDiscordBotService (backwards compatibility)
+        // Register as Application port interfaces for clean architecture
         services.AddSingleton<DiscordBotService>();
         services.AddSingleton<IMessagingService>(sp => sp.GetRequiredService<DiscordBotService>());
-        services.AddSingleton<Services.IDiscordBotService>(sp => sp.GetRequiredService<DiscordBotService>());
-        services.AddSingleton<Application.Ports.Messaging.IDiscordBotService>(sp => sp.GetRequiredService<DiscordBotService>());
+        services.AddSingleton<IChatBotService>(sp => sp.GetRequiredService<DiscordBotService>());
+        services.AddSingleton<IBotCommandService>(sp => sp.GetRequiredService<DiscordBotService>());
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds Discord bot as a keyed service (for multi-platform scenarios).
+    /// Use this when you have multiple chat platforms (Discord + Teams + WhatsApp).
+    /// FIX: Added for consistency with Teams and WhatsApp service registration patterns.
+    /// </summary>
+    /// <param name="services">The service collection</param>
+    /// <param name="configuration">The configuration instance</param>
+    /// <param name="serviceKey">The key to use for the keyed service (default: "discord")</param>
+    /// <returns>The service collection for chaining</returns>
+    public static IServiceCollection AddDiscordBotKeyed(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        string serviceKey = "discord")
+    {
+        // Register configuration
+        services.Configure<DiscordOptions>(configuration.GetSection(DiscordOptions.SectionName));
+
+        // Register Discord bot service as singleton
+        services.AddSingleton<DiscordBotService>();
+
+        // Register as keyed services for multi-platform scenarios
+        services.AddKeyedSingleton<IMessagingService>(serviceKey,
+            (sp, _) => sp.GetRequiredService<DiscordBotService>());
+        services.AddKeyedSingleton<IChatBotService>(serviceKey,
+            (sp, _) => sp.GetRequiredService<DiscordBotService>());
+        services.AddKeyedSingleton<IBotCommandService>(serviceKey,
+            (sp, _) => sp.GetRequiredService<DiscordBotService>());
 
         return services;
     }
@@ -71,5 +107,17 @@ public static class ServiceCollectionExtensions
         tags ??= new[] { "discord", "bot", "ready" };
 
         return builder.AddCheck<DiscordBotHealthCheck>(name, tags: tags);
+    }
+
+    /// <summary>
+    /// Adds ticket support services (SampleTicketStartupService).
+    /// The TicketModule is auto-discovered when RegisterCommandsAsync is called.
+    /// </summary>
+    /// <param name="services">The service collection</param>
+    /// <returns>The service collection for chaining</returns>
+    public static IServiceCollection AddDiscordTicketSupport(this IServiceCollection services)
+    {
+        services.AddSingleton<SampleTicketStartupService>();
+        return services;
     }
 }

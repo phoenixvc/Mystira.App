@@ -32,13 +32,19 @@ public class CreateUserProfileCommandHandler : ICommandHandler<CreateUserProfile
 
         // Validate request
         if (string.IsNullOrWhiteSpace(request.Name))
+        {
             throw new ArgumentException("Profile name is required");
+        }
 
         if (string.IsNullOrWhiteSpace(request.AgeGroup))
+        {
             throw new ArgumentException("Age group is required");
+        }
 
         if (!AgeGroupConstants.AllAgeGroups.Contains(request.AgeGroup))
+        {
             throw new ArgumentException($"Invalid age group: {request.AgeGroup}. Must be one of: {string.Join(", ", AgeGroupConstants.AllAgeGroups)}");
+        }
 
         var profile = new UserProfile
         {

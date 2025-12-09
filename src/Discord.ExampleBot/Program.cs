@@ -1,98 +1,122 @@
-﻿using System.Reflection;
-using Discord.Interactions;
-using Discord.WebSocket;
+using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Mystira.App.Application.Ports.Messaging;
+using Mystira.App.Infrastructure.Discord;
+using Mystira.App.Infrastructure.Discord.Services;
 
 namespace Discord.ExampleBot;
 
+/// <summary>
+/// Example Discord bot using the Infrastructure.Discord layer.
+/// Demonstrates proper integration with the Mystira.App stack.
+///
+/// This is now a thin host that uses the shared Infrastructure.Discord components:
+/// - DiscordBotService (messaging + slash commands)
+/// - TicketModule (from Infrastructure.Discord.Modules)
+/// - SampleTicketStartupService (for testing)
+/// </summary>
 public class Program
 {
-    private DiscordSocketClient _client = null!;
-    private InteractionService _interactions = null!;
-    private IServiceProvider _services = null!;
-
-    public static Task Main(string[] args) => new Program().RunAsync();
-
-    public async Task RunAsync()
+    public static async Task Main(string[] args)
     {
-        // Build configuration
-        var configuration = new ConfigurationBuilder()
-            .SetBasePath(AppContext.BaseDirectory)
-            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-            .AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true)
+        var host = Host.CreateDefaultBuilder(args)
+            .ConfigureAppConfiguration((context, config) =>
+            {
+                config.SetBasePath(AppContext.BaseDirectory)
+                    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                    .AddJsonFile($"appsettings.{context.HostingEnvironment.EnvironmentName}.json", optional: true)
+                    .AddUserSecrets<Program>(optional: true)
+                    .AddEnvironmentVariables();
+            })
+            .ConfigureServices((context, services) =>
+            {
+                // Register Discord bot using Infrastructure layer
+                // This registers: IMessagingService, IChatBotService, IBotCommandService
+                services.AddDiscordBot(context.Configuration);
+
+                // Add the hosted service that manages bot lifecycle
+                services.AddDiscordBotHostedService();
+
+                // Add ticket support services
+                services.AddDiscordTicketSupport();
+
+                // Register the startup orchestrator for command registration
+                services.AddHostedService<BotStartupService>();
+            })
+            .ConfigureLogging(logging =>
+            {
+                logging.AddConsole();
+                logging.SetMinimumLevel(LogLevel.Information);
+            })
             .Build();
 
-        var discordSettings = configuration.GetSection("Discord").Get<DiscordSettings>()
-                              ?? throw new InvalidOperationException("Discord settings missing.");
+        await host.RunAsync();
+    }
+}
 
-        if (string.IsNullOrWhiteSpace(discordSettings.Token))
-            throw new InvalidOperationException("Discord:Token not set.");
+/// <summary>
+/// Hosted service that handles bot startup tasks after connection:
+/// - Registering command modules from Infrastructure.Discord
+/// - Running sample ticket creation if enabled
+/// </summary>
+public class BotStartupService : BackgroundService
+{
+    private readonly IBotCommandService _botCommandService;
+    private readonly SampleTicketStartupService _sampleTicketService;
+    private readonly IChatBotService _chatBotService;
+    private readonly ILogger<BotStartupService> _logger;
 
-        var config = new DiscordSocketConfig
-        {
-            GatewayIntents = GatewayIntents.Guilds
-        };
-
-        _client = new DiscordSocketClient(config);
-        _interactions = new InteractionService(_client.Rest);
-
-        _services = new ServiceCollection()
-            .AddSingleton<IConfiguration>(configuration)
-            .AddSingleton(discordSettings)
-            .AddSingleton(_client)
-            .AddSingleton(_interactions)
-            // Logging for your services
-            .AddLogging(builder =>
-            {
-                builder.AddConsole();
-                builder.SetMinimumLevel(LogLevel.Information);
-            })
-            // Register your startup poster service
-            .AddSingleton<SampleTicketStartupService>()
-            .BuildServiceProvider();
-
-        _client.Log += msg => { Console.WriteLine(msg); return Task.CompletedTask; };
-        _interactions.Log += msg => { Console.WriteLine(msg); return Task.CompletedTask; };
-
-        _client.Ready += () => OnReadyAsync(discordSettings);
-
-        _client.InteractionCreated += async interaction =>
-        {
-            var ctx = new SocketInteractionContext(_client, interaction);
-            await _interactions.ExecuteCommandAsync(ctx, _services);
-        };
-
-        await _client.LoginAsync(TokenType.Bot, discordSettings.Token);
-        await _client.StartAsync();
-
-        await Task.Delay(-1);
+    public BotStartupService(
+        IBotCommandService botCommandService,
+        SampleTicketStartupService sampleTicketService,
+        IChatBotService chatBotService,
+        ILogger<BotStartupService> logger)
+    {
+        _botCommandService = botCommandService;
+        _sampleTicketService = sampleTicketService;
+        _chatBotService = chatBotService;
+        _logger = logger;
     }
 
-    private async Task OnReadyAsync(DiscordSettings settings)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // 1) Load slash command modules
-        await _interactions.AddModulesAsync(Assembly.GetExecutingAssembly(), _services);
+        // Wait for bot to connect
+        _logger.LogInformation("Waiting for chat bot to connect...");
 
-        // 2) Register commands
-        if (settings.GuildId != 0)
+        var maxWait = TimeSpan.FromSeconds(30);
+        var waited = TimeSpan.Zero;
+        while (!_chatBotService.IsConnected && waited < maxWait)
         {
-            await _interactions.RegisterCommandsToGuildAsync(settings.GuildId);
-            Console.WriteLine($"Slash commands registered to guild {settings.GuildId}");
-        }
-        else if (settings.RegisterGloballyIfNoGuildId)
-        {
-            await _interactions.RegisterCommandsGloballyAsync();
-            Console.WriteLine("Slash commands registered globally");
-        }
-        else
-        {
-            Console.WriteLine("No GuildId provided. Commands not registered.");
+            await Task.Delay(500, stoppingToken);
+            waited += TimeSpan.FromMilliseconds(500);
         }
 
-        // 3) Post sample ticket (if enabled)
-        var startup = _services.GetRequiredService<SampleTicketStartupService>();
-        await startup.PostSampleTicketIfEnabledAsync();
+        if (!_chatBotService.IsConnected)
+        {
+            _logger.LogWarning("Bot did not connect within timeout. Startup tasks may fail.");
+        }
+
+        try
+        {
+            // Register command modules from Infrastructure.Discord assembly
+            // This includes the TicketModule (/ticket, /ticket-close)
+            var infrastructureAssembly = typeof(Mystira.App.Infrastructure.Discord.Modules.TicketModule).Assembly;
+            await _botCommandService.RegisterCommandsAsync(infrastructureAssembly, stoppingToken);
+
+            _logger.LogInformation("Registered {Count} command modules from Infrastructure.Discord",
+                _botCommandService.RegisteredModuleCount);
+
+            // Post sample ticket if enabled in configuration
+            await _sampleTicketService.PostSampleTicketIfEnabledAsync();
+
+            _logger.LogInformation("Bot startup complete");
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException && ex is not ThreadAbortException)
+        {
+            _logger.LogError(ex, "Error during bot startup");
+        }
     }
 }

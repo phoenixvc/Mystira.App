@@ -1,15 +1,16 @@
 using System.Text;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Mystira.App.Api.Adapters;
 using Mystira.App.Api.Services;
-using Mystira.App.Infrastructure.Data;
+using Mystira.App.Application.Behaviors;
 using Mystira.App.Application.Ports;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Application.Ports.Media;
 using Mystira.App.Application.Ports.Health;
-using Mystira.App.Application.Behaviors;
+using Mystira.App.Application.Ports.Media;
 using Mystira.App.Application.Services;
 using Mystira.App.Application.UseCases.Accounts;
 using Mystira.App.Application.UseCases.GameSessions;
@@ -19,12 +20,11 @@ using Mystira.App.Application.UseCases.UserProfiles;
 using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
+using Mystira.App.Infrastructure.Data;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.Services;
 using Mystira.App.Infrastructure.Discord;
 using Mystira.App.Shared.Middleware;
-using Microsoft.AspNetCore.RateLimiting;
-using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 

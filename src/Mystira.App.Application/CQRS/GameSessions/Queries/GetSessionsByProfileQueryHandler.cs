@@ -27,7 +27,9 @@ public class GetSessionsByProfileQueryHandler : IQueryHandler<GetSessionsByProfi
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(request.ProfileId))
+        {
             throw new ArgumentException("ProfileId is required");
+        }
 
         var spec = new SessionsByProfileSpecification(request.ProfileId);
         var sessions = await _repository.ListAsync(spec);

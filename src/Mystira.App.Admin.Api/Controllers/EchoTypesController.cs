@@ -44,7 +44,7 @@ public class EchoTypesController : ControllerBase
     public async Task<ActionResult<EchoTypeDefinition>> CreateEchoType([FromBody] CreateEchoTypeRequest request)
     {
         _logger.LogInformation("POST: Creating echo type with name: {Name}", request.Name);
-        
+
         var created = await _mediator.Send(new CreateEchoTypeCommand(request.Name, request.Description));
         return CreatedAtAction(nameof(GetEchoTypeById), new { id = created.Id }, created);
     }
@@ -53,7 +53,7 @@ public class EchoTypesController : ControllerBase
     public async Task<ActionResult<EchoTypeDefinition>> UpdateEchoType(string id, [FromBody] UpdateEchoTypeRequest request)
     {
         _logger.LogInformation("PUT: Updating echo type with id: {Id}", id);
-        
+
         var updated = await _mediator.Send(new UpdateEchoTypeCommand(id, request.Name, request.Description));
         if (updated == null)
         {
@@ -67,7 +67,7 @@ public class EchoTypesController : ControllerBase
     public async Task<IActionResult> DeleteEchoType(string id)
     {
         _logger.LogInformation("DELETE: Deleting echo type with id: {Id}", id);
-        
+
         var success = await _mediator.Send(new DeleteEchoTypeCommand(id));
         if (!success)
         {

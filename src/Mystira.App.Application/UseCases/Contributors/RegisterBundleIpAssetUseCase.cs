@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports;
+using Mystira.App.Application.Ports.Data;
 using Mystira.App.Contracts.Requests.Contributors;
 using Mystira.App.Domain.Models;
-using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Application.UseCases.Contributors;
 
@@ -79,9 +79,9 @@ public class RegisterBundleIpAssetUseCase
             throw;
         }
 
-        _logger.LogInformation("Registered bundle {BundleId} as IP Asset: {IpAssetId}", 
+        _logger.LogInformation("Registered bundle {BundleId} as IP Asset: {IpAssetId}",
             bundleId, storyProtocolMetadata.IpAssetId);
-        
+
         return storyProtocolMetadata;
     }
 }

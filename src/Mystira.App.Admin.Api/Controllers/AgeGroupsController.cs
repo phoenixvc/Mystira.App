@@ -44,12 +44,12 @@ public class AgeGroupsController : ControllerBase
     public async Task<ActionResult<AgeGroupDefinition>> CreateAgeGroup([FromBody] CreateAgeGroupRequest request)
     {
         _logger.LogInformation("POST: Creating age group with name: {Name}", request.Name);
-        
+
         var created = await _mediator.Send(new CreateAgeGroupCommand(
-            request.Name, 
-            request.Value, 
-            request.MinimumAge, 
-            request.MaximumAge, 
+            request.Name,
+            request.Value,
+            request.MinimumAge,
+            request.MaximumAge,
             request.Description));
         return CreatedAtAction(nameof(GetAgeGroupById), new { id = created.Id }, created);
     }
@@ -58,13 +58,13 @@ public class AgeGroupsController : ControllerBase
     public async Task<ActionResult<AgeGroupDefinition>> UpdateAgeGroup(string id, [FromBody] UpdateAgeGroupRequest request)
     {
         _logger.LogInformation("PUT: Updating age group with id: {Id}", id);
-        
+
         var updated = await _mediator.Send(new UpdateAgeGroupCommand(
-            id, 
-            request.Name, 
-            request.Value, 
-            request.MinimumAge, 
-            request.MaximumAge, 
+            id,
+            request.Name,
+            request.Value,
+            request.MinimumAge,
+            request.MaximumAge,
             request.Description));
         if (updated == null)
         {
@@ -78,7 +78,7 @@ public class AgeGroupsController : ControllerBase
     public async Task<IActionResult> DeleteAgeGroup(string id)
     {
         _logger.LogInformation("DELETE: Deleting age group with id: {Id}", id);
-        
+
         var success = await _mediator.Send(new DeleteAgeGroupCommand(id));
         if (!success)
         {

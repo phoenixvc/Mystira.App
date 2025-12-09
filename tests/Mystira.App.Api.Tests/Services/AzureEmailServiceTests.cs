@@ -171,8 +171,8 @@ public class AzureEmailServiceTests
             x => x.Log(
                 It.IsAny<LogLevel>(),
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => 
-                    v.ToString()!.Contains("initialized") || 
+                It.Is<It.IsAnyType>((v, t) =>
+                    v.ToString()!.Contains("initialized") ||
                     v.ToString()!.Contains("Failed to initialize")),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),

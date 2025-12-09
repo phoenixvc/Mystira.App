@@ -43,7 +43,7 @@ public class CompassAxesController : ControllerBase
     public async Task<ActionResult<dynamic>> ValidateCompassAxis([FromBody] ValidateCompassAxisRequest request)
     {
         _logger.LogInformation("POST: Validating compass axis: {Name}", request.Name);
-        
+
         var isValid = await _mediator.Send(new ValidateCompassAxisQuery(request.Name));
         return Ok(new { isValid });
     }

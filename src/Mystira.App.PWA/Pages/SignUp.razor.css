@@ -1,5 +1,172 @@
+/* Sign Up Page Styles */
+
+/* Verification code input - spaced format display */
 .verification-code-input {
-    font-size: 1.5rem;
-    letter-spacing: 0.5rem;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1.75rem;
+    letter-spacing: 0.5em;
+    font-weight: 600;
+    background-color: var(--bg, #f8fafc);
+    color: var(--fg, #111827);
+    border: 2px solid var(--border, rgba(17,24,39,0.08));
+    border-radius: 12px;
+    padding: 16px 20px;
+}
+
+.verification-code-input::placeholder {
+    color: var(--muted, #6b7280);
+    opacity: 0.6;
+    letter-spacing: 0.5em;
+}
+
+.verification-code-input:focus {
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+/* Auth card styling - card used in signup page */
+::deep .card.shadow-lg {
+    background-color: var(--card, rgba(255,255,255,0.95));
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    border: 1px solid var(--border, rgba(17,24,39,0.08));
+}
+
+/* Dark mode styles via media query */
+@media (prefers-color-scheme: dark) {
+    ::deep .card.shadow-lg {
+        background: linear-gradient(135deg, #1e1b4b 0%, #14122b 100%);
+        border-color: rgba(99, 102, 241, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    ::deep .card-title {
+        color: #f1f5f9;
+    }
+
+    ::deep .form-label {
+        color: #e2e8f0;
+    }
+
+    ::deep .form-control {
+        background-color: #14122b;
+        border-color: #2d2a5e;
+        color: #f1f5f9;
+    }
+
+    ::deep .form-control::placeholder {
+        color: #818cf8;
+    }
+
+    ::deep .form-control:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+
+    .verification-code-input {
+        background-color: #14122b;
+        color: #f1f5f9;
+        border-color: #2d2a5e;
+    }
+
+    .verification-code-input::placeholder {
+        color: #6366f1;
+    }
+
+    .verification-code-input:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+
+    ::deep .form-check-input {
+        background-color: #14122b;
+        border-color: #4f46e5;
+    }
+
+    ::deep .form-check-input:checked {
+        background-color: #6366f1;
+        border-color: #6366f1;
+    }
+
+    ::deep .text-danger {
+        color: #fca5a5 !important;
+    }
+}
+
+/* Dark mode styles via data attribute */
+html[data-theme="dark"] ::deep .card.shadow-lg {
+    background: linear-gradient(135deg, #1e1b4b 0%, #14122b 100%);
+    border-color: rgba(99, 102, 241, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+html[data-theme="dark"] ::deep .card-title {
+    color: #f1f5f9;
+}
+
+html[data-theme="dark"] ::deep .form-label {
+    color: #e2e8f0;
+}
+
+html[data-theme="dark"] ::deep .form-control {
+    background-color: #14122b;
+    border-color: #2d2a5e;
+    color: #f1f5f9;
+}
+
+html[data-theme="dark"] ::deep .form-control::placeholder {
+    color: #818cf8;
+}
+
+html[data-theme="dark"] ::deep .form-control:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+html[data-theme="dark"] .verification-code-input {
+    background-color: #14122b;
+    color: #f1f5f9;
+    border-color: #2d2a5e;
+}
+
+html[data-theme="dark"] .verification-code-input::placeholder {
+    color: #6366f1;
+}
+
+html[data-theme="dark"] .verification-code-input:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+html[data-theme="dark"] ::deep .form-check-input {
+    background-color: #14122b;
+    border-color: #4f46e5;
+}
+
+html[data-theme="dark"] ::deep .form-check-input:checked {
+    background-color: #6366f1;
+    border-color: #6366f1;
+}
+
+html[data-theme="dark"] ::deep .text-danger {
+    color: #fca5a5 !important;
+}
+
+/* Light mode explicit overrides */
+html[data-theme="light"] ::deep .card.shadow-lg {
+    background-color: rgba(255, 255, 255, 0.95);
+    border-color: rgba(17, 24, 39, 0.08);
+}
+
+html[data-theme="light"] ::deep .form-control {
+    background-color: #f8fafc;
+    color: #111827;
+    border-color: rgba(17, 24, 39, 0.08);
+}
+
+html[data-theme="light"] .verification-code-input {
+    background-color: #f8fafc;
+    color: #111827;
+    border-color: rgba(17, 24, 39, 0.08);
 }
 
