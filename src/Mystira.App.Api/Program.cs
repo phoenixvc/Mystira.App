@@ -11,6 +11,7 @@ using Mystira.App.Application.Ports;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Ports.Health;
 using Mystira.App.Application.Ports.Media;
+using Mystira.App.Application.Ports.Messaging;
 using Mystira.App.Application.Services;
 using Mystira.App.Application.UseCases.Accounts;
 using Mystira.App.Application.UseCases.GameSessions;
@@ -24,6 +25,7 @@ using Mystira.App.Infrastructure.Data;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.Services;
 using Mystira.App.Infrastructure.Discord;
+using Mystira.App.Infrastructure.Discord.Services;
 using Mystira.App.Shared.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -288,7 +290,7 @@ builder.Services.AddScoped<IArchetypeRepository, ArchetypeRepository>();
 builder.Services.AddScoped<IEchoTypeRepository, EchoTypeRepository>();
 builder.Services.AddScoped<IFantasyThemeRepository, FantasyThemeRepository>();
 builder.Services.AddScoped<IAgeGroupRepository, AgeGroupRepository>();
-builder.Services.AddScoped<Mystira.App.Application.Ports.Data.IUnitOfWork, Mystira.App.Infrastructure.Data.UnitOfWork.UnitOfWork>();
+builder.Services.AddScoped<IUnitOfWork, Mystira.App.Infrastructure.Data.UnitOfWork.UnitOfWork>();
 
 // Register Application Layer Use Cases
 // Scenario Use Cases
@@ -342,7 +344,7 @@ builder.Services.AddScoped<DownloadMediaUseCase>();
 // Register application services
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
 builder.Services.AddScoped<IAppStatusService, AppStatusService>();
-builder.Services.AddScoped<Mystira.App.Api.Services.IJwtService, JwtService>();
+builder.Services.AddScoped<IJwtService, JwtService>();
 
 // Register Application.Ports adapters for CQRS handlers
 builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, JwtServiceAdapter>();
@@ -383,6 +385,14 @@ if (discordEnabled)
     builder.Services.AddDiscordBotHostedService();
     builder.Services.AddHealthChecks()
         .AddDiscordBotHealthCheck();
+}
+else
+{
+    // Register No-Op implementations so MediatR handlers depending on chat bot ports still resolve
+    builder.Services.AddSingleton<NoOpChatBotService>();
+    builder.Services.AddSingleton<IChatBotService>(sp => sp.GetRequiredService<NoOpChatBotService>());
+    builder.Services.AddSingleton<IMessagingService>(sp => sp.GetRequiredService<NoOpChatBotService>());
+    builder.Services.AddSingleton<IBotCommandService>(sp => sp.GetRequiredService<NoOpChatBotService>());
 }
 
 // Configure CORS for frontend integration (Best Practices)

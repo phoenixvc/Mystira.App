@@ -38,7 +38,7 @@ public class StoryProtocolClient
         _options = options;
 
         // Create account from private key
-        var account = new Account(privateKey);
+        var account = new Nethereum.Web3.Accounts.Account(privateKey);
 
         // Initialize Web3 with RPC endpoint
         _web3 = new Web3(account, options.RpcUrl);
