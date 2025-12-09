@@ -113,7 +113,7 @@ public class TicketModule : InteractionModuleBase<SocketInteractionContext>
             const int maxChannelLength = 100;
             const int maxSafeNameLength = maxChannelLength - prefixLength - separatorLength - suffixLength; // 88
 
-            var suffix = Random.Shared.Next(1000, 9999);
+            var suffix = Random.Shared.Next(1000, 10000); // 1000-9999 (upper bound exclusive)
             var safeName = MakeSafeChannelSlug(user.Username);
 
             // Truncate safeName if it would exceed the limit

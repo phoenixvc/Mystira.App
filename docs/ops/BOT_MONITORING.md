@@ -36,11 +36,15 @@ Response:
 
 ### Custom Health Checks for Teams/WhatsApp
 
+> **Note:** Keyed services require registration with `AddTeamsBotKeyed()` or `AddWhatsAppBotKeyed()`.
+> See [MULTI_PLATFORM_CHAT_BOT_SETUP.md](../setup/MULTI_PLATFORM_CHAT_BOT_SETUP.md) for configuration details.
+
 ```csharp
 public class TeamsBotHealthCheck : IHealthCheck
 {
     private readonly IChatBotService _botService;
 
+    // Requires: services.AddTeamsBotKeyed(configuration, "teams");
     public TeamsBotHealthCheck([FromKeyedServices("teams")] IChatBotService botService)
     {
         _botService = botService;
