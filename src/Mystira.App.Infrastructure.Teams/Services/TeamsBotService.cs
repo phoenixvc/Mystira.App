@@ -9,6 +9,7 @@ using Microsoft.Bot.Connector.Authentication;
 using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Rest;
 using Mystira.App.Application.Ports.Messaging;
 using Mystira.App.Infrastructure.Teams.Configuration;
 
@@ -122,10 +123,15 @@ public class TeamsBotService : IMessagingService, IChatBotService, IBotCommandSe
             _logger.LogWarning("Timeout sending message to Teams conversation after {Timeout}s", _options.DefaultTimeoutSeconds);
             throw new TimeoutException($"Teams API request timed out after {_options.DefaultTimeoutSeconds} seconds");
         }
-        catch (Exception ex)
+        catch (HttpOperationException ex)
         {
-            _logger.LogError(ex, "Failed to send message to Teams conversation");
+            _logger.LogError(ex, "Teams API HTTP operation failed while sending message. Status: {StatusCode}", ex.Response?.StatusCode);
             throw new InvalidOperationException($"Teams API error: {ex.Message}", ex);
+        }
+        catch (ValidationException ex)
+        {
+            _logger.LogError(ex, "Validation error while sending message to Teams conversation");
+            throw new InvalidOperationException($"Teams API validation error: {ex.Message}", ex);
         }
     }
 
@@ -173,10 +179,15 @@ public class TeamsBotService : IMessagingService, IChatBotService, IBotCommandSe
             _logger.LogWarning("Timeout sending embed to Teams conversation after {Timeout}s", _options.DefaultTimeoutSeconds);
             throw new TimeoutException($"Teams API request timed out after {_options.DefaultTimeoutSeconds} seconds");
         }
-        catch (Exception ex)
+        catch (HttpOperationException ex)
         {
-            _logger.LogError(ex, "Failed to send embed to Teams conversation");
+            _logger.LogError(ex, "Teams API HTTP operation failed while sending embed. Status: {StatusCode}", ex.Response?.StatusCode);
             throw new InvalidOperationException($"Teams API error: {ex.Message}", ex);
+        }
+        catch (ValidationException ex)
+        {
+            _logger.LogError(ex, "Validation error while sending embed to Teams conversation");
+            throw new InvalidOperationException($"Teams API validation error: {ex.Message}", ex);
         }
     }
 
@@ -224,10 +235,15 @@ public class TeamsBotService : IMessagingService, IChatBotService, IBotCommandSe
         {
             throw new TimeoutException($"Teams API request timed out after {_options.DefaultTimeoutSeconds} seconds");
         }
-        catch (Exception ex)
+        catch (HttpOperationException ex)
         {
-            _logger.LogError(ex, "Failed to send reply to Teams conversation");
+            _logger.LogError(ex, "Teams API HTTP operation failed while sending reply. Status: {StatusCode}", ex.Response?.StatusCode);
             throw new InvalidOperationException($"Teams API error: {ex.Message}", ex);
+        }
+        catch (ValidationException ex)
+        {
+            _logger.LogError(ex, "Validation error while sending reply to Teams conversation");
+            throw new InvalidOperationException($"Teams API validation error: {ex.Message}", ex);
         }
     }
 
