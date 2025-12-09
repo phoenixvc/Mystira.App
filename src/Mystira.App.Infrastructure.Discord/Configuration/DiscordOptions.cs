@@ -17,10 +17,28 @@ public class DiscordOptions
     public string BotToken { get; set; } = string.Empty;
 
     /// <summary>
-    /// Comma-separated list of guild (server) IDs the bot should operate in
-    /// If empty, bot will operate in all guilds it has access to
+    /// Primary guild (server) ID for slash command registration.
+    /// If set, commands are registered to this guild (faster updates during development).
+    /// If 0, commands are registered globally (takes up to 1 hour to propagate).
+    /// </summary>
+    public ulong GuildId { get; set; }
+
+    /// <summary>
+    /// Comma-separated list of guild (server) IDs the bot should operate in.
+    /// If empty, bot will operate in all guilds it has access to.
     /// </summary>
     public string GuildIds { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Whether to register slash commands globally if no GuildId is specified.
+    /// Default is false for safety during development.
+    /// </summary>
+    public bool RegisterCommandsGlobally { get; set; }
+
+    /// <summary>
+    /// Whether to enable slash command (interaction) support.
+    /// </summary>
+    public bool EnableSlashCommands { get; set; } = true;
 
     /// <summary>
     /// Whether to enable message content intent (required for reading message content)
@@ -53,4 +71,33 @@ public class DiscordOptions
     /// Leave empty to disable text commands
     /// </summary>
     public string CommandPrefix { get; set; } = "!";
+
+    // ─────────────────────────────────────────────────────────────────
+    // Ticketing/Support Configuration
+    // ─────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Role ID for support staff who can manage tickets.
+    /// </summary>
+    public ulong SupportRoleId { get; set; }
+
+    /// <summary>
+    /// Category ID where ticket channels should be created.
+    /// </summary>
+    public ulong SupportCategoryId { get; set; }
+
+    /// <summary>
+    /// Category ID where closed/archived tickets should be moved.
+    /// </summary>
+    public ulong SupportArchiveCategoryId { get; set; }
+
+    /// <summary>
+    /// Channel ID for ticket intake notifications (optional).
+    /// </summary>
+    public ulong SupportIntakeChannelId { get; set; }
+
+    /// <summary>
+    /// Whether to post a sample ticket on bot startup (for testing).
+    /// </summary>
+    public bool PostSampleTicketOnStartup { get; set; }
 }

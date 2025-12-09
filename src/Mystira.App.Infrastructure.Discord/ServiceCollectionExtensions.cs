@@ -15,7 +15,10 @@ public static class ServiceCollectionExtensions
 {
     /// <summary>
     /// Adds Discord bot services to the service collection.
-    /// Registers the service as Application port interfaces (IMessagingService, IDiscordBotService).
+    /// Registers the service as Application port interfaces:
+    /// - IMessagingService (platform-agnostic messaging)
+    /// - IDiscordBotService (Discord-specific operations)
+    /// - ISlashCommandService (slash command/interaction support)
     /// </summary>
     /// <param name="services">The service collection</param>
     /// <param name="configuration">The configuration instance</param>
@@ -39,6 +42,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<DiscordBotService>();
         services.AddSingleton<IMessagingService>(sp => sp.GetRequiredService<DiscordBotService>());
         services.AddSingleton<IDiscordBotService>(sp => sp.GetRequiredService<DiscordBotService>());
+        services.AddSingleton<ISlashCommandService>(sp => sp.GetRequiredService<DiscordBotService>());
 
         return services;
     }
@@ -72,5 +76,17 @@ public static class ServiceCollectionExtensions
         tags ??= new[] { "discord", "bot", "ready" };
 
         return builder.AddCheck<DiscordBotHealthCheck>(name, tags: tags);
+    }
+
+    /// <summary>
+    /// Adds ticket support services (SampleTicketStartupService).
+    /// The TicketModule is auto-discovered when RegisterCommandsAsync is called.
+    /// </summary>
+    /// <param name="services">The service collection</param>
+    /// <returns>The service collection for chaining</returns>
+    public static IServiceCollection AddDiscordTicketSupport(this IServiceCollection services)
+    {
+        services.AddSingleton<SampleTicketStartupService>();
+        return services;
     }
 }

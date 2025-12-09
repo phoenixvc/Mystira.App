@@ -1,5 +1,8 @@
+using System.Reflection;
 using Discord;
+using Discord.Interactions;
 using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Mystira.App.Application.Ports.Messaging;
@@ -10,20 +13,26 @@ namespace Mystira.App.Infrastructure.Discord.Services;
 /// <summary>
 /// Implementation of Discord bot service using Discord.NET.
 /// Implements the Application port interfaces for clean architecture compliance.
+/// Supports both messaging and slash commands (interactions).
 /// </summary>
-public class DiscordBotService : IMessagingService, Application.Ports.Messaging.IDiscordBotService, IDisposable
+public class DiscordBotService : IMessagingService, Application.Ports.Messaging.IDiscordBotService, ISlashCommandService, IDisposable
 {
     private readonly DiscordSocketClient _client;
+    private readonly InteractionService _interactions;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<DiscordBotService> _logger;
     private readonly DiscordOptions _options;
     private bool _disposed;
+    private bool _commandsRegistered;
 
     public DiscordBotService(
         IOptions<DiscordOptions> options,
-        ILogger<DiscordBotService> logger)
+        ILogger<DiscordBotService> logger,
+        IServiceProvider serviceProvider)
     {
         _options = options.Value;
         _logger = logger;
+        _serviceProvider = serviceProvider;
 
         // Configure Discord client with appropriate intents
         var config = new DiscordSocketConfig
@@ -48,17 +57,24 @@ public class DiscordBotService : IMessagingService, Application.Ports.Messaging.
         }
 
         _client = new DiscordSocketClient(config);
+        _interactions = new InteractionService(_client.Rest);
 
         // Wire up event handlers
         _client.Log += LogAsync;
+        _interactions.Log += LogAsync;
         _client.Ready += ReadyAsync;
         _client.MessageReceived += MessageReceivedAsync;
         _client.Disconnected += DisconnectedAsync;
+        _client.InteractionCreated += HandleInteractionAsync;
     }
 
     public bool IsConnected => _client.ConnectionState == ConnectionState.Connected;
 
-    public SocketSelfUser? CurrentUser => _client.CurrentUser;
+    /// <summary>
+    /// Internal access to Discord client for Infrastructure layer use only.
+    /// Do not expose Discord.NET types outside this assembly.
+    /// </summary>
+    internal DiscordSocketClient Client => _client;
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
@@ -216,12 +232,62 @@ public class DiscordBotService : IMessagingService, Application.Ports.Messaging.
         return Task.CompletedTask;
     }
 
-    private Task ReadyAsync()
+    private async Task ReadyAsync()
     {
-        _logger.LogInformation("Discord bot is ready! Logged in as {Username}", 
+        _logger.LogInformation("Discord bot is ready! Logged in as {Username}",
             _client.CurrentUser?.Username);
-        
-        return Task.CompletedTask;
+
+        // Auto-register commands if configured
+        if (_options.EnableSlashCommands && !_commandsRegistered)
+        {
+            try
+            {
+                if (_options.GuildId != 0)
+                {
+                    await RegisterCommandsToGuildAsync(_options.GuildId);
+                    _logger.LogInformation("Slash commands registered to guild {GuildId}", _options.GuildId);
+                }
+                else if (_options.RegisterCommandsGlobally)
+                {
+                    await RegisterCommandsGloballyAsync();
+                    _logger.LogInformation("Slash commands registered globally");
+                }
+                else
+                {
+                    _logger.LogWarning("Slash commands enabled but no GuildId configured and RegisterCommandsGlobally is false");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to register slash commands");
+            }
+        }
+    }
+
+    private async Task HandleInteractionAsync(SocketInteraction interaction)
+    {
+        try
+        {
+            var context = new SocketInteractionContext(_client, interaction);
+            await _interactions.ExecuteCommandAsync(context, _serviceProvider);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling interaction");
+
+            // If the interaction hasn't been responded to, send an error message
+            if (interaction.Type == InteractionType.ApplicationCommand)
+            {
+                try
+                {
+                    await interaction.RespondAsync("An error occurred while processing this command.", ephemeral: true);
+                }
+                catch
+                {
+                    // Interaction may have already been responded to
+                }
+            }
+        }
     }
 
     private Task MessageReceivedAsync(SocketMessage message)
@@ -259,6 +325,7 @@ public class DiscordBotService : IMessagingService, Application.Ports.Messaging.
             return;
         }
 
+        _interactions?.Dispose();
         _client?.Dispose();
         _disposed = true;
         GC.SuppressFinalize(this);
@@ -304,4 +371,86 @@ public class DiscordBotService : IMessagingService, Application.Ports.Messaging.
             GuildCount = _client.Guilds.Count
         };
     }
+
+    // ─────────────────────────────────────────────────────────────────
+    // ISlashCommandService Implementation
+    // ─────────────────────────────────────────────────────────────────
+
+    /// <inheritdoc />
+    public bool IsEnabled => _options.EnableSlashCommands;
+
+    /// <inheritdoc />
+    public int RegisteredModuleCount => _interactions.Modules.Count;
+
+    /// <inheritdoc />
+    public async Task RegisterCommandsAsync(Assembly assembly, CancellationToken cancellationToken = default)
+    {
+        if (!_options.EnableSlashCommands)
+        {
+            _logger.LogWarning("Slash commands are disabled in configuration");
+            return;
+        }
+
+        try
+        {
+            await _interactions.AddModulesAsync(assembly, _serviceProvider);
+            _logger.LogInformation("Registered command modules from assembly {Assembly}", assembly.GetName().Name);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to register command modules from assembly {Assembly}", assembly.GetName().Name);
+            throw;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task RegisterCommandsToGuildAsync(ulong guildId, CancellationToken cancellationToken = default)
+    {
+        if (!_options.EnableSlashCommands)
+        {
+            _logger.LogWarning("Slash commands are disabled in configuration");
+            return;
+        }
+
+        try
+        {
+            await _interactions.RegisterCommandsToGuildAsync(guildId);
+            _commandsRegistered = true;
+            _logger.LogInformation("Registered {Count} slash commands to guild {GuildId}",
+                _interactions.SlashCommands.Count, guildId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to register commands to guild {GuildId}", guildId);
+            throw;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task RegisterCommandsGloballyAsync(CancellationToken cancellationToken = default)
+    {
+        if (!_options.EnableSlashCommands)
+        {
+            _logger.LogWarning("Slash commands are disabled in configuration");
+            return;
+        }
+
+        try
+        {
+            await _interactions.RegisterCommandsGloballyAsync();
+            _commandsRegistered = true;
+            _logger.LogInformation("Registered {Count} slash commands globally",
+                _interactions.SlashCommands.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to register commands globally");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Internal access to InteractionService for Infrastructure layer use.
+    /// </summary>
+    internal InteractionService Interactions => _interactions;
 }
