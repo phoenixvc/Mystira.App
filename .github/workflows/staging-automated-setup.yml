@@ -23,8 +23,8 @@ permissions:
 
 env:
   ENVIRONMENT: 'staging'
-  LOCATION: 'westeurope'
-  RESOURCE_GROUP: 'staging-euw-rg-mystira-app'
+  LOCATION: 'southafricanorth'
+  RESOURCE_GROUP: 'mys-staging-mystira-rg-san'
   SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
 jobs:

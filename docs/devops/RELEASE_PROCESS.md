@@ -178,8 +178,8 @@ If production deployment fails or causes issues:
 ```bash
 # If using deployment slots, swap back
 az webapp deployment slot swap \
-  --resource-group mys-prod-mystira-rg-euw \
-  --name mys-prod-mystira-api-euw \
+  --resource-group mys-prod-mystira-rg-san \
+  --name mys-prod-mystira-api-san \
   --slot staging \
   --target-slot production
 ```

@@ -281,7 +281,9 @@ param staticWebAppBranch string = 'dev'
 var storageAccountName = skipStorageCreation ? 'placeholder' : names.storageAccount
 var cosmosConnString = skipCosmosCreation && existingCosmosConnectionString != '' ? existingCosmosConnectionString : ''
 var storageConnString = skipStorageCreation && existingStorageConnectionString != '' ? existingStorageConnectionString : ''
-var acsConnStringToUse = skipCommServiceCreation ? acsConnectionString : ''
+
+// Key Vault URI for App Service secret references
+var keyVaultUriComputed = 'https://${names.keyVault}${az.environment().suffixes.keyvaultDns}/'
 
 // ─────────────────────────────────────────────────────────────────
 // Module Deployments
@@ -385,6 +387,7 @@ module cosmosDb 'modules/cosmos-db.bicep' = if (!skipCosmosCreation) {
 // Main API App Service (conditional)
 module apiAppService 'modules/app-service.bicep' = if (!skipAppServiceCreation) {
   name: 'deploy-api-app-service'
+  dependsOn: [keyVault]  // Ensure Key Vault is created first
   params: {
     appServiceName: names.apiApp
     appServicePlanName: names.appServicePlan
@@ -397,18 +400,27 @@ module apiAppService 'modules/app-service.bicep' = if (!skipAppServiceCreation) 
     jwtRsaPublicKey: jwtRsaPublicKey
     jwtIssuer: jwtIssuer
     jwtAudience: jwtAudience
-    acsConnectionString: acsConnStringToUse
+    keyVaultUri: keyVaultUriComputed
+    acsConnectionString: skipCommServiceCreation ? acsConnectionString : communicationServices.outputs.communicationServiceConnectionString
     acsSenderEmail: acsSenderEmail
     corsAllowedOrigins: corsAllowedOrigins
     appInsightsConnectionString: appInsights.outputs.connectionString
     logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+    discordBotToken: discordBotToken
+    botMicrosoftAppId: botMicrosoftAppId
+    botMicrosoftAppPassword: botMicrosoftAppPassword
+    whatsAppChannelRegistrationId: whatsAppChannelRegistrationId
+    whatsAppPhoneNumberId: whatsAppPhoneNumberId
+    whatsAppBusinessAccountId: whatsAppBusinessAccountId
+    whatsAppWebhookVerifyToken: whatsAppWebhookVerifyToken
+    tags: tags
   }
 }
 
 // Admin API App Service (conditional) - shares the same App Service Plan
 module adminApiAppService 'modules/app-service.bicep' = if (!skipAppServiceCreation) {
   name: 'deploy-admin-api-app-service'
-  dependsOn: [apiAppService]  // Ensure plan is created first
+  dependsOn: [apiAppService, keyVault]  // Ensure plan and Key Vault are created first
   params: {
     appServiceName: names.adminApiApp
     appServicePlanName: names.appServicePlan
@@ -421,11 +433,20 @@ module adminApiAppService 'modules/app-service.bicep' = if (!skipAppServiceCreat
     jwtRsaPublicKey: jwtRsaPublicKey
     jwtIssuer: jwtIssuer
     jwtAudience: jwtAudience
-    acsConnectionString: acsConnStringToUse
+    keyVaultUri: keyVaultUriComputed
+    acsConnectionString: skipCommServiceCreation ? acsConnectionString : communicationServices.outputs.communicationServiceConnectionString
     acsSenderEmail: acsSenderEmail
     corsAllowedOrigins: corsAllowedOrigins
     appInsightsConnectionString: appInsights.outputs.connectionString
     logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+    discordBotToken: discordBotToken
+    botMicrosoftAppId: botMicrosoftAppId
+    botMicrosoftAppPassword: botMicrosoftAppPassword
+    whatsAppChannelRegistrationId: whatsAppChannelRegistrationId
+    whatsAppPhoneNumberId: whatsAppPhoneNumberId
+    whatsAppBusinessAccountId: whatsAppBusinessAccountId
+    whatsAppWebhookVerifyToken: whatsAppWebhookVerifyToken
+    tags: tags
   }
 }
 
@@ -439,6 +460,40 @@ module staticWebApp 'modules/static-web-app.bicep' = if (deployStaticWebApp) {
     repositoryUrl: staticWebAppRepositoryUrl
     branch: staticWebAppBranch
     tags: tags
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Key Vault Access Policies for App Services
+// Added after App Services are deployed to avoid circular dependency
+// ─────────────────────────────────────────────────────────────────
+
+// Reference the Key Vault that was created by the module
+resource keyVaultRef 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
+  name: names.keyVault
+}
+
+// Grant Main API App Service access to Key Vault secrets
+resource apiAppKeyVaultAccess 'Microsoft.KeyVault/vaults/accessPolicies@2023-07-01' = if (!skipAppServiceCreation) {
+  name: 'add'
+  parent: keyVaultRef
+  properties: {
+    accessPolicies: [
+      {
+        tenantId: subscription().tenantId
+        objectId: apiAppService.outputs.appServicePrincipalId
+        permissions: {
+          secrets: ['get', 'list']
+        }
+      }
+      {
+        tenantId: subscription().tenantId
+        objectId: adminApiAppService.outputs.appServicePrincipalId
+        permissions: {
+          secrets: ['get', 'list']
+        }
+      }
+    ]
   }
 }
 

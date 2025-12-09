@@ -70,7 +70,7 @@ This document describes our continuous integration and continuous deployment (CI
 | PR to `dev` | Preview only |
 
 **Configuration**:
-- Resource Group: `mys-dev-mystira-rg-euw`
+- Resource Group: `mys-dev-mystira-rg-san`
 - Parameters: `infrastructure/params.dev.json`
 - SKU: Free/Basic tiers
 
@@ -82,7 +82,7 @@ This document describes our continuous integration and continuous deployment (CI
 | PR to `main` | Preview only |
 
 **Configuration**:
-- Resource Group: `mys-staging-mystira-rg-euw`
+- Resource Group: `mys-staging-mystira-rg-san`
 - Parameters: `infrastructure/params.staging.json`
 - SKU: Standard tiers
 
@@ -93,7 +93,7 @@ This document describes our continuous integration and continuous deployment (CI
 | Tag `v*.*.*` | Auto-deploy (with approval gate) |
 
 **Configuration**:
-- Resource Group: `mys-prod-mystira-rg-euw`
+- Resource Group: `mys-prod-mystira-rg-san`
 - Parameters: `infrastructure/params.prod.json`
 - SKU: Premium tiers
 - Manual approval required
@@ -193,8 +193,8 @@ All environments send telemetry to:
 ```bash
 # Swap back to previous deployment
 az webapp deployment slot swap \
-  --resource-group mys-prod-mystira-rg-euw \
-  --name mys-prod-mystira-api-euw \
+  --resource-group mys-prod-mystira-rg-san \
+  --name mys-prod-mystira-api-san \
   --slot staging \
   --target-slot production
 ```
@@ -213,17 +213,17 @@ For infrastructure issues:
 
 ```yaml
 env:
-  DOTNET_VERSION: '8.0.x'
+  DOTNET_VERSION: '9.0.x'
   NODE_VERSION: '20.x'
-  AZURE_LOCATION: 'westeurope'
+  AZURE_LOCATION: 'southafricanorth'
 ```
 
 ### Environment-Specific Variables
 
 | Variable | Dev | Staging | Prod |
 |----------|-----|---------|------|
-| `RESOURCE_GROUP` | mys-dev-mystira-rg-euw | mys-staging-mystira-rg-euw | mys-prod-mystira-rg-euw |
-| `APP_NAME` | mys-dev-mystira-api-euw | mys-staging-mystira-api-euw | mys-prod-mystira-api-euw |
+| `RESOURCE_GROUP` | mys-dev-mystira-rg-san | mys-staging-mystira-rg-san | mys-prod-mystira-rg-san |
+| `APP_NAME` | mys-dev-mystira-api-san | mys-staging-mystira-api-san | mys-prod-mystira-api-san |
 
 ## Security Considerations
 

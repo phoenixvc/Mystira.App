@@ -18,7 +18,7 @@ All Azure resources follow this naming pattern:
 | `env` | Environment | `dev`, `staging`, `prod` |
 | `project` | Project name | `mystira`, `website`, `api` |
 | `type` | Resource type abbreviation | `rg`, `st`, `cosmos`, `api` |
-| `region` | Azure region code | `euw`, `eun`, `wus` |
+| `region` | Azure region code | `san`, `eus2`, `euw` |
 
 ## Organisation Codes
 
@@ -39,17 +39,18 @@ All Azure resources follow this naming pattern:
 
 ## Region Codes
 
-| Code | Azure Region | Location |
-|------|--------------|----------|
-| `euw` | westeurope | West Europe (Netherlands) |
-| `eun` | northeurope | North Europe (Ireland) |
-| `wus` | westus | West US |
-| `eus` | eastus | East US |
-| `san` | southafricanorth | South Africa North |
-| `swe` | swedencentral | Sweden Central |
-| `uks` | uksouth | UK South |
-| `usw` | westus2 | West US 2 |
-| `glob` | global | Global/non-regional resources |
+| Code | Azure Region | Location | Notes |
+|------|--------------|----------|-------|
+| `san` | southafricanorth | South Africa North | **PRIMARY** |
+| `eus2` | eastus2 | East US 2 | Fallback for SWA |
+| `euw` | westeurope | West Europe (Netherlands) | |
+| `eun` | northeurope | North Europe (Ireland) | |
+| `wus` | westus | West US | |
+| `eus` | eastus | East US | |
+| `swe` | swedencentral | Sweden Central | |
+| `uks` | uksouth | UK South | |
+| `usw` | westus2 | West US 2 | |
+| `glob` | global | Global/non-regional resources | ACS, Bot |
 
 ## Resource Type Abbreviations
 
@@ -80,10 +81,10 @@ All Azure resources follow this naming pattern:
 ### Resource Groups
 
 ```
-mys-dev-mystira-rg-euw      # Mystira development in West Europe
-mys-staging-mystira-rg-euw  # Mystira staging in West Europe
-mys-prod-mystira-rg-euw     # Mystira production in West Europe
-nl-prod-api-rg-euw          # NeuralLiquid API production
+mys-dev-mystira-rg-san      # Mystira development in South Africa North
+mys-staging-mystira-rg-san  # Mystira staging in South Africa North
+mys-prod-mystira-rg-san     # Mystira production in South Africa North
+nl-prod-api-rg-san          # NeuralLiquid API production
 tws-prod-website-rg-san     # Twines & Straps website in South Africa
 ```
 
@@ -92,19 +93,21 @@ tws-prod-website-rg-san     # Twines & Straps website in South Africa
 Storage accounts have special rules (no hyphens, max 24 chars):
 
 ```
-mysdevmystirasteruw         # Mystira dev storage
-mysprodmystirasteruw        # Mystira prod storage
+mysdevmystirstsan           # Mystira dev storage
+mysprodmystirstsan          # Mystira prod storage
 twsprodwebsitestsan         # Twines & Straps prod storage
 ```
 
 ### Other Resources
 
 ```
-mys-dev-mystira-cosmos-euw      # Cosmos DB
-mys-dev-mystira-api-euw         # App Service (API)
-mys-dev-mystira-log-euw         # Log Analytics
-mys-dev-mystira-appins-euw      # Application Insights
-mys-dev-mystira-kv-euw          # Key Vault
+mys-dev-mystira-cosmos-san      # Cosmos DB
+mys-dev-mystira-api-san         # App Service (API)
+mys-dev-mystira-log-san         # Log Analytics
+mys-dev-mystira-appins-san      # Application Insights
+mys-dev-mystira-kv-san          # Key Vault
+mys-dev-mystira-acs-glob        # Communication Services (global)
+mys-dev-mystira-swa-eus2        # Static Web App (fallback region)
 ```
 
 ## Special Cases
@@ -132,7 +135,7 @@ mys-prod-mystira-dns-glob       # DNS Zone (global)
 For resources shared across projects within an organisation:
 
 ```
-mys-prod-shared-log-euw         # Shared Log Analytics workspace
+mys-prod-shared-log-san         # Shared Log Analytics workspace
 ```
 
 ## Bicep Implementation
