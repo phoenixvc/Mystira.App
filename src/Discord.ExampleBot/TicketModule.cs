@@ -141,7 +141,6 @@ public class TicketModule : InteractionModuleBase<SocketInteractionContext>
         // Move to an archive category and lock the user out
         if (_settings.SupportArchiveCategoryId != 0)
         {
-            var guild = Context.Guild;
 
             // Extract user id from topic
             var marker = "user:";
