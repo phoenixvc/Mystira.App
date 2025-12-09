@@ -12,6 +12,7 @@ public record DiscordBotStatusResponse(
     bool Enabled,
     bool Connected,
     string? BotUsername,
-    string? BotId,
+    // FIX: BotId type changed from string? to ulong? to match BotStatus.BotId
+    ulong? BotId,
     string? Message
 );

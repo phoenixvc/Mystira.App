@@ -209,33 +209,49 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
 
     public async Task ReplyToMessageAsync(ulong messageId, ulong channelId, string reply, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var channel = await GetMessageChannelAsync(channelId);
-            var message = await channel.GetMessageAsync(messageId);
-            
-            if (message == null)
-            {
-                throw new InvalidOperationException($"Message {messageId} not found in channel {channelId}");
-            }
+        var channel = await GetMessageChannelAsync(channelId);
+        var message = await channel.GetMessageAsync(messageId);
 
-            await channel.SendMessageAsync(reply, messageReference: new MessageReference(messageId));
-            _logger.LogDebug("Replied to message {MessageId} in channel {ChannelId}", messageId, channelId);
-        }
-        catch (global::Discord.Net.HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.TooManyRequests)
+        if (message == null)
         {
-            _logger.LogWarning(ex, "Rate limited while replying to message {MessageId} in channel {ChannelId}", messageId, channelId);
-            throw new InvalidOperationException($"Rate limited: {ex.Message}", ex);
+            throw new InvalidOperationException($"Message {messageId} not found in channel {channelId}");
         }
-        catch (global::Discord.Net.HttpException ex)
+
+        // FIX: Add retry logic for rate limiting (consistent with SendMessageAsync/SendEmbedAsync)
+        var maxAttempts = _options.MaxRetryAttempts > 0 ? _options.MaxRetryAttempts : 3;
+        var attempt = 0;
+
+        while (true)
         {
-            _logger.LogError(ex, "HTTP error replying to message {MessageId} in channel {ChannelId}: {StatusCode}", messageId, channelId, ex.HttpCode);
-            throw new InvalidOperationException($"Discord API error: {ex.Message}", ex);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error replying to message {MessageId} in channel {ChannelId}", messageId, channelId);
-            throw;
+            attempt++;
+            try
+            {
+                await channel.SendMessageAsync(reply, messageReference: new MessageReference(messageId));
+                _logger.LogDebug("Replied to message {MessageId} in channel {ChannelId}", messageId, channelId);
+                return;
+            }
+            catch (global::Discord.Net.HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.TooManyRequests && attempt < maxAttempts)
+            {
+                var retryAfter = ex.RetryAfter ?? TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                _logger.LogWarning(ex, "Rate limited while replying to message {MessageId} in channel {ChannelId}, retrying in {RetryAfter}s (attempt {Attempt}/{MaxAttempts})",
+                    messageId, channelId, retryAfter.TotalSeconds, attempt, maxAttempts);
+                await Task.Delay(retryAfter, cancellationToken);
+            }
+            catch (global::Discord.Net.HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.TooManyRequests)
+            {
+                _logger.LogWarning(ex, "Rate limited while replying to message {MessageId} in channel {ChannelId} after {Attempts} attempts", messageId, channelId, attempt);
+                throw new InvalidOperationException($"Rate limited after {attempt} attempts: {ex.Message}", ex);
+            }
+            catch (global::Discord.Net.HttpException ex)
+            {
+                _logger.LogError(ex, "HTTP error replying to message {MessageId} in channel {ChannelId}: {StatusCode}", messageId, channelId, ex.HttpCode);
+                throw new InvalidOperationException($"Discord API error: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error replying to message {MessageId} in channel {ChannelId}", messageId, channelId);
+                throw;
+            }
         }
     }
 

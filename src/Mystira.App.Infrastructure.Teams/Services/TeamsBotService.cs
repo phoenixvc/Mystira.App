@@ -390,25 +390,35 @@ public class TeamsBotService : IChatBotService, IBotCommandService, IDisposable
     /// Get a stable channel ID for a conversation key, creating one if necessary.
     /// Uses deterministic ID generation to avoid hash collisions.
     /// FIX: Use reverse lookup dictionary for O(1) lookup instead of O(n) iteration
+    /// FIX: Use double-checked locking to prevent race condition
     /// </summary>
     private ulong GetOrCreateChannelId(string key)
     {
         // FIX: O(1) lookup using reverse dictionary instead of O(n) iteration
+        // First check without lock for fast path
         if (_keyToId.TryGetValue(key, out var existingId))
         {
             return existingId;
         }
 
-        // Generate a new stable ID using deterministic hash
-        // FIX: Use SHA256 for deterministic, collision-resistant ID generation (Phase 1)
-        var channelId = GenerateDeterministicId(key);
-
-        // FIX: Handle potential (unlikely) collision with bounded retry
-        const int maxCollisionAttempts = 100;
-        var attempts = 0;
-
+        // FIX: Use lock for creation to prevent race condition where two threads
+        // both pass the TryGetValue check and try to create the same mapping
         lock (_idLock)
         {
+            // Double-check inside lock in case another thread already created it
+            if (_keyToId.TryGetValue(key, out existingId))
+            {
+                return existingId;
+            }
+
+            // Generate a new stable ID using deterministic hash
+            // FIX: Use SHA256 for deterministic, collision-resistant ID generation (Phase 1)
+            var channelId = GenerateDeterministicId(key);
+
+            // FIX: Handle potential (unlikely) collision with bounded retry
+            const int maxCollisionAttempts = 100;
+            var attempts = 0;
+
             while (!_idToKey.TryAdd(channelId, key))
             {
                 attempts++;
@@ -422,9 +432,9 @@ public class TeamsBotService : IChatBotService, IBotCommandService, IDisposable
 
             // Also add to reverse lookup
             _keyToId[key] = channelId;
-        }
 
-        return channelId;
+            return channelId;
+        }
     }
 
     /// <summary>

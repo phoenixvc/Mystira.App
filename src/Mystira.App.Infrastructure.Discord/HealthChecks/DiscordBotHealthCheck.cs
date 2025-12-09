@@ -1,19 +1,21 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Mystira.App.Application.Ports.Messaging;
+using Mystira.App.Infrastructure.Discord.Services;
 
 namespace Mystira.App.Infrastructure.Discord.HealthChecks;
 
 /// <summary>
 /// Health check to verify Discord bot connectivity.
-/// Uses the Application port interface for clean architecture compliance.
+/// Uses concrete DiscordBotService to ensure correct service is injected in multi-platform setups.
 /// </summary>
 public class DiscordBotHealthCheck : IHealthCheck
 {
-    private readonly IChatBotService _chatBotService;
+    private readonly DiscordBotService _discordBotService;
 
-    public DiscordBotHealthCheck(IChatBotService chatBotService)
+    // FIX: Inject concrete DiscordBotService instead of IChatBotService
+    // to avoid incorrect service resolution in multi-platform DI container
+    public DiscordBotHealthCheck(DiscordBotService discordBotService)
     {
-        _chatBotService = chatBotService;
+        _discordBotService = discordBotService;
     }
 
     public Task<HealthCheckResult> CheckHealthAsync(
@@ -22,7 +24,7 @@ public class DiscordBotHealthCheck : IHealthCheck
     {
         try
         {
-            var status = _chatBotService.GetStatus();
+            var status = _discordBotService.GetStatus();
 
             if (!status.IsConnected)
             {

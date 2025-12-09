@@ -9,6 +9,16 @@ using Mystira.App.Infrastructure.Discord.Configuration;
 namespace Mystira.App.Infrastructure.Discord.Modules;
 
 /// <summary>
+/// Tracks a semaphore with last access time for cleanup purposes.
+/// </summary>
+internal sealed class UserLockEntry
+{
+    public SemaphoreSlim Semaphore { get; } = new(1, 1);
+    public DateTime LastAccess { get; set; } = DateTime.UtcNow;
+    public int ActiveCount;
+}
+
+/// <summary>
 /// Slash command module for ticket management.
 /// Provides /ticket and /ticket-close commands for support ticketing.
 /// </summary>
@@ -17,8 +27,35 @@ public class TicketModule : InteractionModuleBase<SocketInteractionContext>
     private readonly DiscordOptions _options;
     private readonly ILogger<TicketModule> _logger;
 
-    // FIX: Use per-user semaphores to prevent race condition when creating tickets
-    private static readonly ConcurrentDictionary<ulong, SemaphoreSlim> _userLocks = new();
+    // FIX: Use per-user semaphores with cleanup to prevent memory leak
+    private static readonly ConcurrentDictionary<ulong, UserLockEntry> _userLocks = new();
+    private static readonly Timer _cleanupTimer;
+    private static readonly TimeSpan CleanupInterval = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan LockIdleTimeout = TimeSpan.FromMinutes(10);
+
+    static TicketModule()
+    {
+        // Start cleanup timer to remove idle locks
+        _cleanupTimer = new Timer(CleanupIdleLocks, null, CleanupInterval, CleanupInterval);
+    }
+
+    private static void CleanupIdleLocks(object? state)
+    {
+        var cutoff = DateTime.UtcNow - LockIdleTimeout;
+        foreach (var kvp in _userLocks)
+        {
+            var entry = kvp.Value;
+            // Only remove if not actively in use and idle past timeout
+            if (Interlocked.CompareExchange(ref entry.ActiveCount, 0, 0) == 0 &&
+                entry.LastAccess < cutoff)
+            {
+                if (_userLocks.TryRemove(kvp.Key, out var removed))
+                {
+                    removed.Semaphore.Dispose();
+                }
+            }
+        }
+    }
 
     public TicketModule(
         IOptions<DiscordOptions> options,
@@ -41,12 +78,15 @@ public class TicketModule : InteractionModuleBase<SocketInteractionContext>
             return;
         }
 
-        // FIX: Acquire per-user lock to prevent race condition
-        var userLock = _userLocks.GetOrAdd(user.Id, _ => new SemaphoreSlim(1, 1));
+        // FIX: Acquire per-user lock to prevent race condition with cleanup tracking
+        var lockEntry = _userLocks.GetOrAdd(user.Id, _ => new UserLockEntry());
+        lockEntry.LastAccess = DateTime.UtcNow;
+        Interlocked.Increment(ref lockEntry.ActiveCount);
 
         // Try to acquire lock with timeout
-        if (!await userLock.WaitAsync(TimeSpan.FromSeconds(5)))
+        if (!await lockEntry.Semaphore.WaitAsync(TimeSpan.FromSeconds(5)))
         {
+            Interlocked.Decrement(ref lockEntry.ActiveCount);
             await RespondAsync("Please wait, your previous ticket request is still being processed.", ephemeral: true);
             return;
         }
@@ -137,7 +177,9 @@ public class TicketModule : InteractionModuleBase<SocketInteractionContext>
         }
         finally
         {
-            userLock.Release();
+            lockEntry.Semaphore.Release();
+            lockEntry.LastAccess = DateTime.UtcNow;
+            Interlocked.Decrement(ref lockEntry.ActiveCount);
         }
     }
 
