@@ -2,6 +2,7 @@
 using Discord.ExampleBot;
 using Discord.Interactions;
 using Discord.WebSocket;
+using System.Text.RegularExpressions;
 
 public class TicketModule : InteractionModuleBase<SocketInteractionContext>
 {
@@ -115,9 +116,8 @@ public class TicketModule : InteractionModuleBase<SocketInteractionContext>
 
         cleaned = cleaned.Trim('-');
 
-        // Collapse consecutive dashes
-        while (cleaned.Contains("--"))
-            cleaned = cleaned.Replace("--", "-");
+        // Collapse consecutive dashes using regex for better performance
+        cleaned = Regex.Replace(cleaned, "-+", "-");
 
         // Limit length to 88 characters (leaving room for "ticket-" prefix and "-####" suffix)
         const int maxLength = 88;
