@@ -10,27 +10,22 @@ namespace Mystira.App.Application.CQRS.Discord.Commands;
 public class SendDiscordMessageCommandHandler
     : ICommandHandler<SendDiscordMessageCommand, (bool Success, string Message)>
 {
-    private readonly IChatBotService? _chatBotService;
+    // FIX: Remove optional dependency anti-pattern - require the service
+    private readonly IChatBotService _chatBotService;
     private readonly ILogger<SendDiscordMessageCommandHandler> _logger;
 
     public SendDiscordMessageCommandHandler(
         ILogger<SendDiscordMessageCommandHandler> logger,
-        IChatBotService? chatBotService = null)
+        IChatBotService chatBotService)
     {
         _logger = logger;
-        _chatBotService = chatBotService;
+        _chatBotService = chatBotService ?? throw new ArgumentNullException(nameof(chatBotService));
     }
 
     public async Task<(bool Success, string Message)> Handle(
         SendDiscordMessageCommand command,
         CancellationToken cancellationToken)
     {
-        if (_chatBotService == null)
-        {
-            _logger.LogWarning("Attempted to send message but chat bot service is not enabled");
-            return (false, "Chat bot is not enabled");
-        }
-
         if (!_chatBotService.IsConnected)
         {
             _logger.LogWarning("Attempted to send message but chat bot is not connected");
@@ -39,7 +34,7 @@ public class SendDiscordMessageCommandHandler
 
         try
         {
-            await _chatBotService.SendMessageAsync(command.ChannelId, command.Message);
+            await _chatBotService.SendMessageAsync(command.ChannelId, command.Message, cancellationToken);
             _logger.LogInformation("Successfully sent Discord message to channel {ChannelId}", command.ChannelId);
             return (true, "Message sent successfully");
         }

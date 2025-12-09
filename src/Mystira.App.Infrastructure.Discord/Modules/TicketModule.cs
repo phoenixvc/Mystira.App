@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
@@ -15,6 +16,9 @@ public class TicketModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly DiscordOptions _options;
     private readonly ILogger<TicketModule> _logger;
+
+    // FIX: Use per-user semaphores to prevent race condition when creating tickets
+    private static readonly ConcurrentDictionary<ulong, SemaphoreSlim> _userLocks = new();
 
     public TicketModule(
         IOptions<DiscordOptions> options,
@@ -37,82 +41,104 @@ public class TicketModule : InteractionModuleBase<SocketInteractionContext>
             return;
         }
 
-        // Check for existing open ticket
-        var existing = guild.TextChannels
-            .FirstOrDefault(c => c.Topic != null && c.Topic.Contains($"user:{user.Id}"));
+        // FIX: Acquire per-user lock to prevent race condition
+        var userLock = _userLocks.GetOrAdd(user.Id, _ => new SemaphoreSlim(1, 1));
 
-        if (existing != null)
+        // Try to acquire lock with timeout
+        if (!await userLock.WaitAsync(TimeSpan.FromSeconds(5)))
         {
-            await RespondAsync($"You already have an open ticket: {existing.Mention}", ephemeral: true);
+            await RespondAsync("Please wait, your previous ticket request is still being processed.", ephemeral: true);
             return;
         }
 
-        // Channel naming: ticket-<username>-<4digits>
-        var suffix = Random.Shared.Next(1000, 9999);
-        var safeName = MakeSafeChannelSlug(user.Username);
-        var channelName = $"ticket-{safeName}-{suffix}";
-
-        // Permission overwrites
-        var overwrites = new Overwrite[]
+        try
         {
-            new(guild.EveryoneRole.Id, PermissionTarget.Role,
-                new OverwritePermissions(viewChannel: PermValue.Deny)),
+            // Check for existing open ticket (now protected by lock)
+            var existing = guild.TextChannels
+                .FirstOrDefault(c => c.Topic != null && c.Topic.Contains($"user:{user.Id}") && !c.Topic.Contains("status:closed"));
 
-            new(user.Id, PermissionTarget.User,
-                new OverwritePermissions(
-                    viewChannel: PermValue.Allow,
-                    sendMessages: PermValue.Allow,
-                    readMessageHistory: PermValue.Allow,
-                    attachFiles: PermValue.Allow,
-                    embedLinks: PermValue.Allow)),
-
-            new(_options.SupportRoleId, PermissionTarget.Role,
-                new OverwritePermissions(
-                    viewChannel: PermValue.Allow,
-                    sendMessages: PermValue.Allow,
-                    readMessageHistory: PermValue.Allow,
-                    manageChannel: PermValue.Allow,
-                    manageMessages: PermValue.Allow))
-        };
-
-        var newChannel = await guild.CreateTextChannelAsync(channelName, props =>
-        {
-            if (_options.SupportCategoryId != 0)
-                props.CategoryId = _options.SupportCategoryId;
-
-            props.PermissionOverwrites = overwrites;
-            props.Topic = $"ticket | user:{user.Id} | created:{DateTimeOffset.UtcNow:O}";
-        });
-
-        // Acknowledge privately
-        await RespondAsync($"Your ticket is ready: {newChannel.Mention}", ephemeral: true);
-
-        // Intro message in ticket channel
-        var embed = new EmbedBuilder()
-            .WithTitle("Support Ticket Opened")
-            .WithDescription(
-                $"{user.Mention}, welcome!\n\n" +
-                $"**Subject:** {(string.IsNullOrWhiteSpace(subject) ? "No subject provided" : subject)}\n\n" +
-                "Please describe your issue with as much detail as you can.\n" +
-                "A support member will reply here."
-            )
-            .WithColor(Color.Blue)
-            .WithTimestamp(DateTimeOffset.UtcNow)
-            .Build();
-
-        await newChannel.SendMessageAsync(embed: embed);
-
-        // Log to intake channel if configured
-        if (_options.SupportIntakeChannelId != 0)
-        {
-            var intake = Context.Client.GetChannel(_options.SupportIntakeChannelId) as IMessageChannel;
-            if (intake != null)
+            if (existing != null)
             {
-                await intake.SendMessageAsync($"New ticket created by {user.Mention}: {newChannel.Mention}");
+                await RespondAsync($"You already have an open ticket: {existing.Mention}", ephemeral: true);
+                return;
             }
-        }
 
-        _logger.LogInformation("Ticket created: {ChannelName} by {User}", channelName, user.Username);
+            // Channel naming: ticket-<username>-<4digits>
+            // FIX: Validate channel name length (Discord limit: 100 chars)
+            var suffix = Random.Shared.Next(1000, 9999);
+            var safeName = MakeSafeChannelSlug(user.Username);
+            var channelName = $"ticket-{safeName}-{suffix}";
+            if (channelName.Length > 100)
+            {
+                channelName = $"ticket-{safeName[..Math.Min(safeName.Length, 85)]}-{suffix}";
+            }
+
+            // Permission overwrites
+            var overwrites = new Overwrite[]
+            {
+                new(guild.EveryoneRole.Id, PermissionTarget.Role,
+                    new OverwritePermissions(viewChannel: PermValue.Deny)),
+
+                new(user.Id, PermissionTarget.User,
+                    new OverwritePermissions(
+                        viewChannel: PermValue.Allow,
+                        sendMessages: PermValue.Allow,
+                        readMessageHistory: PermValue.Allow,
+                        attachFiles: PermValue.Allow,
+                        embedLinks: PermValue.Allow)),
+
+                new(_options.SupportRoleId, PermissionTarget.Role,
+                    new OverwritePermissions(
+                        viewChannel: PermValue.Allow,
+                        sendMessages: PermValue.Allow,
+                        readMessageHistory: PermValue.Allow,
+                        manageChannel: PermValue.Allow,
+                        manageMessages: PermValue.Allow))
+            };
+
+            var newChannel = await guild.CreateTextChannelAsync(channelName, props =>
+            {
+                if (_options.SupportCategoryId != 0)
+                    props.CategoryId = _options.SupportCategoryId;
+
+                props.PermissionOverwrites = overwrites;
+                props.Topic = $"ticket | user:{user.Id} | created:{DateTimeOffset.UtcNow:O}";
+            });
+
+            // Acknowledge privately
+            await RespondAsync($"Your ticket is ready: {newChannel.Mention}", ephemeral: true);
+
+            // Intro message in ticket channel
+            var embed = new EmbedBuilder()
+                .WithTitle("Support Ticket Opened")
+                .WithDescription(
+                    $"{user.Mention}, welcome!\n\n" +
+                    $"**Subject:** {(string.IsNullOrWhiteSpace(subject) ? "No subject provided" : subject)}\n\n" +
+                    "Please describe your issue with as much detail as you can.\n" +
+                    "A support member will reply here."
+                )
+                .WithColor(Color.Blue)
+                .WithTimestamp(DateTimeOffset.UtcNow)
+                .Build();
+
+            await newChannel.SendMessageAsync(embed: embed);
+
+            // Log to intake channel if configured
+            if (_options.SupportIntakeChannelId != 0)
+            {
+                var intake = Context.Client.GetChannel(_options.SupportIntakeChannelId) as IMessageChannel;
+                if (intake != null)
+                {
+                    await intake.SendMessageAsync($"New ticket created by {user.Mention}: {newChannel.Mention}");
+                }
+            }
+
+            _logger.LogInformation("Ticket created: {ChannelName} by {User}", channelName, user.Username);
+        }
+        finally
+        {
+            userLock.Release();
+        }
     }
 
     [SlashCommand("ticket-close", "Close this ticket (support only)")]

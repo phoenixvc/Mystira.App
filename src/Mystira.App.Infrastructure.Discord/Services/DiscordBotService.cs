@@ -124,51 +124,86 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
 
     public async Task SendMessageAsync(ulong channelId, string message, CancellationToken cancellationToken = default)
     {
-        try
+        var channel = await GetMessageChannelAsync(channelId);
+
+        // FIX: Add retry logic for rate limiting and transient errors
+        var maxAttempts = _options.MaxRetryAttempts > 0 ? _options.MaxRetryAttempts : 3;
+        var attempt = 0;
+
+        while (true)
         {
-            var channel = await GetMessageChannelAsync(channelId);
-            await channel.SendMessageAsync(message);
-            _logger.LogDebug("Sent message to channel {ChannelId}", channelId);
-        }
-        catch (global::Discord.Net.HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.TooManyRequests)
-        {
-            _logger.LogWarning(ex, "Rate limited while sending message to channel {ChannelId}", channelId);
-            throw new InvalidOperationException($"Rate limited: {ex.Message}", ex);
-        }
-        catch (global::Discord.Net.HttpException ex)
-        {
-            _logger.LogError(ex, "HTTP error sending message to channel {ChannelId}: {StatusCode}", channelId, ex.HttpCode);
-            throw new InvalidOperationException($"Discord API error: {ex.Message}", ex);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error sending message to channel {ChannelId}", channelId);
-            throw;
+            attempt++;
+            try
+            {
+                await channel.SendMessageAsync(message);
+                _logger.LogDebug("Sent message to channel {ChannelId}", channelId);
+                return;
+            }
+            catch (global::Discord.Net.HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.TooManyRequests && attempt < maxAttempts)
+            {
+                // FIX: Retry with backoff on rate limit instead of failing immediately
+                var retryAfter = ex.RetryAfter ?? TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                _logger.LogWarning(ex, "Rate limited while sending message to channel {ChannelId}, retrying in {RetryAfter}s (attempt {Attempt}/{MaxAttempts})",
+                    channelId, retryAfter.TotalSeconds, attempt, maxAttempts);
+                await Task.Delay(retryAfter, cancellationToken);
+            }
+            catch (global::Discord.Net.HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.TooManyRequests)
+            {
+                _logger.LogWarning(ex, "Rate limited while sending message to channel {ChannelId} after {Attempts} attempts", channelId, attempt);
+                throw new InvalidOperationException($"Rate limited after {attempt} attempts: {ex.Message}", ex);
+            }
+            catch (global::Discord.Net.HttpException ex)
+            {
+                _logger.LogError(ex, "HTTP error sending message to channel {ChannelId}: {StatusCode}", channelId, ex.HttpCode);
+                throw new InvalidOperationException($"Discord API error: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error sending message to channel {ChannelId}", channelId);
+                throw;
+            }
         }
     }
 
     public async Task SendEmbedAsync(ulong channelId, Embed embed, CancellationToken cancellationToken = default)
     {
-        try
+        var channel = await GetMessageChannelAsync(channelId);
+
+        // FIX: Add retry logic for rate limiting and transient errors
+        var maxAttempts = _options.MaxRetryAttempts > 0 ? _options.MaxRetryAttempts : 3;
+        var attempt = 0;
+
+        while (true)
         {
-            var channel = await GetMessageChannelAsync(channelId);
-            await channel.SendMessageAsync(embed: embed);
-            _logger.LogDebug("Sent embed to channel {ChannelId}", channelId);
-        }
-        catch (global::Discord.Net.HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.TooManyRequests)
-        {
-            _logger.LogWarning(ex, "Rate limited while sending embed to channel {ChannelId}", channelId);
-            throw new InvalidOperationException($"Rate limited: {ex.Message}", ex);
-        }
-        catch (global::Discord.Net.HttpException ex)
-        {
-            _logger.LogError(ex, "HTTP error sending embed to channel {ChannelId}: {StatusCode}", channelId, ex.HttpCode);
-            throw new InvalidOperationException($"Discord API error: {ex.Message}", ex);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error sending embed to channel {ChannelId}", channelId);
-            throw;
+            attempt++;
+            try
+            {
+                await channel.SendMessageAsync(embed: embed);
+                _logger.LogDebug("Sent embed to channel {ChannelId}", channelId);
+                return;
+            }
+            catch (global::Discord.Net.HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.TooManyRequests && attempt < maxAttempts)
+            {
+                var retryAfter = ex.RetryAfter ?? TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                _logger.LogWarning(ex, "Rate limited while sending embed to channel {ChannelId}, retrying in {RetryAfter}s (attempt {Attempt}/{MaxAttempts})",
+                    channelId, retryAfter.TotalSeconds, attempt, maxAttempts);
+                await Task.Delay(retryAfter, cancellationToken);
+            }
+            catch (global::Discord.Net.HttpException ex) when (ex.HttpCode == System.Net.HttpStatusCode.TooManyRequests)
+            {
+                _logger.LogWarning(ex, "Rate limited while sending embed to channel {ChannelId} after {Attempts} attempts", channelId, attempt);
+                throw new InvalidOperationException($"Rate limited after {attempt} attempts: {ex.Message}", ex);
+            }
+            catch (global::Discord.Net.HttpException ex)
+            {
+                _logger.LogError(ex, "HTTP error sending embed to channel {ChannelId}: {StatusCode}", channelId, ex.HttpCode);
+                throw new InvalidOperationException($"Discord API error: {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error sending embed to channel {ChannelId}", channelId);
+                throw;
+            }
         }
     }
 

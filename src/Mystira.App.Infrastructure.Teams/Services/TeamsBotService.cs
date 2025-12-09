@@ -31,7 +31,8 @@ public class TeamsBotService : IChatBotService, IBotCommandService, IDisposable
     // FIX: Use bidirectional mapping to avoid hash collision issues (Phase 1)
     private readonly ConcurrentDictionary<ulong, string> _idToKey = new();
     private readonly ConcurrentDictionary<string, ConversationReference> _keyToRef = new();
-    private ulong _nextChannelId = 1;
+    // FIX: Add reverse lookup dictionary for O(1) key-to-id lookups
+    private readonly ConcurrentDictionary<string, ulong> _keyToId = new();
     private readonly object _idLock = new();
 
     public TeamsBotService(
@@ -388,29 +389,39 @@ public class TeamsBotService : IChatBotService, IBotCommandService, IDisposable
     /// <summary>
     /// Get a stable channel ID for a conversation key, creating one if necessary.
     /// Uses deterministic ID generation to avoid hash collisions.
+    /// FIX: Use reverse lookup dictionary for O(1) lookup instead of O(n) iteration
     /// </summary>
     private ulong GetOrCreateChannelId(string key)
     {
-        // Check if we already have an ID for this key
-        foreach (var kvp in _idToKey)
+        // FIX: O(1) lookup using reverse dictionary instead of O(n) iteration
+        if (_keyToId.TryGetValue(key, out var existingId))
         {
-            if (kvp.Value == key)
-            {
-                return kvp.Key;
-            }
+            return existingId;
         }
 
         // Generate a new stable ID using deterministic hash
         // FIX: Use SHA256 for deterministic, collision-resistant ID generation (Phase 1)
         var channelId = GenerateDeterministicId(key);
 
-        // Handle potential (unlikely) collision by incrementing
+        // FIX: Handle potential (unlikely) collision with bounded retry
+        const int maxCollisionAttempts = 100;
+        var attempts = 0;
+
         lock (_idLock)
         {
             while (!_idToKey.TryAdd(channelId, key))
             {
-                channelId++;
+                attempts++;
+                if (attempts >= maxCollisionAttempts)
+                {
+                    throw new InvalidOperationException($"Failed to generate unique channel ID after {maxCollisionAttempts} attempts. This indicates a serious hash collision problem.");
+                }
+                // Use a different hash seed for retry
+                channelId = GenerateDeterministicId($"{key}:{attempts}");
             }
+
+            // Also add to reverse lookup
+            _keyToId[key] = channelId;
         }
 
         return channelId;
@@ -472,6 +483,7 @@ public class TeamsBotService : IChatBotService, IBotCommandService, IDisposable
         if (_disposed) return;
         _idToKey.Clear();
         _keyToRef.Clear();
+        _keyToId.Clear();
         _disposed = true;
         GC.SuppressFinalize(this);
     }

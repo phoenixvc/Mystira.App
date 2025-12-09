@@ -354,13 +354,31 @@ public class WhatsAppBotService : IChatBotService, IBotCommandService, IDisposab
                 new[] { phoneNumber },
                 templateName);
 
-            // Add template parameters if provided
+            // FIX: Properly accumulate template parameters instead of overwriting
             if (parameters != null)
             {
-                var bindings = new MessageTemplateText("body");
-                foreach (var param in parameters)
+                var paramList = parameters.ToList();
+                if (paramList.Count > 0)
                 {
-                    bindings = new MessageTemplateText(param);
+                    var values = new List<MessageTemplateValue>();
+                    for (var i = 0; i < paramList.Count; i++)
+                    {
+                        // Each parameter needs a unique name and the value
+                        values.Add(new MessageTemplateText($"param{i}", paramList[i]));
+                    }
+
+                    // Create template bindings with body component
+                    var bodyBinding = new MessageTemplateWhatsAppBindings("body");
+                    foreach (var value in values)
+                    {
+                        bodyBinding.Body.Add(value.Name);
+                    }
+                    templateContent.Bindings = bodyBinding;
+
+                    foreach (var value in values)
+                    {
+                        templateContent.Values.Add(value);
+                    }
                 }
             }
 
