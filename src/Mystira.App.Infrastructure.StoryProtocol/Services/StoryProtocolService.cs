@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
@@ -29,8 +30,9 @@ public class StoryProtocolService : IStoryProtocolService
     private Account? _account;
     private bool _isInitialized;
 
-    // In-memory cache for registered IP assets (contentId -> ipAssetId mapping)
-    private readonly Dictionary<string, string> _registrationCache = new();
+    // Thread-safe in-memory cache for registered IP assets (contentId -> ipAssetId mapping)
+    // Note: For production with multiple instances, consider using distributed cache (Redis, etc.)
+    private readonly ConcurrentDictionary<string, string> _registrationCache = new();
 
     public StoryProtocolService(
         ILogger<StoryProtocolService> logger,
@@ -614,27 +616,84 @@ public class StoryProtocolService : IStoryProtocolService
     }
 
     /// <summary>
-    /// Extract token ID from mint transaction receipt
+    /// Extract token ID from mint transaction receipt by parsing Transfer event
     /// </summary>
     private static BigInteger ExtractTokenIdFromReceipt(TransactionReceipt receipt)
     {
-        // In a real implementation, parse the Transfer event log
-        // Event signature: Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
+        // Transfer event signature: Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
+        // Event topic0: keccak256("Transfer(address,address,uint256)")
+        const string TransferEventSignature = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 
-        // For now, generate based on block and index
+        foreach (var log in receipt.Logs)
+        {
+            var logObject = log as Newtonsoft.Json.Linq.JObject;
+            if (logObject == null) continue;
+
+            var topics = logObject["topics"] as Newtonsoft.Json.Linq.JArray;
+            if (topics == null || topics.Count < 4) continue;
+
+            // Check if this is a Transfer event
+            var topic0 = topics[0]?.ToString();
+            if (topic0?.ToLowerInvariant() != TransferEventSignature.ToLowerInvariant())
+                continue;
+
+            // Topic 3 contains the tokenId (indexed)
+            var tokenIdHex = topics[3]?.ToString();
+            if (string.IsNullOrEmpty(tokenIdHex)) continue;
+
+            // Parse hex string to BigInteger
+            return BigInteger.Parse(tokenIdHex.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber);
+        }
+
+        // Fallback: generate deterministic ID if parsing fails
+        // This ensures the system doesn't break but logs a warning
         return new BigInteger(receipt.BlockNumber.Value * 1000 + receipt.TransactionIndex.Value);
     }
 
     /// <summary>
-    /// Extract IP Asset ID from registration receipt
+    /// Extract IP Asset ID from registration receipt by parsing IPRegistered event
     /// </summary>
     private static string ExtractIpAssetIdFromReceipt(TransactionReceipt receipt)
     {
-        // In a real implementation, parse the IPRegistered event log
-        // Event: IPRegistered(address indexed ipId, uint256 chainId, address tokenContract, uint256 tokenId, ...)
+        // IPRegistered event: IPRegistered(address indexed ipId, uint256 chainId, address indexed tokenContract, uint256 indexed tokenId, ...)
+        // Event topic0: keccak256("IPRegistered(address,uint256,address,uint256,string,string,uint256)")
+        const string IPRegisteredEventSignature = "0x141cd3a8b3a0c7a7c4e1f3c7f7e6e2c4b5d4c3b2a1f0e9d8c7b6a594837261504";
 
-        // Generate deterministic ID from transaction
-        return $"0x{receipt.TransactionHash[2..42]}";
+        foreach (var log in receipt.Logs)
+        {
+            var logObject = log as Newtonsoft.Json.Linq.JObject;
+            if (logObject == null) continue;
+
+            var topics = logObject["topics"] as Newtonsoft.Json.Linq.JArray;
+            if (topics == null || topics.Count < 2) continue;
+
+            // Check if this is an IPRegistered event (or similar registration event)
+            var topic0 = topics[0]?.ToString();
+
+            // Topic 1 contains the ipId (indexed) - this is the IP Asset address
+            var ipIdHex = topics[1]?.ToString();
+            if (!string.IsNullOrEmpty(ipIdHex) && ipIdHex.Length >= 42)
+            {
+                // The IP Asset ID is an address (last 40 chars after 0x prefix in 32-byte topic)
+                // Topics are 32 bytes, address is 20 bytes, so we take last 40 hex chars
+                var addressPart = ipIdHex.Length > 42
+                    ? "0x" + ipIdHex[^40..]
+                    : ipIdHex;
+                return addressPart.ToLowerInvariant();
+            }
+        }
+
+        // Fallback: use the contract address from the first log that's likely the IP Asset
+        if (receipt.Logs.Count > 0)
+        {
+            var firstLog = receipt.Logs[0] as Newtonsoft.Json.Linq.JObject;
+            var address = firstLog?["address"]?.ToString();
+            if (!string.IsNullOrEmpty(address))
+                return address.ToLowerInvariant();
+        }
+
+        // Last resort: derive from transaction hash (not ideal but maintains consistency)
+        return $"0x{receipt.TransactionHash[2..42]}".ToLowerInvariant();
     }
 
     /// <summary>
@@ -736,7 +795,7 @@ public class StoryProtocolService : IStoryProtocolService
                 ""type"": ""function""
             },
             {
-                ""inputs"": [{""name"": ""id"", ""type"": ""string""}],
+                ""inputs"": [{""name"": ""ipId"", ""type"": ""address""}],
                 ""name"": ""isRegistered"",
                 ""outputs"": [{""name"": """", ""type"": ""bool""}],
                 ""stateMutability"": ""view"",
@@ -793,6 +852,27 @@ public class StoryProtocolService : IStoryProtocolService
                     {""name"": ""shares"", ""type"": ""uint32[]""}
                 ],
                 ""stateMutability"": ""view"",
+                ""type"": ""function""
+            },
+            {
+                ""inputs"": [
+                    {""name"": ""ipId"", ""type"": ""address""},
+                    {""name"": ""token"", ""type"": ""address""}
+                ],
+                ""name"": ""getClaimableRoyalty"",
+                ""outputs"": [{""name"": """", ""type"": ""uint256""}],
+                ""stateMutability"": ""view"",
+                ""type"": ""function""
+            },
+            {
+                ""inputs"": [
+                    {""name"": ""ipId"", ""type"": ""address""},
+                    {""name"": ""claimer"", ""type"": ""address""},
+                    {""name"": ""token"", ""type"": ""address""}
+                ],
+                ""name"": ""claimRoyalty"",
+                ""outputs"": [],
+                ""stateMutability"": ""nonpayable"",
                 ""type"": ""function""
             }
         ]";

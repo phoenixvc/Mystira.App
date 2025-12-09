@@ -70,11 +70,19 @@
     flex-shrink: 0;
 }
 
+/* Header - semantic styling */
+.attribution-header h4.attribution-title {
+    margin: 0;
+}
+
 /* Credits List */
 .credits-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
 }
 
 .credit-item {

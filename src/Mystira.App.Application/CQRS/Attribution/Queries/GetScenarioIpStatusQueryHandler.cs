@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Mystira.App.Application.CQRS;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Contracts.Responses.Attribution;
@@ -14,7 +13,10 @@ public class GetScenarioIpStatusQueryHandler : IQueryHandler<GetScenarioIpStatus
 {
     private readonly IScenarioRepository _repository;
     private readonly ILogger<GetScenarioIpStatusQueryHandler> _logger;
-    private const string StoryProtocolExplorerBaseUrl = "https://explorer.story.foundation/ipa";
+
+    // TODO: Move to configuration (StoryProtocolOptions.ExplorerBaseUrl) via DI
+    // Default is Story Protocol Odyssey testnet explorer
+    private const string StoryProtocolExplorerBaseUrl = "https://odyssey.storyscan.xyz/address";
 
     public GetScenarioIpStatusQueryHandler(
         IScenarioRepository repository,

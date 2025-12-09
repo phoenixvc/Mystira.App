@@ -127,11 +127,11 @@ public class MockStoryProtocolService : IStoryProtocolService
         {
             distributions.Add(new RoyaltyDistribution
             {
-                ContributorId = contributor.UserId,
-                ContributorName = contributor.DisplayName,
+                ContributorId = contributor.Id,
+                ContributorName = contributor.Name,
                 WalletAddress = contributor.WalletAddress,
-                SharePercentage = contributor.RoyaltySharePercentage,
-                Amount = amount * (contributor.RoyaltySharePercentage / 100m)
+                SharePercentage = contributor.ContributionPercentage,
+                Amount = amount * (contributor.ContributionPercentage / 100m)
             });
         }
 
@@ -182,9 +182,10 @@ public class MockStoryProtocolService : IStoryProtocolService
 
             contributorBalances.Add(new ContributorBalance
             {
-                ContributorId = contributor.UserId,
-                ContributorName = contributor.DisplayName,
+                ContributorId = contributor.Id,
+                ContributorName = contributor.Name,
                 WalletAddress = contributor.WalletAddress,
+                SharePercentage = contributor.ContributionPercentage,
                 ClaimableAmount = balance,
                 TotalEarned = balance * 2, // Mock that they've earned double and claimed half
                 TotalClaimed = balance

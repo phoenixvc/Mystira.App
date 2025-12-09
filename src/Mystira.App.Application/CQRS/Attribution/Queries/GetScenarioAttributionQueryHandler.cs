@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.CQRS;
+using Mystira.App.Application.Helpers;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Contracts.Responses.Attribution;
 using Mystira.App.Domain.Models;
@@ -59,29 +60,12 @@ public class GetScenarioAttributionQueryHandler : IQueryHandler<GetScenarioAttri
                 response.Credits.Add(new CreatorCreditResponse
                 {
                     Name = contributor.Name,
-                    Role = GetRoleDisplayName(contributor.Role),
+                    Role = ContributorHelpers.GetRoleDisplayName(contributor.Role),
                     ContributionPercentage = contributor.ContributionPercentage
                 });
             }
         }
 
         return response;
-    }
-
-    private static string GetRoleDisplayName(ContributorRole role)
-    {
-        return role switch
-        {
-            ContributorRole.Writer => "Writer",
-            ContributorRole.Artist => "Artist",
-            ContributorRole.VoiceActor => "Voice Actor",
-            ContributorRole.MusicComposer => "Music Composer",
-            ContributorRole.SoundDesigner => "Sound Designer",
-            ContributorRole.Editor => "Editor",
-            ContributorRole.GameDesigner => "Game Designer",
-            ContributorRole.QualityAssurance => "Quality Assurance",
-            ContributorRole.Other => "Contributor",
-            _ => "Contributor"
-        };
     }
 }

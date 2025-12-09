@@ -4,17 +4,23 @@
 @inject IAttributionApiClient AttributionClient
 
 <div class="ip-verification-badge @GetBadgeClass() @(IsLoading ? "loading" : "")"
+     role="@(Clickable ? "button" : "status")"
+     aria-label="@GetAriaLabel()"
+     aria-busy="@IsLoading.ToString().ToLowerInvariant()"
+     tabindex="@(Clickable && IpStatus?.IsRegistered == true ? "0" : "-1")"
      title="@GetTooltipText()"
-     @onclick="HandleClick">
+     @onclick="HandleClick"
+     @onkeydown="HandleKeyDown">
     @if (IsLoading)
     {
-        <div class="badge-loading">
+        <div class="badge-loading" aria-hidden="true">
             <div class="loading-dot"></div>
         </div>
+        <span class="visually-hidden">Loading IP verification status</span>
     }
     else if (IpStatus != null && IpStatus.IsRegistered)
     {
-        <svg class="badge-icon verified" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="badge-icon verified" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
             <polyline points="9,12 12,15 16,10"/>
         </svg>
@@ -24,8 +30,13 @@
         }
         @if (ShowDetails && IpStatus.ExplorerUrl != null)
         {
-            <a href="@IpStatus.ExplorerUrl" target="_blank" rel="noopener noreferrer" class="badge-link" @onclick:stopPropagation="true">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <a href="@IpStatus.ExplorerUrl"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="badge-link"
+               aria-label="View on Story Protocol Explorer (opens in new tab)"
+               @onclick:stopPropagation="true">
+                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                     <polyline points="15 3 21 3 21 9"/>
                     <line x1="10" y1="14" x2="21" y2="3"/>
@@ -35,7 +46,7 @@
     }
     else if (!IsLoading && HasChecked)
     {
-        <svg class="badge-icon unverified" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="badge-icon unverified" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
         </svg>
         @if (ShowLabel)
@@ -47,52 +58,73 @@
 
 @if (ShowModal && IpStatus != null && IpStatus.IsRegistered)
 {
-    <div class="ip-modal-overlay" @onclick="CloseModal">
-        <div class="ip-modal" @onclick:stopPropagation="true">
+    <div class="ip-modal-overlay"
+         role="presentation"
+         @onclick="CloseModal"
+         @onkeydown="HandleOverlayKeyDown">
+        <div class="ip-modal"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="ip-modal-title"
+             @onclick:stopPropagation="true"
+             @ref="_modalRef">
             <div class="ip-modal-header">
-                <h3>IP Registration Details</h3>
-                <button class="ip-modal-close" @onclick="CloseModal">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <h3 id="ip-modal-title">IP Registration Details</h3>
+                <button class="ip-modal-close"
+                        @onclick="CloseModal"
+                        aria-label="Close dialog"
+                        type="button">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"/>
                         <line x1="6" y1="6" x2="18" y2="18"/>
                     </svg>
                 </button>
             </div>
             <div class="ip-modal-body">
-                <div class="ip-detail-row">
-                    <span class="ip-detail-label">Status</span>
-                    <span class="ip-detail-value verified">Registered</span>
-                </div>
-                @if (!string.IsNullOrEmpty(IpStatus.IpAssetId))
-                {
+                <dl class="ip-details-list">
                     <div class="ip-detail-row">
-                        <span class="ip-detail-label">IP Asset ID</span>
-                        <span class="ip-detail-value mono">@TruncateId(IpStatus.IpAssetId)</span>
+                        <dt class="ip-detail-label">Status</dt>
+                        <dd class="ip-detail-value verified">Registered</dd>
                     </div>
-                }
-                @if (IpStatus.RegisteredAt.HasValue)
-                {
-                    <div class="ip-detail-row">
-                        <span class="ip-detail-label">Registered</span>
-                        <span class="ip-detail-value">@IpStatus.RegisteredAt.Value.ToString("MMMM d, yyyy")</span>
-                    </div>
-                }
-                @if (IpStatus.ContributorCount > 0)
-                {
-                    <div class="ip-detail-row">
-                        <span class="ip-detail-label">Contributors</span>
-                        <span class="ip-detail-value">@IpStatus.ContributorCount creator@(IpStatus.ContributorCount == 1 ? "" : "s")</span>
-                    </div>
-                }
+                    @if (!string.IsNullOrEmpty(IpStatus.IpAssetId))
+                    {
+                        <div class="ip-detail-row">
+                            <dt class="ip-detail-label">IP Asset ID</dt>
+                            <dd class="ip-detail-value mono">@TruncateId(IpStatus.IpAssetId)</dd>
+                        </div>
+                    }
+                    @if (IpStatus.RegisteredAt.HasValue)
+                    {
+                        <div class="ip-detail-row">
+                            <dt class="ip-detail-label">Registered</dt>
+                            <dd class="ip-detail-value">
+                                <time datetime="@IpStatus.RegisteredAt.Value.ToString("yyyy-MM-dd")">
+                                    @IpStatus.RegisteredAt.Value.ToString("MMMM d, yyyy")
+                                </time>
+                            </dd>
+                        </div>
+                    }
+                    @if (IpStatus.ContributorCount > 0)
+                    {
+                        <div class="ip-detail-row">
+                            <dt class="ip-detail-label">Contributors</dt>
+                            <dd class="ip-detail-value">@IpStatus.ContributorCount creator@(IpStatus.ContributorCount == 1 ? "" : "s")</dd>
+                        </div>
+                    }
+                </dl>
                 @if (!string.IsNullOrEmpty(IpStatus.ExplorerUrl))
                 {
-                    <a href="@IpStatus.ExplorerUrl" target="_blank" rel="noopener noreferrer" class="ip-explorer-link">
+                    <a href="@IpStatus.ExplorerUrl"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="ip-explorer-link">
                         View on Story Protocol Explorer
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                             <polyline points="15 3 21 3 21 9"/>
                             <line x1="10" y1="14" x2="21" y2="3"/>
                         </svg>
+                        <span class="visually-hidden">(opens in new tab)</span>
                     </a>
                 }
             </div>
@@ -146,6 +178,7 @@
     private bool IsLoading { get; set; }
     private bool HasChecked { get; set; }
     private bool ShowModal { get; set; }
+    private ElementReference _modalRef;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -212,12 +245,45 @@
         return "";
     }
 
+    private string GetAriaLabel()
+    {
+        if (IsLoading) return "Checking IP verification status";
+        if (IpStatus?.IsRegistered == true)
+        {
+            return Clickable
+                ? "IP Protected - Click to view details"
+                : "IP Protected - Content is registered on Story Protocol";
+        }
+        if (HasChecked) return "Not registered on Story Protocol";
+        return "IP verification status";
+    }
+
     private void HandleClick()
     {
         if (Clickable && IpStatus?.IsRegistered == true)
         {
             ShowModal = true;
             StateHasChanged();
+        }
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (Clickable && IpStatus?.IsRegistered == true)
+        {
+            if (e.Key == "Enter" || e.Key == " ")
+            {
+                ShowModal = true;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void HandleOverlayKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            CloseModal();
         }
     }
 

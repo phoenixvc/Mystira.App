@@ -13,7 +13,10 @@ public class GetBundleIpStatusQueryHandler : IQueryHandler<GetBundleIpStatusQuer
 {
     private readonly IContentBundleRepository _repository;
     private readonly ILogger<GetBundleIpStatusQueryHandler> _logger;
-    private const string StoryProtocolExplorerBaseUrl = "https://explorer.story.foundation/ipa";
+
+    // TODO: Move to configuration (StoryProtocolOptions.ExplorerBaseUrl) via DI
+    // Default is Story Protocol Odyssey testnet explorer
+    private const string StoryProtocolExplorerBaseUrl = "https://odyssey.storyscan.xyz/address";
 
     public GetBundleIpStatusQueryHandler(
         IContentBundleRepository repository,

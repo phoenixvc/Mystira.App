@@ -3,35 +3,39 @@
 
 @inject IAttributionApiClient AttributionClient
 
-<div class="content-attribution @(IsLoading ? "loading" : "")">
+<section class="content-attribution @(IsLoading ? "loading" : "") @CssClass"
+         aria-label="Content creator credits"
+         aria-busy="@IsLoading.ToString().ToLowerInvariant()">
     @if (IsLoading)
     {
-        <div class="attribution-loading">
-            <div class="loading-spinner"></div>
+        <div class="attribution-loading" role="status" aria-live="polite">
+            <div class="loading-spinner" aria-hidden="true"></div>
             <span>Loading credits...</span>
         </div>
     }
     else if (Attribution != null && Attribution.HasCredits)
     {
-        <div class="attribution-header">
-            <span class="attribution-title">Created by</span>
+        <header class="attribution-header">
+            <h4 class="attribution-title">Created by</h4>
             @if (Attribution.IsIpRegistered)
             {
-                <span class="ip-badge" title="Registered on Story Protocol">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <span class="ip-badge"
+                      role="status"
+                      aria-label="Content is IP protected and registered on Story Protocol">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                         <polyline points="9,12 12,15 16,10"/>
                     </svg>
                     IP Protected
                 </span>
             }
-        </div>
+        </header>
 
-        <div class="credits-list">
+        <ul class="credits-list" role="list" aria-label="List of content creators">
             @foreach (var credit in Attribution.Credits)
             {
-                <div class="credit-item">
-                    <div class="credit-avatar">
+                <li class="credit-item">
+                    <div class="credit-avatar" aria-hidden="true">
                         @GetInitials(credit.Name)
                     </div>
                     <div class="credit-info">
@@ -40,37 +44,39 @@
                     </div>
                     @if (ShowPercentages && credit.ContributionPercentage.HasValue)
                     {
-                        <span class="credit-percentage">
+                        <span class="credit-percentage" aria-label="@credit.ContributionPercentage.Value.ToString("0.#") percent contribution">
                             @credit.ContributionPercentage.Value.ToString("0.#")%
                         </span>
                     }
-                </div>
+                </li>
             }
-        </div>
+        </ul>
 
         @if (ShowDetails && Attribution.IsIpRegistered && !string.IsNullOrEmpty(Attribution.IpAssetId))
         {
-            <div class="ip-details">
-                <span class="ip-label">Story Protocol IP Asset</span>
-                <span class="ip-value" title="@Attribution.IpAssetId">
+            <footer class="ip-details">
+                <span class="ip-label" id="ip-asset-label">Story Protocol IP Asset</span>
+                <span class="ip-value"
+                      aria-labelledby="ip-asset-label"
+                      title="@Attribution.IpAssetId">
                     @TruncateIpAssetId(Attribution.IpAssetId)
                 </span>
-            </div>
+            </footer>
         }
     }
     else if (!IsLoading && Attribution == null && !string.IsNullOrEmpty(ErrorMessage))
     {
-        <div class="attribution-error">
+        <div class="attribution-error" role="alert">
             <span>@ErrorMessage</span>
         </div>
     }
     else if (!IsLoading && (Attribution == null || !Attribution.HasCredits))
     {
-        <div class="attribution-empty">
+        <div class="attribution-empty" role="status">
             <span>No creator credits available</span>
         </div>
     }
-</div>
+</section>
 
 @code {
     /// <summary>

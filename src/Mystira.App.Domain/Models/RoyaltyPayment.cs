@@ -26,6 +26,15 @@ public class RoyaltyPaymentResult
     public decimal Amount { get; set; }
 
     /// <summary>
+    /// Total amount paid (alias for Amount, for compatibility)
+    /// </summary>
+    public decimal TotalAmount
+    {
+        get => Amount;
+        set => Amount = value;
+    }
+
+    /// <summary>
     /// Token used for payment (e.g., WIP token address)
     /// </summary>
     public string TokenAddress { get; set; } = string.Empty;
@@ -39,6 +48,15 @@ public class RoyaltyPaymentResult
     /// When the payment was made
     /// </summary>
     public DateTime PaidAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// When the payment was processed (alias for PaidAt, for compatibility)
+    /// </summary>
+    public DateTime ProcessedAt
+    {
+        get => PaidAt;
+        set => PaidAt = value;
+    }
 
     /// <summary>
     /// Whether the payment was successful
@@ -61,6 +79,11 @@ public class RoyaltyPaymentResult
 /// </summary>
 public class RoyaltyDistribution
 {
+    /// <summary>
+    /// Contributor ID (internal identifier)
+    /// </summary>
+    public string? ContributorId { get; set; }
+
     /// <summary>
     /// Contributor wallet address
     /// </summary>
@@ -129,6 +152,11 @@ public class RoyaltyBalance
 public class ContributorBalance
 {
     /// <summary>
+    /// Contributor ID (internal identifier)
+    /// </summary>
+    public string? ContributorId { get; set; }
+
+    /// <summary>
     /// Contributor wallet address
     /// </summary>
     public string WalletAddress { get; set; } = string.Empty;
@@ -152,4 +180,18 @@ public class ContributorBalance
     /// Amount already claimed
     /// </summary>
     public decimal ClaimedAmount { get; set; }
+
+    /// <summary>
+    /// Alias for ClaimedAmount (for compatibility)
+    /// </summary>
+    public decimal TotalClaimed
+    {
+        get => ClaimedAmount;
+        set => ClaimedAmount = value;
+    }
+
+    /// <summary>
+    /// Total amount earned (claimable + claimed)
+    /// </summary>
+    public decimal TotalEarned { get; set; }
 }
