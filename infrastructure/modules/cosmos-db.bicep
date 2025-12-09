@@ -12,7 +12,6 @@ param databaseName string = 'MystiraAppDb'
 param serverless bool = true
 
 // Cosmos DB Account
-// Using 2024-05-15 API version to improve what-if deployment preview compatibility
 resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   name: cosmosDbAccountName
   location: location

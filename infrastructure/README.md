@@ -4,9 +4,29 @@ This directory contains Bicep templates for deploying the Mystira application in
 
 ## Overview
 
-The infrastructure is organized by environment:
-- `dev/` - Development environment (West Europe)
-- `prod/` - Production environment (West US)
+The infrastructure uses a single `main.bicep` template with environment-specific parameter files:
+
+```
+infrastructure/
+├── main.bicep              # Single orchestration template for all environments
+├── modules/                # Shared Bicep modules
+│   ├── app-service.bicep
+│   ├── application-insights.bicep
+│   ├── azure-bot.bicep
+│   ├── communication-services.bicep
+│   ├── cosmos-db.bicep
+│   ├── key-vault.bicep
+│   ├── log-analytics.bicep
+│   └── storage.bicep
+├── params.dev.json         # Development environment parameters
+├── params.staging.json     # Staging environment parameters
+└── params.prod.json        # Production environment parameters
+```
+
+This "Option B" approach provides:
+- **One template, multiple environments** - Same infrastructure code, different configurations
+- **Environment parity** - Dev, staging, and prod use identical resource structure
+- **Simple CI/CD** - Pipelines choose the right parameter file per environment
 
 ## Prerequisites
 
@@ -323,17 +343,40 @@ az login
 az account set --subscription 22f9eb18-6553-4b7d-9451-47d0195085fe
 
 # Create resource group (if it doesn't exist)
-az group create \
-  --name dev-euw-rg-mystira \
-  --location westeurope
+# Dev
+az group create --name dev-euw-rg-mystira --location westeurope
 
-# Deploy infrastructure
+# Staging
+az group create --name staging-euw-rg-mystira --location westeurope
+
+# Prod
+az group create --name prod-euw-rg-mystira --location westeurope
+
+# Deploy infrastructure (choose the appropriate environment)
+
+# Dev deployment
 az deployment group create \
   --resource-group dev-euw-rg-mystira \
-  --template-file infrastructure/dev/main.bicep \
-  --parameters infrastructure/dev/main.parameters.json \
-  --parameters jwtSecretKey="<your-secret>" \
-  --parameters acsConnectionString="<your-acs-connection>"
+  --template-file infrastructure/main.bicep \
+  --parameters @infrastructure/params.dev.json \
+  --parameters jwtRsaPrivateKey="<your-private-key>" \
+  --parameters jwtRsaPublicKey="<your-public-key>"
+
+# Staging deployment
+az deployment group create \
+  --resource-group staging-euw-rg-mystira \
+  --template-file infrastructure/main.bicep \
+  --parameters @infrastructure/params.staging.json \
+  --parameters jwtRsaPrivateKey="<your-private-key>" \
+  --parameters jwtRsaPublicKey="<your-public-key>"
+
+# Prod deployment
+az deployment group create \
+  --resource-group prod-euw-rg-mystira \
+  --template-file infrastructure/main.bicep \
+  --parameters @infrastructure/params.prod.json \
+  --parameters jwtRsaPrivateKey="<your-private-key>" \
+  --parameters jwtRsaPublicKey="<your-public-key>"
 ```
 
 ### Data Migration via CosmosConsole Tool
@@ -361,12 +404,29 @@ See `tools/Mystira.App.CosmosConsole/README.md` for detailed migration documenta
 Before deploying, you can preview what changes will be made:
 
 ```bash
+# Dev environment preview
 az deployment group what-if \
   --resource-group dev-euw-rg-mystira \
-  --template-file infrastructure/dev/main.bicep \
-  --parameters infrastructure/dev/main.parameters.json \
-  --parameters jwtSecretKey="<your-secret>" \
-  --parameters acsConnectionString="<your-acs-connection>"
+  --template-file infrastructure/main.bicep \
+  --parameters @infrastructure/params.dev.json \
+  --parameters jwtRsaPrivateKey="<your-private-key>" \
+  --parameters jwtRsaPublicKey="<your-public-key>"
+
+# Staging environment preview
+az deployment group what-if \
+  --resource-group staging-euw-rg-mystira \
+  --template-file infrastructure/main.bicep \
+  --parameters @infrastructure/params.staging.json \
+  --parameters jwtRsaPrivateKey="<your-private-key>" \
+  --parameters jwtRsaPublicKey="<your-public-key>"
+
+# Prod environment preview
+az deployment group what-if \
+  --resource-group prod-euw-rg-mystira \
+  --template-file infrastructure/main.bicep \
+  --parameters @infrastructure/params.prod.json \
+  --parameters jwtRsaPrivateKey="<your-private-key>" \
+  --parameters jwtRsaPublicKey="<your-public-key>"
 ```
 
 ## Configuration

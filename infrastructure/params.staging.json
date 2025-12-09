@@ -1,0 +1,55 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "staging"
+    },
+    "location": {
+      "value": "westeurope"
+    },
+    "resourcePrefix": {
+      "value": "staging-euw"
+    },
+    "tags": {
+      "value": {
+        "environment": "staging",
+        "application": "mystira-app",
+        "owner": "mystira-team"
+      }
+    },
+    "appServiceSku": {
+      "value": "B1"
+    },
+    "storageSku": {
+      "value": "Standard_GRS"
+    },
+    "cosmosServerless": {
+      "value": true
+    },
+    "logRetentionDays": {
+      "value": 60
+    },
+    "logDailyQuotaGb": {
+      "value": 5
+    },
+    "acsSenderEmail": {
+      "value": "DoNotReply@mystira.app"
+    },
+    "emailDomainName": {
+      "value": "mystira.app"
+    },
+    "corsAllowedOrigins": {
+      "value": "https://staging.mystira.app,https://mystira.app"
+    },
+    "deployAzureBot": {
+      "value": false
+    },
+    "botSku": {
+      "value": "F0"
+    },
+    "enableWhatsApp": {
+      "value": false
+    }
+  }
+}

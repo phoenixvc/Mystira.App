@@ -11,6 +11,14 @@ param location string = resourceGroup().location
 @description('App Service Plan SKU')
 param sku string = 'B1'
 
+@description('ASPNETCORE_ENVIRONMENT value')
+@allowed([
+  'Development'
+  'Staging'
+  'Production'
+])
+param aspnetEnvironment string = 'Development'
+
 @description('Cosmos DB connection string')
 @secure()
 param cosmosDbConnectionString string
@@ -19,11 +27,11 @@ param cosmosDbConnectionString string
 @secure()
 param storageConnectionString string
 
-@description('JWT RSA Private Key (PEM format) - use Key Vault reference in production')
+@description('JWT RSA Private Key (PEM format)')
 @secure()
 param jwtRsaPrivateKey string = ''
 
-@description('JWT RSA Public Key (PEM format) - use Key Vault reference in production')
+@description('JWT RSA Public Key (PEM format)')
 @secure()
 param jwtRsaPublicKey string = ''
 
@@ -81,7 +89,7 @@ resource appService 'Microsoft.Web/sites@2023-01-01' = {
       appSettings: [
         {
           name: 'ASPNETCORE_ENVIRONMENT'
-          value: 'Development'
+          value: aspnetEnvironment
         }
         {
           name: 'ConnectionStrings__CosmosDb'
