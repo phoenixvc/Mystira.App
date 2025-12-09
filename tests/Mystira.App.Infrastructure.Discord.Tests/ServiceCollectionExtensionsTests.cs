@@ -61,7 +61,7 @@ public class ServiceCollectionExtensionsTests
         // Assert
         var serviceProvider = services.BuildServiceProvider();
         var options = serviceProvider.GetRequiredService<IOptions<DiscordOptions>>().Value;
-        
+
         options.BotToken.Should().Be("test-token-123");
         options.EnableMessageContentIntent.Should().BeFalse();
         options.CommandPrefix.Should().Be("?");
@@ -89,7 +89,7 @@ public class ServiceCollectionExtensionsTests
         // Assert
         var serviceProvider = services.BuildServiceProvider();
         var hostedServices = serviceProvider.GetServices<Microsoft.Extensions.Hosting.IHostedService>();
-        
+
         hostedServices.Should().Contain(s => s.GetType() == typeof(DiscordBotHostedService));
     }
 

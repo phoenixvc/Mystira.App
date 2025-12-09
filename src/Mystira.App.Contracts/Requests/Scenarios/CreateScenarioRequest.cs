@@ -45,5 +45,5 @@ public class CreateScenarioRequest
     public List<string> CompassAxes { get; set; } = new();
 
     public string? Image { get; set; }
-    }
+}
 

@@ -26,12 +26,12 @@ public class GetAgeGroupByIdQueryHandler : IQueryHandler<GetAgeGroupByIdQuery, A
     {
         _logger.LogInformation("Retrieving age group with id: {Id}", query.Id);
         var ageGroup = await _repository.GetByIdAsync(query.Id);
-        
+
         if (ageGroup == null)
         {
             _logger.LogWarning("Age group with id {Id} not found", query.Id);
         }
-        
+
         return ageGroup;
     }
 }

@@ -14,11 +14,11 @@ public static class ApiConnectionHelper
         // - "TypeError: Failed to fetch" (the most common)
         // - Inner exception message containing "Failed to fetch"
         // - Connection-related errors
-        
+
         var message = ex.Message?.ToLowerInvariant() ?? string.Empty;
         var innerMessage = ex.InnerException?.Message?.ToLowerInvariant() ?? string.Empty;
-        
-        return message.Contains("failed to fetch") 
+
+        return message.Contains("failed to fetch")
             || message.Contains("network error")
             || message.Contains("connection refused")
             || innerMessage.Contains("failed to fetch")
@@ -36,7 +36,7 @@ public static class ApiConnectionHelper
                    "Please ensure the API is running. " +
                    "You can start it with: dotnet run --project src/Mystira.App.Api/Mystira.App.Api.csproj";
         }
-        
+
         return "Unable to connect to the server. Please check your internet connection and try again.";
     }
 
@@ -50,7 +50,7 @@ public static class ApiConnectionHelper
             return $"Cannot connect to API at {apiBaseUrl}. The API server may not be running. " +
                    "Start it with: dotnet run --project src/Mystira.App.Api/Mystira.App.Api.csproj";
         }
-        
+
         return $"Network error connecting to API at {apiBaseUrl}";
     }
 

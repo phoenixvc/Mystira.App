@@ -762,8 +762,16 @@ public class ClassificationTagComparer : IEqualityComparer<ClassificationTag>
 {
     public bool Equals(ClassificationTag? x, ClassificationTag? y)
     {
-        if (x == null && y == null) return true;
-        if (x == null || y == null) return false;
+        if (x == null && y == null)
+        {
+            return true;
+        }
+
+        if (x == null || y == null)
+        {
+            return false;
+        }
+
         return x.Key == y.Key && x.Value == y.Value;
     }
 
@@ -819,8 +827,16 @@ public class ModifierComparer : IEqualityComparer<Modifier>
 {
     public bool Equals(Modifier? x, Modifier? y)
     {
-        if (x == null && y == null) return true;
-        if (x == null || y == null) return false;
+        if (x == null && y == null)
+        {
+            return true;
+        }
+
+        if (x == null || y == null)
+        {
+            return false;
+        }
+
         return x.Key == y.Key && x.Value == y.Value;
     }
 

@@ -52,7 +52,9 @@ public sealed class SampleTicketStartupService
 
         // Only run once
         if (Interlocked.Exchange(ref _hasRun, 1) == 1)
+        {
             return;
+        }
 
         var client = _botService.Client;
         var guild = client.GetGuild(_options.GuildId);
@@ -83,7 +85,9 @@ public sealed class SampleTicketStartupService
         var newChannel = await guild.CreateTextChannelAsync(channelName, props =>
         {
             if (_options.SupportCategoryId != 0)
+            {
                 props.CategoryId = _options.SupportCategoryId;
+            }
 
             props.PermissionOverwrites = overwrites;
             props.Topic = $"startup sample ticket | created:{DateTimeOffset.UtcNow:O}";

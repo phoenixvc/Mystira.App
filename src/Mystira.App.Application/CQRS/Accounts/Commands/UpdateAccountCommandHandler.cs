@@ -30,16 +30,24 @@ public class UpdateAccountCommandHandler : ICommandHandler<UpdateAccountCommand,
         }
 
         if (!string.IsNullOrEmpty(command.DisplayName))
+        {
             account.DisplayName = command.DisplayName;
+        }
 
         if (command.UserProfileIds != null)
+        {
             account.UserProfileIds = command.UserProfileIds;
+        }
 
         if (command.Subscription != null)
+        {
             account.Subscription = command.Subscription;
+        }
 
         if (command.Settings != null)
+        {
             account.Settings = command.Settings;
+        }
 
         await _repository.UpdateAsync(account);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

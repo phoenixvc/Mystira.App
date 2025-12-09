@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Contracts.Models.GameSessions;
 using Mystira.App.Contracts.Responses.GameSessions;
 using Mystira.App.Domain.Specifications;
-using Mystira.App.Contracts.Models.GameSessions;
 
 namespace Mystira.App.Application.CQRS.GameSessions.Queries;
 
@@ -28,7 +28,9 @@ public class GetInProgressSessionsQueryHandler : IQueryHandler<GetInProgressSess
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(request.AccountId))
+        {
             throw new ArgumentException("AccountId is required");
+        }
 
         var spec = new InProgressSessionsSpecification(request.AccountId);
         var sessions = await _repository.ListAsync(spec);

@@ -32,13 +32,24 @@ public class MakeChoiceCommandHandler : ICommandHandler<MakeChoiceCommand, GameS
 
         // Validate request
         if (string.IsNullOrEmpty(request.SessionId))
+        {
             throw new ArgumentException("SessionId is required");
+        }
+
         if (string.IsNullOrEmpty(request.SceneId))
+        {
             throw new ArgumentException("SceneId is required");
+        }
+
         if (string.IsNullOrEmpty(request.ChoiceText))
+        {
             throw new ArgumentException("ChoiceText is required");
+        }
+
         if (string.IsNullOrEmpty(request.NextSceneId))
+        {
             throw new ArgumentException("NextSceneId is required");
+        }
 
         var session = await _repository.GetByIdAsync(request.SessionId);
         if (session == null)

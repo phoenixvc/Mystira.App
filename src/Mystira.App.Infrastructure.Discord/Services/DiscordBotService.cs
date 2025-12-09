@@ -1,7 +1,7 @@
 using System.Reflection;
 using Discord;
-using Discord.Net;
 using Discord.Interactions;
+using Discord.Net;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -92,7 +92,7 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
         try
         {
             _logger.LogInformation("Starting Discord bot...");
-            
+
             await _client.LoginAsync(TokenType.Bot, _options.BotToken);
             await _client.StartAsync();
 
@@ -110,7 +110,7 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
         try
         {
             _logger.LogInformation("Stopping Discord bot...");
-            
+
             await _client.StopAsync();
             await _client.LogoutAsync();
 
@@ -326,15 +326,15 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
 
         if (_options.LogAllMessages)
         {
-            _logger.LogDebug("Message received from {Author} in {Channel}: {Content}", 
-                message.Author.Username, 
-                message.Channel.Name, 
+            _logger.LogDebug("Message received from {Author} in {Channel}: {Content}",
+                message.Author.Username,
+                message.Channel.Name,
                 message.Content);
         }
 
         // Message handling logic can be extended here or in derived classes
         // For now, this is a hook for future message processing
-        
+
         return Task.CompletedTask;
     }
 
@@ -543,11 +543,15 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
         {
             // Ignore bot messages
             if (msg.Author.IsBot)
+            {
                 return Task.CompletedTask;
+            }
 
             // Check if message is in one of our broadcast channels
             if (!sentChannelIds.Contains(msg.Channel.Id))
+            {
                 return Task.CompletedTask;
+            }
 
             // Accept either direct replies or any message in the broadcast channels
             tcs.TrySetResult(new FirstResponderResult
@@ -669,7 +673,9 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
         Task OnMessageReceived(SocketMessage msg)
         {
             if (msg.Author.IsBot || !sentChannelIds.Contains(msg.Channel.Id))
+            {
                 return Task.CompletedTask;
+            }
 
             tcs.TrySetResult(new FirstResponderResult
             {
@@ -748,9 +754,17 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
                     sentMessages.Add(new SentMessage { ChannelId = channelId, MessageId = sentMsg.Id });
                 }
             }
-            catch (Exception ex)
+            catch (global::Discord.Net.HttpException ex)
             {
-                _logger.LogWarning(ex, "Failed to send broadcast to channel {ChannelId}", channelId);
+                _logger.LogWarning(ex, "Discord API error sending broadcast to channel {ChannelId}: {StatusCode}", channelId, ex.HttpCode);
+            }
+            catch (TimeoutException ex)
+            {
+                _logger.LogWarning(ex, "Timeout sending broadcast to channel {ChannelId}", channelId);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Invalid operation sending broadcast to channel {ChannelId}", channelId);
             }
         }
 
@@ -767,7 +781,9 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
             // FIX: Use Interlocked.CompareExchange to prevent race condition (Phase 3)
             // Only process if we haven't stopped listening yet
             if (Interlocked.CompareExchange(ref stopListening, 0, 0) == 1 || msg.Author.IsBot || !sentChannelIds.Contains(msg.Channel.Id))
+            {
                 return;
+            }
 
             var isDirectReply = msg.Reference?.MessageId is { } replyToId && sentMessageIds.Contains(replyToId.Value);
 

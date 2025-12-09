@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Domain.Models;
 using Mystira.App.Contracts.Models.GameSessions;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.GameSessions.Commands;
 
@@ -33,14 +33,25 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
 
         // Validate request
         if (string.IsNullOrEmpty(request.ScenarioId))
+        {
             throw new ArgumentException("ScenarioId is required");
+        }
+
         if (string.IsNullOrEmpty(request.AccountId))
+        {
             throw new ArgumentException("AccountId is required");
+        }
+
         if (string.IsNullOrEmpty(request.ProfileId))
+        {
             throw new ArgumentException("ProfileId is required");
+        }
+
         if ((request.PlayerNames == null || !request.PlayerNames.Any())
             && (request.CharacterAssignments == null || !request.CharacterAssignments.Any()))
+        {
             throw new ArgumentException("At least one player or character assignment is required");
+        }
 
         // Create new game session
         var session = new GameSession

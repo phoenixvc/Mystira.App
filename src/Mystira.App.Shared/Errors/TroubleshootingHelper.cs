@@ -1,6 +1,7 @@
-namespace Mystira.App.Shared.Errors;
 
 using System.Linq;
+
+namespace Mystira.App.Shared.Errors;
 /// <summary>
 /// Provides troubleshooting suggestions for common errors.
 /// Maps error patterns to actionable solutions users can follow.

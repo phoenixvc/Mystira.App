@@ -18,7 +18,7 @@ public class HealthCheckPortAdapter : IHealthCheckPort
     public async Task<Application.Ports.Health.HealthReport> CheckHealthAsync(CancellationToken cancellationToken = default)
     {
         var aspNetHealthReport = await _healthCheckService.CheckHealthAsync(cancellationToken);
-        
+
         return new Application.Ports.Health.HealthReport
         {
             Status = aspNetHealthReport.Status.ToString(),

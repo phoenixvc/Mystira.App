@@ -80,11 +80,15 @@ public class Contributor
     private bool IsValidWalletAddress(string address)
     {
         if (string.IsNullOrWhiteSpace(address))
+        {
             return false;
+        }
 
         // Basic Ethereum address validation: 0x followed by 40 hexadecimal characters
         if (!address.StartsWith("0x") || address.Length != 42)
+        {
             return false;
+        }
 
         return address.Substring(2).All(c => "0123456789abcdefABCDEF".Contains(c));
     }

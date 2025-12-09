@@ -17,11 +17,15 @@ public static partial class PiiRedactor
     public static string RedactEmail(string? email)
     {
         if (string.IsNullOrWhiteSpace(email))
+        {
             return "[empty]";
+        }
 
         var atIndex = email.IndexOf('@');
         if (atIndex <= 0)
+        {
             return "[invalid-email]";
+        }
 
         var domain = email.Substring(atIndex);
         return $"***{domain}";
@@ -33,7 +37,9 @@ public static partial class PiiRedactor
     public static string HashEmail(string? email)
     {
         if (string.IsNullOrWhiteSpace(email))
+        {
             return "[empty]";
+        }
 
         using var sha256 = SHA256.Create();
         var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(email.ToLowerInvariant()));
@@ -48,7 +54,9 @@ public static partial class PiiRedactor
     public static string RedactDisplayName(string? displayName)
     {
         if (string.IsNullOrWhiteSpace(displayName))
+        {
             return "[empty]";
+        }
 
         return $"{displayName[0]}***";
     }
@@ -60,7 +68,9 @@ public static partial class PiiRedactor
     public static string RedactEmailsInString(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
+        {
             return text ?? string.Empty;
+        }
 
         return EmailRegex().Replace(text, match => RedactEmail(match.Value));
     }

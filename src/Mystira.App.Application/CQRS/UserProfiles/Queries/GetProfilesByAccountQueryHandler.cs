@@ -27,7 +27,9 @@ public class GetProfilesByAccountQueryHandler : IQueryHandler<GetProfilesByAccou
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(request.AccountId))
+        {
             throw new ArgumentException("AccountId is required");
+        }
 
         var spec = new ProfilesByAccountSpecification(request.AccountId);
         var profiles = await _repository.ListAsync(spec);

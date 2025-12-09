@@ -1,4 +1,4 @@
-﻿namespace Mystira.App.PWA.Models;
+namespace Mystira.App.PWA.Models;
 
 // DTOs matching the API's ScenarioListResponse and ScenarioSummary
 public class ScenarioListResponseDto

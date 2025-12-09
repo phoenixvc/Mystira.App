@@ -44,7 +44,7 @@ public class CompassAxesController : ControllerBase
     public async Task<ActionResult<CompassAxis>> CreateCompassAxis([FromBody] CreateCompassAxisRequest request)
     {
         _logger.LogInformation("POST: Creating compass axis with name: {Name}", request.Name);
-        
+
         var created = await _mediator.Send(new CreateCompassAxisCommand(request.Name, request.Description));
         return CreatedAtAction(nameof(GetCompassAxisById), new { id = created.Id }, created);
     }
@@ -53,7 +53,7 @@ public class CompassAxesController : ControllerBase
     public async Task<ActionResult<CompassAxis>> UpdateCompassAxis(string id, [FromBody] UpdateCompassAxisRequest request)
     {
         _logger.LogInformation("PUT: Updating compass axis with id: {Id}", id);
-        
+
         var updated = await _mediator.Send(new UpdateCompassAxisCommand(id, request.Name, request.Description));
         if (updated == null)
         {
@@ -67,7 +67,7 @@ public class CompassAxesController : ControllerBase
     public async Task<IActionResult> DeleteCompassAxis(string id)
     {
         _logger.LogInformation("DELETE: Deleting compass axis with id: {Id}", id);
-        
+
         var success = await _mediator.Send(new DeleteCompassAxisCommand(id));
         if (!success)
         {

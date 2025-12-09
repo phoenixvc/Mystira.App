@@ -26,12 +26,12 @@ public class GetEchoTypeByIdQueryHandler : IQueryHandler<GetEchoTypeByIdQuery, E
     {
         _logger.LogInformation("Retrieving echo type with id: {Id}", query.Id);
         var echoType = await _repository.GetByIdAsync(query.Id);
-        
+
         if (echoType == null)
         {
             _logger.LogWarning("Echo type with id {Id} not found", query.Id);
         }
-        
+
         return echoType;
     }
 }

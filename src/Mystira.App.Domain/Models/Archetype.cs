@@ -40,7 +40,10 @@ public class Archetype
     public static Archetype? Parse(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
+        {
             return null;
+        }
+
         return new Archetype(value);
     }
 }
