@@ -46,7 +46,6 @@ All Azure resources follow this naming pattern:
 | `wus` | westus | West US |
 | `eus` | eastus | East US |
 | `san` | southafricanorth | South Africa North |
-| `saf` | southafricanorth | South Africa (alias) |
 | `swe` | swedencentral | Sweden Central |
 | `uks` | uksouth | UK South |
 | `usw` | westus2 | West US 2 |
@@ -149,7 +148,7 @@ param environment string
 
 param project string
 
-@allowed(['euw', 'eun', 'wus', 'eus', 'san', 'saf', 'swe', 'uks', 'usw', 'glob'])
+@allowed(['euw', 'eun', 'wus', 'eus', 'san', 'swe', 'uks', 'usw', 'glob'])
 param region string
 
 var namePrefix = '${org}-${environment}-${project}'

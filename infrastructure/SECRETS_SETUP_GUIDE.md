@@ -16,7 +16,8 @@ Or: Repository → Settings → Secrets and variables → Actions
 |--------|---------|-----------|
 | `AZURE_CREDENTIALS` | Infrastructure Deploy (all envs) | ✅ Required |
 | `AZURE_SUBSCRIPTION_ID` | Infrastructure Deploy (all envs) | ✅ Required |
-| `JWT_SECRET_KEY` | Infrastructure Deploy (all envs) | ✅ Required |
+| `JWT_RSA_PRIVATE_KEY` | Infrastructure Deploy (all envs) | ✅ Required |
+| `JWT_RSA_PUBLIC_KEY` | Infrastructure Deploy (all envs) | ✅ Required |
 | `ACS_CONNECTION_STRING` | Infrastructure Deploy | ⚠️ Optional |
 | `AZURE_WEBAPP_PUBLISH_PROFILE_DEV` | API CI/CD - Dev | ✅ Required |
 | `AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN` | Admin API CI/CD - Dev | ✅ Required |
@@ -190,29 +191,49 @@ az ad sp create-for-rbac `
 3. Value: `22f9eb18-6553-4b7d-9451-47d0195085fe`
 4. Click: **Add secret**
 
-### `JWT_SECRET_KEY` (Required)
+### `JWT_RSA_PRIVATE_KEY` and `JWT_RSA_PUBLIC_KEY` (Required)
 
-Generate a secure key:
+Generate an RSA key pair for JWT token signing (RS256 algorithm):
 
 ```bash
 # Using OpenSSL (Linux/macOS/WSL)
-openssl rand -base64 32
+# Generate private key
+openssl genrsa -out private.pem 2048
+
+# Extract public key
+openssl rsa -in private.pem -pubout -out public.pem
+
+# View the keys (copy content for GitHub secrets)
+cat private.pem
+cat public.pem
 ```
 
 ```powershell
-# Using PowerShell (Windows) - cryptographically secure
-$bytes = [byte[]]::new(32)
-[System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
-[Convert]::ToBase64String($bytes)
+# Using PowerShell (Windows)
+# Generate private key
+openssl genrsa -out private.pem 2048
+
+# Extract public key
+openssl rsa -in private.pem -pubout -out public.pem
+
+# View the keys
+Get-Content private.pem
+Get-Content public.pem
 ```
 
 Add to GitHub:
 1. Click: **New repository secret**
-2. Name: `JWT_SECRET_KEY`
-3. Value: Paste the generated key
+2. Name: `JWT_RSA_PRIVATE_KEY`
+3. Value: Paste the entire private key including `-----BEGIN RSA PRIVATE KEY-----` and `-----END RSA PRIVATE KEY-----`
 4. Click: **Add secret**
 
-⚠️ **Important**: Use different keys for dev, staging, and prod environments in production.
+Repeat for public key:
+1. Click: **New repository secret**
+2. Name: `JWT_RSA_PUBLIC_KEY`
+3. Value: Paste the entire public key including `-----BEGIN PUBLIC KEY-----` and `-----END PUBLIC KEY-----`
+4. Click: **Add secret**
+
+⚠️ **Important**: Use different key pairs for dev, staging, and prod environments in production.
 
 ### `ACS_CONNECTION_STRING` (Optional)
 
@@ -220,8 +241,8 @@ Only needed if you want to send emails via Azure Communication Services. If not 
 
 ```bash
 az communication list-key \
-  --name dev-euw-acs-mystira \
-  --resource-group dev-euw-rg-mystira \
+  --name mys-dev-mystira-acs-euw \
+  --resource-group mys-dev-mystira-rg-euw \
   --query primaryConnectionString \
   --output tsv
 ```
@@ -286,38 +307,45 @@ az webapp deployment list-publishing-profiles \
 
 | Secret Name | App Service Name | Resource Group |
 |-------------|------------------|----------------|
-| `AZURE_WEBAPP_PUBLISH_PROFILE_DEV` | `mystira-app-dev-api` | `dev-euw-rg-mystira` |
-| `AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN` | `dev-euw-app-mystora-admin-api` | `dev-euw-rg-mystira` |
-| `AZURE_WEBAPP_PUBLISH_PROFILE_STAGING` | `mystira-app-staging-api` | `staging-euw-rg-mystira` |
-| `AZURE_WEBAPP_PUBLISH_PROFILE_STAGING_ADMIN` | `staging-euw-app-mystira-admin-api` | `staging-euw-rg-mystira` |
-| `AZURE_WEBAPP_PUBLISH_PROFILE_PROD` | `prod-wus-app-mystira-api` | `prod-wus-rg-mystira` |
-| `AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN` | `prod-wus-app-mystira-api-admin` | `prod-wus-rg-mystira` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_DEV` | `mys-dev-mystira-api-euw` | `mys-dev-mystira-rg-euw` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN` | `mys-dev-mystira-adminapi-euw` | `mys-dev-mystira-rg-euw` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_STAGING` | `mys-staging-mystira-api-euw` | `mys-staging-mystira-rg-euw` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_STAGING_ADMIN` | `mys-staging-mystira-adminapi-euw` | `mys-staging-mystira-rg-euw` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_PROD` | `mys-prod-mystira-api-euw` | `mys-prod-mystira-rg-euw` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN` | `mys-prod-mystira-adminapi-euw` | `mys-prod-mystira-rg-euw` |
 
 **Quick Commands:**
 ```bash
 # Dev API
-az webapp deployment list-publishing-profiles --name mystira-app-dev-api --resource-group dev-euw-rg-mystira --xml
+az webapp deployment list-publishing-profiles --name mys-dev-mystira-api-euw --resource-group mys-dev-mystira-rg-euw --xml
 
 # Dev Admin API
-az webapp deployment list-publishing-profiles --name dev-euw-app-mystora-admin-api --resource-group dev-euw-rg-mystira --xml
+az webapp deployment list-publishing-profiles --name mys-dev-mystira-adminapi-euw --resource-group mys-dev-mystira-rg-euw --xml
+
+# Staging API
+az webapp deployment list-publishing-profiles --name mys-staging-mystira-api-euw --resource-group mys-staging-mystira-rg-euw --xml
+
+# Staging Admin API
+az webapp deployment list-publishing-profiles --name mys-staging-mystira-adminapi-euw --resource-group mys-staging-mystira-rg-euw --xml
 
 # Prod API
-az webapp deployment list-publishing-profiles --name prod-wus-app-mystira-api --resource-group prod-wus-rg-mystira --xml
+az webapp deployment list-publishing-profiles --name mys-prod-mystira-api-euw --resource-group mys-prod-mystira-rg-euw --xml
 
 # Prod Admin API
-az webapp deployment list-publishing-profiles --name prod-wus-app-mystira-api-admin --resource-group prod-wus-rg-mystira --xml
+az webapp deployment list-publishing-profiles --name mys-prod-mystira-adminapi-euw --resource-group mys-prod-mystira-rg-euw --xml
 ```
 
 ---
 
 ## Verification Checklist
 
-After adding all secrets, you should have these **14 secrets** configured:
+After adding all secrets, you should have these **15 secrets** configured:
 
-### Azure Authentication (3)
+### Azure Authentication (4)
 - [ ] `AZURE_CREDENTIALS`
 - [ ] `AZURE_SUBSCRIPTION_ID`
-- [ ] `JWT_SECRET_KEY`
+- [ ] `JWT_RSA_PRIVATE_KEY`
+- [ ] `JWT_RSA_PUBLIC_KEY`
 
 ### Static Web Apps (2)
 - [ ] `AZURE_STATIC_WEB_APPS_API_TOKEN_DEV_SAN_MYSTIRA_APP` (South Africa North)
@@ -448,20 +476,21 @@ az ad sp create-for-rbac \
   --scopes /subscriptions/22f9eb18-6553-4b7d-9451-47d0195085fe \
   --sdk-auth
 
-# Generate JWT secret
-openssl rand -base64 32
+# Generate JWT RSA key pair
+openssl genrsa -out private.pem 2048
+openssl rsa -in private.pem -pubout -out public.pem
 
 # Get ACS connection string
 az communication list-key \
-  --name dev-euw-acs-mystira \
-  --resource-group dev-euw-rg-mystira \
+  --name mys-dev-mystira-acs-euw \
+  --resource-group mys-dev-mystira-rg-euw \
   --query primaryConnectionString \
   --output tsv
 
 # Get App Service publish profile
 az webapp deployment list-publishing-profiles \
-  --name mystira-app-dev-api \
-  --resource-group dev-euw-rg-mystira \
+  --name mys-dev-mystira-api-euw \
+  --resource-group mys-dev-mystira-rg-euw \
   --xml
 ```
 
@@ -490,22 +519,21 @@ az ad sp create-for-rbac `
   --scopes "/subscriptions/22f9eb18-6553-4b7d-9451-47d0195085fe" `
   --sdk-auth
 
-# Generate JWT secret (cryptographically secure)
-$bytes = [byte[]]::new(32)
-[System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
-[Convert]::ToBase64String($bytes)
+# Generate JWT RSA key pair
+openssl genrsa -out private.pem 2048
+openssl rsa -in private.pem -pubout -out public.pem
 
 # Get ACS connection string
 az communication list-key `
-  --name "dev-euw-acs-mystira" `
-  --resource-group "dev-euw-rg-mystira" `
+  --name "mys-dev-mystira-acs-euw" `
+  --resource-group "mys-dev-mystira-rg-euw" `
   --query "primaryConnectionString" `
   --output tsv
 
 # Get App Service publish profile
 az webapp deployment list-publishing-profiles `
-  --name "mystira-app-dev-api" `
-  --resource-group "dev-euw-rg-mystira" `
+  --name "mys-dev-mystira-api-euw" `
+  --resource-group "mys-dev-mystira-rg-euw" `
   --xml
 ```
 

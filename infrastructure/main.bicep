@@ -32,15 +32,14 @@ param project string = 'mystira'
 
 @description('Short region code')
 @allowed([
-  'euw'   // West Europe
-  'eun'   // North Europe
-  'wus'   // West US
-  'eus'   // East US
-  'san'   // South Africa North
-  'saf'   // South Africa West
-  'swe'   // Sweden Central/North
-  'uks'   // UK South
-  'usw'   // US West
+  'euw'   // West Europe (westeurope)
+  'eun'   // North Europe (northeurope)
+  'wus'   // West US (westus)
+  'eus'   // East US (eastus)
+  'san'   // South Africa North (southafricanorth)
+  'swe'   // Sweden Central (swedencentral)
+  'uks'   // UK South (uksouth)
+  'usw'   // US West 2 (westus2)
   'glob'  // Global / regionless
 ])
 param region string = 'euw'
@@ -81,11 +80,10 @@ var names = {
   storageAccount: replace(toLower('${org}${environment}${project}st${region}'), '-', '')
   cosmosDb: '${namePrefix}-cosmos-${region}'
 
-  // App Services
+  // App Services (share a single App Service Plan to reduce costs)
+  appServicePlan: '${namePrefix}-plan-${region}'
   apiApp: '${namePrefix}-api-${region}'
-  apiPlan: '${namePrefix}-api-plan-${region}'
   adminApiApp: '${namePrefix}-adminapi-${region}'
-  adminApiPlan: '${namePrefix}-adminapi-plan-${region}'
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -316,7 +314,7 @@ module apiAppService 'modules/app-service.bicep' = if (!skipAppServiceCreation) 
   name: 'deploy-api-app-service'
   params: {
     appServiceName: names.apiApp
-    appServicePlanName: names.apiPlan
+    appServicePlanName: names.appServicePlan
     location: location
     sku: appServiceSku
     aspnetEnvironment: environment == 'prod' ? 'Production' : (environment == 'staging' ? 'Staging' : 'Development')
@@ -334,12 +332,13 @@ module apiAppService 'modules/app-service.bicep' = if (!skipAppServiceCreation) 
   }
 }
 
-// Admin API App Service (conditional)
+// Admin API App Service (conditional) - shares the same App Service Plan
 module adminApiAppService 'modules/app-service.bicep' = if (!skipAppServiceCreation) {
   name: 'deploy-admin-api-app-service'
+  dependsOn: [apiAppService]  // Ensure plan is created first
   params: {
     appServiceName: names.adminApiApp
-    appServicePlanName: names.adminApiPlan
+    appServicePlanName: names.appServicePlan
     location: location
     sku: appServiceSku
     aspnetEnvironment: environment == 'prod' ? 'Production' : (environment == 'staging' ? 'Staging' : 'Development')

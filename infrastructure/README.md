@@ -28,7 +28,7 @@ All resources follow the pattern: `[org]-[env]-[project]-[type]-[region]`
 | Dev Cosmos DB | `mys-dev-mystira-cosmos-euw` |
 | Dev Log Analytics | `mys-dev-mystira-log-euw` |
 | Prod API App Service | `mys-prod-mystira-api-euw` |
-| Prod Storage Account | `mysprodsystirastoreuw` (no dashes for storage) |
+| Prod Storage Account | `mysprodmystirasteruw` (no dashes for storage) |
 
 ## Overview
 
@@ -92,7 +92,7 @@ az account set --subscription 22f9eb18-6553-4b7d-9451-47d0195085fe
 az ad sp create-for-rbac \
   --name "github-actions-mystira-app" \
   --role Contributor \
-  --scopes /subscriptions/22f9eb18-6553-4b7d-9451-47d0195085fe/resourceGroups/dev-euw-rg-mystira \
+  --scopes /subscriptions/22f9eb18-6553-4b7d-9451-47d0195085fe/resourceGroups/mys-dev-mystira-rg-euw \
   --sdk-auth
 
 # The output will be a JSON object - save this entire output
@@ -154,16 +154,16 @@ Add each of the following secrets to your GitHub repository:
    - **How to get**:
      ```bash
      # List your ACS resources
-     az communication list --resource-group dev-euw-rg-mystira
-     
+     az communication list --resource-group mys-dev-mystira-rg-euw
+
      # Get the connection string
      az communication list-key \
-       --name dev-euw-acs-mystira \
-       --resource-group dev-euw-rg-mystira \
+       --name mys-dev-mystira-acs-euw \
+       --resource-group mys-dev-mystira-rg-euw \
        --query primaryConnectionString \
        --output tsv
      ```
-   - **Example**: `endpoint=https://dev-euw-acs-mystira.communication.azure.com/;accesskey=your-access-key-here`
+   - **Example**: `endpoint=https://mys-dev-mystira-acs-euw.communication.azure.com/;accesskey=your-access-key-here`
    - **Location**: GitHub → Settings → Secrets and variables → Actions → New repository secret
    - **Name**: `ACS_CONNECTION_STRING`
    - **Used by**: Infrastructure deployment (passed to App Services for email functionality)
@@ -179,8 +179,8 @@ These secrets are used by the API deployment workflows to publish to Azure App S
      ```bash
      # Via Azure CLI
      az webapp deployment list-publishing-profiles \
-       --name mystira-app-dev-api \
-       --resource-group dev-euw-rg-mystira \
+       --name mys-dev-mystira-api-euw \
+       --resource-group mys-dev-mystira-rg-euw \
        --xml
      ```
      Or via Azure Portal:
@@ -194,21 +194,21 @@ These secrets are used by the API deployment workflows to publish to Azure App S
 
 6. **`AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN`**
    - **Value**: Publish profile XML for the admin API (dev environment)
-   - **How to get**: Same as above, but for `dev-euw-app-mystora-admin-api`
+   - **How to get**: Same as above, but for `mys-dev-mystira-adminapi-euw`
    - **Location**: GitHub → Settings → Secrets and variables → Actions → New repository secret
    - **Name**: `AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN`
    - **Used by**: `.github/workflows/mystira-app-admin-api-cicd-dev.yml`
 
 7. **`AZURE_WEBAPP_PUBLISH_PROFILE_PROD`**
    - **Value**: Publish profile XML for the main API (production environment)
-   - **How to get**: Same as above, but for `prod-wus-app-mystira-api`
+   - **How to get**: Same as above, but for `mys-prod-mystira-api-euw`
    - **Location**: GitHub → Settings → Secrets and variables → Actions → New repository secret
    - **Name**: `AZURE_WEBAPP_PUBLISH_PROFILE_PROD`
    - **Used by**: `.github/workflows/mystira-app-api-cicd-prod.yml`
 
 8. **`AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN`**
    - **Value**: Publish profile XML for the admin API (production environment)
-   - **How to get**: Same as above, but for `prod-wus-app-mystira-api-admin`
+   - **How to get**: Same as above, but for `mys-prod-mystira-adminapi-euw`
    - **Location**: GitHub → Settings → Secrets and variables → Actions → New repository secret
    - **Name**: `AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN`
    - **Used by**: `.github/workflows/mystira-app-admin-api-cicd-prod.yml`
@@ -252,37 +252,35 @@ After adding all secrets, verify them in GitHub:
 
 ## Dev Environment Resources
 
-**Note**: The resource names listed below represent the desired naming convention. The actual Azure resources currently use different names. See [NAMING_AND_OPTIMIZATION.md](./NAMING_AND_OPTIMIZATION.md) for details on current vs. desired resource names and the migration plan.
-
-The development environment includes:
+The development environment includes the following resources (using the naming convention `[org]-[env]-[project]-[type]-[region]`):
 
 ### Core Infrastructure
-- **Log Analytics Workspace**: `dev-euw-log-mystira`
+- **Log Analytics Workspace**: `mys-dev-mystira-log-euw`
   - Centralized logging and monitoring
   - 30-day retention
   - 1GB daily cap
 
-- **Application Insights**: `dev-euw-ai-mystira`
+- **Application Insights**: `mys-dev-mystira-appins-euw`
   - Application performance monitoring
   - Integrated with Log Analytics
 
 ### Communication Services
-- **Azure Communication Services**: `dev-euw-acs-mystira`
+- **Azure Communication Services**: `mys-dev-mystira-acs-euw`
   - Email and SMS capabilities
   - Global deployment
 
-- **Email Communication Service**: `dev-euw-ecs-mystira`
+- **Email Communication Service**: `mys-dev-mystira-email-euw`
   - Domain: `mystira.app`
   - Sender: `DoNotReply@mystira.app`
 
 ### Storage & Database
-- **Storage Account**: `deveuwstmystira`
+- **Storage Account**: `mysdevmystirasteruw`
   - Container: `mystira-app-media`
   - SKU: Standard_LRS (Locally Redundant - dev optimized)
   - Public blob access enabled
   - CORS configured for PWA origins
 
-- **Cosmos DB**: `dev-euw-cosmos-mystira`
+- **Cosmos DB**: `mys-dev-mystira-cosmos-euw`
   - Database: `MystiraAppDb`
   - Serverless mode (pay-per-request - dev optimized)
   - Containers:
@@ -294,24 +292,24 @@ The development environment includes:
     - PendingSignups
 
 ### Application Hosting
-- **Main API App Service**: `dev-euw-app-mystira-api`
+- **App Service Plan**: `mys-dev-mystira-plan-euw` (shared by both APIs)
   - SKU: F1 (Free - dev optimized)
+
+- **Main API App Service**: `mys-dev-mystira-api-euw`
   - Runtime: .NET 9.0 on Linux
   - Health check: `/health`
   - Integrated with App Insights
 
-- **Admin API App Service**: `dev-euw-app-mystira-admin-api`
-  - SKU: F1 (Free - dev optimized)
+- **Admin API App Service**: `mys-dev-mystira-adminapi-euw`
   - Runtime: .NET 9.0 on Linux
   - Health check: `/health`
   - Integrated with App Insights
 
 ### Frontend
-- **Static Web App**: `dev-euw-swa-mystira-app`
+- **Static Web App**: `mys-dev-mystira-swa-euw`
   - URL: `https://mango-water-04fdb1c03.3.azurestaticapps.net`
   - SKU: Standard
   - Connected to GitHub branch: `dev`
-  - Workflow: `azure-static-web-apps-mango-water-04fdb1c03.yml`
 
 ## Deployment
 

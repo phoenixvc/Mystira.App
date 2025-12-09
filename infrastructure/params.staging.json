@@ -17,15 +17,6 @@
     "location": {
       "value": "westeurope"
     },
-    "tags": {
-      "value": {
-        "org": "mys",
-        "environment": "staging",
-        "project": "mystira",
-        "application": "mystira-app",
-        "owner": "Eben"
-      }
-    },
     "appServiceSku": {
       "value": "B1"
     },

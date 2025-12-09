@@ -60,7 +60,7 @@ param appInsightsConnectionString string = ''
 @description('Log Analytics Workspace ID')
 param logAnalyticsWorkspaceId string = ''
 
-// App Service Plan
+// App Service Plan - uses existing if already deployed
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
   name: appServicePlanName
   location: location
@@ -73,6 +73,9 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
     reserved: true
   }
 }
+
+// Note: When the same plan name is used for multiple app services,
+// Bicep/ARM will reuse the existing plan instead of recreating it.
 
 // App Service
 resource appService 'Microsoft.Web/sites@2023-01-01' = {
