@@ -48,6 +48,37 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Adds Discord bot as a keyed service (for multi-platform scenarios).
+    /// Use this when you have multiple chat platforms (Discord + Teams + WhatsApp).
+    /// FIX: Added for consistency with Teams and WhatsApp service registration patterns.
+    /// </summary>
+    /// <param name="services">The service collection</param>
+    /// <param name="configuration">The configuration instance</param>
+    /// <param name="serviceKey">The key to use for the keyed service (default: "discord")</param>
+    /// <returns>The service collection for chaining</returns>
+    public static IServiceCollection AddDiscordBotKeyed(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        string serviceKey = "discord")
+    {
+        // Register configuration
+        services.Configure<DiscordOptions>(configuration.GetSection(DiscordOptions.SectionName));
+
+        // Register Discord bot service as singleton
+        services.AddSingleton<DiscordBotService>();
+
+        // Register as keyed services for multi-platform scenarios
+        services.AddKeyedSingleton<IMessagingService>(serviceKey,
+            (sp, _) => sp.GetRequiredService<DiscordBotService>());
+        services.AddKeyedSingleton<IChatBotService>(serviceKey,
+            (sp, _) => sp.GetRequiredService<DiscordBotService>());
+        services.AddKeyedSingleton<IBotCommandService>(serviceKey,
+            (sp, _) => sp.GetRequiredService<DiscordBotService>());
+
+        return services;
+    }
+
+    /// <summary>
     /// Adds Discord bot as a hosted service (background service)
     /// This is suitable for running the bot continuously in Azure App Service WebJobs,
     /// Container Apps, or as a standalone service

@@ -1,4 +1,6 @@
 // Azure Communication Services Module
+// Supports Email, SMS, and WhatsApp messaging channels
+
 @description('Name of the Communication Service')
 param communicationServiceName string
 
@@ -14,12 +16,24 @@ param location string = 'global'
 @description('Data location for Communication Services')
 param dataLocation string = 'Europe'
 
+@description('Enable WhatsApp channel (requires Meta Business verification)')
+param enableWhatsApp bool = false
+
+@description('WhatsApp phone number ID (from Meta Business Suite, required if enableWhatsApp is true)')
+param whatsAppPhoneNumberId string = ''
+
+@description('Tags for all resources')
+param tags object = {}
+
 // Communication Service
 resource communicationService 'Microsoft.Communication/communicationServices@2023-04-01' = {
   name: communicationServiceName
   location: location
+  tags: tags
   properties: {
     dataLocation: dataLocation
+    // Note: WhatsApp channel must be configured manually through Azure Portal
+    // after Meta Business verification is complete. See docs/ops/WHATSAPP_WEBHOOK_SETUP.md
   }
 }
 
@@ -27,6 +41,7 @@ resource communicationService 'Microsoft.Communication/communicationServices@202
 resource emailCommunicationService 'Microsoft.Communication/emailServices@2023-04-01' = {
   name: emailServiceName
   location: location
+  tags: tags
   properties: {
     dataLocation: dataLocation
   }
@@ -53,10 +68,14 @@ resource senderUsername 'Microsoft.Communication/emailServices/domains/senderUse
   }
 }
 
+// Outputs
 output communicationServiceId string = communicationService.id
 output communicationServiceName string = communicationService.name
+output communicationServiceConnectionString string = communicationService.listKeys().primaryConnectionString
 output emailServiceId string = emailCommunicationService.id
 output emailServiceName string = emailCommunicationService.name
 output emailDomainId string = emailDomain.id
 output emailDomainName string = emailDomain.name
 output senderEmail string = 'DoNotReply@${domainName}'
+output whatsAppEnabled bool = enableWhatsApp
+output whatsAppPhoneNumberId string = whatsAppPhoneNumberId
