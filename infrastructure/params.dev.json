@@ -54,10 +54,16 @@
       "value": false
     },
     "deployStaticWebApp": {
-      "value": false
+      "value": true
     },
     "staticWebAppSku": {
       "value": "Free"
+    },
+    "staticWebAppRepositoryUrl": {
+      "value": "https://github.com/phoenixvc/Mystira.App"
+    },
+    "staticWebAppBranch": {
+      "value": "dev"
     }
   }
 }

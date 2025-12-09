@@ -52,6 +52,18 @@
     },
     "enableWhatsApp": {
       "value": true
+    },
+    "deployStaticWebApp": {
+      "value": true
+    },
+    "staticWebAppSku": {
+      "value": "Standard"
+    },
+    "staticWebAppRepositoryUrl": {
+      "value": "https://github.com/phoenixvc/Mystira.App"
+    },
+    "staticWebAppBranch": {
+      "value": "main"
     }
   }
 }
