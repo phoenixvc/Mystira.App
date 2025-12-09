@@ -103,4 +103,121 @@ public class MockStoryProtocolService : IStoryProtocolService
 
         return Task.FromResult(metadata);
     }
+
+    public Task<RoyaltyPaymentResult> PayRoyaltyAsync(string ipAssetId, decimal amount, string? payerReference = null)
+    {
+        _logger.LogInformation(
+            "Mock: Processing royalty payment of {Amount} for IP Asset {IpAssetId}",
+            amount, ipAssetId);
+
+        if (!_registeredAssets.TryGetValue(ipAssetId, out var metadata))
+        {
+            return Task.FromResult(new RoyaltyPaymentResult
+            {
+                Success = false,
+                IpAssetId = ipAssetId,
+                TotalAmount = amount,
+                ErrorMessage = $"IP Asset not found: {ipAssetId}"
+            });
+        }
+
+        // Create mock distribution based on contributors
+        var distributions = new List<RoyaltyDistribution>();
+        foreach (var contributor in metadata.Contributors)
+        {
+            distributions.Add(new RoyaltyDistribution
+            {
+                ContributorId = contributor.UserId,
+                ContributorName = contributor.DisplayName,
+                WalletAddress = contributor.WalletAddress,
+                SharePercentage = contributor.RoyaltySharePercentage,
+                Amount = amount * (contributor.RoyaltySharePercentage / 100m)
+            });
+        }
+
+        var result = new RoyaltyPaymentResult
+        {
+            Success = true,
+            IpAssetId = ipAssetId,
+            TotalAmount = amount,
+            TransactionHash = $"0x{Guid.NewGuid():N}{Guid.NewGuid():N}",
+            Distributions = distributions,
+            ProcessedAt = DateTime.UtcNow,
+            PayerReference = payerReference
+        };
+
+        _logger.LogInformation(
+            "Mock: Royalty payment processed successfully. TxHash: {TxHash}",
+            result.TransactionHash);
+
+        return Task.FromResult(result);
+    }
+
+    public Task<RoyaltyBalance> GetClaimableRoyaltiesAsync(string ipAssetId)
+    {
+        _logger.LogInformation(
+            "Mock: Getting claimable royalties for IP Asset {IpAssetId}",
+            ipAssetId);
+
+        if (!_registeredAssets.TryGetValue(ipAssetId, out var metadata))
+        {
+            return Task.FromResult(new RoyaltyBalance
+            {
+                IpAssetId = ipAssetId,
+                TotalClaimable = 0,
+                ContributorBalances = new List<ContributorBalance>()
+            });
+        }
+
+        // Generate mock balances for each contributor
+        var random = new Random();
+        var contributorBalances = new List<ContributorBalance>();
+        decimal totalClaimable = 0;
+
+        foreach (var contributor in metadata.Contributors)
+        {
+            // Mock some random claimable amount
+            var balance = Math.Round((decimal)(random.NextDouble() * 10), 6);
+            totalClaimable += balance;
+
+            contributorBalances.Add(new ContributorBalance
+            {
+                ContributorId = contributor.UserId,
+                ContributorName = contributor.DisplayName,
+                WalletAddress = contributor.WalletAddress,
+                ClaimableAmount = balance,
+                TotalEarned = balance * 2, // Mock that they've earned double and claimed half
+                TotalClaimed = balance
+            });
+        }
+
+        return Task.FromResult(new RoyaltyBalance
+        {
+            IpAssetId = ipAssetId,
+            TotalClaimable = totalClaimable,
+            ContributorBalances = contributorBalances,
+            LastUpdated = DateTime.UtcNow
+        });
+    }
+
+    public Task<string> ClaimRoyaltiesAsync(string ipAssetId, string contributorWallet)
+    {
+        _logger.LogInformation(
+            "Mock: Claiming royalties for wallet {Wallet} from IP Asset {IpAssetId}",
+            contributorWallet, ipAssetId);
+
+        if (!_registeredAssets.TryGetValue(ipAssetId, out _))
+        {
+            throw new ArgumentException($"IP Asset not found: {ipAssetId}");
+        }
+
+        // Generate mock transaction hash
+        var txHash = $"0x{Guid.NewGuid():N}{Guid.NewGuid():N}";
+
+        _logger.LogInformation(
+            "Mock: Royalties claimed successfully. TxHash: {TxHash}",
+            txHash);
+
+        return Task.FromResult(txHash);
+    }
 }
