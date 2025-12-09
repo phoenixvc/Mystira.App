@@ -36,6 +36,19 @@ param botMicrosoftAppId string = ''
 @secure()
 param botMicrosoftAppPassword string = ''
 
+@description('WhatsApp Channel Registration ID (from Azure Portal → ACS → Channels → WhatsApp)')
+param whatsAppChannelRegistrationId string = ''
+
+@description('WhatsApp Business Account ID (from Meta Business Suite → Business Settings)')
+param whatsAppBusinessAccountId string = ''
+
+@description('WhatsApp Phone Number ID (from Meta Business Suite → Phone Numbers)')
+param whatsAppPhoneNumberId string = ''
+
+@description('WhatsApp webhook verification token (random string for verifying webhook requests from Meta)')
+@secure()
+param whatsAppWebhookVerifyToken string = ''
+
 // Key Vault resource
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: keyVaultName
@@ -173,6 +186,58 @@ resource botAppPasswordSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = i
   name: 'Bot--MicrosoftAppPassword'
   properties: {
     value: botMicrosoftAppPassword
+    contentType: 'text/plain'
+    attributes: {
+      enabled: true
+    }
+  }
+}
+
+// WhatsApp Channel Registration ID secret
+resource whatsAppChannelRegIdSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (whatsAppChannelRegistrationId != '') {
+  parent: keyVault
+  name: 'WhatsApp--ChannelRegistrationId'
+  properties: {
+    value: whatsAppChannelRegistrationId
+    contentType: 'text/plain'
+    attributes: {
+      enabled: true
+    }
+  }
+}
+
+// WhatsApp Business Account ID secret
+resource whatsAppBusinessIdSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (whatsAppBusinessAccountId != '') {
+  parent: keyVault
+  name: 'WhatsApp--BusinessAccountId'
+  properties: {
+    value: whatsAppBusinessAccountId
+    contentType: 'text/plain'
+    attributes: {
+      enabled: true
+    }
+  }
+}
+
+// WhatsApp Phone Number ID secret
+resource whatsAppPhoneIdSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (whatsAppPhoneNumberId != '') {
+  parent: keyVault
+  name: 'WhatsApp--PhoneNumberId'
+  properties: {
+    value: whatsAppPhoneNumberId
+    contentType: 'text/plain'
+    attributes: {
+      enabled: true
+    }
+  }
+}
+
+// WhatsApp Webhook Verify Token secret
+resource whatsAppVerifyTokenSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (whatsAppWebhookVerifyToken != '') {
+  parent: keyVault
+  name: 'WhatsApp--WebhookVerifyToken'
+  properties: {
+    value: whatsAppWebhookVerifyToken
     contentType: 'text/plain'
     attributes: {
       enabled: true

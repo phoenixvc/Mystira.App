@@ -226,19 +226,30 @@ param botSku string = 'F0'
 
 // ─────────────────────────────────────────────────────────────────
 // WhatsApp Parameters (via ACS)
+// Note: Requires Meta Business verification before channel can be used
 // ─────────────────────────────────────────────────────────────────
 
 @description('Enable WhatsApp channel in Communication Services')
 param enableWhatsApp bool = false
 
-@description('WhatsApp phone number ID (from Meta Business Suite)')
+@description('WhatsApp phone number ID (from Meta Business Suite → Phone Numbers)')
 param whatsAppPhoneNumberId string = ''
+
+@description('WhatsApp Channel Registration ID (from Azure Portal → ACS → Channels → WhatsApp)')
+param whatsAppChannelRegistrationId string = ''
+
+@description('WhatsApp Business Account ID (from Meta Business Suite → Business Settings)')
+param whatsAppBusinessAccountId string = ''
+
+@description('WhatsApp webhook verification token (random string for verifying webhook requests from Meta)')
+@secure()
+param whatsAppWebhookVerifyToken string = ''
 
 // ─────────────────────────────────────────────────────────────────
 // Discord Bot Parameters
 // ─────────────────────────────────────────────────────────────────
 
-@description('Discord bot token (from Discord Developer Portal)')
+@description('Discord bot token (from Discord Developer Portal → Bot → Token)')
 @secure()
 param discordBotToken string = ''
 
@@ -297,7 +308,7 @@ module appInsights 'modules/application-insights.bicep' = {
   }
 }
 
-// Key Vault (stores JWT secrets, Discord token, and Bot credentials)
+// Key Vault (stores JWT secrets, Discord token, Bot credentials, and WhatsApp config)
 module keyVault 'modules/key-vault.bicep' = {
   name: 'deploy-key-vault'
   params: {
@@ -310,6 +321,10 @@ module keyVault 'modules/key-vault.bicep' = {
     discordBotToken: discordBotToken
     botMicrosoftAppId: botMicrosoftAppId
     botMicrosoftAppPassword: botMicrosoftAppPassword
+    whatsAppChannelRegistrationId: whatsAppChannelRegistrationId
+    whatsAppBusinessAccountId: whatsAppBusinessAccountId
+    whatsAppPhoneNumberId: whatsAppPhoneNumberId
+    whatsAppWebhookVerifyToken: whatsAppWebhookVerifyToken
   }
 }
 
