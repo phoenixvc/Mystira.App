@@ -383,7 +383,7 @@ public class WhatsAppBotService : IMessagingService, IChatBotService, IBotComman
                 }
             }
 
-            var result = await _client.SendAsync(templateContent, cancellationToken);
+            await _client.SendAsync(templateContent, cancellationToken);
 
             _logger.LogDebug("Sent WhatsApp template message to {PhoneNumber}", phoneNumber);
         }
