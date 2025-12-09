@@ -350,6 +350,72 @@ The development environment includes the following resources (using the naming c
   - Connected to GitHub branch: `dev`
   - Note: SWA not available in South Africa North, deployed to fallback region (East US 2)
 
+## Key Vault Administration
+
+The Key Vault module supports an optional `adminObjectId` parameter to grant full Key Vault access to a specific user or service principal. This is useful for:
+- Manual secret management in Azure Portal
+- Debugging and troubleshooting
+- Initial secret setup
+
+### Getting Your Object ID
+
+```bash
+# For the currently logged-in user
+az ad signed-in-user show --query id -o tsv
+
+# For a specific user by email
+az ad user show --id user@example.com --query id -o tsv
+
+# For a service principal
+az ad sp show --id <app-id> --query id -o tsv
+```
+
+### Adding Admin Access
+
+Add the `adminObjectId` parameter to your deployment:
+
+```bash
+az deployment group create \
+  --resource-group mys-dev-mystira-rg-san \
+  --template-file infrastructure/main.bicep \
+  --parameters @infrastructure/params.dev.json \
+  --parameters jwtRsaPrivateKey="<key>" jwtRsaPublicKey="<key>" \
+  --parameters adminObjectId="<your-object-id>"
+```
+
+## Workflow Dependencies
+
+### Infrastructure → API Deployment Chain
+
+API deployment workflows are configured to automatically trigger after successful infrastructure deployments. This ensures:
+- App Services exist before code deployment
+- Key Vault and secrets are configured before API uses them
+- Connection strings and settings are properly applied
+
+### Trigger Flow
+
+```
+Infrastructure Deploy (Dev) → API CI/CD (Dev) + Admin API CI/CD (Dev)
+Infrastructure Deploy (Staging) → API CI/CD (Staging) + Admin API CI/CD (Staging)
+Infrastructure Deploy (Production) → API CI/CD (Production) + Admin API CI/CD (Production)
+```
+
+### API Workflow Triggers
+
+Each API workflow runs on:
+1. **Push to branch** - When code changes are pushed
+2. **PR merged** - When a pull request is merged
+3. **Infrastructure completed** - When infrastructure workflow succeeds
+4. **Manual dispatch** - When manually triggered
+
+### Incremental Deployment Mode
+
+All infrastructure deployments use `--mode Incremental` which:
+- **Adds/updates** resources defined in the template
+- **Preserves** existing resources not in the template
+- **Never deletes** resources automatically
+- **Safe for existing environments** - won't fail if resources already exist
+
 ## Deployment
 
 ### Manual Deployment via GitHub Actions (Recommended)

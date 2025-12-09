@@ -254,6 +254,13 @@ param whatsAppWebhookVerifyToken string = ''
 param discordBotToken string = ''
 
 // ─────────────────────────────────────────────────────────────────
+// Key Vault Admin Parameters
+// ─────────────────────────────────────────────────────────────────
+
+@description('Object ID of the admin user/service principal for Key Vault full access (Get from Azure Portal → Microsoft Entra ID → Users → Your User → Object ID)')
+param adminObjectId string = ''
+
+// ─────────────────────────────────────────────────────────────────
 // Static Web App Parameters
 // Note: SWA is NOT available in South Africa North - deploys to fallback region
 // ─────────────────────────────────────────────────────────────────
@@ -316,6 +323,7 @@ module keyVault 'modules/key-vault.bicep' = {
   params: {
     keyVaultName: names.keyVault
     location: location
+    adminObjectId: adminObjectId
     jwtRsaPrivateKey: jwtRsaPrivateKey
     jwtRsaPublicKey: jwtRsaPublicKey
     jwtIssuer: jwtIssuer
