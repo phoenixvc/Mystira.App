@@ -176,4 +176,93 @@ public class WhatsAppBotServiceTests
         // Assert - should not throw
         service.GetStatus().ServerCount.Should().Be(0);
     }
+
+    [Fact]
+    public void ImplementsIMessagingService()
+    {
+        // Arrange
+        var service = new WhatsAppBotService(_optionsMock.Object, _loggerMock.Object);
+
+        // Assert
+        service.Should().BeAssignableTo<IMessagingService>();
+    }
+
+    [Fact]
+    public void ImplementsIChatBotService()
+    {
+        // Arrange
+        var service = new WhatsAppBotService(_optionsMock.Object, _loggerMock.Object);
+
+        // Assert
+        service.Should().BeAssignableTo<IChatBotService>();
+    }
+
+    [Fact]
+    public void ImplementsIBotCommandService()
+    {
+        // Arrange
+        var service = new WhatsAppBotService(_optionsMock.Object, _loggerMock.Object);
+
+        // Assert
+        service.Should().BeAssignableTo<IBotCommandService>();
+    }
+
+    [Fact]
+    public async Task SendEmbedAsync_WhenNotConnected_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var service = new WhatsAppBotService(_optionsMock.Object, _loggerMock.Object);
+        var embed = new EmbedData { Title = "Test", Description = "Test embed" };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.SendEmbedAsync(123456, embed));
+    }
+
+    [Fact]
+    public async Task ReplyToMessageAsync_WhenNotConnected_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var service = new WhatsAppBotService(_optionsMock.Object, _loggerMock.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ReplyToMessageAsync(111, 222, "reply message"));
+    }
+
+    [Fact]
+    public void RegisteredModuleCount_ShouldBeZero()
+    {
+        // Arrange
+        var service = new WhatsAppBotService(_optionsMock.Object, _loggerMock.Object);
+
+        // Assert - WhatsApp doesn't support command modules like Discord
+        service.RegisteredModuleCount.Should().Be(0);
+    }
+
+    [Fact]
+    public void GetChannelIdFromPhoneNumber_ShouldBeDeterministic()
+    {
+        // Act - call multiple times with the same input
+        var id1 = WhatsAppBotService.GetChannelIdFromPhoneNumber("+1234567890");
+        var id2 = WhatsAppBotService.GetChannelIdFromPhoneNumber("+1234567890");
+        var id3 = WhatsAppBotService.GetChannelIdFromPhoneNumber("+1234567890");
+
+        // Assert - all should be identical
+        id1.Should().Be(id2);
+        id2.Should().Be(id3);
+    }
+
+    [Fact]
+    public void GetChannelIdFromPhoneNumber_WithVeryLargeNumber_ShouldNotOverflow()
+    {
+        // Arrange - phone number that exceeds ulong.MaxValue when parsed as number
+        var largeNumber = "99999999999999999999"; // 20 digits, larger than ulong.MaxValue
+
+        // Act - should hash instead of parse
+        var result = WhatsAppBotService.GetChannelIdFromPhoneNumber(largeNumber);
+
+        // Assert - should return a valid hash
+        result.Should().NotBe(0ul);
+    }
 }

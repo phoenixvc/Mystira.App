@@ -144,4 +144,67 @@ public class TeamsBotServiceTests
         // Assert - should not throw
         service.GetStatus().ServerCount.Should().Be(0);
     }
+
+    [Fact]
+    public void ImplementsIMessagingService()
+    {
+        // Arrange
+        var service = new TeamsBotService(_optionsMock.Object, _loggerMock.Object);
+
+        // Assert
+        service.Should().BeAssignableTo<IMessagingService>();
+    }
+
+    [Fact]
+    public void ImplementsIChatBotService()
+    {
+        // Arrange
+        var service = new TeamsBotService(_optionsMock.Object, _loggerMock.Object);
+
+        // Assert
+        service.Should().BeAssignableTo<IChatBotService>();
+    }
+
+    [Fact]
+    public void ImplementsIBotCommandService()
+    {
+        // Arrange
+        var service = new TeamsBotService(_optionsMock.Object, _loggerMock.Object);
+
+        // Assert
+        service.Should().BeAssignableTo<IBotCommandService>();
+    }
+
+    [Fact]
+    public async Task SendEmbedAsync_WhenNotConnected_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var service = new TeamsBotService(_optionsMock.Object, _loggerMock.Object);
+        var embed = new EmbedData { Title = "Test", Description = "Test embed" };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.SendEmbedAsync(123456, embed));
+    }
+
+    [Fact]
+    public async Task ReplyToMessageAsync_WhenNotConnected_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var service = new TeamsBotService(_optionsMock.Object, _loggerMock.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ReplyToMessageAsync(111, 222, "reply message"));
+    }
+
+    [Fact]
+    public void RegisteredModuleCount_ShouldBeZero()
+    {
+        // Arrange
+        var service = new TeamsBotService(_optionsMock.Object, _loggerMock.Object);
+
+        // Assert - Teams doesn't support command modules like Discord
+        service.RegisteredModuleCount.Should().Be(0);
+    }
 }

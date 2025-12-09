@@ -14,13 +14,14 @@ namespace Mystira.App.Infrastructure.WhatsApp.Services;
 /// <summary>
 /// Implementation of chat bot service using Azure Communication Services for WhatsApp.
 /// Implements the Application port interfaces for clean architecture compliance.
+/// FIX: Added IMessagingService for consistency with DiscordBotService.
 ///
 /// Note: WhatsApp has specific limitations:
 /// - Messages can only be sent to users who have initiated a conversation (24-hour window)
 /// - Outside the 24-hour window, only template messages can be sent
 /// - No concept of "channels" like Discord/Teams - messages are to phone numbers
 /// </summary>
-public class WhatsAppBotService : IChatBotService, IBotCommandService, IDisposable
+public class WhatsAppBotService : IMessagingService, IChatBotService, IBotCommandService, IDisposable
 {
     private readonly ILogger<WhatsAppBotService> _logger;
     private readonly WhatsAppOptions _options;

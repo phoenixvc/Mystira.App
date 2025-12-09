@@ -104,14 +104,25 @@ public class TicketModule : InteractionModuleBase<SocketInteractionContext>
             }
 
             // Channel naming: ticket-<username>-<4digits>
-            // FIX: Validate channel name length (Discord limit: 100 chars)
+            // Discord channel name limit: 100 chars
+            // Format: "ticket-" (7) + safeName + "-" (1) + suffix (4) = 12 + safeName
+            // Max safeName length: 100 - 12 = 88 chars
+            const int prefixLength = 7;  // "ticket-"
+            const int separatorLength = 1; // "-"
+            const int suffixLength = 4;  // "1000"-"9999"
+            const int maxChannelLength = 100;
+            const int maxSafeNameLength = maxChannelLength - prefixLength - separatorLength - suffixLength; // 88
+
             var suffix = Random.Shared.Next(1000, 9999);
             var safeName = MakeSafeChannelSlug(user.Username);
-            var channelName = $"ticket-{safeName}-{suffix}";
-            if (channelName.Length > 100)
+
+            // Truncate safeName if it would exceed the limit
+            if (safeName.Length > maxSafeNameLength)
             {
-                channelName = $"ticket-{safeName[..Math.Min(safeName.Length, 85)]}-{suffix}";
+                safeName = safeName[..maxSafeNameLength];
             }
+
+            var channelName = $"ticket-{safeName}-{suffix}";
 
             // Permission overwrites
             var overwrites = new Overwrite[]

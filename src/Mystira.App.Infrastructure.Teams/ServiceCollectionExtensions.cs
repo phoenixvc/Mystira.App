@@ -47,6 +47,7 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Registers Teams bot as the IChatBotService implementation.
     /// Use this when Teams is your primary/only chat platform.
+    /// FIX: Added IMessagingService registration for consistency with Discord.
     /// </summary>
     public static IServiceCollection AddTeamsBotAsDefault(
         this IServiceCollection services,
@@ -56,6 +57,7 @@ public static class ServiceCollectionExtensions
         services.AddTeamsBot(configuration, configureOptions);
 
         // Register as Application port interfaces
+        services.AddSingleton<IMessagingService>(sp => sp.GetRequiredService<TeamsBotService>());
         services.AddSingleton<IChatBotService>(sp => sp.GetRequiredService<TeamsBotService>());
         services.AddSingleton<IBotCommandService>(sp => sp.GetRequiredService<TeamsBotService>());
 
@@ -65,6 +67,7 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Adds Teams bot as a keyed service (for multi-platform scenarios).
     /// Use this when you have multiple chat platforms (Discord + Teams).
+    /// FIX: Added IMessagingService registration for consistency with Discord.
     /// </summary>
     /// <param name="services">The service collection</param>
     /// <param name="configuration">The configuration instance</param>
@@ -78,6 +81,8 @@ public static class ServiceCollectionExtensions
         services.AddTeamsBot(configuration);
 
         // Register as keyed services for multi-platform scenarios
+        services.AddKeyedSingleton<IMessagingService>(serviceKey,
+            (sp, _) => sp.GetRequiredService<TeamsBotService>());
         services.AddKeyedSingleton<IChatBotService>(serviceKey,
             (sp, _) => sp.GetRequiredService<TeamsBotService>());
         services.AddKeyedSingleton<IBotCommandService>(serviceKey,

@@ -17,8 +17,9 @@ namespace Mystira.App.Infrastructure.Teams.Services;
 /// <summary>
 /// Implementation of chat bot service using Microsoft Bot Framework for Teams.
 /// Implements the Application port interfaces for clean architecture compliance.
+/// FIX: Added IMessagingService for consistency with DiscordBotService.
 /// </summary>
-public class TeamsBotService : IChatBotService, IBotCommandService, IDisposable
+public class TeamsBotService : IMessagingService, IChatBotService, IBotCommandService, IDisposable
 {
     private readonly ILogger<TeamsBotService> _logger;
     private readonly TeamsOptions _options;
