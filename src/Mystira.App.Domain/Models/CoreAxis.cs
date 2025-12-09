@@ -40,7 +40,10 @@ public class CoreAxis
     public static CoreAxis? Parse(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
+        {
             return null;
+        }
+
         return new CoreAxis(value);
     }
 }

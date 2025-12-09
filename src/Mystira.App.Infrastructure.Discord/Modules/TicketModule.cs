@@ -148,7 +148,9 @@ public class TicketModule : InteractionModuleBase<SocketInteractionContext>
             var newChannel = await guild.CreateTextChannelAsync(channelName, props =>
             {
                 if (_options.SupportCategoryId != 0)
+                {
                     props.CategoryId = _options.SupportCategoryId;
+                }
 
                 props.PermissionOverwrites = overwrites;
                 props.Topic = $"ticket | user:{user.Id} | created:{DateTimeOffset.UtcNow:O}";
@@ -261,7 +263,9 @@ public class TicketModule : InteractionModuleBase<SocketInteractionContext>
         cleaned = cleaned.Trim('-');
 
         while (cleaned.Contains("--"))
+        {
             cleaned = cleaned.Replace("--", "-");
+        }
 
         return string.IsNullOrWhiteSpace(cleaned) ? "user" : cleaned;
     }

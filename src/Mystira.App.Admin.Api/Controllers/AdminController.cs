@@ -189,7 +189,7 @@ public class AdminController : Controller
     [HttpGet("badges/import")]
     public IActionResult ImportBadges()
     {
-       return View("ImportBadges");
+        return View("ImportBadges");
     }
 
     /// <summary>
@@ -198,7 +198,7 @@ public class AdminController : Controller
     [HttpGet("compassaxes")]
     public IActionResult CompassAxes()
     {
-       return View("CompassAxes");
+        return View("CompassAxes");
     }
 
     /// <summary>
@@ -207,7 +207,7 @@ public class AdminController : Controller
     [HttpGet("archetypes")]
     public IActionResult Archetypes()
     {
-       return View("Archetypes");
+        return View("Archetypes");
     }
 
     /// <summary>
@@ -216,7 +216,7 @@ public class AdminController : Controller
     [HttpGet("echotypes")]
     public IActionResult EchoTypes()
     {
-       return View("EchoTypes");
+        return View("EchoTypes");
     }
 
     /// <summary>
@@ -225,7 +225,7 @@ public class AdminController : Controller
     [HttpGet("fantasythemes")]
     public IActionResult FantasyThemes()
     {
-       return View("FantasyThemes");
+        return View("FantasyThemes");
     }
 
     /// <summary>
@@ -234,7 +234,7 @@ public class AdminController : Controller
     [HttpGet("agegroups")]
     public IActionResult AgeGroups()
     {
-       return View("AgeGroups");
+        return View("AgeGroups");
     }
 
     /// <summary>

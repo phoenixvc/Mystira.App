@@ -25,7 +25,9 @@ public class CreateAccountCommandHandler : ICommandHandler<CreateAccountCommand,
         // Check if account already exists
         var existing = await _repository.GetByEmailAsync(command.Email);
         if (existing != null)
+        {
             throw new InvalidOperationException($"Account with email {command.Email} already exists");
+        }
 
         var account = new Account
         {

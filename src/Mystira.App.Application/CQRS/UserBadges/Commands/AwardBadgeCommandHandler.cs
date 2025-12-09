@@ -28,14 +28,21 @@ public class AwardBadgeCommandHandler : ICommandHandler<AwardBadgeCommand, UserB
         var request = command.Request;
 
         if (string.IsNullOrEmpty(request.UserProfileId))
+        {
             throw new ArgumentException("UserProfileId is required");
+        }
+
         if (string.IsNullOrEmpty(request.BadgeConfigurationId))
+        {
             throw new ArgumentException("BadgeConfigurationId is required");
+        }
 
         // Get badge configuration to populate badge details
         var badgeConfig = await _badgeConfigRepository.GetByIdAsync(request.BadgeConfigurationId);
         if (badgeConfig == null)
+        {
             throw new ArgumentException($"Badge configuration not found: {request.BadgeConfigurationId}");
+        }
 
         var badge = new UserBadge
         {

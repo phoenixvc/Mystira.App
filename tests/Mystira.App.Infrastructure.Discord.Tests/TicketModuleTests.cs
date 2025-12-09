@@ -1,6 +1,6 @@
+using System.Reflection;
 using FluentAssertions;
 using Mystira.App.Infrastructure.Discord.Modules;
-using System.Reflection;
 
 namespace Mystira.App.Infrastructure.Discord.Tests;
 

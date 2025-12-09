@@ -1,4 +1,4 @@
-﻿namespace Mystira.App.Contracts.Models.GameSessions;
+namespace Mystira.App.Contracts.Models.GameSessions;
 
 public class CharacterAssignmentDto
 {

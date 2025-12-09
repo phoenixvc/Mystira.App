@@ -26,12 +26,12 @@ public class GetCompassAxisByIdQueryHandler : IQueryHandler<GetCompassAxisByIdQu
     {
         _logger.LogInformation("Retrieving compass axis with id: {Id}", query.Id);
         var axis = await _repository.GetByIdAsync(query.Id);
-        
+
         if (axis == null)
         {
             _logger.LogWarning("Compass axis with id {Id} not found", query.Id);
         }
-        
+
         return axis;
     }
 }

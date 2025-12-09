@@ -15,7 +15,7 @@ public class EchoTypeJsonConverter : JsonConverter<EchoType>
             var stringValue = reader.GetString();
             return stringValue != null ? new EchoType(stringValue) : null;
         }
-        
+
         if (reader.TokenType == JsonTokenType.Null)
         {
             return null;

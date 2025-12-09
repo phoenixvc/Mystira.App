@@ -15,7 +15,7 @@ public class CoreAxisJsonConverter : JsonConverter<CoreAxis>
             var stringValue = reader.GetString();
             return stringValue != null ? new CoreAxis(stringValue) : null;
         }
-        
+
         if (reader.TokenType == JsonTokenType.Null)
         {
             return null;

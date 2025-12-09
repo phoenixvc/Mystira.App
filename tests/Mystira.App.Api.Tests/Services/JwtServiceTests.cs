@@ -18,7 +18,7 @@ public class JwtServiceTests
 {
     private readonly Mock<ILogger<JwtService>> _mockLogger;
     private readonly IConfiguration _configuration;
-    
+
     // Test-only secret key - DO NOT use in production
     // This is a long test secret for HS256 signing in unit tests only
     private const string TestSecretKey = "ThisIsATestSecretKeyThatIsLongEnoughForHS256Signing123456789";
@@ -26,7 +26,7 @@ public class JwtServiceTests
     public JwtServiceTests()
     {
         _mockLogger = new Mock<ILogger<JwtService>>();
-        
+
         // Create test configuration with symmetric key for testing
         _configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -52,14 +52,14 @@ public class JwtServiceTests
 
         // Assert
         token.Should().NotBeNullOrEmpty();
-        
+
         // Decode and verify token claims
         var tokenHandler = new JwtSecurityTokenHandler();
         var jwtToken = tokenHandler.ReadJwtToken(token);
-        
+
         jwtToken.Issuer.Should().Be("MystiraAPI");
         jwtToken.Audiences.Should().Contain("MystiraPWA");
-        
+
         // Verify standard claims are present
         var claims = jwtToken.Claims.ToList();
         claims.Should().Contain(c => c.Type == "sub" && c.Value == userId);
@@ -84,9 +84,9 @@ public class JwtServiceTests
         // Assert
         var tokenHandler = new JwtSecurityTokenHandler();
         var jwtToken = tokenHandler.ReadJwtToken(token);
-        
+
         var claims = jwtToken.Claims.ToList();
-        
+
         // Verify role claim is present (JWT serialization maps ClaimTypes.Role to "role")
         var roleClaims = claims.Where(c => c.Type == "role").ToList();
         roleClaims.Should().NotBeEmpty("JWT tokens must include role claim");
@@ -109,9 +109,9 @@ public class JwtServiceTests
         // Assert
         var tokenHandler = new JwtSecurityTokenHandler();
         var jwtToken = tokenHandler.ReadJwtToken(token);
-        
+
         var claims = jwtToken.Claims.ToList();
-        
+
         // Verify default Guest role is assigned
         var roleClaims = claims.Where(c => c.Type == "role").ToList();
         roleClaims.Should().NotBeEmpty();
@@ -134,11 +134,11 @@ public class JwtServiceTests
         // Assert
         var tokenHandler = new JwtSecurityTokenHandler();
         var jwtToken = tokenHandler.ReadJwtToken(token);
-        
+
         // Token should expire in approximately 6 hours
         var expectedExpiration = beforeGeneration.AddHours(6);
         var tokenExpiration = jwtToken.ValidTo;
-        
+
         // Use 30-second tolerance for more precise timing validation
         tokenExpiration.Should().BeCloseTo(expectedExpiration, TimeSpan.FromSeconds(30));
     }

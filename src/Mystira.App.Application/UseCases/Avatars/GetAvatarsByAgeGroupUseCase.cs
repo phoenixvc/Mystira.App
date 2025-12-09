@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
-using Mystira.App.Contracts.Responses.Media;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Contracts.Responses.Media;
 
 namespace Mystira.App.Application.UseCases.Avatars;
 

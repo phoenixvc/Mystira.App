@@ -277,18 +277,18 @@ internal class Program
         var migrationService = serviceProvider.GetRequiredService<IMigrationService>();
 
         // Get connection strings from environment or configuration
-        var sourceCosmosConnection = Environment.GetEnvironmentVariable("SOURCE_COSMOS_CONNECTION") 
+        var sourceCosmosConnection = Environment.GetEnvironmentVariable("SOURCE_COSMOS_CONNECTION")
             ?? configuration.GetConnectionString("SourceCosmosDb") ?? "";
-        var destCosmosConnection = Environment.GetEnvironmentVariable("DEST_COSMOS_CONNECTION") 
+        var destCosmosConnection = Environment.GetEnvironmentVariable("DEST_COSMOS_CONNECTION")
             ?? configuration.GetConnectionString("DestCosmosDb") ?? configuration.GetConnectionString("CosmosDb") ?? "";
-        var databaseName = Environment.GetEnvironmentVariable("COSMOS_DATABASE_NAME") 
+        var databaseName = Environment.GetEnvironmentVariable("COSMOS_DATABASE_NAME")
             ?? configuration["Database:Name"] ?? "MystiraAppDb";
 
-        var sourceStorageConnection = Environment.GetEnvironmentVariable("SOURCE_STORAGE_CONNECTION") 
+        var sourceStorageConnection = Environment.GetEnvironmentVariable("SOURCE_STORAGE_CONNECTION")
             ?? configuration.GetConnectionString("SourceStorage") ?? "";
-        var destStorageConnection = Environment.GetEnvironmentVariable("DEST_STORAGE_CONNECTION") 
+        var destStorageConnection = Environment.GetEnvironmentVariable("DEST_STORAGE_CONNECTION")
             ?? configuration.GetConnectionString("DestStorage") ?? configuration.GetConnectionString("AzureStorage") ?? "";
-        var containerName = Environment.GetEnvironmentVariable("STORAGE_CONTAINER_NAME") 
+        var containerName = Environment.GetEnvironmentVariable("STORAGE_CONTAINER_NAME")
             ?? configuration["Storage:ContainerName"] ?? "mystira-app-media";
 
         try
@@ -344,9 +344,9 @@ internal class Program
                 case "all":
                     Console.WriteLine("Starting complete migration...");
                     Console.WriteLine("================================\n");
-                    
+
                     var allSuccess = true;
-                    
+
                     // Migrate Cosmos DB data
                     if (!string.IsNullOrEmpty(sourceCosmosConnection) && !string.IsNullOrEmpty(destCosmosConnection))
                     {
@@ -410,7 +410,7 @@ internal class Program
         Console.WriteLine($"  Failed: {result.FailureCount}");
         Console.WriteLine($"  Duration: {result.Duration.TotalSeconds:F2}s");
         Console.WriteLine($"  Status: {(result.Success ? "✓ SUCCESS" : "✗ FAILED")}");
-        
+
         if (result.Errors.Count > 0)
         {
             Console.WriteLine($"\n  Errors ({result.Errors.Count}):");
@@ -543,7 +543,7 @@ internal class Program
             Console.WriteLine("   gh run list --workflow=infrastructure-deploy-dev.yml --limit 1");
             Console.WriteLine("\n🔍 Watch workflow progress:");
             Console.WriteLine("   gh run watch");
-            
+
             logger.LogInformation("Infrastructure workflow triggered successfully");
             return 0;
         }

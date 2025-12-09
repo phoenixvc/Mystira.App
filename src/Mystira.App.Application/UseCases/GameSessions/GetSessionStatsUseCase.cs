@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
-using Mystira.App.Contracts.Responses.GameSessions;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Contracts.Responses.GameSessions;
 
 namespace Mystira.App.Application.UseCases.GameSessions;
 

@@ -15,7 +15,7 @@ public class ArchetypeJsonConverter : JsonConverter<Archetype>
             var stringValue = reader.GetString();
             return stringValue != null ? new Archetype(stringValue) : null;
         }
-        
+
         if (reader.TokenType == JsonTokenType.Null)
         {
             return null;

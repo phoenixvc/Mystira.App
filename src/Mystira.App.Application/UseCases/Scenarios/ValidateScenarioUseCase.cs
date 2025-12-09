@@ -30,7 +30,7 @@ public class ValidateScenarioUseCase
         {
             var validAxes = await _compassAxisRepository.GetAllAsync();
             var validAxisNames = validAxes.Select(a => a.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            
+
             foreach (var axis in scenario.CoreAxes)
             {
                 if (!validAxisNames.Contains(axis.Value))
@@ -45,7 +45,7 @@ public class ValidateScenarioUseCase
         {
             var validArchetypes = await _archetypeRepository.GetAllAsync();
             var validArchetypeNames = validArchetypes.Select(a => a.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            
+
             foreach (var archetype in scenario.Archetypes)
             {
                 if (!validArchetypeNames.Contains(archetype.Value))

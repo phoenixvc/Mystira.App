@@ -1,8 +1,8 @@
+using System.Linq;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components.WebAssembly.Http;
 using Mystira.App.PWA.Models;
-using System.Linq;
 
 namespace Mystira.App.PWA.Services;
 
@@ -99,8 +99,15 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                                 {
                                     if (item.TryGetProperty(name, out var prop))
                                     {
-                                        if (prop.ValueKind == JsonValueKind.Number && prop.TryGetInt32(out var i)) return i;
-                                        if (prop.ValueKind == JsonValueKind.String && int.TryParse(prop.GetString(), out var si)) return si;
+                                        if (prop.ValueKind == JsonValueKind.Number && prop.TryGetInt32(out var i))
+                                        {
+                                            return i;
+                                        }
+
+                                        if (prop.ValueKind == JsonValueKind.String && int.TryParse(prop.GetString(), out var si))
+                                        {
+                                            return si;
+                                        }
                                     }
                                     return fallback;
                                 }
@@ -109,7 +116,10 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                                 {
                                     if (item.TryGetProperty(name, out var prop) && prop.ValueKind == JsonValueKind.String)
                                     {
-                                        if (DateTime.TryParse(prop.GetString(), out var dt)) return dt;
+                                        if (DateTime.TryParse(prop.GetString(), out var dt))
+                                        {
+                                            return dt;
+                                        }
                                     }
                                     return DateTime.UtcNow;
                                 }
@@ -117,7 +127,9 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                                 string[] GetStringArray(string name)
                                 {
                                     if (!item.TryGetProperty(name, out var prop) || prop.ValueKind != JsonValueKind.Array)
+                                    {
                                         return Array.Empty<string>();
+                                    }
 
                                     var list = new List<string>();
                                     foreach (var el in prop.EnumerateArray())
@@ -125,14 +137,20 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                                         if (el.ValueKind == JsonValueKind.String)
                                         {
                                             var v = el.GetString();
-                                            if (!string.IsNullOrWhiteSpace(v)) list.Add(v!);
+                                            if (!string.IsNullOrWhiteSpace(v))
+                                            {
+                                                list.Add(v!);
+                                            }
                                         }
                                         else if (el.ValueKind == JsonValueKind.Object)
                                         {
                                             if (el.TryGetProperty("value", out var vProp) && vProp.ValueKind == JsonValueKind.String)
                                             {
                                                 var v = vProp.GetString();
-                                                if (!string.IsNullOrWhiteSpace(v)) list.Add(v!);
+                                                if (!string.IsNullOrWhiteSpace(v))
+                                                {
+                                                    list.Add(v!);
+                                                }
                                             }
                                         }
                                     }
@@ -251,8 +269,15 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                 {
                     if (obj.TryGetProperty(name, out var prop))
                     {
-                        if (prop.ValueKind == JsonValueKind.Number && prop.TryGetInt32(out var i)) return i;
-                        if (prop.ValueKind == JsonValueKind.String && int.TryParse(prop.GetString(), out var si)) return si;
+                        if (prop.ValueKind == JsonValueKind.Number && prop.TryGetInt32(out var i))
+                        {
+                            return i;
+                        }
+
+                        if (prop.ValueKind == JsonValueKind.String && int.TryParse(prop.GetString(), out var si))
+                        {
+                            return si;
+                        }
                     }
                     return fallback;
                 }
@@ -261,7 +286,10 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                 {
                     if (obj.TryGetProperty(name, out var prop) && prop.ValueKind == JsonValueKind.String)
                     {
-                        if (DateTime.TryParse(prop.GetString(), out var dt)) return dt;
+                        if (DateTime.TryParse(prop.GetString(), out var dt))
+                        {
+                            return dt;
+                        }
                     }
                     return DateTime.UtcNow;
                 }
@@ -269,7 +297,9 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                 string[] GetStringArray(JsonElement obj, string name)
                 {
                     if (!obj.TryGetProperty(name, out var prop) || prop.ValueKind != JsonValueKind.Array)
+                    {
                         return Array.Empty<string>();
+                    }
 
                     var list = new List<string>();
                     foreach (var el in prop.EnumerateArray())
@@ -277,14 +307,20 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                         if (el.ValueKind == JsonValueKind.String)
                         {
                             var v = el.GetString();
-                            if (!string.IsNullOrWhiteSpace(v) && !string.Equals(v, "null", StringComparison.OrdinalIgnoreCase)) list.Add(v!);
+                            if (!string.IsNullOrWhiteSpace(v) && !string.Equals(v, "null", StringComparison.OrdinalIgnoreCase))
+                            {
+                                list.Add(v!);
+                            }
                         }
                         else if (el.ValueKind == JsonValueKind.Object)
                         {
                             if (el.TryGetProperty("value", out var vProp) && vProp.ValueKind == JsonValueKind.String)
                             {
                                 var v = vProp.GetString();
-                                if (!string.IsNullOrWhiteSpace(v)) list.Add(v!);
+                                if (!string.IsNullOrWhiteSpace(v))
+                                {
+                                    list.Add(v!);
+                                }
                             }
                         }
                     }
@@ -294,7 +330,10 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                 SceneMedia? ReadMedia(JsonElement obj)
                 {
                     if (!obj.TryGetProperty("media", out var media) || media.ValueKind != JsonValueKind.Object)
+                    {
                         return null;
+                    }
+
                     string? Clean(string s) => string.IsNullOrWhiteSpace(s) || string.Equals(s, "null", StringComparison.OrdinalIgnoreCase) ? null : s;
                     return new SceneMedia
                     {
@@ -308,7 +347,10 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                 {
                     var branches = new List<SceneBranch>();
                     if (!obj.TryGetProperty("branches", out var arr) || arr.ValueKind != JsonValueKind.Array)
+                    {
                         return branches;
+                    }
+
                     foreach (var br in arr.EnumerateArray().Where(br => br.ValueKind == JsonValueKind.Object))
                     {
                         branches.Add(new SceneBranch
@@ -324,10 +366,17 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                 {
                     var scenes = new List<Scene>();
                     if (!obj.TryGetProperty("scenes", out var arr) || arr.ValueKind != JsonValueKind.Array)
+                    {
                         return scenes;
+                    }
+
                     foreach (var s in arr.EnumerateArray())
                     {
-                        if (s.ValueKind != JsonValueKind.Object) continue;
+                        if (s.ValueKind != JsonValueKind.Object)
+                        {
+                            continue;
+                        }
+
                         var type = GetString(s, "type");
                         var scene = new Scene
                         {
@@ -351,10 +400,17 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                 {
                     var chars = new List<ScenarioCharacter>();
                     if (!obj.TryGetProperty("characters", out var arr) || arr.ValueKind != JsonValueKind.Array)
+                    {
                         return chars;
+                    }
+
                     foreach (var c in arr.EnumerateArray())
                     {
-                        if (c.ValueKind != JsonValueKind.Object) continue;
+                        if (c.ValueKind != JsonValueKind.Object)
+                        {
+                            continue;
+                        }
+
                         var ch = new ScenarioCharacter
                         {
                             Id = GetString(c, "id"),

@@ -43,7 +43,7 @@ public class AgeGroupsController : ControllerBase
     public async Task<ActionResult<dynamic>> ValidateAgeGroup([FromBody] ValidateAgeGroupRequest request)
     {
         _logger.LogInformation("POST: Validating age group: {Value}", request.Value);
-        
+
         var isValid = await _mediator.Send(new ValidateAgeGroupQuery(request.Value));
         return Ok(new { isValid });
     }

@@ -44,7 +44,7 @@ public class ArchetypesController : ControllerBase
     public async Task<ActionResult<ArchetypeDefinition>> CreateArchetype([FromBody] CreateArchetypeRequest request)
     {
         _logger.LogInformation("POST: Creating archetype with name: {Name}", request.Name);
-        
+
         var created = await _mediator.Send(new CreateArchetypeCommand(request.Name, request.Description));
         return CreatedAtAction(nameof(GetArchetypeById), new { id = created.Id }, created);
     }
@@ -53,7 +53,7 @@ public class ArchetypesController : ControllerBase
     public async Task<ActionResult<ArchetypeDefinition>> UpdateArchetype(string id, [FromBody] UpdateArchetypeRequest request)
     {
         _logger.LogInformation("PUT: Updating archetype with id: {Id}", id);
-        
+
         var updated = await _mediator.Send(new UpdateArchetypeCommand(id, request.Name, request.Description));
         if (updated == null)
         {
@@ -67,7 +67,7 @@ public class ArchetypesController : ControllerBase
     public async Task<IActionResult> DeleteArchetype(string id)
     {
         _logger.LogInformation("DELETE: Deleting archetype with id: {Id}", id);
-        
+
         var success = await _mediator.Send(new DeleteArchetypeCommand(id));
         if (!success)
         {
