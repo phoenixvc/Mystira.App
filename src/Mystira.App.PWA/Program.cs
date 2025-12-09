@@ -114,6 +114,15 @@ builder.Services.AddHttpClient<IDiscordApiClient, DiscordApiClient>(client =>
     }
 }).AddHttpMessageHandler<AuthHeaderHandler>();
 
+builder.Services.AddHttpClient<IAttributionApiClient, AttributionApiClient>(client =>
+{
+    if (!string.IsNullOrEmpty(apiBaseUrl))
+    {
+        client.BaseAddress = new Uri(apiBaseUrl);
+        client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
+    }
+}).AddHttpMessageHandler<AuthHeaderHandler>();
+
 // Register main ApiClient that composes all domain clients
 builder.Services.AddScoped<IApiClient, ApiClient>();
 
@@ -200,7 +209,8 @@ static void SetDevelopmentModeForApiClients(IServiceProvider services, bool isDe
         typeof(IAvatarApiClient),
         typeof(IContentBundleApiClient),
         typeof(ICharacterApiClient),
-        typeof(IDiscordApiClient)
+        typeof(IDiscordApiClient),
+        typeof(IAttributionApiClient)
     };
 
     foreach (var interfaceType in apiClientTypes)

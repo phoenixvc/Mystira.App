@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Mystira.App.Application.CQRS.Attribution.Queries;
 using Mystira.App.Application.CQRS.Scenarios.Queries;
 using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.App.Contracts.Responses.Attribution;
 using Mystira.App.Contracts.Responses.Common;
 using Mystira.App.Contracts.Responses.Scenarios;
 using Mystira.App.Domain.Models;
@@ -155,6 +157,84 @@ public class ScenariosController : ControllerBase
             return StatusCode(500, new ErrorResponse
             {
                 Message = "Internal server error while fetching scenarios with game state",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get creator attribution/credits for a scenario.
+    /// Returns information about the content creators and Story Protocol registration status.
+    /// </summary>
+    /// <param name="id">The scenario ID</param>
+    /// <returns>Attribution information including creator credits</returns>
+    [HttpGet("{id}/attribution")]
+    [ProducesResponseType(typeof(ContentAttributionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ContentAttributionResponse>> GetScenarioAttribution(string id)
+    {
+        try
+        {
+            var query = new GetScenarioAttributionQuery(id);
+            var attribution = await _mediator.Send(query);
+
+            if (attribution == null)
+            {
+                return NotFound(new ErrorResponse
+                {
+                    Message = $"Scenario not found: {id}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            return Ok(attribution);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting attribution for scenario {ScenarioId}", id);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = "Internal server error while fetching scenario attribution",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get IP registration status for a scenario.
+    /// Returns Story Protocol blockchain registration verification details.
+    /// </summary>
+    /// <param name="id">The scenario ID</param>
+    /// <returns>IP verification status including blockchain details</returns>
+    [HttpGet("{id}/ip-status")]
+    [ProducesResponseType(typeof(IpVerificationResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<IpVerificationResponse>> GetScenarioIpStatus(string id)
+    {
+        try
+        {
+            var query = new GetScenarioIpStatusQuery(id);
+            var ipStatus = await _mediator.Send(query);
+
+            if (ipStatus == null)
+            {
+                return NotFound(new ErrorResponse
+                {
+                    Message = $"Scenario not found: {id}",
+                    TraceId = HttpContext.TraceIdentifier
+                });
+            }
+
+            return Ok(ipStatus);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting IP status for scenario {ScenarioId}", id);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = "Internal server error while fetching scenario IP status",
                 TraceId = HttpContext.TraceIdentifier
             });
         }

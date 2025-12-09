@@ -1,0 +1,308 @@
+/* IP Verification Badge Styles */
+
+.ip-verification-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+/* Size Variants */
+.ip-verification-badge.size-small {
+    padding: 2px 6px;
+    gap: 4px;
+    font-size: 0.7rem;
+}
+
+.ip-verification-badge.size-small .badge-icon {
+    width: 12px;
+    height: 12px;
+}
+
+.ip-verification-badge.size-medium {
+    padding: 4px 10px;
+    gap: 6px;
+    font-size: 0.75rem;
+}
+
+.ip-verification-badge.size-large {
+    padding: 6px 14px;
+    gap: 8px;
+    font-size: 0.875rem;
+}
+
+.ip-verification-badge.size-large .badge-icon {
+    width: 20px;
+    height: 20px;
+}
+
+/* Verified State */
+.ip-verification-badge.verified {
+    background: rgba(5, 150, 105, 0.1);
+    color: #059669;
+    border: 1px solid rgba(5, 150, 105, 0.2);
+}
+
+.ip-verification-badge.verified:hover {
+    background: rgba(5, 150, 105, 0.15);
+}
+
+.ip-verification-badge.verified.clickable {
+    cursor: pointer;
+}
+
+.ip-verification-badge.verified.clickable:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.2);
+}
+
+/* Unverified State */
+.ip-verification-badge.unverified {
+    background: rgba(156, 163, 175, 0.1);
+    color: #9ca3af;
+    border: 1px solid rgba(156, 163, 175, 0.2);
+}
+
+/* Loading State */
+.ip-verification-badge.loading {
+    background: rgba(156, 163, 175, 0.1);
+    border: 1px solid rgba(156, 163, 175, 0.2);
+    min-width: 80px;
+    justify-content: center;
+}
+
+.badge-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 16px;
+}
+
+.loading-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #9ca3af;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.4; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1); }
+}
+
+/* Icons */
+.badge-icon {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+}
+
+.badge-icon.verified {
+    color: #059669;
+}
+
+.badge-icon.unverified {
+    color: #9ca3af;
+}
+
+/* Label */
+.badge-label {
+    white-space: nowrap;
+}
+
+/* External Link */
+.badge-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    margin-left: 2px;
+    color: inherit;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.badge-link:hover {
+    opacity: 1;
+}
+
+/* Modal Overlay */
+.ip-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Modal */
+.ip-modal {
+    background: var(--card, white);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ip-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+}
+
+.ip-modal-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text, #111827);
+}
+
+.ip-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    color: var(--muted, #6b7280);
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.ip-modal-close:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text, #111827);
+}
+
+.ip-modal-body {
+    padding: 20px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ip-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.ip-detail-label {
+    font-size: 0.875rem;
+    color: var(--muted, #6b7280);
+}
+
+.ip-detail-value {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text, #111827);
+    text-align: right;
+}
+
+.ip-detail-value.verified {
+    color: #059669;
+}
+
+.ip-detail-value.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.8rem;
+}
+
+.ip-explorer-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+
+.ip-explorer-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+    .ip-verification-badge.verified {
+        background: rgba(5, 150, 105, 0.2);
+        border-color: rgba(5, 150, 105, 0.3);
+    }
+
+    .ip-verification-badge.unverified {
+        background: rgba(156, 163, 175, 0.15);
+        border-color: rgba(156, 163, 175, 0.25);
+    }
+
+    .ip-modal {
+        background: var(--card-dark, #1f2937);
+    }
+
+    .ip-modal-header {
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .ip-modal-header h3 {
+        color: var(--text-dark, #f9fafb);
+    }
+
+    .ip-detail-value {
+        color: var(--text-dark, #f9fafb);
+    }
+
+    .ip-modal-close:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-dark, #f9fafb);
+    }
+}
+
+/* Manual dark theme override */
+html[data-theme="dark"] .ip-verification-badge.verified {
+    background: rgba(5, 150, 105, 0.2);
+    border-color: rgba(5, 150, 105, 0.3);
+}
+
+html[data-theme="dark"] .ip-modal {
+    background: var(--card-dark, #1f2937);
+}
+
+html[data-theme="dark"] .ip-modal-header h3,
+html[data-theme="dark"] .ip-detail-value {
+    color: var(--text-dark, #f9fafb);
+}
