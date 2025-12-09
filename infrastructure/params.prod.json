@@ -54,7 +54,7 @@
       "value": true
     },
     "deployStaticWebApp": {
-      "value": true
+      "value": false
     },
     "staticWebAppSku": {
       "value": "Standard"
