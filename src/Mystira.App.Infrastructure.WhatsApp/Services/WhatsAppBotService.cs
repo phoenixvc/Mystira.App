@@ -437,6 +437,7 @@ public class WhatsAppBotService : IMessagingService, IChatBotService, IBotComman
     public void Dispose()
     {
         if (_disposed) return;
+        _isConnected = false;
         _activeConversations.Clear();
         _disposed = true;
         GC.SuppressFinalize(this);

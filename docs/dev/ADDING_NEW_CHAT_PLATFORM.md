@@ -93,7 +93,7 @@ using Mystira.App.Application.Ports.Messaging;
 
 namespace Mystira.App.Infrastructure.Slack.Services;
 
-public class SlackBotService : IChatBotService, IBotCommandService, IDisposable
+public class SlackBotService : IMessagingService, IChatBotService, IBotCommandService, IDisposable
 {
     private readonly ILogger<SlackBotService> _logger;
     private readonly SlackOptions _options;
@@ -245,6 +245,49 @@ public class SlackBotService : IChatBotService, IBotCommandService, IDisposable
         };
     }
 
+    public async Task<FirstResponderResult> SendEmbedAndAwaitFirstResponseAsync(
+        IEnumerable<ulong> channelIds,
+        EmbedData embed,
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default)
+    {
+        var sentMessages = new List<SentMessage>();
+        foreach (var channelId in channelIds)
+        {
+            try
+            {
+                await SendEmbedAsync(channelId, embed, cancellationToken);
+                sentMessages.Add(new SentMessage { ChannelId = channelId, MessageId = 0 });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send embed to channel {ChannelId}", channelId);
+            }
+        }
+        return new FirstResponderResult { TimedOut = true, SentMessages = sentMessages };
+    }
+
+    public async Task BroadcastWithResponseHandlerAsync(
+        IEnumerable<ulong> channelIds,
+        string message,
+        Func<ResponseEvent, Task<bool>> onResponse,
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default)
+    {
+        foreach (var channelId in channelIds)
+        {
+            try
+            {
+                await SendMessageAsync(channelId, message, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to broadcast to channel {ChannelId}", channelId);
+            }
+        }
+        _logger.LogWarning("Slack broadcast sent. Response handling requires event subscription.");
+    }
+
     // Helper methods
     private string? GetSlackChannelId(ulong channelId)
     {
@@ -267,6 +310,7 @@ public class SlackBotService : IChatBotService, IBotCommandService, IDisposable
     public void Dispose()
     {
         if (_disposed) return;
+        _isConnected = false;
         _channelMapping.Clear();
         _disposed = true;
         GC.SuppressFinalize(this);
@@ -307,6 +351,7 @@ public static class ServiceCollectionExtensions
             configuration.GetSection(SlackOptions.SectionName));
 
         services.AddSingleton<SlackBotService>();
+        services.AddSingleton<IMessagingService>(sp => sp.GetRequiredService<SlackBotService>());
         services.AddSingleton<IChatBotService>(sp => sp.GetRequiredService<SlackBotService>());
         services.AddSingleton<IBotCommandService>(sp => sp.GetRequiredService<SlackBotService>());
 
@@ -321,8 +366,10 @@ public static class ServiceCollectionExtensions
         services.Configure<SlackOptions>(
             configuration.GetSection(SlackOptions.SectionName));
 
-        services.AddKeyedSingleton<IChatBotService, SlackBotService>(serviceKey);
-        services.AddKeyedSingleton<IBotCommandService, SlackBotService>(serviceKey);
+        services.AddSingleton<SlackBotService>();
+        services.AddKeyedSingleton<IMessagingService>(serviceKey, (sp, _) => sp.GetRequiredService<SlackBotService>());
+        services.AddKeyedSingleton<IChatBotService>(serviceKey, (sp, _) => sp.GetRequiredService<SlackBotService>());
+        services.AddKeyedSingleton<IBotCommandService>(serviceKey, (sp, _) => sp.GetRequiredService<SlackBotService>());
 
         return services;
     }

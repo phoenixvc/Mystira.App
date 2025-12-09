@@ -78,7 +78,19 @@ public interface IChatBotService
 
     /// <summary>
     /// Send an embed to multiple channels and await the first response.
+    /// Useful for rich formatted messages in support escalation or announcements.
     /// </summary>
+    /// <param name="channelIds">Channels to broadcast to</param>
+    /// <param name="embed">Rich embed content (title, description, fields, etc.)</param>
+    /// <param name="timeout">How long to wait for a response</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Result containing first responder info, or TimedOut=true if no response</returns>
+    /// <remarks>
+    /// Platform support varies:
+    /// - Discord: Full embed support with colors, fields, and footer
+    /// - Teams: Converts to Hero Card (no color support)
+    /// - WhatsApp: Converts to formatted text
+    /// </remarks>
     Task<FirstResponderResult> SendEmbedAndAwaitFirstResponseAsync(
         IEnumerable<ulong> channelIds,
         EmbedData embed,

@@ -492,6 +492,7 @@ public class TeamsBotService : IMessagingService, IChatBotService, IBotCommandSe
     public void Dispose()
     {
         if (_disposed) return;
+        _isConnected = false;
         _idToKey.Clear();
         _keyToRef.Clear();
         _keyToId.Clear();
