@@ -303,7 +303,11 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
                 {
                     await interaction.RespondAsync("An error occurred while processing this command.", ephemeral: true);
                 }
-                catch (Exception innerEx)
+                catch (Exception innerEx) when (
+                    innerEx is not OutOfMemoryException &&
+                    innerEx is not StackOverflowException &&
+                    innerEx is not AccessViolationException
+                )
                 {
                     // Interaction may have already been responded to
                     _logger.LogError(innerEx, "Failed to send error response to interaction");
