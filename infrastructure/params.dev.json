@@ -54,7 +54,7 @@
       "value": false
     },
     "deployStaticWebApp": {
-      "value": false
+      "value": true
     },
     "staticWebAppSku": {
       "value": "Free"
