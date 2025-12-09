@@ -59,11 +59,11 @@
                     }
                     @if (CurrentGameSession != null)
                     {
-                        <li class="nav-item">
-                            <span class="nav-link text-success">
-                                <i class="fas fa-play-circle me-1"></i>
-                                @CurrentGameSession.ScenarioName
-                            </span>
+                        <li class="nav-item d-flex align-items-center">
+                            <a class="nav-link current-adventure-indicator" href="/game">
+                                <i class="fas fa-play-circle"></i>
+                                <span class="current-adventure-name">@CurrentGameSession.ScenarioName</span>
+                            </a>
                         </li>
                     }
                     @if (isAuthenticated)

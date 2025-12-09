@@ -61,14 +61,15 @@
         @* Active Adventures (below Filter, above Bundles) *@
         @if (hasProfiles && inProgressSessions.Any())
         {
-            <div class="row mb-3">
+            <div class="row mb-3 active-adventures-section">
                 <div class="col-12">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="mb-0">
-                            <i class="fas fa-play-circle me-2"></i>Active Adventures
-                            <span class="badge bg-secondary ms-2">@inProgressSessions.Count</span>
+                    <div class="active-adventures-header">
+                        <h6 class="active-adventures-title">
+                            <i class="fas fa-play-circle"></i>
+                            Active Adventures
+                            <span class="active-adventures-badge">@inProgressSessions.Count</span>
                         </h6>
-                        <div class="form-check form-switch">
+                        <div class="form-check form-switch active-adventures-toggle">
                             <input class="form-check-input" type="checkbox" role="switch" id="toggleActiveAdventures"
                                    @bind="showActiveAdventures" />
                             <label class="form-check-label" for="toggleActiveAdventures">
@@ -86,22 +87,23 @@
                                 if (scenario != null)
                                 {
                                     <div class="col-md-6 col-lg-4 mb-3">
-                                        <div class="card h-100 border-info">
+                                        <div class="active-adventure-card h-100">
                                             <div class="card-body d-flex flex-column">
                                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                                     <h6 class="card-title mb-0">@scenario.Title</h6>
-                                                    <span class="badge bg-info">
-                                                        <i class="fas fa-hourglass-half me-1"></i>In Progress
+                                                    <span class="active-adventure-status">
+                                                        <i class="fas fa-circle"></i>In Progress
                                                     </span>
                                                 </div>
-                                                <p class="card-text small text-muted">
+                                                <p class="active-adventure-meta">
+                                                    <i class="fas fa-calendar-alt"></i>
                                                     Started: @session.StartedAt.ToLocalTime().ToString("dd-MMM-yy HH:mm")
                                                 </p>
                                                 <div class="mt-auto">
-                                                    <button class="btn btn-info w-100"
+                                                    <button class="btn-continue-adventure"
                                                             @onclick="() => ContinueAdventure(session, scenario)"
                                                             disabled="@isStartingAdventure">
-                                                        <i class="fas fa-play me-2"></i>
+                                                        <i class="fas fa-play"></i>
                                                         Continue
                                                     </button>
                                                 </div>

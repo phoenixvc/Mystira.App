@@ -29,34 +29,35 @@ else
     <div class="container-fluid py-4">
         <div class="row">
             <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div class="d-flex align-items-center">
-                        <div class="me-4">
-                            <h2 class="text-primary-custom mb-1">
-                                @gameSession.Scenario.Title
-                            </h2>
-                        </div>
+                <div class="game-session-header">
+                    <div class="game-session-title-area">
+                        <h2 class="game-session-title">
+                            @gameSession.Scenario.Title
+                        </h2>
                     </div>
-                    <div class="d-flex align-items-center gap-3">
+                    <div class="game-session-controls">
                         @if (GameSessionService.IsPaused)
                         {
-                            <button class="btn btn-secondary-custom" @onclick="ResumeGame" disabled="@isProcessing">
-                                <i class="fas fa-play me-1"></i> Resume
+                            <button class="btn-game-control btn-resume" @onclick="ResumeGame" disabled="@isProcessing">
+                                <i class="fas fa-play"></i>
+                                <span>Resume</span>
                             </button>
                         }
                         else
                         {
-                            <button class="btn btn-outline-secondary-custom" @onclick="PauseGame" disabled="@isProcessing">
-                                <i class="fas fa-pause me-1"></i> Pause
+                            <button class="btn-game-control btn-pause" @onclick="PauseGame" disabled="@isProcessing">
+                                <i class="fas fa-pause"></i>
+                                <span>Pause</span>
                             </button>
                         }
-                        <button class="btn btn-outline-danger" @onclick="ExitAdventure" disabled="@isProcessing">
-                            <i class="fas fa-door-open me-1"></i> Exit Adventure
+                        <button class="btn-game-control btn-exit" @onclick="ExitAdventure" disabled="@isProcessing">
+                            <i class="fas fa-door-open"></i>
+                            <span>Exit Adventure</span>
                         </button>
                         <img src="images/mystira-logo.webp"
                             alt="Mystira Logo"
-                            width="120"
-                            height="120"
+                            width="80"
+                            height="80"
                             class="mystira-logo" />
                     </div>
                 </div>

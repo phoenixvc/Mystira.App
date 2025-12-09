@@ -38,7 +38,112 @@
     box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
 }
 
-/* Dark mode styles */
+/* Dark mode styles via media query */
+@media (prefers-color-scheme: dark) {
+    .auth-card {
+        background: linear-gradient(135deg, #1e1b4b 0%, #14122b 100%);
+        border-color: rgba(99, 102, 241, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .auth-card .card-title {
+        color: #f1f5f9;
+    }
+
+    .auth-card .text-muted {
+        color: #a5b4fc !important;
+    }
+
+    .auth-card .form-label {
+        color: #e2e8f0;
+    }
+
+    .auth-card .form-control {
+        background-color: #14122b;
+        border-color: #2d2a5e;
+        color: #f1f5f9;
+    }
+
+    .auth-card .form-control::placeholder {
+        color: #818cf8;
+    }
+
+    .auth-card .form-control:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+
+    .auth-card .form-check-label {
+        color: #e2e8f0;
+    }
+
+    .auth-card .form-text {
+        color: #94a3b8 !important;
+    }
+
+    .auth-card hr {
+        border-color: rgba(99, 102, 241, 0.2);
+    }
+
+    .email-display {
+        background-color: #14122b;
+        color: #f1f5f9;
+        border-color: #2d2a5e;
+    }
+
+    .verification-code-input {
+        background-color: #14122b;
+        color: #f1f5f9;
+        border-color: #2d2a5e;
+    }
+
+    .verification-code-input::placeholder {
+        color: #6366f1;
+    }
+
+    .verification-code-input:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+
+    .auth-card .btn-outline-primary {
+        color: #a5b4fc;
+        border-color: #4f46e5;
+    }
+
+    .auth-card .btn-outline-primary:hover {
+        background-color: rgba(99, 102, 241, 0.15);
+        border-color: #6366f1;
+        color: #c7d2fe;
+    }
+
+    .auth-card .btn-outline-secondary {
+        color: #94a3b8;
+        border-color: #475569;
+    }
+
+    .auth-card .btn-outline-secondary:hover {
+        background-color: rgba(148, 163, 184, 0.15);
+        border-color: #64748b;
+        color: #cbd5e1;
+    }
+
+    .auth-card .text-primary-custom {
+        color: #a5b4fc !important;
+    }
+
+    .auth-card .form-check-input {
+        background-color: #14122b;
+        border-color: #4f46e5;
+    }
+
+    .auth-card .form-check-input:checked {
+        background-color: #6366f1;
+        border-color: #6366f1;
+    }
+}
+
+/* Dark mode styles via data attribute */
 html[data-theme="dark"] .auth-card {
     background: linear-gradient(135deg, #1e1b4b 0%, #14122b 100%);
     border-color: rgba(99, 102, 241, 0.2);
