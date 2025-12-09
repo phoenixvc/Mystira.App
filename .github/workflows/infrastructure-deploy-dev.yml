@@ -11,19 +11,16 @@ on:
           - validate
           - preview
           - deploy
-      environment:
-        description: 'Environment'
-        required: true
-        type: choice
-        options:
-          - dev
-        default: 'dev'
-  pull_request:
-    paths:
-      - 'src/Mystira.App.Infrastructure.Azure/Deployment/dev/**'
+  push:
     branches:
       - dev
-      - main
+    paths:
+      - 'infrastructure/**'
+  pull_request:
+    paths:
+      - 'infrastructure/**'
+    branches:
+      - dev
 
 permissions:
   id-token: write
@@ -31,9 +28,9 @@ permissions:
   pull-requests: write
 
 env:
-  ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+  ENVIRONMENT: 'dev'
   LOCATION: 'westeurope'
-  RESOURCE_GROUP: 'dev-euw-rg-mystira-app'
+  RESOURCE_GROUP: 'mys-dev-mystira-rg-euw'
   SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
 jobs:
@@ -58,24 +55,25 @@ jobs:
     runs-on: ubuntu-latest
     needs: [check-secrets]
     environment: development
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Azure Login
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
+
     - name: Set Azure Subscription
       run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
-    
+
     - name: Validate Bicep Templates
       run: |
         az deployment group validate \
           --resource-group "${{ env.RESOURCE_GROUP }}" \
-          --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/dev/main.bicep' \
-          --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=dummy deployStorage=true deployCosmos=true deployAppService=true \
+          --template-file './infrastructure/main.bicep' \
+          --parameters '@./infrastructure/params.dev.json' \
+          --parameters jwtSecretKey=dummy \
           --output json
 
   preview:
@@ -86,35 +84,36 @@ jobs:
     runs-on: ubuntu-latest
     needs: [check-secrets]
     environment: development
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Azure Login
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
+
     - name: Set Azure Subscription
       run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
-    
+
     - name: Create Resource Group if not exists
       run: |
         az group create \
           --name "${{ env.RESOURCE_GROUP }}" \
           --location "${{ env.LOCATION }}" \
           --output none || true
-    
+
     - name: Preview Infrastructure Changes (What-If)
       id: whatif
       run: |
         az deployment group what-if \
           --resource-group "${{ env.RESOURCE_GROUP }}" \
-          --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/dev/main.bicep' \
-          --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} deployStorage=true deployCosmos=true deployAppService=true \
+          --template-file './infrastructure/main.bicep' \
+          --parameters '@./infrastructure/params.dev.json' \
+          --parameters jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} \
           --output json > what-if-output.json
         cat what-if-output.json
-    
+
     - name: Comment PR with What-If Results
       if: github.event_name == 'pull_request'
       uses: actions/github-script@v7
@@ -122,18 +121,18 @@ jobs:
         script: |
           const fs = require('fs');
           const whatIfOutput = fs.readFileSync('what-if-output.json', 'utf8');
-          const output = `#### Infrastructure What-If Analysis 🔍
-          
+          const output = `#### Infrastructure What-If Analysis - Dev
+
           <details><summary>Show What-If Results</summary>
-          
+
           \`\`\`json
           ${whatIfOutput}
           \`\`\`
-          
+
           </details>
-          
+
           *Workflow: \`${{ github.workflow }}\`, Run: [\`${{ github.run_number }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*`;
-          
+
           github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
@@ -156,23 +155,23 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const output = `#### Infrastructure What-If Analysis ⚠️
-            
+            const output = `#### Infrastructure What-If Analysis - Dev
+
             **Preview skipped**: Required secrets are not configured.
-            
+
             Please configure the following secrets:
             - \`AZURE_CREDENTIALS\` ${{ needs.check-secrets.outputs.has-azure-secrets == 'true' && '✅' || '❌' }}
             - \`JWT_SECRET_KEY\` ${{ needs.check-secrets.outputs.has-jwt-secret == 'true' && '✅' || '❌' }}
-            
+
             *Workflow: \`${{ github.workflow }}\`, Run: [\`${{ github.run_number }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*`;
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: output
             });
-      
+
       - name: Log missing secrets
         run: |
           echo "::warning::Infrastructure preview skipped due to missing secrets"
@@ -182,44 +181,44 @@ jobs:
 
   deploy:
     if: |
-      github.event.inputs.action == 'deploy' &&
+      (github.event.inputs.action == 'deploy' || (github.event_name == 'push' && github.ref == 'refs/heads/dev')) &&
       needs.check-secrets.outputs.has-azure-secrets == 'true' &&
       needs.check-secrets.outputs.has-jwt-secret == 'true'
     runs-on: ubuntu-latest
-    needs: [check-secrets, validate]
+    needs: [check-secrets]
     environment: development
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Azure Login
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
+
     - name: Set Azure Subscription
       run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
-    
+
     - name: Create Resource Group if not exists
       run: |
         az group create \
           --name "${{ env.RESOURCE_GROUP }}" \
           --location "${{ env.LOCATION }}" \
           --output none || true
-    
+
     - name: Deploy Infrastructure (Incremental - Safe Mode)
       id: deploy
       run: |
-        # ⚠️ SAFETY: Using --mode Incremental to prevent accidental resource deletion
-        # Incremental mode only creates/updates resources in the template, never deletes existing ones
+        # Using --mode Incremental to prevent accidental resource deletion
         az deployment group create \
           --resource-group "${{ env.RESOURCE_GROUP }}" \
-          --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/dev/main.bicep' \
-          --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} deployStorage=true deployCosmos=true deployAppService=true \
+          --template-file './infrastructure/main.bicep' \
+          --parameters '@./infrastructure/params.dev.json' \
+          --parameters jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} \
           --mode Incremental \
-          --name "mystira-app-dev-$(date +%Y%m%d-%H%M%S)" \
+          --name "mys-dev-mystira-$(date +%Y%m%d-%H%M%S)" \
           --output json
-    
+
     - name: Get Deployment Outputs
       id: outputs
       run: |
@@ -228,9 +227,9 @@ jobs:
           --name "$(az deployment group list --resource-group ${{ env.RESOURCE_GROUP }} --query '[0].name' -o tsv)" \
           --query "properties.outputs.appServiceUrl.value" -o tsv)
         echo "appServiceUrl=$APP_SERVICE_URL" >> $GITHUB_OUTPUT
-    
+
     - name: Deployment Summary
       run: |
-        echo "✅ Infrastructure deployed successfully!"
-        echo "📊 Resource Group: ${{ env.RESOURCE_GROUP }}"
-        echo "🌐 App Service URL: ${{ steps.outputs.outputs.appServiceUrl }}"
+        echo "Infrastructure deployed successfully!"
+        echo "Resource Group: ${{ env.RESOURCE_GROUP }}"
+        echo "App Service URL: ${{ steps.outputs.outputs.appServiceUrl }}"
