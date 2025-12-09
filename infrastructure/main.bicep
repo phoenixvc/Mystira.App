@@ -84,6 +84,9 @@ var names = {
   appServicePlan: '${namePrefix}-plan-${region}'
   apiApp: '${namePrefix}-api-${region}'
   adminApiApp: '${namePrefix}-adminapi-${region}'
+
+  // Security
+  keyVault: '${namePrefix}-kv-${region}'
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -255,6 +258,19 @@ module appInsights 'modules/application-insights.bicep' = {
   }
 }
 
+// Key Vault (stores JWT secrets securely)
+module keyVault 'modules/key-vault.bicep' = {
+  name: 'deploy-key-vault'
+  params: {
+    keyVaultName: names.keyVault
+    location: location
+    jwtRsaPrivateKey: jwtRsaPrivateKey
+    jwtRsaPublicKey: jwtRsaPublicKey
+    jwtIssuer: jwtIssuer
+    jwtAudience: jwtAudience
+  }
+}
+
 // Communication Services (conditional)
 module communicationServices 'modules/communication-services.bicep' = if (!skipCommServiceCreation) {
   name: 'deploy-communication-services'
@@ -395,3 +411,7 @@ output azureBotEndpoint string = deployAzureBot && botMicrosoftAppId != '' ? azu
 
 // WhatsApp
 output whatsAppEnabled bool = enableWhatsApp
+
+// Key Vault
+output keyVaultName string = keyVault.outputs.keyVaultName
+output keyVaultUri string = keyVault.outputs.keyVaultUri

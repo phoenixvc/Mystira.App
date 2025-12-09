@@ -150,51 +150,22 @@ mod tests {
     #[test]
     fn test_get_resource_group_name() {
         use crate::azure::deployment::helpers::get_resource_group_name;
-        
-        assert_eq!(get_resource_group_name("dev"), "dev-euw-rg-mystira-app");
-        assert_eq!(get_resource_group_name("prod"), "prod-euw-rg-mystira-app");
-        assert_eq!(get_resource_group_name("test"), "test-euw-rg-mystira-app");
+
+        // Naming convention: [org]-[env]-[project]-rg-[region]
+        assert_eq!(get_resource_group_name("dev"), "mys-dev-mystira-rg-euw");
+        assert_eq!(get_resource_group_name("staging"), "mys-staging-mystira-rg-euw");
+        assert_eq!(get_resource_group_name("prod"), "mys-prod-mystira-rg-euw");
+        assert_eq!(get_resource_group_name("test"), "mys-test-mystira-rg-euw");
     }
 
     #[test]
     fn test_get_deployment_path() {
         use crate::azure::deployment::helpers::get_deployment_path;
-        
+
         let path = get_deployment_path("/repo", "dev");
         assert_eq!(path, "/repo/src/Mystira.App.Infrastructure.Azure/Deployment/dev");
-        
+
         let path2 = get_deployment_path("C:\\repo", "prod");
         assert!(path2.contains("prod") && path2.contains("Deployment"));
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_get_azure_cli_path() {
-        let (path, use_direct) = get_azure_cli_path();
-        // Path should be non-empty
-        assert!(!path.is_empty());
-        // Should contain az.cmd
-        assert!(path.contains("az.cmd") || path.contains("az"));
-    }
-
-    #[test]
-    fn test_get_resource_group_name() {
-        use crate::azure::deployment::helpers::get_resource_group_name;
-        
-        assert_eq!(get_resource_group_name("dev"), "dev-euw-rg-mystira-app");
-        assert_eq!(get_resource_group_name("prod"), "prod-euw-rg-mystira-app");
-        assert_eq!(get_resource_group_name("test"), "test-euw-rg-mystira-app");
-    }
-
-    #[test]
-    fn test_get_deployment_path() {
-        use crate::azure::deployment::helpers::get_deployment_path;
-        
-        let path = get_deployment_path("/repo", "dev");
-        assert_eq!(path, "/repo/src/Mystira.App.Infrastructure.Azure/Deployment/dev");
     }
 }

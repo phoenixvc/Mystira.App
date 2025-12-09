@@ -13,11 +13,14 @@ use crate::types::CommandResponse;
 use std::process::Command;
 
 /// Get resource group name from environment
+/// Follows naming convention: [org]-[env]-[project]-rg-[region]
+/// Default: mys-{env}-mystira-rg-euw (West Europe)
 pub fn get_resource_group_name(environment: &str) -> String {
     match environment {
-        "dev" => "dev-san-rg-mystira-app".to_string(),
-        "prod" => "prod-san-rg-mystira-app".to_string(),
-        _ => format!("{}-san-rg-mystira-app", environment),
+        "dev" => "mys-dev-mystira-rg-euw".to_string(),
+        "staging" => "mys-staging-mystira-rg-euw".to_string(),
+        "prod" => "mys-prod-mystira-rg-euw".to_string(),
+        _ => format!("mys-{}-mystira-rg-euw", environment),
     }
 }
 

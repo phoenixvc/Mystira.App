@@ -5,57 +5,78 @@ function Get-ResourceGroupName {
     <#
     .SYNOPSIS
     Gets the resource group name for a given location.
+    Naming convention: [org]-[env]-[project]-rg-[region]
     #>
-    param([string]$Location)
-    
-    switch ($Location) {
-        "southafricanorth" { return "dev-san-rg-mystira-app" }
-        "eastus2" { return "dev-eus2-rg-mystira-app" }
-        "westus2" { return "dev-wus2-rg-mystira-app" }
-        "centralus" { return "dev-cus-rg-mystira-app" }
-        "westeurope" { return "dev-euw-rg-mystira-app" }
-        "northeurope" { return "dev-eun-rg-mystira-app" }
-        "eastasia" { return "dev-ea-rg-mystira-app" }
-        default { return "dev-$($Location.Substring(0,4))-rg-mystira-app" }
+    param(
+        [string]$Location,
+        [string]$Environment = "dev",
+        [string]$Org = "mys",
+        [string]$Project = "mystira"
+    )
+
+    $regionCode = switch ($Location) {
+        "southafricanorth" { "san" }
+        "eastus2" { "eus2" }
+        "eastus" { "eus" }
+        "westus2" { "usw" }
+        "westus" { "wus" }
+        "centralus" { "cus" }
+        "westeurope" { "euw" }
+        "northeurope" { "eun" }
+        "eastasia" { "ea" }
+        "uksouth" { "uks" }
+        "swedencentral" { "swe" }
+        default { $Location.Substring(0, [Math]::Min(3, $Location.Length)) }
     }
+
+    return "$Org-$Environment-$Project-rg-$regionCode"
 }
 
 function Get-StaticWebAppName {
     <#
     .SYNOPSIS
     Gets the Static Web App name for a given location.
+    Naming convention: [org]-[env]-[project]-swa-[region]
     #>
-    param([string]$Location)
-    
-    switch ($Location) {
-        "southafricanorth" { return "dev-san-swa-mystira-app" }
-        "eastus2" { return "dev-eus2-swa-mystira-app" }
-        "westus2" { return "dev-wus2-swa-mystira-app" }
-        "centralus" { return "dev-cus-swa-mystira-app" }
-        "westeurope" { return "dev-euw-swa-mystira-app" }
-        "northeurope" { return "dev-eun-swa-mystira-app" }
-        "eastasia" { return "dev-ea-swa-mystira-app" }
-        default { return "dev-$($Location.Substring(0,4))-swa-mystira-app" }
+    param(
+        [string]$Location,
+        [string]$Environment = "dev",
+        [string]$Org = "mys",
+        [string]$Project = "mystira"
+    )
+
+    $regionCode = switch ($Location) {
+        "southafricanorth" { "san" }
+        "eastus2" { "eus2" }
+        "eastus" { "eus" }
+        "westus2" { "usw" }
+        "westus" { "wus" }
+        "centralus" { "cus" }
+        "westeurope" { "euw" }
+        "northeurope" { "eun" }
+        "eastasia" { "ea" }
+        "uksouth" { "uks" }
+        "swedencentral" { "swe" }
+        default { $Location.Substring(0, [Math]::Min(3, $Location.Length)) }
     }
+
+    return "$Org-$Environment-$Project-swa-$regionCode"
 }
 
 function Get-ResourcePrefix {
     <#
     .SYNOPSIS
     Gets the resource prefix for a given location.
+    Naming convention: [org]-[env]-[project]
     #>
-    param([string]$Location)
-    
-    switch ($Location) {
-        "southafricanorth" { return "dev-san" }
-        "eastus2" { return "dev-eus2" }
-        "westus2" { return "dev-wus2" }
-        "centralus" { return "dev-cus" }
-        "westeurope" { return "dev-euw" }
-        "northeurope" { return "dev-eun" }
-        "eastasia" { return "dev-ea" }
-        default { return "dev-$($Location.Substring(0, 4))" }
-    }
+    param(
+        [string]$Location,
+        [string]$Environment = "dev",
+        [string]$Org = "mys",
+        [string]$Project = "mystira"
+    )
+
+    return "$Org-$Environment-$Project"
 }
 
 function Get-ExistingResources {
@@ -173,18 +194,38 @@ function Get-ExistingResources {
 function Get-ExpectedStorageAccountName {
     <#
     .SYNOPSIS
-    Calculates the expected storage account name based on resource prefix.
+    Calculates the expected storage account name.
+    Storage account naming: [org][env][project]st[region] (no dashes, max 24 chars)
     #>
     param(
-        [string]$ResourcePrefix
+        [string]$Location,
+        [string]$Environment = "dev",
+        [string]$Org = "mys",
+        [string]$Project = "mystira"
     )
-    
-    $storageNameBase = ($ResourcePrefix + "-st-mystira") -replace '-', ''
+
+    $regionCode = switch ($Location) {
+        "southafricanorth" { "san" }
+        "eastus2" { "eus2" }
+        "eastus" { "eus" }
+        "westus2" { "usw" }
+        "westus" { "wus" }
+        "centralus" { "cus" }
+        "westeurope" { "euw" }
+        "northeurope" { "eun" }
+        "eastasia" { "ea" }
+        "uksouth" { "uks" }
+        "swedencentral" { "swe" }
+        default { $Location.Substring(0, [Math]::Min(3, $Location.Length)) }
+    }
+
+    # Storage account: [org][env][project]st[region] (no dashes)
+    $storageNameBase = "$Org$Environment${Project}st$regionCode" -replace '-', ''
     if ($storageNameBase.Length -gt 24) {
         return $storageNameBase.Substring(0, 24)
     }
     else {
-        return $storageNameBase
+        return $storageNameBase.ToLower()
     }
 }
 

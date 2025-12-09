@@ -67,6 +67,12 @@ jobs:
     - name: Set Azure Subscription
       run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
 
+    - name: Lint Bicep Templates
+      run: |
+        # Build all Bicep files to check for syntax errors
+        az bicep build --file './infrastructure/main.bicep'
+        echo "Bicep linting passed"
+
     - name: Validate Bicep Templates
       run: |
         az deployment group validate \
