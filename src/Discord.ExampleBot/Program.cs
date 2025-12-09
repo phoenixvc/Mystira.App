@@ -114,7 +114,7 @@ public class BotStartupService : BackgroundService
 
             _logger.LogInformation("Bot startup complete");
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException && ex is not ThreadAbortException)
         {
             _logger.LogError(ex, "Error during bot startup");
         }
