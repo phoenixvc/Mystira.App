@@ -1,14 +1,17 @@
+// Cosmos DB Module
 @description('Name of the Cosmos DB account')
 param cosmosDbAccountName string
 
-@description('Location for all resources')
+@description('Location for the resource')
 param location string = resourceGroup().location
 
 @description('Database name')
 param databaseName string = 'MystiraAppDb'
 
-// Cosmos DB Account (Azure Cloud Database)
-// Using 2024-05-15 API version to improve what-if deployment preview compatibility
+@description('Enable serverless mode')
+param serverless bool = true
+
+// Cosmos DB Account
 resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
   name: cosmosDbAccountName
   location: location
@@ -27,15 +30,15 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2024-05-15' = {
     databaseAccountOfferType: 'Standard'
     enableAutomaticFailover: false
     enableMultipleWriteLocations: false
-    capabilities: [
+    capabilities: serverless ? [
       {
         name: 'EnableServerless'
       }
-    ]
+    ] : []
   }
 }
 
-// Cosmos DB Database (Azure Cloud Database)
+// Cosmos DB Database
 resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-05-15' = {
   parent: cosmosDbAccount
   name: databaseName
@@ -49,7 +52,7 @@ resource cosmosDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024
   }
 }
 
-// User Profiles Container (Azure Cloud Database)
+// User Profiles Container
 resource userProfilesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'UserProfiles'
@@ -60,7 +63,7 @@ resource userProfilesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabas
     resource: {
       id: 'UserProfiles'
       partitionKey: {
-        paths: ['/Name']
+        paths: ['/accountId']
         kind: 'Hash'
       }
       indexingPolicy: {
@@ -75,7 +78,33 @@ resource userProfilesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabas
   }
 }
 
-// Scenarios Container (Azure Cloud Database)
+// Accounts Container
+resource accountsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
+  parent: cosmosDatabase
+  name: 'Accounts'
+  dependsOn: [
+    cosmosDatabase
+  ]
+  properties: {
+    resource: {
+      id: 'Accounts'
+      partitionKey: {
+        paths: ['/id']
+        kind: 'Hash'
+      }
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        includedPaths: [
+          {
+            path: '/*'
+          }
+        ]
+      }
+    }
+  }
+}
+
+// Scenarios Container
 resource scenariosContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'Scenarios'
@@ -86,7 +115,7 @@ resource scenariosContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/
     resource: {
       id: 'Scenarios'
       partitionKey: {
-        paths: ['/Id']
+        paths: ['/id']
         kind: 'Hash'
       }
       indexingPolicy: {
@@ -101,7 +130,7 @@ resource scenariosContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/
   }
 }
 
-// Game Sessions Container (Azure Cloud Database)
+// Game Sessions Container
 resource gameSessionsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'GameSessions'
@@ -112,7 +141,7 @@ resource gameSessionsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabas
     resource: {
       id: 'GameSessions'
       partitionKey: {
-        paths: ['/DmName']
+        paths: ['/accountId']
         kind: 'Hash'
       }
       indexingPolicy: {
@@ -127,7 +156,59 @@ resource gameSessionsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabas
   }
 }
 
-// Compass Trackings Container (Azure Cloud Database)
+// Content Bundles Container
+resource contentBundlesContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
+  parent: cosmosDatabase
+  name: 'ContentBundles'
+  dependsOn: [
+    cosmosDatabase
+  ]
+  properties: {
+    resource: {
+      id: 'ContentBundles'
+      partitionKey: {
+        paths: ['/id']
+        kind: 'Hash'
+      }
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        includedPaths: [
+          {
+            path: '/*'
+          }
+        ]
+      }
+    }
+  }
+}
+
+// Pending Signups Container
+resource pendingSignupsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
+  parent: cosmosDatabase
+  name: 'PendingSignups'
+  dependsOn: [
+    cosmosDatabase
+  ]
+  properties: {
+    resource: {
+      id: 'PendingSignups'
+      partitionKey: {
+        paths: ['/email']
+        kind: 'Hash'
+      }
+      indexingPolicy: {
+        indexingMode: 'consistent'
+        includedPaths: [
+          {
+            path: '/*'
+          }
+        ]
+      }
+    }
+  }
+}
+
+// Compass Trackings Container
 resource compassTrackingsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
   parent: cosmosDatabase
   name: 'CompassTrackings'
@@ -153,6 +234,8 @@ resource compassTrackingsContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDat
   }
 }
 
-// Output connection string
-output cosmosDbConnectionString string = listConnectionStrings(cosmosDbAccount.id, cosmosDbAccount.apiVersion).connectionStrings[0].connectionString
 output cosmosDbAccountName string = cosmosDbAccount.name
+output cosmosDbAccountId string = cosmosDbAccount.id
+output cosmosDbConnectionString string = listConnectionStrings(cosmosDbAccount.id, cosmosDbAccount.apiVersion).connectionStrings[0].connectionString
+output cosmosDbEndpoint string = cosmosDbAccount.properties.documentEndpoint
+output databaseName string = cosmosDatabase.name

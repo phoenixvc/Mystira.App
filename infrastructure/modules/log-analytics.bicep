@@ -11,6 +11,9 @@ param sku string = 'PerGB2018'
 @description('Data retention in days')
 param retentionInDays int = 30
 
+@description('Daily quota in GB (-1 for unlimited)')
+param dailyQuotaGb int = -1
+
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: workspaceName
   location: location
@@ -22,9 +25,9 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10
     features: {
       enableLogAccessUsingOnlyResourcePermissions: true
     }
-    workspaceCapping: {
-      dailyQuotaGb: 1
-    }
+    workspaceCapping: dailyQuotaGb > 0 ? {
+      dailyQuotaGb: dailyQuotaGb
+    } : null
     publicNetworkAccessForIngestion: 'Enabled'
     publicNetworkAccessForQuery: 'Enabled'
   }

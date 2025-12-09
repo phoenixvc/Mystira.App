@@ -74,10 +74,11 @@ Save the output:
 ### 2. Deploy Infrastructure
 
 ```bash
-# Dev environment
+# Dev environment (naming: [org]-[env]-[project]-[type]-[region])
 az deployment group create \
-  --resource-group dev-euw-rg-mystira-app \
-  --template-file infrastructure/dev/main.bicep \
+  --resource-group mys-dev-mystira-rg-san \
+  --template-file infrastructure/main.bicep \
+  --parameters @infrastructure/params.dev.json \
   --parameters \
     deployAzureBot=true \
     botMicrosoftAppId=$APP_ID \
@@ -143,14 +144,14 @@ The infrastructure deployment workflow automatically:
 # Generate new secret
 az ad app credential reset --id $APP_ID --years 2
 
-# Update Key Vault
+# Update Key Vault (naming: [org]-[env]-[project]-kv-[region])
 az keyvault secret set \
-  --vault-name dev-euw-kv-mystira \
+  --vault-name mys-dev-mystira-kv-san \
   --name BOT-MICROSOFT-APP-PASSWORD \
   --value $NEW_SECRET
 
 # Restart App Service to pick up new secret
-az webapp restart --name dev-euw-app-mystira-api --resource-group dev-euw-rg-mystira-app
+az webapp restart --name mys-dev-mystira-api-san --resource-group mys-dev-mystira-rg-san
 ```
 
 ### Rotate Discord Bot Token

@@ -2,18 +2,105 @@
 
 This directory contains Bicep templates for deploying the Mystira application infrastructure to Azure.
 
+## Naming Convention
+
+All resources follow the pattern: `[org]-[env]-[project]-[type]-[region]`
+
+| Segment | Description | Values |
+|---------|-------------|--------|
+| `org` | Organisation code | `mys` (Mystira), `nl` (NeuralLiquid), `pvc` (Phoenix VC), `tws` (Twines & Straps) |
+| `env` | Environment | `dev`, `staging`, `prod` |
+| `project` | Project name | `mystira`, `mystira-story` |
+| `type` | Resource type | `api`, `app`, `log`, `cosmos`, `storage`, `kv`, `acs`, `bot`, `swa`, etc. |
+| `region` | Region code | `san` (South Africa North - **primary**), `eus2` (East US 2 - fallback), `euw` (West Europe), etc. |
+
+### Resource Group Pattern
+```
+[org]-[env]-[project]-rg-[region]
+```
+
+### Examples (South Africa North)
+
+| Resource | Name |
+|----------|------|
+| Dev Resource Group | `mys-dev-mystira-rg-san` |
+| Dev API App Service | `mys-dev-mystira-api-san` |
+| Dev Cosmos DB | `mys-dev-mystira-cosmos-san` |
+| Dev Log Analytics | `mys-dev-mystira-log-san` |
+| Dev Static Web App | `mys-dev-mystira-swa-eus2` (fallback region - see below) |
+| Prod API App Service | `mys-prod-mystira-api-san` |
+| Prod Storage Account | `mysprodmystirstsan` (no dashes for storage) |
+
+## Regional Availability
+
+**Primary Region: South Africa North (southafricanorth / san)**
+
+Not all Azure services are available in South Africa North. The infrastructure uses fallback regions for services that aren't available locally.
+
+### Service Availability Matrix
+
+| Service | South Africa North | Fallback Region | Notes |
+|---------|-------------------|-----------------|-------|
+| **App Service** | ✅ Available | - | Primary compute |
+| **Cosmos DB** | ✅ Available | - | NoSQL database |
+| **Storage Account** | ✅ Available | - | Blob storage |
+| **Key Vault** | ✅ Available | - | Secret management |
+| **Log Analytics** | ✅ Available | - | Monitoring |
+| **App Insights** | ✅ Available | - | APM |
+| **Azure Bot** | ✅ Available (global) | - | Teams/Discord bots |
+| **Communication Services** | ✅ Available (global) | - | Email/SMS/WhatsApp |
+| **Static Web Apps** | ❌ NOT Available | **eastus2** | PWA hosting |
+
+### Fallback Region Strategy
+
+For services not available in South Africa North, we use **East US 2 (eastus2)** as the fallback region because:
+1. It has full service availability
+2. Good connectivity to Africa via Azure backbone
+3. Lower latency than other fully-featured regions
+
+Static Web Apps are CDN-accelerated globally, so the backend region has minimal impact on user experience.
+
+### ACS Data Location
+
+Azure Communication Services data is stored in **Europe** (closest supported data location to Africa). Supported data locations are:
+- United States, Europe, UK, Australia, Japan, Canada, India, France
+
+"Africa" is not yet a supported data location for ACS.
+
 ## Overview
 
-The infrastructure is organized by environment:
-- `dev/` - Development environment (West Europe)
-- `prod/` - Production environment (West US)
+The infrastructure uses a single `main.bicep` template with environment-specific parameter files:
+
+```
+infrastructure/
+├── main.bicep              # Single orchestration template for all environments
+├── modules/                # Shared Bicep modules
+│   ├── app-service.bicep
+│   ├── application-insights.bicep
+│   ├── azure-bot.bicep        # Teams/Discord bot (global)
+│   ├── communication-services.bicep  # ACS Email/SMS/WhatsApp (global)
+│   ├── cosmos-db.bicep
+│   ├── key-vault.bicep        # Stores secrets (JWT, Discord, Bot credentials)
+│   ├── log-analytics.bicep
+│   ├── static-web-app.bicep   # PWA hosting (fallback region)
+│   └── storage.bicep
+├── params.dev.json         # Development environment parameters (san)
+├── params.staging.json     # Staging environment parameters (san)
+└── params.prod.json        # Production environment parameters (san)
+```
+
+This approach provides:
+- **One template, multiple environments** - Same infrastructure code, different configurations
+- **Environment parity** - Dev, staging, and prod use identical resource structure
+- **Simple CI/CD** - Pipelines choose the right parameter file per environment
+- **Consistent naming** - All resources follow `[org]-[env]-[project]-[type]-[region]`
 
 ## Prerequisites
 
 ### Azure Setup
 
 1. **Azure Subscription**: Phoenix Azure Sponsorship (ID: `22f9eb18-6553-4b7d-9451-47d0195085fe`)
-2. **Resource Group**: `dev-euw-rg-mystira` (Development) - must be created manually
+2. **Resource Group**: `mys-dev-mystira-rg-san` (Development) - must be created manually
 3. **Service Principal**: For GitHub Actions authentication
 
 ### Required Secrets Setup
@@ -43,7 +130,7 @@ az account set --subscription 22f9eb18-6553-4b7d-9451-47d0195085fe
 az ad sp create-for-rbac \
   --name "github-actions-mystira-app" \
   --role Contributor \
-  --scopes /subscriptions/22f9eb18-6553-4b7d-9451-47d0195085fe/resourceGroups/dev-euw-rg-mystira \
+  --scopes /subscriptions/22f9eb18-6553-4b7d-9451-47d0195085fe/resourceGroups/mys-dev-mystira-rg-san \
   --sdk-auth
 
 # The output will be a JSON object - save this entire output
@@ -105,16 +192,16 @@ Add each of the following secrets to your GitHub repository:
    - **How to get**:
      ```bash
      # List your ACS resources
-     az communication list --resource-group dev-euw-rg-mystira
-     
+     az communication list --resource-group mys-dev-mystira-rg-san
+
      # Get the connection string
      az communication list-key \
-       --name dev-euw-acs-mystira \
-       --resource-group dev-euw-rg-mystira \
+       --name mys-dev-mystira-acs-glob \
+       --resource-group mys-dev-mystira-rg-san \
        --query primaryConnectionString \
        --output tsv
      ```
-   - **Example**: `endpoint=https://dev-euw-acs-mystira.communication.azure.com/;accesskey=your-access-key-here`
+   - **Example**: `endpoint=https://mys-dev-mystira-acs-glob.communication.azure.com/;accesskey=your-access-key-here`
    - **Location**: GitHub → Settings → Secrets and variables → Actions → New repository secret
    - **Name**: `ACS_CONNECTION_STRING`
    - **Used by**: Infrastructure deployment (passed to App Services for email functionality)
@@ -130,8 +217,8 @@ These secrets are used by the API deployment workflows to publish to Azure App S
      ```bash
      # Via Azure CLI
      az webapp deployment list-publishing-profiles \
-       --name mystira-app-dev-api \
-       --resource-group dev-euw-rg-mystira \
+       --name mys-dev-mystira-api-san \
+       --resource-group mys-dev-mystira-rg-san \
        --xml
      ```
      Or via Azure Portal:
@@ -145,21 +232,21 @@ These secrets are used by the API deployment workflows to publish to Azure App S
 
 6. **`AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN`**
    - **Value**: Publish profile XML for the admin API (dev environment)
-   - **How to get**: Same as above, but for `dev-euw-app-mystora-admin-api`
+   - **How to get**: Same as above, but for `mys-dev-mystira-adminapi-san`
    - **Location**: GitHub → Settings → Secrets and variables → Actions → New repository secret
    - **Name**: `AZURE_WEBAPP_PUBLISH_PROFILE_DEV_ADMIN`
    - **Used by**: `.github/workflows/mystira-app-admin-api-cicd-dev.yml`
 
 7. **`AZURE_WEBAPP_PUBLISH_PROFILE_PROD`**
    - **Value**: Publish profile XML for the main API (production environment)
-   - **How to get**: Same as above, but for `prod-wus-app-mystira-api`
+   - **How to get**: Same as above, but for `mys-prod-mystira-api-san`
    - **Location**: GitHub → Settings → Secrets and variables → Actions → New repository secret
    - **Name**: `AZURE_WEBAPP_PUBLISH_PROFILE_PROD`
    - **Used by**: `.github/workflows/mystira-app-api-cicd-prod.yml`
 
 8. **`AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN`**
    - **Value**: Publish profile XML for the admin API (production environment)
-   - **How to get**: Same as above, but for `prod-wus-app-mystira-api-admin`
+   - **How to get**: Same as above, but for `mys-prod-mystira-adminapi-san`
    - **Location**: GitHub → Settings → Secrets and variables → Actions → New repository secret
    - **Name**: `AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN`
    - **Used by**: `.github/workflows/mystira-app-admin-api-cicd-prod.yml`
@@ -203,37 +290,35 @@ After adding all secrets, verify them in GitHub:
 
 ## Dev Environment Resources
 
-**Note**: The resource names listed below represent the desired naming convention. The actual Azure resources currently use different names. See [NAMING_AND_OPTIMIZATION.md](./NAMING_AND_OPTIMIZATION.md) for details on current vs. desired resource names and the migration plan.
-
-The development environment includes:
+The development environment includes the following resources (using the naming convention `[org]-[env]-[project]-[type]-[region]`):
 
 ### Core Infrastructure
-- **Log Analytics Workspace**: `dev-euw-log-mystira`
+- **Log Analytics Workspace**: `mys-dev-mystira-log-san`
   - Centralized logging and monitoring
   - 30-day retention
   - 1GB daily cap
 
-- **Application Insights**: `dev-euw-ai-mystira`
+- **Application Insights**: `mys-dev-mystira-appins-san`
   - Application performance monitoring
   - Integrated with Log Analytics
 
-### Communication Services
-- **Azure Communication Services**: `dev-euw-acs-mystira`
-  - Email and SMS capabilities
-  - Global deployment
+### Communication Services (Global)
+- **Azure Communication Services**: `mys-dev-mystira-acs-glob`
+  - Email, SMS, and WhatsApp capabilities
+  - Global deployment (data location: Europe)
 
-- **Email Communication Service**: `dev-euw-ecs-mystira`
+- **Email Communication Service**: `mys-dev-mystira-email-glob`
   - Domain: `mystira.app`
   - Sender: `DoNotReply@mystira.app`
 
 ### Storage & Database
-- **Storage Account**: `deveuwstmystira`
+- **Storage Account**: `mysdevmystirstsan`
   - Container: `mystira-app-media`
   - SKU: Standard_LRS (Locally Redundant - dev optimized)
   - Public blob access enabled
   - CORS configured for PWA origins
 
-- **Cosmos DB**: `dev-euw-cosmos-mystira`
+- **Cosmos DB**: `mys-dev-mystira-cosmos-san`
   - Database: `MystiraAppDb`
   - Serverless mode (pay-per-request - dev optimized)
   - Containers:
@@ -245,24 +330,91 @@ The development environment includes:
     - PendingSignups
 
 ### Application Hosting
-- **Main API App Service**: `dev-euw-app-mystira-api`
+- **App Service Plan**: `mys-dev-mystira-plan-san` (shared by both APIs)
   - SKU: F1 (Free - dev optimized)
+
+- **Main API App Service**: `mys-dev-mystira-api-san`
   - Runtime: .NET 9.0 on Linux
   - Health check: `/health`
   - Integrated with App Insights
 
-- **Admin API App Service**: `dev-euw-app-mystira-admin-api`
-  - SKU: F1 (Free - dev optimized)
+- **Admin API App Service**: `mys-dev-mystira-adminapi-san`
   - Runtime: .NET 9.0 on Linux
   - Health check: `/health`
   - Integrated with App Insights
 
 ### Frontend
-- **Static Web App**: `dev-euw-swa-mystira-app`
+- **Static Web App**: `mys-dev-mystira-swa-eus2`
   - URL: `https://mango-water-04fdb1c03.3.azurestaticapps.net`
-  - SKU: Standard
+  - SKU: Free (dev optimized)
   - Connected to GitHub branch: `dev`
-  - Workflow: `azure-static-web-apps-mango-water-04fdb1c03.yml`
+  - Note: SWA not available in South Africa North, deployed to fallback region (East US 2)
+
+## Key Vault Administration
+
+The Key Vault module supports an optional `adminObjectId` parameter to grant full Key Vault access to a specific user or service principal. This is useful for:
+- Manual secret management in Azure Portal
+- Debugging and troubleshooting
+- Initial secret setup
+
+### Getting Your Object ID
+
+```bash
+# For the currently logged-in user
+az ad signed-in-user show --query id -o tsv
+
+# For a specific user by email
+az ad user show --id user@example.com --query id -o tsv
+
+# For a service principal
+az ad sp show --id <app-id> --query id -o tsv
+```
+
+### Adding Admin Access
+
+Add the `adminObjectId` parameter to your deployment:
+
+```bash
+az deployment group create \
+  --resource-group mys-dev-mystira-rg-san \
+  --template-file infrastructure/main.bicep \
+  --parameters @infrastructure/params.dev.json \
+  --parameters jwtRsaPrivateKey="<key>" jwtRsaPublicKey="<key>" \
+  --parameters adminObjectId="<your-object-id>"
+```
+
+## Workflow Dependencies
+
+### Infrastructure → API Deployment Chain
+
+API deployment workflows are configured to automatically trigger after successful infrastructure deployments. This ensures:
+- App Services exist before code deployment
+- Key Vault and secrets are configured before API uses them
+- Connection strings and settings are properly applied
+
+### Trigger Flow
+
+```
+Infrastructure Deploy (Dev) → API CI/CD (Dev) + Admin API CI/CD (Dev)
+Infrastructure Deploy (Staging) → API CI/CD (Staging) + Admin API CI/CD (Staging)
+Infrastructure Deploy (Production) → API CI/CD (Production) + Admin API CI/CD (Production)
+```
+
+### API Workflow Triggers
+
+Each API workflow runs on:
+1. **Push to branch** - When code changes are pushed
+2. **PR merged** - When a pull request is merged
+3. **Infrastructure completed** - When infrastructure workflow succeeds
+4. **Manual dispatch** - When manually triggered
+
+### Incremental Deployment Mode
+
+All infrastructure deployments use `--mode Incremental` which:
+- **Adds/updates** resources defined in the template
+- **Preserves** existing resources not in the template
+- **Never deletes** resources automatically
+- **Safe for existing environments** - won't fail if resources already exist
 
 ## Deployment
 
@@ -323,17 +475,42 @@ az login
 az account set --subscription 22f9eb18-6553-4b7d-9451-47d0195085fe
 
 # Create resource group (if it doesn't exist)
-az group create \
-  --name dev-euw-rg-mystira \
-  --location westeurope
+# Pattern: [org]-[env]-[project]-rg-[region]
 
-# Deploy infrastructure
+# Dev
+az group create --name mys-dev-mystira-rg-san --location southafricanorth
+
+# Staging
+az group create --name mys-staging-mystira-rg-san --location southafricanorth
+
+# Prod
+az group create --name mys-prod-mystira-rg-san --location southafricanorth
+
+# Deploy infrastructure (choose the appropriate environment)
+
+# Dev deployment
 az deployment group create \
-  --resource-group dev-euw-rg-mystira \
-  --template-file infrastructure/dev/main.bicep \
-  --parameters infrastructure/dev/main.parameters.json \
-  --parameters jwtSecretKey="<your-secret>" \
-  --parameters acsConnectionString="<your-acs-connection>"
+  --resource-group mys-dev-mystira-rg-san \
+  --template-file infrastructure/main.bicep \
+  --parameters @infrastructure/params.dev.json \
+  --parameters jwtRsaPrivateKey="<your-private-key>" \
+  --parameters jwtRsaPublicKey="<your-public-key>"
+
+# Staging deployment
+az deployment group create \
+  --resource-group mys-staging-mystira-rg-san \
+  --template-file infrastructure/main.bicep \
+  --parameters @infrastructure/params.staging.json \
+  --parameters jwtRsaPrivateKey="<your-private-key>" \
+  --parameters jwtRsaPublicKey="<your-public-key>"
+
+# Prod deployment
+az deployment group create \
+  --resource-group mys-prod-mystira-rg-san \
+  --template-file infrastructure/main.bicep \
+  --parameters @infrastructure/params.prod.json \
+  --parameters jwtRsaPrivateKey="<your-private-key>" \
+  --parameters jwtRsaPublicKey="<your-public-key>"
 ```
 
 ### Data Migration via CosmosConsole Tool
@@ -361,12 +538,29 @@ See `tools/Mystira.App.CosmosConsole/README.md` for detailed migration documenta
 Before deploying, you can preview what changes will be made:
 
 ```bash
+# Dev environment preview
 az deployment group what-if \
-  --resource-group dev-euw-rg-mystira \
-  --template-file infrastructure/dev/main.bicep \
-  --parameters infrastructure/dev/main.parameters.json \
-  --parameters jwtSecretKey="<your-secret>" \
-  --parameters acsConnectionString="<your-acs-connection>"
+  --resource-group mys-dev-mystira-rg-san \
+  --template-file infrastructure/main.bicep \
+  --parameters @infrastructure/params.dev.json \
+  --parameters jwtRsaPrivateKey="<your-private-key>" \
+  --parameters jwtRsaPublicKey="<your-public-key>"
+
+# Staging environment preview
+az deployment group what-if \
+  --resource-group mys-staging-mystira-rg-san \
+  --template-file infrastructure/main.bicep \
+  --parameters @infrastructure/params.staging.json \
+  --parameters jwtRsaPrivateKey="<your-private-key>" \
+  --parameters jwtRsaPublicKey="<your-public-key>"
+
+# Prod environment preview
+az deployment group what-if \
+  --resource-group mys-prod-mystira-rg-san \
+  --template-file infrastructure/main.bicep \
+  --parameters @infrastructure/params.prod.json \
+  --parameters jwtRsaPrivateKey="<your-private-key>" \
+  --parameters jwtRsaPublicKey="<your-public-key>"
 ```
 
 ## Configuration

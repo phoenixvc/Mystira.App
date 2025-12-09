@@ -19,11 +19,15 @@ function Write-ColorOutput($ForegroundColor, $Message) {
 }
 
 # Get resource names based on region
-function Get-ResourcePrefix($Location) {
+# Naming convention: [org]-[env]-[project]-[type]-[region]
+function Get-RegionCode($Location) {
     switch ($Location) {
-        "southafricanorth" { return "dev-san" }
-        "westeurope" { return "dev-euw" }
-        default { return "dev-san" }
+        "southafricanorth" { return "san" }
+        "westeurope" { return "euw" }
+        "northeurope" { return "eun" }
+        "eastus" { return "eus" }
+        "westus" { return "wus" }
+        default { return "san" }
     }
 }
 
@@ -45,11 +49,17 @@ Write-Host "✓" -ForegroundColor Green
 # Set subscription
 az account set --subscription $SubscriptionId 2>$null
 
-$prefix = Get-ResourcePrefix -Location $Region
-$RG = "$prefix-rg-mystira-app"
-$API_NAME = "$prefix-app-mystira-api"
-$ADMIN_API_NAME = "$prefix-app-mystira-admin-api"
-$SWA_NAME = "$prefix-swa-mystira-app"
+# Naming convention: [org]-[env]-[project]-[type]-[region]
+$Org = "mys"
+$Environment = "dev"
+$Project = "mystira"
+$regionCode = Get-RegionCode -Location $Region
+$namePrefix = "$Org-$Environment-$Project"
+
+$RG = "$namePrefix-rg-$regionCode"
+$API_NAME = "$namePrefix-api-$regionCode"
+$ADMIN_API_NAME = "$namePrefix-adminapi-$regionCode"
+$SWA_NAME = "$namePrefix-swa-$regionCode"
 
 Write-Output ""
 Write-Output "Region: $Region"

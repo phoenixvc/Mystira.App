@@ -11,19 +11,16 @@ on:
           - validate
           - preview
           - deploy
-      environment:
-        description: 'Environment'
-        required: true
-        type: choice
-        options:
-          - dev
-        default: 'dev'
-  pull_request:
-    paths:
-      - 'src/Mystira.App.Infrastructure.Azure/Deployment/dev/**'
+  push:
     branches:
       - dev
-      - main
+    paths:
+      - 'infrastructure/**'
+  pull_request:
+    paths:
+      - 'infrastructure/**'
+    branches:
+      - dev
 
 permissions:
   id-token: write
@@ -31,9 +28,9 @@ permissions:
   pull-requests: write
 
 env:
-  ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
-  LOCATION: 'westeurope'
-  RESOURCE_GROUP: 'dev-euw-rg-mystira-app'
+  ENVIRONMENT: 'dev'
+  LOCATION: 'southafricanorth'
+  RESOURCE_GROUP: 'mys-dev-mystira-rg-san'
   SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
 jobs:
@@ -42,79 +39,87 @@ jobs:
     name: Check Required Secrets
     outputs:
       has-azure-secrets: ${{ steps.check.outputs.has-azure-secrets }}
-      has-jwt-secret: ${{ steps.check.outputs.has-jwt-secret }}
+      has-jwt-secrets: ${{ steps.check.outputs.has-jwt-secrets }}
     steps:
       - name: Check secrets availability
         id: check
         run: |
           echo "has-azure-secrets=${{ secrets.AZURE_CREDENTIALS != '' }}" >> $GITHUB_OUTPUT
-          echo "has-jwt-secret=${{ secrets.JWT_SECRET_KEY != '' }}" >> $GITHUB_OUTPUT
+          echo "has-jwt-secrets=${{ secrets.JWT_RSA_PRIVATE_KEY != '' && secrets.JWT_RSA_PUBLIC_KEY != '' }}" >> $GITHUB_OUTPUT
 
   validate:
     if: |
       github.event.inputs.action == 'validate' &&
       needs.check-secrets.outputs.has-azure-secrets == 'true' &&
-      needs.check-secrets.outputs.has-jwt-secret == 'true'
+      needs.check-secrets.outputs.has-jwt-secrets == 'true'
     runs-on: ubuntu-latest
     needs: [check-secrets]
     environment: development
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Azure Login
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
+
     - name: Set Azure Subscription
       run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
-    
+
+    - name: Lint Bicep Templates
+      run: |
+        # Build all Bicep files to check for syntax errors
+        az bicep build --file './infrastructure/main.bicep'
+        echo "Bicep linting passed"
+
     - name: Validate Bicep Templates
       run: |
         az deployment group validate \
           --resource-group "${{ env.RESOURCE_GROUP }}" \
-          --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/dev/main.bicep' \
-          --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=dummy deployStorage=true deployCosmos=true deployAppService=true \
+          --template-file './infrastructure/main.bicep' \
+          --parameters '@./infrastructure/params.dev.json' \
+          --parameters jwtRsaPrivateKey=dummy jwtRsaPublicKey=dummy \
           --output json
 
   preview:
     if: |
       (github.event.inputs.action == 'preview' || github.event_name == 'pull_request') &&
       needs.check-secrets.outputs.has-azure-secrets == 'true' &&
-      needs.check-secrets.outputs.has-jwt-secret == 'true'
+      needs.check-secrets.outputs.has-jwt-secrets == 'true'
     runs-on: ubuntu-latest
     needs: [check-secrets]
     environment: development
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Azure Login
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
+
     - name: Set Azure Subscription
       run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
-    
+
     - name: Create Resource Group if not exists
       run: |
         az group create \
           --name "${{ env.RESOURCE_GROUP }}" \
           --location "${{ env.LOCATION }}" \
           --output none || true
-    
+
     - name: Preview Infrastructure Changes (What-If)
       id: whatif
       run: |
         az deployment group what-if \
           --resource-group "${{ env.RESOURCE_GROUP }}" \
-          --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/dev/main.bicep' \
-          --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} deployStorage=true deployCosmos=true deployAppService=true \
+          --template-file './infrastructure/main.bicep' \
+          --parameters '@./infrastructure/params.dev.json' \
+          --parameters jwtRsaPrivateKey="${{ secrets.JWT_RSA_PRIVATE_KEY }}" jwtRsaPublicKey="${{ secrets.JWT_RSA_PUBLIC_KEY }}" \
           --output json > what-if-output.json
         cat what-if-output.json
-    
+
     - name: Comment PR with What-If Results
       if: github.event_name == 'pull_request'
       uses: actions/github-script@v7
@@ -122,18 +127,18 @@ jobs:
         script: |
           const fs = require('fs');
           const whatIfOutput = fs.readFileSync('what-if-output.json', 'utf8');
-          const output = `#### Infrastructure What-If Analysis 🔍
-          
+          const output = `#### Infrastructure What-If Analysis - Dev
+
           <details><summary>Show What-If Results</summary>
-          
+
           \`\`\`json
           ${whatIfOutput}
           \`\`\`
-          
+
           </details>
-          
+
           *Workflow: \`${{ github.workflow }}\`, Run: [\`${{ github.run_number }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*`;
-          
+
           github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
@@ -149,77 +154,77 @@ jobs:
       ((github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'preview') ||
        github.event_name == 'pull_request') &&
       (needs.check-secrets.outputs.has-azure-secrets != 'true' ||
-       needs.check-secrets.outputs.has-jwt-secret != 'true')
+       needs.check-secrets.outputs.has-jwt-secrets != 'true')
     steps:
       - name: Comment PR about missing secrets
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
-            const output = `#### Infrastructure What-If Analysis ⚠️
-            
+            const output = `#### Infrastructure What-If Analysis - Dev
+
             **Preview skipped**: Required secrets are not configured.
-            
+
             Please configure the following secrets:
             - \`AZURE_CREDENTIALS\` ${{ needs.check-secrets.outputs.has-azure-secrets == 'true' && '✅' || '❌' }}
-            - \`JWT_SECRET_KEY\` ${{ needs.check-secrets.outputs.has-jwt-secret == 'true' && '✅' || '❌' }}
-            
+            - \`JWT_RSA_PRIVATE_KEY\` and \`JWT_RSA_PUBLIC_KEY\` ${{ needs.check-secrets.outputs.has-jwt-secrets == 'true' && '✅' || '❌' }}
+
             *Workflow: \`${{ github.workflow }}\`, Run: [\`${{ github.run_number }}\`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*`;
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: output
             });
-      
+
       - name: Log missing secrets
         run: |
           echo "::warning::Infrastructure preview skipped due to missing secrets"
           echo "Required secrets status:"
           echo "  AZURE_CREDENTIALS: ${{ needs.check-secrets.outputs.has-azure-secrets }}"
-          echo "  JWT_SECRET_KEY: ${{ needs.check-secrets.outputs.has-jwt-secret }}"
+          echo "  JWT_RSA_PRIVATE_KEY + JWT_RSA_PUBLIC_KEY: ${{ needs.check-secrets.outputs.has-jwt-secrets }}"
 
   deploy:
     if: |
-      github.event.inputs.action == 'deploy' &&
+      (github.event.inputs.action == 'deploy' || (github.event_name == 'push' && github.ref == 'refs/heads/dev')) &&
       needs.check-secrets.outputs.has-azure-secrets == 'true' &&
-      needs.check-secrets.outputs.has-jwt-secret == 'true'
+      needs.check-secrets.outputs.has-jwt-secrets == 'true'
     runs-on: ubuntu-latest
-    needs: [check-secrets, validate]
+    needs: [check-secrets]
     environment: development
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Azure Login
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
+
     - name: Set Azure Subscription
       run: az account set --subscription "${{ env.SUBSCRIPTION_ID }}"
-    
+
     - name: Create Resource Group if not exists
       run: |
         az group create \
           --name "${{ env.RESOURCE_GROUP }}" \
           --location "${{ env.LOCATION }}" \
           --output none || true
-    
+
     - name: Deploy Infrastructure (Incremental - Safe Mode)
       id: deploy
       run: |
-        # ⚠️ SAFETY: Using --mode Incremental to prevent accidental resource deletion
-        # Incremental mode only creates/updates resources in the template, never deletes existing ones
+        # Using --mode Incremental to prevent accidental resource deletion
         az deployment group create \
           --resource-group "${{ env.RESOURCE_GROUP }}" \
-          --template-file './src/Mystira.App.Infrastructure.Azure/Deployment/dev/main.bicep' \
-          --parameters environment=${{ env.ENVIRONMENT }} location=${{ env.LOCATION }} jwtSecretKey=${{ secrets.JWT_SECRET_KEY }} deployStorage=true deployCosmos=true deployAppService=true \
+          --template-file './infrastructure/main.bicep' \
+          --parameters '@./infrastructure/params.dev.json' \
+          --parameters jwtRsaPrivateKey="${{ secrets.JWT_RSA_PRIVATE_KEY }}" jwtRsaPublicKey="${{ secrets.JWT_RSA_PUBLIC_KEY }}" \
           --mode Incremental \
-          --name "mystira-app-dev-$(date +%Y%m%d-%H%M%S)" \
+          --name "mys-dev-mystira-$(date +%Y%m%d-%H%M%S)" \
           --output json
-    
+
     - name: Get Deployment Outputs
       id: outputs
       run: |
@@ -228,9 +233,9 @@ jobs:
           --name "$(az deployment group list --resource-group ${{ env.RESOURCE_GROUP }} --query '[0].name' -o tsv)" \
           --query "properties.outputs.appServiceUrl.value" -o tsv)
         echo "appServiceUrl=$APP_SERVICE_URL" >> $GITHUB_OUTPUT
-    
+
     - name: Deployment Summary
       run: |
-        echo "✅ Infrastructure deployed successfully!"
-        echo "📊 Resource Group: ${{ env.RESOURCE_GROUP }}"
-        echo "🌐 App Service URL: ${{ steps.outputs.outputs.appServiceUrl }}"
+        echo "Infrastructure deployed successfully!"
+        echo "Resource Group: ${{ env.RESOURCE_GROUP }}"
+        echo "App Service URL: ${{ steps.outputs.outputs.appServiceUrl }}"

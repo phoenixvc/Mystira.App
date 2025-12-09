@@ -13,20 +13,21 @@ use crate::types::CommandResponse;
 use std::process::Command;
 
 /// Get resource group name from environment
+/// Follows naming convention: [org]-[env]-[project]-rg-[region]
+/// Default: mys-{env}-mystira-rg-san (South Africa North)
 pub fn get_resource_group_name(environment: &str) -> String {
     match environment {
-        "dev" => "dev-san-rg-mystira-app".to_string(),
-        "prod" => "prod-san-rg-mystira-app".to_string(),
-        _ => format!("{}-san-rg-mystira-app", environment),
+        "dev" => "mys-dev-mystira-rg-san".to_string(),
+        "staging" => "mys-staging-mystira-rg-san".to_string(),
+        "prod" => "mys-prod-mystira-rg-san".to_string(),
+        _ => format!("mys-{}-mystira-rg-san", environment),
     }
 }
 
 /// Get deployment path from repo root and environment
-pub fn get_deployment_path(repo_root: &str, environment: &str) -> String {
-    format!(
-        "{}/src/Mystira.App.Infrastructure.Azure/Deployment/{}",
-        repo_root, environment
-    )
+/// Note: The new infrastructure uses a single main.bicep with environment-specific parameter files
+pub fn get_deployment_path(repo_root: &str, _environment: &str) -> String {
+    format!("{}/infrastructure", repo_root)
 }
 
 /// Check Azure CLI installation and return error response if not installed
