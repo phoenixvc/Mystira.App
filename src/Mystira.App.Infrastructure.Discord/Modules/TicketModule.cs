@@ -257,7 +257,7 @@ public class TicketModule : InteractionModuleBase<SocketInteractionContext>
     {
         var lower = input.ToLowerInvariant();
         var cleaned = new string(lower
-            .Select(ch => char.IsLetterOrDigit(ch) ? ch : '-')
+            .Select(ch => IsAsciiAlphanumeric(ch) ? ch : '-')
             .ToArray());
 
         cleaned = cleaned.Trim('-');
@@ -268,5 +268,10 @@ public class TicketModule : InteractionModuleBase<SocketInteractionContext>
         }
 
         return string.IsNullOrWhiteSpace(cleaned) ? "user" : cleaned;
+    }
+
+    private static bool IsAsciiAlphanumeric(char ch)
+    {
+        return (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9');
     }
 }
