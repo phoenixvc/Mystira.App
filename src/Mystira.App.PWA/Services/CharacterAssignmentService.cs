@@ -167,7 +167,7 @@ public class CharacterAssignmentService : ICharacterAssignmentService
                 var assignments = apiGameSession.CharacterAssignments?.Any() == true
                     ? apiGameSession.CharacterAssignments
                     : request.CharacterAssignments;
-                if (assignments.Any())
+                if (assignments?.Any() == true)
                 {
                     _gameSessionService.SetCharacterAssignments(assignments);
                 }

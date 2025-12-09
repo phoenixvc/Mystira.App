@@ -116,7 +116,7 @@ public class GameSessionService : IGameSessionService
 
             // Set empty character assignments for scenarios that skip character assignment
             // This ensures text replacement functionality works (even though no replacements will occur)
-            if (!_characterAssignments.Any())
+            if (_characterAssignments?.Any() != true)
             {
                 _characterAssignments = new List<CharacterAssignment>();
             }
