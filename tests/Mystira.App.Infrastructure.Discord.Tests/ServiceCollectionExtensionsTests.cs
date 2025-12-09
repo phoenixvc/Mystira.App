@@ -31,11 +31,11 @@ public class ServiceCollectionExtensionsTests
 
         // Assert
         var serviceProvider = services.BuildServiceProvider();
-        
-        // Check that IDiscordBotService is registered
-        var discordService = serviceProvider.GetService<IDiscordBotService>();
-        discordService.Should().NotBeNull();
-        discordService.Should().BeOfType<DiscordBotService>();
+
+        // Check that IChatBotService is registered
+        var chatBotService = serviceProvider.GetService<IChatBotService>();
+        chatBotService.Should().NotBeNull();
+        chatBotService.Should().BeOfType<DiscordBotService>();
     }
 
     [Fact]

@@ -1,18 +1,18 @@
 namespace Mystira.App.Application.Ports.Messaging;
 
 /// <summary>
-/// Port interface for Discord bot operations.
-/// Implementations handle Discord-specific functionality.
+/// Port interface for chat bot operations.
+/// Platform-agnostic interface that can be implemented by Discord, Teams, Slack, etc.
 /// </summary>
-public interface IDiscordBotService
+public interface IChatBotService
 {
     /// <summary>
-    /// Start the Discord bot connection
+    /// Start the chat bot connection
     /// </summary>
     Task StartAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Stop the Discord bot connection
+    /// Stop the chat bot connection
     /// </summary>
     Task StopAsync(CancellationToken cancellationToken = default);
 
@@ -111,7 +111,7 @@ public class EmbedFieldData
 }
 
 /// <summary>
-/// Bot status information
+/// Bot status information (platform-agnostic)
 /// </summary>
 public class BotStatus
 {
@@ -119,7 +119,10 @@ public class BotStatus
     public bool IsConnected { get; set; }
     public string? BotName { get; set; }
     public ulong? BotId { get; set; }
-    public int GuildCount { get; set; }
+    /// <summary>
+    /// Number of servers/guilds/workspaces the bot is connected to
+    /// </summary>
+    public int ServerCount { get; set; }
 }
 
 // ─────────────────────────────────────────────────────────────────

@@ -34,7 +34,7 @@ public class Program
             .ConfigureServices((context, services) =>
             {
                 // Register Discord bot using Infrastructure layer
-                // This registers: IMessagingService, IDiscordBotService, ISlashCommandService
+                // This registers: IMessagingService, IChatBotService, IBotCommandService
                 services.AddDiscordBot(context.Configuration);
 
                 // Add the hosted service that manages bot lifecycle
@@ -59,42 +59,42 @@ public class Program
 
 /// <summary>
 /// Hosted service that handles bot startup tasks after connection:
-/// - Registering slash command modules from Infrastructure.Discord
+/// - Registering command modules from Infrastructure.Discord
 /// - Running sample ticket creation if enabled
 /// </summary>
 public class BotStartupService : BackgroundService
 {
-    private readonly ISlashCommandService _slashCommandService;
+    private readonly IBotCommandService _botCommandService;
     private readonly SampleTicketStartupService _sampleTicketService;
-    private readonly IDiscordBotService _botService;
+    private readonly IChatBotService _chatBotService;
     private readonly ILogger<BotStartupService> _logger;
 
     public BotStartupService(
-        ISlashCommandService slashCommandService,
+        IBotCommandService botCommandService,
         SampleTicketStartupService sampleTicketService,
-        IDiscordBotService botService,
+        IChatBotService chatBotService,
         ILogger<BotStartupService> logger)
     {
-        _slashCommandService = slashCommandService;
+        _botCommandService = botCommandService;
         _sampleTicketService = sampleTicketService;
-        _botService = botService;
+        _chatBotService = chatBotService;
         _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Wait for bot to connect
-        _logger.LogInformation("Waiting for Discord bot to connect...");
+        _logger.LogInformation("Waiting for chat bot to connect...");
 
         var maxWait = TimeSpan.FromSeconds(30);
         var waited = TimeSpan.Zero;
-        while (!_botService.IsConnected && waited < maxWait)
+        while (!_chatBotService.IsConnected && waited < maxWait)
         {
             await Task.Delay(500, stoppingToken);
             waited += TimeSpan.FromMilliseconds(500);
         }
 
-        if (!_botService.IsConnected)
+        if (!_chatBotService.IsConnected)
         {
             _logger.LogWarning("Bot did not connect within timeout. Startup tasks may fail.");
         }
@@ -104,10 +104,10 @@ public class BotStartupService : BackgroundService
             // Register command modules from Infrastructure.Discord assembly
             // This includes the TicketModule (/ticket, /ticket-close)
             var infrastructureAssembly = typeof(Mystira.App.Infrastructure.Discord.Modules.TicketModule).Assembly;
-            await _slashCommandService.RegisterCommandsAsync(infrastructureAssembly, stoppingToken);
+            await _botCommandService.RegisterCommandsAsync(infrastructureAssembly, stoppingToken);
 
             _logger.LogInformation("Registered {Count} command modules from Infrastructure.Discord",
-                _slashCommandService.RegisteredModuleCount);
+                _botCommandService.RegisteredModuleCount);
 
             // Post sample ticket if enabled in configuration
             await _sampleTicketService.PostSampleTicketIfEnabledAsync();

@@ -9,11 +9,11 @@ namespace Mystira.App.Infrastructure.Discord.HealthChecks;
 /// </summary>
 public class DiscordBotHealthCheck : IHealthCheck
 {
-    private readonly IDiscordBotService _discordBotService;
+    private readonly IChatBotService _chatBotService;
 
-    public DiscordBotHealthCheck(IDiscordBotService discordBotService)
+    public DiscordBotHealthCheck(IChatBotService chatBotService)
     {
-        _discordBotService = discordBotService;
+        _chatBotService = chatBotService;
     }
 
     public Task<HealthCheckResult> CheckHealthAsync(
@@ -22,7 +22,7 @@ public class DiscordBotHealthCheck : IHealthCheck
     {
         try
         {
-            var status = _discordBotService.GetStatus();
+            var status = _chatBotService.GetStatus();
 
             if (!status.IsConnected)
             {
@@ -52,7 +52,7 @@ public class DiscordBotHealthCheck : IHealthCheck
             {
                 ["IsConnected"] = true,
                 ["BotUsername"] = status.BotName,
-                ["GuildCount"] = status.GuildCount
+                ["ServerCount"] = status.ServerCount
             };
 
             if (status.BotId.HasValue)

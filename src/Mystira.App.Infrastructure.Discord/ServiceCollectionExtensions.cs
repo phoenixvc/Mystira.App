@@ -17,8 +17,8 @@ public static class ServiceCollectionExtensions
     /// Adds Discord bot services to the service collection.
     /// Registers the service as Application port interfaces:
     /// - IMessagingService (platform-agnostic messaging)
-    /// - IDiscordBotService (Discord-specific operations)
-    /// - ISlashCommandService (slash command/interaction support)
+    /// - IChatBotService (platform-agnostic chat bot operations)
+    /// - IBotCommandService (platform-agnostic command support)
     /// </summary>
     /// <param name="services">The service collection</param>
     /// <param name="configuration">The configuration instance</param>
@@ -41,8 +41,8 @@ public static class ServiceCollectionExtensions
         // Register as Application port interfaces for clean architecture
         services.AddSingleton<DiscordBotService>();
         services.AddSingleton<IMessagingService>(sp => sp.GetRequiredService<DiscordBotService>());
-        services.AddSingleton<IDiscordBotService>(sp => sp.GetRequiredService<DiscordBotService>());
-        services.AddSingleton<ISlashCommandService>(sp => sp.GetRequiredService<DiscordBotService>());
+        services.AddSingleton<IChatBotService>(sp => sp.GetRequiredService<DiscordBotService>());
+        services.AddSingleton<IBotCommandService>(sp => sp.GetRequiredService<DiscordBotService>());
 
         return services;
     }

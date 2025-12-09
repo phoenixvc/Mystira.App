@@ -15,7 +15,7 @@ namespace Mystira.App.Infrastructure.Discord.Services;
 /// Implements the Application port interfaces for clean architecture compliance.
 /// Supports both messaging and slash commands (interactions).
 /// </summary>
-public class DiscordBotService : IMessagingService, Application.Ports.Messaging.IDiscordBotService, ISlashCommandService, IDisposable
+public class DiscordBotService : IMessagingService, IChatBotService, IBotCommandService, IDisposable
 {
     private readonly DiscordSocketClient _client;
     private readonly InteractionService _interactions;
@@ -244,8 +244,8 @@ public class DiscordBotService : IMessagingService, Application.Ports.Messaging.
             {
                 if (_options.GuildId != 0)
                 {
-                    await RegisterCommandsToGuildAsync(_options.GuildId);
-                    _logger.LogInformation("Slash commands registered to guild {GuildId}", _options.GuildId);
+                    await RegisterCommandsToServerAsync(_options.GuildId);
+                    _logger.LogInformation("Slash commands registered to server {ServerId}", _options.GuildId);
                 }
                 else if (_options.RegisterCommandsGlobally)
                 {
@@ -254,7 +254,7 @@ public class DiscordBotService : IMessagingService, Application.Ports.Messaging.
                 }
                 else
                 {
-                    _logger.LogWarning("Slash commands enabled but no GuildId configured and RegisterCommandsGlobally is false");
+                    _logger.LogWarning("Slash commands enabled but no GuildId/ServerId configured and RegisterCommandsGlobally is false");
                 }
             }
             catch (Exception ex)
@@ -332,7 +332,7 @@ public class DiscordBotService : IMessagingService, Application.Ports.Messaging.
     }
 
     /// <summary>
-    /// Send an embed using platform-agnostic EmbedData (implements Application.Ports.Messaging.IDiscordBotService)
+    /// Send an embed using platform-agnostic EmbedData (implements IChatBotService)
     /// </summary>
     public async Task SendEmbedAsync(ulong channelId, EmbedData embedData, CancellationToken cancellationToken = default)
     {
@@ -358,7 +358,7 @@ public class DiscordBotService : IMessagingService, Application.Ports.Messaging.
     }
 
     /// <summary>
-    /// Get bot status information (implements Application.Ports.Messaging.IDiscordBotService)
+    /// Get bot status information (implements IChatBotService)
     /// </summary>
     public BotStatus GetStatus()
     {
@@ -368,12 +368,12 @@ public class DiscordBotService : IMessagingService, Application.Ports.Messaging.
             IsConnected = IsConnected,
             BotName = _client.CurrentUser?.Username,
             BotId = _client.CurrentUser?.Id,
-            GuildCount = _client.Guilds.Count
+            ServerCount = _client.Guilds.Count
         };
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // ISlashCommandService Implementation
+    // IBotCommandService Implementation
     // ─────────────────────────────────────────────────────────────────
 
     /// <inheritdoc />
@@ -404,7 +404,7 @@ public class DiscordBotService : IMessagingService, Application.Ports.Messaging.
     }
 
     /// <inheritdoc />
-    public async Task RegisterCommandsToGuildAsync(ulong guildId, CancellationToken cancellationToken = default)
+    public async Task RegisterCommandsToServerAsync(ulong serverId, CancellationToken cancellationToken = default)
     {
         if (!_options.EnableSlashCommands)
         {
@@ -414,14 +414,15 @@ public class DiscordBotService : IMessagingService, Application.Ports.Messaging.
 
         try
         {
-            await _interactions.RegisterCommandsToGuildAsync(guildId);
+            // Discord uses "guild" terminology, but the interface uses "server" for platform-agnosticism
+            await _interactions.RegisterCommandsToGuildAsync(serverId);
             _commandsRegistered = true;
-            _logger.LogInformation("Registered {Count} slash commands to guild {GuildId}",
-                _interactions.SlashCommands.Count, guildId);
+            _logger.LogInformation("Registered {Count} slash commands to server {ServerId}",
+                _interactions.SlashCommands.Count, serverId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to register commands to guild {GuildId}", guildId);
+            _logger.LogError(ex, "Failed to register commands to server {ServerId}", serverId);
             throw;
         }
     }
