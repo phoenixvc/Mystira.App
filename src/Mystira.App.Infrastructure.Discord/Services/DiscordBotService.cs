@@ -1,5 +1,6 @@
 using System.Reflection;
 using Discord;
+using Discord.Net;
 using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
@@ -742,10 +743,18 @@ public class DiscordBotService : IMessagingService, IChatBotService, IBotCommand
                     var sentMsg = await channel.SendMessageAsync(message);
                     sentMessages.Add(new SentMessage { ChannelId = channelId, MessageId = sentMsg.Id });
                 }
-            }
+            catch (HttpException ex)
             catch (Exception ex)
-            {
+                _logger.LogWarning(ex, "Failed to send broadcast to channel {ChannelId} (Discord API error)", channelId);
                 _logger.LogWarning(ex, "Failed to send broadcast to channel {ChannelId}", channelId);
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Failed to send broadcast to channel {ChannelId} (Invalid operation)", channelId);
+            }
+            catch (TimeoutException ex)
+            {
+                _logger.LogWarning(ex, "Failed to send broadcast to channel {ChannelId} (Timed out)", channelId);
+            }
             }
         }
 
