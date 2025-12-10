@@ -353,11 +353,8 @@ resource customDomainBindingSsl 'Microsoft.Web/sites/hostNameBindings@2023-01-01
     siteName: appService.name
     hostNameType: 'Verified'
     sslState: 'SniEnabled'
-    thumbprint: managedCertificate.properties.thumbprint
+    thumbprint: managedCertificate!.properties.thumbprint
   }
-  dependsOn: [
-    managedCertificate
-  ]
 }
 
 // Outputs

@@ -10,10 +10,6 @@ param botDisplayName string = 'Mystira Bot'
 @description('Microsoft App ID for the bot (from Azure AD App Registration)')
 param microsoftAppId string
 
-@description('Microsoft App Password (client secret)')
-@secure()
-param microsoftAppPassword string
-
 @description('Bot endpoint URL (messaging endpoint)')
 param botEndpoint string
 

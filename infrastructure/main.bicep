@@ -402,7 +402,6 @@ module azureBot 'modules/azure-bot.bicep' = if (deployAzureBot && botMicrosoftAp
     botName: names.azureBot
     botDisplayName: 'Mystira Bot'
     microsoftAppId: botMicrosoftAppId
-    microsoftAppPassword: botMicrosoftAppPassword
     botEndpoint: botEndpoint != '' ? botEndpoint : 'https://${names.apiApp}.azurewebsites.net/api/messages/teams'
     location: 'global'
     sku: botSku
@@ -521,10 +520,8 @@ module staticWebApp 'modules/static-web-app.bicep' = if (deployStaticWebApp) {
 module swaDnsRecord 'modules/dns-zone.bicep' = if (deployStaticWebApp && enableCustomDomain) {
   name: 'deploy-swa-dns-record'
   scope: resourceGroup(dnsZoneRg)
-  dependsOn: [staticWebApp]
   params: {
     dnsZoneName: dnsZoneName
-    dnsZoneResourceGroup: dnsZoneRg
     subdomain: customDomainSubdomain
     targetHostname: staticWebApp.outputs.staticWebAppDefaultHostname
     recordType: customDomainSubdomain == '' ? 'TXT' : 'CNAME'
@@ -538,10 +535,8 @@ module swaDnsRecord 'modules/dns-zone.bicep' = if (deployStaticWebApp && enableC
 module apiDnsRecord 'modules/dns-zone.bicep' = if (!skipAppServiceCreation && enableApiCustomDomain) {
   name: 'deploy-api-dns-record'
   scope: resourceGroup(dnsZoneRg)
-  dependsOn: [apiAppService]
   params: {
     dnsZoneName: dnsZoneName
-    dnsZoneResourceGroup: dnsZoneRg
     subdomain: customDomainSubdomain == '' ? apiSubdomainPrefix : '${apiSubdomainPrefix}.${customDomainSubdomain}'
     targetHostname: apiAppService.outputs.appServiceDefaultHostname
     recordType: 'CNAME'
@@ -555,10 +550,8 @@ module apiDnsRecord 'modules/dns-zone.bicep' = if (!skipAppServiceCreation && en
 module adminApiDnsRecord 'modules/dns-zone.bicep' = if (!skipAppServiceCreation && enableApiCustomDomain) {
   name: 'deploy-admin-api-dns-record'
   scope: resourceGroup(dnsZoneRg)
-  dependsOn: [adminApiAppService]
   params: {
     dnsZoneName: dnsZoneName
-    dnsZoneResourceGroup: dnsZoneRg
     subdomain: customDomainSubdomain == '' ? adminApiSubdomainPrefix : '${adminApiSubdomainPrefix}.${customDomainSubdomain}'
     targetHostname: adminApiAppService.outputs.appServiceDefaultHostname
     recordType: 'CNAME'

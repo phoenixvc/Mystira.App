@@ -4,9 +4,6 @@
 @description('Name of the existing DNS zone (e.g., mystira.app)')
 param dnsZoneName string
 
-@description('Resource group where the DNS zone exists')
-param dnsZoneResourceGroup string = resourceGroup().name
-
 @description('Subdomain to create (e.g., "api", "admin", "dev", "api.dev", or "" for apex)')
 param subdomain string = ''
 
@@ -26,10 +23,10 @@ param recordType string = 'CNAME'
 @description('Tags for resources')
 param tags object = {}
 
-// Reference existing DNS zone (may be in different resource group)
+// Reference existing DNS zone in current resource group
+// Note: This module must be deployed to the DNS zone's resource group via scope: resourceGroup(dnsZoneRg)
 resource dnsZone 'Microsoft.Network/dnsZones@2023-07-01-preview' existing = {
   name: dnsZoneName
-  scope: resourceGroup(dnsZoneResourceGroup)
 }
 
 // Full custom domain name
