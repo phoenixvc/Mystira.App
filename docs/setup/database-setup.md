@@ -35,7 +35,34 @@ Master data includes reference data needed for the application to function:
 
 ### Configuration
 
-#### Enable Seeding for Cosmos DB
+#### Database Initialization
+
+Database initialization can be controlled with the `InitializeDatabaseOnStartup` setting:
+
+```json
+{
+  "InitializeDatabaseOnStartup": true  // Default: true
+}
+```
+
+**When set to `true` (default):**
+- Database and containers are created if they don't exist
+- Master data seeding runs (if enabled)
+- Application fails fast if database connection fails
+
+**When set to `false`:**
+- Database initialization is skipped
+- Application assumes database and containers are pre-configured
+- Useful for production environments with pre-provisioned infrastructure
+
+**Azure App Service configuration:**
+
+```bash
+az webapp config appsettings set --name <app-name> --resource-group <rg-name> \
+  --settings InitializeDatabaseOnStartup=true
+```
+
+#### Enable Master Data Seeding
 
 To enable master data seeding in Cosmos DB environments, add this to your `appsettings.json` or Azure App Service configuration:
 
@@ -54,11 +81,11 @@ az webapp config appsettings set --name <app-name> --resource-group <rg-name> \
 
 #### Default Behavior
 
-| Environment | Database Provider | Seeding Enabled |
-|------------|------------------|----------------|
-| Local Dev (no connection string) | InMemory | ✅ Yes (automatic) |
-| Local Dev (with Cosmos connection) | Cosmos DB | ❌ No (unless configured) |
-| Cloud (Dev/Staging/Prod) | Cosmos DB | ❌ No (unless configured) |
+| Environment | Database Provider | Init Enabled | Seeding Enabled |
+|------------|------------------|--------------|----------------|
+| Local Dev (no connection string) | InMemory | ✅ Yes (default) | ✅ Yes (automatic) |
+| Local Dev (with Cosmos connection) | Cosmos DB | ✅ Yes (default) | ❌ No (unless configured) |
+| Cloud (Dev/Staging/Prod) | Cosmos DB | ✅ Yes (default) | ❌ No (unless configured) |
 
 ### Seeding Logic
 

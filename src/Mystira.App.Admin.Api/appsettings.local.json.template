@@ -35,6 +35,8 @@
   "CorsSettings": {
     "AllowedOrigins": "http://localhost:7001,https://localhost:7001,http://localhost:7000,https://localhost:7000"
   },
+  "InitializeDatabaseOnStartup": true,
+  "// InitializeDatabaseOnStartup_Note": "Set to false to skip database initialization (requires pre-configured database). Default: true",
   "SeedMasterDataOnStartup": false,
   "// SeedMasterDataOnStartup_Note": "Set to true to seed master data on startup (for Cosmos DB). InMemory database seeds automatically."
 }
