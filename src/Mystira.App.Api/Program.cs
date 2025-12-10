@@ -134,12 +134,12 @@ var jwtKey = builder.Configuration["JwtSettings:SecretKey"];
 var jwksEndpoint = builder.Configuration["JwtSettings:JwksEndpoint"];
 
 // Fail fast if JWT configuration is missing
-if (string.IsNullOrEmpty(jwtIssuer))
+if (string.IsNullOrWhiteSpace(jwtIssuer))
 {
     throw new InvalidOperationException("JWT Issuer (JwtSettings:Issuer) is not configured.");
 }
 
-if (string.IsNullOrEmpty(jwtAudience))
+if (string.IsNullOrWhiteSpace(jwtAudience))
 {
     throw new InvalidOperationException("JWT Audience (JwtSettings:Audience) is not configured.");
 }
