@@ -110,9 +110,9 @@ public class ApiEndpointCache : IApiEndpointCache
         var requestPath = requestUri.AbsolutePath;
 
         // Determine if this is an admin API request based on the PATH, not host
-        // Admin API paths typically start with /admin/ or /api/admin/
+        // Admin API paths must START with /admin/ or /api/admin/ (not just contain it anywhere)
         var isAdminRequest = requestPath.StartsWith("/admin/", StringComparison.OrdinalIgnoreCase) ||
-                             requestPath.Contains("/admin/", StringComparison.OrdinalIgnoreCase);
+                             requestPath.StartsWith("/api/admin/", StringComparison.OrdinalIgnoreCase);
 
         if (isAdminRequest)
         {

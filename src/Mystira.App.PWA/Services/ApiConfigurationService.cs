@@ -25,12 +25,13 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
     private const string AdminApiUrlStorageKey = "mystira_admin_api_base_url";
     private const string EnvironmentStorageKey = "mystira_api_environment";
 
-    // Cache for configuration values
-    private string? _cachedApiUrl;
-    private string? _cachedAdminApiUrl;
-    private string? _cachedEnvironment;
-    private List<ApiEndpoint>? _cachedEndpoints;
-    private bool _isInitialized;
+    // Cache for configuration values (volatile for thread safety)
+    private volatile string? _cachedApiUrl;
+    private volatile string? _cachedAdminApiUrl;
+    private volatile string? _cachedEnvironment;
+    private volatile List<ApiEndpoint>? _cachedEndpoints;
+    private volatile bool _isInitialized;
+    private readonly SemaphoreSlim _initLock = new(1, 1);
 
     public ApiConfigurationService(
         IJSRuntime jsRuntime,
@@ -313,11 +314,32 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
 
     private async Task EnsureInitializedAsync()
     {
+        // Fast path - already initialized (volatile read)
         if (_isInitialized)
         {
             return;
         }
 
+        // Slow path - acquire lock for thread-safe initialization
+        await _initLock.WaitAsync();
+        try
+        {
+            // Double-check after acquiring lock
+            if (_isInitialized)
+            {
+                return;
+            }
+
+            await InitializeFromStorageAsync();
+        }
+        finally
+        {
+            _initLock.Release();
+        }
+    }
+
+    private async Task InitializeFromStorageAsync()
+    {
         try
         {
             // Try to load persisted values from localStorage
@@ -325,15 +347,15 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
             var persistedAdminApiUrl = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", AdminApiUrlStorageKey);
             var persistedEnvironment = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", EnvironmentStorageKey);
 
-            // Validate persisted URL before using it
-            if (!string.IsNullOrEmpty(persistedApiUrl) && ValidateUrl(persistedApiUrl, out _))
+            // Validate persisted URL before using it (check for whitespace too)
+            if (!string.IsNullOrWhiteSpace(persistedApiUrl) && ValidateUrl(persistedApiUrl, out _))
             {
                 _cachedApiUrl = persistedApiUrl;
                 _logger.LogInformation("Loaded persisted API URL from localStorage: {ApiUrl}", persistedApiUrl);
             }
             else
             {
-                if (!string.IsNullOrEmpty(persistedApiUrl))
+                if (!string.IsNullOrWhiteSpace(persistedApiUrl))
                 {
                     _logger.LogWarning("Persisted API URL is invalid, clearing: {ApiUrl}", persistedApiUrl);
                     await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", ApiUrlStorageKey);
@@ -343,7 +365,7 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
             }
 
             // Validate persisted admin URL
-            if (!string.IsNullOrEmpty(persistedAdminApiUrl) && ValidateUrl(persistedAdminApiUrl, out _))
+            if (!string.IsNullOrWhiteSpace(persistedAdminApiUrl) && ValidateUrl(persistedAdminApiUrl, out _))
             {
                 _cachedAdminApiUrl = persistedAdminApiUrl;
             }
@@ -352,7 +374,7 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
                 _cachedAdminApiUrl = GetDefaultAdminApiUrl();
             }
 
-            _cachedEnvironment = !string.IsNullOrEmpty(persistedEnvironment)
+            _cachedEnvironment = !string.IsNullOrWhiteSpace(persistedEnvironment)
                 ? persistedEnvironment
                 : GetDefaultEnvironment();
 
@@ -368,6 +390,7 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
             _cachedAdminApiUrl = GetDefaultAdminApiUrl();
             _cachedEnvironment = GetDefaultEnvironment();
             _endpointCache.Initialize(_cachedApiUrl, _cachedAdminApiUrl);
+            _isInitialized = true;
             _logger.LogDebug("JSInterop not available, using default configuration values");
         }
         catch (Exception ex)
@@ -377,6 +400,7 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
             _cachedAdminApiUrl = GetDefaultAdminApiUrl();
             _cachedEnvironment = GetDefaultEnvironment();
             _endpointCache.Initialize(_cachedApiUrl, _cachedAdminApiUrl);
+            _isInitialized = true;
         }
     }
 
@@ -453,6 +477,7 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
         if (!_disposed)
         {
             _healthCheckClient.Dispose();
+            _initLock.Dispose();
             _disposed = true;
         }
     }
