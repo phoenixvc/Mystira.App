@@ -353,11 +353,34 @@ public class MigrationService : IMigrationService
             _logger.LogInformation("{Container} migration completed: {Result}", containerName, result);
             return result;
         }
-        catch (Exception ex)
+        catch (CosmosException ex)
         {
-            _logger.LogError(ex, "Critical error during {Container} migration", containerName);
+            _logger.LogError(ex, "Cosmos DB error during {Container} migration", containerName);
             result.Success = false;
-            result.Errors.Add($"Critical error: {ex.Message}");
+            result.Errors.Add($"Cosmos DB error: {ex.Message}");
+            stopwatch.Stop();
+            result.Duration = stopwatch.Elapsed;
+            return result;
+        }
+        catch (Azure.RequestFailedException ex)
+        {
+            _logger.LogError(ex, "Azure Storage error during {Container} migration", containerName);
+            result.Success = false;
+            result.Errors.Add($"Azure Storage error: {ex.Message}");
+            stopwatch.Stop();
+            result.Duration = stopwatch.Elapsed;
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            // Propagate task cancellation so higher level handlers can deal with it properly.
+            throw;
+        }
+        catch (Exception ex) when (!(ex is StackOverflowException) && !(ex is OutOfMemoryException) && !(ex is ThreadAbortException))
+        {
+            _logger.LogError(ex, "Unhandled exception during {Container} migration", containerName);
+            result.Success = false;
+            result.Errors.Add($"Unhandled exception: {ex.Message}");
             stopwatch.Stop();
             result.Duration = stopwatch.Elapsed;
             return result;
