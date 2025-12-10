@@ -18,7 +18,7 @@ function MigrationManager() {
     destCosmosConnection: '',
     sourceStorageConnection: '',
     destStorageConnection: '',
-    databaseName: 'MystiraDb',
+    databaseName: 'MystiraAppDb',
     containerName: 'media-assets',
   });
 
@@ -78,7 +78,7 @@ function MigrationManager() {
       destCosmosConnection: '',
       sourceStorageConnection: '',
       destStorageConnection: '',
-      databaseName: 'MystiraDb',
+      databaseName: 'MystiraAppDb',
       containerName: 'media-assets',
     });
     setSelectedResources({
