@@ -154,6 +154,19 @@ jobs:
               {"name": "JwtSettings__Audience", "value": "MystiraPWA", "slotSetting": false}
             ]
 
+      - name: Configure Story Protocol settings
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-settings-json: |
+            [
+              {"name": "StoryProtocol__Enabled", "value": "false", "slotSetting": false},
+              {"name": "StoryProtocol__UseMockImplementation", "value": "true", "slotSetting": false},
+              {"name": "StoryProtocol__Network", "value": "aeneid", "slotSetting": false},
+              {"name": "StoryProtocol__RpcUrl", "value": "${{ secrets.STORY_PROTOCOL_RPC_URL || 'https://aeneid.storyrpc.io' }}", "slotSetting": false},
+              {"name": "StoryProtocol__PrivateKey", "value": "${{ secrets.STORY_PROTOCOL_WALLET_PRIVATE_KEY }}", "slotSetting": false}
+            ]
+
       - name: Azure Logout
         if: always()
         run: az logout

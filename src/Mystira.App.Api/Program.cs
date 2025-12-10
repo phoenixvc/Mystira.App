@@ -26,6 +26,7 @@ using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.Services;
 using Mystira.App.Infrastructure.Discord;
 using Mystira.App.Infrastructure.Discord.Services;
+using Mystira.App.Infrastructure.StoryProtocol;
 using Mystira.App.Shared.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -121,6 +122,10 @@ builder.Services.AddAzureBlobStorage(builder.Configuration);
 builder.Services.Configure<AudioTranscodingOptions>(builder.Configuration.GetSection(AudioTranscodingOptions.SectionName));
 // Register Application.Ports.Media.IAudioTranscodingService for use cases
 builder.Services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingService>();
+
+// Add Story Protocol Services
+builder.Services.AddStoryProtocolServices(builder.Configuration);
+
 // Configure JWT Authentication - Load from secure configuration only
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];
 var jwtAudience = builder.Configuration["JwtSettings:Audience"];
@@ -129,19 +134,19 @@ var jwtKey = builder.Configuration["JwtSettings:SecretKey"];
 var jwksEndpoint = builder.Configuration["JwtSettings:JwksEndpoint"];
 
 // Fail fast if JWT configuration is missing
-if (string.IsNullOrEmpty(jwtIssuer))
+if (string.IsNullOrWhiteSpace(jwtIssuer))
 {
     throw new InvalidOperationException("JWT Issuer (JwtSettings:Issuer) is not configured.");
 }
 
-if (string.IsNullOrEmpty(jwtAudience))
+if (string.IsNullOrWhiteSpace(jwtAudience))
 {
     throw new InvalidOperationException("JWT Audience (JwtSettings:Audience) is not configured.");
 }
 
 // Determine which signing method to use
-bool useAsymmetric = !string.IsNullOrEmpty(jwtRsaPublicKey) || !string.IsNullOrEmpty(jwksEndpoint);
-bool useSymmetric = !string.IsNullOrEmpty(jwtKey);
+bool useAsymmetric = !string.IsNullOrWhiteSpace(jwtRsaPublicKey) || !string.IsNullOrWhiteSpace(jwksEndpoint);
+bool useSymmetric = !string.IsNullOrWhiteSpace(jwtKey);
 
 if (!useAsymmetric && !useSymmetric)
 {
@@ -149,7 +154,7 @@ if (!useAsymmetric && !useSymmetric)
         "JWT signing key not configured. Please provide either:\n" +
         "- JwtSettings:RsaPublicKey for asymmetric RS256 verification (recommended), OR\n" +
         "- JwtSettings:JwksEndpoint for JWKS-based key rotation (recommended), OR\n" +
-        "- JwtSettings:Key for symmetric HS256 verification (legacy)\n" +
+        "- JwtSettings:SecretKey for symmetric HS256 verification (legacy)\n" +
         "Keys must be loaded from secure stores (Azure Key Vault, AWS Secrets Manager, etc.). " +
         "Never hardcode secrets in source code.");
 }
@@ -177,7 +182,7 @@ builder.Services.AddAuthentication(options =>
             NameClaimType = "name"   // Map "name" claim to ClaimTypes.Name
         };
 
-        if (!string.IsNullOrEmpty(jwksEndpoint))
+        if (!string.IsNullOrWhiteSpace(jwksEndpoint))
         {
             // Use JWKS endpoint for key rotation support (most secure)
             options.MetadataAddress = jwksEndpoint;
@@ -191,7 +196,7 @@ builder.Services.AddAuthentication(options =>
                 return keys.Keys;
             };
         }
-        else if (!string.IsNullOrEmpty(jwtRsaPublicKey))
+        else if (!string.IsNullOrWhiteSpace(jwtRsaPublicKey))
         {
             // Use RSA public key for asymmetric verification (recommended)
             try
@@ -203,11 +208,11 @@ builder.Services.AddAuthentication(options =>
             catch (Exception ex)
             {
                 throw new InvalidOperationException(
-                    "Failed to load RSA public key. Ensure Jwt:RsaPublicKey contains a valid PEM-encoded RSA public key " +
+                    "Failed to load RSA public key. Ensure JwtSettings:RsaPublicKey contains a valid PEM-encoded RSA public key " +
                     "from a secure store (Azure Key Vault, AWS Secrets Manager, etc.)", ex);
             }
         }
-        else if (!string.IsNullOrEmpty(jwtKey))
+        else if (!string.IsNullOrWhiteSpace(jwtKey))
         {
             // Fall back to symmetric key (legacy - should be phased out)
             validationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
