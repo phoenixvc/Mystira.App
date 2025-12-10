@@ -250,7 +250,7 @@ export function useMigration() {
           migrateResource(op.type, op.name).then(result => ({ op, result }))
         );
         
-        const parallelResults = await Promise.all(parallelPromises);
+        await Promise.all(parallelPromises);
         
         // Check for cancellation or failures
         if (abortRef.current) {
