@@ -1,0 +1,183 @@
+@using Mystira.App.PWA.Models
+@using Mystira.App.PWA.Services
+
+@inject IAttributionApiClient AttributionClient
+
+<section class="content-attribution @(IsLoading ? "loading" : "") @CssClass"
+         aria-label="Content creator credits"
+         aria-busy="@IsLoading.ToString().ToLowerInvariant()">
+    @if (IsLoading)
+    {
+        <div class="attribution-loading" role="status" aria-live="polite">
+            <div class="loading-spinner" aria-hidden="true"></div>
+            <span>Loading credits...</span>
+        </div>
+    }
+    else if (Attribution != null && Attribution.HasCredits)
+    {
+        <header class="attribution-header">
+            <h4 class="attribution-title">Created by</h4>
+            @if (Attribution.IsIpRegistered)
+            {
+                <span class="ip-badge"
+                      role="status"
+                      aria-label="Content is IP protected and registered on Story Protocol">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <polyline points="9,12 12,15 16,10"/>
+                    </svg>
+                    IP Protected
+                </span>
+            }
+        </header>
+
+        <ul class="credits-list" role="list" aria-label="List of content creators">
+            @foreach (var credit in Attribution.Credits)
+            {
+                <li class="credit-item">
+                    <div class="credit-avatar" aria-hidden="true">
+                        @GetInitials(credit.Name)
+                    </div>
+                    <div class="credit-info">
+                        <span class="credit-name">@credit.Name</span>
+                        <span class="credit-role">@credit.Role</span>
+                    </div>
+                    @if (ShowPercentages && credit.ContributionPercentage.HasValue)
+                    {
+                        <span class="credit-percentage" aria-label="@credit.ContributionPercentage.Value.ToString("0.#") percent contribution">
+                            @credit.ContributionPercentage.Value.ToString("0.#")%
+                        </span>
+                    }
+                </li>
+            }
+        </ul>
+
+        @if (ShowDetails && Attribution.IsIpRegistered && !string.IsNullOrEmpty(Attribution.IpAssetId))
+        {
+            <footer class="ip-details">
+                <span class="ip-label" id="ip-asset-label">Story Protocol IP Asset</span>
+                <span class="ip-value"
+                      aria-labelledby="ip-asset-label"
+                      title="@Attribution.IpAssetId">
+                    @TruncateIpAssetId(Attribution.IpAssetId)
+                </span>
+            </footer>
+        }
+    }
+    else if (!IsLoading && Attribution == null && !string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="attribution-error" role="alert">
+            <span>@ErrorMessage</span>
+        </div>
+    }
+    else if (Attribution == null || !Attribution.HasCredits)
+    {
+        <div class="attribution-empty" role="status">
+            <span>No creator credits available</span>
+        </div>
+    }
+</section>
+
+@code {
+    /// <summary>
+    /// The scenario ID to fetch attribution for
+    /// </summary>
+    [Parameter]
+    public string? ScenarioId { get; set; }
+
+    /// <summary>
+    /// The bundle ID to fetch attribution for
+    /// </summary>
+    [Parameter]
+    public string? BundleId { get; set; }
+
+    /// <summary>
+    /// Pre-loaded attribution data (optional - skips API call if provided)
+    /// </summary>
+    [Parameter]
+    public Models.ContentAttribution? Attribution { get; set; }
+
+    /// <summary>
+    /// Whether to show contribution percentages
+    /// </summary>
+    [Parameter]
+    public bool ShowPercentages { get; set; } = false;
+
+    /// <summary>
+    /// Whether to show detailed IP asset information
+    /// </summary>
+    [Parameter]
+    public bool ShowDetails { get; set; } = false;
+
+    /// <summary>
+    /// Custom CSS class to apply
+    /// </summary>
+    [Parameter]
+    public string? CssClass { get; set; }
+
+    private bool IsLoading { get; set; }
+    private string? ErrorMessage { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Only fetch if we don't have pre-loaded data and have an ID
+        if (Attribution == null)
+        {
+            await FetchAttributionAsync();
+        }
+    }
+
+    private async Task FetchAttributionAsync()
+    {
+        if (string.IsNullOrEmpty(ScenarioId) && string.IsNullOrEmpty(BundleId))
+        {
+            return;
+        }
+
+        IsLoading = true;
+        ErrorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            if (!string.IsNullOrEmpty(ScenarioId))
+            {
+                Attribution = await AttributionClient.GetScenarioAttributionAsync(ScenarioId);
+            }
+            else if (!string.IsNullOrEmpty(BundleId))
+            {
+                Attribution = await AttributionClient.GetBundleAttributionAsync(BundleId);
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "Failed to load creator credits";
+            Console.Error.WriteLine($"Error fetching attribution: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private static string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "?";
+
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
+
+        return name.Length >= 2 ? name[..2].ToUpperInvariant() : name.ToUpperInvariant();
+    }
+
+    private static string TruncateIpAssetId(string ipAssetId)
+    {
+        if (string.IsNullOrEmpty(ipAssetId) || ipAssetId.Length <= 16)
+            return ipAssetId;
+
+        return $"{ipAssetId[..8]}...{ipAssetId[^6..]}";
+    }
+}

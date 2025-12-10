@@ -1,0 +1,303 @@
+@using Mystira.App.PWA.Models
+@using Mystira.App.PWA.Services
+
+@inject IAttributionApiClient AttributionClient
+
+<div class="ip-verification-badge @GetBadgeClass() @(IsLoading ? "loading" : "")"
+     role="@(Clickable ? "button" : "status")"
+     aria-label="@GetAriaLabel()"
+     aria-busy="@IsLoading.ToString().ToLowerInvariant()"
+     tabindex="@(Clickable && IpStatus?.IsRegistered == true ? "0" : "-1")"
+     title="@GetTooltipText()"
+     @onclick="HandleClick"
+     @onkeydown="HandleKeyDown">
+    @if (IsLoading)
+    {
+        <div class="badge-loading" aria-hidden="true">
+            <div class="loading-dot"></div>
+        </div>
+        <span class="visually-hidden">Loading IP verification status</span>
+    }
+    else if (IpStatus != null && IpStatus.IsRegistered)
+    {
+        <svg class="badge-icon verified" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <polyline points="9,12 12,15 16,10"/>
+        </svg>
+        @if (ShowLabel)
+        {
+            <span class="badge-label">IP Protected</span>
+        }
+        @if (ShowDetails && IpStatus.ExplorerUrl != null)
+        {
+            <a href="@IpStatus.ExplorerUrl"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="badge-link"
+               aria-label="View on Story Protocol Explorer (opens in new tab)"
+               @onclick:stopPropagation="true">
+                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                    <polyline points="15 3 21 3 21 9"/>
+                    <line x1="10" y1="14" x2="21" y2="3"/>
+                </svg>
+            </a>
+        }
+    }
+    else if (!IsLoading && HasChecked)
+    {
+        <svg class="badge-icon unverified" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        @if (ShowLabel)
+        {
+            <span class="badge-label">Not Registered</span>
+        }
+    }
+</div>
+
+@if (ShowModal && IpStatus != null && IpStatus.IsRegistered)
+{
+    <div class="ip-modal-overlay"
+         role="presentation"
+         @onclick="CloseModal"
+         @onkeydown="HandleOverlayKeyDown">
+        <div class="ip-modal"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="ip-modal-title"
+             @onclick:stopPropagation="true"
+             @ref="_modalRef">
+            <div class="ip-modal-header">
+                <h3 id="ip-modal-title">IP Registration Details</h3>
+                <button class="ip-modal-close"
+                        @onclick="CloseModal"
+                        aria-label="Close dialog"
+                        type="button">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="ip-modal-body">
+                <dl class="ip-details-list">
+                    <div class="ip-detail-row">
+                        <dt class="ip-detail-label">Status</dt>
+                        <dd class="ip-detail-value verified">Registered</dd>
+                    </div>
+                    @if (!string.IsNullOrEmpty(IpStatus.IpAssetId))
+                    {
+                        <div class="ip-detail-row">
+                            <dt class="ip-detail-label">IP Asset ID</dt>
+                            <dd class="ip-detail-value mono">@TruncateId(IpStatus.IpAssetId)</dd>
+                        </div>
+                    }
+                    @if (IpStatus.RegisteredAt.HasValue)
+                    {
+                        <div class="ip-detail-row">
+                            <dt class="ip-detail-label">Registered</dt>
+                            <dd class="ip-detail-value">
+                                <time datetime="@IpStatus.RegisteredAt.Value.ToString("yyyy-MM-dd")">
+                                    @IpStatus.RegisteredAt.Value.ToString("MMMM d, yyyy")
+                                </time>
+                            </dd>
+                        </div>
+                    }
+                    @if (IpStatus.ContributorCount > 0)
+                    {
+                        <div class="ip-detail-row">
+                            <dt class="ip-detail-label">Contributors</dt>
+                            <dd class="ip-detail-value">@IpStatus.ContributorCount creator@(IpStatus.ContributorCount == 1 ? "" : "s")</dd>
+                        </div>
+                    }
+                </dl>
+                @if (!string.IsNullOrEmpty(IpStatus.ExplorerUrl))
+                {
+                    <a href="@IpStatus.ExplorerUrl"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="ip-explorer-link">
+                        View on Story Protocol Explorer
+                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                            <polyline points="15 3 21 3 21 9"/>
+                            <line x1="10" y1="14" x2="21" y2="3"/>
+                        </svg>
+                        <span class="visually-hidden">(opens in new tab)</span>
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>
+    /// The scenario ID to check IP status for
+    /// </summary>
+    [Parameter]
+    public string? ScenarioId { get; set; }
+
+    /// <summary>
+    /// The bundle ID to check IP status for
+    /// </summary>
+    [Parameter]
+    public string? BundleId { get; set; }
+
+    /// <summary>
+    /// Pre-loaded IP status (optional - skips API call if provided)
+    /// </summary>
+    [Parameter]
+    public IpVerification? IpStatus { get; set; }
+
+    /// <summary>
+    /// Whether to show the text label alongside the icon
+    /// </summary>
+    [Parameter]
+    public bool ShowLabel { get; set; } = true;
+
+    /// <summary>
+    /// Whether to show the external link icon for verified assets
+    /// </summary>
+    [Parameter]
+    public bool ShowDetails { get; set; } = false;
+
+    /// <summary>
+    /// Whether clicking the badge opens a detail modal
+    /// </summary>
+    [Parameter]
+    public bool Clickable { get; set; } = false;
+
+    /// <summary>
+    /// Badge size variant
+    /// </summary>
+    [Parameter]
+    public string Size { get; set; } = "medium"; // "small", "medium", "large"
+
+    private bool IsLoading { get; set; }
+    private bool HasChecked { get; set; }
+    private bool ShowModal { get; set; }
+    private ElementReference _modalRef;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IpStatus == null && !HasChecked)
+        {
+            await FetchIpStatusAsync();
+        }
+    }
+
+    private async Task FetchIpStatusAsync()
+    {
+        if (string.IsNullOrEmpty(ScenarioId) && string.IsNullOrEmpty(BundleId))
+        {
+            return;
+        }
+
+        IsLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            if (!string.IsNullOrEmpty(ScenarioId))
+            {
+                IpStatus = await AttributionClient.GetScenarioIpStatusAsync(ScenarioId);
+            }
+            else if (!string.IsNullOrEmpty(BundleId))
+            {
+                IpStatus = await AttributionClient.GetBundleIpStatusAsync(BundleId);
+            }
+            HasChecked = true;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error fetching IP status: {ex.Message}");
+            HasChecked = true;
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetBadgeClass()
+    {
+        var classes = new List<string> { $"size-{Size}" };
+
+        if (IpStatus?.IsRegistered == true)
+            classes.Add("verified");
+        else if (HasChecked)
+            classes.Add("unverified");
+
+        if (Clickable && IpStatus?.IsRegistered == true)
+            classes.Add("clickable");
+
+        return string.Join(" ", classes);
+    }
+
+    private string GetTooltipText()
+    {
+        if (IsLoading) return "Checking IP status...";
+        if (IpStatus?.IsRegistered == true) return "This content is registered on Story Protocol";
+        if (HasChecked) return "This content is not yet registered on Story Protocol";
+        return "";
+    }
+
+    private string GetAriaLabel()
+    {
+        if (IsLoading) return "Checking IP verification status";
+        if (IpStatus?.IsRegistered == true)
+        {
+            return Clickable
+                ? "IP Protected - Click to view details"
+                : "IP Protected - Content is registered on Story Protocol";
+        }
+        if (HasChecked) return "Not registered on Story Protocol";
+        return "IP verification status";
+    }
+
+    private void HandleClick()
+    {
+        if (Clickable && IpStatus?.IsRegistered == true)
+        {
+            ShowModal = true;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (Clickable && IpStatus?.IsRegistered == true)
+        {
+            if (e.Key == "Enter" || e.Key == " ")
+            {
+                ShowModal = true;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void HandleOverlayKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            CloseModal();
+        }
+    }
+
+    private void CloseModal()
+    {
+        ShowModal = false;
+        StateHasChanged();
+    }
+
+    private static string TruncateId(string id)
+    {
+        if (string.IsNullOrEmpty(id) || id.Length <= 16)
+            return id;
+
+        return $"{id[..8]}...{id[^6..]}";
+    }
+}
