@@ -12,6 +12,8 @@ function MigrationManager() {
   const { toasts, showToast, dismissToast } = useToast();
   const [currentStep, setCurrentStep] = useState<MigrationStep>('configure');
   const [config, setConfig] = useState<MigrationConfig>({
+    sourceEnvironment: '',
+    destEnvironment: '',
     sourceCosmosConnection: '',
     destCosmosConnection: '',
     sourceStorageConnection: '',
@@ -70,6 +72,8 @@ function MigrationManager() {
   const resetMigration = () => {
     setCurrentStep('configure');
     setConfig({
+      sourceEnvironment: '',
+      destEnvironment: '',
       sourceCosmosConnection: '',
       destCosmosConnection: '',
       sourceStorageConnection: '',
@@ -92,7 +96,8 @@ function MigrationManager() {
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Migration Manager</h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Migrate Cosmos DB data and Azure Blob Storage between environments
+            Migrate Cosmos DB data and Azure Blob Storage from old environments to new environments.
+            Select preset environments to auto-fetch connection strings from Azure.
           </p>
         </div>
 
