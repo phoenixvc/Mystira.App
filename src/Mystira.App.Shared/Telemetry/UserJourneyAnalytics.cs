@@ -305,12 +305,13 @@ public class UserJourneyAnalytics : IUserJourneyAnalytics
 
     private Dictionary<string, string> CreateBaseProperties(string? userId)
     {
+        // Note: Application Insights automatically captures timestamps at the system level
+        // Adding a custom Timestamp property would cause cardinality explosion in metrics
         return new Dictionary<string, string>
         {
             ["Environment"] = _environment,
             ["EventType"] = "UserJourney",
-            ["UserId"] = userId ?? "anonymous",
-            ["Timestamp"] = DateTime.UtcNow.ToString("O")
+            ["UserId"] = userId ?? "anonymous"
         };
     }
 

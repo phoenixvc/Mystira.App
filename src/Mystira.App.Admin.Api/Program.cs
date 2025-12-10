@@ -175,10 +175,8 @@ if (useCosmosDb)
             // Default timeout is too long for startup scenarios
             cosmosOptions.HttpClientFactory(() =>
             {
-                var httpClient = new HttpClient(new HttpClientHandler
-                {
-                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-                });
+                // Use default certificate validation (secure) with custom timeout
+                var httpClient = new HttpClient();
                 httpClient.Timeout = TimeSpan.FromSeconds(30);
                 return httpClient;
             });
