@@ -174,31 +174,19 @@ public class ScenariosController : ControllerBase
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<ContentAttributionResponse>> GetScenarioAttribution(string id)
     {
-        try
-        {
-            var query = new GetScenarioAttributionQuery(id);
-            var attribution = await _mediator.Send(query);
+        var query = new GetScenarioAttributionQuery(id);
+        var attribution = await _mediator.Send(query);
 
-            if (attribution == null)
-            {
-                return NotFound(new ErrorResponse
-                {
-                    Message = $"Scenario not found: {id}",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            return Ok(attribution);
-        }
-        catch (Exception ex)
+        if (attribution == null)
         {
-            _logger.LogError(ex, "Error getting attribution for scenario {ScenarioId}", id);
-            return StatusCode(500, new ErrorResponse
+            return NotFound(new ErrorResponse
             {
-                Message = "Internal server error while fetching scenario attribution",
+                Message = $"Scenario not found: {id}",
                 TraceId = HttpContext.TraceIdentifier
             });
         }
+
+        return Ok(attribution);
     }
 
     /// <summary>
@@ -213,28 +201,16 @@ public class ScenariosController : ControllerBase
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IpVerificationResponse>> GetScenarioIpStatus(string id)
     {
-        try
-        {
-            var query = new GetScenarioIpStatusQuery(id);
-            var ipStatus = await _mediator.Send(query);
+        var query = new GetScenarioIpStatusQuery(id);
+        var ipStatus = await _mediator.Send(query);
 
-            if (ipStatus == null)
-            {
-                return NotFound(new ErrorResponse
-                {
-                    Message = $"Scenario not found: {id}",
-                    TraceId = HttpContext.TraceIdentifier
-                });
-            }
-
-            return Ok(ipStatus);
-        }
-        catch (Exception ex)
+        if (ipStatus == null)
         {
-            _logger.LogError(ex, "Error getting IP status for scenario {ScenarioId}", id);
-            return StatusCode(500, new ErrorResponse
+            return NotFound(new ErrorResponse
             {
-                Message = "Internal server error while fetching scenario IP status",
+                Message = $"Scenario not found: {id}",
+
+        return Ok(ipStatus);
                 TraceId = HttpContext.TraceIdentifier
             });
         }
