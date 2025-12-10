@@ -79,8 +79,8 @@ This document describes our continuous integration and continuous deployment (CI
 
 | Trigger | Action |
 |---------|--------|
-| Push to `main` | Auto-deploy |
-| PR to `main` | Preview only |
+| Push to `staging` | Auto-deploy |
+| PR to `staging` | Preview only |
 | Manual workflow dispatch | Deploy on-demand |
 
 **Configuration**:
@@ -146,10 +146,10 @@ All API and Admin API workflows support manual deployment invocation via GitHub'
 
 3. **Run Workflow**
    - Click the **"Run workflow"** dropdown button (top right)
-   - Select the target branch:
-     - `dev` for development environment
-     - `staging` for staging environment
-     - `main` for production environment
+   - Select the target branch that corresponds to your desired environment:
+     - `dev` branch → deploys to **Development** environment
+     - `staging` branch → deploys to **Staging** environment
+     - `main` branch → deploys to **Production** environment
    - Click **"Run workflow"** to start the deployment
 
 4. **Monitor Progress**
