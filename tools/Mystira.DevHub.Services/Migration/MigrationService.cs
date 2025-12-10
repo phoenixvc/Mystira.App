@@ -296,13 +296,18 @@ public class MigrationService : IMigrationService
     {
         try
         {
+            // First ensure the database exists
+            var databaseResponse = await client.CreateDatabaseIfNotExistsAsync(databaseName);
+            _logger.LogInformation("Database {Database} ready (created: {Created})", databaseName, databaseResponse.StatusCode == System.Net.HttpStatusCode.Created);
+
+            // Then ensure the container exists
             var database = client.GetDatabase(databaseName);
             var containerResponse = await database.CreateContainerIfNotExistsAsync(containerName, partitionKeyPath);
             _logger.LogInformation("Container {Container} ready (created: {Created})", containerName, containerResponse.StatusCode == System.Net.HttpStatusCode.Created);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Could not ensure container {Container} exists", containerName);
+            _logger.LogWarning(ex, "Could not ensure container {Container} exists in database {Database}", containerName, databaseName);
         }
     }
 
