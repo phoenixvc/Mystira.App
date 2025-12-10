@@ -103,6 +103,34 @@
         }(window,document);
     </script>
 
+    <!-- Telemetry wrapper for Blazor JSInterop -->
+    <script>
+        window.mystiraTelemetry = {
+            trackEvent: function(eventName, properties) {
+                if (window.appInsights && window.appInsights.trackEvent) {
+                    window.appInsights.trackEvent({ name: eventName, properties: properties || {} });
+                }
+            },
+            trackException: function(properties) {
+                if (window.appInsights && window.appInsights.trackException) {
+                    window.appInsights.trackException({
+                        exception: new Error(properties.message || 'Unknown error'),
+                        properties: properties
+                    });
+                }
+            },
+            trackMetric: function(metricName, value, properties) {
+                if (window.appInsights && window.appInsights.trackMetric) {
+                    window.appInsights.trackMetric({
+                        name: metricName,
+                        average: value,
+                        properties: properties || {}
+                    });
+                }
+            }
+        };
+    </script>
+
 </head>
 
 <body>

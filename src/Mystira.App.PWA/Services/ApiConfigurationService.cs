@@ -14,6 +14,7 @@ public class ApiConfigurationService : IApiConfigurationService
     private readonly IConfiguration _configuration;
     private readonly ILogger<ApiConfigurationService> _logger;
     private readonly IApiEndpointCache _endpointCache;
+    private readonly ITelemetryService _telemetry;
     private readonly HttpClient _healthCheckClient;
 
     // LocalStorage keys - using specific prefix to avoid conflicts
@@ -34,12 +35,14 @@ public class ApiConfigurationService : IApiConfigurationService
         IJSRuntime jsRuntime,
         IConfiguration configuration,
         ILogger<ApiConfigurationService> logger,
-        IApiEndpointCache endpointCache)
+        IApiEndpointCache endpointCache,
+        ITelemetryService telemetry)
     {
         _jsRuntime = jsRuntime;
         _configuration = configuration;
         _logger = logger;
         _endpointCache = endpointCache;
+        _telemetry = telemetry;
 
         // Create a simple HttpClient for health checks (no auth needed)
         _healthCheckClient = new HttpClient
@@ -105,6 +108,15 @@ public class ApiConfigurationService : IApiConfigurationService
 
             _logger.LogInformation("API endpoint changed from {OldUrl} to {NewUrl} (Environment: {Environment})",
                 oldUrl, apiBaseUrl, environmentName);
+
+            // Track endpoint change in Application Insights
+            await _telemetry.TrackEventAsync("EndpointChanged", new Dictionary<string, string>
+            {
+                ["OldUrl"] = oldUrl,
+                ["NewUrl"] = apiBaseUrl,
+                ["Environment"] = environmentName ?? "Unknown",
+                ["Timestamp"] = DateTime.UtcNow.ToString("O")
+            });
 
             // Raise event
             EndpointChanged?.Invoke(this, new ApiEndpointChangedEventArgs

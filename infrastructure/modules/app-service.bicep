@@ -308,15 +308,39 @@ resource diagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-pr
   }
 }
 
-// Custom domain binding (requires DNS CNAME record to exist first)
+// Custom domain binding with managed SSL certificate
 // CNAME should point: customDomain -> appServiceName.azurewebsites.net
+//
+// NOTE: For managed certificates, deploy in two phases:
+//   Phase 1: Deploy with enableManagedCert=false (creates hostname binding only)
+//   Phase 2: Deploy with enableManagedCert=true (creates certificate after DNS propagates)
+//
+// This avoids circular dependency issues with certificate validation
+
+@description('Enable managed SSL certificate (requires hostname binding to exist first)')
+param enableManagedCert bool = false
+
 resource customDomainBinding 'Microsoft.Web/sites/hostNameBindings@2023-01-01' = if (enableCustomDomain && customDomain != '') {
   name: customDomain
   parent: appService
   properties: {
     siteName: appService.name
     hostNameType: 'Verified'
-    // Note: SSL certificate can be added separately via App Service Managed Certificate
+    sslState: enableManagedCert ? 'SniEnabled' : 'Disabled'
+    thumbprint: enableManagedCert ? managedCertificate.properties.thumbprint : ''
+  }
+}
+
+// App Service Managed Certificate for custom domain
+// Azure automatically provisions and renews this certificate (free)
+// Only create after hostname binding exists and DNS has propagated
+resource managedCertificate 'Microsoft.Web/certificates@2023-01-01' = if (enableCustomDomain && customDomain != '' && enableManagedCert) {
+  name: '${appServiceName}-${replace(customDomain, '.', '-')}-cert'
+  location: location
+  tags: tags
+  properties: {
+    serverFarmId: appServicePlan.id
+    canonicalName: customDomain
   }
 }
 

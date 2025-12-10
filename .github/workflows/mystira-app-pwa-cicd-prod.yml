@@ -51,6 +51,43 @@ jobs:
       - name: Install wasm-tools workload
         run: dotnet workload install wasm-tools
 
+      - name: Validate API Configuration
+        run: |
+          echo "Validating appsettings configuration..."
+
+          # Check Production config
+          PROD_API_URL=$(jq -r '.ApiConfiguration.DefaultApiBaseUrl // empty' src/Mystira.App.PWA/wwwroot/appsettings.Production.json)
+          if [ -z "$PROD_API_URL" ]; then
+            echo "ERROR: Missing DefaultApiBaseUrl in appsettings.Production.json"
+            exit 1
+          fi
+
+          # Validate URL format
+          if ! [[ "$PROD_API_URL" =~ ^https:// ]]; then
+            echo "ERROR: Production API URL must use HTTPS: $PROD_API_URL"
+            exit 1
+          fi
+
+          # Check that AvailableEndpoints exist and have valid URLs
+          ENDPOINTS=$(jq -r '.ApiConfiguration.AvailableEndpoints[]?.Url // empty' src/Mystira.App.PWA/wwwroot/appsettings.Production.json)
+          if [ -z "$ENDPOINTS" ]; then
+            echo "ERROR: No AvailableEndpoints configured in appsettings.Production.json"
+            exit 1
+          fi
+
+          # Validate each endpoint URL
+          echo "$ENDPOINTS" | while read -r url; do
+            if [ -n "$url" ] && ! [[ "$url" =~ ^https:// ]]; then
+              echo "ERROR: Endpoint URL must use HTTPS: $url"
+              exit 1
+            fi
+          done
+
+          echo "✓ API configuration validation passed"
+          echo "  - Default API: $PROD_API_URL"
+          echo "  - Available endpoints:"
+          jq -r '.ApiConfiguration.AvailableEndpoints[] | "    - \(.Name): \(.Url)"' src/Mystira.App.PWA/wwwroot/appsettings.Production.json
+
       - name: Build Blazor WASM
         run: dotnet publish src/Mystira.App.PWA/Mystira.App.PWA.csproj -c Release -o publish
 

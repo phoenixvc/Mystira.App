@@ -310,6 +310,9 @@ param apiSubdomainPrefix string = 'api'
 @description('Admin API subdomain prefix (e.g., "admin" for admin.mystira.app)')
 param adminApiSubdomainPrefix string = 'admin'
 
+@description('Enable managed SSL certificates for custom domains (requires hostname binding first)')
+param enableManagedCert bool = false
+
 // ─────────────────────────────────────────────────────────────────
 // Computed Values
 // ─────────────────────────────────────────────────────────────────
@@ -613,6 +616,7 @@ module apiCustomDomainBinding 'modules/app-service.bicep' = if (!skipAppServiceC
     tags: tags
     customDomain: apiCustomDomain
     enableCustomDomain: true
+    enableManagedCert: enableManagedCert
   }
 }
 
@@ -648,6 +652,7 @@ module adminApiCustomDomainBinding 'modules/app-service.bicep' = if (!skipAppSer
     tags: tags
     customDomain: adminApiCustomDomain
     enableCustomDomain: true
+    enableManagedCert: enableManagedCert
   }
 }
 

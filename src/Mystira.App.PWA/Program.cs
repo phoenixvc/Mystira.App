@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.JSInterop;
 using Mystira.App.PWA;
 using Mystira.App.PWA.Services;
+using Polly;
+using Polly.Extensions.Http;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -22,6 +24,9 @@ builder.Services.AddScoped<AuthHeaderHandler>();
 // Register singleton cache for API endpoints - solves DelegatingHandler lifetime issues
 // This cache is shared across all handler instances and is thread-safe
 builder.Services.AddSingleton<IApiEndpointCache, ApiEndpointCache>();
+
+// Register telemetry service for Application Insights tracking
+builder.Services.AddScoped<ITelemetryService, TelemetryService>();
 
 // Register API Configuration Service (handles domain persistence across PWA updates)
 // This service reads from localStorage and provides the current API URL
@@ -51,41 +56,77 @@ void ConfigureApiHttpClient(HttpClient client)
     client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
 }
 
-// Register domain-specific API clients with dynamic base address resolution
+// Resilience policies for API clients
+// Retry policy: exponential backoff (2s, 4s, 8s) on transient errors
+var retryPolicy = HttpPolicyExtensions
+    .HandleTransientHttpError()
+    .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+        onRetry: (outcome, timespan, retryAttempt, _) =>
+        {
+            Console.WriteLine($"[Retry] Attempt {retryAttempt} after {timespan.TotalSeconds}s - {outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString()}");
+        });
+
+// Circuit breaker: opens after 5 failures, stays open for 30s
+var circuitBreakerPolicy = HttpPolicyExtensions
+    .HandleTransientHttpError()
+    .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30),
+        onBreak: (outcome, breakDelay) =>
+        {
+            Console.WriteLine($"[CircuitBreaker] Opened for {breakDelay.TotalSeconds}s - {outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString()}");
+        },
+        onReset: () => Console.WriteLine("[CircuitBreaker] Reset"),
+        onHalfOpen: () => Console.WriteLine("[CircuitBreaker] Half-open, testing..."));
+
+// Timeout policy: 30 second timeout per request
+var timeoutPolicy = Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(30));
+
+// Combined policy: timeout wraps retry wraps circuit breaker
+var combinedPolicy = Policy.WrapAsync(timeoutPolicy, retryPolicy, circuitBreakerPolicy);
+
+// Register domain-specific API clients with dynamic base address resolution and resilience policies
 // Each client uses ApiBaseAddressHandler to resolve URLs from localStorage
 builder.Services.AddHttpClient<IScenarioApiClient, ScenarioApiClient>(ConfigureApiHttpClient)
+    .AddPolicyHandler(combinedPolicy)
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IGameSessionApiClient, GameSessionApiClient>(ConfigureApiHttpClient)
+    .AddPolicyHandler(combinedPolicy)
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IUserProfileApiClient, UserProfileApiClient>(ConfigureApiHttpClient)
+    .AddPolicyHandler(combinedPolicy)
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IAuthApiClient, AuthApiClient>(ConfigureApiHttpClient)
+    .AddPolicyHandler(combinedPolicy)
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IMediaApiClient, MediaApiClient>(ConfigureApiHttpClient)
+    .AddPolicyHandler(combinedPolicy)
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IAvatarApiClient, AvatarApiClient>(ConfigureApiHttpClient)
+    .AddPolicyHandler(combinedPolicy)
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IContentBundleApiClient, ContentBundleApiClient>(ConfigureApiHttpClient)
+    .AddPolicyHandler(combinedPolicy)
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<ICharacterApiClient, CharacterApiClient>(ConfigureApiHttpClient)
+    .AddPolicyHandler(combinedPolicy)
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IDiscordApiClient, DiscordApiClient>(ConfigureApiHttpClient)
+    .AddPolicyHandler(combinedPolicy)
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
