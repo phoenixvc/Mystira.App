@@ -104,8 +104,26 @@ if (useCosmosDb)
 {
     // AZURE CLOUD DATABASE: Production Cosmos DB
     builder.Services.AddDbContext<MystiraAppDbContext>(options =>
-        options.UseCosmos(cosmosConnectionString!, "MystiraAppDb")
-               .AddInterceptors(new PartitionKeyInterceptor()));
+    {
+        options.UseCosmos(cosmosConnectionString!, "MystiraAppDb", cosmosOptions =>
+        {
+            // Configure HTTP client timeout to prevent hanging indefinitely
+            // Default timeout is too long for startup scenarios
+            cosmosOptions.HttpClientFactory(() =>
+            {
+                var httpClient = new HttpClient(new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                });
+                httpClient.Timeout = TimeSpan.FromSeconds(30);
+                return httpClient;
+            });
+            
+            // Set request timeout for Cosmos operations
+            cosmosOptions.RequestTimeout(TimeSpan.FromSeconds(30));
+        })
+        .AddInterceptors(new PartitionKeyInterceptor());
+    });
 }
 else
 {
@@ -535,20 +553,55 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
 
-// Initialize database
-using (var scope = app.Services.CreateScope())
+// Initialize database (optional, controlled by configuration)
+var initializeDatabaseOnStartup = builder.Configuration.GetValue<bool>("InitializeDatabaseOnStartup", defaultValue: false);
+var isInMemory = !useCosmosDb;
+
+// Always initialize for in-memory databases (local dev), optional for Cosmos DB (production)
+if (initializeDatabaseOnStartup || isInMemory)
 {
+    using var scope = app.Services.CreateScope();
     var context = scope.ServiceProvider.GetRequiredService<MystiraAppDbContext>();
+    var startupLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
     try
     {
-        await context.Database.EnsureCreatedAsync();
+        startupLogger.LogInformation("Starting database initialization (InitializeDatabaseOnStartup={Init}, InMemory={InMemory})...", initializeDatabaseOnStartup, isInMemory);
+        
+        // Use Task.WhenAny with timeout for more reliable timeout handling
+        // CancellationToken doesn't always work well with Cosmos DB SDK
+        var initTask = context.Database.EnsureCreatedAsync();
+        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(30));
+        var completedTask = await Task.WhenAny(initTask, timeoutTask);
+        
+        if (completedTask == timeoutTask)
+        {
+            // Timeout occurred
+            startupLogger.LogWarning("Database initialization timed out after 30 seconds. The application will start without database initialization. Ensure Azure Cosmos DB is accessible and configured correctly. Set 'InitializeDatabaseOnStartup'=false to skip this check.");
+        }
+        else
+        {
+            // Await the actual task to catch any exceptions
+            await initTask;
+            startupLogger.LogInformation("Database initialization succeeded.");
+        }
     }
     catch (Exception ex)
     {
         // Log error but continue - some environments may not have database access
-        var startupLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        startupLogger.LogWarning(ex, "Failed to initialize database during startup. Continuing without database initialization.");
+        startupLogger.LogWarning(ex, "Failed to initialize database during startup. The application will start in degraded mode. Ensure Azure Cosmos DB is configured correctly. Set 'InitializeDatabaseOnStartup'=false to skip this check.");
+        
+        // Only fail fast in development/local environments where we expect the database to work
+        if (isInMemory)
+        {
+            throw;
+        }
     }
+}
+else
+{
+    var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
+    startupLogger.LogInformation("Database initialization skipped (InitializeDatabaseOnStartup=false). Ensure database and containers are pre-configured in Azure.");
 }
 
 app.Run();
