@@ -116,7 +116,7 @@ resource highLatencyAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = if (ena
   location: 'global'
   tags: tags
   properties: {
-    description: 'Alert when Cosmos DB server-side latency exceeds 100ms (P99)'
+    description: 'Alert when Cosmos DB average server-side latency exceeds 100ms'
     severity: 2 // Warning
     enabled: true
     scopes: [cosmosDbId]
@@ -176,7 +176,7 @@ resource failedRequestsAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = if (
             {
               name: 'StatusCode'
               operator: 'Include'
-              values: ['500', '503']
+              values: ['500', '502', '503', '504']
             }
           ]
         }

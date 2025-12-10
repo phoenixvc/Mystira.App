@@ -404,6 +404,10 @@ public class SecurityMetrics : ISecurityMetrics
         _logger.LogWarning("Invalid input detected ({InputType}) from {ClientIp}", inputType, MaskIp(clientIp));
     }
 
+    /// <remarks>
+    /// NOTE: To use this method, you must wire it up in your CORS middleware or policy.
+    /// Example: In a custom CORS policy handler, call this when an origin is rejected.
+    /// </remarks>
     public void TrackCorsViolation(string? origin, string? clientIp)
     {
         var properties = new Dictionary<string, string>

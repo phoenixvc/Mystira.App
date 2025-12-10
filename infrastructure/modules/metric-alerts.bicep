@@ -65,15 +65,15 @@ resource httpErrorAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = if (enabl
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SLOW RESPONSE TIME ALERT
-// Triggers when response time P95 exceeds threshold
+// SLOW RESPONSE TIME ALERT (Average)
+// Triggers when average response time exceeds threshold
 // ═══════════════════════════════════════════════════════════════════════════════
 resource slowResponseAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = if (enableAlerts) {
   name: '${alertPrefix}-slow-response'
   location: 'global'
   tags: tags
   properties: {
-    description: 'Alert when P95 response time exceeds 3 seconds'
+    description: 'Alert when average response time exceeds 3 seconds'
     severity: 2 // Warning
     enabled: true
     scopes: [appInsightsId]
@@ -104,6 +104,48 @@ resource slowResponseAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = if (en
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// P95 RESPONSE TIME ALERT (Log-based query for accurate percentile)
+// Triggers when 95th percentile response time exceeds threshold
+// ═══════════════════════════════════════════════════════════════════════════════
+resource p95ResponseAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview' = if (enableAlerts) {
+  name: '${alertPrefix}-p95-response'
+  location: resourceGroup().location
+  tags: tags
+  properties: {
+    displayName: '${alertPrefix} P95 Response Time'
+    description: 'Alert when P95 response time exceeds 5 seconds'
+    enabled: true
+    severity: 2 // Warning
+    evaluationFrequency: 'PT5M' // Check every 5 minutes
+    windowSize: 'PT15M' // Look at 15 minute window
+    scopes: [appInsightsId]
+    criteria: {
+      allOf: [
+        {
+          query: '''
+            requests
+            | where timestamp > ago(15m)
+            | summarize P95 = percentile(duration, 95)
+            | where P95 > 5000
+          '''
+          timeAggregation: 'Count'
+          operator: 'GreaterThan'
+          threshold: 0
+          failingPeriods: {
+            numberOfEvaluationPeriods: 1
+            minFailingPeriodsToAlert: 1
+          }
+        }
+      ]
+    }
+    actions: {
+      actionGroups: [actionGroupId]
+    }
+    autoMitigate: true
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // HIGH FAILED REQUEST RATE ALERT
 // Triggers when failed request percentage exceeds threshold
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -112,7 +154,7 @@ resource failedRequestRateAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = i
   location: 'global'
   tags: tags
   properties: {
-    description: 'Alert when failed request rate exceeds 10%'
+    description: 'Alert when failed request count exceeds 10 in 15 minutes'
     severity: 1 // Critical
     enabled: true
     scopes: [appInsightsId]
@@ -262,6 +304,7 @@ resource exceptionAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = if (enabl
 // Outputs
 output httpErrorAlertId string = enableAlerts ? httpErrorAlert.id : ''
 output slowResponseAlertId string = enableAlerts ? slowResponseAlert.id : ''
+output p95ResponseAlertId string = enableAlerts ? p95ResponseAlert.id : ''
 output failedRequestRateAlertId string = enableAlerts ? failedRequestRateAlert.id : ''
 output highCpuAlertId string = enableAlerts ? highCpuAlert.id : ''
 output highMemoryAlertId string = enableAlerts ? highMemoryAlert.id : ''

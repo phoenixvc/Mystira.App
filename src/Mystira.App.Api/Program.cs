@@ -555,6 +555,9 @@ builder.Services.AddCors(options =>
         // Allow credentials for authenticated requests (required for cookies/auth headers)
         policy.AllowCredentials();
 
+        // Expose headers that clients need to read from responses
+        policy.WithExposedHeaders("X-Correlation-Id");
+
         // Set preflight cache duration (24 hours)
         policy.SetPreflightMaxAge(TimeSpan.FromHours(24));
     });

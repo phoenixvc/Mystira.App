@@ -308,6 +308,44 @@ builder.Services.AddAuthentication(options =>
         }
 
         options.TokenValidationParameters = validationParameters;
+
+        // JWT events for security tracking
+        options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+        {
+            OnAuthenticationFailed = context =>
+            {
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                var ua = context.HttpContext.Request.Headers["User-Agent"].ToString();
+                var path = context.HttpContext.Request.Path;
+                logger.LogError(context.Exception, "JWT authentication failed on {Path} (UA: {UserAgent})", path, ua);
+
+                // Track in security metrics
+                var securityMetrics = context.HttpContext.RequestServices.GetService<ISecurityMetrics>();
+                var clientIp = context.HttpContext.Connection.RemoteIpAddress?.ToString();
+                var reason = context.Exception?.GetType().Name ?? "Unknown";
+                securityMetrics?.TrackTokenValidationFailed(clientIp, reason);
+
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = context =>
+            {
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                var userId = context.Principal?.Identity?.Name;
+                logger.LogInformation("JWT token validated for user: {User}", userId);
+
+                // Track successful authentication in security metrics
+                var securityMetrics = context.HttpContext.RequestServices.GetService<ISecurityMetrics>();
+                securityMetrics?.TrackAuthenticationSuccess("JWT", userId);
+
+                return Task.CompletedTask;
+            },
+            OnChallenge = context =>
+            {
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogWarning("JWT challenge on {Path}: {Error} - {Description}", context.HttpContext.Request.Path, context.Error, context.ErrorDescription);
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -469,6 +507,9 @@ builder.Services.AddCors(options =>
 
         // Allow credentials for authenticated requests (required for cookies/auth headers)
         policy.AllowCredentials();
+
+        // Expose headers that clients need to read from responses
+        policy.WithExposedHeaders("X-Correlation-Id");
 
         // Set preflight cache duration (24 hours)
         policy.SetPreflightMaxAge(TimeSpan.FromHours(24));

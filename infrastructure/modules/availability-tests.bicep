@@ -19,6 +19,9 @@ param actionGroupId string
 @description('Base URL for the API (e.g., https://api.mystira.app)')
 param apiBaseUrl string
 
+@description('Base URL for the Admin API (e.g., https://admin-api.mystira.app)')
+param adminApiBaseUrl string = ''
+
 @description('Base URL for the PWA (e.g., https://mystira.app)')
 param pwaBaseUrl string = ''
 
@@ -40,6 +43,8 @@ var apiHealthTestGuid = guid('${testPrefix}-api-health-test')
 var apiHealthRequestGuid = guid('${testPrefix}-api-health-request')
 var apiReadyTestGuid = guid('${testPrefix}-api-ready-test')
 var apiReadyRequestGuid = guid('${testPrefix}-api-ready-request')
+var adminApiHealthTestGuid = guid('${testPrefix}-admin-api-health-test')
+var adminApiHealthRequestGuid = guid('${testPrefix}-admin-api-health-request')
 var pwaHomeTestGuid = guid('${testPrefix}-pwa-home-test')
 var pwaHomeRequestGuid = guid('${testPrefix}-pwa-home-request')
 
@@ -50,6 +55,8 @@ var apiHealthWebTest = '<WebTest Name="${testPrefix}-api-health-test" Id="${apiH
 var apiReadyWebTest = '<WebTest Name="${testPrefix}-api-ready-test" Id="${apiReadyTestGuid}" Enabled="True" Timeout="30" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010"><Items><Request Method="GET" Guid="${apiReadyRequestGuid}" Version="1.1" Url="${apiBaseUrl}/health/ready" ThinkTime="0" Timeout="30" ParseDependentRequests="False" FollowRedirects="True" RecordResult="True" Cache="False" ResponseTimeGoal="0" Encoding="utf-8" ExpectedHttpStatusCode="200"/></Items></WebTest>'
 
 var pwaHomeWebTest = '<WebTest Name="${testPrefix}-pwa-home-test" Id="${pwaHomeTestGuid}" Enabled="True" Timeout="60" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010"><Items><Request Method="GET" Guid="${pwaHomeRequestGuid}" Version="1.1" Url="${pwaBaseUrl}/" ThinkTime="0" Timeout="60" ParseDependentRequests="False" FollowRedirects="True" RecordResult="True" Cache="False" ResponseTimeGoal="0" Encoding="utf-8" ExpectedHttpStatusCode="200"/></Items></WebTest>'
+
+var adminApiHealthWebTest = '<WebTest Name="${testPrefix}-admin-api-health-test" Id="${adminApiHealthTestGuid}" Enabled="True" Timeout="30" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010"><Items><Request Method="GET" Guid="${adminApiHealthRequestGuid}" Version="1.1" Url="${adminApiBaseUrl}/health" ThinkTime="0" Timeout="30" ParseDependentRequests="False" FollowRedirects="True" RecordResult="True" Cache="False" ResponseTimeGoal="0" Encoding="utf-8" ExpectedHttpStatusCode="200"/></Items></WebTest>'
 
 // Test locations (use multiple geographic locations for reliability)
 // See: https://docs.microsoft.com/en-us/azure/azure-monitor/app/monitor-web-app-availability#location
@@ -126,6 +133,33 @@ resource apiReadyTest 'Microsoft.Insights/webtests@2022-06-15' = if (enableAvail
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN API HEALTH ENDPOINT TEST
+// Availability test for Admin API health endpoint
+// ═══════════════════════════════════════════════════════════════════════════════
+resource adminApiHealthTest 'Microsoft.Insights/webtests@2022-06-15' = if (enableAvailabilityTests && !empty(adminApiBaseUrl)) {
+  name: '${testPrefix}-admin-api-health-test'
+  location: location
+  tags: union(tags, {
+    'hidden-link:${appInsightsId}': 'Resource'
+  })
+  kind: 'ping'
+  properties: {
+    SyntheticMonitorId: '${testPrefix}-admin-api-health-test'
+    Name: '${testPrefix} Admin API Health Check'
+    Description: 'Tests the Admin API /health endpoint for availability'
+    Enabled: true
+    Frequency: testFrequencySeconds
+    Timeout: 30
+    Kind: 'ping'
+    RetryEnabled: true
+    Locations: take(testLocations, 3) // Use fewer locations for Admin API
+    Configuration: {
+      WebTest: adminApiHealthWebTest
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // PWA HOME PAGE TEST (Optional)
 // Tests the PWA is loading correctly
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -194,5 +228,6 @@ resource availabilityAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = if (en
 // Outputs
 output apiHealthTestId string = enableAvailabilityTests && !empty(apiBaseUrl) ? apiHealthTest.id : ''
 output apiReadyTestId string = enableAvailabilityTests && !empty(apiBaseUrl) ? apiReadyTest.id : ''
+output adminApiHealthTestId string = enableAvailabilityTests && !empty(adminApiBaseUrl) ? adminApiHealthTest.id : ''
 output pwaHomeTestId string = enableAvailabilityTests && !empty(pwaBaseUrl) ? pwaHomeTest.id : ''
 output availabilityAlertId string = enableAvailabilityTests && !empty(apiBaseUrl) ? availabilityAlert.id : ''

@@ -22,11 +22,14 @@ param enableSecurityAlerts bool = true
 // Naming convention helper
 var alertPrefix = '${environment}-${project}'
 
+// Safety check: Only create alerts if actionGroupId is provided
+var shouldCreateAlerts = enableSecurityAlerts && !empty(actionGroupId)
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // BRUTE FORCE DETECTION ALERT
 // Triggers when authentication failures from same source exceed threshold
 // ═══════════════════════════════════════════════════════════════════════════════
-resource bruteForceAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview' = if (enableSecurityAlerts) {
+resource bruteForceAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview' = if (shouldCreateAlerts) {
   name: '${alertPrefix}-brute-force-detected'
   location: resourceGroup().location
   tags: tags
@@ -68,7 +71,7 @@ resource bruteForceAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-prev
 // SUSTAINED RATE LIMITING ALERT
 // Triggers when rate limit hits are sustained over time
 // ═══════════════════════════════════════════════════════════════════════════════
-resource rateLimitSustainedAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview' = if (enableSecurityAlerts) {
+resource rateLimitSustainedAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview' = if (shouldCreateAlerts) {
   name: '${alertPrefix}-rate-limit-sustained'
   location: resourceGroup().location
   tags: tags
@@ -110,7 +113,7 @@ resource rateLimitSustainedAlert 'Microsoft.Insights/scheduledQueryRules@2023-03
 // JWT VALIDATION FAILURE SPIKE ALERT
 // Triggers when token validation failures spike
 // ═══════════════════════════════════════════════════════════════════════════════
-resource jwtValidationAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview' = if (enableSecurityAlerts) {
+resource jwtValidationAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview' = if (shouldCreateAlerts) {
   name: '${alertPrefix}-jwt-validation-spike'
   location: resourceGroup().location
   tags: tags
@@ -152,7 +155,7 @@ resource jwtValidationAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-p
 // SUSPICIOUS ACTIVITY ALERT
 // Triggers on any suspicious request detection
 // ═══════════════════════════════════════════════════════════════════════════════
-resource suspiciousActivityAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview' = if (enableSecurityAlerts) {
+resource suspiciousActivityAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview' = if (shouldCreateAlerts) {
   name: '${alertPrefix}-suspicious-activity'
   location: resourceGroup().location
   tags: tags
@@ -191,7 +194,7 @@ resource suspiciousActivityAlert 'Microsoft.Insights/scheduledQueryRules@2023-03
 }
 
 // Outputs
-output bruteForceAlertId string = enableSecurityAlerts ? bruteForceAlert.id : ''
-output rateLimitSustainedAlertId string = enableSecurityAlerts ? rateLimitSustainedAlert.id : ''
-output jwtValidationAlertId string = enableSecurityAlerts ? jwtValidationAlert.id : ''
-output suspiciousActivityAlertId string = enableSecurityAlerts ? suspiciousActivityAlert.id : ''
+output bruteForceAlertId string = shouldCreateAlerts ? bruteForceAlert.id : ''
+output rateLimitSustainedAlertId string = shouldCreateAlerts ? rateLimitSustainedAlert.id : ''
+output jwtValidationAlertId string = shouldCreateAlerts ? jwtValidationAlert.id : ''
+output suspiciousActivityAlertId string = shouldCreateAlerts ? suspiciousActivityAlert.id : ''

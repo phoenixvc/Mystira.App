@@ -28,9 +28,6 @@ param appServiceId string = ''
 @description('Cosmos DB account resource ID (optional, for database metrics)')
 param cosmosDbId string = ''
 
-@description('App Service Plan resource ID (optional, for hosting metrics)')
-param appServicePlanId string = ''
-
 // Dashboard definition
 resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
   name: dashboardName
