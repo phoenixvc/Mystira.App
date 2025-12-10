@@ -120,11 +120,10 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
-                // Existing Cosmos container 'Accounts' is provisioned with partition key path '/Id' (uppercase I).
-                // Keep document key mapped to JSON 'id' while using a separate partition key property mapped to 'Id'.
-                entity.Property<string>("PartitionKeyIdUpper").ToJsonProperty("Id");
+                // Existing Cosmos container 'Accounts' uses partition key path '/id' (lowercase).
+                // Use the Id property directly as the partition key.
                 entity.ToContainer("Accounts")
-                      .HasPartitionKey("PartitionKeyIdUpper");
+                      .HasPartitionKey(e => e.Id);
             }
 
             entity.Property(e => e.UserProfileIds)

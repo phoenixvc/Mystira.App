@@ -241,8 +241,10 @@ builder.Services.AddAuthentication(options =>
 
                 if (skipPrefixes.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
                 {
+                    // Skip bearer processing for public/auth routes
+                    // Note: Using Debug level to avoid log spam from health check endpoints
                     var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                    logger.LogInformation("Skipping JWT bearer processing for auth route: {Path}", path);
+                    logger.LogDebug("Skipping JWT bearer processing for auth route: {Path}", path);
                     context.NoResult();
                     return Task.CompletedTask;
                 }
@@ -516,7 +518,12 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = string.Empty; // Serve Swagger UI at root
 });
 
-app.UseHttpsRedirection();
+// Only use HTTPS redirection in development
+// In production (Azure App Service), HTTPS is handled at the load balancer level
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 // Add OWASP security headers (BUG-6)
 app.UseSecurityHeaders();
