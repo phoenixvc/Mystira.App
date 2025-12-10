@@ -42,7 +42,6 @@ COPY --from=publish /app/publish .
 # Copy appsettings files explicitly to ensure they're available at runtime
 # These should be overridden by environment variables or volume mounts in production
 COPY --from=build /src/Mystira.App.Api/appsettings.json .
-COPY --from=build /src/Mystira.App.Api/appsettings.Production.json* ./
 
 # Create a non-root user for security
 RUN adduser --disabled-password --gecos '' appuser && chown -R appuser /app

@@ -64,9 +64,9 @@ services:
       - ConnectionStrings__AzureStorage=${AZURE_STORAGE_CONNECTION_STRING:-}
       - Azure__BlobStorage__ContainerName=${BLOB_CONTAINER_NAME:-mystira-app-media}
       # JWT Settings (same as API for token validation)
-      - Jwt__Issuer=${JWT_ISSUER:-mystira-app-api}
-      - Jwt__Audience=${JWT_AUDIENCE:-mystira-app-app}
-      - Jwt__Key=${JWT_SECRET_KEY:-}
+      - JwtSettings__Issuer=${JWT_ISSUER:-mystira-app-api}
+      - JwtSettings__Audience=${JWT_AUDIENCE:-mystira-app-app}
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY:-}
       # Database initialization
       - InitializeDatabaseOnStartup=true
       - SeedMasterDataOnStartup=false
