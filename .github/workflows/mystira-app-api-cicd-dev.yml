@@ -51,6 +51,9 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: "1"
   # Evaluates to "true"/"false" at workflow parse time
   HAS_PUBLISH_PROFILE_DEV: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV != '' }}
+  # Application Insights for deployment annotations
+  APP_INSIGHTS_NAME: "mys-dev-mystira-appins-san"
+  RESOURCE_GROUP: "mys-dev-mystira-rg-san"
 
 jobs:
   build-and-test:
@@ -174,6 +177,46 @@ jobs:
               {"name": "StoryProtocol__RpcUrl", "value": "${{ secrets.STORY_PROTOCOL_RPC_URL || 'https://aeneid.storyrpc.io' }}", "slotSetting": false},
               {"name": "StoryProtocol__PrivateKey", "value": "${{ secrets.STORY_PROTOCOL_WALLET_PRIVATE_KEY }}", "slotSetting": false}
             ]
+
+      - name: Smoke test - Health check
+        id: smoke-test
+        run: |
+          APP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+          echo "🔍 Running post-deployment smoke tests for ${APP_URL}"
+
+          # Wait for deployment to stabilize
+          sleep 30
+
+          # Retry logic for health check
+          MAX_RETRIES=5
+          RETRY_DELAY=10
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i of $MAX_RETRIES..."
+
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 10 \
+              --max-time 30 \
+              "${APP_URL}/health" || echo "000")
+
+            echo "  Status: ${HTTP_STATUS}"
+
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "✅ Health check passed!"
+              echo "health_status=healthy" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            if [ $i -lt $MAX_RETRIES ]; then
+              echo "  Retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "❌ Health check failed after $MAX_RETRIES attempts"
+          echo "health_status=unhealthy" >> $GITHUB_OUTPUT
+          # Don't fail the workflow for dev - just warn
+          echo "::warning::Health check failed - deployment may need investigation"
 
       - name: Azure Logout
         if: always()

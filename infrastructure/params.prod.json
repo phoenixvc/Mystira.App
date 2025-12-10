@@ -88,6 +88,24 @@
     },
     "enableManagedCert": {
       "value": true
+    },
+    "enableAlerts": {
+      "value": true
+    },
+    "enableAvailabilityTests": {
+      "value": true
+    },
+    "alertEmailReceivers": {
+      "value": ["devops@mystira.app"]
+    },
+    "deployDashboard": {
+      "value": true
+    },
+    "deployBudget": {
+      "value": true
+    },
+    "monthlyBudget": {
+      "value": 500
     }
   }
 }

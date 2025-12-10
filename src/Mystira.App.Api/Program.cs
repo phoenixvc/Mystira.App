@@ -24,14 +24,78 @@ using Mystira.App.Infrastructure.Azure.Services;
 using Mystira.App.Infrastructure.Data;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.Services;
+using Microsoft.ApplicationInsights.Extensibility;
 using Mystira.App.Infrastructure.Discord;
 using Mystira.App.Infrastructure.Discord.Services;
 using Mystira.App.Infrastructure.StoryProtocol;
 using Mystira.App.Shared.Middleware;
+using Mystira.App.Shared.Telemetry;
+using Serilog;
+using Serilog.Events;
 
-var builder = WebApplication.CreateBuilder(args);
+// ═══════════════════════════════════════════════════════════════════════════════
+// SERILOG BOOTSTRAP LOGGING (before host is built)
+// ═══════════════════════════════════════════════════════════════════════════════
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
 
-// Add services to the container
+try
+{
+    Log.Information("Starting Mystira.App.Api");
+
+    var builder = WebApplication.CreateBuilder(args);
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SERILOG CONFIGURATION (reads from appsettings.json)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    builder.Host.UseSerilog((context, services, configuration) => configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .Enrich.WithMachineName()
+        .Enrich.WithThreadId()
+        .Enrich.WithCorrelationId()
+        .Enrich.WithProperty("Application", "Mystira.App.Api")
+        .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName)
+        .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+        .WriteTo.ApplicationInsights(
+            services.GetService<TelemetryConfiguration>(),
+            TelemetryConverter.Traces));
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // APPLICATION INSIGHTS TELEMETRY CONFIGURATION
+    // ═══════════════════════════════════════════════════════════════════════════════
+    builder.Services.AddApplicationInsightsTelemetry(options =>
+    {
+        // Enable adaptive sampling only in production to reduce telemetry volume
+        options.EnableAdaptiveSampling = builder.Environment.IsProduction();
+        options.EnableDependencyTrackingTelemetryModule = true;
+        options.EnableQuickPulseMetricStream = true; // Live Metrics
+        options.EnablePerformanceCounterCollectionModule = true;
+        options.EnableRequestTrackingTelemetryModule = true;
+        options.EnableEventCounterCollectionModule = true;
+    });
+
+    // Configure cloud role name for Application Map and distributed tracing
+    builder.Services.AddSingleton<ITelemetryInitializer>(sp =>
+    {
+        var env = sp.GetRequiredService<IWebHostEnvironment>();
+        return new CloudRoleNameInitializer("Mystira.App.Api", env.EnvironmentName);
+    });
+
+    // Register custom metrics service for business KPIs
+    builder.Services.AddCustomMetrics(builder.Environment.EnvironmentName);
+
+    // Register security metrics service for auth tracking, rate limiting, etc.
+    builder.Services.AddSecurityMetrics(builder.Environment.EnvironmentName);
+
+    // Configure request logging options from configuration
+    builder.Services.Configure<RequestLoggingOptions>(builder.Configuration.GetSection("RequestLogging"));
+
+    // Add services to the container
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(options =>
     {
@@ -549,6 +613,26 @@ app.UseSecurityHeaders();
 // Add rate limiting (BUG-5)
 app.UseRateLimiter();
 
+// Add correlation ID middleware (early in pipeline for tracing)
+app.UseCorrelationId();
+
+// Add Serilog request logging (replaces default request logging)
+app.UseSerilogRequestLogging(options =>
+{
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
+        diagnosticContext.Set("UserAgent", httpContext.Request.Headers["User-Agent"].FirstOrDefault());
+        if (httpContext.Items.TryGetValue("CorrelationId", out var correlationId))
+        {
+            diagnosticContext.Set("CorrelationId", correlationId);
+        }
+    };
+});
+
+// Add custom request logging middleware for detailed tracking
+app.UseRequestLogging();
+
 app.UseRouting();
 
 // ✅ CORS must be between UseRouting and auth/endpoints
@@ -611,7 +695,16 @@ else
     startupLogger.LogInformation("Database initialization skipped (InitializeDatabaseOnStartup=false). Ensure database and containers are pre-configured in Azure.");
 }
 
-app.Run();
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
 // Make Program class accessible for testing
 namespace Mystira.App.Api

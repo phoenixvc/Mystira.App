@@ -77,6 +77,10 @@ var names = {
   // Monitoring
   logAnalytics: '${namePrefix}-log-${region}'
   appInsights: '${namePrefix}-appins-${region}'
+  actionGroup: '${namePrefix}-alerts-${region}'
+  actionGroupShort: '${org}${envShort}alerts' // Max 12 chars for action group short name
+  dashboard: '${namePrefix}-dashboard-${region}'
+  budget: '${namePrefix}-budget-${region}'
 
   // Communication (global service)
   communicationService: '${namePrefix}-acs-glob'
@@ -314,6 +318,31 @@ param adminApiSubdomainPrefix string = 'admin'
 param enableManagedCert bool = false
 
 // ─────────────────────────────────────────────────────────────────
+// Monitoring & Alerting Parameters
+// ─────────────────────────────────────────────────────────────────
+
+@description('Enable metric alerts (recommended to disable for dev to reduce noise)')
+param enableAlerts bool = true
+
+@description('Enable availability tests')
+param enableAvailabilityTests bool = true
+
+@description('Email addresses for alert notifications (comma-separated or array)')
+param alertEmailReceivers array = []
+
+@description('Webhook URLs for alert notifications')
+param alertWebhookReceivers array = []
+
+@description('Deploy Azure Dashboard for monitoring')
+param deployDashboard bool = true
+
+@description('Deploy budget alerts for cost management')
+param deployBudget bool = true
+
+@description('Monthly budget amount in USD')
+param monthlyBudget int = 100
+
+// ─────────────────────────────────────────────────────────────────
 // Computed Values
 // ─────────────────────────────────────────────────────────────────
 
@@ -356,6 +385,92 @@ module appInsights 'modules/application-insights.bicep' = {
     appInsightsName: names.appInsights
     location: location
     logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+  }
+}
+
+// Action Group for Alert Notifications
+module actionGroup 'modules/action-group.bicep' = if (enableAlerts && length(alertEmailReceivers) > 0) {
+  name: 'deploy-action-group'
+  params: {
+    actionGroupName: names.actionGroup
+    actionGroupShortName: names.actionGroupShort
+    emailReceivers: alertEmailReceivers
+    webhookReceivers: alertWebhookReceivers
+    tags: tags
+    enabled: true
+  }
+}
+
+// Metric Alerts (HTTP errors, slow response, CPU/Memory, etc.)
+module metricAlerts 'modules/metric-alerts.bicep' = if (enableAlerts && length(alertEmailReceivers) > 0 && !skipAppServiceCreation) {
+  name: 'deploy-metric-alerts'
+  dependsOn: [actionGroup, apiAppService]
+  params: {
+    environment: environment
+    project: project
+    appInsightsId: appInsights.outputs.appInsightsId
+    appServiceId: apiAppService.outputs.appServicePlanId
+    actionGroupId: enableAlerts && length(alertEmailReceivers) > 0 ? actionGroup.outputs.actionGroupId : ''
+    tags: tags
+    enableAlerts: enableAlerts
+  }
+}
+
+// Availability Tests (synthetic monitoring)
+module availabilityTests 'modules/availability-tests.bicep' = if (enableAvailabilityTests && length(alertEmailReceivers) > 0 && !skipAppServiceCreation) {
+  name: 'deploy-availability-tests'
+  dependsOn: [actionGroup, apiAppService]
+  params: {
+    environment: environment
+    project: project
+    location: location
+    appInsightsId: appInsights.outputs.appInsightsId
+    actionGroupId: enableAlerts && length(alertEmailReceivers) > 0 ? actionGroup.outputs.actionGroupId : ''
+    apiBaseUrl: 'https://${apiAppService.outputs.appServiceDefaultHostname}'
+    pwaBaseUrl: deployStaticWebApp ? 'https://${staticWebApp.outputs.staticWebAppDefaultHostname}' : ''
+    tags: tags
+    enableAvailabilityTests: enableAvailabilityTests
+    testFrequencySeconds: environment == 'prod' ? 300 : 600 // 5 min for prod, 10 min for others
+  }
+}
+
+// Security Alerts (brute force detection, rate limit monitoring, etc.)
+module securityAlerts 'modules/security-alerts.bicep' = if (enableAlerts && length(alertEmailReceivers) > 0) {
+  name: 'deploy-security-alerts'
+  dependsOn: [actionGroup]
+  params: {
+    environment: environment
+    project: project
+    appInsightsId: appInsights.outputs.appInsightsId
+    actionGroupId: enableAlerts && length(alertEmailReceivers) > 0 ? actionGroup.outputs.actionGroupId : ''
+    tags: tags
+    enableSecurityAlerts: enableAlerts
+  }
+}
+
+// Monitoring Dashboard
+module monitoringDashboard 'modules/dashboard.bicep' = if (deployDashboard) {
+  name: 'deploy-monitoring-dashboard'
+  params: {
+    dashboardName: names.dashboard
+    location: location
+    appInsightsId: appInsights.outputs.appInsightsId
+    appInsightsName: appInsights.outputs.appInsightsName
+    tags: tags
+    environment: environment
+    project: project
+  }
+}
+
+// Budget Alerts for Cost Management
+module budgetAlerts 'modules/budget.bicep' = if (deployBudget && length(alertEmailReceivers) > 0) {
+  name: 'deploy-budget-alerts'
+  params: {
+    budgetName: names.budget
+    monthlyBudget: monthlyBudget
+    alertEmailReceivers: alertEmailReceivers
+    tags: tags
+    enableBudget: deployBudget
   }
 }
 
@@ -743,3 +858,10 @@ output keyVaultUri string = keyVault.outputs.keyVaultUri
 output primaryRegion string = location
 output primaryRegionCode string = region
 output fallbackRegionForSWA string = fallbackRegion
+
+// Monitoring & Alerting
+output actionGroupId string = enableAlerts && length(alertEmailReceivers) > 0 ? actionGroup.outputs.actionGroupId : ''
+output alertsEnabled bool = enableAlerts
+output availabilityTestsEnabled bool = enableAvailabilityTests
+output dashboardId string = deployDashboard ? monitoringDashboard.outputs.dashboardId : ''
+output budgetConfigured bool = deployBudget && length(alertEmailReceivers) > 0
