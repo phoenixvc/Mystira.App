@@ -1,6 +1,7 @@
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Mystira.App.Shared.Telemetry;
@@ -65,6 +66,26 @@ public interface ICustomMetrics
     /// Tracks an exception.
     /// </summary>
     void TrackException(Exception exception, IDictionary<string, string>? properties = null);
+
+    /// <summary>
+    /// Tracks a database query execution with performance metrics.
+    /// </summary>
+    void TrackDatabaseQuery(string queryName, string? collection, TimeSpan duration, bool success, double? requestUnits = null);
+
+    /// <summary>
+    /// Tracks blob storage operation performance.
+    /// </summary>
+    void TrackBlobOperation(string operation, string containerName, long? bytesTransferred, TimeSpan duration, bool success);
+
+    /// <summary>
+    /// Tracks cache hit/miss for query caching.
+    /// </summary>
+    void TrackCacheAccess(string cacheKey, bool hit);
+
+    /// <summary>
+    /// Tracks JWT token refresh attempt.
+    /// </summary>
+    void TrackTokenRefresh(string? userId, bool success, string? failureReason = null);
 }
 
 /// <summary>
@@ -305,6 +326,112 @@ public class CustomMetrics : ICustomMetrics
 
         _telemetryClient.TrackException(exceptionTelemetry);
     }
+
+    public void TrackDatabaseQuery(string queryName, string? collection, TimeSpan duration, bool success, double? requestUnits = null)
+    {
+        var properties = new Dictionary<string, string>
+        {
+            ["QueryName"] = queryName,
+            ["Success"] = success.ToString(),
+            ["Environment"] = _environment
+        };
+
+        if (!string.IsNullOrEmpty(collection))
+            properties["Collection"] = collection;
+
+        var metrics = new Dictionary<string, double>
+        {
+            ["DurationMs"] = duration.TotalMilliseconds
+        };
+
+        if (requestUnits.HasValue)
+            metrics["RequestUnits"] = requestUnits.Value;
+
+        TrackEvent("Database.Query", properties, metrics);
+        TrackMetric($"Database.Query.{queryName}.Duration", duration.TotalMilliseconds, properties);
+
+        if (requestUnits.HasValue)
+            TrackMetric("Database.Query.RequestUnits", requestUnits.Value, properties);
+
+        // Track slow queries (> 500ms)
+        if (duration.TotalMilliseconds > 500)
+        {
+            _logger.LogWarning("Slow database query: {QueryName} took {Duration}ms (RU: {RU})",
+                queryName, duration.TotalMilliseconds, requestUnits);
+            TrackMetric("Database.SlowQueries", 1, properties);
+        }
+    }
+
+    public void TrackBlobOperation(string operation, string containerName, long? bytesTransferred, TimeSpan duration, bool success)
+    {
+        var properties = new Dictionary<string, string>
+        {
+            ["Operation"] = operation,
+            ["Container"] = containerName,
+            ["Success"] = success.ToString(),
+            ["Environment"] = _environment
+        };
+
+        var metrics = new Dictionary<string, double>
+        {
+            ["DurationMs"] = duration.TotalMilliseconds
+        };
+
+        if (bytesTransferred.HasValue)
+            metrics["BytesTransferred"] = bytesTransferred.Value;
+
+        TrackEvent($"BlobStorage.{operation}", properties, metrics);
+        TrackMetric($"BlobStorage.{operation}.Duration", duration.TotalMilliseconds, properties);
+
+        if (bytesTransferred.HasValue && duration.TotalSeconds > 0)
+        {
+            var throughputKBps = (bytesTransferred.Value / 1024.0) / duration.TotalSeconds;
+            TrackMetric("BlobStorage.ThroughputKBps", throughputKBps, properties);
+        }
+
+        if (!success)
+        {
+            _logger.LogWarning("Blob storage operation failed: {Operation} on {Container}", operation, containerName);
+            TrackMetric("BlobStorage.Failures", 1, properties);
+        }
+    }
+
+    public void TrackCacheAccess(string cacheKey, bool hit)
+    {
+        var properties = new Dictionary<string, string>
+        {
+            ["CacheKey"] = cacheKey,
+            ["Hit"] = hit.ToString(),
+            ["Environment"] = _environment
+        };
+
+        TrackMetric(hit ? "Cache.Hits" : "Cache.Misses", 1, properties);
+
+        _logger.LogDebug("Cache {Result} for key: {CacheKey}", hit ? "hit" : "miss", cacheKey);
+    }
+
+    public void TrackTokenRefresh(string? userId, bool success, string? failureReason = null)
+    {
+        var properties = new Dictionary<string, string>
+        {
+            ["Success"] = success.ToString(),
+            ["Environment"] = _environment
+        };
+
+        if (!string.IsNullOrEmpty(userId))
+            properties["UserId"] = userId;
+
+        if (!string.IsNullOrEmpty(failureReason))
+            properties["FailureReason"] = failureReason;
+
+        TrackEvent(success ? "Auth.TokenRefresh.Success" : "Auth.TokenRefresh.Failed", properties);
+        TrackMetric(success ? "Auth.TokenRefreshes.Success" : "Auth.TokenRefreshes.Failed", 1, properties);
+
+        if (!success)
+        {
+            _logger.LogWarning("Token refresh failed for user {UserId}: {Reason}", userId ?? "unknown", failureReason ?? "unknown");
+        }
+    }
 }
 
 /// <summary>
@@ -314,6 +441,7 @@ public static class CustomMetricsExtensions
 {
     /// <summary>
     /// Adds ICustomMetrics service to the DI container.
+    /// Logs a warning if Application Insights is not configured in non-development environments.
     /// </summary>
     public static IServiceCollection AddCustomMetrics(this IServiceCollection services, string environment)
     {
@@ -321,6 +449,30 @@ public static class CustomMetricsExtensions
         {
             var telemetryClient = sp.GetService<TelemetryClient>();
             var logger = sp.GetRequiredService<ILogger<CustomMetrics>>();
+            var hostEnv = sp.GetService<IHostEnvironment>();
+
+            // Warn if App Insights is not available in non-development environments
+            if (telemetryClient == null && hostEnv != null && !hostEnv.IsDevelopment())
+            {
+                logger.LogError(
+                    "Application Insights TelemetryClient is not configured in {Environment} environment! " +
+                    "Metrics and telemetry will NOT be collected. " +
+                    "Ensure APPLICATIONINSIGHTS_CONNECTION_STRING is set.",
+                    environment);
+            }
+            else if (telemetryClient == null)
+            {
+                logger.LogWarning(
+                    "Application Insights TelemetryClient is not available. " +
+                    "Metrics will be logged locally but not sent to Application Insights.");
+            }
+            else
+            {
+                logger.LogInformation(
+                    "Application Insights telemetry initialized for environment: {Environment}",
+                    environment);
+            }
+
             return new CustomMetrics(telemetryClient, logger, environment);
         });
 

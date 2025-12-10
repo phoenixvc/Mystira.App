@@ -19,8 +19,23 @@ param tags object = {}
 @description('Enable Cosmos DB alerts')
 param enableCosmosAlerts bool = true
 
+@description('Storage threshold in GB for capacity alerts (default 40GB = 80% of 50GB)')
+param storageThresholdGB int = 40
+
+@description('Monthly RU budget threshold (default 1000000 = 1M RUs)')
+param monthlyRuBudgetThreshold int = 1000000
+
+@description('Application Insights resource ID for log-based alerts')
+param appInsightsId string = ''
+
 // Naming convention helper
 var alertPrefix = '${environment}-${project}'
+
+// Convert GB to bytes for metric comparison
+var storageThresholdBytes = storageThresholdGB * 1073741824
+
+// Calculate daily RU budget (monthly / 30)
+var dailyRuBudgetThreshold = monthlyRuBudgetThreshold / 30
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // HIGH REQUEST UNIT CONSUMPTION ALERT
@@ -201,7 +216,7 @@ resource highStorageAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = if (ena
   location: 'global'
   tags: tags
   properties: {
-    description: 'Alert when Cosmos DB data storage exceeds 80% of provisioned capacity'
+    description: 'Alert when Cosmos DB data storage exceeds ${storageThresholdGB}GB'
     severity: 2 // Warning
     enabled: true
     scopes: [cosmosDbId]
@@ -215,7 +230,7 @@ resource highStorageAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = if (ena
           metricName: 'DataUsage'
           metricNamespace: 'Microsoft.DocumentDB/databaseAccounts'
           operator: 'GreaterThan'
-          threshold: 42949672960 // 40GB (80% of 50GB typical limit)
+          threshold: storageThresholdBytes
           timeAggregation: 'Maximum'
           criterionType: 'StaticThresholdCriterion'
         }
@@ -231,9 +246,49 @@ resource highStorageAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = if (ena
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// RU BUDGET ALERT (Cost Control)
+// Triggers when cumulative RU consumption approaches budget threshold
+// This helps prevent unexpected Azure bills from runaway queries
+// ═══════════════════════════════════════════════════════════════════════════════
+resource ruBudgetAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview' = if (enableCosmosAlerts && !empty(appInsightsId)) {
+  name: '${alertPrefix}-cosmos-ru-budget'
+  location: resourceGroup().location
+  tags: tags
+  properties: {
+    displayName: '${alertPrefix} Cosmos DB RU Budget Warning'
+    description: 'Alert when daily RU consumption exceeds budget threshold (${dailyRuBudgetThreshold} RUs/day)'
+    enabled: true
+    severity: 2 // Warning
+    evaluationFrequency: 'PT1H' // Check every hour
+    windowSize: 'PT24H' // Look at 24 hour window
+    scopes: [appInsightsId]
+    criteria: {
+      allOf: [
+        {
+          // Note: Using string concatenation because raw strings don't support interpolation
+          query: 'dependencies | where timestamp > ago(24h) | where type == "Azure DocumentDB" or type == "Microsoft.DocumentDB" | extend RUs = todouble(customDimensions["RequestCharge"]) | summarize TotalRUs = sum(RUs) | where TotalRUs > ${dailyRuBudgetThreshold}'
+          timeAggregation: 'Count'
+          operator: 'GreaterThan'
+          threshold: 0
+          failingPeriods: {
+            numberOfEvaluationPeriods: 1
+            minFailingPeriodsToAlert: 1
+          }
+        }
+      ]
+    }
+    actions: {
+      actionGroups: [actionGroupId]
+    }
+    autoMitigate: true
+  }
+}
+
 // Outputs
 output highRuAlertId string = enableCosmosAlerts ? highRuAlert.id : ''
 output throttledRequestsAlertId string = enableCosmosAlerts ? throttledRequestsAlert.id : ''
 output highLatencyAlertId string = enableCosmosAlerts ? highLatencyAlert.id : ''
 output failedRequestsAlertId string = enableCosmosAlerts ? failedRequestsAlert.id : ''
 output highStorageAlertId string = enableCosmosAlerts ? highStorageAlert.id : ''
+output ruBudgetAlertId string = (enableCosmosAlerts && !empty(appInsightsId)) ? ruBudgetAlert.id : ''

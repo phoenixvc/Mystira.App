@@ -163,13 +163,33 @@ jobs:
         if: success()
         run: |
           DEPLOY_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          ANNOTATION_RESULT="success"
+
           az monitor app-insights component create-annotation \
             --app "${{ env.APP_INSIGHTS_NAME }}" \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --annotation-name "Deployment" \
             --category "Deployment" \
             --properties "{\"Application\":\"Mystira.App.Api\",\"Environment\":\"Production\",\"Version\":\"${{ github.sha }}\",\"Branch\":\"${{ github.ref_name }}\",\"DeployedBy\":\"${{ github.actor }}\",\"Timestamp\":\"${DEPLOY_TIME}\",\"WorkflowRun\":\"${{ github.run_id }}\"}" \
-            || echo "Warning: Failed to create deployment annotation (non-fatal)"
+            || ANNOTATION_RESULT="failed"
+
+          # Write deployment info to GitHub step summary regardless of annotation success
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Application | Mystira.App.Api |" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | Production |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deployed By | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Timestamp | ${DEPLOY_TIME} |" >> $GITHUB_STEP_SUMMARY
+          echo "| App Insights Annotation | ${ANNOTATION_RESULT} |" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$ANNOTATION_RESULT" = "failed" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ **Note:** Failed to create App Insights annotation. Deployment succeeded but annotation was not recorded." >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Smoke test - Health check
         id: smoke-test
