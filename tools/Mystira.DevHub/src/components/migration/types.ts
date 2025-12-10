@@ -77,9 +77,22 @@ export interface MigrationConfig {
 }
 
 export interface ResourceSelection {
+  // Core content
   scenarios: boolean;
   bundles: boolean;
   mediaMetadata: boolean;
+  // User data
+  userProfiles: boolean;
+  gameSessions: boolean;
+  accounts: boolean;
+  compassTrackings: boolean;
+  // Reference data
+  characterMaps: boolean;
+  characterMapFiles: boolean;
+  characterMediaMetadataFiles: boolean;
+  avatarConfigurationFiles: boolean;
+  badgeConfigurations: boolean;
+  // Storage
   blobStorage: boolean;
 }
 

@@ -292,6 +292,117 @@ public class MigrationService : IMigrationService
         }
     }
 
+    /// <summary>
+    /// Generic container migration using dynamic JSON documents.
+    /// Works for any container without needing specific model classes.
+    /// </summary>
+    public async Task<MigrationResult> MigrateContainerAsync(string sourceConnectionString, string destConnectionString, string databaseName, string containerName, string partitionKeyPath = "/id")
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var result = new MigrationResult();
+
+        try
+        {
+            _logger.LogInformation("Starting generic migration for container: {Container}", containerName);
+
+            using var sourceClient = new CosmosClient(sourceConnectionString);
+            using var destClient = new CosmosClient(destConnectionString);
+
+            // Ensure destination container exists
+            await EnsureContainerExists(destClient, databaseName, containerName, partitionKeyPath);
+
+            var sourceContainer = sourceClient.GetContainer(databaseName, containerName);
+            var destContainer = destClient.GetContainer(databaseName, containerName);
+
+            // Query all items from source as dynamic JSON
+            var query = sourceContainer.GetItemQueryIterator<dynamic>("SELECT * FROM c");
+            var items = new List<dynamic>();
+
+            while (query.HasMoreResults)
+            {
+                var response = await query.ReadNextAsync();
+                items.AddRange(response);
+            }
+
+            result.TotalItems = items.Count;
+            _logger.LogInformation("Found {Count} items to migrate in {Container}", items.Count, containerName);
+
+            // Migrate each item
+            foreach (var item in items)
+            {
+                try
+                {
+                    // Extract partition key value from the item
+                    string partitionKeyValue = GetPartitionKeyValue(item, partitionKeyPath);
+                    await destContainer.UpsertItemAsync(item, new PartitionKey(partitionKeyValue));
+                    result.SuccessCount++;
+                }
+                catch (Exception ex)
+                {
+                    result.FailureCount++;
+                    string itemId = item?.id?.ToString() ?? "unknown";
+                    result.Errors.Add($"Failed to migrate item {itemId} in {containerName}: {ex.Message}");
+                    _logger.LogError(ex, "Failed to migrate item in {Container}", containerName);
+                }
+            }
+
+            result.Success = result.FailureCount == 0;
+            stopwatch.Stop();
+            result.Duration = stopwatch.Elapsed;
+
+            _logger.LogInformation("{Container} migration completed: {Result}", containerName, result);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Critical error during {Container} migration", containerName);
+            result.Success = false;
+            result.Errors.Add($"Critical error: {ex.Message}");
+            stopwatch.Stop();
+            result.Duration = stopwatch.Elapsed;
+            return result;
+        }
+    }
+
+    private static string GetPartitionKeyValue(dynamic item, string partitionKeyPath)
+    {
+        // Remove leading slash from partition key path
+        var propertyName = partitionKeyPath.TrimStart('/');
+
+        // Handle nested paths (e.g., "/metadata/id")
+        var parts = propertyName.Split('/');
+        dynamic current = item;
+
+        foreach (var part in parts)
+        {
+            if (current is System.Text.Json.JsonElement jsonElement)
+            {
+                if (jsonElement.TryGetProperty(part, out var prop))
+                {
+                    current = prop;
+                }
+                else
+                {
+                    return item?.id?.ToString() ?? Guid.NewGuid().ToString();
+                }
+            }
+            else
+            {
+                // Try to access as dynamic object
+                try
+                {
+                    current = ((IDictionary<string, object>)current)[part];
+                }
+                catch
+                {
+                    return item?.id?.ToString() ?? Guid.NewGuid().ToString();
+                }
+            }
+        }
+
+        return current?.ToString() ?? Guid.NewGuid().ToString();
+    }
+
     private async Task EnsureContainerExists(CosmosClient client, string databaseName, string containerName, string partitionKeyPath)
     {
         try

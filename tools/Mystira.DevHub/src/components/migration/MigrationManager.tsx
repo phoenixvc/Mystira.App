@@ -23,9 +23,22 @@ function MigrationManager() {
   });
 
   const [selectedResources, setSelectedResources] = useState<ResourceSelection>({
+    // Core content
     scenarios: true,
     bundles: true,
     mediaMetadata: true,
+    // User data
+    userProfiles: true,
+    gameSessions: true,
+    accounts: true,
+    compassTrackings: true,
+    // Reference data
+    characterMaps: true,
+    characterMapFiles: true,
+    characterMediaMetadataFiles: true,
+    avatarConfigurationFiles: true,
+    badgeConfigurations: true,
+    // Storage
     blobStorage: false,
   });
 
@@ -44,6 +57,15 @@ function MigrationManager() {
       scenarios: true,
       bundles: true,
       mediaMetadata: true,
+      userProfiles: true,
+      gameSessions: true,
+      accounts: true,
+      compassTrackings: true,
+      characterMaps: true,
+      characterMapFiles: true,
+      characterMediaMetadataFiles: true,
+      avatarConfigurationFiles: true,
+      badgeConfigurations: true,
       blobStorage: true,
     });
   };
@@ -53,6 +75,15 @@ function MigrationManager() {
       scenarios: false,
       bundles: false,
       mediaMetadata: false,
+      userProfiles: false,
+      gameSessions: false,
+      accounts: false,
+      compassTrackings: false,
+      characterMaps: false,
+      characterMapFiles: false,
+      characterMediaMetadataFiles: false,
+      avatarConfigurationFiles: false,
+      badgeConfigurations: false,
       blobStorage: false,
     });
   };
@@ -82,9 +113,22 @@ function MigrationManager() {
       containerName: 'media-assets',
     });
     setSelectedResources({
+      // Core content
       scenarios: true,
       bundles: true,
       mediaMetadata: true,
+      // User data
+      userProfiles: true,
+      gameSessions: true,
+      accounts: true,
+      compassTrackings: true,
+      // Reference data
+      characterMaps: true,
+      characterMapFiles: true,
+      characterMediaMetadataFiles: true,
+      avatarConfigurationFiles: true,
+      badgeConfigurations: true,
+      // Storage
       blobStorage: false,
     });
   };

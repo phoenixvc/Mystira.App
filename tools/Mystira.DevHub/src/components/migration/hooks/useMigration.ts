@@ -10,7 +10,21 @@ export function useMigration() {
     config: MigrationConfig,
     selectedResources: ResourceSelection
   ): string | null => {
-    const needsCosmos = selectedResources.scenarios || selectedResources.bundles || selectedResources.mediaMetadata;
+    // Check if any Cosmos DB migration is selected
+    const needsCosmos =
+      selectedResources.scenarios ||
+      selectedResources.bundles ||
+      selectedResources.mediaMetadata ||
+      selectedResources.userProfiles ||
+      selectedResources.gameSessions ||
+      selectedResources.accounts ||
+      selectedResources.compassTrackings ||
+      selectedResources.characterMaps ||
+      selectedResources.characterMapFiles ||
+      selectedResources.characterMediaMetadataFiles ||
+      selectedResources.avatarConfigurationFiles ||
+      selectedResources.badgeConfigurations;
+
     if (needsCosmos) {
       if (!config.sourceCosmosConnection || !config.destCosmosConnection) {
         return 'Source and destination Cosmos DB connection strings are required for selected resources';
@@ -69,6 +83,7 @@ export function useMigration() {
         }
       };
 
+      // Core content
       if (selectedResources.scenarios) {
         await migrateResource('scenarios', 'Migrating Scenarios...');
       }
@@ -81,6 +96,45 @@ export function useMigration() {
         await migrateResource('media-metadata', 'Migrating Media Assets Metadata...');
       }
 
+      // User data
+      if (selectedResources.userProfiles) {
+        await migrateResource('user-profiles', 'Migrating User Profiles...');
+      }
+
+      if (selectedResources.gameSessions) {
+        await migrateResource('game-sessions', 'Migrating Game Sessions...');
+      }
+
+      if (selectedResources.accounts) {
+        await migrateResource('accounts', 'Migrating Accounts...');
+      }
+
+      if (selectedResources.compassTrackings) {
+        await migrateResource('compass-trackings', 'Migrating Compass Trackings...');
+      }
+
+      // Reference data
+      if (selectedResources.characterMaps) {
+        await migrateResource('character-maps', 'Migrating Character Maps...');
+      }
+
+      if (selectedResources.characterMapFiles) {
+        await migrateResource('character-map-files', 'Migrating Character Map Files...');
+      }
+
+      if (selectedResources.characterMediaMetadataFiles) {
+        await migrateResource('character-media-metadata-files', 'Migrating Character Media Files...');
+      }
+
+      if (selectedResources.avatarConfigurationFiles) {
+        await migrateResource('avatar-configuration-files', 'Migrating Avatar Configurations...');
+      }
+
+      if (selectedResources.badgeConfigurations) {
+        await migrateResource('badge-configurations', 'Migrating Badge Configurations...');
+      }
+
+      // Blob storage
       if (selectedResources.blobStorage) {
         await migrateResource('blobs', 'Migrating Blob Storage Files...');
       }
@@ -118,4 +172,3 @@ export function useMigration() {
     runMigration,
   };
 }
-

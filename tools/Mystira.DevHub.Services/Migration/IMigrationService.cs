@@ -18,6 +18,11 @@ public interface IMigrationService
     Task<MigrationResult> MigrateMediaAssetsAsync(string sourceConnectionString, string destConnectionString, string databaseName);
 
     /// <summary>
+    /// Generic container migration - migrates any container using dynamic JSON documents
+    /// </summary>
+    Task<MigrationResult> MigrateContainerAsync(string sourceConnectionString, string destConnectionString, string databaseName, string containerName, string partitionKeyPath = "/id");
+
+    /// <summary>
     /// Copies blob files from source storage to destination storage
     /// </summary>
     Task<MigrationResult> MigrateBlobStorageAsync(string sourceStorageConnectionString, string destStorageConnectionString, string containerName);
