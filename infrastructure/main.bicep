@@ -286,6 +286,22 @@ param staticWebAppRepositoryUrl string = ''
 param staticWebAppBranch string = 'dev'
 
 // ─────────────────────────────────────────────────────────────────
+// DNS / Custom Domain Parameters
+// ─────────────────────────────────────────────────────────────────
+
+@description('Enable custom domain for Static Web App')
+param enableCustomDomain bool = false
+
+@description('DNS zone name (e.g., mystira.app)')
+param dnsZoneName string = 'mystira.app'
+
+@description('Resource group where the DNS zone exists (defaults to current RG)')
+param dnsZoneResourceGroup string = ''
+
+@description('Subdomain for the environment (empty for apex/prod, "dev" for dev, "staging" for staging)')
+param customDomainSubdomain string = ''
+
+// ─────────────────────────────────────────────────────────────────
 // Computed Values
 // ─────────────────────────────────────────────────────────────────
 
@@ -295,6 +311,12 @@ var storageConnString = skipStorageCreation && existingStorageConnectionString !
 
 // Key Vault URI for App Service secret references
 var keyVaultUriComputed = 'https://${names.keyVault}${az.environment().suffixes.keyvaultDns}/'
+
+// DNS Zone resource group (defaults to current RG if not specified)
+var dnsZoneRg = dnsZoneResourceGroup == '' ? resourceGroup().name : dnsZoneResourceGroup
+
+// Custom domain name (e.g., "dev.mystira.app" or "mystira.app" for apex)
+var customDomainFull = customDomainSubdomain == '' ? dnsZoneName : '${customDomainSubdomain}.${dnsZoneName}'
 
 // ─────────────────────────────────────────────────────────────────
 // Module Deployments
@@ -472,6 +494,42 @@ module staticWebApp 'modules/static-web-app.bicep' = if (deployStaticWebApp) {
     repositoryUrl: staticWebAppRepositoryUrl
     branch: staticWebAppBranch
     tags: tags
+    // Custom domain will be bound after DNS record is created
+    customDomain: ''
+    enableCustomDomain: false
+  }
+}
+
+// DNS Records for Static Web App Custom Domain
+// Creates CNAME/TXT record in existing DNS zone pointing to SWA
+module dnsRecords 'modules/dns-zone.bicep' = if (deployStaticWebApp && enableCustomDomain) {
+  name: 'deploy-dns-records'
+  scope: resourceGroup(dnsZoneRg)
+  dependsOn: [staticWebApp]
+  params: {
+    dnsZoneName: dnsZoneName
+    dnsZoneResourceGroup: dnsZoneRg
+    subdomain: customDomainSubdomain
+    swaDefaultHostname: staticWebApp.outputs.staticWebAppDefaultHostname
+    enableCustomDomain: true
+    tags: tags
+  }
+}
+
+// Static Web App Custom Domain Binding (after DNS record exists)
+// This is a separate deployment to ensure DNS propagates first
+module staticWebAppCustomDomain 'modules/static-web-app.bicep' = if (deployStaticWebApp && enableCustomDomain) {
+  name: 'deploy-static-web-app-custom-domain'
+  dependsOn: [dnsRecords]
+  params: {
+    staticWebAppName: names.staticWebApp
+    location: fallbackRegion
+    sku: staticWebAppSku
+    repositoryUrl: staticWebAppRepositoryUrl
+    branch: staticWebAppBranch
+    tags: tags
+    customDomain: customDomainFull
+    enableCustomDomain: true
   }
 }
 
@@ -556,6 +614,8 @@ output discordBotConfigured bool = discordBotToken != ''
 output staticWebAppUrl string = deployStaticWebApp ? staticWebApp.outputs.staticWebAppUrl : ''
 output staticWebAppName string = deployStaticWebApp ? staticWebApp.outputs.staticWebAppName : ''
 output staticWebAppFallbackRegion string = fallbackRegion
+output staticWebAppCustomDomain string = deployStaticWebApp && enableCustomDomain ? customDomainFull : ''
+output staticWebAppCustomDomainUrl string = deployStaticWebApp && enableCustomDomain ? 'https://${customDomainFull}' : ''
 
 // Key Vault
 output keyVaultName string = keyVault.outputs.keyVaultName

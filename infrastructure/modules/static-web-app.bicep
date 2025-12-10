@@ -40,6 +40,12 @@ param outputLocation string = 'wwwroot'
 @description('Tags for all resources')
 param tags object = {}
 
+@description('Custom domain to bind (e.g., "mystira.app" or "dev.mystira.app")')
+param customDomain string = ''
+
+@description('Enable custom domain binding (requires DNS to be configured first)')
+param enableCustomDomain bool = false
+
 // Static Web App resource
 resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
   name: staticWebAppName
@@ -62,10 +68,21 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
   }
 }
 
+// Custom domain binding (requires DNS record to exist first)
+// Azure will validate the domain ownership via CNAME/TXT record
+resource customDomainBinding 'Microsoft.Web/staticSites/customDomains@2023-01-01' = if (enableCustomDomain && customDomain != '') {
+  name: customDomain
+  parent: staticWebApp
+  properties: {
+    // Azure validates via DNS lookup - no validation method needed for CNAME
+  }
+}
+
 // Outputs
 output staticWebAppId string = staticWebApp.id
 output staticWebAppName string = staticWebApp.name
 output staticWebAppUrl string = 'https://${staticWebApp.properties.defaultHostname}'
 output staticWebAppDefaultHostname string = staticWebApp.properties.defaultHostname
+output customDomainUrl string = enableCustomDomain && customDomain != '' ? 'https://${customDomain}' : ''
 // Note: Deployment token must be retrieved separately via Azure CLI or Portal
 // Use: az staticwebapp secrets list --name <name> --query "properties.apiKey" -o tsv

@@ -64,6 +64,18 @@
     },
     "staticWebAppBranch": {
       "value": "main"
+    },
+    "enableCustomDomain": {
+      "value": true
+    },
+    "dnsZoneName": {
+      "value": "mystira.app"
+    },
+    "dnsZoneResourceGroup": {
+      "value": "mys-prod-mystira-rg-san"
+    },
+    "customDomainSubdomain": {
+      "value": ""
     }
   }
 }
