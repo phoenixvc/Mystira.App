@@ -2,65 +2,58 @@ export interface EnvironmentPreset {
   id: string;
   name: string;
   description: string;
-  resourceGroup: string;
   cosmosAccountName: string;
-  storageAccountName: string;
+  // Resource group and storage are auto-discovered from Cosmos account
   isLegacy?: boolean;
+  defaultDatabaseName?: string;
 }
 
 export const ENVIRONMENT_PRESETS: EnvironmentPreset[] = [
   {
     id: 'old-dev',
     name: 'Old Dev Environment',
-    description: 'Legacy dev environment (dev-san-cosmos-mystira)',
-    resourceGroup: 'dev-san-rg-mystira',
+    description: 'Legacy dev environment - resource group auto-discovered',
     cosmosAccountName: 'dev-san-cosmos-mystira',
-    storageAccountName: 'devsanstoragemystira',
     isLegacy: true,
+    defaultDatabaseName: 'MystiraDb',
   },
   {
     id: 'old-prod',
     name: 'Old Production Environment',
-    description: 'Legacy prod environment (prodwusappmystiracosmos)',
-    resourceGroup: 'prod-wus-rg-mystira',
+    description: 'Legacy prod environment - resource group auto-discovered',
     cosmosAccountName: 'prodwusappmystiracosmos',
-    storageAccountName: 'prodwusstoragemystira',
     isLegacy: true,
+    defaultDatabaseName: 'MystiraDb',
   },
   {
     id: 'new-dev',
     name: 'New Dev Environment',
-    description: 'Current development environment (mys-dev-mystira-rg-san)',
-    resourceGroup: 'mys-dev-mystira-rg-san',
+    description: 'Current development environment - resource group auto-discovered',
     cosmosAccountName: 'mys-dev-mystira-cosmos-san',
-    storageAccountName: 'mysdevmystirastsan',
     isLegacy: false,
+    defaultDatabaseName: 'MystiraAppDb',
   },
   {
     id: 'new-staging',
     name: 'New Staging Environment',
-    description: 'Current staging environment (mys-staging-mystira-rg-san)',
-    resourceGroup: 'mys-staging-mystira-rg-san',
+    description: 'Current staging environment - resource group auto-discovered',
     cosmosAccountName: 'mys-staging-mystira-cosmos-san',
-    storageAccountName: 'mysstagingmystirastsan',
     isLegacy: false,
+    defaultDatabaseName: 'MystiraAppDb',
   },
   {
     id: 'new-prod',
     name: 'New Production Environment',
-    description: 'Current production environment (mys-prod-mystira-rg-san)',
-    resourceGroup: 'mys-prod-mystira-rg-san',
+    description: 'Current production environment - resource group auto-discovered',
     cosmosAccountName: 'mys-prod-mystira-cosmos-san',
-    storageAccountName: 'mysprodmystirastsan',
     isLegacy: false,
+    defaultDatabaseName: 'MystiraAppDb',
   },
   {
     id: 'custom',
     name: 'Custom',
     description: 'Enter connection strings manually',
-    resourceGroup: '',
     cosmosAccountName: '',
-    storageAccountName: '',
     isLegacy: false,
   },
 ];
@@ -72,8 +65,10 @@ export interface MigrationConfig {
   destCosmosConnection: string;
   sourceStorageConnection: string;
   destStorageConnection: string;
-  databaseName: string;
+  sourceDatabaseName: string;
+  destDatabaseName: string;
   containerName: string;
+  dryRun: boolean;
 }
 
 export interface ResourceSelection {
@@ -92,6 +87,8 @@ export interface ResourceSelection {
   characterMediaMetadataFiles: boolean;
   avatarConfigurationFiles: boolean;
   badgeConfigurations: boolean;
+  // Master data (seeding)
+  masterData: boolean;
   // Storage
   blobStorage: boolean;
 }

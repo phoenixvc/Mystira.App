@@ -25,12 +25,24 @@ export function useMigration() {
       selectedResources.avatarConfigurationFiles ||
       selectedResources.badgeConfigurations;
 
+    // Master data seeding only needs destination connection
+    const needsDestCosmos = selectedResources.masterData;
+
     if (needsCosmos) {
       if (!config.sourceCosmosConnection || !config.destCosmosConnection) {
         return 'Source and destination Cosmos DB connection strings are required for selected resources';
       }
-      if (!config.databaseName) {
-        return 'Database name is required';
+      if (!config.sourceDatabaseName || !config.destDatabaseName) {
+        return 'Source and destination database names are required';
+      }
+    }
+
+    if (needsDestCosmos && !needsCosmos) {
+      if (!config.destCosmosConnection) {
+        return 'Destination Cosmos DB connection string is required for master data seeding';
+      }
+      if (!config.destDatabaseName) {
+        return 'Destination database name is required for master data seeding';
       }
     }
 
@@ -71,7 +83,8 @@ export function useMigration() {
           destCosmos: config.destCosmosConnection || null,
           sourceStorage: config.sourceStorageConnection || null,
           destStorage: config.destStorageConnection || null,
-          databaseName: config.databaseName,
+          sourceDatabaseName: config.sourceDatabaseName,
+          destDatabaseName: config.destDatabaseName,
           containerName: config.containerName,
         });
 
@@ -132,6 +145,11 @@ export function useMigration() {
 
       if (selectedResources.badgeConfigurations) {
         await migrateResource('badge-configurations', 'Migrating Badge Configurations...');
+      }
+
+      // Master data seeding
+      if (selectedResources.masterData) {
+        await migrateResource('master-data', 'Seeding Master Data...');
       }
 
       // Blob storage

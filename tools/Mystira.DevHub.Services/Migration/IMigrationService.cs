@@ -5,22 +5,22 @@ public interface IMigrationService
     /// <summary>
     /// Migrates scenarios from source to destination Cosmos DB
     /// </summary>
-    Task<MigrationResult> MigrateScenariosAsync(string sourceConnectionString, string destConnectionString, string databaseName);
+    Task<MigrationResult> MigrateScenariosAsync(string sourceConnectionString, string destConnectionString, string sourceDatabaseName, string destDatabaseName);
 
     /// <summary>
     /// Migrates content bundles from source to destination Cosmos DB
     /// </summary>
-    Task<MigrationResult> MigrateContentBundlesAsync(string sourceConnectionString, string destConnectionString, string databaseName);
+    Task<MigrationResult> MigrateContentBundlesAsync(string sourceConnectionString, string destConnectionString, string sourceDatabaseName, string destDatabaseName);
 
     /// <summary>
     /// Migrates media assets metadata from source to destination Cosmos DB
     /// </summary>
-    Task<MigrationResult> MigrateMediaAssetsAsync(string sourceConnectionString, string destConnectionString, string databaseName);
+    Task<MigrationResult> MigrateMediaAssetsAsync(string sourceConnectionString, string destConnectionString, string sourceDatabaseName, string destDatabaseName);
 
     /// <summary>
     /// Generic container migration - migrates any container using dynamic JSON documents
     /// </summary>
-    Task<MigrationResult> MigrateContainerAsync(string sourceConnectionString, string destConnectionString, string databaseName, string containerName, string partitionKeyPath = "/id");
+    Task<MigrationResult> MigrateContainerAsync(string sourceConnectionString, string destConnectionString, string sourceDatabaseName, string destDatabaseName, string containerName, string partitionKeyPath = "/id");
 
     /// <summary>
     /// Copies blob files from source storage to destination storage

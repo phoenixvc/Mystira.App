@@ -1,11 +1,28 @@
 /* Sign In Page Styles */
 
-/* Auth card styling */
+/* ========================================
+   Light Mode Styles (Default)
+   ======================================== */
+
 .auth-card {
     background-color: var(--card, rgba(255,255,255,0.95));
     backdrop-filter: blur(10px);
     border-radius: 20px;
     border: 1px solid var(--border, rgba(17,24,39,0.08));
+}
+
+/* Light mode focus effect on form controls */
+.auth-card .form-control {
+    transition: all 0.3s ease;
+    border-width: 2px;
+    border-color: #d1d5db;
+}
+
+.auth-card .form-control:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15),
+                0 0 15px rgba(99, 102, 241, 0.2);
+    outline: none;
 }
 
 .email-display {
@@ -25,6 +42,7 @@
     border: 2px solid var(--border, rgba(17,24,39,0.08));
     border-radius: 12px;
     padding: 16px 20px;
+    transition: all 0.3s ease;
 }
 
 .verification-code-input::placeholder {
@@ -38,74 +56,69 @@
     box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
 }
 
-/* Dark mode styles via media query */
+/* ========================================
+   Dark Mode Styles
+   Uses CSS custom properties for shared values
+   ======================================== */
+
+/* Dark mode via media query */
 @media (prefers-color-scheme: dark) {
+    :root {
+        --dark-card-bg: linear-gradient(135deg, #1e1b4b 0%, #14122b 100%);
+        --dark-card-border: rgba(99, 102, 241, 0.2);
+        --dark-input-bg: #14122b;
+        --dark-input-border: #2d2a5e;
+        --dark-input-focus-border: #818cf8;
+        --dark-input-focus-bg: #1a1740;
+        --dark-text-primary: #f1f5f9;
+        --dark-text-muted: #a5b4fc;
+        --dark-text-secondary: #e2e8f0;
+        --dark-focus-glow: 0 0 0 4px rgba(129, 140, 248, 0.25),
+                           0 0 20px rgba(99, 102, 241, 0.3),
+                           inset 0 0 10px rgba(99, 102, 241, 0.05);
+    }
+
     .auth-card {
-        background: linear-gradient(135deg, #1e1b4b 0%, #14122b 100%);
-        border-color: rgba(99, 102, 241, 0.2);
+        background: var(--dark-card-bg);
+        border-color: var(--dark-card-border);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     }
 
-    .auth-card .card-title {
-        color: #f1f5f9;
-    }
-
-    .auth-card .text-muted {
-        color: #a5b4fc !important;
-    }
-
-    .auth-card .form-label {
-        color: #e2e8f0;
-    }
+    .auth-card .card-title { color: var(--dark-text-primary); }
+    .auth-card .text-muted { color: var(--dark-text-muted) !important; }
+    .auth-card .form-label { color: var(--dark-text-secondary); }
 
     .auth-card .form-control {
-        background-color: #14122b;
-        border-color: #2d2a5e;
-        color: #f1f5f9;
-        transition: all 0.3s ease;
-        border-width: 2px;
+        background-color: var(--dark-input-bg);
+        border-color: var(--dark-input-border);
+        color: var(--dark-text-primary);
     }
 
-    .auth-card .form-control::placeholder {
-        color: #818cf8;
-    }
+    .auth-card .form-control::placeholder { color: #818cf8; }
 
     .auth-card .form-control:focus {
-        border-color: #818cf8;
-        box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.25),
-                    0 0 20px rgba(99, 102, 241, 0.3),
-                    inset 0 0 10px rgba(99, 102, 241, 0.05);
-        background-color: #1a1740;
-        outline: none;
+        border-color: var(--dark-input-focus-border);
+        box-shadow: var(--dark-focus-glow);
+        background-color: var(--dark-input-focus-bg);
     }
 
-    .auth-card .form-check-label {
-        color: #e2e8f0;
-    }
-
-    .auth-card .form-text {
-        color: #94a3b8 !important;
-    }
-
-    .auth-card hr {
-        border-color: rgba(99, 102, 241, 0.2);
-    }
+    .auth-card .form-check-label { color: var(--dark-text-secondary); }
+    .auth-card .form-text { color: #94a3b8 !important; }
+    .auth-card hr { border-color: var(--dark-card-border); }
 
     .email-display {
-        background-color: #14122b;
-        color: #f1f5f9;
-        border-color: #2d2a5e;
+        background-color: var(--dark-input-bg);
+        color: var(--dark-text-primary);
+        border-color: var(--dark-input-border);
     }
 
     .verification-code-input {
-        background-color: #14122b;
-        color: #f1f5f9;
-        border-color: #2d2a5e;
+        background-color: var(--dark-input-bg);
+        color: var(--dark-text-primary);
+        border-color: var(--dark-input-border);
     }
 
-    .verification-code-input::placeholder {
-        color: #6366f1;
-    }
+    .verification-code-input::placeholder { color: #6366f1; }
 
     .verification-code-input:focus {
         border-color: #6366f1;
@@ -113,7 +126,7 @@
     }
 
     .auth-card .btn-outline-primary {
-        color: #a5b4fc;
+        color: var(--dark-text-muted);
         border-color: #4f46e5;
     }
 
@@ -134,12 +147,10 @@
         color: #cbd5e1;
     }
 
-    .auth-card .text-primary-custom {
-        color: #a5b4fc !important;
-    }
+    .auth-card .text-primary-custom { color: var(--dark-text-muted) !important; }
 
     .auth-card .form-check-input {
-        background-color: #14122b;
+        background-color: var(--dark-input-bg);
         border-color: #4f46e5;
     }
 
@@ -149,36 +160,24 @@
     }
 }
 
-/* Dark mode styles via data attribute */
+/* Dark mode via data attribute - uses same styles as media query */
 html[data-theme="dark"] .auth-card {
     background: linear-gradient(135deg, #1e1b4b 0%, #14122b 100%);
     border-color: rgba(99, 102, 241, 0.2);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
-html[data-theme="dark"] .auth-card .card-title {
-    color: #f1f5f9;
-}
-
-html[data-theme="dark"] .auth-card .text-muted {
-    color: #a5b4fc !important;
-}
-
-html[data-theme="dark"] .auth-card .form-label {
-    color: #e2e8f0;
-}
+html[data-theme="dark"] .auth-card .card-title { color: #f1f5f9; }
+html[data-theme="dark"] .auth-card .text-muted { color: #a5b4fc !important; }
+html[data-theme="dark"] .auth-card .form-label { color: #e2e8f0; }
 
 html[data-theme="dark"] .auth-card .form-control {
     background-color: #14122b;
     border-color: #2d2a5e;
     color: #f1f5f9;
-    transition: all 0.3s ease;
-    border-width: 2px;
 }
 
-html[data-theme="dark"] .auth-card .form-control::placeholder {
-    color: #818cf8;
-}
+html[data-theme="dark"] .auth-card .form-control::placeholder { color: #818cf8; }
 
 html[data-theme="dark"] .auth-card .form-control:focus {
     border-color: #818cf8;
@@ -186,20 +185,11 @@ html[data-theme="dark"] .auth-card .form-control:focus {
                 0 0 20px rgba(99, 102, 241, 0.3),
                 inset 0 0 10px rgba(99, 102, 241, 0.05);
     background-color: #1a1740;
-    outline: none;
 }
 
-html[data-theme="dark"] .auth-card .form-check-label {
-    color: #e2e8f0;
-}
-
-html[data-theme="dark"] .auth-card .form-text {
-    color: #94a3b8 !important;
-}
-
-html[data-theme="dark"] .auth-card hr {
-    border-color: rgba(99, 102, 241, 0.2);
-}
+html[data-theme="dark"] .auth-card .form-check-label { color: #e2e8f0; }
+html[data-theme="dark"] .auth-card .form-text { color: #94a3b8 !important; }
+html[data-theme="dark"] .auth-card hr { border-color: rgba(99, 102, 241, 0.2); }
 
 html[data-theme="dark"] .email-display {
     background-color: #14122b;
@@ -213,9 +203,7 @@ html[data-theme="dark"] .verification-code-input {
     border-color: #2d2a5e;
 }
 
-html[data-theme="dark"] .verification-code-input::placeholder {
-    color: #6366f1;
-}
+html[data-theme="dark"] .verification-code-input::placeholder { color: #6366f1; }
 
 html[data-theme="dark"] .verification-code-input:focus {
     border-color: #6366f1;
@@ -244,11 +232,8 @@ html[data-theme="dark"] .auth-card .btn-outline-secondary:hover {
     color: #cbd5e1;
 }
 
-html[data-theme="dark"] .auth-card .text-primary-custom {
-    color: #a5b4fc !important;
-}
+html[data-theme="dark"] .auth-card .text-primary-custom { color: #a5b4fc !important; }
 
-/* Form check input styling for dark mode */
 html[data-theme="dark"] .auth-card .form-check-input {
     background-color: #14122b;
     border-color: #4f46e5;

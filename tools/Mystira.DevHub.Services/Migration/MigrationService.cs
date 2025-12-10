@@ -16,23 +16,23 @@ public class MigrationService : IMigrationService
         _logger = logger;
     }
 
-    public async Task<MigrationResult> MigrateScenariosAsync(string sourceConnectionString, string destConnectionString, string databaseName)
+    public async Task<MigrationResult> MigrateScenariosAsync(string sourceConnectionString, string destConnectionString, string sourceDatabaseName, string destDatabaseName)
     {
         var stopwatch = Stopwatch.StartNew();
         var result = new MigrationResult();
 
         try
         {
-            _logger.LogInformation("Starting scenarios migration");
+            _logger.LogInformation("Starting scenarios migration from {SourceDb} to {DestDb}", sourceDatabaseName, destDatabaseName);
 
             using var sourceClient = new CosmosClient(sourceConnectionString);
             using var destClient = new CosmosClient(destConnectionString);
 
-            var sourceContainer = sourceClient.GetContainer(databaseName, "Scenarios");
-            var destContainer = destClient.GetContainer(databaseName, "Scenarios");
+            var sourceContainer = sourceClient.GetContainer(sourceDatabaseName, "Scenarios");
+            var destContainer = destClient.GetContainer(destDatabaseName, "Scenarios");
 
             // Ensure destination container exists
-            await EnsureContainerExists(destClient, databaseName, "Scenarios", "/id");
+            await EnsureContainerExists(destClient, destDatabaseName, "Scenarios", "/id");
 
             // Query all scenarios from source
             var query = sourceContainer.GetItemQueryIterator<Scenario>("SELECT * FROM c");
@@ -82,23 +82,23 @@ public class MigrationService : IMigrationService
         }
     }
 
-    public async Task<MigrationResult> MigrateContentBundlesAsync(string sourceConnectionString, string destConnectionString, string databaseName)
+    public async Task<MigrationResult> MigrateContentBundlesAsync(string sourceConnectionString, string destConnectionString, string sourceDatabaseName, string destDatabaseName)
     {
         var stopwatch = Stopwatch.StartNew();
         var result = new MigrationResult();
 
         try
         {
-            _logger.LogInformation("Starting content bundles migration");
+            _logger.LogInformation("Starting content bundles migration from {SourceDb} to {DestDb}", sourceDatabaseName, destDatabaseName);
 
             using var sourceClient = new CosmosClient(sourceConnectionString);
             using var destClient = new CosmosClient(destConnectionString);
 
-            var sourceContainer = sourceClient.GetContainer(databaseName, "ContentBundles");
-            var destContainer = destClient.GetContainer(databaseName, "ContentBundles");
+            var sourceContainer = sourceClient.GetContainer(sourceDatabaseName, "ContentBundles");
+            var destContainer = destClient.GetContainer(destDatabaseName, "ContentBundles");
 
             // Ensure destination container exists
-            await EnsureContainerExists(destClient, databaseName, "ContentBundles", "/id");
+            await EnsureContainerExists(destClient, destDatabaseName, "ContentBundles", "/id");
 
             // Query all content bundles from source
             var query = sourceContainer.GetItemQueryIterator<ContentBundle>("SELECT * FROM c");
@@ -148,23 +148,23 @@ public class MigrationService : IMigrationService
         }
     }
 
-    public async Task<MigrationResult> MigrateMediaAssetsAsync(string sourceConnectionString, string destConnectionString, string databaseName)
+    public async Task<MigrationResult> MigrateMediaAssetsAsync(string sourceConnectionString, string destConnectionString, string sourceDatabaseName, string destDatabaseName)
     {
         var stopwatch = Stopwatch.StartNew();
         var result = new MigrationResult();
 
         try
         {
-            _logger.LogInformation("Starting media assets migration");
+            _logger.LogInformation("Starting media assets migration from {SourceDb} to {DestDb}", sourceDatabaseName, destDatabaseName);
 
             using var sourceClient = new CosmosClient(sourceConnectionString);
             using var destClient = new CosmosClient(destConnectionString);
 
-            var sourceContainer = sourceClient.GetContainer(databaseName, "MediaAssets");
-            var destContainer = destClient.GetContainer(databaseName, "MediaAssets");
+            var sourceContainer = sourceClient.GetContainer(sourceDatabaseName, "MediaAssets");
+            var destContainer = destClient.GetContainer(destDatabaseName, "MediaAssets");
 
             // Ensure destination container exists
-            await EnsureContainerExists(destClient, databaseName, "MediaAssets", "/id");
+            await EnsureContainerExists(destClient, destDatabaseName, "MediaAssets", "/id");
 
             // Query all media assets from source
             var query = sourceContainer.GetItemQueryIterator<MediaAsset>("SELECT * FROM c");
@@ -229,8 +229,20 @@ public class MigrationService : IMigrationService
             var sourceContainerClient = sourceBlobServiceClient.GetBlobContainerClient(containerName);
             var destContainerClient = destBlobServiceClient.GetBlobContainerClient(containerName);
 
-            // Ensure destination container exists
-            await destContainerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
+            // Check if source container exists
+            var sourceExists = await sourceContainerClient.ExistsAsync();
+            if (!sourceExists.Value)
+            {
+                _logger.LogWarning("Source container {Container} does not exist, skipping migration", containerName);
+                result.Success = true;
+                result.Errors.Add($"Source container '{containerName}' does not exist - nothing to migrate");
+                stopwatch.Stop();
+                result.Duration = stopwatch.Elapsed;
+                return result;
+            }
+
+            // Ensure destination container exists (use None for private access)
+            await destContainerClient.CreateIfNotExistsAsync(PublicAccessType.None);
 
             // List all blobs in source container
             var blobs = new List<string>();
@@ -242,7 +254,7 @@ public class MigrationService : IMigrationService
             result.TotalItems = blobs.Count;
             _logger.LogInformation("Found {Count} blobs to migrate", blobs.Count);
 
-            // Migrate each blob
+            // Migrate each blob using download/upload pattern (works for private containers)
             foreach (var blobName in blobs)
             {
                 try
@@ -259,9 +271,18 @@ public class MigrationService : IMigrationService
                         continue;
                     }
 
-                    // Copy blob using server-side copy
-                    var copyOperation = await destBlobClient.StartCopyFromUriAsync(sourceBlobClient.Uri);
-                    await copyOperation.WaitForCompletionAsync();
+                    // Download from source and upload to destination (works for private containers)
+                    var downloadResponse = await sourceBlobClient.DownloadContentAsync();
+                    var blobContent = downloadResponse.Value.Content;
+                    var contentType = downloadResponse.Value.Details.ContentType;
+
+                    await destBlobClient.UploadAsync(blobContent, overwrite: false);
+
+                    // Set content type if available
+                    if (!string.IsNullOrEmpty(contentType))
+                    {
+                        await destBlobClient.SetHttpHeadersAsync(new BlobHttpHeaders { ContentType = contentType });
+                    }
 
                     result.SuccessCount++;
                     _logger.LogDebug("Migrated blob: {BlobName}", blobName);
@@ -296,23 +317,35 @@ public class MigrationService : IMigrationService
     /// Generic container migration using dynamic JSON documents.
     /// Works for any container without needing specific model classes.
     /// </summary>
-    public async Task<MigrationResult> MigrateContainerAsync(string sourceConnectionString, string destConnectionString, string databaseName, string containerName, string partitionKeyPath = "/id")
+    public async Task<MigrationResult> MigrateContainerAsync(string sourceConnectionString, string destConnectionString, string sourceDatabaseName, string destDatabaseName, string containerName, string partitionKeyPath = "/id")
     {
         var stopwatch = Stopwatch.StartNew();
         var result = new MigrationResult();
 
         try
         {
-            _logger.LogInformation("Starting generic migration for container: {Container}", containerName);
+            _logger.LogInformation("Starting generic migration for container: {Container} from {SourceDb} to {DestDb}", containerName, sourceDatabaseName, destDatabaseName);
 
             using var sourceClient = new CosmosClient(sourceConnectionString);
             using var destClient = new CosmosClient(destConnectionString);
 
-            // Ensure destination container exists
-            await EnsureContainerExists(destClient, databaseName, containerName, partitionKeyPath);
+            // Check if source container exists before attempting migration
+            var sourceContainerExists = await CheckContainerExists(sourceClient, sourceDatabaseName, containerName);
+            if (!sourceContainerExists)
+            {
+                _logger.LogWarning("Source container {Container} does not exist in database {Database}, skipping migration", containerName, sourceDatabaseName);
+                result.Success = true;
+                result.Errors.Add($"Source container '{containerName}' does not exist in database '{sourceDatabaseName}' - nothing to migrate");
+                stopwatch.Stop();
+                result.Duration = stopwatch.Elapsed;
+                return result;
+            }
 
-            var sourceContainer = sourceClient.GetContainer(databaseName, containerName);
-            var destContainer = destClient.GetContainer(databaseName, containerName);
+            // Ensure destination container exists
+            await EnsureContainerExists(destClient, destDatabaseName, containerName, partitionKeyPath);
+
+            var sourceContainer = sourceClient.GetContainer(sourceDatabaseName, containerName);
+            var destContainer = destClient.GetContainer(destDatabaseName, containerName);
 
             // Query all items from source as dynamic JSON
             var query = sourceContainer.GetItemQueryIterator<dynamic>("SELECT * FROM c");
@@ -326,6 +359,15 @@ public class MigrationService : IMigrationService
 
             result.TotalItems = items.Count;
             _logger.LogInformation("Found {Count} items to migrate in {Container}", items.Count, containerName);
+
+            if (items.Count == 0)
+            {
+                _logger.LogInformation("Container {Container} is empty, nothing to migrate", containerName);
+                result.Success = true;
+                stopwatch.Stop();
+                result.Duration = stopwatch.Elapsed;
+                return result;
+            }
 
             // Migrate each item
             foreach (var item in items)
@@ -387,6 +429,20 @@ public class MigrationService : IMigrationService
         }
     }
 
+    private async Task<bool> CheckContainerExists(CosmosClient client, string databaseName, string containerName)
+    {
+        try
+        {
+            var container = client.GetContainer(databaseName, containerName);
+            await container.ReadContainerAsync();
+            return true;
+        }
+        catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+    }
+
     private static string GetPartitionKeyValue(dynamic item, string partitionKeyPath)
     {
         // Remove leading slash from partition key path
@@ -406,7 +462,12 @@ public class MigrationService : IMigrationService
                 }
                 else
                 {
-                    return item?.id?.ToString() ?? Guid.NewGuid().ToString();
+                    // Partition key property not found - try fallback to 'id'
+                    if (item is System.Text.Json.JsonElement rootElement && rootElement.TryGetProperty("id", out var idProp))
+                    {
+                        return idProp.ToString();
+                    }
+                    throw new InvalidOperationException($"Partition key path '{partitionKeyPath}' not found in item and no 'id' fallback available");
                 }
             }
             else
@@ -418,7 +479,13 @@ public class MigrationService : IMigrationService
                 }
                 catch (InvalidCastException)
                 {
-                    return item?.id?.ToString() ?? Guid.NewGuid().ToString();
+                    // Partition key property not found - try fallback to 'id'
+                    string? itemId = item?.id?.ToString();
+                    if (!string.IsNullOrEmpty(itemId))
+                    {
+                        return itemId;
+                    }
+                    throw new InvalidOperationException($"Partition key path '{partitionKeyPath}' not found in item and no 'id' fallback available");
                 }
                 catch (KeyNotFoundException)
                 {
@@ -436,7 +503,12 @@ public class MigrationService : IMigrationService
             }
         }
 
-        return current?.ToString() ?? Guid.NewGuid().ToString();
+        var result = current?.ToString();
+        if (string.IsNullOrEmpty(result))
+        {
+            throw new InvalidOperationException($"Partition key value at path '{partitionKeyPath}' is null or empty");
+        }
+        return result;
     }
 
     private async Task EnsureContainerExists(CosmosClient client, string databaseName, string containerName, string partitionKeyPath)

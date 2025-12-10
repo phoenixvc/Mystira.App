@@ -1,4 +1,4 @@
-import { Database, Users, FileText, HardDrive } from 'lucide-react';
+import { Database, Users, FileText, HardDrive, Sparkles } from 'lucide-react';
 import { ResourceSelection } from './types';
 
 interface ResourceSelectionFormProps {
@@ -168,6 +168,22 @@ export function ResourceSelectionForm({
               description="Badge configuration data"
               checked={selectedResources.badgeConfigurations}
               onChange={() => onResourceToggle('badgeConfigurations')}
+            />
+          </div>
+        </div>
+
+        {/* Master Data Section */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            <h4 className="font-medium text-gray-900 dark:text-white">Master Data Seeding</h4>
+          </div>
+          <div className="grid grid-cols-1 gap-2">
+            <ResourceItem
+              label="Seed Master Data"
+              description="Populate reference data (archetypes, echo types, compass axes, etc.) in destination"
+              checked={selectedResources.masterData}
+              onChange={() => onResourceToggle('masterData')}
             />
           </div>
         </div>
