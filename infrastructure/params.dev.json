@@ -87,7 +87,7 @@
       "value": "admin"
     },
     "enableManagedCert": {
-      "value": false
+      "value": true
     }
   }
 }
