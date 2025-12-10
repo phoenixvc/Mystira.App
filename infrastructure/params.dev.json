@@ -21,7 +21,7 @@
       "value": "eastus2"
     },
     "appServiceSku": {
-      "value": "F1"
+      "value": "B1"
     },
     "storageSku": {
       "value": "Standard_LRS"
