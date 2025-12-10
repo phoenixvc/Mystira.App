@@ -475,6 +475,12 @@ public class MigrationService : IMigrationService
                 // Try to access as dynamic object
                 try
                 {
+                    // Add a null check before attempting to cast and access
+                    if (current == null)
+                    {
+                        // current is null, fallback to 'id'
+                        return item?.id?.ToString() ?? Guid.NewGuid().ToString();
+                    }
                     current = ((IDictionary<string, object>)current)[part];
                 }
                 catch (InvalidCastException)
@@ -488,10 +494,6 @@ public class MigrationService : IMigrationService
                     throw new InvalidOperationException($"Partition key path '{partitionKeyPath}' not found in item and no 'id' fallback available");
                 }
                 catch (KeyNotFoundException)
-                {
-                    return item?.id?.ToString() ?? Guid.NewGuid().ToString();
-                }
-                catch (NullReferenceException)
                 {
                     return item?.id?.ToString() ?? Guid.NewGuid().ToString();
                 }
