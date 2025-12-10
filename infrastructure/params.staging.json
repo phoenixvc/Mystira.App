@@ -42,7 +42,7 @@
       "value": "mystira.app"
     },
     "corsAllowedOrigins": {
-      "value": "https://staging.mystira.app,https://mystira.app"
+      "value": "https://staging.mystira.app,https://api.staging.mystira.app,https://admin.staging.mystira.app,https://mystira.app"
     },
     "deployAzureBot": {
       "value": false
@@ -64,6 +64,30 @@
     },
     "staticWebAppBranch": {
       "value": "staging"
+    },
+    "enableCustomDomain": {
+      "value": true
+    },
+    "dnsZoneName": {
+      "value": "mystira.app"
+    },
+    "dnsZoneResourceGroup": {
+      "value": "mys-prod-mystira-rg-glob"
+    },
+    "customDomainSubdomain": {
+      "value": "staging"
+    },
+    "enableApiCustomDomain": {
+      "value": true
+    },
+    "apiSubdomainPrefix": {
+      "value": "api"
+    },
+    "adminApiSubdomainPrefix": {
+      "value": "admin"
+    },
+    "enableManagedCert": {
+      "value": true
     }
   }
 }

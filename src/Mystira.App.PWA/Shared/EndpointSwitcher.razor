@@ -1,0 +1,274 @@
+@using Mystira.App.PWA.Services
+@inject IApiConfigurationService ApiConfigService
+@inject IAuthService AuthService
+@inject ILogger<EndpointSwitcher> Logger
+@inject IJSRuntime JSRuntime
+
+@if (_isAllowed && _endpoints.Count > 1)
+{
+    <div class="endpoint-switcher dropdown">
+        <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                title="Switch API Endpoint">
+            <i class="fas fa-server me-1"></i>
+            @_currentEnvironment
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li><h6 class="dropdown-header">API Endpoint</h6></li>
+            @foreach (var endpoint in _endpoints)
+            {
+                var isActive = endpoint.Url == _currentUrl;
+                var healthStatus = _healthResults.GetValueOrDefault(endpoint.Url);
+                <li>
+                    <button class="dropdown-item d-flex align-items-center justify-content-between @(isActive ? "active" : "")"
+                            @onclick="() => ConfirmAndSwitchEndpoint(endpoint)"
+                            disabled="@(_isSwitching)">
+                        <span>
+                            @endpoint.Name
+                            @if (isActive)
+                            {
+                                <i class="fas fa-check ms-1 text-success"></i>
+                            }
+                        </span>
+                        <span class="ms-2">
+                            @if (_isCheckingHealth && !_healthResults.ContainsKey(endpoint.Url))
+                            {
+                                <i class="fas fa-spinner fa-spin" style="font-size: 0.5rem;" title="Checking..."></i>
+                            }
+                            else if (healthStatus != null)
+                            {
+                                @if (healthStatus.IsHealthy)
+                                {
+                                    <i class="fas fa-circle text-success" style="font-size: 0.5rem;" title="Healthy (@(healthStatus.ResponseTimeMs)ms)"></i>
+                                }
+                                else
+                                {
+                                    <i class="fas fa-circle text-danger" style="font-size: 0.5rem;" title="@healthStatus.ErrorMessage"></i>
+                                }
+                            }
+                        </span>
+                    </button>
+                </li>
+            }
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <button class="dropdown-item text-muted" @onclick="ResetToDefault" disabled="@(_isSwitching)">
+                    <i class="fas fa-undo me-1"></i> Reset to Default
+                </button>
+            </li>
+        </ul>
+    </div>
+}
+
+@implements IDisposable
+
+@code {
+    private bool _isAllowed;
+    private bool _isSwitching;
+    private bool _isCheckingHealth;
+    private bool _healthCheckInProgress; // Prevents concurrent health check calls
+    private string _currentUrl = string.Empty;
+    private string _currentEnvironment = string.Empty;
+    private IReadOnlyList<ApiEndpoint> _endpoints = Array.Empty<ApiEndpoint>();
+    private Dictionary<string, EndpointHealthResult> _healthResults = new();
+    private DateTime _lastHealthCheck = DateTime.MinValue;
+    private CancellationTokenSource? _cts;
+    private static readonly TimeSpan HealthCheckCooldown = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan HealthResultsExpiration = TimeSpan.FromMinutes(5);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _cts = new CancellationTokenSource();
+
+        // Get current user's email to check allowlist
+        var account = await AuthService.GetCurrentAccountAsync();
+        var userEmail = account?.Email;
+
+        // Check if this specific user is allowed to switch endpoints
+        _isAllowed = ApiConfigService.IsUserAllowedToSwitchEndpoints(userEmail);
+
+        if (_isAllowed)
+        {
+            _endpoints = await ApiConfigService.GetAvailableEndpointsAsync();
+            _currentUrl = await ApiConfigService.GetApiBaseUrlAsync();
+            _currentEnvironment = await ApiConfigService.GetCurrentEnvironmentAsync();
+
+            // Check health of all endpoints in background (with rate limiting)
+            await CheckEndpointHealthWithRateLimitAsync();
+        }
+    }
+
+    private async Task CheckEndpointHealthWithRateLimitAsync()
+    {
+        // Prevent concurrent health check calls (race condition fix)
+        if (_healthCheckInProgress)
+        {
+            return;
+        }
+
+        var timeSinceLastCheck = DateTime.UtcNow - _lastHealthCheck;
+
+        // Clear expired health results (TTL expiration)
+        if (timeSinceLastCheck >= HealthResultsExpiration && _healthResults.Count > 0)
+        {
+            _healthResults.Clear();
+            Logger.LogDebug("Cleared expired health results after {Minutes} minutes", HealthResultsExpiration.TotalMinutes);
+        }
+
+        // Rate limit: only check once per minute (but always check if results are empty)
+        if (timeSinceLastCheck < HealthCheckCooldown && _healthResults.Count > 0)
+        {
+            return;
+        }
+
+        _healthCheckInProgress = true;
+        _isCheckingHealth = true;
+        _lastHealthCheck = DateTime.UtcNow;
+        StateHasChanged();
+
+        try
+        {
+            var cancellationToken = _cts?.Token ?? CancellationToken.None;
+
+            // Clean up stale health results for endpoints that no longer exist
+            var currentEndpointUrls = _endpoints.Select(e => e.Url).ToHashSet();
+            var staleUrls = _healthResults.Keys.Where(url => !currentEndpointUrls.Contains(url)).ToList();
+            foreach (var staleUrl in staleUrls)
+            {
+                _healthResults.Remove(staleUrl);
+            }
+
+            // Run health checks in parallel for faster results
+            var healthCheckTasks = _endpoints.Select(async endpoint =>
+            {
+                try
+                {
+                    var result = await ApiConfigService.ValidateEndpointAsync(endpoint.Url, cancellationToken);
+                    return (endpoint.Url, Result: result, Error: (Exception?)null);
+                }
+                catch (OperationCanceledException)
+                {
+                    return (endpoint.Url, Result: (EndpointHealthResult?)null, Error: (Exception?)null);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Failed to check health of {Url}", endpoint.Url);
+                    return (endpoint.Url, Result: (EndpointHealthResult?)null, Error: ex);
+                }
+            });
+
+            var results = await Task.WhenAll(healthCheckTasks);
+
+            // Update results dictionary (skip cancelled results)
+            foreach (var (url, result, _) in results)
+            {
+                if (result != null)
+                {
+                    _healthResults[url] = result;
+                }
+            }
+        }
+        finally
+        {
+            _isCheckingHealth = false;
+            _healthCheckInProgress = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ConfirmAndSwitchEndpoint(ApiEndpoint endpoint)
+    {
+        if (_isSwitching || endpoint.Url == _currentUrl)
+            return;
+
+        // Check if endpoint is healthy before switching
+        var healthResult = _healthResults.GetValueOrDefault(endpoint.Url);
+        if (healthResult != null && !healthResult.IsHealthy)
+        {
+            var confirmUnhealthy = await JSRuntime.InvokeAsync<bool>(
+                "confirm",
+                $"Warning: {endpoint.Name} endpoint appears to be unhealthy.\n\nError: {healthResult.ErrorMessage}\n\nSwitch anyway?");
+
+            if (!confirmUnhealthy) return;
+        }
+        else
+        {
+            // Always confirm endpoint switch (it will reload the app)
+            var confirm = await JSRuntime.InvokeAsync<bool>(
+                "confirm",
+                $"Switch to {endpoint.Name} endpoint?\n\nThe app will reload to apply the new API endpoint.");
+
+            if (!confirm) return;
+        }
+
+        await SwitchEndpoint(endpoint);
+    }
+
+    private async Task SwitchEndpoint(ApiEndpoint endpoint)
+    {
+        _isSwitching = true;
+        StateHasChanged();
+
+        try
+        {
+            await ApiConfigService.SetApiBaseUrlAsync(endpoint.Url, endpoint.Environment);
+            _currentUrl = endpoint.Url;
+            _currentEnvironment = endpoint.Environment;
+
+            Logger.LogInformation("Switched to endpoint: {Name} ({Url})", endpoint.Name, endpoint.Url);
+
+            // Reload the app to ensure all services use new endpoint
+            // This is necessary because HttpClients cache the base address
+            await JSRuntime.InvokeVoidAsync("location.reload");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to switch endpoint to {Url}", endpoint.Url);
+            await JSRuntime.InvokeVoidAsync("alert", $"Failed to switch endpoint: {ex.Message}");
+        }
+        finally
+        {
+            _isSwitching = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ResetToDefault()
+    {
+        var confirm = await JSRuntime.InvokeAsync<bool>(
+            "confirm",
+            "Reset to default endpoint?\n\nThe app will reload to apply the change.");
+
+        if (!confirm) return;
+
+        _isSwitching = true;
+        StateHasChanged();
+
+        try
+        {
+            await ApiConfigService.ClearPersistedEndpointAsync();
+            Logger.LogInformation("Reset to default endpoint");
+
+            // Reload the app
+            await JSRuntime.InvokeVoidAsync("location.reload");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to reset endpoint");
+            await JSRuntime.InvokeVoidAsync("alert", $"Failed to reset endpoint: {ex.Message}");
+        }
+        finally
+        {
+            _isSwitching = false;
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+    }
+}

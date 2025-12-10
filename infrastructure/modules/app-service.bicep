@@ -95,6 +95,12 @@ param cosmosDbDatabaseName string = 'MystiraAppDb'
 @description('Tags for all resources')
 param tags object = {}
 
+@description('Custom domain to bind (e.g., "api.mystira.app")')
+param customDomain string = ''
+
+@description('Enable custom domain binding (requires DNS CNAME to be configured first)')
+param enableCustomDomain bool = false
+
 // Helper: Check if Key Vault is configured
 var useKeyVault = !empty(keyVaultUri)
 
@@ -302,9 +308,60 @@ resource diagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-pr
   }
 }
 
+// Custom domain binding with managed SSL certificate
+// CNAME should point: customDomain -> appServiceName.azurewebsites.net
+//
+// Deployment approach:
+//   Phase 1: Deploy with enableManagedCert=false - creates hostname binding only (no SSL)
+//   Phase 2: After DNS propagates, redeploy with enableManagedCert=true - creates cert and binds SSL
+//
+// The two phases use SEPARATE resources to avoid circular dependency:
+//   - Phase 1: customDomainBindingNoSsl (binding without SSL)
+//   - Phase 2: managedCertificate + customDomainBindingSsl (cert + binding with SSL)
+
+@description('Enable managed SSL certificate (requires hostname binding to exist first)')
+param enableManagedCert bool = false
+
+// Phase 1: Hostname binding WITHOUT SSL - used when setting up custom domain initially
+resource customDomainBindingNoSsl 'Microsoft.Web/sites/hostNameBindings@2023-01-01' = if (enableCustomDomain && customDomain != '' && !enableManagedCert) {
+  name: customDomain
+  parent: appService
+  properties: {
+    siteName: appService.name
+    hostNameType: 'Verified'
+    sslState: 'Disabled'
+  }
+}
+
+// Phase 2a: App Service Managed Certificate - only created after hostname binding exists
+// Azure automatically provisions and renews this certificate (free)
+resource managedCertificate 'Microsoft.Web/certificates@2023-01-01' = if (enableCustomDomain && customDomain != '' && enableManagedCert) {
+  name: '${appServiceName}-${replace(customDomain, '.', '-')}-cert'
+  location: location
+  tags: tags
+  properties: {
+    serverFarmId: appServicePlan.id
+    canonicalName: customDomain
+  }
+}
+
+// Phase 2b: Hostname binding WITH SSL - references the managed certificate
+resource customDomainBindingSsl 'Microsoft.Web/sites/hostNameBindings@2023-01-01' = if (enableCustomDomain && customDomain != '' && enableManagedCert) {
+  name: customDomain
+  parent: appService
+  properties: {
+    siteName: appService.name
+    hostNameType: 'Verified'
+    sslState: 'SniEnabled'
+    thumbprint: managedCertificate!.properties.thumbprint
+  }
+}
+
 // Outputs
 output appServiceName string = appService.name
 output appServiceId string = appService.id
 output appServiceUrl string = 'https://${appService.properties.defaultHostName}'
+output appServiceDefaultHostname string = appService.properties.defaultHostName
 output appServicePlanId string = appServicePlan.id
 output appServicePrincipalId string = appService.identity.principalId
+output customDomainUrl string = enableCustomDomain && customDomain != '' ? 'https://${customDomain}' : ''

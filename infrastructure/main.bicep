@@ -286,6 +286,34 @@ param staticWebAppRepositoryUrl string = ''
 param staticWebAppBranch string = 'dev'
 
 // ─────────────────────────────────────────────────────────────────
+// DNS / Custom Domain Parameters
+// ─────────────────────────────────────────────────────────────────
+
+@description('Enable custom domain for Static Web App')
+param enableCustomDomain bool = false
+
+@description('DNS zone name (e.g., mystira.app)')
+param dnsZoneName string = 'mystira.app'
+
+@description('Resource group where the DNS zone exists (defaults to current RG)')
+param dnsZoneResourceGroup string = ''
+
+@description('Subdomain for the environment (empty for apex/prod, "dev" for dev, "staging" for staging)')
+param customDomainSubdomain string = ''
+
+@description('Enable custom domain for API App Services')
+param enableApiCustomDomain bool = false
+
+@description('API subdomain prefix (e.g., "api" for api.mystira.app or api.dev.mystira.app)')
+param apiSubdomainPrefix string = 'api'
+
+@description('Admin API subdomain prefix (e.g., "admin" for admin.mystira.app)')
+param adminApiSubdomainPrefix string = 'admin'
+
+@description('Enable managed SSL certificates for custom domains (requires hostname binding first)')
+param enableManagedCert bool = false
+
+// ─────────────────────────────────────────────────────────────────
 // Computed Values
 // ─────────────────────────────────────────────────────────────────
 
@@ -295,6 +323,16 @@ var storageConnString = skipStorageCreation && existingStorageConnectionString !
 
 // Key Vault URI for App Service secret references
 var keyVaultUriComputed = 'https://${names.keyVault}${az.environment().suffixes.keyvaultDns}/'
+
+// DNS Zone resource group (defaults to current RG if not specified)
+var dnsZoneRg = dnsZoneResourceGroup == '' ? resourceGroup().name : dnsZoneResourceGroup
+
+// Custom domain name (e.g., "dev.mystira.app" or "mystira.app" for apex)
+var customDomainFull = customDomainSubdomain == '' ? dnsZoneName : '${customDomainSubdomain}.${dnsZoneName}'
+
+// API custom domains (e.g., "api.dev.mystira.app" or "api.mystira.app" for prod)
+var apiCustomDomain = customDomainSubdomain == '' ? '${apiSubdomainPrefix}.${dnsZoneName}' : '${apiSubdomainPrefix}.${customDomainSubdomain}.${dnsZoneName}'
+var adminApiCustomDomain = customDomainSubdomain == '' ? '${adminApiSubdomainPrefix}.${dnsZoneName}' : '${adminApiSubdomainPrefix}.${customDomainSubdomain}.${dnsZoneName}'
 
 // ─────────────────────────────────────────────────────────────────
 // Module Deployments
@@ -364,7 +402,6 @@ module azureBot 'modules/azure-bot.bicep' = if (deployAzureBot && botMicrosoftAp
     botName: names.azureBot
     botDisplayName: 'Mystira Bot'
     microsoftAppId: botMicrosoftAppId
-    microsoftAppPassword: botMicrosoftAppPassword
     botEndpoint: botEndpoint != '' ? botEndpoint : 'https://${names.apiApp}.azurewebsites.net/api/messages/teams'
     location: 'global'
     sku: botSku
@@ -472,6 +509,143 @@ module staticWebApp 'modules/static-web-app.bicep' = if (deployStaticWebApp) {
     repositoryUrl: staticWebAppRepositoryUrl
     branch: staticWebAppBranch
     tags: tags
+    // Custom domain will be bound after DNS record is created
+    customDomain: ''
+    enableCustomDomain: false
+  }
+}
+
+// DNS Records for Static Web App Custom Domain
+// Creates CNAME/TXT record in existing DNS zone pointing to SWA
+module swaDnsRecord 'modules/dns-zone.bicep' = if (deployStaticWebApp && enableCustomDomain) {
+  name: 'deploy-swa-dns-record'
+  scope: resourceGroup(dnsZoneRg)
+  params: {
+    dnsZoneName: dnsZoneName
+    subdomain: customDomainSubdomain
+    targetHostname: staticWebApp.outputs.staticWebAppDefaultHostname
+    recordType: customDomainSubdomain == '' ? 'TXT' : 'CNAME'
+    enableCustomDomain: true
+    tags: tags
+  }
+}
+
+// DNS Records for Main API Custom Domain
+// Creates CNAME record: api.mystira.app or api.dev.mystira.app -> App Service hostname
+module apiDnsRecord 'modules/dns-zone.bicep' = if (!skipAppServiceCreation && enableApiCustomDomain) {
+  name: 'deploy-api-dns-record'
+  scope: resourceGroup(dnsZoneRg)
+  params: {
+    dnsZoneName: dnsZoneName
+    subdomain: customDomainSubdomain == '' ? apiSubdomainPrefix : '${apiSubdomainPrefix}.${customDomainSubdomain}'
+    targetHostname: apiAppService.outputs.appServiceDefaultHostname
+    recordType: 'CNAME'
+    enableCustomDomain: true
+    tags: tags
+  }
+}
+
+// DNS Records for Admin API Custom Domain
+// Creates CNAME record: admin.mystira.app or admin.dev.mystira.app -> App Service hostname
+module adminApiDnsRecord 'modules/dns-zone.bicep' = if (!skipAppServiceCreation && enableApiCustomDomain) {
+  name: 'deploy-admin-api-dns-record'
+  scope: resourceGroup(dnsZoneRg)
+  params: {
+    dnsZoneName: dnsZoneName
+    subdomain: customDomainSubdomain == '' ? adminApiSubdomainPrefix : '${adminApiSubdomainPrefix}.${customDomainSubdomain}'
+    targetHostname: adminApiAppService.outputs.appServiceDefaultHostname
+    recordType: 'CNAME'
+    enableCustomDomain: true
+    tags: tags
+  }
+}
+
+// Static Web App Custom Domain Binding (after DNS record exists)
+// This is a separate deployment to ensure DNS propagates first
+module staticWebAppCustomDomain 'modules/static-web-app.bicep' = if (deployStaticWebApp && enableCustomDomain) {
+  name: 'deploy-static-web-app-custom-domain'
+  dependsOn: [swaDnsRecord]
+  params: {
+    staticWebAppName: names.staticWebApp
+    location: fallbackRegion
+    sku: staticWebAppSku
+    repositoryUrl: staticWebAppRepositoryUrl
+    branch: staticWebAppBranch
+    tags: tags
+    customDomain: customDomainFull
+    enableCustomDomain: true
+  }
+}
+
+// API Custom Domain Binding (after DNS record exists)
+module apiCustomDomainBinding 'modules/app-service.bicep' = if (!skipAppServiceCreation && enableApiCustomDomain) {
+  name: 'deploy-api-custom-domain-binding'
+  dependsOn: [apiDnsRecord]
+  params: {
+    appServiceName: names.apiApp
+    appServicePlanName: names.appServicePlan
+    location: location
+    sku: appServiceSku
+    aspnetEnvironment: environment == 'prod' ? 'Production' : (environment == 'staging' ? 'Staging' : 'Development')
+    cosmosDbConnectionString: skipCosmosCreation ? cosmosConnString : cosmosDb.outputs.cosmosDbConnectionString
+    storageConnectionString: skipStorageCreation ? storageConnString : storage.outputs.storageConnectionString
+    jwtRsaPrivateKey: jwtRsaPrivateKey
+    jwtRsaPublicKey: jwtRsaPublicKey
+    jwtIssuer: jwtIssuer
+    jwtAudience: jwtAudience
+    keyVaultUri: keyVaultUriComputed
+    acsConnectionString: skipCommServiceCreation ? acsConnectionString : communicationServices.outputs.communicationServiceConnectionString
+    acsSenderEmail: acsSenderEmail
+    corsAllowedOrigins: corsAllowedOrigins
+    appInsightsConnectionString: appInsights.outputs.connectionString
+    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+    discordBotToken: discordBotToken
+    botMicrosoftAppId: botMicrosoftAppId
+    botMicrosoftAppPassword: botMicrosoftAppPassword
+    whatsAppChannelRegistrationId: whatsAppChannelRegistrationId
+    whatsAppPhoneNumberId: whatsAppPhoneNumberId
+    whatsAppBusinessAccountId: whatsAppBusinessAccountId
+    whatsAppWebhookVerifyToken: whatsAppWebhookVerifyToken
+    tags: tags
+    customDomain: apiCustomDomain
+    enableCustomDomain: true
+    enableManagedCert: enableManagedCert
+  }
+}
+
+// Admin API Custom Domain Binding (after DNS record exists)
+module adminApiCustomDomainBinding 'modules/app-service.bicep' = if (!skipAppServiceCreation && enableApiCustomDomain) {
+  name: 'deploy-admin-api-custom-domain-binding'
+  dependsOn: [adminApiDnsRecord]
+  params: {
+    appServiceName: names.adminApiApp
+    appServicePlanName: names.appServicePlan
+    location: location
+    sku: appServiceSku
+    aspnetEnvironment: environment == 'prod' ? 'Production' : (environment == 'staging' ? 'Staging' : 'Development')
+    cosmosDbConnectionString: skipCosmosCreation ? cosmosConnString : cosmosDb.outputs.cosmosDbConnectionString
+    storageConnectionString: skipStorageCreation ? storageConnString : storage.outputs.storageConnectionString
+    jwtRsaPrivateKey: jwtRsaPrivateKey
+    jwtRsaPublicKey: jwtRsaPublicKey
+    jwtIssuer: jwtIssuer
+    jwtAudience: jwtAudience
+    keyVaultUri: keyVaultUriComputed
+    acsConnectionString: skipCommServiceCreation ? acsConnectionString : communicationServices.outputs.communicationServiceConnectionString
+    acsSenderEmail: acsSenderEmail
+    corsAllowedOrigins: corsAllowedOrigins
+    appInsightsConnectionString: appInsights.outputs.connectionString
+    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+    discordBotToken: discordBotToken
+    botMicrosoftAppId: botMicrosoftAppId
+    botMicrosoftAppPassword: botMicrosoftAppPassword
+    whatsAppChannelRegistrationId: whatsAppChannelRegistrationId
+    whatsAppPhoneNumberId: whatsAppPhoneNumberId
+    whatsAppBusinessAccountId: whatsAppBusinessAccountId
+    whatsAppWebhookVerifyToken: whatsAppWebhookVerifyToken
+    tags: tags
+    customDomain: adminApiCustomDomain
+    enableCustomDomain: true
+    enableManagedCert: enableManagedCert
   }
 }
 
@@ -540,6 +714,8 @@ output cosmosDbConnectionString string = skipCosmosCreation ? cosmosConnString :
 // App Services
 output apiAppServiceUrl string = skipAppServiceCreation ? '' : apiAppService.outputs.appServiceUrl
 output adminApiAppServiceUrl string = skipAppServiceCreation ? '' : adminApiAppService.outputs.appServiceUrl
+output apiCustomDomainUrl string = !skipAppServiceCreation && enableApiCustomDomain ? 'https://${apiCustomDomain}' : ''
+output adminApiCustomDomainUrl string = !skipAppServiceCreation && enableApiCustomDomain ? 'https://${adminApiCustomDomain}' : ''
 
 // Azure Bot
 output azureBotId string = deployAzureBot && botMicrosoftAppId != '' ? azureBot.outputs.botId : ''
@@ -556,6 +732,8 @@ output discordBotConfigured bool = discordBotToken != ''
 output staticWebAppUrl string = deployStaticWebApp ? staticWebApp.outputs.staticWebAppUrl : ''
 output staticWebAppName string = deployStaticWebApp ? staticWebApp.outputs.staticWebAppName : ''
 output staticWebAppFallbackRegion string = fallbackRegion
+output staticWebAppCustomDomain string = deployStaticWebApp && enableCustomDomain ? customDomainFull : ''
+output staticWebAppCustomDomainUrl string = deployStaticWebApp && enableCustomDomain ? 'https://${customDomainFull}' : ''
 
 // Key Vault
 output keyVaultName string = keyVault.outputs.keyVaultName
