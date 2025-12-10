@@ -20,6 +20,8 @@ public class AzureEmailService : IEmailService
     private readonly ILogger<AzureEmailService> _logger;
     private readonly string _senderEmail;
     private readonly bool _isEnabled;
+    private const int CodeExpiryMinutes = 15;
+    private const int EmailSendTimeoutSeconds = 10; // Timeout for email send operations to detect ACS configuration issues
 
     public AzureEmailService(IConfiguration configuration, ILogger<AzureEmailService> logger)
     {
@@ -104,7 +106,7 @@ public class AzureEmailService : IEmailService
 
             // Use WaitUntil.Started to avoid blocking on email delivery
             // This prevents timeouts when ACS is misconfigured
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(EmailSendTimeoutSeconds));
             var operation = await _emailClient.SendAsync(WaitUntil.Started, emailMessage, cts.Token);
 
             _logger.LogInformation(
@@ -116,13 +118,8 @@ public class AzureEmailService : IEmailService
         catch (OperationCanceledException ex)
         {
             // Handles both OperationCanceledException and TaskCanceledException (subclass)
-            _logger.LogError(ex,
-                "[{OperationId}] Email sending operation timed out. " +
-                "Recipient: {Email}. This may indicate Azure Communication Services is not properly configured. " +
-                "Please verify: 1) Connection string is valid, 2) Sender email domain is verified in Azure, " +
-                "3) Email domain has proper DNS records (SPF, DKIM, DMARC)",
-                operationId, toEmail);
-            return (false, "Email service configuration error. Please contact support or verify your email domain setup.");
+            _logger.LogError(ex, "Email operation canceled");
+            return HandleEmailTimeout(operationId, toEmail, "Signup");
         }
         catch (RequestFailedException ex)
         {
@@ -131,13 +128,7 @@ public class AzureEmailService : IEmailService
                 "Recipient: {Email}, ErrorCode: {ErrorCode}, Status: {Status}, Message: {Message}",
                 operationId, toEmail, ex.ErrorCode, ex.Status, ex.Message);
             
-            // Provide more helpful error message for common configuration issues
-            var userMessage = ex.ErrorCode switch
-            {
-                "Unauthorized" => "Email service authentication failed. Please contact support.",
-                "InvalidSenderAddress" => "Email sender address is not verified. Please contact support.",
-                _ => $"Failed to send email: {ex.Message}"
-            };
+            var userMessage = GetUserFriendlyErrorMessage(ex.ErrorCode, $"Failed to send email: {ex.Message}");
             return (false, userMessage);
         }
         catch (InvalidOperationException ex)
@@ -192,7 +183,7 @@ public class AzureEmailService : IEmailService
 
             // Use WaitUntil.Started to avoid blocking on email delivery
             // This prevents timeouts when ACS is misconfigured
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(EmailSendTimeoutSeconds));
             var operation = await _emailClient.SendAsync(WaitUntil.Started, emailMessage, cts.Token);
 
             _logger.LogInformation(
@@ -204,13 +195,8 @@ public class AzureEmailService : IEmailService
         catch (OperationCanceledException ex)
         {
             // Handles both OperationCanceledException and TaskCanceledException (subclass)
-            _logger.LogError(ex,
-                "[{OperationId}] Sign-in email operation timed out. " +
-                "Recipient: {Email}. This may indicate Azure Communication Services is not properly configured. " +
-                "Please verify: 1) Connection string is valid, 2) Sender email domain is verified in Azure, " +
-                "3) Email domain has proper DNS records (SPF, DKIM, DMARC)",
-                operationId, toEmail);
-            return (false, "Email service configuration error. Please contact support or verify your email domain setup.");
+            _logger.LogError(ex, "Email operation canceled");
+            return HandleEmailTimeout(operationId, toEmail, "Sign-in");
         }
         catch (RequestFailedException ex)
         {
@@ -219,13 +205,7 @@ public class AzureEmailService : IEmailService
                 "Recipient: {Email}, ErrorCode: {ErrorCode}, Status: {Status}, Message: {Message}",
                 operationId, toEmail, ex.ErrorCode, ex.Status, ex.Message);
             
-            // Provide more helpful error message for common configuration issues
-            var userMessage = ex.ErrorCode switch
-            {
-                "Unauthorized" => "Email service authentication failed. Please contact support.",
-                "InvalidSenderAddress" => "Email sender address is not verified. Please contact support.",
-                _ => $"Failed to send sign-in email: {ex.Message}"
-            };
+            var userMessage = GetUserFriendlyErrorMessage(ex.ErrorCode, $"Failed to send sign-in email: {ex.Message}");
             return (false, userMessage);
         }
         catch (InvalidOperationException ex)
@@ -428,5 +408,32 @@ public class AzureEmailService : IEmailService
     </div>
 </body>
 </html>";
+    }
+
+    /// <summary>
+    /// Handles timeout errors for email operations with detailed logging and helpful error messages.
+    /// </summary>
+    private (bool Success, string ErrorMessage) HandleEmailTimeout(string operationId, string toEmail, string emailType)
+    {
+        _logger.LogError(
+            "[{OperationId}] {EmailType} email operation timed out. " +
+            "Recipient: {Email}. This may indicate Azure Communication Services is not properly configured. " +
+            "Please verify: 1) Connection string is valid, 2) Sender email domain is verified in Azure, " +
+            "3) Email domain has proper DNS records (SPF, DKIM, DMARC)",
+            operationId, emailType, toEmail);
+        return (false, "Email service configuration error. Please contact support or verify your email domain setup.");
+    }
+
+    /// <summary>
+    /// Maps ACS error codes to user-friendly error messages.
+    /// </summary>
+    private static string GetUserFriendlyErrorMessage(string? errorCode, string defaultMessage)
+    {
+        return errorCode switch
+        {
+            "Unauthorized" => "Email service authentication failed. Please contact support.",
+            "InvalidSenderAddress" => "Email sender address is not verified. Please contact support.",
+            _ => defaultMessage
+        };
     }
 }
