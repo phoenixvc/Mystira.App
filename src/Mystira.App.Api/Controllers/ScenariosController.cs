@@ -209,10 +209,10 @@ public class ScenariosController : ControllerBase
             return NotFound(new ErrorResponse
             {
                 Message = $"Scenario not found: {id}",
-
-        return Ok(ipStatus);
                 TraceId = HttpContext.TraceIdentifier
             });
         }
+
+        return Ok(ipStatus);
     }
 }
