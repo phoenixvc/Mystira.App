@@ -109,6 +109,7 @@ pub async fn migration_run(
     source_database_name: String,
     dest_database_name: String,
     container_name: String,
+    dry_run: Option<bool>,
 ) -> Result<CommandResponse, String> {
     let args = serde_json::json!({
         "type": migration_type,
@@ -118,7 +119,8 @@ pub async fn migration_run(
         "destStorageConnection": dest_storage,
         "sourceDatabaseName": source_database_name,
         "destDatabaseName": dest_database_name,
-        "containerName": container_name
+        "containerName": container_name,
+        "dryRun": dry_run.unwrap_or(false)
     });
     execute_devhub_cli("migration.run".to_string(), args).await
 }

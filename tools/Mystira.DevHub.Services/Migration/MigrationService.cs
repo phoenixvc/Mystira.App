@@ -317,17 +317,21 @@ public class MigrationService : IMigrationService
     /// Generic container migration using dynamic JSON documents.
     /// Works for any container without needing specific model classes.
     /// </summary>
-    public async Task<MigrationResult> MigrateContainerAsync(string sourceConnectionString, string destConnectionString, string sourceDatabaseName, string destDatabaseName, string containerName, string partitionKeyPath = "/id")
+    public async Task<MigrationResult> MigrateContainerAsync(string sourceConnectionString, string destConnectionString, string sourceDatabaseName, string destDatabaseName, string containerName, string partitionKeyPath = "/id", bool dryRun = false)
     {
         var stopwatch = Stopwatch.StartNew();
         var result = new MigrationResult();
 
         try
         {
-            _logger.LogInformation("Starting generic migration for container: {Container} from {SourceDb} to {DestDb}", containerName, sourceDatabaseName, destDatabaseName);
+            _logger.LogInformation("Starting{DryRun} generic migration for container: {Container} from {SourceDb} to {DestDb}", 
+                dryRun ? " DRY-RUN" : "", containerName, sourceDatabaseName, destDatabaseName);
 
-            using var sourceClient = new CosmosClient(sourceConnectionString);
-            using var destClient = new CosmosClient(destConnectionString);
+            var sourceOptions = new CosmosClientOptions { AllowBulkExecution = false }; // Read doesn't need bulk
+            var destOptions = new CosmosClientOptions { AllowBulkExecution = true }; // Enable bulk for writes
+
+            using var sourceClient = new CosmosClient(sourceConnectionString, sourceOptions);
+            using var destClient = new CosmosClient(destConnectionString, destOptions);
 
             // Check if source container exists before attempting migration
             var sourceContainerExists = await CheckContainerExists(sourceClient, sourceDatabaseName, containerName);
@@ -341,11 +345,13 @@ public class MigrationService : IMigrationService
                 return result;
             }
 
-            // Ensure destination container exists
-            await EnsureContainerExists(destClient, destDatabaseName, containerName, partitionKeyPath);
+            if (!dryRun)
+            {
+                // Ensure destination container exists
+                await EnsureContainerExists(destClient, destDatabaseName, containerName, partitionKeyPath);
+            }
 
             var sourceContainer = sourceClient.GetContainer(sourceDatabaseName, containerName);
-            var destContainer = destClient.GetContainer(destDatabaseName, containerName);
 
             // Query all items from source as dynamic JSON
             var query = sourceContainer.GetItemQueryIterator<dynamic>("SELECT * FROM c");
@@ -369,25 +375,88 @@ public class MigrationService : IMigrationService
                 return result;
             }
 
-            // Migrate each item
-            foreach (var item in items)
+            if (dryRun)
             {
-                try
-                {
-                    // Extract partition key value from the item
-                    string partitionKeyValue = GetPartitionKeyValue(item, partitionKeyPath);
-                    await destContainer.UpsertItemAsync(item, new PartitionKey(partitionKeyValue));
-                    result.SuccessCount++;
-                }
-                catch (Exception ex)
-                {
-                    result.FailureCount++;
-                    string itemId = item?.id?.ToString() ?? "unknown";
-                    result.Errors.Add($"Failed to migrate item {itemId} in {containerName}: {ex.Message}");
-                    _logger.LogError(ex, "Failed to migrate item in {Container}", containerName);
-                }
+                _logger.LogInformation("DRY-RUN: Would migrate {Count} items from {Container}", items.Count, containerName);
+                result.Success = true;
+                result.SuccessCount = items.Count;
+                stopwatch.Stop();
+                result.Duration = stopwatch.Elapsed;
+                return result;
             }
 
+            var destContainer = destClient.GetContainer(destDatabaseName, containerName);
+
+            // Use bulk operations for better performance
+            var tasks = new List<Task>();
+            const int maxRetries = 3;
+            var semaphore = new SemaphoreSlim(100); // Limit concurrent operations
+            int successCount = 0;
+            int failureCount = 0;
+
+            foreach (var item in items)
+            {
+                await semaphore.WaitAsync();
+
+                tasks.Add(Task.Run(async () =>
+                {
+                    try
+                    {
+                        // Extract partition key value from the item
+                        string partitionKeyValue = GetPartitionKeyValueSafe(item, partitionKeyPath, _logger);
+
+                        // Retry logic with exponential backoff
+                        int retryCount = 0;
+                        bool success = false;
+
+                        while (!success && retryCount < maxRetries)
+                        {
+                            try
+                            {
+                                await destContainer.UpsertItemAsync(item, new PartitionKey(partitionKeyValue));
+                                success = true;
+                                Interlocked.Increment(ref successCount);
+                            }
+                            catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                            {
+                                // Rate limiting - wait and retry with exponential backoff
+                                retryCount++;
+                                if (retryCount < maxRetries)
+                                {
+                                    var delay = TimeSpan.FromSeconds(Math.Pow(2, retryCount));
+                                    _logger.LogWarning("Rate limited on item {PartitionKey}, retry {Retry}/{MaxRetries} after {Delay}s", 
+                                        partitionKeyValue, retryCount, maxRetries, delay.TotalSeconds);
+                                    await Task.Delay(delay);
+                                }
+                                else
+                                {
+                                    throw; // Max retries exceeded
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Interlocked.Increment(ref failureCount);
+                        string itemId = item?.id?.ToString() ?? "unknown";
+                        lock (result.Errors)
+                        {
+                            result.Errors.Add($"Failed to migrate item {itemId} in {containerName}: {ex.Message}");
+                        }
+                        _logger.LogError(ex, "Failed to migrate item in {Container}", containerName);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                }));
+            }
+
+            // Wait for all bulk operations to complete
+            await Task.WhenAll(tasks);
+
+            result.SuccessCount = successCount;
+            result.FailureCount = failureCount;
             result.Success = result.FailureCount == 0;
             stopwatch.Stop();
             result.Duration = stopwatch.Elapsed;
@@ -443,7 +512,12 @@ public class MigrationService : IMigrationService
         }
     }
 
-    private static string GetPartitionKeyValue(dynamic item, string partitionKeyPath)
+    private string GetPartitionKeyValue(dynamic item, string partitionKeyPath)
+    {
+        return GetPartitionKeyValueSafe(item, partitionKeyPath, _logger);
+    }
+
+    private static string GetPartitionKeyValueSafe(dynamic item, string partitionKeyPath, ILogger logger)
     {
         // Remove leading slash from partition key path
         var propertyName = partitionKeyPath.TrimStart('/');
@@ -479,7 +553,12 @@ public class MigrationService : IMigrationService
                     if (current == null)
                     {
                         // current is null, fallback to 'id'
-                        return item?.id?.ToString() ?? Guid.NewGuid().ToString();
+                        string? itemId = item?.id?.ToString();
+                        if (!string.IsNullOrEmpty(itemId))
+                        {
+                            return itemId;
+                        }
+                        throw new InvalidOperationException($"Partition key path '{partitionKeyPath}' is null and no 'id' fallback available");
                     }
                     current = ((IDictionary<string, object>)current)[part];
                 }
@@ -495,12 +574,22 @@ public class MigrationService : IMigrationService
                 }
                 catch (KeyNotFoundException)
                 {
-                    return item?.id?.ToString() ?? Guid.NewGuid().ToString();
+                    string? itemId = item?.id?.ToString();
+                    if (!string.IsNullOrEmpty(itemId))
+                    {
+                        return itemId;
+                    }
+                    throw new InvalidOperationException($"Partition key path '{partitionKeyPath}' not found in item and no 'id' fallback available");
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Unexpected exception when traversing partition key path '{PartitionKeyPath}' on item: {Item}", partitionKeyPath, item);
-                    return item?.id?.ToString() ?? Guid.NewGuid().ToString();
+                    logger.LogWarning(ex, "Unexpected exception when traversing partition key path '{PartitionKeyPath}'", partitionKeyPath);
+                    string? itemId = item?.id?.ToString();
+                    if (!string.IsNullOrEmpty(itemId))
+                    {
+                        return itemId;
+                    }
+                    throw new InvalidOperationException($"Unexpected exception traversing partition key path '{partitionKeyPath}' and no 'id' fallback available", ex);
                 }
             }
         }

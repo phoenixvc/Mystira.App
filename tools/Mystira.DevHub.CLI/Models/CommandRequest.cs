@@ -29,6 +29,7 @@ public class MigrationArgs
     public string DestDatabaseName { get; set; } = "MystiraAppDb";
     public string ContainerName { get; set; } = "mystira-app-media";
     public string? JsonFilesPath { get; set; } // Path to master data JSON files
+    public bool DryRun { get; set; } = false; // If true, simulate migration without writing data
 }
 
 public class InfrastructureArgs

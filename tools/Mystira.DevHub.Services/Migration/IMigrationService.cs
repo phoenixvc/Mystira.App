@@ -20,7 +20,7 @@ public interface IMigrationService
     /// <summary>
     /// Generic container migration - migrates any container using dynamic JSON documents
     /// </summary>
-    Task<MigrationResult> MigrateContainerAsync(string sourceConnectionString, string destConnectionString, string sourceDatabaseName, string destDatabaseName, string containerName, string partitionKeyPath = "/id");
+    Task<MigrationResult> MigrateContainerAsync(string sourceConnectionString, string destConnectionString, string sourceDatabaseName, string destDatabaseName, string containerName, string partitionKeyPath = "/id", bool dryRun = false);
 
     /// <summary>
     /// Copies blob files from source storage to destination storage
