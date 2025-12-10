@@ -8,3 +8,7 @@ riderModule.iml
 # Temporary files
 *.tar.gz
 find_dotnet.txt
+
+# Local configuration files (never commit secrets!)
+appsettings.local.json
+appsettings.Local.json

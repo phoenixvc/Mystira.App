@@ -317,6 +317,9 @@ builder.Services.AddScoped<IFantasyThemeRepository, FantasyThemeRepository>();
 builder.Services.AddScoped<IAgeGroupRepository, AgeGroupRepository>();
 builder.Services.AddScoped<IUnitOfWork, Mystira.App.Infrastructure.Data.UnitOfWork.UnitOfWork>();
 
+// Register Master Data Seeder Service
+builder.Services.AddScoped<MasterDataSeederService>();
+
 // Register Application Layer Use Cases
 // Scenario Use Cases
 builder.Services.AddScoped<GetScenariosUseCase>();
@@ -560,47 +563,46 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
 
-// Initialize database (optional, controlled by configuration)
-var initializeDatabaseOnStartup = builder.Configuration.GetValue<bool>("InitializeDatabaseOnStartup", defaultValue: false);
-var isInMemory = !useCosmosDb;
+// Initialize database
+// Check if database initialization should run on startup
+var initializeDb = builder.Configuration.GetValue<bool>("InitializeDatabaseOnStartup", true); // Default to true for backward compatibility
 
-// Always initialize for in-memory databases (local dev), optional for Cosmos DB (production)
-if (initializeDatabaseOnStartup || isInMemory)
+if (initializeDb)
 {
-    using var scope = app.Services.CreateScope();
-    var context = scope.ServiceProvider.GetRequiredService<MystiraAppDbContext>();
-    var startupLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    using (var scope = app.Services.CreateScope())
+    {
+        var context = scope.ServiceProvider.GetRequiredService<MystiraAppDbContext>();
+        var startupLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-    try
-    {
-        startupLogger.LogInformation("Starting database initialization (InitializeDatabaseOnStartup={Init}, InMemory={InMemory})...", initializeDatabaseOnStartup, isInMemory);
-        
-        // Use Task.WhenAny with timeout for more reliable timeout handling
-        // CancellationToken doesn't always work well with Cosmos DB SDK
-        var initTask = context.Database.EnsureCreatedAsync();
-        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(30));
-        var completedTask = await Task.WhenAny(initTask, timeoutTask);
-        
-        if (completedTask == timeoutTask)
+        try
         {
-            // Timeout occurred
-            startupLogger.LogWarning("Database initialization timed out after 30 seconds. The application will start without database initialization. Ensure Azure Cosmos DB is accessible and configured correctly. Set 'InitializeDatabaseOnStartup'=false to skip this check.");
+            await context.Database.EnsureCreatedAsync();
+
+            // Gate master-data seeding by configuration and environment to avoid Cosmos SDK query issues in some setups
+            // Defaults: seed only for InMemory or when explicitly enabled via configuration
+            var seedOnStartup = builder.Configuration.GetValue<bool>("SeedMasterDataOnStartup");
+            var isInMemory = !useCosmosDb;
+            if (seedOnStartup || isInMemory)
+            {
+                try
+                {
+                    var seeder = scope.ServiceProvider.GetRequiredService<MasterDataSeederService>();
+                    await seeder.SeedAllAsync();
+                    startupLogger.LogInformation("Master data seeding completed (SeedMasterDataOnStartup={Seed}, InMemory={InMemory}).", seedOnStartup, isInMemory);
+                }
+                catch (Exception seedEx)
+                {
+                    // Do not crash the app on seeding failure in Cosmos environments; log and continue
+                    startupLogger.LogError(seedEx, "Master data seeding failed. The application will continue to start. Set 'SeedMasterDataOnStartup'=false to skip seeding or use InMemory provider for local dev seeding.");
+                }
+            }
+
+            startupLogger.LogInformation("Database initialization succeeded. Verified containers for current model are present.");
         }
-        else
+        catch (Exception ex)
         {
-            // Await the actual task to catch any exceptions
-            await initTask;
-            startupLogger.LogInformation("Database initialization succeeded.");
-        }
-    }
-    catch (Exception ex)
-    {
-        // Log error but continue - some environments may not have database access
-        startupLogger.LogWarning(ex, "Failed to initialize database during startup. The application will start in degraded mode. Ensure Azure Cosmos DB is configured correctly. Set 'InitializeDatabaseOnStartup'=false to skip this check.");
-        
-        // Only fail fast in development/local environments where we expect the database to work
-        if (isInMemory)
-        {
+            // Fail fast with clear guidance so missing Cosmos containers/permissions are visible immediately
+            startupLogger.LogCritical(ex, "Failed to initialize database during startup. Ensure Azure Cosmos DB database 'MystiraAppDb' exists and app identity has permissions to create/read containers. Expected containers include: CompassAxes (PK /Id), BadgeConfigurations (PK /Id), CharacterMaps (PK /Id), ContentBundles (PK /Id), Scenarios (PK /Id), MediaMetadataFiles (PK /Id), CharacterMediaMetadataFiles (PK /Id), CharacterMapFiles (PK /Id), UserProfiles (PK /Id), Accounts (PK /Id), PendingSignups (PK /email), GameSessions (PK /AccountId), MediaAssets (PK /MediaType).");
             throw;
         }
     }
