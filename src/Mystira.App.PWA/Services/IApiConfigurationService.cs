@@ -23,9 +23,11 @@ public interface IApiConfigurationService
 
     /// <summary>
     /// Sets and persists the API base URL to localStorage.
+    /// Validates the URL before persisting.
     /// </summary>
     /// <param name="apiBaseUrl">The API URL to persist.</param>
     /// <param name="environmentName">The environment name (optional).</param>
+    /// <exception cref="ArgumentException">Thrown if the URL is invalid.</exception>
     Task SetApiBaseUrlAsync(string apiBaseUrl, string? environmentName = null);
 
     /// <summary>
@@ -35,13 +37,21 @@ public interface IApiConfigurationService
 
     /// <summary>
     /// Checks if endpoint switching is allowed for this environment.
+    /// Synchronous because it only reads from configuration.
     /// </summary>
-    Task<bool> IsEndpointSwitchingAllowedAsync();
+    bool IsEndpointSwitchingAllowed();
 
     /// <summary>
     /// Clears the persisted endpoint, reverting to the default from config.
     /// </summary>
     Task ClearPersistedEndpointAsync();
+
+    /// <summary>
+    /// Validates an endpoint by checking if it's reachable.
+    /// </summary>
+    /// <param name="url">The URL to validate.</param>
+    /// <returns>Health check result with status and any error message.</returns>
+    Task<EndpointHealthResult> ValidateEndpointAsync(string url);
 
     /// <summary>
     /// Event raised when the API endpoint changes.
@@ -67,4 +77,16 @@ public class ApiEndpointChangedEventArgs : EventArgs
     public string OldUrl { get; init; } = string.Empty;
     public string NewUrl { get; init; } = string.Empty;
     public string Environment { get; init; } = string.Empty;
+}
+
+/// <summary>
+/// Result of an endpoint health check.
+/// </summary>
+public record EndpointHealthResult
+{
+    public string Url { get; init; } = string.Empty;
+    public bool IsHealthy { get; init; }
+    public int? StatusCode { get; init; }
+    public int ResponseTimeMs { get; init; }
+    public string? ErrorMessage { get; init; }
 }

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.JSInterop;
 
@@ -14,6 +13,8 @@ public class ApiConfigurationService : IApiConfigurationService
     private readonly IJSRuntime _jsRuntime;
     private readonly IConfiguration _configuration;
     private readonly ILogger<ApiConfigurationService> _logger;
+    private readonly IApiEndpointCache _endpointCache;
+    private readonly HttpClient _healthCheckClient;
 
     // LocalStorage keys - using specific prefix to avoid conflicts
     private const string ApiUrlStorageKey = "mystira_api_base_url";
@@ -32,11 +33,19 @@ public class ApiConfigurationService : IApiConfigurationService
     public ApiConfigurationService(
         IJSRuntime jsRuntime,
         IConfiguration configuration,
-        ILogger<ApiConfigurationService> logger)
+        ILogger<ApiConfigurationService> logger,
+        IApiEndpointCache endpointCache)
     {
         _jsRuntime = jsRuntime;
         _configuration = configuration;
         _logger = logger;
+        _endpointCache = endpointCache;
+
+        // Create a simple HttpClient for health checks (no auth needed)
+        _healthCheckClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(5)
+        };
     }
 
     /// <inheritdoc />
@@ -63,6 +72,13 @@ public class ApiConfigurationService : IApiConfigurationService
     /// <inheritdoc />
     public async Task SetApiBaseUrlAsync(string apiBaseUrl, string? environmentName = null)
     {
+        // Validate URL before persisting
+        if (!ValidateUrl(apiBaseUrl, out var validationError))
+        {
+            _logger.LogError("Invalid API URL: {Url}. Error: {Error}", apiBaseUrl, validationError);
+            throw new ArgumentException($"Invalid API URL: {validationError}", nameof(apiBaseUrl));
+        }
+
         var oldUrl = await GetApiBaseUrlAsync();
 
         try
@@ -75,22 +91,17 @@ public class ApiConfigurationService : IApiConfigurationService
                 await _jsRuntime.InvokeVoidAsync("localStorage.setItem", EnvironmentStorageKey, environmentName);
             }
 
-            // Find matching admin API URL from available endpoints
-            var endpoints = await GetAvailableEndpointsAsync();
-            var matchingEndpoint = endpoints.FirstOrDefault(e =>
-                e.Url.Equals(apiBaseUrl, StringComparison.OrdinalIgnoreCase));
-
-            if (matchingEndpoint != null)
-            {
-                // Derive admin API URL from the same environment
-                var adminApiUrl = DeriveAdminApiUrl(apiBaseUrl);
-                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", AdminApiUrlStorageKey, adminApiUrl);
-                _cachedAdminApiUrl = adminApiUrl;
-            }
+            // Derive admin API URL
+            var adminApiUrl = DeriveAdminApiUrl(apiBaseUrl);
+            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", AdminApiUrlStorageKey, adminApiUrl);
+            _cachedAdminApiUrl = adminApiUrl;
 
             // Update cache
             _cachedApiUrl = apiBaseUrl;
             _cachedEnvironment = environmentName ?? _cachedEnvironment;
+
+            // Update singleton cache for handlers
+            _endpointCache.Update(apiBaseUrl, adminApiUrl);
 
             _logger.LogInformation("API endpoint changed from {OldUrl} to {NewUrl} (Environment: {Environment})",
                 oldUrl, apiBaseUrl, environmentName);
@@ -103,7 +114,7 @@ public class ApiConfigurationService : IApiConfigurationService
                 Environment = environmentName ?? string.Empty
             });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not ArgumentException)
         {
             _logger.LogError(ex, "Failed to persist API endpoint to localStorage");
             throw;
@@ -129,12 +140,12 @@ public class ApiConfigurationService : IApiConfigurationService
                 {
                     var endpoint = new ApiEndpoint
                     {
-                        Name = child["name"] ?? string.Empty,
-                        Url = child["url"] ?? string.Empty,
-                        Environment = child["environment"] ?? string.Empty
+                        Name = child["Name"] ?? child["name"] ?? string.Empty,
+                        Url = child["Url"] ?? child["url"] ?? string.Empty,
+                        Environment = child["Environment"] ?? child["environment"] ?? string.Empty
                     };
 
-                    if (!string.IsNullOrEmpty(endpoint.Url))
+                    if (!string.IsNullOrEmpty(endpoint.Url) && ValidateUrl(endpoint.Url, out _))
                     {
                         endpoints.Add(endpoint);
                     }
@@ -162,10 +173,9 @@ public class ApiConfigurationService : IApiConfigurationService
     }
 
     /// <inheritdoc />
-    public async Task<bool> IsEndpointSwitchingAllowedAsync()
+    public bool IsEndpointSwitchingAllowed()
     {
-        var allowSwitching = _configuration.GetValue<bool>("ApiConfiguration:AllowEndpointSwitching");
-        return allowSwitching;
+        return _configuration.GetValue<bool>("ApiConfiguration:AllowEndpointSwitching");
     }
 
     /// <inheritdoc />
@@ -177,11 +187,15 @@ public class ApiConfigurationService : IApiConfigurationService
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", AdminApiUrlStorageKey);
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", EnvironmentStorageKey);
 
-            // Reset cache
+            // Reset caches
             _cachedApiUrl = null;
             _cachedAdminApiUrl = null;
             _cachedEnvironment = null;
             _isInitialized = false;
+
+            // Reset singleton cache and reinitialize with defaults
+            _endpointCache.Clear();
+            _endpointCache.Initialize(GetDefaultApiUrl(), GetDefaultAdminApiUrl());
 
             _logger.LogInformation("Cleared persisted API endpoint, reverting to default configuration");
         }
@@ -189,6 +203,61 @@ public class ApiConfigurationService : IApiConfigurationService
         {
             _logger.LogError(ex, "Failed to clear persisted API endpoint from localStorage");
             throw;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<EndpointHealthResult> ValidateEndpointAsync(string url)
+    {
+        if (!ValidateUrl(url, out var validationError))
+        {
+            return new EndpointHealthResult
+            {
+                Url = url,
+                IsHealthy = false,
+                ErrorMessage = $"Invalid URL: {validationError}"
+            };
+        }
+
+        try
+        {
+            var healthUrl = EnsureTrailingSlash(url) + "health";
+            var response = await _healthCheckClient.GetAsync(healthUrl);
+
+            return new EndpointHealthResult
+            {
+                Url = url,
+                IsHealthy = response.IsSuccessStatusCode,
+                StatusCode = (int)response.StatusCode,
+                ResponseTimeMs = 0 // Would need Stopwatch for accurate timing
+            };
+        }
+        catch (HttpRequestException ex)
+        {
+            return new EndpointHealthResult
+            {
+                Url = url,
+                IsHealthy = false,
+                ErrorMessage = $"Connection failed: {ex.Message}"
+            };
+        }
+        catch (TaskCanceledException)
+        {
+            return new EndpointHealthResult
+            {
+                Url = url,
+                IsHealthy = false,
+                ErrorMessage = "Request timed out (5s)"
+            };
+        }
+        catch (Exception ex)
+        {
+            return new EndpointHealthResult
+            {
+                Url = url,
+                IsHealthy = false,
+                ErrorMessage = $"Unexpected error: {ex.Message}"
+            };
         }
     }
 
@@ -206,18 +275,25 @@ public class ApiConfigurationService : IApiConfigurationService
             var persistedAdminApiUrl = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", AdminApiUrlStorageKey);
             var persistedEnvironment = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", EnvironmentStorageKey);
 
-            if (!string.IsNullOrEmpty(persistedApiUrl))
+            // Validate persisted URL before using it
+            if (!string.IsNullOrEmpty(persistedApiUrl) && ValidateUrl(persistedApiUrl, out _))
             {
                 _cachedApiUrl = persistedApiUrl;
                 _logger.LogInformation("Loaded persisted API URL from localStorage: {ApiUrl}", persistedApiUrl);
             }
             else
             {
+                if (!string.IsNullOrEmpty(persistedApiUrl))
+                {
+                    _logger.LogWarning("Persisted API URL is invalid, clearing: {ApiUrl}", persistedApiUrl);
+                    await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", ApiUrlStorageKey);
+                }
                 _cachedApiUrl = GetDefaultApiUrl();
                 _logger.LogInformation("Using default API URL from configuration: {ApiUrl}", _cachedApiUrl);
             }
 
-            if (!string.IsNullOrEmpty(persistedAdminApiUrl))
+            // Validate persisted admin URL
+            if (!string.IsNullOrEmpty(persistedAdminApiUrl) && ValidateUrl(persistedAdminApiUrl, out _))
             {
                 _cachedAdminApiUrl = persistedAdminApiUrl;
             }
@@ -230,6 +306,9 @@ public class ApiConfigurationService : IApiConfigurationService
                 ? persistedEnvironment
                 : GetDefaultEnvironment();
 
+            // Initialize singleton cache
+            _endpointCache.Initialize(_cachedApiUrl, _cachedAdminApiUrl);
+
             _isInitialized = true;
         }
         catch (InvalidOperationException)
@@ -238,6 +317,7 @@ public class ApiConfigurationService : IApiConfigurationService
             _cachedApiUrl = GetDefaultApiUrl();
             _cachedAdminApiUrl = GetDefaultAdminApiUrl();
             _cachedEnvironment = GetDefaultEnvironment();
+            _endpointCache.Initialize(_cachedApiUrl, _cachedAdminApiUrl);
             _logger.LogDebug("JSInterop not available, using default configuration values");
         }
         catch (Exception ex)
@@ -246,7 +326,43 @@ public class ApiConfigurationService : IApiConfigurationService
             _cachedApiUrl = GetDefaultApiUrl();
             _cachedAdminApiUrl = GetDefaultAdminApiUrl();
             _cachedEnvironment = GetDefaultEnvironment();
+            _endpointCache.Initialize(_cachedApiUrl, _cachedAdminApiUrl);
         }
+    }
+
+    /// <summary>
+    /// Validates that a URL is well-formed and uses HTTPS.
+    /// </summary>
+    private static bool ValidateUrl(string url, out string? error)
+    {
+        error = null;
+
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            error = "URL cannot be empty";
+            return false;
+        }
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            error = "URL is not well-formed";
+            return false;
+        }
+
+        if (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp)
+        {
+            error = "URL must use HTTP or HTTPS scheme";
+            return false;
+        }
+
+        // Allow HTTP only for localhost
+        if (uri.Scheme == Uri.UriSchemeHttp && !uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+        {
+            error = "Non-localhost URLs must use HTTPS";
+            return false;
+        }
+
+        return true;
     }
 
     private string GetDefaultApiUrl()
@@ -286,7 +402,7 @@ public class ApiConfigurationService : IApiConfigurationService
             var uri = new Uri(apiUrl);
             var host = uri.Host;
 
-            if (host.StartsWith("api."))
+            if (host.StartsWith("api.", StringComparison.OrdinalIgnoreCase))
             {
                 var newHost = "admin" + host.Substring(3);
                 return $"{uri.Scheme}://{newHost}{uri.AbsolutePath}";

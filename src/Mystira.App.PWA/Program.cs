@@ -19,13 +19,17 @@ builder.Services.AddScoped(_ => new HttpClient
 // Register the auth header handler
 builder.Services.AddScoped<AuthHeaderHandler>();
 
+// Register singleton cache for API endpoints - solves DelegatingHandler lifetime issues
+// This cache is shared across all handler instances and is thread-safe
+builder.Services.AddSingleton<IApiEndpointCache, ApiEndpointCache>();
+
 // Register API Configuration Service (handles domain persistence across PWA updates)
 // This service reads from localStorage and provides the current API URL
 builder.Services.AddScoped<IApiConfigurationService, ApiConfigurationService>();
 
 // Register the dynamic API base address handler
-// This handler resolves the API URL at request time from ApiConfigurationService
-builder.Services.AddScoped<ApiBaseAddressHandler>();
+// This handler uses the singleton cache - no event subscriptions, no lifetime issues
+builder.Services.AddTransient<ApiBaseAddressHandler>();
 
 // Get default API URL from configuration (used as fallback if no persisted URL)
 var defaultApiUrl = builder.Configuration.GetValue<string>("ApiConfiguration:DefaultApiBaseUrl")

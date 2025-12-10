@@ -1,0 +1,152 @@
+@using Mystira.App.PWA.Services
+@inject IApiConfigurationService ApiConfigService
+@inject ILogger<EndpointSwitcher> Logger
+
+@if (_isAllowed && _endpoints.Count > 1)
+{
+    <div class="endpoint-switcher dropdown">
+        <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                title="Switch API Endpoint">
+            <i class="fas fa-server me-1"></i>
+            @_currentEnvironment
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li><h6 class="dropdown-header">API Endpoint</h6></li>
+            @foreach (var endpoint in _endpoints)
+            {
+                var isActive = endpoint.Url == _currentUrl;
+                var healthStatus = _healthResults.GetValueOrDefault(endpoint.Url);
+                <li>
+                    <button class="dropdown-item d-flex align-items-center justify-content-between @(isActive ? "active" : "")"
+                            @onclick="() => SwitchEndpoint(endpoint)"
+                            disabled="@(_isSwitching)">
+                        <span>
+                            @endpoint.Name
+                            @if (isActive)
+                            {
+                                <i class="fas fa-check ms-1 text-success"></i>
+                            }
+                        </span>
+                        @if (healthStatus != null)
+                        {
+                            <span class="ms-2">
+                                @if (healthStatus.IsHealthy)
+                                {
+                                    <i class="fas fa-circle text-success" style="font-size: 0.5rem;" title="Healthy"></i>
+                                }
+                                else
+                                {
+                                    <i class="fas fa-circle text-danger" style="font-size: 0.5rem;" title="@healthStatus.ErrorMessage"></i>
+                                }
+                            </span>
+                        }
+                    </button>
+                </li>
+            }
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <button class="dropdown-item text-muted" @onclick="ResetToDefault">
+                    <i class="fas fa-undo me-1"></i> Reset to Default
+                </button>
+            </li>
+        </ul>
+    </div>
+}
+
+@code {
+    private bool _isAllowed;
+    private bool _isSwitching;
+    private string _currentUrl = string.Empty;
+    private string _currentEnvironment = string.Empty;
+    private IReadOnlyList<ApiEndpoint> _endpoints = Array.Empty<ApiEndpoint>();
+    private Dictionary<string, EndpointHealthResult> _healthResults = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isAllowed = ApiConfigService.IsEndpointSwitchingAllowed();
+
+        if (_isAllowed)
+        {
+            _endpoints = await ApiConfigService.GetAvailableEndpointsAsync();
+            _currentUrl = await ApiConfigService.GetApiBaseUrlAsync();
+            _currentEnvironment = await ApiConfigService.GetCurrentEnvironmentAsync();
+
+            // Check health of all endpoints in background
+            _ = CheckEndpointHealthAsync();
+        }
+    }
+
+    private async Task CheckEndpointHealthAsync()
+    {
+        foreach (var endpoint in _endpoints)
+        {
+            try
+            {
+                var result = await ApiConfigService.ValidateEndpointAsync(endpoint.Url);
+                _healthResults[endpoint.Url] = result;
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to check health of {Url}", endpoint.Url);
+            }
+        }
+    }
+
+    private async Task SwitchEndpoint(ApiEndpoint endpoint)
+    {
+        if (_isSwitching || endpoint.Url == _currentUrl)
+            return;
+
+        _isSwitching = true;
+        StateHasChanged();
+
+        try
+        {
+            await ApiConfigService.SetApiBaseUrlAsync(endpoint.Url, endpoint.Environment);
+            _currentUrl = endpoint.Url;
+            _currentEnvironment = endpoint.Environment;
+
+            Logger.LogInformation("Switched to endpoint: {Name} ({Url})", endpoint.Name, endpoint.Url);
+
+            // Optionally reload to ensure all services use new endpoint
+            // For now, the singleton cache update should handle it
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to switch endpoint to {Url}", endpoint.Url);
+        }
+        finally
+        {
+            _isSwitching = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ResetToDefault()
+    {
+        _isSwitching = true;
+        StateHasChanged();
+
+        try
+        {
+            await ApiConfigService.ClearPersistedEndpointAsync();
+            _currentUrl = await ApiConfigService.GetApiBaseUrlAsync();
+            _currentEnvironment = await ApiConfigService.GetCurrentEnvironmentAsync();
+
+            Logger.LogInformation("Reset to default endpoint");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to reset endpoint");
+        }
+        finally
+        {
+            _isSwitching = false;
+            StateHasChanged();
+        }
+    }
+}
