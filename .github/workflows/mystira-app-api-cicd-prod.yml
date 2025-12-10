@@ -9,6 +9,10 @@ on:
       - "src/Mystira.App.Contracts/**"
       - "src/Mystira.App.Application/**"
       - "src/Mystira.App.Infrastructure.Data/**"
+      - "src/Mystira.App.Infrastructure.Azure/**"
+      - "src/Mystira.App.Infrastructure.Discord/**"
+      - "src/Mystira.App.Infrastructure.StoryProtocol/**"
+      - "src/Mystira.App.Shared/**"
       - ".github/workflows/mystira-app-api-cicd-prod.yml"
   pull_request:
     branches: [main] # PRs targeting main
@@ -19,6 +23,10 @@ on:
       - "src/Mystira.App.Contracts/**"
       - "src/Mystira.App.Application/**"
       - "src/Mystira.App.Infrastructure.Data/**"
+      - "src/Mystira.App.Infrastructure.Azure/**"
+      - "src/Mystira.App.Infrastructure.Discord/**"
+      - "src/Mystira.App.Infrastructure.StoryProtocol/**"
+      - "src/Mystira.App.Shared/**"
       - ".github/workflows/mystira-app-api-cicd-prod.yml"
   workflow_run:
     workflows: ["Infrastructure Deploy - Production"]
