@@ -10,19 +10,25 @@ export function useMigration() {
   const abortRef = useRef(false);
 
   // Connection string validation
-  const validateConnectionString = (connStr: string, type: 'cosmos' | 'storage'): string | null => {
-    if (!connStr || connStr.trim() === '') {
+  const validateConnectionString = (connStr: string | null | undefined, type: 'cosmos' | 'storage'): string | null => {
+    if (!connStr?.trim()) {
       return `${type === 'cosmos' ? 'Cosmos DB' : 'Storage'} connection string is required`;
     }
 
     if (type === 'cosmos') {
       // Cosmos DB connection string format: AccountEndpoint=https://...;AccountKey=...;
-      if (!connStr.includes('AccountEndpoint=') || !connStr.includes('AccountKey=')) {
+      const hasEndpoint = /AccountEndpoint=https?:\/\/[^;]+/i.test(connStr);
+      const hasKey = /AccountKey=[^;]+/i.test(connStr);
+      
+      if (!hasEndpoint || !hasKey) {
         return 'Invalid Cosmos DB connection string format. Expected format: AccountEndpoint=https://...;AccountKey=...;';
       }
     } else {
       // Storage connection string format: DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=...
-      if (!connStr.includes('AccountName=') || !connStr.includes('AccountKey=')) {
+      const hasAccountName = /AccountName=[^;]+/i.test(connStr);
+      const hasAccountKey = /AccountKey=[^;]+/i.test(connStr);
+      
+      if (!hasAccountName || !hasAccountKey) {
         return 'Invalid Azure Storage connection string format. Expected format: DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;';
       }
     }
@@ -205,7 +211,7 @@ export function useMigration() {
           currentOperation: operationName,
           completedOperations: [...completedOperations],
           totalOperations,
-          percentComplete: Math.round((completedOperations.length / totalOperations) * 100),
+          percentComplete: totalOperations > 0 ? Math.round((completedOperations.length / totalOperations) * 100) : 0,
           itemsProcessed: totalSuccess,
           itemsTotal: totalItems,
         });

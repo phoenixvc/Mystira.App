@@ -10,6 +10,11 @@ namespace Mystira.DevHub.Services.Migration;
 public class MigrationService : IMigrationService
 {
     private readonly ILogger<MigrationService> _logger;
+    
+    // Concurrency limits for parallel operations
+    private const int MaxConcurrentDocumentOperations = 100;
+    private const int MaxConcurrentBlobOperations = 10;
+    private const int MaxRetries = 3;
 
     public MigrationService(ILogger<MigrationService> logger)
     {
@@ -264,10 +269,9 @@ public class MigrationService : IMigrationService
 
             // Migrate blobs with parallel processing and retry logic
             var tasks = new List<Task>();
-            var semaphore = new SemaphoreSlim(10); // Limit concurrent blob operations (blobs can be large)
+            var semaphore = new SemaphoreSlim(MaxConcurrentBlobOperations); // Limit concurrent blob operations (blobs can be large)
             int successCount = 0;
             int failureCount = 0;
-            const int maxRetries = 3;
 
             foreach (var blobName in blobs)
             {
@@ -293,7 +297,7 @@ public class MigrationService : IMigrationService
                         int retryCount = 0;
                         bool success = false;
 
-                        while (!success && retryCount < maxRetries)
+                        while (!success && retryCount < MaxRetries)
                         {
                             try
                             {
@@ -326,11 +330,11 @@ public class MigrationService : IMigrationService
                             {
                                 // Rate limiting or service unavailable - retry with exponential backoff
                                 retryCount++;
-                                if (retryCount < maxRetries)
+                                if (retryCount < MaxRetries)
                                 {
                                     var delay = TimeSpan.FromSeconds(Math.Pow(2, retryCount));
                                     _logger.LogWarning("Rate limited or service unavailable for blob {BlobName}, retry {Retry}/{MaxRetries} after {Delay}s", 
-                                        blobName, retryCount, maxRetries, delay.TotalSeconds);
+                                        blobName, retryCount, MaxRetries, delay.TotalSeconds);
                                     await Task.Delay(delay);
                                 }
                                 else
@@ -455,8 +459,7 @@ public class MigrationService : IMigrationService
 
             // Use bulk operations for better performance
             var tasks = new List<Task>();
-            const int maxRetries = 3;
-            var semaphore = new SemaphoreSlim(100); // Limit concurrent operations
+            var semaphore = new SemaphoreSlim(MaxConcurrentDocumentOperations); // Limit concurrent operations
             int successCount = 0;
             int failureCount = 0;
 
@@ -475,7 +478,7 @@ public class MigrationService : IMigrationService
                         int retryCount = 0;
                         bool success = false;
 
-                        while (!success && retryCount < maxRetries)
+                        while (!success && retryCount < MaxRetries)
                         {
                             try
                             {
@@ -487,11 +490,11 @@ public class MigrationService : IMigrationService
                             {
                                 // Rate limiting - wait and retry with exponential backoff
                                 retryCount++;
-                                if (retryCount < maxRetries)
+                                if (retryCount < MaxRetries)
                                 {
                                     var delay = TimeSpan.FromSeconds(Math.Pow(2, retryCount));
                                     _logger.LogWarning("Rate limited on item {PartitionKey}, retry {Retry}/{MaxRetries} after {Delay}s", 
-                                        partitionKeyValue, retryCount, maxRetries, delay.TotalSeconds);
+                                        partitionKeyValue, retryCount, MaxRetries, delay.TotalSeconds);
                                     await Task.Delay(delay);
                                 }
                                 else
