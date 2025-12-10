@@ -18,27 +18,39 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Register configuration
+        // Register configuration with default values
         services.Configure<StoryProtocolOptions>(config =>
-            configuration.GetSection(StoryProtocolOptions.SectionName).Bind(config));
+        {
+            // Bind configuration section if it exists, otherwise use defaults
+            var section = configuration.GetSection(StoryProtocolOptions.SectionName);
+            if (section.Exists())
+            {
+                section.Bind(config);
+            }
+            // If section doesn't exist, StoryProtocolOptions defaults will be used:
+            // Enabled = false, UseMockImplementation = true
+        });
 
-        // Register the appropriate implementation based on configuration
+        // Determine which implementation to register based on configuration
+        var section = configuration.GetSection(StoryProtocolOptions.SectionName);
         var options = new StoryProtocolOptions();
-        configuration.GetSection(StoryProtocolOptions.SectionName).Bind(options);
-
-        if (!options.Enabled)
+        
+        if (section.Exists())
         {
-            // When disabled, register mock implementation
-            services.AddSingleton<IStoryProtocolService, MockStoryProtocolService>();
+            section.Bind(options);
         }
-        else if (options.UseMockImplementation)
+        // If section doesn't exist, use default values (Enabled = false, UseMockImplementation = true)
+
+        // Always register a service implementation to prevent DI errors
+        // Default to mock implementation for safety
+        if (!options.Enabled || options.UseMockImplementation)
         {
-            // Register mock implementation for development/testing
+            // Register mock implementation (disabled or explicitly set to use mock)
             services.AddSingleton<IStoryProtocolService, MockStoryProtocolService>();
         }
         else
         {
-            // Register real blockchain implementation for production
+            // Register real blockchain implementation (enabled and not using mock)
             services.AddSingleton<IStoryProtocolService, StoryProtocolService>();
         }
 
