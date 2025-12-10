@@ -140,14 +140,10 @@ builder.Services.AddHttpClient<IDiscordApiClient, DiscordApiClient>(ConfigureApi
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
-builder.Services.AddHttpClient<IAttributionApiClient, AttributionApiClient>(client =>
-{
-    if (!string.IsNullOrEmpty(apiBaseUrl))
-    {
-        client.BaseAddress = new Uri(apiBaseUrl);
-        client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
-    }
-}).AddHttpMessageHandler<AuthHeaderHandler>();
+builder.Services.AddHttpClient<IAttributionApiClient, AttributionApiClient>(ConfigureApiHttpClient)
+    .AddPolicyHandler(CreateResiliencePolicy("AttributionApi"))
+    .AddHttpMessageHandler<ApiBaseAddressHandler>()
+    .AddHttpMessageHandler<AuthHeaderHandler>();
 
 // Register main ApiClient that composes all domain clients
 builder.Services.AddScoped<IApiClient, ApiClient>();
