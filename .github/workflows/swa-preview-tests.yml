@@ -41,16 +41,16 @@ jobs:
           script: |
             const maxAttempts = 10;
             const delayMs = 30000; // 30 seconds between attempts
-            
+
             // Get PR number from the workflow run that triggered this
-            const prNumber = github.event.workflow_run.pull_requests[0]?.number;
-            
-            if (!prNumber) {
-              console.log('❌ No PR number found in workflow_run event');
+            const pullRequests = github.event.workflow_run.pull_requests;
+            if (!pullRequests || pullRequests.length === 0) {
+              console.log('❌ No pull requests found in workflow_run event');
               core.setOutput('url', '');
               return '';
             }
-            
+
+            const prNumber = pullRequests[0].number;
             console.log(`Looking for SWA preview URL for PR #${prNumber}`);
             
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -337,12 +337,15 @@ jobs:
           script: |
             const success = '${{ needs.smoke-tests.result }}' === 'success';
             const previewUrl = '${{ needs.wait-for-preview.outputs.preview-url }}';
-            const prNumber = github.event.workflow_run.pull_requests[0]?.number;
-            
-            if (!prNumber) {
-              console.log('No PR number found, skipping comment');
+
+            // Get PR number from the workflow run that triggered this
+            const pullRequests = github.event.workflow_run.pull_requests;
+            if (!pullRequests || pullRequests.length === 0) {
+              console.log('No pull requests found, skipping comment');
               return;
             }
+
+            const prNumber = pullRequests[0].number;
             
             const icon = success ? '✅' : '❌';
             const status = success ? 'passed' : 'failed';
