@@ -299,6 +299,9 @@ builder.Services.AddScoped<IFantasyThemeRepository, FantasyThemeRepository>();
 builder.Services.AddScoped<IAgeGroupRepository, AgeGroupRepository>();
 builder.Services.AddScoped<IUnitOfWork, Mystira.App.Infrastructure.Data.UnitOfWork.UnitOfWork>();
 
+// Register Master Data Seeder Service
+builder.Services.AddScoped<MasterDataSeederService>();
+
 // Register Application Layer Use Cases
 // Scenario Use Cases
 builder.Services.AddScoped<GetScenariosUseCase>();
@@ -546,15 +549,38 @@ app.MapHealthChecks("/health");
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<MystiraAppDbContext>();
+    var startupLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
     try
     {
         await context.Database.EnsureCreatedAsync();
+
+        // Gate master-data seeding by configuration and environment to avoid Cosmos SDK query issues in some setups
+        // Defaults: seed only for InMemory or when explicitly enabled via configuration
+        var seedOnStartup = builder.Configuration.GetValue<bool>("SeedMasterDataOnStartup");
+        var isInMemory = !useCosmosDb;
+        if (seedOnStartup || isInMemory)
+        {
+            try
+            {
+                var seeder = scope.ServiceProvider.GetRequiredService<MasterDataSeederService>();
+                await seeder.SeedAllAsync();
+                startupLogger.LogInformation("Master data seeding completed (SeedMasterDataOnStartup={Seed}, InMemory={InMemory}).", seedOnStartup, isInMemory);
+            }
+            catch (Exception seedEx)
+            {
+                // Do not crash the app on seeding failure in Cosmos environments; log and continue
+                startupLogger.LogError(seedEx, "Master data seeding failed. The application will continue to start. Set 'SeedMasterDataOnStartup'=false to skip seeding or use InMemory provider for local dev seeding.");
+            }
+        }
+
+        startupLogger.LogInformation("Database initialization succeeded. Verified containers for current model are present.");
     }
     catch (Exception ex)
     {
-        // Log error but continue - some environments may not have database access
-        var startupLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        startupLogger.LogWarning(ex, "Failed to initialize database during startup. Continuing without database initialization.");
+        // Fail fast with clear guidance so missing Cosmos containers/permissions are visible immediately
+        startupLogger.LogCritical(ex, "Failed to initialize database during startup. Ensure Azure Cosmos DB database 'MystiraAppDb' exists and app identity has permissions to create/read containers. Expected containers include: CompassAxes (PK /Id), BadgeConfigurations (PK /Id), CharacterMaps (PK /Id), ContentBundles (PK /Id), Scenarios (PK /Id), MediaMetadataFiles (PK /Id), CharacterMediaMetadataFiles (PK /Id), CharacterMapFiles (PK /Id), UserProfiles (PK /Id), Accounts (PK /Id), PendingSignups (PK /email), GameSessions (PK /AccountId), MediaAssets (PK /MediaType).");
+        throw;
     }
 }
 
