@@ -11,6 +11,13 @@ WORKDIR /src
 # Copy csproj files and restore dependencies
 COPY ["Mystira.App.Api/Mystira.App.Api.csproj", "Mystira.App.Api/"]
 COPY ["Mystira.App.Domain/Mystira.App.Domain.csproj", "Mystira.App.Domain/"]
+COPY ["Mystira.App.Infrastructure.Azure/Mystira.App.Infrastructure.Azure.csproj", "Mystira.App.Infrastructure.Azure/"]
+COPY ["Mystira.App.Infrastructure.Data/Mystira.App.Infrastructure.Data.csproj", "Mystira.App.Infrastructure.Data/"]
+COPY ["Mystira.App.Infrastructure.StoryProtocol/Mystira.App.Infrastructure.StoryProtocol.csproj", "Mystira.App.Infrastructure.StoryProtocol/"]
+COPY ["Mystira.App.Contracts/Mystira.App.Contracts.csproj", "Mystira.App.Contracts/"]
+COPY ["Mystira.App.Application/Mystira.App.Application.csproj", "Mystira.App.Application/"]
+COPY ["Mystira.App.Infrastructure.Discord/Mystira.App.Infrastructure.Discord.csproj", "Mystira.App.Infrastructure.Discord/"]
+COPY ["Mystira.App.Shared/Mystira.App.Shared.csproj", "Mystira.App.Shared/"]
 RUN dotnet restore "Mystira.App.Api/Mystira.App.Api.csproj"
 
 # Copy all source files
