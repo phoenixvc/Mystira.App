@@ -339,12 +339,25 @@ builder.Services.AddAuthentication(options =>
                 var ua = context.HttpContext.Request.Headers["User-Agent"].ToString();
                 var path = context.HttpContext.Request.Path;
                 logger.LogError(context.Exception, "JWT authentication failed on {Path} (UA: {UserAgent})", path, ua);
+
+                // Track in security metrics
+                var securityMetrics = context.HttpContext.RequestServices.GetService<ISecurityMetrics>();
+                var clientIp = context.HttpContext.Connection.RemoteIpAddress?.ToString();
+                var reason = context.Exception?.GetType().Name ?? "Unknown";
+                securityMetrics?.TrackTokenValidationFailed(clientIp, reason);
+
                 return Task.CompletedTask;
             },
             OnTokenValidated = context =>
             {
                 var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                logger.LogInformation("JWT token validated for user: {User}", context.Principal?.Identity?.Name);
+                var userId = context.Principal?.Identity?.Name;
+                logger.LogInformation("JWT token validated for user: {User}", userId);
+
+                // Track successful authentication in security metrics
+                var securityMetrics = context.HttpContext.RequestServices.GetService<ISecurityMetrics>();
+                securityMetrics?.TrackAuthenticationSuccess("JWT", userId);
+
                 return Task.CompletedTask;
             },
             OnChallenge = context =>
@@ -523,6 +536,7 @@ builder.Services.AddCors(options =>
             "Content-Type",
             "Authorization",
             "X-Requested-With",
+            "X-Correlation-Id",
             "Accept",
             "Origin",
             "User-Agent",
@@ -576,9 +590,15 @@ builder.Services.AddRateLimiter(options =>
         options.QueueLimit = 0;
     });
 
-    // Rejection response
+    // Rejection response with security metrics tracking
     options.OnRejected = async (context, cancellationToken) =>
     {
+        // Track rate limit hit in security metrics
+        var securityMetrics = context.HttpContext.RequestServices.GetService<ISecurityMetrics>();
+        var clientIp = context.HttpContext.Connection.RemoteIpAddress?.ToString();
+        var endpoint = context.HttpContext.Request.Path.Value ?? "unknown";
+        securityMetrics?.TrackRateLimitHit(clientIp, endpoint);
+
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
         await context.HttpContext.Response.WriteAsync(
             "Too many requests. Please try again later.",

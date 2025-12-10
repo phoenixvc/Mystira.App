@@ -1,5 +1,7 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -206,10 +208,39 @@ builder.Services.AddStoryProtocolServices(builder.Configuration);
 // Register Content Bundle admin service
 builder.Services.AddScoped<IContentBundleAdminService, ContentBundleAdminService>();
 
-// Configure JWT Authentication
-var jwtKey = builder.Configuration["JwtSettings:SecretKey"] ?? "Mystira-app-Development-Secret-Key-2024-Very-Long-For-Security";
-var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "mystira-admin-api";
-var jwtAudience = builder.Configuration["JwtSettings:Audience"] ?? "mystira-app";
+// Configure JWT Authentication - Load from secure configuration only
+var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];
+var jwtAudience = builder.Configuration["JwtSettings:Audience"];
+var jwtRsaPublicKey = builder.Configuration["JwtSettings:RsaPublicKey"];
+var jwtKey = builder.Configuration["JwtSettings:SecretKey"];
+
+// Fail fast if JWT configuration is missing in non-development environments
+if (!builder.Environment.IsDevelopment())
+{
+    if (string.IsNullOrWhiteSpace(jwtIssuer))
+    {
+        throw new InvalidOperationException("JWT Issuer (JwtSettings:Issuer) is not configured.");
+    }
+
+    if (string.IsNullOrWhiteSpace(jwtAudience))
+    {
+        throw new InvalidOperationException("JWT Audience (JwtSettings:Audience) is not configured.");
+    }
+
+    // Require at least one signing key method
+    if (string.IsNullOrWhiteSpace(jwtRsaPublicKey) && string.IsNullOrWhiteSpace(jwtKey))
+    {
+        throw new InvalidOperationException(
+            "JWT signing key not configured. Please provide either:\n" +
+            "- JwtSettings:RsaPublicKey for asymmetric RS256 verification (recommended), OR\n" +
+            "- JwtSettings:SecretKey for symmetric HS256 verification (legacy)\n" +
+            "Keys must be loaded from secure stores (Azure Key Vault, etc.).");
+    }
+}
+
+// Use defaults only in development
+jwtIssuer ??= "mystira-admin-api";
+jwtAudience ??= "mystira-app";
 
 builder.Services.AddAuthentication(options =>
     {
@@ -231,7 +262,7 @@ builder.Services.AddAuthentication(options =>
     })
     .AddJwtBearer(options =>
     {
-        options.TokenValidationParameters = new TokenValidationParameters
+        var validationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
@@ -239,8 +270,44 @@ builder.Services.AddAuthentication(options =>
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+            ClockSkew = TimeSpan.FromMinutes(5),
+            RoleClaimType = "role",
+            NameClaimType = "name"
         };
+
+        if (!string.IsNullOrWhiteSpace(jwtRsaPublicKey))
+        {
+            // Use RSA public key for asymmetric verification (recommended)
+            try
+            {
+                var rsa = System.Security.Cryptography.RSA.Create();
+                rsa.ImportFromPem(jwtRsaPublicKey);
+                validationParameters.IssuerSigningKey = new RsaSecurityKey(rsa);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    "Failed to load RSA public key. Ensure JwtSettings:RsaPublicKey contains a valid PEM-encoded RSA public key.", ex);
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(jwtKey))
+        {
+            // Fall back to symmetric key (legacy)
+            validationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            if (!builder.Environment.IsDevelopment())
+            {
+                Log.Warning("Using symmetric HS256 JWT signing. Consider migrating to asymmetric RS256 for better security.");
+            }
+        }
+        else if (builder.Environment.IsDevelopment())
+        {
+            // Only allow insecure default in development
+            var devKey = "Mystira-app-Development-Secret-Key-2024-Very-Long-For-Security";
+            validationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(devKey));
+            Log.Warning("Using development-only JWT key. This must not be used in production!");
+        }
+
+        options.TokenValidationParameters = validationParameters;
     });
 
 builder.Services.AddAuthorization();
@@ -384,6 +451,7 @@ builder.Services.AddCors(options =>
             "Content-Type",
             "Authorization",
             "X-Requested-With",
+            "X-Correlation-Id",
             "Accept",
             "Origin",
             "User-Agent",
@@ -407,6 +475,48 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Configure Rate Limiting (protect against brute-force attacks)
+builder.Services.AddRateLimiter(options =>
+{
+    // Global rate limit: 100 requests per minute per IP
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    {
+        var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(ipAddress, _ =>
+            new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 100,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            });
+    });
+
+    // Strict rate limit for authentication endpoints: 5 attempts per 15 minutes per IP
+    options.AddFixedWindowLimiter("auth", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 5;
+        limiterOptions.Window = TimeSpan.FromMinutes(15);
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiterOptions.QueueLimit = 0;
+    });
+
+    // Rejection response with security metrics tracking
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        // Track rate limit hit in security metrics
+        var securityMetrics = context.HttpContext.RequestServices.GetService<ISecurityMetrics>();
+        var clientIp = context.HttpContext.Connection.RemoteIpAddress?.ToString();
+        var endpoint = context.HttpContext.Request.Path.Value ?? "unknown";
+        securityMetrics?.TrackRateLimitHit(clientIp, endpoint);
+
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await context.HttpContext.Response.WriteAsync(
+            "Too many requests. Please try again later.",
+            cancellationToken);
+    };
+});
+
 var app = builder.Build();
 
 Log.Information(useCosmosDb ? "Using Azure Cosmos DB (Cloud Database)" : "Using In-Memory Database (Local Development)");
@@ -422,7 +532,18 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
+// Only use HTTPS redirection in development
+// In production (Azure App Service), HTTPS is handled at the load balancer level
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
+// Add OWASP security headers
+app.UseSecurityHeaders();
+
+// Add rate limiting
+app.UseRateLimiter();
 
 // Add correlation ID middleware (early in pipeline for tracing)
 app.UseCorrelationId();

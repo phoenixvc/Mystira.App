@@ -73,8 +73,15 @@ public class RequestLoggingMiddleware
         var stopwatch = Stopwatch.StartNew();
         var requestId = context.Items["CorrelationId"]?.ToString() ?? context.TraceIdentifier;
 
+        // Read and log request body if configured
+        string? requestBody = null;
+        if (ShouldLogBody(context.Request))
+        {
+            requestBody = await ReadRequestBodyAsync(context.Request);
+        }
+
         // Log request start
-        LogRequestStart(context, requestId);
+        LogRequestStart(context, requestId, requestBody);
 
         try
         {
@@ -93,17 +100,109 @@ public class RequestLoggingMiddleware
         LogRequestCompletion(context, requestId, stopwatch.ElapsedMilliseconds);
     }
 
-    private void LogRequestStart(HttpContext context, string requestId)
+    private bool ShouldLogBody(HttpRequest request)
+    {
+        // Only log body for configured methods
+        if (!_options.LogBodyForMethods.Contains(request.Method, StringComparer.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        // Don't log if no content
+        if (!request.ContentLength.HasValue || request.ContentLength == 0)
+        {
+            return false;
+        }
+
+        // Don't log file uploads or multipart
+        var contentType = request.ContentType ?? string.Empty;
+        if (contentType.Contains("multipart/form-data") || contentType.Contains("application/octet-stream"))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task<string?> ReadRequestBodyAsync(HttpRequest request)
+    {
+        try
+        {
+            // Enable buffering so the body can be read multiple times
+            request.EnableBuffering();
+
+            // Read the body
+            using var reader = new StreamReader(
+                request.Body,
+                encoding: System.Text.Encoding.UTF8,
+                detectEncodingFromByteOrderMarks: false,
+                bufferSize: 1024,
+                leaveOpen: true);
+
+            var body = await reader.ReadToEndAsync();
+
+            // Reset the position so downstream handlers can read the body
+            request.Body.Position = 0;
+
+            // Truncate if too long
+            if (body.Length > _options.MaxBodyLength)
+            {
+                return body.Substring(0, _options.MaxBodyLength) + $"... [truncated, {body.Length} total bytes]";
+            }
+
+            // Redact sensitive fields (basic implementation)
+            return RedactSensitiveData(body);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to read request body for logging");
+            return null;
+        }
+    }
+
+    private static string RedactSensitiveData(string body)
+    {
+        // List of JSON field patterns to redact
+        string[] sensitivePatterns = { "password", "token", "secret", "apiKey", "api_key", "authorization", "credit_card", "ssn" };
+
+        foreach (var pattern in sensitivePatterns)
+        {
+            // Redact JSON string values: "password": "value" -> "password": "[REDACTED]"
+            body = System.Text.RegularExpressions.Regex.Replace(
+                body,
+                $@"(""{pattern}""\\s*:\\s*"")[^""]*("")",
+                $"$1[REDACTED]$2",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        }
+
+        return body;
+    }
+
+    private void LogRequestStart(HttpContext context, string requestId, string? requestBody = null)
     {
         var request = context.Request;
 
-        _logger.LogInformation(
-            "Request started: {Method} {Path}{QueryString} | RequestId: {RequestId} | Client: {ClientIp}",
-            request.Method,
-            request.Path,
-            request.QueryString,
-            requestId,
-            GetClientIp(context));
+        if (!string.IsNullOrEmpty(requestBody))
+        {
+            _logger.LogInformation(
+                "Request started: {Method} {Path}{QueryString} | RequestId: {RequestId} | Client: {ClientIp} | Body: {RequestBody}",
+                request.Method,
+                request.Path,
+                request.QueryString,
+                requestId,
+                GetClientIp(context),
+                requestBody);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "Request started: {Method} {Path}{QueryString} | RequestId: {RequestId} | Client: {ClientIp}",
+                request.Method,
+                request.Path,
+                request.QueryString,
+                requestId,
+                GetClientIp(context));
+        }
     }
 
     private void LogRequestCompletion(HttpContext context, string requestId, long elapsedMs)

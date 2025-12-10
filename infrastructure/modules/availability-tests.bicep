@@ -35,6 +35,22 @@ param testFrequencySeconds int = 300
 // Naming convention helper
 var testPrefix = '${environment}-${project}'
 
+// Generate unique GUIDs for test elements
+var apiHealthTestGuid = guid('${testPrefix}-api-health-test')
+var apiHealthRequestGuid = guid('${testPrefix}-api-health-request')
+var apiReadyTestGuid = guid('${testPrefix}-api-ready-test')
+var apiReadyRequestGuid = guid('${testPrefix}-api-ready-request')
+var pwaHomeTestGuid = guid('${testPrefix}-pwa-home-test')
+var pwaHomeRequestGuid = guid('${testPrefix}-pwa-home-request')
+
+// Build WebTest XML strings with proper interpolation
+// Note: Bicep raw strings ('''...''') do NOT interpolate variables, so we use regular string concatenation
+var apiHealthWebTest = '<WebTest Name="${testPrefix}-api-health-test" Id="${apiHealthTestGuid}" Enabled="True" Timeout="30" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010"><Items><Request Method="GET" Guid="${apiHealthRequestGuid}" Version="1.1" Url="${apiBaseUrl}/health" ThinkTime="0" Timeout="30" ParseDependentRequests="False" FollowRedirects="True" RecordResult="True" Cache="False" ResponseTimeGoal="0" Encoding="utf-8" ExpectedHttpStatusCode="200"/></Items></WebTest>'
+
+var apiReadyWebTest = '<WebTest Name="${testPrefix}-api-ready-test" Id="${apiReadyTestGuid}" Enabled="True" Timeout="30" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010"><Items><Request Method="GET" Guid="${apiReadyRequestGuid}" Version="1.1" Url="${apiBaseUrl}/health/ready" ThinkTime="0" Timeout="30" ParseDependentRequests="False" FollowRedirects="True" RecordResult="True" Cache="False" ResponseTimeGoal="0" Encoding="utf-8" ExpectedHttpStatusCode="200"/></Items></WebTest>'
+
+var pwaHomeWebTest = '<WebTest Name="${testPrefix}-pwa-home-test" Id="${pwaHomeTestGuid}" Enabled="True" Timeout="60" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010"><Items><Request Method="GET" Guid="${pwaHomeRequestGuid}" Version="1.1" Url="${pwaBaseUrl}/" ThinkTime="0" Timeout="60" ParseDependentRequests="False" FollowRedirects="True" RecordResult="True" Cache="False" ResponseTimeGoal="0" Encoding="utf-8" ExpectedHttpStatusCode="200"/></Items></WebTest>'
+
 // Test locations (use multiple geographic locations for reliability)
 // See: https://docs.microsoft.com/en-us/azure/azure-monitor/app/monitor-web-app-availability#location
 var testLocations = [
@@ -77,13 +93,7 @@ resource apiHealthTest 'Microsoft.Insights/webtests@2022-06-15' = if (enableAvai
     RetryEnabled: true
     Locations: testLocations
     Configuration: {
-      WebTest: '''
-        <WebTest Name="${testPrefix}-api-health-test" Id="${guid('${testPrefix}-api-health-test')}" Enabled="True" Timeout="30" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
-          <Items>
-            <Request Method="GET" Guid="${guid('${testPrefix}-api-health-request')}" Version="1.1" Url="${apiBaseUrl}/health" ThinkTime="0" Timeout="30" ParseDependentRequests="False" FollowRedirects="True" RecordResult="True" Cache="False" ResponseTimeGoal="0" Encoding="utf-8" ExpectedHttpStatusCode="200"/>
-          </Items>
-        </WebTest>
-      '''
+      WebTest: apiHealthWebTest
     }
   }
 }
@@ -110,13 +120,7 @@ resource apiReadyTest 'Microsoft.Insights/webtests@2022-06-15' = if (enableAvail
     RetryEnabled: true
     Locations: take(testLocations, 3) // Use fewer locations for readiness
     Configuration: {
-      WebTest: '''
-        <WebTest Name="${testPrefix}-api-ready-test" Id="${guid('${testPrefix}-api-ready-test')}" Enabled="True" Timeout="30" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
-          <Items>
-            <Request Method="GET" Guid="${guid('${testPrefix}-api-ready-request')}" Version="1.1" Url="${apiBaseUrl}/health/ready" ThinkTime="0" Timeout="30" ParseDependentRequests="False" FollowRedirects="True" RecordResult="True" Cache="False" ResponseTimeGoal="0" Encoding="utf-8" ExpectedHttpStatusCode="200"/>
-          </Items>
-        </WebTest>
-      '''
+      WebTest: apiReadyWebTest
     }
   }
 }
@@ -143,13 +147,7 @@ resource pwaHomeTest 'Microsoft.Insights/webtests@2022-06-15' = if (enableAvaila
     RetryEnabled: true
     Locations: testLocations
     Configuration: {
-      WebTest: '''
-        <WebTest Name="${testPrefix}-pwa-home-test" Id="${guid('${testPrefix}-pwa-home-test')}" Enabled="True" Timeout="60" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
-          <Items>
-            <Request Method="GET" Guid="${guid('${testPrefix}-pwa-home-request')}" Version="1.1" Url="${pwaBaseUrl}/" ThinkTime="0" Timeout="60" ParseDependentRequests="False" FollowRedirects="True" RecordResult="True" Cache="False" ResponseTimeGoal="0" Encoding="utf-8" ExpectedHttpStatusCode="200"/>
-          </Items>
-        </WebTest>
-      '''
+      WebTest: pwaHomeWebTest
     }
   }
 }

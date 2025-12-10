@@ -448,6 +448,20 @@ module securityAlerts 'modules/security-alerts.bicep' = if (enableAlerts && leng
   }
 }
 
+// Cosmos DB Alerts (RU consumption, throttling, latency, errors)
+module cosmosAlerts 'modules/cosmos-alerts.bicep' = if (enableAlerts && length(alertEmailReceivers) > 0 && !skipCosmosCreation) {
+  name: 'deploy-cosmos-alerts'
+  dependsOn: [actionGroup, cosmosDb]
+  params: {
+    environment: environment
+    project: project
+    cosmosDbId: cosmosDb.outputs.cosmosDbAccountId
+    actionGroupId: enableAlerts && length(alertEmailReceivers) > 0 ? actionGroup.outputs.actionGroupId : ''
+    tags: tags
+    enableCosmosAlerts: enableAlerts
+  }
+}
+
 // Monitoring Dashboard
 module monitoringDashboard 'modules/dashboard.bicep' = if (deployDashboard) {
   name: 'deploy-monitoring-dashboard'

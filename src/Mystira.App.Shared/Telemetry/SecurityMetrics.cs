@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,6 +65,7 @@ public interface ISecurityMetrics
 
 /// <summary>
 /// Implementation of ISecurityMetrics that sends telemetry to Application Insights.
+/// Includes real-time brute force and sustained rate limit detection.
 /// </summary>
 public class SecurityMetrics : ISecurityMetrics
 {
@@ -74,12 +76,134 @@ public class SecurityMetrics : ISecurityMetrics
     // Alert thresholds
     private const int BruteForceThreshold = 10;
     private const int RateLimitSustainedThreshold = 100;
+    private static readonly TimeSpan BruteForceWindow = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(1);
+
+    // In-memory tracking for real-time detection (per IP)
+    private readonly ConcurrentDictionary<string, List<DateTime>> _authFailuresByIp = new();
+    private readonly ConcurrentDictionary<string, List<DateTime>> _rateLimitsByIp = new();
+    private readonly object _cleanupLock = new();
+    private DateTime _lastCleanup = DateTime.UtcNow;
+    private static readonly TimeSpan CleanupInterval = TimeSpan.FromMinutes(5);
 
     public SecurityMetrics(TelemetryClient? telemetryClient, ILogger<SecurityMetrics> logger, string environment)
     {
         _telemetryClient = telemetryClient;
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _environment = environment ?? "Unknown";
+    }
+
+    /// <summary>
+    /// Cleans up old entries from tracking dictionaries to prevent memory growth.
+    /// </summary>
+    private void CleanupOldEntries()
+    {
+        if (DateTime.UtcNow - _lastCleanup < CleanupInterval)
+            return;
+
+        lock (_cleanupLock)
+        {
+            if (DateTime.UtcNow - _lastCleanup < CleanupInterval)
+                return;
+
+            var cutoff = DateTime.UtcNow - TimeSpan.FromMinutes(10);
+
+            // Clean auth failures
+            foreach (var ip in _authFailuresByIp.Keys.ToList())
+            {
+                if (_authFailuresByIp.TryGetValue(ip, out var timestamps))
+                {
+                    lock (timestamps)
+                    {
+                        timestamps.RemoveAll(t => t < cutoff);
+                        if (timestamps.Count == 0)
+                        {
+                            _authFailuresByIp.TryRemove(ip, out _);
+                        }
+                    }
+                }
+            }
+
+            // Clean rate limits
+            foreach (var ip in _rateLimitsByIp.Keys.ToList())
+            {
+                if (_rateLimitsByIp.TryGetValue(ip, out var timestamps))
+                {
+                    lock (timestamps)
+                    {
+                        timestamps.RemoveAll(t => t < cutoff);
+                        if (timestamps.Count == 0)
+                        {
+                            _rateLimitsByIp.TryRemove(ip, out _);
+                        }
+                    }
+                }
+            }
+
+            _lastCleanup = DateTime.UtcNow;
+            _logger.LogDebug("SecurityMetrics cleanup completed. Auth tracking: {AuthCount}, Rate limit tracking: {RateCount}",
+                _authFailuresByIp.Count, _rateLimitsByIp.Count);
+        }
+    }
+
+    /// <summary>
+    /// Checks for brute force attack and triggers alert if threshold exceeded.
+    /// </summary>
+    private void CheckAndTrackBruteForce(string? clientIp)
+    {
+        if (string.IsNullOrEmpty(clientIp))
+            return;
+
+        CleanupOldEntries();
+
+        var timestamps = _authFailuresByIp.GetOrAdd(clientIp, _ => new List<DateTime>());
+        var now = DateTime.UtcNow;
+        var windowStart = now - BruteForceWindow;
+
+        int recentCount;
+        lock (timestamps)
+        {
+            timestamps.Add(now);
+            // Remove old entries
+            timestamps.RemoveAll(t => t < windowStart);
+            recentCount = timestamps.Count;
+        }
+
+        // Check if threshold exceeded
+        if (recentCount >= BruteForceThreshold)
+        {
+            TrackBruteForceDetected(clientIp, recentCount, BruteForceWindow);
+        }
+    }
+
+    /// <summary>
+    /// Checks for sustained rate limiting and triggers alert if threshold exceeded.
+    /// </summary>
+    private void CheckAndTrackSustainedRateLimit(string? clientIp)
+    {
+        if (string.IsNullOrEmpty(clientIp))
+            return;
+
+        CleanupOldEntries();
+
+        var timestamps = _rateLimitsByIp.GetOrAdd(clientIp, _ => new List<DateTime>());
+        var now = DateTime.UtcNow;
+        var windowStart = now - RateLimitWindow;
+
+        int recentCount;
+        lock (timestamps)
+        {
+            timestamps.Add(now);
+            // Remove old entries
+            timestamps.RemoveAll(t => t < windowStart);
+            recentCount = timestamps.Count;
+        }
+
+        // Check if threshold exceeded
+        if (recentCount >= RateLimitSustainedThreshold)
+        {
+            TrackRateLimitSustained(clientIp, recentCount, RateLimitWindow);
+        }
     }
 
     public void TrackAuthenticationFailed(string method, string? clientIp, string? reason = null)
@@ -102,6 +226,9 @@ public class SecurityMetrics : ISecurityMetrics
 
         _logger.LogWarning("Authentication failed via {Method} from {ClientIp}: {Reason}",
             method, MaskIp(clientIp), reason ?? "Unknown");
+
+        // Check for brute force attack pattern
+        CheckAndTrackBruteForce(clientIp);
     }
 
     public void TrackAuthenticationSuccess(string method, string? userId = null)
@@ -138,6 +265,9 @@ public class SecurityMetrics : ISecurityMetrics
         TrackMetric("Security.TokenValidationFailures", 1, properties);
 
         _logger.LogWarning("Token validation failed from {ClientIp}: {Reason}", MaskIp(clientIp), reason);
+
+        // Check for brute force attack pattern (token validation failures count as auth failures)
+        CheckAndTrackBruteForce(clientIp);
     }
 
     public void TrackRateLimitHit(string? clientIp, string endpoint)
@@ -156,6 +286,9 @@ public class SecurityMetrics : ISecurityMetrics
         TrackMetric("Security.RateLimitHits", 1, properties);
 
         _logger.LogWarning("Rate limit hit from {ClientIp} on {Endpoint}", MaskIp(clientIp), endpoint);
+
+        // Check for sustained rate limiting pattern
+        CheckAndTrackSustainedRateLimit(clientIp);
     }
 
     public void TrackRateLimitSustained(string? clientIp, int hitCount, TimeSpan window)

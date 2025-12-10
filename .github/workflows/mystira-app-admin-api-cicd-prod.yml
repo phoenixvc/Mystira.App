@@ -39,6 +39,9 @@ env:
   AZURE_WEBAPP_PACKAGE_PATH: "./publish"
   ARTIFACT_NAME: "mystira-app-admin-api"
   DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  # Application Insights for deployment annotations
+  APP_INSIGHTS_NAME: "mys-prod-mystira-appins-san"
+  RESOURCE_GROUP: "mys-prod-mystira-rg-san"
 
   # Boolean: evaluates to "true"/"false"
   HAS_PUBLISH_PROFILE_PROD_ADMIN: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN != '' }}
@@ -117,3 +120,69 @@ jobs:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD_ADMIN }}
           package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Create deployment annotation in Application Insights
+        if: success()
+        run: |
+          DEPLOY_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          az monitor app-insights component create-annotation \
+            --app "${{ env.APP_INSIGHTS_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --annotation-name "Deployment" \
+            --category "Deployment" \
+            --properties "{\"Application\":\"Mystira.App.Admin.Api\",\"Environment\":\"Production\",\"Version\":\"${{ github.sha }}\",\"Branch\":\"${{ github.ref_name }}\",\"DeployedBy\":\"${{ github.actor }}\",\"Timestamp\":\"${DEPLOY_TIME}\",\"WorkflowRun\":\"${{ github.run_id }}\"}" \
+            || echo "Warning: Failed to create deployment annotation (non-fatal)"
+
+      - name: Smoke test - Health check
+        id: smoke-test
+        run: |
+          APP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+          echo "Running post-deployment smoke tests for ${APP_URL}"
+
+          # Wait for deployment to stabilize
+          sleep 30
+
+          # Retry logic for health check
+          MAX_RETRIES=5
+          RETRY_DELAY=10
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i of $MAX_RETRIES..."
+
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 10 \
+              --max-time 30 \
+              "${APP_URL}/health" || echo "000")
+
+            echo "  Status: ${HTTP_STATUS}"
+
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "Health check passed!"
+              echo "health_status=healthy" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            if [ $i -lt $MAX_RETRIES ]; then
+              echo "  Retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "Health check failed after $MAX_RETRIES attempts"
+          echo "health_status=unhealthy" >> $GITHUB_OUTPUT
+          exit 1
+
+      - name: Update deployment annotation with result
+        if: always()
+        run: |
+          HEALTH_STATUS="${{ steps.smoke-test.outputs.health_status || 'unknown' }}"
+          echo "Deployment completed. Health status: ${HEALTH_STATUS}"
+
+      - name: Azure Logout
+        if: always()
+        run: az logout

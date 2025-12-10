@@ -274,11 +274,211 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
               }
             }
           }
-          // Application Insights Resource Link
+          // Security Metrics Header
           {
             position: {
               x: 0
               y: 12
+              rowSpan: 1
+              colSpan: 12
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MarkdownPart'
+              settings: {
+                content: {
+                  settings: {
+                    content: '## Security Metrics'
+                    title: ''
+                    subtitle: 'Authentication, rate limiting, and security event monitoring'
+                  }
+                }
+              }
+            }
+          }
+          // Custom Events Chart (Security Events)
+          {
+            position: {
+              x: 0
+              y: 13
+              rowSpan: 4
+              colSpan: 6
+            }
+            metadata: {
+              inputs: [
+                {
+                  name: 'resourceTypeMode'
+                  isOptional: true
+                }
+                {
+                  name: 'ComponentId'
+                  isOptional: true
+                  value: appInsightsId
+                }
+                {
+                  name: 'MetricName'
+                  value: 'customEvents/count'
+                }
+                {
+                  name: 'TimeRange'
+                  value: 'PT24H'
+                }
+              ]
+              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
+              settings: {
+                chartSettings: {
+                  title: 'Custom Events (Security)'
+                  titleKind: 1
+                  visualization: {
+                    chartType: 2 // Line chart
+                  }
+                }
+              }
+            }
+          }
+          // 429 Response Rate (Rate Limiting)
+          {
+            position: {
+              x: 6
+              y: 13
+              rowSpan: 4
+              colSpan: 6
+            }
+            metadata: {
+              inputs: [
+                {
+                  name: 'resourceTypeMode'
+                  isOptional: true
+                }
+                {
+                  name: 'ComponentId'
+                  isOptional: true
+                  value: appInsightsId
+                }
+                {
+                  name: 'Dimensions'
+                  value: {
+                    'request/resultCode': '429'
+                  }
+                }
+                {
+                  name: 'MetricName'
+                  value: 'requests/count'
+                }
+                {
+                  name: 'TimeRange'
+                  value: 'PT24H'
+                }
+              ]
+              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
+              settings: {
+                chartSettings: {
+                  title: 'Rate Limited Requests (429)'
+                  titleKind: 1
+                  visualization: {
+                    chartType: 4 // Bar chart
+                  }
+                }
+              }
+            }
+          }
+          // 401/403 Auth Failures
+          {
+            position: {
+              x: 0
+              y: 17
+              rowSpan: 4
+              colSpan: 6
+            }
+            metadata: {
+              inputs: [
+                {
+                  name: 'resourceTypeMode'
+                  isOptional: true
+                }
+                {
+                  name: 'ComponentId'
+                  isOptional: true
+                  value: appInsightsId
+                }
+                {
+                  name: 'Dimensions'
+                  value: {
+                    'request/resultCode': ['401', '403']
+                  }
+                }
+                {
+                  name: 'MetricName'
+                  value: 'requests/count'
+                }
+                {
+                  name: 'TimeRange'
+                  value: 'PT24H'
+                }
+              ]
+              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
+              settings: {
+                chartSettings: {
+                  title: 'Auth Failures (401/403)'
+                  titleKind: 1
+                  visualization: {
+                    chartType: 4 // Bar chart
+                  }
+                }
+              }
+            }
+          }
+          // Server Errors 5xx
+          {
+            position: {
+              x: 6
+              y: 17
+              rowSpan: 4
+              colSpan: 6
+            }
+            metadata: {
+              inputs: [
+                {
+                  name: 'resourceTypeMode'
+                  isOptional: true
+                }
+                {
+                  name: 'ComponentId'
+                  isOptional: true
+                  value: appInsightsId
+                }
+                {
+                  name: 'Dimensions'
+                  value: {
+                    'request/resultCode': ['500', '502', '503', '504']
+                  }
+                }
+                {
+                  name: 'MetricName'
+                  value: 'requests/count'
+                }
+                {
+                  name: 'TimeRange'
+                  value: 'PT24H'
+                }
+              ]
+              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
+              settings: {
+                chartSettings: {
+                  title: 'Server Errors (5xx)'
+                  titleKind: 1
+                  visualization: {
+                    chartType: 4 // Bar chart
+                  }
+                }
+              }
+            }
+          }
+          // Application Insights Resource Link
+          {
+            position: {
+              x: 0
+              y: 21
               rowSpan: 2
               colSpan: 4
             }
@@ -296,7 +496,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
           {
             position: {
               x: 4
-              y: 12
+              y: 21
               rowSpan: 2
               colSpan: 8
             }
