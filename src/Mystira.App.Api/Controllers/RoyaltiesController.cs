@@ -28,6 +28,17 @@ public class RoyaltiesController : ControllerBase
     }
 
     /// <summary>
+    /// Helper to filter system-critical exceptions that should not
+    /// be caught and handled locally.
+    /// </summary>
+    private static bool IsCriticalException(Exception ex)
+    {
+        return ex is OutOfMemoryException
+               || ex is StackOverflowException
+               || ex is AccessViolationException
+               || ex is AppDomainUnloadedException
+               || ex is ThreadAbortException;
+    }
     /// Get claimable royalties for an IP Asset
     /// </summary>
     /// <param name="ipAssetId">The Story Protocol IP Asset ID</param>
@@ -54,7 +65,25 @@ public class RoyaltiesController : ControllerBase
 
             return Ok(balance);
         }
-        catch (Exception ex)
+        catch (ArgumentException argEx)
+        {
+            _logger.LogWarning(argEx, "Invalid argument when getting claimable royalties for IP Asset {IpAssetId}", ipAssetId);
+            return BadRequest(new ErrorResponse
+            {
+                Message = "Invalid IP Asset ID",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+        catch (InvalidOperationException invOpEx)
+        {
+            _logger.LogWarning(invOpEx, "Invalid operation when getting claimable royalties for IP Asset {IpAssetId}", ipAssetId);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = "Operation failed while fetching royalty balance",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+        catch (Exception ex) when (!IsCriticalException(ex))
         {
             _logger.LogError(ex, "Error getting claimable royalties for IP Asset {IpAssetId}", ipAssetId);
             return StatusCode(500, new ErrorResponse
@@ -62,6 +91,7 @@ public class RoyaltiesController : ControllerBase
                 Message = "Internal server error while fetching royalty balance",
                 TraceId = HttpContext.TraceIdentifier
             });
+        // Let critical exceptions propagate
         }
     }
 
