@@ -105,7 +105,7 @@ Options discussed:
 
 ### Option 2: Workspace Repository with Git Submodules
 
-**Description**: Create `.workspace` repo that includes other repos as git submodules.
+**Description**: Create `Mystira.workspace` repo that includes other repos as git submodules.
 
 **Pros**:
 - ✅ All code visible in one place
@@ -332,22 +332,87 @@ Individual repos keep:
 
 Include `.claude/` directory for Claude Code settings:
 
-```json
-{
-  "context": {
-    "include_patterns": [
-      "**/*.cs",
-      "**/*.ts",
-      "**/*.py",
-      "**/*.md"
-    ],
-    "exclude_patterns": [
-      "**/bin/**",
-      "**/obj/**",
-      "**/node_modules/**"
-    ]
-  }
+```markdown
+# .claude/settings.md - Instructions for AI assistants
+
+## Project Context
+This is the Mystira workspace containing multiple repositories:
+- Mystira.App: .NET 9 main platform
+- Mystira.Chain: Python/FastAPI blockchain service
+- Mystira.StoryGenerator: .NET story generation
+
+## Code Style
+- .NET: Follow existing patterns, use C# 12 features
+- Python: PEP 8, type hints required
+- All: Prefer composition over inheritance
+
+## Testing
+- Run `dotnet test` for .NET projects
+- Run `pytest` for Python projects
+```
+
+Also add a `.gitignore`:
+
+```gitignore
+# .gitignore for Mystira.workspace
+.DS_Store
+*.log
+.env
+.env.local
+```
+
+### Additional Scripts
+
+**scripts/setup.ps1** - Windows setup:
+```powershell
+# scripts/setup.ps1 - Windows setup script
+$ParentDir = Split-Path -Parent (Get-Location)
+$GitHubOrg = "phoenixvc"
+
+$repos = @("Mystira.App", "Mystira.Chain", "Mystira.StoryGenerator")
+
+Write-Host "🚀 Setting up Mystira workspace..." -ForegroundColor Cyan
+
+foreach ($repo in $repos) {
+    $repoPath = Join-Path $ParentDir $repo
+    if (Test-Path $repoPath) {
+        Write-Host "✅ $repo already exists" -ForegroundColor Green
+    } else {
+        Write-Host "📥 Cloning $repo..." -ForegroundColor Yellow
+        git clone "https://github.com/$GitHubOrg/$repo.git" $repoPath
+    }
 }
+
+Write-Host "`n✨ Setup complete! Open mystira.code-workspace in VS Code" -ForegroundColor Green
+Write-Host "   code mystira.code-workspace" -ForegroundColor Gray
+```
+
+**scripts/update-all.sh** - Pull latest for all repos:
+```bash
+#!/bin/bash
+# scripts/update-all.sh - Update all repositories
+
+PARENT_DIR=$(dirname $(pwd))
+
+repos=(
+  "Mystira.App"
+  "Mystira.Chain"
+  "Mystira.StoryGenerator"
+)
+
+echo "🔄 Updating all Mystira repositories..."
+
+for repo in "${repos[@]}"; do
+  if [ -d "$PARENT_DIR/$repo" ]; then
+    echo "📥 Updating $repo..."
+    (cd "$PARENT_DIR/$repo" && git pull --rebase)
+  else
+    echo "⚠️ $repo not found, skipping"
+  fi
+done
+
+echo ""
+echo "✨ All repos updated!"
 ```
 
 ---
@@ -467,6 +532,24 @@ This matches the experience: "dit het nie so lekker gewerk om dit buite v0 te ed
 
 ---
 
+## Quick Start
+
+```bash
+# 1. Create parent directory
+mkdir ~/mystira && cd ~/mystira
+
+# 2. Clone workspace as .workspace (for sorting)
+git clone https://github.com/phoenixvc/Mystira.workspace.git .workspace
+
+# 3. Run setup to clone all repos
+cd .workspace && ./scripts/setup.sh
+
+# 4. Open in VS Code
+code mystira.code-workspace
+```
+
+---
+
 ## Notes
 
 - Workspace approach preferred over submodules due to complexity
@@ -475,6 +558,15 @@ This matches the experience: "dit het nie so lekker gewerk om dit buite v0 te ed
 - GitHub repo: `Mystira.workspace` (follows Mystira.App naming convention)
 - Local clone: `.workspace` (optional, for alphabetical sorting benefit)
 - GitHub repos cannot start with `.` - hence the two-name approach
+
+### Naming Conventions
+
+| Context | Name | Reason |
+|---------|------|--------|
+| GitHub repo | `Mystira.workspace` | Consistent with `Mystira.App` |
+| Local directory | `.workspace` | Sorts first alphabetically |
+| Azure resources | `mystira-*` | Azure doesn't allow dots |
+| VS Code display | `📋 Mystira.workspace` | Visual distinction |
 
 ---
 

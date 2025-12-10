@@ -93,7 +93,7 @@ From business requirements:
 
 ### Option 2: Python Sidecar Microservice ⭐ **RECOMMENDED**
 
-**Description**: Create a lightweight Python microservice (`mystira.chain` or `Mystira.Chain`) that wraps Story Protocol's official Python SDK. The .NET API communicates with this service via HTTP/REST.
+**Description**: Create a lightweight Python microservice (`Mystira.Chain`) that wraps Story Protocol's official Python SDK. The .NET API communicates with this service via HTTP/REST.
 
 ```
 ┌─────────────────────┐       ┌──────────────────────┐       ┌─────────────────┐
@@ -272,25 +272,65 @@ public class ChainServiceAdapter : IStoryProtocolService
 // appsettings.json
 {
   "ChainService": {
-    "BaseUrl": "https://Mystira.Chain.azurewebsites.net",
+    "BaseUrl": "https://mystira-chain.azurewebsites.net",
     "TimeoutSeconds": 120,
-    "RetryCount": 3
+    "RetryCount": 3,
+    "ApiKey": "${CHAIN_SERVICE_API_KEY}"
   }
 }
 ```
+
+> **Note**: Azure App Service names cannot contain dots. Use `mystira-chain` for the Azure resource name.
 
 ### MVP Implementation (Phase 1)
 
 For immediate delivery, implement minimal endpoints:
 
-1. **POST /ip-assets/register** - Register story as IP Asset
-2. **GET /ip-assets/:contentId/status** - Check registration status
-3. **POST /royalties/pay** - Pay royalties to IP Asset
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/ip-assets/register` | POST | Register story as IP Asset |
+| `/ip-assets/{content_id}/status` | GET | Check registration status |
+| `/royalties/pay` | POST | Pay royalties to IP Asset |
+| `/health` | GET | Health check endpoint |
 
 Defer to Phase 2:
-- Royalty claiming
+- Royalty claiming (`/royalties/{ip_asset_id}/claim`)
 - Advanced license terms
 - Derivative works
+
+### Security & Authentication
+
+Service-to-service communication secured via:
+1. **API Key**: Shared secret in `X-API-Key` header
+2. **Network Isolation**: Both services in same Azure VNet (production)
+3. **HTTPS Only**: TLS 1.2+ required
+
+```python
+# Mystira.Chain authentication middleware
+from fastapi import Header, HTTPException
+
+async def verify_api_key(x_api_key: str = Header(...)):
+    if x_api_key != settings.API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+```
+
+### Error Response Schema
+
+All errors return consistent format:
+
+```json
+{
+  "error": {
+    "code": "REGISTRATION_FAILED",
+    "message": "Failed to register IP asset",
+    "details": {
+      "tx_hash": "0x...",
+      "reason": "Insufficient gas"
+    }
+  },
+  "request_id": "uuid-here"
+}
+```
 
 ### Integration Points
 
@@ -433,6 +473,7 @@ services.AddScoped<IStoryProtocolService>(sp =>
 
 - **ADR-0003**: Hexagonal Architecture (this decision maintains port/adapter pattern)
 - **ADR-0005**: Separate API and Admin API (blockchain operations via Admin API)
+- **ADR-0011**: Unified Workspace Repository (Mystira.Chain included in workspace)
 
 ---
 
