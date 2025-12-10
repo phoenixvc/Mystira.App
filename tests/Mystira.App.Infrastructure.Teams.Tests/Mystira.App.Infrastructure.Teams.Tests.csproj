@@ -27,4 +27,8 @@
     <ProjectReference Include="..\..\src\Mystira.App.Infrastructure.Teams\Mystira.App.Infrastructure.Teams.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
 </Project>
