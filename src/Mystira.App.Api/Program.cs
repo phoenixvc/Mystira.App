@@ -140,8 +140,8 @@ if (string.IsNullOrEmpty(jwtAudience))
 }
 
 // Determine which signing method to use
-bool useAsymmetric = !string.IsNullOrEmpty(jwtRsaPublicKey) || !string.IsNullOrEmpty(jwksEndpoint);
-bool useSymmetric = !string.IsNullOrEmpty(jwtKey);
+bool useAsymmetric = !string.IsNullOrWhiteSpace(jwtRsaPublicKey) || !string.IsNullOrWhiteSpace(jwksEndpoint);
+bool useSymmetric = !string.IsNullOrWhiteSpace(jwtKey);
 
 if (!useAsymmetric && !useSymmetric)
 {
@@ -149,7 +149,7 @@ if (!useAsymmetric && !useSymmetric)
         "JWT signing key not configured. Please provide either:\n" +
         "- JwtSettings:RsaPublicKey for asymmetric RS256 verification (recommended), OR\n" +
         "- JwtSettings:JwksEndpoint for JWKS-based key rotation (recommended), OR\n" +
-        "- JwtSettings:Key for symmetric HS256 verification (legacy)\n" +
+        "- JwtSettings:SecretKey for symmetric HS256 verification (legacy)\n" +
         "Keys must be loaded from secure stores (Azure Key Vault, AWS Secrets Manager, etc.). " +
         "Never hardcode secrets in source code.");
 }
@@ -177,7 +177,7 @@ builder.Services.AddAuthentication(options =>
             NameClaimType = "name"   // Map "name" claim to ClaimTypes.Name
         };
 
-        if (!string.IsNullOrEmpty(jwksEndpoint))
+        if (!string.IsNullOrWhiteSpace(jwksEndpoint))
         {
             // Use JWKS endpoint for key rotation support (most secure)
             options.MetadataAddress = jwksEndpoint;
@@ -191,7 +191,7 @@ builder.Services.AddAuthentication(options =>
                 return keys.Keys;
             };
         }
-        else if (!string.IsNullOrEmpty(jwtRsaPublicKey))
+        else if (!string.IsNullOrWhiteSpace(jwtRsaPublicKey))
         {
             // Use RSA public key for asymmetric verification (recommended)
             try
@@ -203,11 +203,11 @@ builder.Services.AddAuthentication(options =>
             catch (Exception ex)
             {
                 throw new InvalidOperationException(
-                    "Failed to load RSA public key. Ensure Jwt:RsaPublicKey contains a valid PEM-encoded RSA public key " +
+                    "Failed to load RSA public key. Ensure JwtSettings:RsaPublicKey contains a valid PEM-encoded RSA public key " +
                     "from a secure store (Azure Key Vault, AWS Secrets Manager, etc.)", ex);
             }
         }
-        else if (!string.IsNullOrEmpty(jwtKey))
+        else if (!string.IsNullOrWhiteSpace(jwtKey))
         {
             // Fall back to symmetric key (legacy - should be phased out)
             validationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
