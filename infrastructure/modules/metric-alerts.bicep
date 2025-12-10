@@ -10,8 +10,8 @@ param project string
 @description('Application Insights resource ID')
 param appInsightsId string
 
-@description('App Service resource ID')
-param appServiceId string
+@description('App Service Plan resource ID (for CPU/Memory alerts)')
+param appServicePlanId string
 
 @description('Action Group ID for alert notifications')
 param actionGroupId string
@@ -196,7 +196,7 @@ resource highCpuAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = if (enableA
     description: 'Alert when CPU usage exceeds 80% for 5 minutes'
     severity: 2 // Warning
     enabled: true
-    scopes: [appServiceId]
+    scopes: [appServicePlanId]
     evaluationFrequency: 'PT1M' // Check every 1 minute
     windowSize: 'PT5M' // Look at 5 minute window
     criteria: {
@@ -235,7 +235,7 @@ resource highMemoryAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = if (enab
     description: 'Alert when memory usage exceeds 80% for 5 minutes'
     severity: 2 // Warning
     enabled: true
-    scopes: [appServiceId]
+    scopes: [appServicePlanId]
     evaluationFrequency: 'PT1M' // Check every 1 minute
     windowSize: 'PT5M' // Look at 5 minute window
     criteria: {

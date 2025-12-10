@@ -409,7 +409,7 @@ module metricAlerts 'modules/metric-alerts.bicep' = if (enableAlerts && length(a
     environment: environment
     project: project
     appInsightsId: appInsights.outputs.appInsightsId
-    appServiceId: apiAppService.outputs.appServicePlanId
+    appServicePlanId: apiAppService.outputs.appServicePlanId
     actionGroupId: enableAlerts && length(alertEmailReceivers) > 0 ? actionGroup.outputs.actionGroupId : ''
     tags: tags
     enableAlerts: enableAlerts
@@ -419,7 +419,7 @@ module metricAlerts 'modules/metric-alerts.bicep' = if (enableAlerts && length(a
 // Availability Tests (synthetic monitoring)
 module availabilityTests 'modules/availability-tests.bicep' = if (enableAvailabilityTests && length(alertEmailReceivers) > 0 && !skipAppServiceCreation) {
   name: 'deploy-availability-tests'
-  dependsOn: [actionGroup, apiAppService]
+  dependsOn: [actionGroup, apiAppService, adminApiAppService]
   params: {
     environment: environment
     project: project
@@ -427,6 +427,7 @@ module availabilityTests 'modules/availability-tests.bicep' = if (enableAvailabi
     appInsightsId: appInsights.outputs.appInsightsId
     actionGroupId: enableAlerts && length(alertEmailReceivers) > 0 ? actionGroup.outputs.actionGroupId : ''
     apiBaseUrl: 'https://${apiAppService.outputs.appServiceDefaultHostname}'
+    adminApiBaseUrl: 'https://${adminApiAppService.outputs.appServiceDefaultHostname}'
     pwaBaseUrl: deployStaticWebApp ? 'https://${staticWebApp.outputs.staticWebAppDefaultHostname}' : ''
     tags: tags
     enableAvailabilityTests: enableAvailabilityTests

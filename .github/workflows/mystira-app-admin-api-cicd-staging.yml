@@ -136,6 +136,43 @@ jobs:
             --properties "{\"Application\":\"Mystira.App.Admin.Api\",\"Environment\":\"Staging\",\"Version\":\"${{ github.sha }}\",\"Branch\":\"${{ github.ref_name }}\",\"DeployedBy\":\"${{ github.actor }}\",\"Timestamp\":\"${DEPLOY_TIME}\",\"WorkflowRun\":\"${{ github.run_id }}\"}" \
             || echo "Warning: Failed to create deployment annotation (non-fatal)"
 
+      - name: Smoke test - Health check
+        id: smoke-test
+        run: |
+          APP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+          echo "Running post-deployment smoke tests for ${APP_URL}"
+
+          # Wait for deployment to stabilize
+          sleep 20
+
+          # Retry logic for health check
+          MAX_RETRIES=4
+          RETRY_DELAY=10
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i of $MAX_RETRIES..."
+
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 10 \
+              --max-time 30 \
+              "${APP_URL}/health" || echo "000")
+
+            echo "  Status: ${HTTP_STATUS}"
+
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "Health check passed!"
+              exit 0
+            fi
+
+            if [ $i -lt $MAX_RETRIES ]; then
+              echo "  Retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "Health check failed after $MAX_RETRIES attempts"
+          exit 1
+
       - name: Azure Logout
         if: always()
         run: az logout
