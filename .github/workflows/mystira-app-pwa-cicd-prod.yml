@@ -96,6 +96,14 @@ jobs:
       - name: Build Blazor WASM
         run: dotnet publish src/Mystira.App.PWA/Mystira.App.PWA.csproj -c Release -o publish
 
+      - name: Configure Environment Header for Production
+        run: |
+          echo "Setting Blazor-Environment header to Production..."
+          jq '.globalHeaders."Blazor-Environment" = "Production"' publish/wwwroot/staticwebapp.config.json > temp.json
+          mv temp.json publish/wwwroot/staticwebapp.config.json
+          echo "✓ Blazor-Environment header set to Production"
+          cat publish/wwwroot/staticwebapp.config.json | grep -A 1 "globalHeaders"
+
       - name: Deploy to Azure Static Web App
         uses: Azure/static-web-apps-deploy@v1
         with:
