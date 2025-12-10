@@ -16,7 +16,9 @@ The Mystira ecosystem has grown organically with multiple repositories and appli
 
 ### Current State
 
-- **2 repositories** currently exist
+- **2 repositories** currently exist:
+  - `Mystira.App` - Main application (API, Admin API, PWA)
+  - `Mystira.StoryGenerator` - Story generation functionality
 - **4+ applications** are running across these repos:
   - Mystira.App (main application - API, Admin API, PWA)
   - Admin UI
@@ -129,9 +131,10 @@ Options discussed:
 │   ├── docs/                  # Centralized documentation
 │   ├── scripts/               # Cross-repo automation
 │   └── README.md
-├── Mystira.App/               # Existing main app (sibling)
-├── mystira-chain-service/     # New chain service (sibling)
-└── [other repos]/             # Future repos (siblings)
+├── Mystira.App/               # Main app (API, Admin API, PWA)
+├── Mystira.StoryGenerator/    # Story generation service
+├── mystira-chain-service/     # Blockchain service (Python)
+└── [future repos]/            # Future repos (siblings)
 ```
 
 **Pros**:
@@ -229,6 +232,10 @@ Create new repository: `Mystira.workspace` (cloned locally as `.workspace`)
       "path": "../Mystira.App"
     },
     {
+      "name": "📖 Mystira.StoryGenerator",
+      "path": "../Mystira.StoryGenerator"
+    },
+    {
       "name": "🐍 mystira-chain-service",
       "path": "../mystira-chain-service"
     }
@@ -277,6 +284,7 @@ GITHUB_ORG="phoenixvc"
 
 repos=(
   "Mystira.App"
+  "Mystira.StoryGenerator"
   "mystira-chain-service"
   # Add more repos here
 )
