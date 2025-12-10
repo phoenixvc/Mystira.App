@@ -86,6 +86,7 @@ jobs:
     # - Direct push to dev
     # - PR into dev is CLOSED *and* MERGED
     # - Infrastructure Deploy workflow completed successfully
+    # - Manual workflow dispatch
     if: >
       (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
       (github.event_name == 'pull_request' &&
@@ -93,7 +94,8 @@ jobs:
        github.event.pull_request.merged == true &&
        github.base_ref == 'dev') ||
       (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success')
+       github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'workflow_dispatch')
 
     environment: development
 
