@@ -154,6 +154,45 @@
    - Added CSS dark mode support with `prefers-color-scheme`
    - Manual theme toggle ready via `data-theme` attribute
 
+## Quick Start Commands
+
+### **Build & Restore**
+```bash
+dotnet restore              # Restore all dependencies
+dotnet build                # Build entire solution
+dotnet build -c Release     # Build for Release
+dotnet publish src/Mystira.App.Api -c Release -o ./publish/api       # Publish API
+dotnet publish src/Mystira.App.PWA -c Release -o ./publish/pwa       # Publish PWA
+```
+
+### **Run Applications**
+```bash
+# Backend API (https://localhost:5001, Swagger at /swagger)
+cd src/Mystira.App.Api && dotnet run
+
+# Admin API
+cd src/Mystira.App.Admin.Api && dotnet run
+
+# PWA Frontend (https://localhost:7000)
+cd src/Mystira.App.PWA && dotnet run
+
+# Cosmos Console (Database Reporting)
+cd src/Mystira.App.CosmosConsole && dotnet run
+```
+
+### **Testing**
+```bash
+dotnet test                                    # Run all tests
+dotnet test tests/Mystira.App.Api.Tests        # Run specific test project
+dotnet test --collect:"XPlat Code Coverage"    # With code coverage
+dotnet test --filter "FullyQualifiedName~ScenarioTests" --verbosity normal  # Specific test
+```
+
+### **Database**
+- **Local Development**: Uses in-memory database by default (no setup required)
+- **Cloud**: Uses Azure Cosmos DB when `ConnectionStrings:CosmosDb` is configured
+- Database is automatically initialized on startup via `EnsureCreatedAsync()`
+
 ## Development Guidelines
 
 ### **When Adding/Modifying Features**
@@ -338,8 +377,8 @@ Mystira.App/
    - Specific use case docs (e.g., `docs/usecases/gamesessions/create-game-session.md`)
 
 5. **Roadmap:**
-   - `docs/POTENTIAL_ENHANCEMENTS_ROADMAP.md` (comprehensive 1100+ line roadmap)
-   - `PRODUCTION_REVIEW_REPORT.md` (this review's findings)
+   - `docs/ROADMAP.md` (consolidated roadmap - single source of truth)
+   - `docs/architecture/REFACTORING_PLAN.md` (detailed refactoring implementation)
 
 ### **API Documentation**
 
