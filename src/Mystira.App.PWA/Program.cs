@@ -56,77 +56,84 @@ void ConfigureApiHttpClient(HttpClient client)
     client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
 }
 
-// Resilience policies for API clients
-// Retry policy: exponential backoff (2s, 4s, 8s) on transient errors
-var retryPolicy = HttpPolicyExtensions
-    .HandleTransientHttpError()
-    .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-        onRetry: (outcome, timespan, retryAttempt, _) =>
-        {
-            Console.WriteLine($"[Retry] Attempt {retryAttempt} after {timespan.TotalSeconds}s - {outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString()}");
-        });
+// Factory function to create resilience policies for each client
+// IMPORTANT: Each client gets its OWN circuit breaker instance to prevent cascade failures
+// (If ScenarioApi fails, it shouldn't block AuthApi, etc.)
+IAsyncPolicy<HttpResponseMessage> CreateResiliencePolicy(string clientName)
+{
+    // Retry policy: exponential backoff (2s, 4s, 8s) on transient errors
+    var retryPolicy = HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+            onRetry: (outcome, timespan, retryAttempt, _) =>
+            {
+                Console.WriteLine($"[{clientName}:Retry] Attempt {retryAttempt} after {timespan.TotalSeconds}s - {outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString()}");
+            });
 
-// Circuit breaker: opens after 5 failures, stays open for 30s
-var circuitBreakerPolicy = HttpPolicyExtensions
-    .HandleTransientHttpError()
-    .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30),
-        onBreak: (outcome, breakDelay) =>
-        {
-            Console.WriteLine($"[CircuitBreaker] Opened for {breakDelay.TotalSeconds}s - {outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString()}");
-        },
-        onReset: () => Console.WriteLine("[CircuitBreaker] Reset"),
-        onHalfOpen: () => Console.WriteLine("[CircuitBreaker] Half-open, testing..."));
+    // Circuit breaker: opens after 5 failures, stays open for 30s
+    // Each client has its own circuit breaker state
+    var circuitBreakerPolicy = HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30),
+            onBreak: (outcome, breakDelay) =>
+            {
+                Console.WriteLine($"[{clientName}:CircuitBreaker] Opened for {breakDelay.TotalSeconds}s - {outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString()}");
+            },
+            onReset: () => Console.WriteLine($"[{clientName}:CircuitBreaker] Reset"),
+            onHalfOpen: () => Console.WriteLine($"[{clientName}:CircuitBreaker] Half-open, testing..."));
 
-// Timeout policy: 30 second timeout per request
-var timeoutPolicy = Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(30));
+    // Timeout policy: 30 second timeout per request
+    var timeoutPolicy = Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(30));
 
-// Combined policy: timeout wraps retry wraps circuit breaker
-var combinedPolicy = Policy.WrapAsync(timeoutPolicy, retryPolicy, circuitBreakerPolicy);
+    // Combined policy: timeout wraps retry wraps circuit breaker
+    return Policy.WrapAsync(timeoutPolicy, retryPolicy, circuitBreakerPolicy);
+}
 
 // Register domain-specific API clients with dynamic base address resolution and resilience policies
 // Each client uses ApiBaseAddressHandler to resolve URLs from localStorage
+// IMPORTANT: Each client gets its own circuit breaker via CreateResiliencePolicy()
 builder.Services.AddHttpClient<IScenarioApiClient, ScenarioApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(combinedPolicy)
+    .AddPolicyHandler(CreateResiliencePolicy("ScenarioApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IGameSessionApiClient, GameSessionApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(combinedPolicy)
+    .AddPolicyHandler(CreateResiliencePolicy("GameSessionApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IUserProfileApiClient, UserProfileApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(combinedPolicy)
+    .AddPolicyHandler(CreateResiliencePolicy("UserProfileApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IAuthApiClient, AuthApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(combinedPolicy)
+    .AddPolicyHandler(CreateResiliencePolicy("AuthApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IMediaApiClient, MediaApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(combinedPolicy)
+    .AddPolicyHandler(CreateResiliencePolicy("MediaApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IAvatarApiClient, AvatarApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(combinedPolicy)
+    .AddPolicyHandler(CreateResiliencePolicy("AvatarApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IContentBundleApiClient, ContentBundleApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(combinedPolicy)
+    .AddPolicyHandler(CreateResiliencePolicy("ContentBundleApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<ICharacterApiClient, CharacterApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(combinedPolicy)
+    .AddPolicyHandler(CreateResiliencePolicy("CharacterApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IDiscordApiClient, DiscordApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(combinedPolicy)
+    .AddPolicyHandler(CreateResiliencePolicy("DiscordApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 

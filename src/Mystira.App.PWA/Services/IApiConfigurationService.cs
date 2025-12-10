@@ -52,11 +52,6 @@ public interface IApiConfigurationService
     /// <param name="url">The URL to validate.</param>
     /// <returns>Health check result with status and any error message.</returns>
     Task<EndpointHealthResult> ValidateEndpointAsync(string url);
-
-    /// <summary>
-    /// Event raised when the API endpoint changes.
-    /// </summary>
-    event EventHandler<ApiEndpointChangedEventArgs>? EndpointChanged;
 }
 
 /// <summary>
@@ -66,16 +61,6 @@ public record ApiEndpoint
 {
     public string Name { get; init; } = string.Empty;
     public string Url { get; init; } = string.Empty;
-    public string Environment { get; init; } = string.Empty;
-}
-
-/// <summary>
-/// Event args for API endpoint changes.
-/// </summary>
-public class ApiEndpointChangedEventArgs : EventArgs
-{
-    public string OldUrl { get; init; } = string.Empty;
-    public string NewUrl { get; init; } = string.Empty;
     public string Environment { get; init; } = string.Empty;
 }
 

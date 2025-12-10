@@ -1,6 +1,7 @@
 @using Mystira.App.PWA.Services
 @inject IApiConfigurationService ApiConfigService
 @inject ILogger<EndpointSwitcher> Logger
+@inject IJSRuntime JSRuntime
 
 @if (_isAllowed && _endpoints.Count > 1)
 {
@@ -21,7 +22,7 @@
                 var healthStatus = _healthResults.GetValueOrDefault(endpoint.Url);
                 <li>
                     <button class="dropdown-item d-flex align-items-center justify-content-between @(isActive ? "active" : "")"
-                            @onclick="() => SwitchEndpoint(endpoint)"
+                            @onclick="() => ConfirmAndSwitchEndpoint(endpoint)"
                             disabled="@(_isSwitching)">
                         <span>
                             @endpoint.Name
@@ -30,25 +31,29 @@
                                 <i class="fas fa-check ms-1 text-success"></i>
                             }
                         </span>
-                        @if (healthStatus != null)
-                        {
-                            <span class="ms-2">
+                        <span class="ms-2">
+                            @if (_isCheckingHealth && !_healthResults.ContainsKey(endpoint.Url))
+                            {
+                                <i class="fas fa-spinner fa-spin" style="font-size: 0.5rem;" title="Checking..."></i>
+                            }
+                            else if (healthStatus != null)
+                            {
                                 @if (healthStatus.IsHealthy)
                                 {
-                                    <i class="fas fa-circle text-success" style="font-size: 0.5rem;" title="Healthy"></i>
+                                    <i class="fas fa-circle text-success" style="font-size: 0.5rem;" title="Healthy (@(healthStatus.ResponseTimeMs)ms)"></i>
                                 }
                                 else
                                 {
                                     <i class="fas fa-circle text-danger" style="font-size: 0.5rem;" title="@healthStatus.ErrorMessage"></i>
                                 }
-                            </span>
-                        }
+                            }
+                        </span>
                     </button>
                 </li>
             }
             <li><hr class="dropdown-divider"></li>
             <li>
-                <button class="dropdown-item text-muted" @onclick="ResetToDefault">
+                <button class="dropdown-item text-muted" @onclick="ResetToDefault" disabled="@(_isSwitching)">
                     <i class="fas fa-undo me-1"></i> Reset to Default
                 </button>
             </li>
@@ -59,10 +64,13 @@
 @code {
     private bool _isAllowed;
     private bool _isSwitching;
+    private bool _isCheckingHealth;
     private string _currentUrl = string.Empty;
     private string _currentEnvironment = string.Empty;
     private IReadOnlyList<ApiEndpoint> _endpoints = Array.Empty<ApiEndpoint>();
     private Dictionary<string, EndpointHealthResult> _healthResults = new();
+    private DateTime _lastHealthCheck = DateTime.MinValue;
+    private static readonly TimeSpan HealthCheckCooldown = TimeSpan.FromMinutes(1);
 
     protected override async Task OnInitializedAsync()
     {
@@ -74,13 +82,23 @@
             _currentUrl = await ApiConfigService.GetApiBaseUrlAsync();
             _currentEnvironment = await ApiConfigService.GetCurrentEnvironmentAsync();
 
-            // Check health of all endpoints in background
-            _ = CheckEndpointHealthAsync();
+            // Check health of all endpoints in background (with rate limiting)
+            await CheckEndpointHealthWithRateLimitAsync();
         }
     }
 
-    private async Task CheckEndpointHealthAsync()
+    private async Task CheckEndpointHealthWithRateLimitAsync()
     {
+        // Rate limit: only check once per minute
+        if (DateTime.UtcNow - _lastHealthCheck < HealthCheckCooldown && _healthResults.Count > 0)
+        {
+            return;
+        }
+
+        _isCheckingHealth = true;
+        _lastHealthCheck = DateTime.UtcNow;
+        StateHasChanged();
+
         foreach (var endpoint in _endpoints)
         {
             try
@@ -94,13 +112,41 @@
                 Logger.LogWarning(ex, "Failed to check health of {Url}", endpoint.Url);
             }
         }
+
+        _isCheckingHealth = false;
+        StateHasChanged();
     }
 
-    private async Task SwitchEndpoint(ApiEndpoint endpoint)
+    private async Task ConfirmAndSwitchEndpoint(ApiEndpoint endpoint)
     {
         if (_isSwitching || endpoint.Url == _currentUrl)
             return;
 
+        // Check if endpoint is healthy before switching
+        var healthResult = _healthResults.GetValueOrDefault(endpoint.Url);
+        if (healthResult != null && !healthResult.IsHealthy)
+        {
+            var confirmUnhealthy = await JSRuntime.InvokeAsync<bool>(
+                "confirm",
+                $"Warning: {endpoint.Name} endpoint appears to be unhealthy.\n\nError: {healthResult.ErrorMessage}\n\nSwitch anyway?");
+
+            if (!confirmUnhealthy) return;
+        }
+        else
+        {
+            // Always confirm endpoint switch (it will reload the app)
+            var confirm = await JSRuntime.InvokeAsync<bool>(
+                "confirm",
+                $"Switch to {endpoint.Name} endpoint?\n\nThe app will reload to apply the new API endpoint.");
+
+            if (!confirm) return;
+        }
+
+        await SwitchEndpoint(endpoint);
+    }
+
+    private async Task SwitchEndpoint(ApiEndpoint endpoint)
+    {
         _isSwitching = true;
         StateHasChanged();
 
@@ -112,12 +158,14 @@
 
             Logger.LogInformation("Switched to endpoint: {Name} ({Url})", endpoint.Name, endpoint.Url);
 
-            // Optionally reload to ensure all services use new endpoint
-            // For now, the singleton cache update should handle it
+            // Reload the app to ensure all services use new endpoint
+            // This is necessary because HttpClients cache the base address
+            await JSRuntime.InvokeVoidAsync("location.reload");
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to switch endpoint to {Url}", endpoint.Url);
+            await JSRuntime.InvokeVoidAsync("alert", $"Failed to switch endpoint: {ex.Message}");
         }
         finally
         {
@@ -128,20 +176,27 @@
 
     private async Task ResetToDefault()
     {
+        var confirm = await JSRuntime.InvokeAsync<bool>(
+            "confirm",
+            "Reset to default endpoint?\n\nThe app will reload to apply the change.");
+
+        if (!confirm) return;
+
         _isSwitching = true;
         StateHasChanged();
 
         try
         {
             await ApiConfigService.ClearPersistedEndpointAsync();
-            _currentUrl = await ApiConfigService.GetApiBaseUrlAsync();
-            _currentEnvironment = await ApiConfigService.GetCurrentEnvironmentAsync();
-
             Logger.LogInformation("Reset to default endpoint");
+
+            // Reload the app
+            await JSRuntime.InvokeVoidAsync("location.reload");
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to reset endpoint");
+            await JSRuntime.InvokeVoidAsync("alert", $"Failed to reset endpoint: {ex.Message}");
         }
         finally
         {

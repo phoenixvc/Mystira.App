@@ -311,29 +311,30 @@ resource diagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-pr
 // Custom domain binding with managed SSL certificate
 // CNAME should point: customDomain -> appServiceName.azurewebsites.net
 //
-// NOTE: For managed certificates, deploy in two phases:
-//   Phase 1: Deploy with enableManagedCert=false (creates hostname binding only)
-//   Phase 2: Deploy with enableManagedCert=true (creates certificate after DNS propagates)
+// Deployment approach:
+//   Phase 1: Deploy with enableManagedCert=false - creates hostname binding only (no SSL)
+//   Phase 2: After DNS propagates, redeploy with enableManagedCert=true - creates cert and binds SSL
 //
-// This avoids circular dependency issues with certificate validation
+// The two phases use SEPARATE resources to avoid circular dependency:
+//   - Phase 1: customDomainBindingNoSsl (binding without SSL)
+//   - Phase 2: managedCertificate + customDomainBindingSsl (cert + binding with SSL)
 
 @description('Enable managed SSL certificate (requires hostname binding to exist first)')
 param enableManagedCert bool = false
 
-resource customDomainBinding 'Microsoft.Web/sites/hostNameBindings@2023-01-01' = if (enableCustomDomain && customDomain != '') {
+// Phase 1: Hostname binding WITHOUT SSL - used when setting up custom domain initially
+resource customDomainBindingNoSsl 'Microsoft.Web/sites/hostNameBindings@2023-01-01' = if (enableCustomDomain && customDomain != '' && !enableManagedCert) {
   name: customDomain
   parent: appService
   properties: {
     siteName: appService.name
     hostNameType: 'Verified'
-    sslState: enableManagedCert ? 'SniEnabled' : 'Disabled'
-    thumbprint: enableManagedCert ? managedCertificate.properties.thumbprint : ''
+    sslState: 'Disabled'
   }
 }
 
-// App Service Managed Certificate for custom domain
+// Phase 2a: App Service Managed Certificate - only created after hostname binding exists
 // Azure automatically provisions and renews this certificate (free)
-// Only create after hostname binding exists and DNS has propagated
 resource managedCertificate 'Microsoft.Web/certificates@2023-01-01' = if (enableCustomDomain && customDomain != '' && enableManagedCert) {
   name: '${appServiceName}-${replace(customDomain, '.', '-')}-cert'
   location: location
@@ -342,6 +343,21 @@ resource managedCertificate 'Microsoft.Web/certificates@2023-01-01' = if (enable
     serverFarmId: appServicePlan.id
     canonicalName: customDomain
   }
+}
+
+// Phase 2b: Hostname binding WITH SSL - references the managed certificate
+resource customDomainBindingSsl 'Microsoft.Web/sites/hostNameBindings@2023-01-01' = if (enableCustomDomain && customDomain != '' && enableManagedCert) {
+  name: customDomain
+  parent: appService
+  properties: {
+    siteName: appService.name
+    hostNameType: 'Verified'
+    sslState: 'SniEnabled'
+    thumbprint: managedCertificate.properties.thumbprint
+  }
+  dependsOn: [
+    managedCertificate
+  ]
 }
 
 // Outputs

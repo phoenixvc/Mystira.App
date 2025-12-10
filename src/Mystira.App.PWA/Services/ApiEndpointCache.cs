@@ -107,24 +107,28 @@ public class ApiEndpointCache : IApiEndpointCache
         }
 
         var requestHost = requestUri.Host;
+        var requestPath = requestUri.AbsolutePath;
 
-        // Check if this is an admin API request
-        var adminUri = _adminApiBaseUri;
-        if (adminUri != null && IsAdminApiRequest(requestHost))
+        // Determine if this is an admin API request based on the PATH, not host
+        // Admin API paths typically start with /admin/ or /api/admin/
+        var isAdminRequest = requestPath.StartsWith("/admin/", StringComparison.OrdinalIgnoreCase) ||
+                             requestPath.Contains("/admin/", StringComparison.OrdinalIgnoreCase);
+
+        if (isAdminRequest)
         {
-            if (!requestHost.Equals(adminUri.Host, StringComparison.OrdinalIgnoreCase))
+            // Route admin requests to admin API endpoint
+            var adminUri = _adminApiBaseUri;
+            if (adminUri != null && !requestHost.Equals(adminUri.Host, StringComparison.OrdinalIgnoreCase))
             {
                 newBaseUri = adminUri;
                 return true;
             }
-            return false;
         }
-
-        // Check if this is a regular API request
-        var apiUri = _apiBaseUri;
-        if (apiUri != null)
+        else
         {
-            if (!requestHost.Equals(apiUri.Host, StringComparison.OrdinalIgnoreCase))
+            // Route regular API requests to main API endpoint
+            var apiUri = _apiBaseUri;
+            if (apiUri != null && !requestHost.Equals(apiUri.Host, StringComparison.OrdinalIgnoreCase))
             {
                 newBaseUri = apiUri;
                 return true;
@@ -153,13 +157,6 @@ public class ApiEndpointCache : IApiEndpointCache
         }
     }
 
-    private static bool IsAdminApiRequest(string host)
-    {
-        // Check if the host starts with "admin." or contains ".admin."
-        return host.StartsWith("admin.", StringComparison.OrdinalIgnoreCase) ||
-               host.Contains(".admin.", StringComparison.OrdinalIgnoreCase);
-    }
-
     private static Uri? TryParseUri(string? url)
     {
         if (string.IsNullOrEmpty(url)) return null;
@@ -171,7 +168,7 @@ public class ApiEndpointCache : IApiEndpointCache
         return url.EndsWith('/') ? url : url + "/";
     }
 
-    private static string DeriveAdminApiUrl(string apiUrl)
+    internal static string DeriveAdminApiUrl(string apiUrl)
     {
         try
         {

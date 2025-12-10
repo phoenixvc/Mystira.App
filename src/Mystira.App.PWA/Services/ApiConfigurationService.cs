@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.JSInterop;
 
@@ -28,8 +29,6 @@ public class ApiConfigurationService : IApiConfigurationService
     private string? _cachedEnvironment;
     private List<ApiEndpoint>? _cachedEndpoints;
     private bool _isInitialized;
-
-    public event EventHandler<ApiEndpointChangedEventArgs>? EndpointChanged;
 
     public ApiConfigurationService(
         IJSRuntime jsRuntime,
@@ -95,7 +94,7 @@ public class ApiConfigurationService : IApiConfigurationService
             }
 
             // Derive admin API URL
-            var adminApiUrl = DeriveAdminApiUrl(apiBaseUrl);
+            var adminApiUrl = ApiEndpointCache.DeriveAdminApiUrl(apiBaseUrl);
             await _jsRuntime.InvokeVoidAsync("localStorage.setItem", AdminApiUrlStorageKey, adminApiUrl);
             _cachedAdminApiUrl = adminApiUrl;
 
@@ -116,14 +115,6 @@ public class ApiConfigurationService : IApiConfigurationService
                 ["NewUrl"] = apiBaseUrl,
                 ["Environment"] = environmentName ?? "Unknown",
                 ["Timestamp"] = DateTime.UtcNow.ToString("O")
-            });
-
-            // Raise event
-            EndpointChanged?.Invoke(this, new ApiEndpointChangedEventArgs
-            {
-                OldUrl = oldUrl,
-                NewUrl = apiBaseUrl,
-                Environment = environmentName ?? string.Empty
             });
         }
         catch (Exception ex) when (ex is not ArgumentException)
@@ -234,14 +225,17 @@ public class ApiConfigurationService : IApiConfigurationService
         try
         {
             var healthUrl = EnsureTrailingSlash(url) + "health";
+
+            var stopwatch = Stopwatch.StartNew();
             var response = await _healthCheckClient.GetAsync(healthUrl);
+            stopwatch.Stop();
 
             return new EndpointHealthResult
             {
                 Url = url,
                 IsHealthy = response.IsSuccessStatusCode,
                 StatusCode = (int)response.StatusCode,
-                ResponseTimeMs = 0 // Would need Stopwatch for accurate timing
+                ResponseTimeMs = (int)stopwatch.ElapsedMilliseconds
             };
         }
         catch (HttpRequestException ex)
@@ -397,36 +391,12 @@ public class ApiConfigurationService : IApiConfigurationService
         }
 
         // Derive from default API URL
-        return DeriveAdminApiUrl(GetDefaultApiUrl());
+        return ApiEndpointCache.DeriveAdminApiUrl(GetDefaultApiUrl());
     }
 
     private string GetDefaultEnvironment()
     {
         return _configuration.GetValue<string>("ApiConfiguration:Environment") ?? "Production";
-    }
-
-    private static string DeriveAdminApiUrl(string apiUrl)
-    {
-        // Transform api.mystira.app -> admin.mystira.app
-        // Transform api.dev.mystira.app -> admin.dev.mystira.app
-        try
-        {
-            var uri = new Uri(apiUrl);
-            var host = uri.Host;
-
-            if (host.StartsWith("api.", StringComparison.OrdinalIgnoreCase))
-            {
-                var newHost = "admin" + host.Substring(3);
-                return $"{uri.Scheme}://{newHost}{uri.AbsolutePath}";
-            }
-
-            // If we can't derive, return same URL
-            return apiUrl;
-        }
-        catch
-        {
-            return apiUrl;
-        }
     }
 
     private static string EnsureTrailingSlash(string url)

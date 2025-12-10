@@ -75,13 +75,18 @@ jobs:
             exit 1
           fi
 
-          # Validate each endpoint URL
-          echo "$ENDPOINTS" | while read -r url; do
+          # Validate each endpoint URL (using here-string to avoid subshell issue)
+          VALIDATION_FAILED=0
+          while IFS= read -r url; do
             if [ -n "$url" ] && ! [[ "$url" =~ ^https:// ]]; then
               echo "ERROR: Endpoint URL must use HTTPS: $url"
-              exit 1
+              VALIDATION_FAILED=1
             fi
-          done
+          done <<< "$ENDPOINTS"
+
+          if [ "$VALIDATION_FAILED" -eq 1 ]; then
+            exit 1
+          fi
 
           echo "✓ API configuration validation passed"
           echo "  - Default API: $PROD_API_URL"
