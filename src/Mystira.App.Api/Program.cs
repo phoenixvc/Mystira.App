@@ -26,6 +26,7 @@ using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.Services;
 using Mystira.App.Infrastructure.Discord;
 using Mystira.App.Infrastructure.Discord.Services;
+using Mystira.App.Infrastructure.StoryProtocol;
 using Mystira.App.Shared.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -121,6 +122,10 @@ builder.Services.AddAzureBlobStorage(builder.Configuration);
 builder.Services.Configure<AudioTranscodingOptions>(builder.Configuration.GetSection(AudioTranscodingOptions.SectionName));
 // Register Application.Ports.Media.IAudioTranscodingService for use cases
 builder.Services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingService>();
+
+// Add Story Protocol Services
+builder.Services.AddStoryProtocolServices(builder.Configuration);
+
 // Configure JWT Authentication - Load from secure configuration only
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];
 var jwtAudience = builder.Configuration["JwtSettings:Audience"];
