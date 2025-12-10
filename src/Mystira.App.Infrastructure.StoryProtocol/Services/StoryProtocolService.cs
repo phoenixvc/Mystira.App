@@ -658,7 +658,7 @@ public class StoryProtocolService : IStoryProtocolService
     {
         // IPRegistered event: IPRegistered(address indexed ipId, uint256 chainId, address indexed tokenContract, uint256 indexed tokenId, ...)
         // Event topic0: keccak256("IPRegistered(address,uint256,address,uint256,string,string,uint256)")
-        const string IPRegisteredEventSignature = "0x141cd3a8b3a0c7a7c4e1f3c7f7e6e2c4b5d4c3b2a1f0e9d8c7b6a594837261504";
+        // Note: Event signature validation omitted as we rely on contract address filtering
 
         foreach (var log in receipt.Logs)
         {
