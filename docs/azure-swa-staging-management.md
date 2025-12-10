@@ -34,27 +34,29 @@ pull_request:
     - "src/Mystira.App.PWA/**"
     # ... other paths
 ```
+**Problem**: Path filter applies to ALL PR actions including 'closed', so cleanup only runs if PWA files were changed.
 
 **After:**
 ```yaml
-# Build/deploy with path filters
-pull_request:
+# Build/deploy - with path filters on push only
+push:
   branches: [dev]
-  types: [opened, synchronize, reopened]
   paths:
     - "src/Mystira.App.PWA/**"
     # ... other paths
 
-# Cleanup WITHOUT path filters - always runs
+# All PR events - NO path filter
 pull_request:
   branches: [dev]
-  types: [closed]
-  # No path filter - always cleanup preview environments when PR is closed
+  types: [opened, synchronize, reopened, closed]
+  # Note: No path filter to ensure cleanup job always runs when PR is closed
+  # The build-and-deploy job has its own path filtering via job-level conditions
 ```
 
-This split ensures:
-1. ✅ Builds only run when relevant files change (saves CI minutes)
-2. ✅ Cleanup ALWAYS runs when a PR is closed (prevents orphaned environments)
+**Key Points:**
+1. ✅ Build job only runs when action is not 'closed' (controlled by job-level `if` condition)
+2. ✅ Cleanup job ALWAYS runs when a PR is closed (no path filter on PR trigger)
+3. ⚠️ Trade-off: Workflow runs for all PRs, but jobs are skipped appropriately (minimal CI minute usage)
 
 ### Manual Cleanup Workflow
 

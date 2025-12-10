@@ -9,15 +9,9 @@ on:
       - ".github/workflows/mystira-app-pwa-cicd-prod.yml"
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened]
-    paths:
-      - "src/Mystira.App.PWA/**"
-      - "src/Mystira.App.Contracts/**"
-      - ".github/workflows/mystira-app-pwa-cicd-prod.yml"
-  pull_request:
-    branches: [main]
-    types: [closed]
-    # No path filter - always cleanup preview environments when PR is closed
+    types: [opened, synchronize, reopened, closed]
+    # Note: No path filter to ensure cleanup job always runs when PR is closed
+    # The build-and-deploy job has its own path filtering via job-level conditions
   workflow_run:
     workflows: ["Infrastructure Deploy - Production"]
     types: [completed]
