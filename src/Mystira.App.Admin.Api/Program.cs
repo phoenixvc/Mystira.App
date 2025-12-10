@@ -89,6 +89,9 @@ try
     // Register security metrics service for auth tracking, rate limiting, etc.
     builder.Services.AddSecurityMetrics(builder.Environment.EnvironmentName);
 
+    // Register user journey analytics for tracking user flows and engagement
+    builder.Services.AddUserJourneyAnalytics(builder.Environment.EnvironmentName);
+
     // Configure request logging options from configuration
     builder.Services.Configure<RequestLoggingOptions>(builder.Configuration.GetSection("RequestLogging"));
 

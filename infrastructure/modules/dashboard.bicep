@@ -1125,6 +1125,294 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             }
           }
           // ═══════════════════════════════════════════════════════════════════════════════
+          // USER JOURNEY ANALYTICS SECTION
+          // Track user flows, engagement, and drop-off points
+          // ═══════════════════════════════════════════════════════════════════════════════
+          // User Journey Header
+          {
+            position: {
+              x: 0
+              y: 46
+              rowSpan: 1
+              colSpan: 12
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MarkdownPart'
+              settings: {
+                content: {
+                  settings: {
+                    content: '## User Journey Analytics'
+                    title: ''
+                    subtitle: 'Session tracking, scenario engagement, and user flow analytics'
+                  }
+                }
+              }
+            }
+          }
+          // Daily Active Users (Sessions Started)
+          {
+            position: {
+              x: 0
+              y: 47
+              rowSpan: 4
+              colSpan: 4
+            }
+            metadata: {
+              inputs: [
+                {
+                  name: 'resourceTypeMode'
+                  isOptional: true
+                }
+                {
+                  name: 'ComponentId'
+                  isOptional: true
+                  value: appInsightsId
+                }
+                {
+                  name: 'MetricName'
+                  value: 'customMetrics/Journey.DailyActiveUsers'
+                }
+                {
+                  name: 'TimeRange'
+                  value: 'P7D'
+                }
+              ]
+              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
+              settings: {
+                chartSettings: {
+                  title: 'Daily Active Users'
+                  titleKind: 1
+                  visualization: {
+                    chartType: 4 // Bar chart
+                  }
+                }
+              }
+            }
+          }
+          // New User Registrations
+          {
+            position: {
+              x: 4
+              y: 47
+              rowSpan: 4
+              colSpan: 4
+            }
+            metadata: {
+              inputs: [
+                {
+                  name: 'resourceTypeMode'
+                  isOptional: true
+                }
+                {
+                  name: 'ComponentId'
+                  isOptional: true
+                  value: appInsightsId
+                }
+                {
+                  name: 'MetricName'
+                  value: 'customMetrics/Journey.NewUsers'
+                }
+                {
+                  name: 'TimeRange'
+                  value: 'P7D'
+                }
+              ]
+              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
+              settings: {
+                chartSettings: {
+                  title: 'New User Registrations'
+                  titleKind: 1
+                  visualization: {
+                    chartType: 4 // Bar chart
+                  }
+                }
+              }
+            }
+          }
+          // Scenario Plays
+          {
+            position: {
+              x: 8
+              y: 47
+              rowSpan: 4
+              colSpan: 4
+            }
+            metadata: {
+              inputs: [
+                {
+                  name: 'resourceTypeMode'
+                  isOptional: true
+                }
+                {
+                  name: 'ComponentId'
+                  isOptional: true
+                  value: appInsightsId
+                }
+                {
+                  name: 'MetricName'
+                  value: 'customMetrics/Journey.ScenarioPlays'
+                }
+                {
+                  name: 'TimeRange'
+                  value: 'P7D'
+                }
+              ]
+              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
+              settings: {
+                chartSettings: {
+                  title: 'Scenario Plays'
+                  titleKind: 1
+                  visualization: {
+                    chartType: 2 // Line chart
+                  }
+                }
+              }
+            }
+          }
+          // Scenario Completions vs Abandons
+          {
+            position: {
+              x: 0
+              y: 51
+              rowSpan: 4
+              colSpan: 6
+            }
+            metadata: {
+              inputs: [
+                {
+                  name: 'resourceTypeMode'
+                  isOptional: true
+                }
+                {
+                  name: 'ComponentId'
+                  isOptional: true
+                  value: appInsightsId
+                }
+                {
+                  name: 'MetricName'
+                  value: 'customMetrics/Journey.ScenarioCompletions'
+                }
+                {
+                  name: 'TimeRange'
+                  value: 'P7D'
+                }
+              ]
+              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
+              settings: {
+                chartSettings: {
+                  title: 'Scenario Completions'
+                  titleKind: 1
+                  visualization: {
+                    chartType: 2 // Line chart
+                  }
+                }
+              }
+            }
+          }
+          // Scenario Abandons
+          {
+            position: {
+              x: 6
+              y: 51
+              rowSpan: 4
+              colSpan: 6
+            }
+            metadata: {
+              inputs: [
+                {
+                  name: 'resourceTypeMode'
+                  isOptional: true
+                }
+                {
+                  name: 'ComponentId'
+                  isOptional: true
+                  value: appInsightsId
+                }
+                {
+                  name: 'MetricName'
+                  value: 'customMetrics/Journey.ScenarioAbandons'
+                }
+                {
+                  name: 'TimeRange'
+                  value: 'P7D'
+                }
+              ]
+              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
+              settings: {
+                chartSettings: {
+                  title: 'Scenario Abandons'
+                  titleKind: 1
+                  visualization: {
+                    chartType: 4 // Bar chart - to highlight problem areas
+                  }
+                }
+              }
+            }
+          }
+          // Average Scenario Duration
+          {
+            position: {
+              x: 0
+              y: 55
+              rowSpan: 4
+              colSpan: 6
+            }
+            metadata: {
+              inputs: [
+                {
+                  name: 'resourceTypeMode'
+                  isOptional: true
+                }
+                {
+                  name: 'ComponentId'
+                  isOptional: true
+                  value: appInsightsId
+                }
+                {
+                  name: 'MetricName'
+                  value: 'customMetrics/Journey.ScenarioDuration'
+                }
+                {
+                  name: 'TimeRange'
+                  value: 'P7D'
+                }
+              ]
+              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
+              settings: {
+                chartSettings: {
+                  title: 'Avg Scenario Duration (sec)'
+                  titleKind: 1
+                  visualization: {
+                    chartType: 2 // Line chart
+                  }
+                }
+              }
+            }
+          }
+          // User Journey Info
+          {
+            position: {
+              x: 6
+              y: 55
+              rowSpan: 4
+              colSpan: 6
+            }
+            metadata: {
+              inputs: []
+              type: 'Extension/HubsExtension/PartType/MarkdownPart'
+              settings: {
+                content: {
+                  settings: {
+                    content: '### Journey Metrics Guide\n\n- **Daily Active Users**: Unique users who started a session\n- **New Users**: First-time registrations\n- **Scenario Plays**: Total scenario starts\n- **Completions**: Successfully finished scenarios\n- **Abandons**: Scenarios left incomplete (high rates may indicate UX issues)\n- **Duration**: Average time to complete scenarios\n\n📊 Use these metrics to identify drop-off points and optimize user experience.'
+                    title: ''
+                    subtitle: ''
+                  }
+                }
+              }
+            }
+          }
+          // ═══════════════════════════════════════════════════════════════════════════════
           // DEPLOYMENTS SECTION
           // Deployment timeline and release annotations
           // ═══════════════════════════════════════════════════════════════════════════════
@@ -1132,7 +1420,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
           {
             position: {
               x: 0
-              y: 46
+              y: 59
               rowSpan: 1
               colSpan: 12
             }
@@ -1154,7 +1442,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
           {
             position: {
               x: 0
-              y: 47
+              y: 60
               rowSpan: 4
               colSpan: 12
             }
@@ -1199,7 +1487,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
           {
             position: {
               x: 0
-              y: 51
+              y: 64
               rowSpan: 2
               colSpan: 12
             }

@@ -301,6 +301,59 @@ resource exceptionAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = if (enabl
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// HIGH SCENARIO ABANDONMENT RATE ALERT (User Journey)
+// Triggers when scenario abandonment rate exceeds threshold
+// This helps identify UX issues or content problems causing users to leave scenarios
+// ═══════════════════════════════════════════════════════════════════════════════
+resource scenarioAbandonmentAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-preview' = if (enableAlerts) {
+  name: '${alertPrefix}-scenario-abandonment'
+  location: resourceGroup().location
+  tags: tags
+  properties: {
+    displayName: '${alertPrefix} High Scenario Abandonment Rate'
+    description: 'Alert when scenario abandonment rate exceeds 30% (more than 30 abandons per 100 starts)'
+    enabled: true
+    severity: 3 // Informational - UX concern, not critical
+    evaluationFrequency: 'PT1H' // Check every hour
+    windowSize: 'PT6H' // Look at 6 hour window for meaningful sample
+    scopes: [appInsightsId]
+    criteria: {
+      allOf: [
+        {
+          query: '''
+            let starts = customEvents
+              | where timestamp > ago(6h)
+              | where name == "Journey.ScenarioStart"
+              | summarize TotalStarts = count();
+            let abandons = customEvents
+              | where timestamp > ago(6h)
+              | where name == "Journey.ScenarioAbandon"
+              | summarize TotalAbandons = count();
+            starts
+            | join kind=inner abandons on $left.TotalStarts == $left.TotalStarts
+            | extend AbandonRate = (toreal(TotalAbandons) / toreal(TotalStarts)) * 100
+            | where TotalStarts >= 10 // Only alert if we have enough data
+            | where AbandonRate > 30 // Alert if more than 30% abandon rate
+            | project AbandonRate, TotalStarts, TotalAbandons
+          '''
+          timeAggregation: 'Count'
+          operator: 'GreaterThan'
+          threshold: 0
+          failingPeriods: {
+            numberOfEvaluationPeriods: 2
+            minFailingPeriodsToAlert: 2 // Must be high for 2 consecutive periods
+          }
+        }
+      ]
+    }
+    actions: {
+      actionGroups: [actionGroupId]
+    }
+    autoMitigate: true
+  }
+}
+
 // Outputs
 output httpErrorAlertId string = enableAlerts ? httpErrorAlert.id : ''
 output slowResponseAlertId string = enableAlerts ? slowResponseAlert.id : ''
@@ -309,3 +362,4 @@ output failedRequestRateAlertId string = enableAlerts ? failedRequestRateAlert.i
 output highCpuAlertId string = enableAlerts ? highCpuAlert.id : ''
 output highMemoryAlertId string = enableAlerts ? highMemoryAlert.id : ''
 output exceptionAlertId string = enableAlerts ? exceptionAlert.id : ''
+output scenarioAbandonmentAlertId string = enableAlerts ? scenarioAbandonmentAlert.id : ''
