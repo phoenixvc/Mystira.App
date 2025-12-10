@@ -254,47 +254,113 @@ public class MigrationService : IMigrationService
             result.TotalItems = blobs.Count;
             _logger.LogInformation("Found {Count} blobs to migrate", blobs.Count);
 
-            // Migrate each blob using download/upload pattern (works for private containers)
-            foreach (var blobName in blobs)
+            if (blobs.Count == 0)
             {
-                try
-                {
-                    var sourceBlobClient = sourceContainerClient.GetBlobClient(blobName);
-                    var destBlobClient = destContainerClient.GetBlobClient(blobName);
-
-                    // Check if blob exists in destination
-                    var destExists = await destBlobClient.ExistsAsync();
-                    if (destExists.Value)
-                    {
-                        _logger.LogDebug("Blob {BlobName} already exists in destination, skipping", blobName);
-                        result.SuccessCount++;
-                        continue;
-                    }
-
-                    // Download from source and upload to destination (works for private containers)
-                    var downloadResponse = await sourceBlobClient.DownloadContentAsync();
-                    var blobContent = downloadResponse.Value.Content;
-                    var contentType = downloadResponse.Value.Details.ContentType;
-
-                    await destBlobClient.UploadAsync(blobContent, overwrite: false);
-
-                    // Set content type if available
-                    if (!string.IsNullOrEmpty(contentType))
-                    {
-                        await destBlobClient.SetHttpHeadersAsync(new BlobHttpHeaders { ContentType = contentType });
-                    }
-
-                    result.SuccessCount++;
-                    _logger.LogDebug("Migrated blob: {BlobName}", blobName);
-                }
-                catch (Exception ex)
-                {
-                    result.FailureCount++;
-                    result.Errors.Add($"Failed to migrate blob {blobName}: {ex.Message}");
-                    _logger.LogError(ex, "Failed to migrate blob {BlobName}", blobName);
-                }
+                result.Success = true;
+                stopwatch.Stop();
+                result.Duration = stopwatch.Elapsed;
+                return result;
             }
 
+            // Migrate blobs with parallel processing and retry logic
+            var tasks = new List<Task>();
+            var semaphore = new SemaphoreSlim(10); // Limit concurrent blob operations (blobs can be large)
+            int successCount = 0;
+            int failureCount = 0;
+            const int maxRetries = 3;
+
+            foreach (var blobName in blobs)
+            {
+                await semaphore.WaitAsync();
+
+                tasks.Add(Task.Run(async () =>
+                {
+                    try
+                    {
+                        var sourceBlobClient = sourceContainerClient.GetBlobClient(blobName);
+                        var destBlobClient = destContainerClient.GetBlobClient(blobName);
+
+                        // Check if blob exists in destination
+                        var destExists = await destBlobClient.ExistsAsync();
+                        if (destExists.Value)
+                        {
+                            _logger.LogDebug("Blob {BlobName} already exists in destination, skipping", blobName);
+                            Interlocked.Increment(ref successCount);
+                            return;
+                        }
+
+                        // Retry logic for blob migration
+                        int retryCount = 0;
+                        bool success = false;
+
+                        while (!success && retryCount < maxRetries)
+                        {
+                            try
+                            {
+                                // Download from source and upload to destination (works for private containers)
+                                var downloadResponse = await sourceBlobClient.DownloadContentAsync();
+                                var blobContent = downloadResponse.Value.Content;
+                                var contentType = downloadResponse.Value.Details.ContentType;
+                                var metadata = downloadResponse.Value.Details.Metadata;
+
+                                await destBlobClient.UploadAsync(blobContent, overwrite: false);
+
+                                // Set content type and metadata if available
+                                var headers = new BlobHttpHeaders();
+                                if (!string.IsNullOrEmpty(contentType))
+                                {
+                                    headers.ContentType = contentType;
+                                }
+                                await destBlobClient.SetHttpHeadersAsync(headers);
+
+                                if (metadata != null && metadata.Count > 0)
+                                {
+                                    await destBlobClient.SetMetadataAsync(metadata);
+                                }
+
+                                success = true;
+                                Interlocked.Increment(ref successCount);
+                                _logger.LogDebug("Migrated blob: {BlobName}", blobName);
+                            }
+                            catch (Azure.RequestFailedException ex) when (ex.Status == 429 || ex.Status == 503)
+                            {
+                                // Rate limiting or service unavailable - retry with exponential backoff
+                                retryCount++;
+                                if (retryCount < maxRetries)
+                                {
+                                    var delay = TimeSpan.FromSeconds(Math.Pow(2, retryCount));
+                                    _logger.LogWarning("Rate limited or service unavailable for blob {BlobName}, retry {Retry}/{MaxRetries} after {Delay}s", 
+                                        blobName, retryCount, maxRetries, delay.TotalSeconds);
+                                    await Task.Delay(delay);
+                                }
+                                else
+                                {
+                                    throw; // Max retries exceeded
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Interlocked.Increment(ref failureCount);
+                        lock (result.Errors)
+                        {
+                            result.Errors.Add($"Failed to migrate blob {blobName}: {ex.Message}");
+                        }
+                        _logger.LogError(ex, "Failed to migrate blob {BlobName}", blobName);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                }));
+            }
+
+            // Wait for all blob migrations to complete
+            await Task.WhenAll(tasks);
+
+            result.SuccessCount = successCount;
+            result.FailureCount = failureCount;
             result.Success = result.FailureCount == 0;
             stopwatch.Stop();
             result.Duration = stopwatch.Elapsed;
