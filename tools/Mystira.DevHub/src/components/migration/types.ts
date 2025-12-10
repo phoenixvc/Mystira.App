@@ -102,6 +102,15 @@ export interface MigrationResult {
   errors: string[];
 }
 
+export interface MigrationProgress {
+  currentOperation: string;
+  completedOperations: string[];
+  totalOperations: number;
+  percentComplete: number;
+  itemsProcessed: number;
+  itemsTotal: number;
+}
+
 export interface MigrationResponse {
   success: boolean;
   result?: {

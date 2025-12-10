@@ -14,6 +14,14 @@ use std::process::Command;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct AzureLoginStatus {
+    pub is_logged_in: bool,
+    pub account_name: Option<String>,
+    pub subscription_id: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct EnvironmentConnectionStrings {
     pub cosmos_connection: Option<String>,
     pub storage_connection: Option<String>,
@@ -98,6 +106,47 @@ pub async fn cosmos_stats() -> Result<CommandResponse, String> {
     execute_devhub_cli("cosmos.stats".to_string(), serde_json::json!({})).await
 }
 
+/// Check if user is logged in to Azure CLI (for cosmos operations)
+#[tauri::command]
+pub async fn check_azure_cli_login() -> Result<AzureLoginStatus, String> {
+    let mut status = AzureLoginStatus {
+        is_logged_in: false,
+        account_name: None,
+        subscription_id: None,
+        error: None,
+    };
+
+    // Try to get current account info
+    let output = Command::new("az")
+        .args(["account", "show", "--query", "{name:user.name,id:id}", "-o", "json"])
+        .output();
+
+    match output {
+        Ok(output) => {
+            if output.status.success() {
+                let output_str = String::from_utf8_lossy(&output.stdout);
+                
+                // Try to parse JSON response
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&output_str) {
+                    status.is_logged_in = true;
+                    status.account_name = json["name"].as_str().map(|s| s.to_string());
+                    status.subscription_id = json["id"].as_str().map(|s| s.to_string());
+                } else {
+                    status.error = Some("Failed to parse Azure CLI response".to_string());
+                }
+            } else {
+                let error = String::from_utf8_lossy(&output.stderr).to_string();
+                status.error = Some(format!("Not logged in to Azure CLI. Please run 'az login'. Error: {}", error));
+            }
+        }
+        Err(e) => {
+            status.error = Some(format!("Azure CLI not found or not installed. Error: {}", e));
+        }
+    }
+
+    Ok(status)
+}
+
 /// Run a migration between Cosmos DB instances
 #[tauri::command]
 pub async fn migration_run(
@@ -109,6 +158,7 @@ pub async fn migration_run(
     source_database_name: String,
     dest_database_name: String,
     container_name: String,
+    dry_run: Option<bool>,
 ) -> Result<CommandResponse, String> {
     let args = serde_json::json!({
         "type": migration_type,
@@ -118,7 +168,8 @@ pub async fn migration_run(
         "destStorageConnection": dest_storage,
         "sourceDatabaseName": source_database_name,
         "destDatabaseName": dest_database_name,
-        "containerName": container_name
+        "containerName": container_name,
+        "dryRun": dry_run.unwrap_or(false)
     });
     execute_devhub_cli("migration.run".to_string(), args).await
 }
