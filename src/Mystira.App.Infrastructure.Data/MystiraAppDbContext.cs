@@ -671,7 +671,7 @@ public partial class MystiraAppDbContext : DbContext
                   )
                   .Metadata.SetValueComparer(new ValueComparer<Dictionary<string, List<string>>>(
                       (c1, c2) => c1 != null && c2 != null && c1.Count == c2.Count &&
-                                  c1.Keys.All(k => c2.ContainsKey(k) && c1[k].SequenceEqual(c2[k])),
+                                  c1.Keys.All(k => c2.TryGetValue(k, out var v2) && c1[k].SequenceEqual(v2)),
                       c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.Key.GetHashCode(), v.Value.Aggregate(0, (a2, s) => HashCode.Combine(a2, s.GetHashCode())))),
                       c => new Dictionary<string, List<string>>(c.ToDictionary(kvp => kvp.Key, kvp => new List<string>(kvp.Value)))));
         });
