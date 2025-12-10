@@ -99,7 +99,7 @@ jobs:
       - name: Configure Environment Header for Staging
         run: |
           echo "Setting Blazor-Environment header to Staging..."
-          jq '.globalHeaders."Blazor-Environment" = "Staging"' publish/wwwroot/staticwebapp.config.json > temp.json
+          jq '.globalHeaders = (.globalHeaders // {}) | .globalHeaders."Blazor-Environment" = "Staging"' publish/wwwroot/staticwebapp.config.json > temp.json
           mv temp.json publish/wwwroot/staticwebapp.config.json
           echo "✓ Blazor-Environment header set to Staging"
           cat publish/wwwroot/staticwebapp.config.json | grep -A 1 "globalHeaders"

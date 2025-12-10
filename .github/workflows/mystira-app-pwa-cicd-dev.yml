@@ -99,7 +99,7 @@ jobs:
       - name: Configure Environment Header for Development
         run: |
           echo "Setting Blazor-Environment header to Development..."
-          jq '.globalHeaders."Blazor-Environment" = "Development"' publish/wwwroot/staticwebapp.config.json > temp.json
+          jq '.globalHeaders = (.globalHeaders // {}) | .globalHeaders."Blazor-Environment" = "Development"' publish/wwwroot/staticwebapp.config.json > temp.json
           mv temp.json publish/wwwroot/staticwebapp.config.json
           echo "✓ Blazor-Environment header set to Development"
           cat publish/wwwroot/staticwebapp.config.json | grep -A 1 "globalHeaders"
