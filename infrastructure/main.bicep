@@ -473,6 +473,10 @@ module monitoringDashboard 'modules/dashboard.bicep' = if (deployDashboard) {
     tags: tags
     environment: environment
     project: project
+    // Infrastructure metrics (optional - dashboard gracefully handles empty values)
+    appServiceId: skipAppServiceCreation ? '' : apiAppService.outputs.appServiceId
+    appServicePlanId: skipAppServiceCreation ? '' : apiAppService.outputs.appServicePlanId
+    cosmosDbId: skipCosmosCreation ? '' : cosmosDb.outputs.cosmosDbAccountId
   }
 }
 
