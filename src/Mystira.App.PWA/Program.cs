@@ -36,16 +36,20 @@ builder.Services.AddScoped<IApiConfigurationService, ApiConfigurationService>();
 // This handler uses the singleton cache - no event subscriptions, no lifetime issues
 builder.Services.AddTransient<ApiBaseAddressHandler>();
 
+// Detect environment from hostname at runtime
+var hostName = builder.HostEnvironment.BaseAddress;
+var detectedEnvironment = DetectEnvironmentFromHostname(hostName);
+Console.WriteLine($"Detected environment from hostname '{hostName}': {detectedEnvironment}");
+
 // Get default API URL from configuration (used as fallback if no persisted URL)
-var defaultApiUrl = builder.Configuration.GetValue<string>("ApiConfiguration:DefaultApiBaseUrl")
-                    ?? builder.Configuration.GetConnectionString("MystiraApiBaseUrl")
-                    ?? "https://api.mystira.app/";
+// Override with environment-specific URL if detected
+var defaultApiUrl = GetDefaultApiUrlForEnvironment(builder.Configuration, detectedEnvironment);
 
 // Validate API configuration at startup
 ValidateApiConfiguration(builder.Configuration, defaultApiUrl);
 
 // Log API configuration details
-var environment = builder.Configuration.GetValue<string>("ApiConfiguration:Environment") ?? "Unknown";
+var environment = builder.Configuration.GetValue<string>("ApiConfiguration:Environment") ?? detectedEnvironment;
 var allowSwitching = builder.Configuration.GetValue<bool>("ApiConfiguration:AllowEndpointSwitching");
 Console.WriteLine($"Environment: {environment}, Default API: {defaultApiUrl}, Endpoint switching allowed: {allowSwitching}");
 
@@ -140,6 +144,11 @@ builder.Services.AddHttpClient<IDiscordApiClient, DiscordApiClient>(ConfigureApi
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
+builder.Services.AddHttpClient<IAttributionApiClient, AttributionApiClient>(ConfigureApiHttpClient)
+    .AddPolicyHandler(CreateResiliencePolicy("AttributionApi"))
+    .AddHttpMessageHandler<ApiBaseAddressHandler>()
+    .AddHttpMessageHandler<AuthHeaderHandler>();
+
 // Register main ApiClient that composes all domain clients
 builder.Services.AddScoped<IApiClient, ApiClient>();
 
@@ -226,7 +235,8 @@ static void SetDevelopmentModeForApiClients(IServiceProvider services, bool isDe
         typeof(IAvatarApiClient),
         typeof(IContentBundleApiClient),
         typeof(ICharacterApiClient),
-        typeof(IDiscordApiClient)
+        typeof(IDiscordApiClient),
+        typeof(IAttributionApiClient)
     };
 
     foreach (var interfaceType in apiClientTypes)
@@ -250,6 +260,80 @@ static void SetDevelopmentModeForApiClients(IServiceProvider services, bool isDe
             logger.LogWarning(ex, "Unexpected error setting development mode for {ServiceType}", interfaceType.Name);
         }
     }
+}
+
+static string DetectEnvironmentFromHostname(string baseAddress)
+{
+    try
+    {
+        var uri = new Uri(baseAddress);
+        var host = uri.Host.ToLowerInvariant();
+
+        // Check for localhost (always Development)
+        if (host == "localhost" || host == "127.0.0.1")
+        {
+            return "Development";
+        }
+
+        // Check for dev subdomain
+        if (host.Contains("dev.mystira.app") || host.StartsWith("dev."))
+        {
+            return "Development";
+        }
+
+        // Check for staging subdomain
+        if (host.Contains("staging.mystira.app") || host.StartsWith("staging."))
+        {
+            return "Staging";
+        }
+
+        // Check for Azure Static Web Apps preview URLs (dev environment)
+        if (host.Contains("azurestaticapps.net"))
+        {
+            // Preview deployments from dev branch
+            if (host.Contains("blue-water") || host.Contains("brave-meadow"))
+            {
+                return "Development";
+            }
+            // Could add staging detection here if needed
+            return "Development"; // Default SWA previews to dev
+        }
+
+        // Default to Production for mystira.app apex domain
+        return "Production";
+    }
+    catch
+    {
+        return "Production"; // Safe default
+    }
+}
+
+static string GetDefaultApiUrlForEnvironment(IConfiguration configuration, string environment)
+{
+    // Try to get environment-specific URL from AvailableEndpoints
+    var endpointsSection = configuration.GetSection("ApiConfiguration:AvailableEndpoints");
+    if (endpointsSection.Exists())
+    {
+        foreach (var child in endpointsSection.GetChildren())
+        {
+            var envName = child["Environment"] ?? child["environment"];
+            var url = child["Url"] ?? child["url"];
+
+            if (!string.IsNullOrEmpty(envName) && 
+                envName.Equals(environment, StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrEmpty(url))
+            {
+                return url.EndsWith('/') ? url : url + "/";
+            }
+        }
+    }
+
+    // Fallback to configured default or production
+    var defaultUrl = configuration.GetValue<string>("ApiConfiguration:DefaultApiBaseUrl")
+                    ?? configuration.GetConnectionString("MystiraApiBaseUrl")
+                    ?? "https://api.mystira.app/";
+
+    return defaultUrl.EndsWith('/') ? defaultUrl : defaultUrl + "/";
 }
 
 static void ValidateApiConfiguration(IConfiguration configuration, string defaultApiUrl)

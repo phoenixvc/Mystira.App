@@ -136,11 +136,11 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<ApiEndpoint>> GetAvailableEndpointsAsync()
+    public Task<IReadOnlyList<ApiEndpoint>> GetAvailableEndpointsAsync()
     {
         if (_cachedEndpoints != null)
         {
-            return _cachedEndpoints;
+            return Task.FromResult<IReadOnlyList<ApiEndpoint>>(_cachedEndpoints);
         }
 
         var endpoints = new List<ApiEndpoint>();
@@ -183,7 +183,7 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
         }
 
         _cachedEndpoints = endpoints;
-        return endpoints;
+        return Task.FromResult<IReadOnlyList<ApiEndpoint>>(endpoints);
     }
 
     /// <inheritdoc />

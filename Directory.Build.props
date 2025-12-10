@@ -1,0 +1,33 @@
+<Project>
+  <!-- 
+    Global MSBuild properties for CodeQL compatibility
+    This file disables features that cause issues during CodeQL static analysis
+  -->
+  
+  <PropertyGroup>
+    <!-- Detect CodeQL analysis environment -->
+    <IsCodeQLAnalysis Condition="'$(LGTM_INDEX_IMPORT)' != '' OR '$(CODEQL_DIST)' != ''">true</IsCodeQLAnalysis>
+  </PropertyGroup>
+
+  <!-- Disable problematic features during CodeQL analysis -->
+  <PropertyGroup Condition="'$(IsCodeQLAnalysis)' == 'true'">
+    <!-- Disable AOT compilation during CodeQL analysis -->
+    <RunAOTCompilation>false</RunAOTCompilation>
+    
+    <!-- Disable IL Linking during CodeQL analysis -->
+    <BlazorWebAssemblyEnableLinking>false</BlazorWebAssemblyEnableLinking>
+    
+    <!-- Disable compression during CodeQL analysis -->
+    <BlazorEnableCompression>false</BlazorEnableCompression>
+    
+    <!-- Use Debug configuration settings for CodeQL -->
+    <BlazorCacheBootResources>false</BlazorCacheBootResources>
+    
+    <!-- Ensure portable debug symbols -->
+    <DebugType>portable</DebugType>
+    
+    <!-- Simplify build for CodeQL -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+</Project>

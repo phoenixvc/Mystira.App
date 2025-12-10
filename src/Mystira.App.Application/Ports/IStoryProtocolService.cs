@@ -45,4 +45,28 @@ public interface IStoryProtocolService
     /// <param name="contributors">Updated list of contributors</param>
     /// <returns>Updated Story Protocol metadata</returns>
     Task<StoryProtocolMetadata> UpdateRoyaltySplitAsync(string ipAssetId, List<Contributor> contributors);
+
+    /// <summary>
+    /// Pays royalties to an IP Asset, distributing to all contributors based on their splits
+    /// </summary>
+    /// <param name="ipAssetId">Story Protocol IP Asset ID to pay royalties to</param>
+    /// <param name="amount">Amount to pay (in WIP token smallest unit)</param>
+    /// <param name="payerReference">Optional reference for the payment (e.g., order ID)</param>
+    /// <returns>Transaction hash of the royalty payment</returns>
+    Task<RoyaltyPaymentResult> PayRoyaltyAsync(string ipAssetId, decimal amount, string? payerReference = null);
+
+    /// <summary>
+    /// Gets the claimable royalty balance for an IP Asset
+    /// </summary>
+    /// <param name="ipAssetId">Story Protocol IP Asset ID</param>
+    /// <returns>Claimable balance information</returns>
+    Task<RoyaltyBalance> GetClaimableRoyaltiesAsync(string ipAssetId);
+
+    /// <summary>
+    /// Claims accumulated royalties for a contributor wallet
+    /// </summary>
+    /// <param name="ipAssetId">Story Protocol IP Asset ID</param>
+    /// <param name="contributorWallet">Wallet address of the contributor claiming</param>
+    /// <returns>Transaction hash of the claim</returns>
+    Task<string> ClaimRoyaltiesAsync(string ipAssetId, string contributorWallet);
 }
