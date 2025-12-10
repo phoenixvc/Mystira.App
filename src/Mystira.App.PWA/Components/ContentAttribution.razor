@@ -70,7 +70,7 @@
             <span>@ErrorMessage</span>
         </div>
     }
-    else if (!IsLoading && (Attribution == null || !Attribution.HasCredits))
+    else if (Attribution == null || !Attribution.HasCredits)
     {
         <div class="attribution-empty" role="status">
             <span>No creator credits available</span>
