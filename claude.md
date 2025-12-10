@@ -377,8 +377,7 @@ Mystira.App/
    - Specific use case docs (e.g., `docs/usecases/gamesessions/create-game-session.md`)
 
 5. **Roadmap:**
-   - `docs/ROADMAP.md` (consolidated roadmap - single source of truth)
-   - `docs/architecture/REFACTORING_PLAN.md` (detailed refactoring implementation)
+   - `docs/ROADMAP.md` (consolidated roadmap - single source of truth for all pending work)
 
 ### **API Documentation**
 
@@ -683,25 +682,16 @@ Use this checklist from `docs/architecture/ARCHITECTURAL_RULES.md`:
 
 ## Final Notes
 
-- **Production Readiness:** Project has strong foundations with recent improvements (November 24, 2025)
-- **Priority:** FEAT-INC-1 (COPPA compliance) is the only remaining blocker for production launch
-- **Architecture:** Well-documented; architectural violations (80+ services in API layer) documented for Wave 5 refactoring
-- **Documentation:** Comprehensive - use it! 72+ markdown files including:
-  - ✅ Master PRD: `docs/prd/master-prd.md` (comprehensive product requirements)
-  - ✅ COPPA PRD: `docs/prd/features/coppa-compliance.md` (706 lines)
-  - ✅ Updated Review: `PRODUCTION_REVIEW_REPORT_UPDATED.md` (59 items tracked)
-  - ✅ Master Summary Table: `MASTER_SUMMARY_TABLE.md` (complete tracking)
-- **Recent Fixes (November 24, 2025):**
-  - ✅ SDK 9.0.100
-  - ✅ Domain → net9.0
-  - ✅ Blazor AOT + IL linking enabled
-  - ✅ Dark mode implemented
-  - ✅ Master PRD created
+- **Production Readiness:** Project has strong foundations with recent improvements
+- **Priority:** COPPA compliance is the remaining blocker for production launch
+- **Architecture:** Well-documented; architectural violations tracked in `docs/ROADMAP.md`
+- **Key Documentation:**
+  - `docs/ROADMAP.md` - All pending work and technical debt
+  - `docs/prd/master-prd.md` - Comprehensive product requirements
+  - `docs/prd/features/coppa-compliance.md` - COPPA compliance requirements
 
 **Remember:** This is a children's platform. Privacy, safety, and compliance are not optional. When in doubt about COPPA implications, consult `docs/prd/features/coppa-compliance.md` or ask for clarification.
 
 ---
 
-*Last Updated: November 24, 2025*
-*Review Report: PRODUCTION_REVIEW_REPORT_UPDATED.md*
-*Master PRD: docs/prd/master-prd.md*
+*Last Updated: 2025-12-10*

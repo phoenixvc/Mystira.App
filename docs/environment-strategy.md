@@ -108,13 +108,6 @@ All three environments use Azure Static Web Apps for maximum production parity.
 
 ---
 
-## Migration Guide
-
-For detailed migration procedures, see:
-- [STAGING_MIGRATION_GUIDE.md](STAGING_MIGRATION_GUIDE.md) - Step-by-step migration reference
-
----
-
 ## Related Documentation
 
 - [Azure Naming Conventions](AZURE-NAMING-CONVENTIONS.md)

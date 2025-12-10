@@ -242,18 +242,9 @@ From `tools/Mystira.DevHub/DRY_SOLID_ANALYSIS.md` and `docs/UX_IMPROVEMENTS.md`:
 
 ## Document History
 
-This roadmap consolidates items from:
-- `/ANALYSIS.md` + `/SUMMARY.md` (archived)
-- `/DEPRECATED_SERVICES_ANALYSIS.md` (active - migration pending)
-- `docs/MASTER_SUMMARY_TABLE.md` (archived)
-- `docs/POTENTIAL_ENHANCEMENTS_ROADMAP.md` (archived)
-- `docs/PRODUCTION_REVIEW_REPORT.md` (archived)
-- `docs/IMPROVEMENTS_ASSESSMENT.md` (archived)
-- `docs/UX_IMPROVEMENTS.md` (archived)
-- `docs/architecture/REFACTORING_PLAN.md` (active - detailed plan)
-- `tools/Mystira.DevHub/*.md` (various analysis docs archived)
+This roadmap consolidates items from various analysis and planning documents that were created during development. The original documents are available in git history if needed.
 
 ---
 
 **Maintained By**: Development Team
-**Next Review**: After completing Critical Priority items
+**Last Updated**: 2025-12-10
