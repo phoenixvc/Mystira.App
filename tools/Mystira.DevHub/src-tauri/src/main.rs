@@ -22,7 +22,7 @@ use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
 // Re-export command functions from modules
-use cosmos::{cosmos_export, cosmos_stats, migration_run};
+use cosmos::{cosmos_export, cosmos_stats, migration_run, fetch_environment_connections, check_azure_cli_login};
 use infrastructure::{infrastructure_validate, infrastructure_preview, infrastructure_deploy, infrastructure_destroy, infrastructure_status};
 use github::{get_github_deployments, github_dispatch_workflow, github_workflow_status, github_workflow_logs, list_github_workflows};
 use azure::cli::{check_azure_cli, install_azure_cli};
@@ -52,6 +52,8 @@ fn main() {
             cosmos_export,
             cosmos_stats,
             migration_run,
+            fetch_environment_connections,
+            check_azure_cli_login,
             infrastructure_validate,
             infrastructure_preview,
             infrastructure_deploy,

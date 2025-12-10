@@ -10,29 +10,34 @@ namespace Mystira.DevHub.Services.Migration;
 public class MigrationService : IMigrationService
 {
     private readonly ILogger<MigrationService> _logger;
+    
+    // Concurrency limits for parallel operations
+    private const int MaxConcurrentDocumentOperations = 100;
+    private const int MaxConcurrentBlobOperations = 10;
+    private const int MaxRetries = 3;
 
     public MigrationService(ILogger<MigrationService> logger)
     {
         _logger = logger;
     }
 
-    public async Task<MigrationResult> MigrateScenariosAsync(string sourceConnectionString, string destConnectionString, string databaseName)
+    public async Task<MigrationResult> MigrateScenariosAsync(string sourceConnectionString, string destConnectionString, string sourceDatabaseName, string destDatabaseName)
     {
         var stopwatch = Stopwatch.StartNew();
         var result = new MigrationResult();
 
         try
         {
-            _logger.LogInformation("Starting scenarios migration");
+            _logger.LogInformation("Starting scenarios migration from {SourceDb} to {DestDb}", sourceDatabaseName, destDatabaseName);
 
             using var sourceClient = new CosmosClient(sourceConnectionString);
             using var destClient = new CosmosClient(destConnectionString);
 
-            var sourceContainer = sourceClient.GetContainer(databaseName, "Scenarios");
-            var destContainer = destClient.GetContainer(databaseName, "Scenarios");
+            var sourceContainer = sourceClient.GetContainer(sourceDatabaseName, "Scenarios");
+            var destContainer = destClient.GetContainer(destDatabaseName, "Scenarios");
 
             // Ensure destination container exists
-            await EnsureContainerExists(destClient, databaseName, "Scenarios", "/id");
+            await EnsureContainerExists(destClient, destDatabaseName, "Scenarios", "/id");
 
             // Query all scenarios from source
             var query = sourceContainer.GetItemQueryIterator<Scenario>("SELECT * FROM c");
@@ -82,23 +87,23 @@ public class MigrationService : IMigrationService
         }
     }
 
-    public async Task<MigrationResult> MigrateContentBundlesAsync(string sourceConnectionString, string destConnectionString, string databaseName)
+    public async Task<MigrationResult> MigrateContentBundlesAsync(string sourceConnectionString, string destConnectionString, string sourceDatabaseName, string destDatabaseName)
     {
         var stopwatch = Stopwatch.StartNew();
         var result = new MigrationResult();
 
         try
         {
-            _logger.LogInformation("Starting content bundles migration");
+            _logger.LogInformation("Starting content bundles migration from {SourceDb} to {DestDb}", sourceDatabaseName, destDatabaseName);
 
             using var sourceClient = new CosmosClient(sourceConnectionString);
             using var destClient = new CosmosClient(destConnectionString);
 
-            var sourceContainer = sourceClient.GetContainer(databaseName, "ContentBundles");
-            var destContainer = destClient.GetContainer(databaseName, "ContentBundles");
+            var sourceContainer = sourceClient.GetContainer(sourceDatabaseName, "ContentBundles");
+            var destContainer = destClient.GetContainer(destDatabaseName, "ContentBundles");
 
             // Ensure destination container exists
-            await EnsureContainerExists(destClient, databaseName, "ContentBundles", "/id");
+            await EnsureContainerExists(destClient, destDatabaseName, "ContentBundles", "/id");
 
             // Query all content bundles from source
             var query = sourceContainer.GetItemQueryIterator<ContentBundle>("SELECT * FROM c");
@@ -148,23 +153,23 @@ public class MigrationService : IMigrationService
         }
     }
 
-    public async Task<MigrationResult> MigrateMediaAssetsAsync(string sourceConnectionString, string destConnectionString, string databaseName)
+    public async Task<MigrationResult> MigrateMediaAssetsAsync(string sourceConnectionString, string destConnectionString, string sourceDatabaseName, string destDatabaseName)
     {
         var stopwatch = Stopwatch.StartNew();
         var result = new MigrationResult();
 
         try
         {
-            _logger.LogInformation("Starting media assets migration");
+            _logger.LogInformation("Starting media assets migration from {SourceDb} to {DestDb}", sourceDatabaseName, destDatabaseName);
 
             using var sourceClient = new CosmosClient(sourceConnectionString);
             using var destClient = new CosmosClient(destConnectionString);
 
-            var sourceContainer = sourceClient.GetContainer(databaseName, "MediaAssets");
-            var destContainer = destClient.GetContainer(databaseName, "MediaAssets");
+            var sourceContainer = sourceClient.GetContainer(sourceDatabaseName, "MediaAssets");
+            var destContainer = destClient.GetContainer(destDatabaseName, "MediaAssets");
 
             // Ensure destination container exists
-            await EnsureContainerExists(destClient, databaseName, "MediaAssets", "/id");
+            await EnsureContainerExists(destClient, destDatabaseName, "MediaAssets", "/id");
 
             // Query all media assets from source
             var query = sourceContainer.GetItemQueryIterator<MediaAsset>("SELECT * FROM c");
@@ -229,8 +234,20 @@ public class MigrationService : IMigrationService
             var sourceContainerClient = sourceBlobServiceClient.GetBlobContainerClient(containerName);
             var destContainerClient = destBlobServiceClient.GetBlobContainerClient(containerName);
 
-            // Ensure destination container exists
-            await destContainerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
+            // Check if source container exists
+            var sourceExists = await sourceContainerClient.ExistsAsync();
+            if (!sourceExists.Value)
+            {
+                _logger.LogWarning("Source container {Container} does not exist, skipping migration", containerName);
+                result.Success = true;
+                result.Errors.Add($"Source container '{containerName}' does not exist - nothing to migrate");
+                stopwatch.Stop();
+                result.Duration = stopwatch.Elapsed;
+                return result;
+            }
+
+            // Ensure destination container exists (use None for private access)
+            await destContainerClient.CreateIfNotExistsAsync(PublicAccessType.None);
 
             // List all blobs in source container
             var blobs = new List<string>();
@@ -242,38 +259,112 @@ public class MigrationService : IMigrationService
             result.TotalItems = blobs.Count;
             _logger.LogInformation("Found {Count} blobs to migrate", blobs.Count);
 
-            // Migrate each blob
-            foreach (var blobName in blobs)
+            if (blobs.Count == 0)
             {
-                try
-                {
-                    var sourceBlobClient = sourceContainerClient.GetBlobClient(blobName);
-                    var destBlobClient = destContainerClient.GetBlobClient(blobName);
-
-                    // Check if blob exists in destination
-                    var destExists = await destBlobClient.ExistsAsync();
-                    if (destExists.Value)
-                    {
-                        _logger.LogDebug("Blob {BlobName} already exists in destination, skipping", blobName);
-                        result.SuccessCount++;
-                        continue;
-                    }
-
-                    // Copy blob using server-side copy
-                    var copyOperation = await destBlobClient.StartCopyFromUriAsync(sourceBlobClient.Uri);
-                    await copyOperation.WaitForCompletionAsync();
-
-                    result.SuccessCount++;
-                    _logger.LogDebug("Migrated blob: {BlobName}", blobName);
-                }
-                catch (Exception ex)
-                {
-                    result.FailureCount++;
-                    result.Errors.Add($"Failed to migrate blob {blobName}: {ex.Message}");
-                    _logger.LogError(ex, "Failed to migrate blob {BlobName}", blobName);
-                }
+                result.Success = true;
+                stopwatch.Stop();
+                result.Duration = stopwatch.Elapsed;
+                return result;
             }
 
+            // Migrate blobs with parallel processing and retry logic
+            var tasks = new List<Task>();
+            var semaphore = new SemaphoreSlim(MaxConcurrentBlobOperations); // Limit concurrent blob operations (blobs can be large)
+            int successCount = 0;
+            int failureCount = 0;
+
+            foreach (var blobName in blobs)
+            {
+                await semaphore.WaitAsync();
+
+                tasks.Add(Task.Run(async () =>
+                {
+                    try
+                    {
+                        var sourceBlobClient = sourceContainerClient.GetBlobClient(blobName);
+                        var destBlobClient = destContainerClient.GetBlobClient(blobName);
+
+                        // Check if blob exists in destination
+                        var destExists = await destBlobClient.ExistsAsync();
+                        if (destExists.Value)
+                        {
+                            _logger.LogDebug("Blob {BlobName} already exists in destination, skipping", blobName);
+                            Interlocked.Increment(ref successCount);
+                            return;
+                        }
+
+                        // Retry logic for blob migration
+                        int retryCount = 0;
+                        bool success = false;
+
+                        while (!success && retryCount < MaxRetries)
+                        {
+                            try
+                            {
+                                // Download from source and upload to destination (works for private containers)
+                                var downloadResponse = await sourceBlobClient.DownloadContentAsync();
+                                var blobContent = downloadResponse.Value.Content;
+                                var contentType = downloadResponse.Value.Details.ContentType;
+                                var metadata = downloadResponse.Value.Details.Metadata;
+
+                                await destBlobClient.UploadAsync(blobContent, overwrite: false);
+
+                                // Set content type and metadata if available
+                                var headers = new BlobHttpHeaders();
+                                if (!string.IsNullOrEmpty(contentType))
+                                {
+                                    headers.ContentType = contentType;
+                                }
+                                await destBlobClient.SetHttpHeadersAsync(headers);
+
+                                if (metadata != null && metadata.Count > 0)
+                                {
+                                    await destBlobClient.SetMetadataAsync(metadata);
+                                }
+
+                                success = true;
+                                Interlocked.Increment(ref successCount);
+                                _logger.LogDebug("Migrated blob: {BlobName}", blobName);
+                            }
+                            catch (Azure.RequestFailedException ex) when (ex.Status == 429 || ex.Status == 503)
+                            {
+                                // Rate limiting or service unavailable - retry with exponential backoff
+                                retryCount++;
+                                if (retryCount < MaxRetries)
+                                {
+                                    var delay = TimeSpan.FromSeconds(Math.Pow(2, retryCount));
+                                    _logger.LogWarning("Rate limited or service unavailable for blob {BlobName}, retry {Retry}/{MaxRetries} after {Delay}s", 
+                                        blobName, retryCount, MaxRetries, delay.TotalSeconds);
+                                    await Task.Delay(delay);
+                                }
+                                else
+                                {
+                                    throw; // Max retries exceeded
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Interlocked.Increment(ref failureCount);
+                        lock (result.Errors)
+                        {
+                            result.Errors.Add($"Failed to migrate blob {blobName}: {ex.Message}");
+                        }
+                        _logger.LogError(ex, "Failed to migrate blob {BlobName}", blobName);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                }));
+            }
+
+            // Wait for all blob migrations to complete
+            await Task.WhenAll(tasks);
+
+            result.SuccessCount = successCount;
+            result.FailureCount = failureCount;
             result.Success = result.FailureCount == 0;
             stopwatch.Stop();
             result.Duration = stopwatch.Elapsed;
@@ -292,17 +383,310 @@ public class MigrationService : IMigrationService
         }
     }
 
+    /// <summary>
+    /// Generic container migration using dynamic JSON documents.
+    /// Works for any container without needing specific model classes.
+    /// </summary>
+    public async Task<MigrationResult> MigrateContainerAsync(string sourceConnectionString, string destConnectionString, string sourceDatabaseName, string destDatabaseName, string containerName, string partitionKeyPath = "/id", bool dryRun = false)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var result = new MigrationResult();
+
+        try
+        {
+            _logger.LogInformation("Starting{DryRun} generic migration for container: {Container} from {SourceDb} to {DestDb}", 
+                dryRun ? " DRY-RUN" : "", containerName, sourceDatabaseName, destDatabaseName);
+
+            var sourceOptions = new CosmosClientOptions { AllowBulkExecution = false }; // Read doesn't need bulk
+            var destOptions = new CosmosClientOptions { AllowBulkExecution = true }; // Enable bulk for writes
+
+            using var sourceClient = new CosmosClient(sourceConnectionString, sourceOptions);
+            using var destClient = new CosmosClient(destConnectionString, destOptions);
+
+            // Check if source container exists before attempting migration
+            var sourceContainerExists = await CheckContainerExists(sourceClient, sourceDatabaseName, containerName);
+            if (!sourceContainerExists)
+            {
+                _logger.LogWarning("Source container {Container} does not exist in database {Database}, skipping migration", containerName, sourceDatabaseName);
+                result.Success = true;
+                result.Errors.Add($"Source container '{containerName}' does not exist in database '{sourceDatabaseName}' - nothing to migrate");
+                stopwatch.Stop();
+                result.Duration = stopwatch.Elapsed;
+                return result;
+            }
+
+            if (!dryRun)
+            {
+                // Ensure destination container exists
+                await EnsureContainerExists(destClient, destDatabaseName, containerName, partitionKeyPath);
+            }
+
+            var sourceContainer = sourceClient.GetContainer(sourceDatabaseName, containerName);
+
+            // Query all items from source as dynamic JSON
+            var query = sourceContainer.GetItemQueryIterator<dynamic>("SELECT * FROM c");
+            var items = new List<dynamic>();
+
+            while (query.HasMoreResults)
+            {
+                var response = await query.ReadNextAsync();
+                items.AddRange(response);
+            }
+
+            result.TotalItems = items.Count;
+            _logger.LogInformation("Found {Count} items to migrate in {Container}", items.Count, containerName);
+
+            if (items.Count == 0)
+            {
+                _logger.LogInformation("Container {Container} is empty, nothing to migrate", containerName);
+                result.Success = true;
+                stopwatch.Stop();
+                result.Duration = stopwatch.Elapsed;
+                return result;
+            }
+
+            if (dryRun)
+            {
+                _logger.LogInformation("DRY-RUN: Would migrate {Count} items from {Container}", items.Count, containerName);
+                result.Success = true;
+                result.SuccessCount = items.Count;
+                stopwatch.Stop();
+                result.Duration = stopwatch.Elapsed;
+                return result;
+            }
+
+            var destContainer = destClient.GetContainer(destDatabaseName, containerName);
+
+            // Use bulk operations for better performance
+            var tasks = new List<Task>();
+            var semaphore = new SemaphoreSlim(MaxConcurrentDocumentOperations); // Limit concurrent operations
+            int successCount = 0;
+            int failureCount = 0;
+
+            foreach (var item in items)
+            {
+                await semaphore.WaitAsync();
+
+                tasks.Add(Task.Run(async () =>
+                {
+                    try
+                    {
+                        // Extract partition key value from the item
+                        string partitionKeyValue = GetPartitionKeyValueSafe(item, partitionKeyPath, _logger);
+
+                        // Retry logic with exponential backoff
+                        int retryCount = 0;
+                        bool success = false;
+
+                        while (!success && retryCount < MaxRetries)
+                        {
+                            try
+                            {
+                                await destContainer.UpsertItemAsync(item, new PartitionKey(partitionKeyValue));
+                                success = true;
+                                Interlocked.Increment(ref successCount);
+                            }
+                            catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                            {
+                                // Rate limiting - wait and retry with exponential backoff
+                                retryCount++;
+                                if (retryCount < MaxRetries)
+                                {
+                                    var delay = TimeSpan.FromSeconds(Math.Pow(2, retryCount));
+                                    _logger.LogWarning("Rate limited on item {PartitionKey}, retry {Retry}/{MaxRetries} after {Delay}s", 
+                                        partitionKeyValue, retryCount, MaxRetries, delay.TotalSeconds);
+                                    await Task.Delay(delay);
+                                }
+                                else
+                                {
+                                    throw; // Max retries exceeded
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Interlocked.Increment(ref failureCount);
+                        string itemId = item?.id?.ToString() ?? "unknown";
+                        lock (result.Errors)
+                        {
+                            result.Errors.Add($"Failed to migrate item {itemId} in {containerName}: {ex.Message}");
+                        }
+                        _logger.LogError(ex, "Failed to migrate item in {Container}", containerName);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                }));
+            }
+
+            // Wait for all bulk operations to complete
+            await Task.WhenAll(tasks);
+
+            result.SuccessCount = successCount;
+            result.FailureCount = failureCount;
+            result.Success = result.FailureCount == 0;
+            stopwatch.Stop();
+            result.Duration = stopwatch.Elapsed;
+
+            _logger.LogInformation("{Container} migration completed: {Result}", containerName, result);
+            return result;
+        }
+        catch (CosmosException ex)
+        {
+            _logger.LogError(ex, "Cosmos DB error during {Container} migration", containerName);
+            result.Success = false;
+            result.Errors.Add($"Cosmos DB error: {ex.Message}");
+            stopwatch.Stop();
+            result.Duration = stopwatch.Elapsed;
+            return result;
+        }
+        catch (Azure.RequestFailedException ex)
+        {
+            _logger.LogError(ex, "Azure Storage error during {Container} migration", containerName);
+            result.Success = false;
+            result.Errors.Add($"Azure Storage error: {ex.Message}");
+            stopwatch.Stop();
+            result.Duration = stopwatch.Elapsed;
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            // Propagate task cancellation so higher level handlers can deal with it properly.
+            throw;
+        }
+        catch (Exception ex) when (!(ex is StackOverflowException) && !(ex is OutOfMemoryException) && !(ex is ThreadAbortException))
+        {
+            _logger.LogError(ex, "Unhandled exception during {Container} migration", containerName);
+            result.Success = false;
+            result.Errors.Add($"Unhandled exception: {ex.Message}");
+            stopwatch.Stop();
+            result.Duration = stopwatch.Elapsed;
+            return result;
+        }
+    }
+
+    private async Task<bool> CheckContainerExists(CosmosClient client, string databaseName, string containerName)
+    {
+        try
+        {
+            var container = client.GetContainer(databaseName, containerName);
+            await container.ReadContainerAsync();
+            return true;
+        }
+        catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+    }
+
+    private string GetPartitionKeyValue(dynamic item, string partitionKeyPath)
+    {
+        return GetPartitionKeyValueSafe(item, partitionKeyPath, _logger);
+    }
+
+    private static string GetPartitionKeyValueSafe(dynamic item, string partitionKeyPath, ILogger logger)
+    {
+        // Remove leading slash from partition key path
+        var propertyName = partitionKeyPath.TrimStart('/');
+
+        // Handle nested paths (e.g., "/metadata/id")
+        var parts = propertyName.Split('/');
+        dynamic current = item;
+
+        foreach (var part in parts)
+        {
+            if (current is System.Text.Json.JsonElement jsonElement)
+            {
+                if (jsonElement.TryGetProperty(part, out var prop))
+                {
+                    current = prop;
+                }
+                else
+                {
+                    // Partition key property not found - try fallback to 'id'
+                    if (item is System.Text.Json.JsonElement rootElement && rootElement.TryGetProperty("id", out var idProp))
+                    {
+                        return idProp.ToString();
+                    }
+                    throw new InvalidOperationException($"Partition key path '{partitionKeyPath}' not found in item and no 'id' fallback available");
+                }
+            }
+            else
+            {
+                // Try to access as dynamic object
+                try
+                {
+                    // Add a null check before attempting to cast and access
+                    if (current == null)
+                    {
+                        // current is null, fallback to 'id'
+                        string? itemId = item?.id?.ToString();
+                        if (!string.IsNullOrEmpty(itemId))
+                        {
+                            return itemId;
+                        }
+                        throw new InvalidOperationException($"Partition key path '{partitionKeyPath}' is null and no 'id' fallback available");
+                    }
+                    current = ((IDictionary<string, object>)current)[part];
+                }
+                catch (InvalidCastException)
+                {
+                    // Partition key property not found - try fallback to 'id'
+                    string? itemId = item?.id?.ToString();
+                    if (!string.IsNullOrEmpty(itemId))
+                    {
+                        return itemId;
+                    }
+                    throw new InvalidOperationException($"Partition key path '{partitionKeyPath}' not found in item and no 'id' fallback available");
+                }
+                catch (KeyNotFoundException)
+                {
+                    string? itemId = item?.id?.ToString();
+                    if (!string.IsNullOrEmpty(itemId))
+                    {
+                        return itemId;
+                    }
+                    throw new InvalidOperationException($"Partition key path '{partitionKeyPath}' not found in item and no 'id' fallback available");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Unexpected exception when traversing partition key path '{PartitionKeyPath}'", partitionKeyPath);
+                    string? itemId = item?.id?.ToString();
+                    if (!string.IsNullOrEmpty(itemId))
+                    {
+                        return itemId;
+                    }
+                    throw new InvalidOperationException($"Unexpected exception traversing partition key path '{partitionKeyPath}' and no 'id' fallback available", ex);
+                }
+            }
+        }
+
+        var result = current?.ToString();
+        if (string.IsNullOrEmpty(result))
+        {
+            throw new InvalidOperationException($"Partition key value at path '{partitionKeyPath}' is null or empty");
+        }
+        return result;
+    }
+
     private async Task EnsureContainerExists(CosmosClient client, string databaseName, string containerName, string partitionKeyPath)
     {
         try
         {
+            // First ensure the database exists
+            var databaseResponse = await client.CreateDatabaseIfNotExistsAsync(databaseName);
+            _logger.LogInformation("Database {Database} ready (created: {Created})", databaseName, databaseResponse.StatusCode == System.Net.HttpStatusCode.Created);
+
+            // Then ensure the container exists
             var database = client.GetDatabase(databaseName);
             var containerResponse = await database.CreateContainerIfNotExistsAsync(containerName, partitionKeyPath);
             _logger.LogInformation("Container {Container} ready (created: {Created})", containerName, containerResponse.StatusCode == System.Net.HttpStatusCode.Created);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Could not ensure container {Container} exists", containerName);
+            _logger.LogWarning(ex, "Could not ensure container {Container} exists in database {Database}", containerName, databaseName);
         }
     }
 
