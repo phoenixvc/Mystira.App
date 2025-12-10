@@ -1,5 +1,6 @@
 @using Mystira.App.PWA.Services
 @inject IApiConfigurationService ApiConfigService
+@inject IAuthService AuthService
 @inject ILogger<EndpointSwitcher> Logger
 @inject IJSRuntime JSRuntime
 
@@ -74,7 +75,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _isAllowed = ApiConfigService.IsEndpointSwitchingAllowed();
+        // Get current user's email to check allowlist
+        var account = await AuthService.GetCurrentAccountAsync();
+        var userEmail = account?.Email;
+
+        // Check if this specific user is allowed to switch endpoints
+        _isAllowed = ApiConfigService.IsUserAllowedToSwitchEndpoints(userEmail);
 
         if (_isAllowed)
         {

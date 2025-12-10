@@ -36,10 +36,23 @@ public interface IApiConfigurationService
     Task<IReadOnlyList<ApiEndpoint>> GetAvailableEndpointsAsync();
 
     /// <summary>
-    /// Checks if endpoint switching is allowed for this environment.
-    /// Synchronous because it only reads from configuration.
+    /// Checks if endpoint switching is enabled in configuration.
+    /// Note: Use IsUserAllowedToSwitchEndpoints for user-specific checks.
     /// </summary>
     bool IsEndpointSwitchingAllowed();
+
+    /// <summary>
+    /// Checks if a specific user (by email) is allowed to switch endpoints.
+    /// Returns true if: endpoint switching is enabled AND (no allowlist configured OR email is in allowlist).
+    /// </summary>
+    /// <param name="userEmail">The user's email address, or null if not authenticated.</param>
+    bool IsUserAllowedToSwitchEndpoints(string? userEmail);
+
+    /// <summary>
+    /// Gets the list of email addresses allowed to switch endpoints.
+    /// Returns empty list if no allowlist is configured (meaning all users can switch if enabled).
+    /// </summary>
+    IReadOnlyList<string> GetAllowedSwitchingEmails();
 
     /// <summary>
     /// Clears the persisted endpoint, reverting to the default from config.

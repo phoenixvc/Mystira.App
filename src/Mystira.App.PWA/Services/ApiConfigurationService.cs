@@ -9,7 +9,7 @@ namespace Mystira.App.PWA.Services;
 /// This service ensures that user-selected API endpoints survive PWA updates,
 /// solving the issue of having to re-add domains after each release.
 /// </summary>
-public class ApiConfigurationService : IApiConfigurationService
+public class ApiConfigurationService : IApiConfigurationService, IDisposable
 {
     private readonly IJSRuntime _jsRuntime;
     private readonly IConfiguration _configuration;
@@ -17,6 +17,8 @@ public class ApiConfigurationService : IApiConfigurationService
     private readonly IApiEndpointCache _endpointCache;
     private readonly ITelemetryService _telemetry;
     private readonly HttpClient _healthCheckClient;
+    private readonly List<string> _allowedEmails;
+    private bool _disposed;
 
     // LocalStorage keys - using specific prefix to avoid conflicts
     private const string ApiUrlStorageKey = "mystira_api_base_url";
@@ -48,6 +50,10 @@ public class ApiConfigurationService : IApiConfigurationService
         {
             Timeout = TimeSpan.FromSeconds(5)
         };
+
+        // Load allowed emails from configuration (case-insensitive matching)
+        _allowedEmails = _configuration.GetSection("ApiConfiguration:AllowedSwitchingEmails")
+            .Get<List<string>>() ?? new List<string>();
     }
 
     /// <inheritdoc />
@@ -179,6 +185,37 @@ public class ApiConfigurationService : IApiConfigurationService
     public bool IsEndpointSwitchingAllowed()
     {
         return _configuration.GetValue<bool>("ApiConfiguration:AllowEndpointSwitching");
+    }
+
+    /// <inheritdoc />
+    public bool IsUserAllowedToSwitchEndpoints(string? userEmail)
+    {
+        // First check if switching is enabled at all
+        if (!IsEndpointSwitchingAllowed())
+        {
+            return false;
+        }
+
+        // If no allowlist configured, all users can switch
+        if (_allowedEmails.Count == 0)
+        {
+            return true;
+        }
+
+        // If user not authenticated, deny access
+        if (string.IsNullOrEmpty(userEmail))
+        {
+            return false;
+        }
+
+        // Check if user's email is in the allowlist (case-insensitive)
+        return _allowedEmails.Any(e => e.Equals(userEmail, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> GetAllowedSwitchingEmails()
+    {
+        return _allowedEmails.AsReadOnly();
     }
 
     /// <inheritdoc />
@@ -402,5 +439,14 @@ public class ApiConfigurationService : IApiConfigurationService
     private static string EnsureTrailingSlash(string url)
     {
         return url.EndsWith('/') ? url : url + "/";
+    }
+
+    public void Dispose()
+    {
+        if (!_disposed)
+        {
+            _healthCheckClient.Dispose();
+            _disposed = true;
+        }
     }
 }
