@@ -95,6 +95,12 @@ param cosmosDbDatabaseName string = 'MystiraAppDb'
 @description('Tags for all resources')
 param tags object = {}
 
+@description('Custom domain to bind (e.g., "api.mystira.app")')
+param customDomain string = ''
+
+@description('Enable custom domain binding (requires DNS CNAME to be configured first)')
+param enableCustomDomain bool = false
+
 // Helper: Check if Key Vault is configured
 var useKeyVault = !empty(keyVaultUri)
 
@@ -302,9 +308,23 @@ resource diagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-pr
   }
 }
 
+// Custom domain binding (requires DNS CNAME record to exist first)
+// CNAME should point: customDomain -> appServiceName.azurewebsites.net
+resource customDomainBinding 'Microsoft.Web/sites/hostNameBindings@2023-01-01' = if (enableCustomDomain && customDomain != '') {
+  name: customDomain
+  parent: appService
+  properties: {
+    siteName: appService.name
+    hostNameType: 'Verified'
+    // Note: SSL certificate can be added separately via App Service Managed Certificate
+  }
+}
+
 // Outputs
 output appServiceName string = appService.name
 output appServiceId string = appService.id
 output appServiceUrl string = 'https://${appService.properties.defaultHostName}'
+output appServiceDefaultHostname string = appService.properties.defaultHostName
 output appServicePlanId string = appServicePlan.id
 output appServicePrincipalId string = appService.identity.principalId
+output customDomainUrl string = enableCustomDomain && customDomain != '' ? 'https://${customDomain}' : ''

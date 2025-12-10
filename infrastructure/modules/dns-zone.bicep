@@ -1,5 +1,5 @@
 // DNS Zone Module for Custom Domain Configuration
-// References an existing DNS zone and manages records for Static Web Apps
+// References an existing DNS zone and manages CNAME/TXT records for SWA and App Services
 
 @description('Name of the existing DNS zone (e.g., mystira.app)')
 param dnsZoneName string
@@ -7,14 +7,21 @@ param dnsZoneName string
 @description('Resource group where the DNS zone exists')
 param dnsZoneResourceGroup string = resourceGroup().name
 
-@description('Subdomain for the SWA (e.g., "www", "dev", "staging", or "" for apex)')
+@description('Subdomain to create (e.g., "api", "admin", "dev", "api.dev", or "" for apex)')
 param subdomain string = ''
 
-@description('Static Web App default hostname to point to')
-param swaDefaultHostname string
+@description('Target hostname to point the CNAME to (e.g., SWA or App Service default hostname)')
+param targetHostname string
 
 @description('Enable custom domain record creation')
 param enableCustomDomain bool = true
+
+@description('Record type: "CNAME" for subdomains, "TXT" for apex domain validation')
+@allowed([
+  'CNAME'
+  'TXT'
+])
+param recordType string = 'CNAME'
 
 @description('Tags for resources')
 param tags object = {}
@@ -28,29 +35,28 @@ resource dnsZone 'Microsoft.Network/dnsZones@2023-07-01-preview' existing = {
 // Full custom domain name
 var customDomainName = subdomain == '' ? dnsZoneName : '${subdomain}.${dnsZoneName}'
 
-// CNAME record for subdomain (www, dev, staging, etc.)
-resource cnameRecord 'Microsoft.Network/dnsZones/CNAME@2023-07-01-preview' = if (enableCustomDomain && subdomain != '') {
+// CNAME record for subdomain (api, admin, api.dev, etc.)
+resource cnameRecord 'Microsoft.Network/dnsZones/CNAME@2023-07-01-preview' = if (enableCustomDomain && subdomain != '' && recordType == 'CNAME') {
   name: subdomain
   parent: dnsZone
   properties: {
     TTL: 3600
     CNAMERecord: {
-      cname: swaDefaultHostname
+      cname: targetHostname
     }
     metadata: tags
   }
 }
 
-// For apex domain, we need an ALIAS record (Azure DNS specific)
-// SWA requires a TXT record for validation first, then the alias
-resource apexTxtRecord 'Microsoft.Network/dnsZones/TXT@2023-07-01-preview' = if (enableCustomDomain && subdomain == '') {
+// TXT record for apex domain validation (SWA requirement)
+resource apexTxtRecord 'Microsoft.Network/dnsZones/TXT@2023-07-01-preview' = if (enableCustomDomain && subdomain == '' && recordType == 'TXT') {
   name: '@'
   parent: dnsZone
   properties: {
     TTL: 3600
     TXTRecords: [
       {
-        value: [swaDefaultHostname]
+        value: [targetHostname]
       }
     ]
     metadata: tags
@@ -61,5 +67,5 @@ resource apexTxtRecord 'Microsoft.Network/dnsZones/TXT@2023-07-01-preview' = if 
 output dnsZoneId string = dnsZone.id
 output dnsZoneName string = dnsZone.name
 output customDomainName string = customDomainName
-output recordType string = subdomain == '' ? 'TXT (apex)' : 'CNAME'
-output targetHostname string = swaDefaultHostname
+output recordType string = recordType
+output targetHostname string = targetHostname

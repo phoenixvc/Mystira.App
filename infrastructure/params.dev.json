@@ -72,10 +72,19 @@
       "value": "mystira.app"
     },
     "dnsZoneResourceGroup": {
-      "value": "mys-prod-mystira-rg-san"
+      "value": "mys-prod-mystira-rg-glob"
     },
     "customDomainSubdomain": {
       "value": "dev"
+    },
+    "enableApiCustomDomain": {
+      "value": true
+    },
+    "apiSubdomainPrefix": {
+      "value": "api"
+    },
+    "adminApiSubdomainPrefix": {
+      "value": "admin"
     }
   }
 }

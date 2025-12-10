@@ -301,6 +301,15 @@ param dnsZoneResourceGroup string = ''
 @description('Subdomain for the environment (empty for apex/prod, "dev" for dev, "staging" for staging)')
 param customDomainSubdomain string = ''
 
+@description('Enable custom domain for API App Services')
+param enableApiCustomDomain bool = false
+
+@description('API subdomain prefix (e.g., "api" for api.mystira.app or api.dev.mystira.app)')
+param apiSubdomainPrefix string = 'api'
+
+@description('Admin API subdomain prefix (e.g., "admin" for admin.mystira.app)')
+param adminApiSubdomainPrefix string = 'admin'
+
 // ─────────────────────────────────────────────────────────────────
 // Computed Values
 // ─────────────────────────────────────────────────────────────────
@@ -317,6 +326,10 @@ var dnsZoneRg = dnsZoneResourceGroup == '' ? resourceGroup().name : dnsZoneResou
 
 // Custom domain name (e.g., "dev.mystira.app" or "mystira.app" for apex)
 var customDomainFull = customDomainSubdomain == '' ? dnsZoneName : '${customDomainSubdomain}.${dnsZoneName}'
+
+// API custom domains (e.g., "api.dev.mystira.app" or "api.mystira.app" for prod)
+var apiCustomDomain = customDomainSubdomain == '' ? '${apiSubdomainPrefix}.${dnsZoneName}' : '${apiSubdomainPrefix}.${customDomainSubdomain}.${dnsZoneName}'
+var adminApiCustomDomain = customDomainSubdomain == '' ? '${adminApiSubdomainPrefix}.${dnsZoneName}' : '${adminApiSubdomainPrefix}.${customDomainSubdomain}.${dnsZoneName}'
 
 // ─────────────────────────────────────────────────────────────────
 // Module Deployments
@@ -502,15 +515,50 @@ module staticWebApp 'modules/static-web-app.bicep' = if (deployStaticWebApp) {
 
 // DNS Records for Static Web App Custom Domain
 // Creates CNAME/TXT record in existing DNS zone pointing to SWA
-module dnsRecords 'modules/dns-zone.bicep' = if (deployStaticWebApp && enableCustomDomain) {
-  name: 'deploy-dns-records'
+module swaDnsRecord 'modules/dns-zone.bicep' = if (deployStaticWebApp && enableCustomDomain) {
+  name: 'deploy-swa-dns-record'
   scope: resourceGroup(dnsZoneRg)
   dependsOn: [staticWebApp]
   params: {
     dnsZoneName: dnsZoneName
     dnsZoneResourceGroup: dnsZoneRg
     subdomain: customDomainSubdomain
-    swaDefaultHostname: staticWebApp.outputs.staticWebAppDefaultHostname
+    targetHostname: staticWebApp.outputs.staticWebAppDefaultHostname
+    recordType: customDomainSubdomain == '' ? 'TXT' : 'CNAME'
+    enableCustomDomain: true
+    tags: tags
+  }
+}
+
+// DNS Records for Main API Custom Domain
+// Creates CNAME record: api.mystira.app or api.dev.mystira.app -> App Service hostname
+module apiDnsRecord 'modules/dns-zone.bicep' = if (!skipAppServiceCreation && enableApiCustomDomain) {
+  name: 'deploy-api-dns-record'
+  scope: resourceGroup(dnsZoneRg)
+  dependsOn: [apiAppService]
+  params: {
+    dnsZoneName: dnsZoneName
+    dnsZoneResourceGroup: dnsZoneRg
+    subdomain: customDomainSubdomain == '' ? apiSubdomainPrefix : '${apiSubdomainPrefix}.${customDomainSubdomain}'
+    targetHostname: apiAppService.outputs.appServiceDefaultHostname
+    recordType: 'CNAME'
+    enableCustomDomain: true
+    tags: tags
+  }
+}
+
+// DNS Records for Admin API Custom Domain
+// Creates CNAME record: admin.mystira.app or admin.dev.mystira.app -> App Service hostname
+module adminApiDnsRecord 'modules/dns-zone.bicep' = if (!skipAppServiceCreation && enableApiCustomDomain) {
+  name: 'deploy-admin-api-dns-record'
+  scope: resourceGroup(dnsZoneRg)
+  dependsOn: [adminApiAppService]
+  params: {
+    dnsZoneName: dnsZoneName
+    dnsZoneResourceGroup: dnsZoneRg
+    subdomain: customDomainSubdomain == '' ? adminApiSubdomainPrefix : '${adminApiSubdomainPrefix}.${customDomainSubdomain}'
+    targetHostname: adminApiAppService.outputs.appServiceDefaultHostname
+    recordType: 'CNAME'
     enableCustomDomain: true
     tags: tags
   }
@@ -520,7 +568,7 @@ module dnsRecords 'modules/dns-zone.bicep' = if (deployStaticWebApp && enableCus
 // This is a separate deployment to ensure DNS propagates first
 module staticWebAppCustomDomain 'modules/static-web-app.bicep' = if (deployStaticWebApp && enableCustomDomain) {
   name: 'deploy-static-web-app-custom-domain'
-  dependsOn: [dnsRecords]
+  dependsOn: [swaDnsRecord]
   params: {
     staticWebAppName: names.staticWebApp
     location: fallbackRegion
@@ -529,6 +577,76 @@ module staticWebAppCustomDomain 'modules/static-web-app.bicep' = if (deployStati
     branch: staticWebAppBranch
     tags: tags
     customDomain: customDomainFull
+    enableCustomDomain: true
+  }
+}
+
+// API Custom Domain Binding (after DNS record exists)
+module apiCustomDomainBinding 'modules/app-service.bicep' = if (!skipAppServiceCreation && enableApiCustomDomain) {
+  name: 'deploy-api-custom-domain-binding'
+  dependsOn: [apiDnsRecord]
+  params: {
+    appServiceName: names.apiApp
+    appServicePlanName: names.appServicePlan
+    location: location
+    sku: appServiceSku
+    aspnetEnvironment: environment == 'prod' ? 'Production' : (environment == 'staging' ? 'Staging' : 'Development')
+    cosmosDbConnectionString: skipCosmosCreation ? cosmosConnString : cosmosDb.outputs.cosmosDbConnectionString
+    storageConnectionString: skipStorageCreation ? storageConnString : storage.outputs.storageConnectionString
+    jwtRsaPrivateKey: jwtRsaPrivateKey
+    jwtRsaPublicKey: jwtRsaPublicKey
+    jwtIssuer: jwtIssuer
+    jwtAudience: jwtAudience
+    keyVaultUri: keyVaultUriComputed
+    acsConnectionString: skipCommServiceCreation ? acsConnectionString : communicationServices.outputs.communicationServiceConnectionString
+    acsSenderEmail: acsSenderEmail
+    corsAllowedOrigins: corsAllowedOrigins
+    appInsightsConnectionString: appInsights.outputs.connectionString
+    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+    discordBotToken: discordBotToken
+    botMicrosoftAppId: botMicrosoftAppId
+    botMicrosoftAppPassword: botMicrosoftAppPassword
+    whatsAppChannelRegistrationId: whatsAppChannelRegistrationId
+    whatsAppPhoneNumberId: whatsAppPhoneNumberId
+    whatsAppBusinessAccountId: whatsAppBusinessAccountId
+    whatsAppWebhookVerifyToken: whatsAppWebhookVerifyToken
+    tags: tags
+    customDomain: apiCustomDomain
+    enableCustomDomain: true
+  }
+}
+
+// Admin API Custom Domain Binding (after DNS record exists)
+module adminApiCustomDomainBinding 'modules/app-service.bicep' = if (!skipAppServiceCreation && enableApiCustomDomain) {
+  name: 'deploy-admin-api-custom-domain-binding'
+  dependsOn: [adminApiDnsRecord]
+  params: {
+    appServiceName: names.adminApiApp
+    appServicePlanName: names.appServicePlan
+    location: location
+    sku: appServiceSku
+    aspnetEnvironment: environment == 'prod' ? 'Production' : (environment == 'staging' ? 'Staging' : 'Development')
+    cosmosDbConnectionString: skipCosmosCreation ? cosmosConnString : cosmosDb.outputs.cosmosDbConnectionString
+    storageConnectionString: skipStorageCreation ? storageConnString : storage.outputs.storageConnectionString
+    jwtRsaPrivateKey: jwtRsaPrivateKey
+    jwtRsaPublicKey: jwtRsaPublicKey
+    jwtIssuer: jwtIssuer
+    jwtAudience: jwtAudience
+    keyVaultUri: keyVaultUriComputed
+    acsConnectionString: skipCommServiceCreation ? acsConnectionString : communicationServices.outputs.communicationServiceConnectionString
+    acsSenderEmail: acsSenderEmail
+    corsAllowedOrigins: corsAllowedOrigins
+    appInsightsConnectionString: appInsights.outputs.connectionString
+    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+    discordBotToken: discordBotToken
+    botMicrosoftAppId: botMicrosoftAppId
+    botMicrosoftAppPassword: botMicrosoftAppPassword
+    whatsAppChannelRegistrationId: whatsAppChannelRegistrationId
+    whatsAppPhoneNumberId: whatsAppPhoneNumberId
+    whatsAppBusinessAccountId: whatsAppBusinessAccountId
+    whatsAppWebhookVerifyToken: whatsAppWebhookVerifyToken
+    tags: tags
+    customDomain: adminApiCustomDomain
     enableCustomDomain: true
   }
 }
@@ -598,6 +716,8 @@ output cosmosDbConnectionString string = skipCosmosCreation ? cosmosConnString :
 // App Services
 output apiAppServiceUrl string = skipAppServiceCreation ? '' : apiAppService.outputs.appServiceUrl
 output adminApiAppServiceUrl string = skipAppServiceCreation ? '' : adminApiAppService.outputs.appServiceUrl
+output apiCustomDomainUrl string = !skipAppServiceCreation && enableApiCustomDomain ? 'https://${apiCustomDomain}' : ''
+output adminApiCustomDomainUrl string = !skipAppServiceCreation && enableApiCustomDomain ? 'https://${adminApiCustomDomain}' : ''
 
 // Azure Bot
 output azureBotId string = deployAzureBot && botMicrosoftAppId != '' ? azureBot.outputs.botId : ''
