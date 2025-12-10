@@ -156,28 +156,47 @@ else
                                         </h3>
                                         <div class="alert @(rollResult >= gameSession.CurrentScene.RollTarget ? "alert-success" : "alert-warning")">
                                             @{
-                                                string successMsg;
+                                                bool isSuccess = rollResult >= gameSession.CurrentScene.RollTarget;
+                                                string resultMessage;
+                                                
                                                 if (gameSession.Scenario.AgeGroup == "1-2")
                                                 {
+                                                    // Age group 1-2: Always show success with young exclamations
                                                     string[] youngExclamations = new[] { "Yipee!", "Hooray!", "Wow!" };
-                                                    successMsg = youngExclamations[new Random().Next(youngExclamations.Length)];
+                                                    resultMessage = youngExclamations[new Random().Next(youngExclamations.Length)];
+                                                    isSuccess = true; // Always treat as success for 1-2 age group
+                                                }
+                                                else if (gameSession.Scenario.AgeGroup == "3-5")
+                                                {
+                                                    // Age group 3-5: Show success or failure exclamations based on roll
+                                                    if (isSuccess)
+                                                    {
+                                                        string[] successExclamations = new[] { "Yay!", "Hooray!", "Wow!", "Yippee!", "Super!", "Yes!" };
+                                                        resultMessage = successExclamations[new Random().Next(successExclamations.Length)];
+                                                    }
+                                                    else
+                                                    {
+                                                        string[] failureExclamations = new[] { "Oops!", "Uh-oh!", "Whoops!", "Oh dear!", "Whoopsie!" };
+                                                        resultMessage = failureExclamations[new Random().Next(failureExclamations.Length)];
+                                                    }
                                                 }
                                                 else
                                                 {
-                                                    successMsg = "Success!";
+                                                    // Other age groups: Standard success/fail messages
+                                                    resultMessage = isSuccess ? "Success!" : "Fail!";
                                                 }
                                             }
 
-                                            @if (gameSession.Scenario.AgeGroup == "1-2" || gameSession.Scenario.AgeGroup == "3-5" || rollResult >= gameSession.CurrentScene.RollTarget)
+                                            @if (isSuccess)
                                             {
-                                                <h5 class="mb-2">@successMsg</h5>
+                                                <h5 class="mb-2">@resultMessage</h5>
                                                 <div class="mb-0">
                                                     <MarkdownRenderer Content="@gameSession.CurrentScene.SuccessBranch" />
                                                 </div>
                                             }
                                             else
                                             {
-                                                <h5 class="mb-2">Fail!</h5>
+                                                <h5 class="mb-2">@resultMessage</h5>
                                                 <div class="mb-0">
                                                     <MarkdownRenderer Content="@gameSession.CurrentScene.FailureBranch" />
                                                 </div>
