@@ -9,11 +9,15 @@ on:
       - ".github/workflows/mystira-app-pwa-cicd-prod.yml"
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened]
     paths:
       - "src/Mystira.App.PWA/**"
       - "src/Mystira.App.Contracts/**"
       - ".github/workflows/mystira-app-pwa-cicd-prod.yml"
+  pull_request:
+    branches: [main]
+    types: [closed]
+    # No path filter - always cleanup preview environments when PR is closed
   workflow_run:
     workflows: ["Infrastructure Deploy - Production"]
     types: [completed]
