@@ -73,6 +73,7 @@
     private Dictionary<string, EndpointHealthResult> _healthResults = new();
     private DateTime _lastHealthCheck = DateTime.MinValue;
     private static readonly TimeSpan HealthCheckCooldown = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan HealthResultsExpiration = TimeSpan.FromMinutes(5);
 
     protected override async Task OnInitializedAsync()
     {
@@ -102,8 +103,17 @@
             return;
         }
 
-        // Rate limit: only check once per minute
-        if (DateTime.UtcNow - _lastHealthCheck < HealthCheckCooldown && _healthResults.Count > 0)
+        var timeSinceLastCheck = DateTime.UtcNow - _lastHealthCheck;
+
+        // Clear expired health results (TTL expiration)
+        if (timeSinceLastCheck >= HealthResultsExpiration && _healthResults.Count > 0)
+        {
+            _healthResults.Clear();
+            Logger.LogDebug("Cleared expired health results after {Minutes} minutes", HealthResultsExpiration.TotalMinutes);
+        }
+
+        // Rate limit: only check once per minute (but always check if results are empty)
+        if (timeSinceLastCheck < HealthCheckCooldown && _healthResults.Count > 0)
         {
             return;
         }
