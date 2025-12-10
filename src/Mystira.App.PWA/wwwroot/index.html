@@ -106,6 +106,9 @@
     <!-- Telemetry wrapper for Blazor JSInterop -->
     <script>
         window.mystiraTelemetry = {
+            isAvailable: function() {
+                return !!(window.appInsights && typeof window.appInsights.trackEvent === 'function');
+            },
             trackEvent: function(eventName, properties) {
                 if (window.appInsights && window.appInsights.trackEvent) {
                     window.appInsights.trackEvent({ name: eventName, properties: properties || {} });

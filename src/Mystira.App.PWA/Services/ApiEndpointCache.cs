@@ -178,7 +178,9 @@ public class ApiEndpointCache : IApiEndpointCache
             if (host.StartsWith("api.", StringComparison.OrdinalIgnoreCase))
             {
                 var newHost = "admin" + host.Substring(3);
-                return $"{uri.Scheme}://{newHost}{uri.AbsolutePath}";
+                // Preserve port number if present
+                var portSuffix = uri.IsDefaultPort ? "" : $":{uri.Port}";
+                return $"{uri.Scheme}://{newHost}{portSuffix}{uri.AbsolutePath}";
             }
 
             return apiUrl;

@@ -17,7 +17,6 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
     private readonly IApiEndpointCache _endpointCache;
     private readonly ITelemetryService _telemetry;
     private readonly HttpClient _healthCheckClient;
-    private readonly List<string> _allowedEmails;
     private bool _disposed;
 
     // LocalStorage keys - using specific prefix to avoid conflicts
@@ -51,9 +50,14 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
         {
             Timeout = TimeSpan.FromSeconds(5)
         };
+    }
 
-        // Load allowed emails from configuration (case-insensitive matching)
-        _allowedEmails = _configuration.GetSection("ApiConfiguration:AllowedSwitchingEmails")
+    /// <summary>
+    /// Gets the current allowlist from configuration (supports hot-reload).
+    /// </summary>
+    private IReadOnlyList<string> GetAllowedEmailsFromConfig()
+    {
+        return _configuration.GetSection("ApiConfiguration:AllowedSwitchingEmails")
             .Get<List<string>>() ?? new List<string>();
     }
 
@@ -197,8 +201,11 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
             return false;
         }
 
+        // Get current allowlist from config (supports hot-reload)
+        var allowedEmails = GetAllowedEmailsFromConfig();
+
         // If no allowlist configured, all users can switch
-        if (_allowedEmails.Count == 0)
+        if (allowedEmails.Count == 0)
         {
             return true;
         }
@@ -210,13 +217,13 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
         }
 
         // Check if user's email is in the allowlist (case-insensitive)
-        return _allowedEmails.Any(e => e.Equals(userEmail, StringComparison.OrdinalIgnoreCase));
+        return allowedEmails.Any(e => e.Equals(userEmail, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <inheritdoc />
     public IReadOnlyList<string> GetAllowedSwitchingEmails()
     {
-        return _allowedEmails.AsReadOnly();
+        return GetAllowedEmailsFromConfig();
     }
 
     /// <inheritdoc />

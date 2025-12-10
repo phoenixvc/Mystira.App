@@ -110,10 +110,8 @@ public class TelemetryService : ITelemetryService
 
         try
         {
-            // Check if mystiraTelemetry object exists in window
-            _isAvailable = await _jsRuntime.InvokeAsync<bool>(
-                "eval",
-                "typeof window.mystiraTelemetry !== 'undefined' && typeof window.mystiraTelemetry.trackEvent === 'function'");
+            // Check if mystiraTelemetry object is available (safer than eval)
+            _isAvailable = await _jsRuntime.InvokeAsync<bool>("mystiraTelemetry.isAvailable");
 
             if (!_isAvailable.Value)
             {

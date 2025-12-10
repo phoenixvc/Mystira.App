@@ -132,6 +132,14 @@
         {
             var cancellationToken = _cts?.Token ?? CancellationToken.None;
 
+            // Clean up stale health results for endpoints that no longer exist
+            var currentEndpointUrls = _endpoints.Select(e => e.Url).ToHashSet();
+            var staleUrls = _healthResults.Keys.Where(url => !currentEndpointUrls.Contains(url)).ToList();
+            foreach (var staleUrl in staleUrls)
+            {
+                _healthResults.Remove(staleUrl);
+            }
+
             // Run health checks in parallel for faster results
             var healthCheckTasks = _endpoints.Select(async endpoint =>
             {
