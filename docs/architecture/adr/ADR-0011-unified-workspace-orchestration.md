@@ -1,4 +1,4 @@
-# ADR-0011: Unified Workspace for Multi-Repository Orchestration
+# ADR-0011: Unified Workspace Repository (Mystira.workspace)
 
 **Status**: 💭 Proposed
 
@@ -60,8 +60,11 @@ Based on team discussion:
 Options discussed:
 - `Mystira.orchestration` - orchestration/coordination focus
 - `Mystira.workspace` - workspace/development focus
-- `Mystira.main` - primary/entry point focus
-- `Mystira.entry` - entry point focus
+- `mystira-workspace` - hyphenated style (GitHub convention)
+
+**Note**: GitHub repository names cannot start with a dot (`.`), so `.workspace`, `.main`, `.entry` are not valid GitHub repo names. However, these can still be used as **local directory names** when cloning.
+
+**Naming strategy**: Use a valid GitHub repo name that can optionally be cloned to a dot-prefixed local directory for sorting benefits.
 
 ---
 
@@ -95,9 +98,9 @@ Options discussed:
 - ❌ Forces everyone into same structure
 - ❌ Git history complexity
 
-### Option 2: Orchestration Repository with Git Submodules
+### Option 2: Workspace Repository with Git Submodules
 
-**Description**: Create `Mystira.orchestration` repo that includes other repos as git submodules.
+**Description**: Create `.workspace` repo that includes other repos as git submodules.
 
 **Pros**:
 - ✅ All code visible in one place
@@ -113,7 +116,7 @@ Options discussed:
 
 ### Option 3: VS Code Multi-Root Workspace ⭐ **RECOMMENDED**
 
-**Description**: Create `Mystira.orchestration` repository containing:
+**Description**: Create `Mystira.workspace` repository (cloned locally as `.workspace`) containing:
 - VS Code workspace file (`.code-workspace`)
 - Shared documentation
 - Cross-repo scripts and tooling
@@ -121,7 +124,7 @@ Options discussed:
 
 ```
 ~/mystira/
-├── Mystira.orchestration/     # New orchestration repo
+├── .workspace/                # Mystira.workspace cloned as .workspace (sorts first!)
 │   ├── mystira.code-workspace # VS Code workspace file
 │   ├── docs/                  # Centralized documentation
 │   ├── scripts/               # Cross-repo automation
@@ -165,12 +168,31 @@ Options discussed:
 
 We will adopt **Option 3: VS Code Multi-Root Workspace** with the following implementation:
 
+### Repository Naming Decision
+
+**Recommended: GitHub repo `Mystira.workspace` → clone locally as `.workspace`**
+
+| GitHub Repo Name | Local Clone | Pros | Cons |
+|------------------|-------------|------|------|
+| `Mystira.workspace` ⭐ | `.workspace` | Follows naming convention, can clone to dot-dir | Requires clone with rename |
+| `mystira-workspace` | `.workspace` | GitHub convention (hyphen) | Inconsistent with `Mystira.App` |
+| `Mystira.orchestration` | as-is | Explicit purpose | Long, doesn't sort first |
+
+**Recommendation**:
+- **GitHub repo**: `Mystira.workspace` (follows `Mystira.App` naming pattern)
+- **Local directory**: Clone as `.workspace` for alphabetical sorting benefit
+
+```bash
+# Clone with custom local directory name
+git clone https://github.com/phoenixvc/Mystira.workspace.git .workspace
+```
+
 ### Repository Structure
 
-Create new repository: `Mystira.orchestration`
+Create new repository: `Mystira.workspace` (cloned locally as `.workspace`)
 
 ```
-Mystira.orchestration/
+.workspace/   # Local directory name (GitHub repo: Mystira.workspace)
 ├── mystira.code-workspace      # VS Code multi-root workspace
 ├── docs/
 │   ├── architecture/           # Centralized architecture docs
@@ -199,7 +221,7 @@ Mystira.orchestration/
 {
   "folders": [
     {
-      "name": "📋 Orchestration",
+      "name": "📋 .workspace",
       "path": "."
     },
     {
@@ -207,7 +229,7 @@ Mystira.orchestration/
       "path": "../Mystira.App"
     },
     {
-      "name": "🐍 Chain Service (Python)",
+      "name": "🐍 mystira-chain-service",
       "path": "../mystira-chain-service"
     }
     // Add more repos as needed
@@ -236,9 +258,19 @@ Mystira.orchestration/
 
 ### Setup Script
 
+**Initial clone** (one-time):
+```bash
+# Clone Mystira.workspace as .workspace for sorting benefit
+cd ~/mystira  # or your preferred parent directory
+git clone https://github.com/phoenixvc/Mystira.workspace.git .workspace
+cd .workspace
+./scripts/setup.sh
+```
+
+**scripts/setup.sh** - Clone sibling repositories:
 ```bash
 #!/bin/bash
-# scripts/setup.sh - Clone all Mystira repositories
+# scripts/setup.sh - Clone all Mystira repositories as siblings
 
 PARENT_DIR=$(dirname $(pwd))
 GITHUB_ORG="phoenixvc"
@@ -262,11 +294,12 @@ done
 
 echo ""
 echo "✨ Setup complete! Open mystira.code-workspace in VS Code"
+echo "   code mystira.code-workspace"
 ```
 
 ### Documentation Strategy
 
-The orchestration repo becomes the **primary source for documentation**:
+The `.workspace` repo becomes the **primary source for documentation**:
 
 1. **Architecture docs** - ADRs, diagrams, patterns
 2. **Getting started guides** - Onboarding for new developers
@@ -362,9 +395,9 @@ Include `.claude/` directory for Claude Code settings:
 
 ### Phase 1: Repository Creation
 
-1. Create `Mystira.orchestration` repository
-2. Add workspace file with Mystira.App
-3. Add basic setup scripts
+1. Create `Mystira.workspace` repository on GitHub
+2. Add workspace file referencing Mystira.App
+3. Add setup scripts (with clone-as-.workspace instructions)
 4. Add initial documentation structure
 
 ### Phase 2: Documentation Migration
@@ -422,7 +455,9 @@ This matches the experience: "dit het nie so lekker gewerk om dit buite v0 te ed
 - Workspace approach preferred over submodules due to complexity
 - VS Code workspaces have improved significantly since preview
 - Team member can opt out ("jy hoef dit obviously nie te gebruik nie")
-- Consider renaming to `.workspace`, `.main`, or `.entry` if preferred
+- GitHub repo: `Mystira.workspace` (follows Mystira.App naming convention)
+- Local clone: `.workspace` (optional, for alphabetical sorting benefit)
+- GitHub repos cannot start with `.` - hence the two-name approach
 
 ---
 
