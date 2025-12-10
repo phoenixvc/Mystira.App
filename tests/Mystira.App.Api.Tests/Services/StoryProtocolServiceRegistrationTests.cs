@@ -95,7 +95,8 @@ public class StoryProtocolServiceRegistrationTests
             {
                 { "StoryProtocol:Enabled", "true" },
                 { "StoryProtocol:UseMockImplementation", "false" },
-                { "StoryProtocol:PrivateKey", "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" }
+                // Note: This is a fake test private key - not a real wallet
+                { "StoryProtocol:PrivateKey", "0x0000000000000000000000000000000000000000000000000000000000000001" }
             })
             .Build();
         
