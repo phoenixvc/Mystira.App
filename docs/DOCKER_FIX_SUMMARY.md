@@ -57,8 +57,9 @@ Both Dockerfiles now include:
 ```dockerfile
 # Copy appsettings files explicitly to ensure they're available at runtime
 COPY --from=build /src/Mystira.App.Api/appsettings.json .
-COPY --from=build /src/Mystira.App.Api/appsettings.Production.json* ./
 ```
+
+Note: Production appsettings are managed via environment variables or volume mounts, not baked into the image.
 
 #### 4. Added `/p:UseAppHost=false` Flag
 - Improves container compatibility

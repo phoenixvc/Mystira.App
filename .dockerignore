@@ -48,6 +48,9 @@ scripts/
 *.bat
 Makefile
 
+# Exception: Keep Docker test script for validation
+!test-docker-build.sh
+
 # Tools and development utilities
 tools/
 devhub.sh

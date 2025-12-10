@@ -70,3 +70,5 @@ echo "Or use docker-compose:"
 echo "  docker-compose build"
 echo "  docker-compose up"
 echo ""
+
+exit 0
