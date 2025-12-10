@@ -50,7 +50,7 @@
 
 ### **Critical Architectural Rules**
 
-**From `docs/architecture/ARCHITECTURAL_RULES.md`:**
+**From `docs/architecture/architectural-rules.md`:**
 
 1. **API Layer:** Controllers ONLY. No business logic, no services.
    - Maps DTOs → Use Case input models
@@ -248,7 +248,7 @@ From `docs/best-practices.md`:
    - Use Blazor **Scoped CSS** (`.razor.css` files) for component-specific styles
    - Global CSS (`app.css`) for design system foundations only
    - NO CSS Modules (designed for JavaScript, not Blazor)
-   - See `docs/features/CSS_STYLING_APPROACH.md`
+   - See `docs/features/css-styling-approach.md`
 
 ### **Commit Standards**
 
@@ -359,9 +359,9 @@ Mystira.App/
 ### **Must-Read Docs**
 
 1. **Architecture:**
-   - `docs/architecture/ARCHITECTURAL_RULES.md` (CRITICAL)
-   - `docs/architecture/patterns/HEXAGONAL_ARCHITECTURE.md`
-   - `docs/architecture/patterns/REPOSITORY_PATTERN.md`
+   - `docs/architecture/architectural-rules.md` (CRITICAL)
+   - `docs/architecture/patterns/hexagonal-architecture.md`
+   - `docs/architecture/patterns/repository-pattern.md`
 
 2. **Development:**
    - `docs/best-practices.md`
@@ -377,7 +377,7 @@ Mystira.App/
    - Specific use case docs (e.g., `docs/usecases/gamesessions/create-game-session.md`)
 
 5. **Roadmap:**
-   - `docs/ROADMAP.md` (consolidated roadmap - single source of truth for all pending work)
+   - `docs/roadmap.md` (consolidated roadmap - single source of truth for all pending work)
 
 ### **API Documentation**
 
@@ -643,7 +643,7 @@ In `Mystira.App.PWA.csproj`:
 
 ### **When Reviewing Code**
 
-Use this checklist from `docs/architecture/ARCHITECTURAL_RULES.md`:
+Use this checklist from `docs/architecture/architectural-rules.md`:
 
 - [ ] No business logic in controllers
 - [ ] No services in API/AdminAPI layers
@@ -684,9 +684,9 @@ Use this checklist from `docs/architecture/ARCHITECTURAL_RULES.md`:
 
 - **Production Readiness:** Project has strong foundations with recent improvements
 - **Priority:** COPPA compliance is the remaining blocker for production launch
-- **Architecture:** Well-documented; architectural violations tracked in `docs/ROADMAP.md`
+- **Architecture:** Well-documented; architectural violations tracked in `docs/roadmap.md`
 - **Key Documentation:**
-  - `docs/ROADMAP.md` - All pending work and technical debt
+  - `docs/roadmap.md` - All pending work and technical debt
   - `docs/prd/master-prd.md` - Comprehensive product requirements
   - `docs/prd/features/coppa-compliance.md` - COPPA compliance requirements
 

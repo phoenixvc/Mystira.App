@@ -110,9 +110,9 @@ All three environments use Azure Static Web Apps for maximum production parity.
 
 ## Related Documentation
 
-- [Azure Naming Conventions](AZURE-NAMING-CONVENTIONS.md)
-- [CI/CD Architecture](devops/CI_CD_ARCHITECTURE.md)
-- [Branching Strategy](devops/BRANCHING_STRATEGY.md)
+- [Azure Naming Conventions](azure-naming-conventions.md)
+- [CI/CD Architecture](devops/ci-cd-architecture.md)
+- [Branching Strategy](devops/branching-strategy.md)
 
 ---
 
