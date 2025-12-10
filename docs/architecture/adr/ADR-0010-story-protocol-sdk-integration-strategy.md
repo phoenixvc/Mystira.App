@@ -91,31 +91,32 @@ From business requirements:
 - ❌ Higher risk of subtle bugs in contract encoding/decoding
 - ❌ No access to SDK's built-in retry logic and error handling
 
-### Option 2: TypeScript Sidecar Microservice ⭐ **RECOMMENDED**
+### Option 2: Python Sidecar Microservice ⭐ **RECOMMENDED**
 
-**Description**: Create a lightweight TypeScript microservice (`mystira.chain` or `mystira-chain-service`) that wraps Story Protocol's official TypeScript SDK. The .NET API communicates with this service via HTTP/REST.
+**Description**: Create a lightweight Python microservice (`mystira.chain` or `mystira-chain-service`) that wraps Story Protocol's official Python SDK. The .NET API communicates with this service via HTTP/REST.
 
 ```
 ┌─────────────────────┐       ┌──────────────────────┐       ┌─────────────────┐
 │  Mystira.App.Api    │──────▶│ mystira-chain-service│──────▶│  Story Protocol │
-│  (.NET)             │  HTTP │ (TypeScript/Node)    │  SDK  │  Blockchain     │
+│  (.NET)             │  HTTP │ (Python/FastAPI)     │  SDK  │  Blockchain     │
 └─────────────────────┘       └──────────────────────┘       └─────────────────┘
 ```
 
 **Pros**:
-- ✅ Uses official Story Protocol TypeScript SDK
+- ✅ Uses official Story Protocol Python SDK
 - ✅ SDK handles protocol upgrades and ABI changes
 - ✅ Clean separation of concerns (blockchain logic isolated)
 - ✅ Can be deployed independently (Azure Container Apps, App Service)
-- ✅ TypeScript preferred over Python for team familiarity
+- ✅ **Team member more familiar with Python than TypeScript**
 - ✅ Easier debugging with SDK's built-in logging
-- ✅ SDK provides type safety and better DX
+- ✅ FastAPI provides automatic OpenAPI docs and validation
+- ✅ Python has excellent blockchain/web3 ecosystem (web3.py)
 
 **Cons**:
 - ⚠️ Additional service to deploy and maintain
 - ⚠️ Network latency between services (minimal for same-region)
 - ⚠️ New repository/project to manage
-- ⚠️ Requires Node.js runtime in infrastructure
+- ⚠️ Requires Python runtime in infrastructure
 
 ### Option 3: Azure Function Bridge (TypeScript)
 
@@ -166,7 +167,7 @@ From business requirements:
 
 ## Decision
 
-We will adopt **Option 2: TypeScript Sidecar Microservice** with the following implementation plan:
+We will adopt **Option 2: Python Sidecar Microservice** with the following implementation plan:
 
 ### Architecture
 
@@ -190,19 +191,19 @@ We will adopt **Option 2: TypeScript Sidecar Microservice** with the following i
                                    HTTP │ REST
                                         ▼
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                    mystira-chain-service (TypeScript)                      │
+│                    mystira-chain-service (Python)                          │
 │  ┌─────────────────────────────────────────────────────────────────────┐  │
-│  │  Express/Fastify API                                                 │  │
+│  │  FastAPI                                                             │  │
 │  │  ├── POST /ip-assets/register                                        │  │
-│  │  ├── GET  /ip-assets/:id/status                                      │  │
+│  │  ├── GET  /ip-assets/{id}/status                                     │  │
 │  │  ├── POST /royalties/pay                                             │  │
-│  │  ├── GET  /royalties/:id/claimable                                   │  │
-│  │  └── POST /royalties/:id/claim                                       │  │
+│  │  ├── GET  /royalties/{id}/claimable                                  │  │
+│  │  └── POST /royalties/{id}/claim                                      │  │
 │  └─────────────────────────────────────────────────────────────────────┘  │
 │                                        │                                   │
 │  ┌─────────────────────────────────────▼──────────────────────────────┐   │
-│  │  Story Protocol TypeScript SDK                                      │   │
-│  │  @story-protocol/core-sdk                                           │   │
+│  │  Story Protocol Python SDK                                          │   │
+│  │  story-protocol-python-sdk                                          │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 └────────────────────────────────────────────────────────────────────────────┘
                                         │
@@ -219,17 +220,18 @@ We will adopt **Option 2: TypeScript Sidecar Microservice** with the following i
 
 ```
 mystira-chain-service/
-├── src/
-│   ├── index.ts           # Express app entry point
-│   ├── routes/
-│   │   ├── ipAssets.ts    # IP Asset registration endpoints
-│   │   └── royalties.ts   # Royalty payment/claiming endpoints
+├── app/
+│   ├── main.py            # FastAPI app entry point
+│   ├── routers/
+│   │   ├── ip_assets.py   # IP Asset registration endpoints
+│   │   └── royalties.py   # Royalty payment/claiming endpoints
 │   ├── services/
-│   │   └── storyProtocol.ts  # SDK wrapper
-│   └── config/
-│       └── index.ts       # Environment configuration
-├── package.json
-├── tsconfig.json
+│   │   └── story_protocol.py  # SDK wrapper
+│   ├── models/
+│   │   └── schemas.py     # Pydantic models
+│   └── config.py          # Environment configuration
+├── requirements.txt
+├── pyproject.toml
 ├── Dockerfile
 └── README.md
 ```
@@ -314,7 +316,7 @@ services.AddScoped<IStoryProtocolService>(sp =>
 ### Positive Consequences ✅
 
 1. **Official SDK Support**
-   - Story Protocol TypeScript SDK is actively maintained
+   - Story Protocol Python SDK is actively maintained
    - Automatic compatibility with protocol upgrades
    - Access to SDK-specific features and optimizations
 
@@ -328,9 +330,10 @@ services.AddScoped<IStoryProtocolService>(sp =>
    - Blockchain operations don't block API responses
 
 4. **Better Developer Experience**
-   - TypeScript SDK has excellent type definitions
-   - Better error messages and debugging
-   - Team can leverage existing TS/JS knowledge
+   - Python is familiar to team member (partner)
+   - FastAPI provides automatic OpenAPI documentation
+   - Excellent blockchain ecosystem (web3.py, eth-brownie)
+   - Pydantic for automatic validation
 
 5. **Future Flexibility**
    - Easy to add new blockchain features
@@ -374,10 +377,10 @@ services.AddScoped<IStoryProtocolService>(sp =>
 
 ### Phase 1: MVP (Target: 2 days)
 
-1. Create `mystira-chain-service` repository
+1. Create `mystira-chain-service` repository (Python/FastAPI)
 2. Implement core endpoints (register, status)
 3. Create `ChainServiceAdapter` in .NET
-4. Deploy to Azure App Service (TypeScript)
+4. Deploy to Azure App Service (Python)
 5. Update Admin portal with registration button
 
 ### Phase 2: Production Hardening
@@ -399,10 +402,11 @@ services.AddScoped<IStoryProtocolService>(sp =>
 
 ## Alternatives Not Chosen
 
-### Python SDK
-- Team preference is TypeScript over Python ("eerder dan die slang?")
-- Existing tooling and experience in TypeScript
-- Python would require additional runtime configuration
+### TypeScript SDK
+- Originally considered due to type safety benefits
+- However, partner/team member is less familiar with TypeScript
+- Python SDK provides equivalent functionality
+- TypeScript would add Node.js complexity to infrastructure
 
 ### Embedded WebAssembly
 - TypeScript SDK compiled to WASM and run in .NET
@@ -425,8 +429,9 @@ services.AddScoped<IStoryProtocolService>(sp =>
 
 ## References
 
-- [Story Protocol TypeScript SDK](https://github.com/storyprotocol/sdk)
+- [Story Protocol Python SDK](https://github.com/storyprotocol/python-sdk)
 - [Story Protocol Documentation](https://docs.story.foundation/)
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Hexagonal Architecture Refactoring Summary](../HEXAGONAL_ARCHITECTURE_REFACTORING_SUMMARY.md)
 - [IStoryProtocolService Port](../../../src/Mystira.App.Application/Ports/IStoryProtocolService.cs)
 
@@ -436,7 +441,8 @@ services.AddScoped<IStoryProtocolService>(sp =>
 
 - This ADR was created based on team discussion on 2025-12-10
 - MVP timeline is aggressive; scope may be adjusted
-- Consider Python as fallback if TypeScript SDK has issues
+- Python chosen over TypeScript due to team member familiarity
+- TypeScript SDK remains a viable alternative if needed
 
 ---
 
