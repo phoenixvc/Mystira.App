@@ -154,6 +154,15 @@ jobs:
               {"name": "StoryProtocol__PrivateKey", "value": "${{ secrets.STORY_PROTOCOL_WALLET_PRIVATE_KEY }}", "slotSetting": false}
             ]
 
+      - name: Configure Database Seeding
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-settings-json: |
+            [
+              {"name": "SeedMasterDataOnStartup", "value": "true", "slotSetting": false}
+            ]
+
       - name: Health Check
         run: |
           echo "Waiting for deployment to stabilize..."

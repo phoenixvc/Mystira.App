@@ -183,7 +183,34 @@ dotnet run --project src/Mystira.App.Api
 
 Master data will be automatically seeded.
 
-### Option 2: Cosmos DB Emulator
+### Option 2: appsettings.local.json (Recommended for persistent local config)
+
+For a persistent local configuration that won't be committed to git:
+
+1. Copy the template file:
+```bash
+cp src/Mystira.App.Api/appsettings.local.json.template src/Mystira.App.Api/appsettings.local.json
+```
+
+2. Edit `appsettings.local.json` with your settings:
+```json
+{
+  "ConnectionStrings": {
+    "CosmosDb": "",  // Leave empty for InMemory, or add Cosmos connection
+    "AzureStorage": "UseDevelopmentStorage=true"
+  },
+  "SeedMasterDataOnStartup": false  // true for Cosmos DB
+}
+```
+
+3. Run the application:
+```bash
+dotnet run --project src/Mystira.App.Api
+```
+
+**Note:** `appsettings.local.json` is gitignored to prevent accidentally committing secrets.
+
+### Option 3: Cosmos DB Emulator
 
 1. Install [Azure Cosmos DB Emulator](https://learn.microsoft.com/azure/cosmos-db/local-emulator)
 2. Start the emulator

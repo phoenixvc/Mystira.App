@@ -1,0 +1,40 @@
+{
+  "// ⚠️ LOCAL DEVELOPMENT CONFIGURATION": "Copy this file to appsettings.local.json and customize for your environment",
+  "// ⚠️ SECURITY": "appsettings.local.json is gitignored to prevent committing secrets",
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore": "Information"
+    }
+  },
+  "ConnectionStrings": {
+    "CosmosDb": "",
+    "// CosmosDb_Note": "Leave empty to use InMemory database, or add Cosmos DB connection string",
+    "AzureStorage": "UseDevelopmentStorage=true",
+    "// AzureStorage_Note": "Use Azurite emulator or replace with your storage account connection string"
+  },
+  "Azure": {
+    "CosmosDb": {
+      "DatabaseName": "MystiraAppDb"
+    },
+    "BlobStorage": {
+      "ContainerName": "mystira-app-media",
+      "MaxFileSizeMB": 10
+    }
+  },
+  "AzureCommunicationServices": {
+    "ConnectionString": "",
+    "SenderEmail": ""
+  },
+  "JwtSettings": {
+    "SecretKey": "Mystira-app-Development-Secret-Key-2024-Very-Long-For-Security",
+    "Issuer": "mystira-admin-api",
+    "Audience": "mystira-app"
+  },
+  "CorsSettings": {
+    "AllowedOrigins": "http://localhost:7001,https://localhost:7001,http://localhost:7000,https://localhost:7000"
+  },
+  "SeedMasterDataOnStartup": false,
+  "// SeedMasterDataOnStartup_Note": "Set to true to seed master data on startup (for Cosmos DB). InMemory database seeds automatically."
+}
