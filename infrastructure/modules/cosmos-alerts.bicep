@@ -266,7 +266,7 @@ resource ruBudgetAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-previe
     criteria: {
       allOf: [
         {
-          // Note: Using string concatenation because raw strings don't support interpolation
+          // Note: Using string interpolation to inject the threshold value
           query: 'dependencies | where timestamp > ago(24h) | where type == "Azure DocumentDB" or type == "Microsoft.DocumentDB" | extend RUs = todouble(customDimensions["RequestCharge"]) | summarize TotalRUs = sum(RUs) | where TotalRUs > ${dailyRuBudgetThreshold}'
           timeAggregation: 'Count'
           operator: 'GreaterThan'
