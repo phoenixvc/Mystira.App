@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.Extensions.DependencyInjection;
@@ -76,6 +77,20 @@ public class UserJourneyAnalytics : IUserJourneyAnalytics
     private readonly ILogger<UserJourneyAnalytics> _logger;
     private readonly string _environment;
 
+    // Regex for validating metric name components (prevents cardinality explosion)
+    private static readonly Regex ValidMetricNamePattern = new(@"^[a-zA-Z][a-zA-Z0-9_]{0,31}$", RegexOptions.Compiled);
+
+    // Known/allowed values for dynamic metric components (whitelist approach)
+    private static readonly HashSet<string> AllowedInteractionTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "View", "Play", "Like", "Share", "Download", "Favorite", "Comment", "Rate", "Complete", "Skip"
+    };
+
+    private static readonly HashSet<string> AllowedFlowNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Onboarding", "Registration", "Purchase", "ProfileSetup", "Tutorial", "FirstScenario", "Checkout"
+    };
+
     public UserJourneyAnalytics(
         TelemetryClient? telemetryClient,
         ILogger<UserJourneyAnalytics> logger,
@@ -84,6 +99,39 @@ public class UserJourneyAnalytics : IUserJourneyAnalytics
         _telemetryClient = telemetryClient;
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _environment = environment ?? "Unknown";
+    }
+
+    /// <summary>
+    /// Validates and sanitizes a metric name component to prevent cardinality explosion.
+    /// Returns sanitized value or "Other" if invalid.
+    /// </summary>
+    private static string SanitizeMetricComponent(string? value, string context)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "Unknown";
+
+        // Check if it matches valid pattern (alphanumeric, starts with letter, max 32 chars)
+        if (ValidMetricNamePattern.IsMatch(value))
+            return value;
+
+        // If invalid, return a safe default to prevent unbounded cardinality
+        return "Other";
+    }
+
+    /// <summary>
+    /// Gets a safe interaction type for metric names.
+    /// </summary>
+    private static string GetSafeInteractionType(string interactionType)
+    {
+        return AllowedInteractionTypes.Contains(interactionType) ? interactionType : "Other";
+    }
+
+    /// <summary>
+    /// Gets a safe flow name for metric names.
+    /// </summary>
+    private static string GetSafeFlowName(string flowName)
+    {
+        return AllowedFlowNames.Contains(flowName) ? flowName : SanitizeMetricComponent(flowName, "flow");
     }
 
     public void TrackSessionStart(string? userId, string? deviceType = null, string? appVersion = null)
@@ -177,8 +225,10 @@ public class UserJourneyAnalytics : IUserJourneyAnalytics
         properties["ContentId"] = contentId;
         properties["InteractionType"] = interactionType;
 
-        TrackEvent($"Journey.Content.{interactionType}", properties);
-        TrackMetric($"Journey.ContentInteractions.{interactionType}", 1, properties);
+        // Use sanitized interaction type in metric names to prevent cardinality explosion
+        var safeInteractionType = GetSafeInteractionType(interactionType);
+        TrackEvent($"Journey.Content.{safeInteractionType}", properties);
+        TrackMetric($"Journey.ContentInteractions.{safeInteractionType}", 1, properties);
 
         _logger.LogDebug("User {UserId} {Interaction} content {ContentId}", userId, interactionType, contentId);
     }
@@ -207,8 +257,10 @@ public class UserJourneyAnalytics : IUserJourneyAnalytics
             }
         }
 
-        TrackEvent($"Journey.Feature.{featureName}", eventProperties);
-        TrackMetric($"Journey.FeatureUsage.{featureName}", 1, eventProperties);
+        // Use sanitized feature name in metric names to prevent cardinality explosion
+        var safeFeatureName = SanitizeMetricComponent(featureName, "feature");
+        TrackEvent($"Journey.Feature.{safeFeatureName}", eventProperties);
+        TrackMetric($"Journey.FeatureUsage.{safeFeatureName}", 1, eventProperties);
 
         _logger.LogDebug("User {UserId} used feature {Feature}", userId, featureName);
     }
@@ -220,9 +272,11 @@ public class UserJourneyAnalytics : IUserJourneyAnalytics
         properties["DurationSeconds"] = duration.TotalSeconds.ToString("F1");
         properties["Success"] = success.ToString();
 
-        TrackEvent($"Journey.Flow.{flowName}.{(success ? "Complete" : "Failed")}", properties);
-        TrackMetric($"Journey.FlowCompletion.{flowName}", success ? 1 : 0, properties);
-        TrackMetric($"Journey.FlowDuration.{flowName}", duration.TotalSeconds, properties);
+        // Use sanitized flow name in metric names to prevent cardinality explosion
+        var safeFlowName = GetSafeFlowName(flowName);
+        TrackEvent($"Journey.Flow.{safeFlowName}.{(success ? "Complete" : "Failed")}", properties);
+        TrackMetric($"Journey.FlowCompletion.{safeFlowName}", success ? 1 : 0, properties);
+        TrackMetric($"Journey.FlowDuration.{safeFlowName}", duration.TotalSeconds, properties);
 
         _logger.LogInformation("User {UserId} {Status} flow {Flow} in {Duration}s",
             userId, success ? "completed" : "failed", flowName, duration.TotalSeconds);
@@ -241,8 +295,10 @@ public class UserJourneyAnalytics : IUserJourneyAnalytics
             }
         }
 
-        TrackEvent($"Journey.Milestone.{milestoneName}", eventProperties);
-        TrackMetric($"Journey.Milestones.{milestoneName}", 1, eventProperties);
+        // Use sanitized milestone name in metric names to prevent cardinality explosion
+        var safeMilestoneName = SanitizeMetricComponent(milestoneName, "milestone");
+        TrackEvent($"Journey.Milestone.{safeMilestoneName}", eventProperties);
+        TrackMetric($"Journey.Milestones.{safeMilestoneName}", 1, eventProperties);
 
         _logger.LogInformation("User {UserId} reached milestone {Milestone}", userId, milestoneName);
     }

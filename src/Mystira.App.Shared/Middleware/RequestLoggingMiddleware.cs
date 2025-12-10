@@ -162,8 +162,28 @@ public class RequestLoggingMiddleware
 
     private static string RedactSensitiveData(string body)
     {
-        // List of JSON field patterns to redact
-        string[] sensitivePatterns = { "password", "token", "secret", "apiKey", "api_key", "authorization", "credit_card", "ssn" };
+        // Comprehensive list of JSON field patterns to redact (case-insensitive)
+        // Includes various naming conventions: camelCase, snake_case, kebab-case, PascalCase
+        string[] sensitivePatterns = {
+            // Passwords
+            "password", "passwd", "pwd", "pass", "current_password", "new_password", "confirm_password",
+            // Tokens and keys
+            "token", "access_token", "refresh_token", "id_token", "bearer", "jwt",
+            "api_key", "apiKey", "api-key", "apikey",
+            "secret", "secret_key", "secretKey", "client_secret", "clientSecret",
+            "private_key", "privateKey", "signing_key", "signingKey",
+            // Auth headers
+            "authorization", "auth", "auth_header", "x-api-key",
+            // Credentials
+            "credential", "credentials", "cred",
+            // Financial
+            "credit_card", "creditCard", "card_number", "cardNumber", "cvv", "cvc", "ccv",
+            "account_number", "accountNumber", "routing_number", "routingNumber",
+            // Personal identifiers
+            "ssn", "social_security", "socialSecurity", "tax_id", "taxId",
+            // Connection strings
+            "connection_string", "connectionString", "conn_str", "connStr"
+        };
 
         foreach (var pattern in sensitivePatterns)
         {

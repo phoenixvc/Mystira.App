@@ -270,16 +270,17 @@ builder.Services.AddAuthentication(options =>
         if (!string.IsNullOrWhiteSpace(jwksEndpoint))
         {
             // Use JWKS endpoint for key rotation support (most secure)
+            // The JwtBearer middleware handles JWKS fetching asynchronously with caching
             options.MetadataAddress = jwksEndpoint;
-            options.RequireHttpsMetadata = true; // Always require HTTPS in production
-            validationParameters.IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>
-            {
-                // This will automatically fetch keys from the JWKS endpoint
-                using var client = new HttpClient();
-                var response = client.GetStringAsync(jwksEndpoint).Result;
-                var keys = new JsonWebKeySet(response);
-                return keys.Keys;
-            };
+            options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+
+            // Configure refresh interval for JWKS keys (handles key rotation)
+            options.RefreshInterval = TimeSpan.FromHours(1);
+            options.AutomaticRefreshInterval = TimeSpan.FromHours(24);
+
+            // Let the built-in ConfigurationManager handle key fetching asynchronously
+            // This avoids the blocking .Result call that can cause deadlocks
+            Log.Information("JWT configured to use JWKS endpoint: {JwksEndpoint}", jwksEndpoint);
         }
         else if (!string.IsNullOrWhiteSpace(jwtRsaPublicKey))
         {
@@ -301,8 +302,8 @@ builder.Services.AddAuthentication(options =>
         {
             // Fall back to symmetric key (legacy - should be phased out)
             validationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-            // Log warning during startup (will be logged when app runs)
-            Console.WriteLine("WARNING: Using symmetric HS256 JWT signing. Consider migrating to asymmetric RS256 with JWKS for better security.");
+            // Log warning through Serilog so it appears in Application Insights
+            Log.Warning("Using symmetric HS256 JWT signing. Consider migrating to asymmetric RS256 with JWKS for better security.");
         }
 
         options.TokenValidationParameters = validationParameters;

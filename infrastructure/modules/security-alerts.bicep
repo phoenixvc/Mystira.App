@@ -46,9 +46,11 @@ resource bruteForceAlert 'Microsoft.Insights/scheduledQueryRules@2023-03-15-prev
         {
           query: '''
             customEvents
-            | where name == "Security.AuthenticationFailed" or name == "Security.BruteForceDetected"
-            | summarize FailedAttempts = count() by bin(timestamp, 1m), tostring(customDimensions.ClientIP)
-            | where FailedAttempts > 10
+            | where name in ("Security.AuthenticationFailed", "Security.TokenValidationFailed")
+            | extend ClientIP = tostring(customDimensions.ClientIP)
+            | summarize FailedAttempts = count() by bin(timestamp, 5m), ClientIP
+            | where FailedAttempts >= 10
+            | project timestamp, ClientIP, FailedAttempts
           '''
           timeAggregation: 'Count'
           operator: 'GreaterThan'

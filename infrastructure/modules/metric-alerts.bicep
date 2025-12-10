@@ -325,16 +325,19 @@ resource scenarioAbandonmentAlert 'Microsoft.Insights/scheduledQueryRules@2023-0
             let starts = customEvents
               | where timestamp > ago(6h)
               | where name == "Journey.ScenarioStart"
-              | summarize TotalStarts = count();
+              | count
+              | extend Type = "starts";
             let abandons = customEvents
               | where timestamp > ago(6h)
               | where name == "Journey.ScenarioAbandon"
-              | summarize TotalAbandons = count();
+              | count
+              | extend Type = "abandons";
             starts
-            | join kind=inner abandons on $left.TotalStarts == $left.TotalStarts
-            | extend AbandonRate = (toreal(TotalAbandons) / toreal(TotalStarts)) * 100
-            | where TotalStarts >= 10 // Only alert if we have enough data
-            | where AbandonRate > 30 // Alert if more than 30% abandon rate
+            | extend TotalStarts = Count
+            | join kind=cross (abandons | extend TotalAbandons = Count) on Type
+            | extend AbandonRate = iff(TotalStarts > 0, (toreal(TotalAbandons) / toreal(TotalStarts)) * 100.0, 0.0)
+            | where TotalStarts >= 10
+            | where AbandonRate > 30
             | project AbandonRate, TotalStarts, TotalAbandons
           '''
           timeAggregation: 'Count'

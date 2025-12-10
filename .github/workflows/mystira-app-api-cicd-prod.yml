@@ -178,18 +178,20 @@ jobs:
           echo "🔍 Running post-deployment smoke tests for ${APP_URL}"
 
           # Wait for deployment to stabilize
-          sleep 30
+          # App Service needs time for: container startup, Application Insights init, Cosmos DB connection
+          echo "⏳ Waiting 60s for App Service startup and dependencies to initialize..."
+          sleep 60
 
-          # Retry logic for health check
-          MAX_RETRIES=5
-          RETRY_DELAY=10
+          # Retry logic for health check with exponential backoff
+          MAX_RETRIES=8
+          RETRY_DELAY=15
 
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Attempt $i of $MAX_RETRIES..."
 
             HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-              --connect-timeout 10 \
-              --max-time 30 \
+              --connect-timeout 15 \
+              --max-time 45 \
               "${APP_URL}/health" || echo "000")
 
             echo "  Status: ${HTTP_STATUS}"

@@ -304,10 +304,15 @@ builder.Services.AddAuthentication(options =>
         }
         else if (builder.Environment.IsDevelopment())
         {
-            // Only allow insecure default in development
-            var devKey = "Mystira-app-Development-Secret-Key-2024-Very-Long-For-Security";
+            // In development, require explicit configuration via user secrets or environment variables
+            // This prevents accidental use of insecure defaults
+            Log.Warning("JWT key not configured for development. Set JwtSettings:SecretKey via user secrets: " +
+                        "dotnet user-secrets set 'JwtSettings:SecretKey' '<your-32+-char-secret>'");
+
+            // Use a generated key per-session for development (not persisted, requires re-login on restart)
+            var devKey = $"DevKey-{Guid.NewGuid():N}-{DateTime.UtcNow:yyyyMMdd}";
             validationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(devKey));
-            Log.Warning("Using development-only JWT key. This must not be used in production!");
+            Log.Warning("Using ephemeral development JWT key. Tokens will be invalidated on app restart.");
         }
 
         options.TokenValidationParameters = validationParameters;

@@ -81,11 +81,11 @@ resource throttledRequestsAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = i
       allOf: [
         {
           name: 'ThrottledRequests'
-          metricName: 'TotalRequestUnits'
+          metricName: 'TotalRequests'
           metricNamespace: 'Microsoft.DocumentDB/databaseAccounts'
           operator: 'GreaterThan'
-          threshold: 0
-          timeAggregation: 'Total'
+          threshold: 10 // Alert when more than 10 throttled requests in window (reduce noise)
+          timeAggregation: 'Count'
           criterionType: 'StaticThresholdCriterion'
           dimensions: [
             {

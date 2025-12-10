@@ -79,6 +79,9 @@ public class SecurityMetrics : ISecurityMetrics
     private static readonly TimeSpan BruteForceWindow = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan RateLimitWindow = TimeSpan.FromMinutes(1);
 
+    // Memory safety: Maximum number of IPs to track (prevents unbounded memory growth from distributed attacks)
+    private const int MaxTrackedIps = 10000;
+
     // In-memory tracking for real-time detection (per IP)
     private readonly ConcurrentDictionary<string, List<DateTime>> _authFailuresByIp = new();
     private readonly ConcurrentDictionary<string, List<DateTime>> _rateLimitsByIp = new();
@@ -95,6 +98,7 @@ public class SecurityMetrics : ISecurityMetrics
 
     /// <summary>
     /// Cleans up old entries from tracking dictionaries to prevent memory growth.
+    /// Also enforces maximum size limit to prevent unbounded memory consumption.
     /// </summary>
     private void CleanupOldEntries()
     {
@@ -106,43 +110,62 @@ public class SecurityMetrics : ISecurityMetrics
             if (DateTime.UtcNow - _lastCleanup < CleanupInterval)
                 return;
 
-            var cutoff = DateTime.UtcNow - TimeSpan.FromMinutes(10);
+            // Use BruteForceWindow * 2 as cutoff to ensure data is retained through detection period
+            var cutoff = DateTime.UtcNow - (BruteForceWindow + BruteForceWindow);
 
             // Clean auth failures
-            foreach (var ip in _authFailuresByIp.Keys.ToList())
-            {
-                if (_authFailuresByIp.TryGetValue(ip, out var timestamps))
-                {
-                    lock (timestamps)
-                    {
-                        timestamps.RemoveAll(t => t < cutoff);
-                        if (timestamps.Count == 0)
-                        {
-                            _authFailuresByIp.TryRemove(ip, out _);
-                        }
-                    }
-                }
-            }
+            CleanupDictionary(_authFailuresByIp, cutoff, "auth failures");
 
             // Clean rate limits
-            foreach (var ip in _rateLimitsByIp.Keys.ToList())
-            {
-                if (_rateLimitsByIp.TryGetValue(ip, out var timestamps))
-                {
-                    lock (timestamps)
-                    {
-                        timestamps.RemoveAll(t => t < cutoff);
-                        if (timestamps.Count == 0)
-                        {
-                            _rateLimitsByIp.TryRemove(ip, out _);
-                        }
-                    }
-                }
-            }
+            CleanupDictionary(_rateLimitsByIp, cutoff, "rate limits");
 
             _lastCleanup = DateTime.UtcNow;
             _logger.LogDebug("SecurityMetrics cleanup completed. Auth tracking: {AuthCount}, Rate limit tracking: {RateCount}",
                 _authFailuresByIp.Count, _rateLimitsByIp.Count);
+        }
+    }
+
+    /// <summary>
+    /// Cleans a tracking dictionary by removing old entries and enforcing size limits.
+    /// </summary>
+    private void CleanupDictionary(ConcurrentDictionary<string, List<DateTime>> dictionary, DateTime cutoff, string context)
+    {
+        // First pass: Remove old timestamps and empty entries
+        foreach (var ip in dictionary.Keys.ToList())
+        {
+            if (dictionary.TryGetValue(ip, out var timestamps))
+            {
+                lock (timestamps)
+                {
+                    timestamps.RemoveAll(t => t < cutoff);
+                    if (timestamps.Count == 0)
+                    {
+                        dictionary.TryRemove(ip, out _);
+                    }
+                }
+            }
+        }
+
+        // Second pass: If still over limit, remove oldest entries (LRU-style eviction)
+        if (dictionary.Count > MaxTrackedIps)
+        {
+            var toRemove = dictionary
+                .Select(kvp => new {
+                    Ip = kvp.Key,
+                    LastActivity = kvp.Value.Count > 0 ? kvp.Value.Max() : DateTime.MinValue
+                })
+                .OrderBy(x => x.LastActivity)
+                .Take(dictionary.Count - MaxTrackedIps)
+                .Select(x => x.Ip)
+                .ToList();
+
+            foreach (var ip in toRemove)
+            {
+                dictionary.TryRemove(ip, out _);
+            }
+
+            _logger.LogWarning("SecurityMetrics {Context} dictionary exceeded {MaxSize} entries, evicted {EvictedCount} oldest entries",
+                context, MaxTrackedIps, toRemove.Count);
         }
     }
 

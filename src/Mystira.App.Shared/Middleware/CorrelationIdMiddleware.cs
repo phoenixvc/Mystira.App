@@ -103,8 +103,9 @@ public class CorrelationIdMiddleware
 
     private static string GenerateCorrelationId()
     {
-        // Use a compact GUID format for correlation IDs
-        return Guid.NewGuid().ToString("N")[..16];
+        // Use full GUID for correlation IDs to maintain 128-bit uniqueness
+        // The "N" format produces 32 hex chars without hyphens
+        return Guid.NewGuid().ToString("N");
     }
 }
 

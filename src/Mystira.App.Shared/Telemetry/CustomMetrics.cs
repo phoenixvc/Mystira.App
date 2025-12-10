@@ -42,6 +42,11 @@ public interface ICustomMetrics
     void TrackMediaAccessed(string mediaType, string? contentId = null);
 
     /// <summary>
+    /// Tracks content being played (scenario, story, game, etc.).
+    /// </summary>
+    void TrackContentPlays(string contentType, string contentId, string? profileId = null);
+
+    /// <summary>
     /// Tracks a custom metric value.
     /// </summary>
     void TrackMetric(string name, double value, IDictionary<string, string>? properties = null);
@@ -184,6 +189,25 @@ public class CustomMetrics : ICustomMetrics
 
         TrackEvent("Media.Accessed", properties);
         TrackMetric("Media.Accesses", 1, properties);
+    }
+
+    public void TrackContentPlays(string contentType, string contentId, string? profileId = null)
+    {
+        var properties = new Dictionary<string, string>
+        {
+            ["ContentType"] = contentType,
+            ["ContentId"] = contentId,
+            ["Environment"] = _environment
+        };
+
+        if (!string.IsNullOrEmpty(profileId))
+            properties["ProfileId"] = profileId;
+
+        TrackEvent("Content.Play", properties);
+        TrackMetric("Mystira.ContentPlays", 1, properties);
+
+        _logger.LogInformation("Content played: {ContentType}/{ContentId} by profile {ProfileId}",
+            contentType, contentId, profileId ?? "anonymous");
     }
 
     public void TrackMetric(string name, double value, IDictionary<string, string>? properties = null)
