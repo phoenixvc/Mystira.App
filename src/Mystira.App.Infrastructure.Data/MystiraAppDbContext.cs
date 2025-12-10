@@ -445,6 +445,10 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
+                // Map AccountId property to match container partition key path
+                // Note: Different from other entities, GameSession uses AccountId as partition key
+                entity.Property(e => e.AccountId).ToJsonProperty("accountId");
+
                 entity.ToContainer("GameSessions")
                       .HasPartitionKey(e => e.AccountId);
             }
@@ -526,6 +530,10 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
+                // Map MediaType property to match container partition key path
+                // Note: Different from other entities, MediaAsset uses MediaType as partition key
+                entity.Property(e => e.MediaType).ToJsonProperty("mediaType");
+
                 entity.ToContainer("MediaAssets")
                       .HasPartitionKey(e => e.MediaType);
             }
