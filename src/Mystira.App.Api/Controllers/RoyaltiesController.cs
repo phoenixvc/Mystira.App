@@ -145,9 +145,28 @@ public class RoyaltiesController : ControllerBase
 
             return Ok(result);
         }
-        catch (Exception ex)
+        catch (ArgumentException argEx)
         {
-            _logger.LogError(ex, "Error paying royalty to IP Asset {IpAssetId}", ipAssetId);
+            _logger.LogWarning(argEx, "Invalid argument when paying royalty to IP Asset {IpAssetId}", ipAssetId);
+            return BadRequest(new ErrorResponse
+            {
+                Message = argEx.Message,
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+        catch (InvalidOperationException invOpEx)
+        {
+            _logger.LogWarning(invOpEx, "Invalid operation when paying royalty to IP Asset {IpAssetId}", ipAssetId);
+            return BadRequest(new ErrorResponse
+            {
+                Message = invOpEx.Message,
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+        // Optionally, catch specific custom exceptions here.
+        catch (Exception ex) // As a last resort
+        {
+            _logger.LogError(ex, "Unexpected error paying royalty to IP Asset {IpAssetId}", ipAssetId);
             return StatusCode(500, new ErrorResponse
             {
                 Message = "Internal server error while processing royalty payment",
