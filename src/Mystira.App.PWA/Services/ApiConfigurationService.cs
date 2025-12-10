@@ -219,6 +219,13 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
     }
 
     /// <inheritdoc />
+    public void InvalidateEndpointsCache()
+    {
+        _cachedEndpoints = null;
+        _logger.LogDebug("Endpoints cache invalidated");
+    }
+
+    /// <inheritdoc />
     public async Task ClearPersistedEndpointAsync()
     {
         try

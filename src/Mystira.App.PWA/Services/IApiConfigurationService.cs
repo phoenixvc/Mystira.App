@@ -65,6 +65,11 @@ public interface IApiConfigurationService
     /// <param name="url">The URL to validate.</param>
     /// <returns>Health check result with status and any error message.</returns>
     Task<EndpointHealthResult> ValidateEndpointAsync(string url);
+
+    /// <summary>
+    /// Invalidates the cached endpoints list, forcing a reload from configuration on next access.
+    /// </summary>
+    void InvalidateEndpointsCache();
 }
 
 /// <summary>

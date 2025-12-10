@@ -66,6 +66,7 @@
     private bool _isAllowed;
     private bool _isSwitching;
     private bool _isCheckingHealth;
+    private bool _healthCheckInProgress; // Prevents concurrent health check calls
     private string _currentUrl = string.Empty;
     private string _currentEnvironment = string.Empty;
     private IReadOnlyList<ApiEndpoint> _endpoints = Array.Empty<ApiEndpoint>();
@@ -95,32 +96,57 @@
 
     private async Task CheckEndpointHealthWithRateLimitAsync()
     {
+        // Prevent concurrent health check calls (race condition fix)
+        if (_healthCheckInProgress)
+        {
+            return;
+        }
+
         // Rate limit: only check once per minute
         if (DateTime.UtcNow - _lastHealthCheck < HealthCheckCooldown && _healthResults.Count > 0)
         {
             return;
         }
 
+        _healthCheckInProgress = true;
         _isCheckingHealth = true;
         _lastHealthCheck = DateTime.UtcNow;
         StateHasChanged();
 
-        foreach (var endpoint in _endpoints)
+        try
         {
-            try
+            // Run health checks in parallel for faster results
+            var healthCheckTasks = _endpoints.Select(async endpoint =>
             {
-                var result = await ApiConfigService.ValidateEndpointAsync(endpoint.Url);
-                _healthResults[endpoint.Url] = result;
-                StateHasChanged();
-            }
-            catch (Exception ex)
+                try
+                {
+                    var result = await ApiConfigService.ValidateEndpointAsync(endpoint.Url);
+                    return (endpoint.Url, Result: result, Error: (Exception?)null);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Failed to check health of {Url}", endpoint.Url);
+                    return (endpoint.Url, Result: (EndpointHealthResult?)null, Error: ex);
+                }
+            });
+
+            var results = await Task.WhenAll(healthCheckTasks);
+
+            // Update results dictionary
+            foreach (var (url, result, _) in results)
             {
-                Logger.LogWarning(ex, "Failed to check health of {Url}", endpoint.Url);
+                if (result != null)
+                {
+                    _healthResults[url] = result;
+                }
             }
         }
-
-        _isCheckingHealth = false;
-        StateHasChanged();
+        finally
+        {
+            _isCheckingHealth = false;
+            _healthCheckInProgress = false;
+            StateHasChanged();
+        }
     }
 
     private async Task ConfirmAndSwitchEndpoint(ApiEndpoint endpoint)
