@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -27,7 +28,7 @@ public class StoryProtocolService : IStoryProtocolService
     private readonly StoryProtocolOptions _options;
     private readonly SecretClient? _secretClient;
     private Web3? _web3;
-    private Account? _account;
+    private Nethereum.Web3.Accounts.Account? _account;
     private bool _isInitialized;
 
     // Thread-safe in-memory cache for registered IP assets (contentId -> ipAssetId mapping)
@@ -61,7 +62,7 @@ public class StoryProtocolService : IStoryProtocolService
         if (_isInitialized) return;
 
         var privateKey = await GetPrivateKeyAsync();
-        _account = new Account(privateKey);
+        _account = new Nethereum.Web3.Accounts.Account(privateKey);
         _web3 = new Web3(_account, _options.RpcUrl);
 
         _logger.LogInformation(
@@ -647,7 +648,7 @@ public class StoryProtocolService : IStoryProtocolService
 
         // Fallback: generate deterministic ID if parsing fails
         // This ensures the system doesn't break but logs a warning
-        return new BigInteger(receipt.BlockNumber.Value * 1000 + receipt.TransactionIndex.Value);
+        return receipt.BlockNumber.Value * 1000 + receipt.TransactionIndex.Value;
     }
 
     /// <summary>
