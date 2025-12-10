@@ -42,7 +42,7 @@
       "value": "mystira.app"
     },
     "corsAllowedOrigins": {
-      "value": "https://mystira.app,https://www.mystira.app"
+      "value": "https://mystira.app,https://www.mystira.app,https://api.mystira.app,https://adminapi.mystira.app"
     },
     "deployAzureBot": {
       "value": true
@@ -64,6 +64,15 @@
     },
     "staticWebAppBranch": {
       "value": "main"
+    },
+    "baseDomain": {
+      "value": "mystira.app"
+    },
+    "enableCustomDomains": {
+      "value": false
+    },
+    "skipSslCertificates": {
+      "value": true
     }
   }
 }

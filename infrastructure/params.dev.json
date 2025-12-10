@@ -42,7 +42,7 @@
       "value": "mystira.app"
     },
     "corsAllowedOrigins": {
-      "value": "http://localhost:7000,https://localhost:7000,https://mystira.app,https://blue-water-0eab7991e.3.azurestaticapps.net,https://brave-meadow-0ecd87c03.3.azurestaticapps.net"
+      "value": "http://localhost:7000,https://localhost:7000,https://dev.mystira.app,https://api.dev.mystira.app,https://adminapi.dev.mystira.app,https://mystira.app,https://blue-water-0eab7991e.3.azurestaticapps.net,https://brave-meadow-0ecd87c03.3.azurestaticapps.net"
     },
     "deployAzureBot": {
       "value": false
@@ -64,6 +64,15 @@
     },
     "staticWebAppBranch": {
       "value": "dev"
+    },
+    "baseDomain": {
+      "value": "mystira.app"
+    },
+    "enableCustomDomains": {
+      "value": false
+    },
+    "skipSslCertificates": {
+      "value": true
     }
   }
 }

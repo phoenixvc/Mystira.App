@@ -1,0 +1,256 @@
+name: Custom Domains Setup
+
+# This workflow helps configure custom domains for Mystira.
+# Run this AFTER you have configured DNS records pointing to Azure resources.
+#
+# Domain Structure:
+# Production:  mystira.app, api.mystira.app, adminapi.mystira.app
+# Staging:     staging.mystira.app, api.staging.mystira.app, adminapi.staging.mystira.app
+# Development: dev.mystira.app, api.dev.mystira.app, adminapi.dev.mystira.app
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to configure'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - validate-dns
+          - enable-domains
+          - enable-ssl
+          - show-instructions
+      skip_ssl:
+        description: 'Skip SSL certificate creation (for initial DNS validation)'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  BASE_DOMAIN: 'mystira.app'
+
+jobs:
+  show-instructions:
+    if: github.event.inputs.action == 'show-instructions'
+    runs-on: ubuntu-latest
+    name: Show DNS Configuration Instructions
+    steps:
+      - name: Display DNS Instructions
+        run: |
+          echo "╔══════════════════════════════════════════════════════════════════╗"
+          echo "║           MYSTIRA CUSTOM DOMAIN DNS CONFIGURATION                ║"
+          echo "╚══════════════════════════════════════════════════════════════════╝"
+          echo ""
+
+          ENV="${{ github.event.inputs.environment }}"
+
+          if [ "$ENV" == "prod" ]; then
+            echo "Production Environment (mystira.app)"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "Configure these DNS records in your domain registrar:"
+            echo ""
+            echo "┌─────────┬───────────────┬──────────────────────────────────────────────────┐"
+            echo "│ Type    │ Name          │ Value                                            │"
+            echo "├─────────┼───────────────┼──────────────────────────────────────────────────┤"
+            echo "│ CNAME   │ @             │ mys-prod-mystira-swa-eus2.azurestaticapps.net   │"
+            echo "│ CNAME   │ www           │ mys-prod-mystira-swa-eus2.azurestaticapps.net   │"
+            echo "│ CNAME   │ api           │ mys-prod-mystira-api-san.azurewebsites.net      │"
+            echo "│ CNAME   │ adminapi      │ mys-prod-mystira-adminapi-san.azurewebsites.net │"
+            echo "└─────────┴───────────────┴──────────────────────────────────────────────────┘"
+            echo ""
+            echo "Note: For apex domain (@), you may need to use ALIAS/ANAME record"
+            echo "      or Azure DNS zone with an alias record."
+
+          elif [ "$ENV" == "staging" ]; then
+            echo "Staging Environment (staging.mystira.app)"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "Configure these DNS records:"
+            echo ""
+            echo "┌─────────┬───────────────────┬──────────────────────────────────────────────────────┐"
+            echo "│ Type    │ Name              │ Value                                                │"
+            echo "├─────────┼───────────────────┼──────────────────────────────────────────────────────┤"
+            echo "│ CNAME   │ staging           │ mys-staging-mystira-swa-eus2.azurestaticapps.net    │"
+            echo "│ CNAME   │ api.staging       │ mys-staging-mystira-api-san.azurewebsites.net       │"
+            echo "│ CNAME   │ adminapi.staging  │ mys-staging-mystira-adminapi-san.azurewebsites.net  │"
+            echo "└─────────┴───────────────────┴──────────────────────────────────────────────────────┘"
+
+          elif [ "$ENV" == "dev" ]; then
+            echo "Development Environment (dev.mystira.app)"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "Configure these DNS records:"
+            echo ""
+            echo "┌─────────┬───────────────────┬──────────────────────────────────────────────────┐"
+            echo "│ Type    │ Name              │ Value                                            │"
+            echo "├─────────┼───────────────────┼──────────────────────────────────────────────────┤"
+            echo "│ CNAME   │ dev               │ mys-dev-mystira-swa-eus2.azurestaticapps.net    │"
+            echo "│ CNAME   │ api.dev           │ mys-dev-mystira-api-san.azurewebsites.net       │"
+            echo "│ CNAME   │ adminapi.dev      │ mys-dev-mystira-adminapi-san.azurewebsites.net  │"
+            echo "└─────────┴───────────────────┴──────────────────────────────────────────────────┘"
+          fi
+
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "NEXT STEPS:"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "1. Add the DNS records above to your domain registrar"
+          echo "2. Wait for DNS propagation (usually 5-30 minutes)"
+          echo "3. Run this workflow with action='validate-dns' to verify"
+          echo "4. Run this workflow with action='enable-domains' to configure Azure"
+          echo "5. Run this workflow with action='enable-ssl' to enable HTTPS"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+  validate-dns:
+    if: github.event.inputs.action == 'validate-dns'
+    runs-on: ubuntu-latest
+    name: Validate DNS Records
+    steps:
+      - name: Validate DNS Configuration
+        run: |
+          ENV="${{ github.event.inputs.environment }}"
+          BASE="${{ env.BASE_DOMAIN }}"
+
+          echo "Validating DNS records for $ENV environment..."
+          echo ""
+
+          # Determine domains based on environment
+          if [ "$ENV" == "prod" ]; then
+            DOMAINS=("$BASE" "www.$BASE" "api.$BASE" "adminapi.$BASE")
+          elif [ "$ENV" == "staging" ]; then
+            DOMAINS=("staging.$BASE" "api.staging.$BASE" "adminapi.staging.$BASE")
+          else
+            DOMAINS=("dev.$BASE" "api.dev.$BASE" "adminapi.dev.$BASE")
+          fi
+
+          ALL_VALID=true
+
+          for domain in "${DOMAINS[@]}"; do
+            echo "Checking $domain..."
+
+            # Try to resolve the domain
+            if nslookup "$domain" > /dev/null 2>&1; then
+              RESOLVED=$(nslookup "$domain" | grep -A1 "Name:" | tail -1 | awk '{print $2}')
+              echo "  ✅ $domain resolves to: $RESOLVED"
+            else
+              echo "  ❌ $domain - DNS record not found or not propagated"
+              ALL_VALID=false
+            fi
+          done
+
+          echo ""
+          if [ "$ALL_VALID" = true ]; then
+            echo "✅ All DNS records are configured correctly!"
+            echo "You can now run the workflow with action='enable-domains'"
+          else
+            echo "❌ Some DNS records are missing or not yet propagated."
+            echo "Please configure DNS and wait for propagation before continuing."
+            exit 1
+          fi
+
+  enable-domains:
+    if: github.event.inputs.action == 'enable-domains'
+    runs-on: ubuntu-latest
+    name: Enable Custom Domains
+    environment: ${{ github.event.inputs.environment == 'prod' && 'production' || github.event.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set Environment Variables
+        id: vars
+        run: |
+          ENV="${{ github.event.inputs.environment }}"
+
+          if [ "$ENV" == "prod" ]; then
+            echo "RESOURCE_GROUP=mys-prod-mystira-rg-san" >> $GITHUB_OUTPUT
+            echo "PARAMS_FILE=params.prod.json" >> $GITHUB_OUTPUT
+          elif [ "$ENV" == "staging" ]; then
+            echo "RESOURCE_GROUP=mys-staging-mystira-rg-san" >> $GITHUB_OUTPUT
+            echo "PARAMS_FILE=params.staging.json" >> $GITHUB_OUTPUT
+          else
+            echo "RESOURCE_GROUP=mys-dev-mystira-rg-san" >> $GITHUB_OUTPUT
+            echo "PARAMS_FILE=params.dev.json" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy Custom Domains
+        run: |
+          az deployment group create \
+            --resource-group "${{ steps.vars.outputs.RESOURCE_GROUP }}" \
+            --template-file './infrastructure/main.bicep' \
+            --parameters '@./infrastructure/${{ steps.vars.outputs.PARAMS_FILE }}' \
+            --parameters jwtRsaPrivateKey="${{ secrets.JWT_RSA_PRIVATE_KEY }}" jwtRsaPublicKey="${{ secrets.JWT_RSA_PUBLIC_KEY }}" \
+            --parameters enableCustomDomains=true skipSslCertificates=${{ github.event.inputs.skip_ssl }} \
+            --mode Incremental \
+            --name "custom-domains-$(date +%Y%m%d-%H%M%S)"
+
+      - name: Deployment Summary
+        run: |
+          echo "Custom domains configured for ${{ github.event.inputs.environment }} environment!"
+          echo ""
+          echo "If skipSslCertificates was true, run this workflow again with"
+          echo "action='enable-ssl' to provision managed SSL certificates."
+
+  enable-ssl:
+    if: github.event.inputs.action == 'enable-ssl'
+    runs-on: ubuntu-latest
+    name: Enable SSL Certificates
+    environment: ${{ github.event.inputs.environment == 'prod' && 'production' || github.event.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set Environment Variables
+        id: vars
+        run: |
+          ENV="${{ github.event.inputs.environment }}"
+
+          if [ "$ENV" == "prod" ]; then
+            echo "RESOURCE_GROUP=mys-prod-mystira-rg-san" >> $GITHUB_OUTPUT
+            echo "PARAMS_FILE=params.prod.json" >> $GITHUB_OUTPUT
+          elif [ "$ENV" == "staging" ]; then
+            echo "RESOURCE_GROUP=mys-staging-mystira-rg-san" >> $GITHUB_OUTPUT
+            echo "PARAMS_FILE=params.staging.json" >> $GITHUB_OUTPUT
+          else
+            echo "RESOURCE_GROUP=mys-dev-mystira-rg-san" >> $GITHUB_OUTPUT
+            echo "PARAMS_FILE=params.dev.json" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy with SSL Certificates
+        run: |
+          az deployment group create \
+            --resource-group "${{ steps.vars.outputs.RESOURCE_GROUP }}" \
+            --template-file './infrastructure/main.bicep' \
+            --parameters '@./infrastructure/${{ steps.vars.outputs.PARAMS_FILE }}' \
+            --parameters jwtRsaPrivateKey="${{ secrets.JWT_RSA_PRIVATE_KEY }}" jwtRsaPublicKey="${{ secrets.JWT_RSA_PUBLIC_KEY }}" \
+            --parameters enableCustomDomains=true skipSslCertificates=false \
+            --mode Incremental \
+            --name "ssl-certificates-$(date +%Y%m%d-%H%M%S)"
+
+      - name: SSL Certificate Summary
+        run: |
+          echo "SSL certificates provisioned for ${{ github.event.inputs.environment }} environment!"
+          echo ""
+          echo "Azure will automatically provision and renew managed SSL certificates."
+          echo "This may take a few minutes to complete."

@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.JSInterop;
 using Mystira.App.PWA;
 using Mystira.App.PWA.Services;
 
@@ -21,16 +22,28 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 // Register the auth header handler
 builder.Services.AddScoped<AuthHeaderHandler>();
 
-// Configure API HttpClient with auth header handler
-var apiBaseUrl = builder.Configuration.GetConnectionString("MystiraApiBaseUrl");
+// Register API Configuration Service (handles domain persistence across PWA updates)
+builder.Services.AddScoped<IApiConfigurationService, ApiConfigurationService>();
+
+// Get API URL from configuration (will be overridden by persisted URL after first load)
+// Try new ApiConfiguration section first, then fall back to ConnectionStrings
+var apiBaseUrl = builder.Configuration.GetValue<string>("ApiConfiguration:DefaultApiBaseUrl")
+                 ?? builder.Configuration.GetConnectionString("MystiraApiBaseUrl");
+
 if (string.IsNullOrEmpty(apiBaseUrl))
 {
-    Console.WriteLine($"API url could not be retrieved from configuration");
+    Console.WriteLine("API url could not be retrieved from configuration. Using default: https://api.mystira.app/");
+    apiBaseUrl = "https://api.mystira.app/";
 }
 else
 {
     Console.WriteLine($"Connecting to API: {apiBaseUrl}");
 }
+
+// Log API configuration details
+var environment = builder.Configuration.GetValue<string>("ApiConfiguration:Environment") ?? "Unknown";
+var allowSwitching = builder.Configuration.GetValue<bool>("ApiConfiguration:AllowEndpointSwitching");
+Console.WriteLine($"Environment: {environment}, Endpoint switching allowed: {allowSwitching}");
 
 // Register domain-specific API clients
 builder.Services.AddHttpClient<IScenarioApiClient, ScenarioApiClient>(client =>

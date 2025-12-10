@@ -286,6 +286,19 @@ param staticWebAppRepositoryUrl string = ''
 param staticWebAppBranch string = 'dev'
 
 // ─────────────────────────────────────────────────────────────────
+// Custom Domain Parameters
+// ─────────────────────────────────────────────────────────────────
+
+@description('Base domain name for all environments (e.g., mystira.app)')
+param baseDomain string = 'mystira.app'
+
+@description('Enable custom domain configuration (requires DNS to be pre-configured)')
+param enableCustomDomains bool = false
+
+@description('Skip SSL certificate creation (set to true for initial DNS validation)')
+param skipSslCertificates bool = true
+
+// ─────────────────────────────────────────────────────────────────
 // Computed Values
 // ─────────────────────────────────────────────────────────────────
 
@@ -475,6 +488,26 @@ module staticWebApp 'modules/static-web-app.bicep' = if (deployStaticWebApp) {
   }
 }
 
+// Custom Domains (conditional - requires DNS to be pre-configured)
+// Domain Structure:
+// - Production:  mystira.app, api.mystira.app, adminapi.mystira.app
+// - Staging:     staging.mystira.app, api.staging.mystira.app, adminapi.staging.mystira.app
+// - Development: dev.mystira.app, api.dev.mystira.app, adminapi.dev.mystira.app
+module customDomains 'modules/custom-domains.bicep' = if (enableCustomDomains && !skipAppServiceCreation && deployStaticWebApp) {
+  name: 'deploy-custom-domains'
+  dependsOn: [apiAppService, adminApiAppService, staticWebApp]
+  params: {
+    environment: environment
+    baseDomain: baseDomain
+    apiAppServiceName: names.apiApp
+    adminApiAppServiceName: names.adminApiApp
+    staticWebAppName: names.staticWebApp
+    enableCustomDomains: enableCustomDomains
+    skipSslCertificates: skipSslCertificates
+    tags: tags
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────
 // Key Vault Access Policies for App Services
 // Added after App Services are deployed to avoid circular dependency
@@ -565,3 +598,10 @@ output keyVaultUri string = keyVault.outputs.keyVaultUri
 output primaryRegion string = location
 output primaryRegionCode string = region
 output fallbackRegionForSWA string = fallbackRegion
+
+// Custom Domains
+output customDomainsEnabled bool = enableCustomDomains
+output pwaCustomDomain string = enableCustomDomains && !skipAppServiceCreation && deployStaticWebApp ? customDomains.outputs.pwaUrl : ''
+output apiCustomDomain string = enableCustomDomains && !skipAppServiceCreation && deployStaticWebApp ? customDomains.outputs.apiUrl : ''
+output adminApiCustomDomain string = enableCustomDomains && !skipAppServiceCreation && deployStaticWebApp ? customDomains.outputs.adminApiUrl : ''
+output dnsInstructions object = enableCustomDomains && !skipAppServiceCreation && deployStaticWebApp ? customDomains.outputs.dnsInstructions : {}
