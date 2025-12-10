@@ -1,0 +1,53 @@
+{
+  "Age_Group_Id": "1-2",
+  "Axis_Achievements": [
+    {
+      "Compass_Axis_Id": "Self-Regulation",
+      "Axes_Direction": "positive",
+      "Description": "Growing ability to manage emotions and impulses"
+    },
+    {
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Axes_Direction": "positive",
+      "Description": "Exploring the world with wonder and taking small risks"
+    }
+  ],
+  "Badges": [
+    {
+      "Tier": "bronze",
+      "Tier_Order": 1,
+      "Title": "Little Explorer",
+      "Description": "Showed curiosity by exploring new things",
+      "Required_Score": 5.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/toddler_explorer_bronze.png"
+    },
+    {
+      "Tier": "silver",
+      "Tier_Order": 1,
+      "Title": "Brave Adventurer",
+      "Description": "Tried new things even when uncertain",
+      "Required_Score": 10.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/toddler_adventurer_silver.png"
+    },
+    {
+      "Tier": "bronze",
+      "Tier_Order": 1,
+      "Title": "Calm Friend",
+      "Description": "Showed patience and self-control",
+      "Required_Score": 5.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/toddler_calm_bronze.png"
+    },
+    {
+      "Tier": "silver",
+      "Tier_Order": 1,
+      "Title": "Gentle Heart",
+      "Description": "Managed big feelings with care",
+      "Required_Score": 10.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/toddler_heart_silver.png"
+    }
+  ]
+}

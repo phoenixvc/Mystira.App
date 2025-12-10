@@ -1,0 +1,107 @@
+{
+  "Age_Group_Id": "10-12",
+  "Axis_Achievements": [
+    {
+      "Compass_Axis_Id": "Self-Regulation",
+      "Axes_Direction": "positive",
+      "Description": "Mastering emotional intelligence and self-control"
+    },
+    {
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Axes_Direction": "positive",
+      "Description": "Leading projects and pursuing passions independently"
+    }
+  ],
+  "Badges": [
+    {
+      "Tier": "bronze",
+      "Tier_Order": 1,
+      "Title": "Knowledge Seeker",
+      "Description": "Actively pursued learning and understanding",
+      "Required_Score": 12.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/preteen_seeker_bronze.png"
+    },
+    {
+      "Tier": "silver",
+      "Tier_Order": 1,
+      "Title": "Strategic Thinker",
+      "Description": "Applied critical thinking to solve complex problems",
+      "Required_Score": 25.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/preteen_strategic_silver.png"
+    },
+    {
+      "Tier": "gold",
+      "Tier_Order": 1,
+      "Title": "Visionary Leader",
+      "Description": "Showed outstanding initiative and leadership",
+      "Required_Score": 40.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/preteen_visionary_gold.png"
+    },
+    {
+      "Tier": "platinum",
+      "Tier_Order": 1,
+      "Title": "Trailblazer",
+      "Description": "Pioneered new approaches with exceptional initiative",
+      "Required_Score": 60.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/preteen_trailblazer_platinum.png"
+    },
+    {
+      "Tier": "diamond",
+      "Tier_Order": 1,
+      "Title": "Renaissance Mind",
+      "Description": "Achieved mastery across multiple areas of curiosity and initiative",
+      "Required_Score": 80.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/preteen_renaissance_diamond.png"
+    },
+    {
+      "Tier": "bronze",
+      "Tier_Order": 1,
+      "Title": "Mindful One",
+      "Description": "Practiced mindfulness and self-awareness",
+      "Required_Score": 12.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/preteen_mindful_bronze.png"
+    },
+    {
+      "Tier": "silver",
+      "Tier_Order": 1,
+      "Title": "Resilient Spirit",
+      "Description": "Bounced back from setbacks with grace",
+      "Required_Score": 25.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/preteen_resilient_silver.png"
+    },
+    {
+      "Tier": "gold",
+      "Tier_Order": 1,
+      "Title": "Emotional Architect",
+      "Description": "Expertly managed complex emotional situations",
+      "Required_Score": 40.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/preteen_architect_gold.png"
+    },
+    {
+      "Tier": "platinum",
+      "Tier_Order": 1,
+      "Title": "Inner Peace",
+      "Description": "Achieved remarkable emotional balance and control",
+      "Required_Score": 60.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/preteen_peace_platinum.png"
+    },
+    {
+      "Tier": "diamond",
+      "Tier_Order": 1,
+      "Title": "Sage",
+      "Description": "Demonstrated wisdom and mastery in self-regulation",
+      "Required_Score": 80.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/preteen_sage_diamond.png"
+    }
+  ]
+}
