@@ -416,8 +416,21 @@ public class MigrationService : IMigrationService
                 {
                     current = ((IDictionary<string, object>)current)[part];
                 }
-                catch
+                catch (InvalidCastException)
                 {
+                    return item?.id?.ToString() ?? Guid.NewGuid().ToString();
+                }
+                catch (KeyNotFoundException)
+                {
+                    return item?.id?.ToString() ?? Guid.NewGuid().ToString();
+                }
+                catch (NullReferenceException)
+                {
+                    return item?.id?.ToString() ?? Guid.NewGuid().ToString();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Unexpected exception when traversing partition key path '{PartitionKeyPath}' on item: {Item}", partitionKeyPath, item);
                     return item?.id?.ToString() ?? Guid.NewGuid().ToString();
                 }
             }
