@@ -39,6 +39,9 @@ builder.Services.AddControllersWithViews()
         options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
 
+// Add HttpClient factory for use cases that need to make HTTP requests
+builder.Services.AddHttpClient();
+
 // Configure OpenAPI/Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
