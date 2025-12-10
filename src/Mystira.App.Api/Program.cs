@@ -104,8 +104,26 @@ if (useCosmosDb)
 {
     // AZURE CLOUD DATABASE: Production Cosmos DB
     builder.Services.AddDbContext<MystiraAppDbContext>(options =>
-        options.UseCosmos(cosmosConnectionString!, "MystiraAppDb")
-               .AddInterceptors(new PartitionKeyInterceptor()));
+    {
+        options.UseCosmos(cosmosConnectionString!, "MystiraAppDb", cosmosOptions =>
+        {
+            // Configure HTTP client timeout to prevent hanging indefinitely
+            // Default timeout is too long for startup scenarios
+            cosmosOptions.HttpClientFactory(() =>
+            {
+                var httpClient = new HttpClient(new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                });
+                httpClient.Timeout = TimeSpan.FromSeconds(30);
+                return httpClient;
+            });
+            
+            // Set request timeout for Cosmos operations
+            cosmosOptions.RequestTimeout(TimeSpan.FromSeconds(30));
+        })
+        .AddInterceptors(new PartitionKeyInterceptor());
+    });
 }
 else
 {
