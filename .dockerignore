@@ -1,0 +1,109 @@
+# .dockerignore - Exclude files from Docker build context to reduce image size
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.deploy-config.ps1
+.deploy-now.ps1
+deploy.log
+
+# IDE and editor files
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build outputs (will be built inside container)
+**/bin/
+**/obj/
+**/out/
+**/dist/
+**/node_modules/
+**/target/
+
+# Test results
+**/TestResults/
+**/*.trx
+coverage/
+coverlet.runsettings
+
+# Documentation and examples
+docs/
+examples/
+*.md
+!README.md
+moodboard.html
+
+# Scripts (not needed in runtime container)
+scripts/
+*.sh
+*.ps1
+*.bat
+Makefile
+
+# Exception: Keep Docker test script for validation
+!test-docker-build.sh
+
+# Tools and development utilities
+tools/
+devhub.sh
+devhub.bat
+start.ps1
+
+# NuGet packages (will be restored during build)
+**/packages/
+*.nupkg
+nuget.exe
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+appsettings.local.json
+appsettings.*.local.json
+secrets.json
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Docker files (don't need Dockerfile inside the image)
+**/Dockerfile*
+**/docker-compose*
+**/.dockerignore
+
+# Infrastructure
+infrastructure/
+
+# MCP server config
+.mcp/
+
+# Husky git hooks
+.husky/
+
+# Config files
+.codeqlignore
+.cspell.json
+.editorconfig
+codecov.yml
+
+# IMPORTANT: Keep appsettings.json files - they're needed for configuration
+# The ! prefix means "don't ignore these files"
+!**/appsettings.json
+!**/appsettings.Development.json
+!**/appsettings.Production.json
+!**/appsettings.Staging.json
+!**/appsettings.Testing.json

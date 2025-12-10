@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # Main API service with Discord bot integration
+  api:
+    build:
+      context: .
+      dockerfile: src/Mystira.App.Api/Dockerfile
+    container_name: mystira-api
+    ports:
+      - "5000:80"
+      - "5001:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      # Discord Configuration (override with .env file or environment variables)
+      - Discord__Enabled=false
+      - Discord__BotToken=${DISCORD_BOT_TOKEN:-}
+      - Discord__GuildId=${DISCORD_GUILD_ID:-0}
+      # Database Configuration
+      - ConnectionStrings__CosmosDb=${COSMOS_DB_CONNECTION_STRING:-}
+      - Azure__CosmosDb__DatabaseName=${COSMOS_DB_NAME:-MystiraAppDb}
+      # Azure Storage
+      - ConnectionStrings__AzureStorage=${AZURE_STORAGE_CONNECTION_STRING:-}
+      - Azure__BlobStorage__ContainerName=${BLOB_CONTAINER_NAME:-mystira-app-media}
+      # JWT Settings
+      - JwtSettings__Issuer=${JWT_ISSUER:-mystira-app-api}
+      - JwtSettings__Audience=${JWT_AUDIENCE:-mystira-app-app}
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY:-}
+      # Database initialization
+      - InitializeDatabaseOnStartup=true
+      - SeedMasterDataOnStartup=false
+    volumes:
+      # Mount appsettings.local.json if you want to override settings locally
+      # - ./src/Mystira.App.Api/appsettings.local.json:/app/appsettings.local.json:ro
+      # Mount logs directory for troubleshooting
+      - ./logs/api:/app/logs
+    networks:
+      - mystira-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Admin API service
+  admin-api:
+    build:
+      context: .
+      dockerfile: src/Mystira.App.Admin.Api/Dockerfile
+    container_name: mystira-admin-api
+    ports:
+      - "5100:80"
+      - "5101:443"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      # Database Configuration
+      - ConnectionStrings__CosmosDb=${COSMOS_DB_CONNECTION_STRING:-}
+      - Azure__CosmosDb__DatabaseName=${COSMOS_DB_NAME:-MystiraAppDb}
+      # Azure Storage
+      - ConnectionStrings__AzureStorage=${AZURE_STORAGE_CONNECTION_STRING:-}
+      - Azure__BlobStorage__ContainerName=${BLOB_CONTAINER_NAME:-mystira-app-media}
+      # JWT Settings (same as API for token validation)
+      - JwtSettings__Issuer=${JWT_ISSUER:-mystira-app-api}
+      - JwtSettings__Audience=${JWT_AUDIENCE:-mystira-app-app}
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY:-}
+      # Database initialization
+      - InitializeDatabaseOnStartup=true
+      - SeedMasterDataOnStartup=false
+    volumes:
+      # Mount appsettings.local.json if you want to override settings locally
+      # - ./src/Mystira.App.Admin.Api/appsettings.local.json:/app/appsettings.local.json:ro
+      # Mount logs directory for troubleshooting
+      - ./logs/admin-api:/app/logs
+    networks:
+      - mystira-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  mystira-network:
+    driver: bridge
+
+volumes:
+  logs:
+    driver: local
