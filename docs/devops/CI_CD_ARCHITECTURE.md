@@ -68,6 +68,7 @@ This document describes our continuous integration and continuous deployment (CI
 |---------|--------|
 | Push to `dev` | Auto-deploy |
 | PR to `dev` | Preview only |
+| Manual workflow dispatch | Deploy on-demand |
 
 **Configuration**:
 - Resource Group: `mys-dev-mystira-rg-san`
@@ -78,8 +79,9 @@ This document describes our continuous integration and continuous deployment (CI
 
 | Trigger | Action |
 |---------|--------|
-| Push to `main` | Auto-deploy |
-| PR to `main` | Preview only |
+| Push to `staging` | Auto-deploy |
+| PR to `staging` | Preview only |
+| Manual workflow dispatch | Deploy on-demand |
 
 **Configuration**:
 - Resource Group: `mys-staging-mystira-rg-san`
@@ -91,6 +93,7 @@ This document describes our continuous integration and continuous deployment (CI
 | Trigger | Action |
 |---------|--------|
 | Tag `v*.*.*` | Auto-deploy (with approval gate) |
+| Manual workflow dispatch | Deploy on-demand (with approval gate) |
 
 **Configuration**:
 - Resource Group: `mys-prod-mystira-rg-san`
@@ -102,12 +105,17 @@ This document describes our continuous integration and continuous deployment (CI
 
 ### Application Workflows
 
-| Workflow | File | Purpose |
-|----------|------|---------|
-| CI Build | `.github/workflows/ci.yml` | Build and test on all branches |
-| Deploy Dev | `.github/workflows/deploy-dev.yml` | Deploy to development |
-| Deploy Staging | `.github/workflows/deploy-staging.yml` | Deploy to staging |
-| Deploy Prod | `.github/workflows/deploy-prod.yml` | Deploy to production |
+| Workflow | File | Purpose | Manual Deploy |
+|----------|------|---------|---------------|
+| API CI/CD - Dev | `.github/workflows/mystira-app-api-cicd-dev.yml` | Build, test, deploy API to dev | ✅ |
+| API CI/CD - Staging | `.github/workflows/mystira-app-api-cicd-staging.yml` | Build, test, deploy API to staging | ✅ |
+| API CI/CD - Prod | `.github/workflows/mystira-app-api-cicd-prod.yml` | Build, test, deploy API to production | ✅ |
+| Admin API CI/CD - Dev | `.github/workflows/mystira-app-admin-api-cicd-dev.yml` | Build, test, deploy Admin API to dev | ✅ |
+| Admin API CI/CD - Staging | `.github/workflows/mystira-app-admin-api-cicd-staging.yml` | Build, test, deploy Admin API to staging | ✅ |
+| Admin API CI/CD - Prod | `.github/workflows/mystira-app-admin-api-cicd-prod.yml` | Build, test, deploy Admin API to production | ✅ |
+| PWA CI/CD - Dev | `.github/workflows/mystira-app-pwa-cicd-dev.yml` | Build, test, deploy PWA to dev | - |
+| PWA CI/CD - Staging | `.github/workflows/mystira-app-pwa-cicd-staging.yml` | Build, test, deploy PWA to staging | - |
+| PWA CI/CD - Prod | `.github/workflows/mystira-app-pwa-cicd-prod.yml` | Build, test, deploy PWA to production | - |
 
 ### Infrastructure Workflows
 
@@ -116,6 +124,52 @@ This document describes our continuous integration and continuous deployment (CI
 | Infra Dev | `.github/workflows/infrastructure-deploy-dev.yml` | Dev infrastructure |
 | Infra Staging | `.github/workflows/infrastructure-deploy-staging.yml` | Staging infrastructure |
 | Infra Prod | `.github/workflows/infrastructure-deploy-prod.yml` | Production infrastructure |
+
+## Manual Deployment
+
+All API and Admin API workflows support manual deployment invocation via GitHub's `workflow_dispatch` event.
+
+### How to Trigger Manual Deployment
+
+1. **Navigate to Actions Tab**
+   - Go to the GitHub repository
+   - Click on the **Actions** tab
+
+2. **Select Workflow**
+   - Choose the desired workflow from the left sidebar:
+     - "API CI/CD - Dev Environment"
+     - "API CI/CD - Staging Environment"
+     - "API CI/CD - Production Environment"
+     - "Admin API CI/CD - Dev Environment"
+     - "Admin API CI/CD - Staging Environment"
+     - "Admin API CI/CD - Production Environment"
+
+3. **Run Workflow**
+   - Click the **"Run workflow"** dropdown button (top right)
+   - Select the target branch that corresponds to your desired environment:
+     - `dev` branch → deploys to **Development** environment
+     - `staging` branch → deploys to **Staging** environment
+     - `main` branch → deploys to **Production** environment
+   - Click **"Run workflow"** to start the deployment
+
+4. **Monitor Progress**
+   - The workflow will appear in the workflow runs list
+   - Click on the run to see real-time logs
+   - Deployment will go through: Build → Test → Deploy stages
+
+### When to Use Manual Deployment
+
+- **Hotfix Deployment**: Deploy critical fixes without waiting for merge
+- **Rollback**: Re-deploy a previous stable version
+- **Configuration Changes**: Deploy after updating environment variables or secrets
+- **Infrastructure Updates**: Deploy after infrastructure changes complete
+- **Testing**: Verify deployment pipeline changes
+
+### Manual Deployment Behavior
+
+- **Development**: Deploys immediately after build and test pass
+- **Staging**: Deploys immediately after build and test pass
+- **Production**: Requires manual approval in GitHub environment settings
 
 ## Deployment Strategy
 
