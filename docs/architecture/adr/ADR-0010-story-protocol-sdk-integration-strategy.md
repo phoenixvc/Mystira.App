@@ -93,11 +93,11 @@ From business requirements:
 
 ### Option 2: Python Sidecar Microservice ⭐ **RECOMMENDED**
 
-**Description**: Create a lightweight Python microservice (`mystira.chain` or `mystira-chain-service`) that wraps Story Protocol's official Python SDK. The .NET API communicates with this service via HTTP/REST.
+**Description**: Create a lightweight Python microservice (`mystira.chain` or `Mystira.Chain`) that wraps Story Protocol's official Python SDK. The .NET API communicates with this service via HTTP/REST.
 
 ```
 ┌─────────────────────┐       ┌──────────────────────┐       ┌─────────────────┐
-│  Mystira.App.Api    │──────▶│ mystira-chain-service│──────▶│  Story Protocol │
+│  Mystira.App.Api    │──────▶│ Mystira.Chain│──────▶│  Story Protocol │
 │  (.NET)             │  HTTP │ (Python/FastAPI)     │  SDK  │  Blockchain     │
 └─────────────────────┘       └──────────────────────┘       └─────────────────┘
 ```
@@ -183,7 +183,7 @@ We will adopt **Option 2: Python Sidecar Microservice** with the following imple
 │  │                     Infrastructure  │                                │  │
 │  │  ┌─────────────────────────────────▼──────────────────────────────┐ │  │
 │  │  │  ChainServiceAdapter : IStoryProtocolService                    │ │  │
-│  │  │  (Calls mystira-chain-service via HTTP)                         │ │  │
+│  │  │  (Calls Mystira.Chain via HTTP)                         │ │  │
 │  │  └────────────────────────────────────────────────────────────────┘ │  │
 │  └─────────────────────────────────────────────────────────────────────┘  │
 └────────────────────────────────────────────────────────────────────────────┘
@@ -191,7 +191,7 @@ We will adopt **Option 2: Python Sidecar Microservice** with the following imple
                                    HTTP │ REST
                                         ▼
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                    mystira-chain-service (Python)                          │
+│                    Mystira.Chain (Python)                          │
 │  ┌─────────────────────────────────────────────────────────────────────┐  │
 │  │  FastAPI                                                             │  │
 │  │  ├── POST /ip-assets/register                                        │  │
@@ -216,10 +216,19 @@ We will adopt **Option 2: Python Sidecar Microservice** with the following imple
 
 ### Implementation Components
 
-#### 1. New Repository: `mystira-chain-service`
+#### 1. New Repository: `Mystira.Chain`
+
+**GitHub Repository Settings:**
+| Field | Value |
+|-------|-------|
+| **Name** | `Mystira.Chain` |
+| **Description** | Blockchain integration service for Story Protocol IP registration and royalties |
+| **Topics/Labels** | `python`, `fastapi`, `blockchain`, `story-protocol`, `mystira` |
+| **Visibility** | Private |
+| **License** | Proprietary |
 
 ```
-mystira-chain-service/
+Mystira.Chain/
 ├── app/
 │   ├── main.py            # FastAPI app entry point
 │   ├── routers/
@@ -263,7 +272,7 @@ public class ChainServiceAdapter : IStoryProtocolService
 // appsettings.json
 {
   "ChainService": {
-    "BaseUrl": "https://mystira-chain-service.azurewebsites.net",
+    "BaseUrl": "https://Mystira.Chain.azurewebsites.net",
     "TimeoutSeconds": 120,
     "RetryCount": 3
   }
@@ -288,7 +297,7 @@ Defer to Phase 2:
 1. **Story Generator / Admin Portal**: Add "Register on Blockchain" button
    - Triggers `POST /admin/royalties/register-ip-asset` in Admin.API
    - Admin.API calls `IStoryProtocolService.RegisterIpAssetAsync()`
-   - ChainServiceAdapter forwards to mystira-chain-service
+   - ChainServiceAdapter forwards to Mystira.Chain
 
 2. **Royalty Configuration**: Admin portal allows setting percentages per contributor
 
@@ -377,7 +386,7 @@ services.AddScoped<IStoryProtocolService>(sp =>
 
 ### Phase 1: MVP (Target: 2 days)
 
-1. Create `mystira-chain-service` repository (Python/FastAPI)
+1. Create `Mystira.Chain` repository (Python/FastAPI)
 2. Implement core endpoints (register, status)
 3. Create `ChainServiceAdapter` in .NET
 4. Deploy to Azure App Service (Python)

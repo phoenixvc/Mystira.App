@@ -16,16 +16,19 @@ The Mystira ecosystem has grown organically with multiple repositories and appli
 
 ### Current State
 
-- **2 repositories** currently exist:
-  - `Mystira.App` - Main application (API, Admin API, PWA)
-  - `Mystira.StoryGenerator` - Story generation functionality
-- **4+ applications** are running across these repos:
-  - Mystira.App (main application - API, Admin API, PWA)
-  - Admin UI
-  - Sorting UI (v0-generated)
-  - Other v0-generated components
+**Mystira Repositories** (all follow `Mystira.X` naming convention):
+
+| Repository | Description | Tech Stack | Status |
+|------------|-------------|------------|--------|
+| `Mystira.App` | Main platform - API, Admin API, PWA | .NET 9, Blazor, Cosmos DB | ✅ Existing |
+| `Mystira.StoryGenerator` | Interactive story generation engine | .NET, AI/ML | ✅ Existing |
+| `Mystira.Chain` | Blockchain integration (Story Protocol) | Python, FastAPI | 🆕 ADR-0010 |
+| `Mystira.workspace` | Multi-repo workspace & centralized docs | Scripts, Markdown | 🆕 This ADR |
+
+**GitHub Topics for all repos:** `mystira`, `interactive-fiction`, `web3`
+
+- **4+ applications** running across these repos
 - Applications started together in shared repos "for convenience"
-- New service planned: `mystira-chain-service` (from ADR-0010)
 
 ### Problems Identified
 
@@ -126,15 +129,15 @@ Options discussed:
 
 ```
 ~/mystira/
-├── .workspace/                # Mystira.workspace cloned as .workspace (sorts first!)
+├── .workspace/                # Mystira.workspace (cloned as .workspace for sorting)
 │   ├── mystira.code-workspace # VS Code workspace file
 │   ├── docs/                  # Centralized documentation
 │   ├── scripts/               # Cross-repo automation
 │   └── README.md
-├── Mystira.App/               # Main app (API, Admin API, PWA)
-├── Mystira.StoryGenerator/    # Story generation service
-├── mystira-chain-service/     # Blockchain service (Python)
-└── [future repos]/            # Future repos (siblings)
+├── Mystira.App/               # Main platform (.NET)
+├── Mystira.Chain/             # Blockchain service (Python)
+├── Mystira.StoryGenerator/    # Story generation (.NET)
+└── [future repos]/
 ```
 
 **Pros**:
@@ -192,7 +195,14 @@ git clone https://github.com/phoenixvc/Mystira.workspace.git .workspace
 
 ### Repository Structure
 
-Create new repository: `Mystira.workspace` (cloned locally as `.workspace`)
+**GitHub Repository Settings for `Mystira.workspace`:**
+| Field | Value |
+|-------|-------|
+| **Name** | `Mystira.workspace` |
+| **Description** | Unified workspace for Mystira multi-repo development - VS Code workspace, docs, and tooling |
+| **Topics/Labels** | `mystira`, `monorepo`, `workspace`, `documentation`, `developer-experience` |
+| **Visibility** | Private |
+| **License** | Proprietary |
 
 ```
 .workspace/   # Local directory name (GitHub repo: Mystira.workspace)
@@ -224,7 +234,7 @@ Create new repository: `Mystira.workspace` (cloned locally as `.workspace`)
 {
   "folders": [
     {
-      "name": "📋 .workspace",
+      "name": "📋 Mystira.workspace",
       "path": "."
     },
     {
@@ -232,12 +242,12 @@ Create new repository: `Mystira.workspace` (cloned locally as `.workspace`)
       "path": "../Mystira.App"
     },
     {
-      "name": "📖 Mystira.StoryGenerator",
-      "path": "../Mystira.StoryGenerator"
+      "name": "⛓️ Mystira.Chain",
+      "path": "../Mystira.Chain"
     },
     {
-      "name": "🐍 mystira-chain-service",
-      "path": "../mystira-chain-service"
+      "name": "📖 Mystira.StoryGenerator",
+      "path": "../Mystira.StoryGenerator"
     }
     // Add more repos as needed
   ],
@@ -284,9 +294,8 @@ GITHUB_ORG="phoenixvc"
 
 repos=(
   "Mystira.App"
+  "Mystira.Chain"
   "Mystira.StoryGenerator"
-  "mystira-chain-service"
-  # Add more repos here
 )
 
 echo "🚀 Setting up Mystira workspace..."
