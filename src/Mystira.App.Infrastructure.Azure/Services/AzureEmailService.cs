@@ -20,7 +20,6 @@ public class AzureEmailService : IEmailService
     private readonly ILogger<AzureEmailService> _logger;
     private readonly string _senderEmail;
     private readonly bool _isEnabled;
-    private const int CodeExpiryMinutes = 15;
     private const int EmailSendTimeoutSeconds = 10; // Timeout for email send operations to detect ACS configuration issues
 
     public AzureEmailService(IConfiguration configuration, ILogger<AzureEmailService> logger)
