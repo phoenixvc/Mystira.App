@@ -101,7 +101,7 @@
                 try {
                     const urlObj = new URL(url);
                     if (urlObj.host.startsWith('api.')) {
-                        const adminHost = 'adminapi' + urlObj.host.substring(3);
+                        const adminHost = 'admin' + urlObj.host.substring(3);
                         const adminUrl = urlObj.protocol + '//' + adminHost + urlObj.pathname;
                         localStorage.setItem('mystira_admin_api_base_url', adminUrl);
                     }

@@ -279,8 +279,8 @@ public class ApiConfigurationService : IApiConfigurationService
 
     private static string DeriveAdminApiUrl(string apiUrl)
     {
-        // Transform api.mystira.app -> adminapi.mystira.app
-        // Transform api.dev.mystira.app -> adminapi.dev.mystira.app
+        // Transform api.mystira.app -> admin.mystira.app
+        // Transform api.dev.mystira.app -> admin.dev.mystira.app
         try
         {
             var uri = new Uri(apiUrl);
@@ -288,7 +288,7 @@ public class ApiConfigurationService : IApiConfigurationService
 
             if (host.StartsWith("api."))
             {
-                var newHost = "adminapi" + host.Substring(3);
+                var newHost = "admin" + host.Substring(3);
                 return $"{uri.Scheme}://{newHost}{uri.AbsolutePath}";
             }
 

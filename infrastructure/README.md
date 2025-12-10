@@ -383,6 +383,76 @@ az deployment group create \
   --parameters adminObjectId="<your-object-id>"
 ```
 
+## DNS Custom Domains
+
+The infrastructure automatically configures custom domains for all services using the `mystira.app` DNS zone.
+
+### Custom Domain Configuration
+
+| Environment | PWA | API | Admin API |
+|-------------|-----|-----|-----------|
+| Dev | `dev.mystira.app` | `api.dev.mystira.app` | `admin.dev.mystira.app` |
+| Staging | `staging.mystira.app` | `api.staging.mystira.app` | `admin.staging.mystira.app` |
+| Prod | `mystira.app` | `api.mystira.app` | `admin.mystira.app` |
+
+### How It Works
+
+1. **DNS Zone Reference**: The Bicep templates reference the existing `mystira.app` DNS zone in `mys-prod-mystira-rg-glob`
+2. **CNAME Records**: For subdomains, CNAME records are automatically created pointing to the Azure resource hostnames
+3. **TXT Records**: For apex domains (prod), TXT records are created for domain validation
+4. **Custom Domain Bindings**: After DNS records are created, custom domain bindings are applied to App Services and Static Web Apps
+
+### Required Permissions
+
+The service principal deploying infrastructure needs `DNS Zone Contributor` role on the DNS zone resource group:
+
+```bash
+# Get your service principal object ID
+SP_OBJECT_ID=$(az ad sp list --display-name "github-actions-mystira-app" --query "[0].id" -o tsv)
+
+# Grant DNS Zone Contributor role on the DNS zone resource group
+az role assignment create \
+  --assignee $SP_OBJECT_ID \
+  --role "DNS Zone Contributor" \
+  --scope /subscriptions/22f9eb18-6553-4b7d-9451-47d0195085fe/resourceGroups/mys-prod-mystira-rg-glob
+
+# Alternatively, grant on just the DNS zone
+az role assignment create \
+  --assignee $SP_OBJECT_ID \
+  --role "DNS Zone Contributor" \
+  --scope /subscriptions/22f9eb18-6553-4b7d-9451-47d0195085fe/resourceGroups/mys-prod-mystira-rg-glob/providers/Microsoft.Network/dnszones/mystira.app
+```
+
+### Parameters
+
+The following parameters control custom domain configuration:
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `enableCustomDomain` | Enable custom domain for Static Web App | `false` |
+| `enableApiCustomDomain` | Enable custom domains for API App Services | `false` |
+| `dnsZoneName` | DNS zone name | `mystira.app` |
+| `dnsZoneResourceGroup` | Resource group containing DNS zone | `mys-prod-mystira-rg-glob` |
+| `customDomainSubdomain` | Environment subdomain (empty for prod) | varies |
+| `apiSubdomainPrefix` | API subdomain prefix | `api` |
+| `adminApiSubdomainPrefix` | Admin API subdomain prefix | `admin` |
+
+### Verifying DNS Records
+
+```bash
+# Check if CNAME record exists
+az network dns record-set cname show \
+  --resource-group mys-prod-mystira-rg-glob \
+  --zone-name mystira.app \
+  --name api.dev
+
+# List all DNS records in the zone
+az network dns record-set list \
+  --resource-group mys-prod-mystira-rg-glob \
+  --zone-name mystira.app \
+  --output table
+```
+
 ## Workflow Dependencies
 
 ### Infrastructure → API Deployment Chain
