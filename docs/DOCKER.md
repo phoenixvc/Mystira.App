@@ -127,7 +127,7 @@ If you see volume mount errors:
 ### Configuration Not Found
 
 If the container can't find configuration:
-1. Check that appsettings files are copied (see Dockerfile lines 44-45)
+1. Check that appsettings files are copied in the final stage of the Dockerfile (look for explicit COPY of appsettings.json)
 2. Verify environment variables are set correctly
 3. Use `docker logs <container-name>` to see detailed error messages
 
