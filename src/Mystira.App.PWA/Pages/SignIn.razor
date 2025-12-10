@@ -39,11 +39,14 @@
                                 <input type="checkbox"
                                        class="form-check-input"
                                        id="rememberMe"
-                                       @bind="rememberMe" />
+                                       @bind="rememberMe"
+                                       aria-label="Remember me for 30 days" />
                                 <label class="form-check-label" for="rememberMe">
-                                    <i class="fas fa-heart me-2"></i>Remember me for 30 days
+                                    Remember me for 30 days
                                 </label>
-                                <div class="form-text">Stay signed in on this device for faster access</div>
+                            </div>
+                            <div class="form-text mb-3">
+                                <i class="fas fa-info-circle me-2"></i>Stay signed in on this device for faster access
                             </div>
 
                             @if (!string.IsNullOrEmpty(errorMessage))

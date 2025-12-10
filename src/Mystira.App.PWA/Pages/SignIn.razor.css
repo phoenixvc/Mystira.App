@@ -66,18 +66,27 @@ html[data-theme="dark"] {
     border-width: 2px;
     border-color: var(--auth-input-border);
     background-color: var(--auth-input-bg);
-    color: var(--auth-text-primary);
+    color: var(--auth-text-primary) !important;
 }
 
 .auth-card .form-control::placeholder {
-    color: var(--auth-text-muted);
+    color: var(--auth-text-muted) !important;
+    opacity: 0.7;
 }
 
 .auth-card .form-control:focus {
     border-color: var(--auth-input-focus-border);
     box-shadow: var(--auth-focus-shadow);
     background-color: var(--auth-input-focus-bg);
+    color: var(--auth-text-primary) !important;
     outline: none;
+}
+
+.auth-card .form-control:disabled {
+    background-color: var(--auth-input-bg);
+    color: var(--auth-text-primary) !important;
+    opacity: 0.8;
+    border-color: var(--auth-input-border);
 }
 
 .email-display {
@@ -151,11 +160,40 @@ html[data-theme="dark"] {
 }
 
 .auth-card .form-check-input {
-    background-color: var(--auth-input-bg);
-    border-color: var(--auth-input-focus-border);
+    width: 1.25rem;
+    height: 1.25rem;
+    background-color: var(--auth-input-bg) !important;
+    border: 2px solid var(--auth-input-border) !important;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.auth-card .form-check-input:hover {
+    border-color: var(--auth-input-focus-border) !important;
+}
+
+.auth-card .form-check-input:focus {
+    border-color: var(--auth-input-focus-border) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    outline: none;
 }
 
 .auth-card .form-check-input:checked {
-    background-color: var(--auth-input-focus-border);
-    border-color: var(--auth-input-focus-border);
+    background-color: var(--auth-input-focus-border) !important;
+    border-color: var(--auth-input-focus-border) !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10l3 3l6-6'/%3e%3c/svg%3e");
+}
+
+.auth-card .form-check {
+    padding-left: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.auth-card .form-check-label {
+    cursor: pointer;
+    user-select: none;
+    margin-bottom: 0;
 }
