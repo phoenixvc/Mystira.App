@@ -8,6 +8,18 @@
 
 **Tags**: architecture, blockchain, story-protocol, sdk-integration, infrastructure
 
+**Supersedes**: None (new capability)
+
+---
+
+## Approvals
+
+| Role | Name | Date | Status |
+|------|------|------|--------|
+| Tech Lead | | | ⏳ Pending |
+| Backend Dev | | | ⏳ Pending |
+| DevOps | | | ⏳ Pending |
+
 ---
 
 ## Context
@@ -245,6 +257,160 @@ Mystira.Chain/
 └── README.md
 ```
 
+#### Pydantic Schema Examples
+
+```python
+# app/models/schemas.py
+from datetime import datetime
+from enum import Enum
+from pydantic import BaseModel, Field
+
+
+class ContributorType(str, Enum):
+    """Type of contributor to a story."""
+    PUBLISHER = "publisher"
+    CURATOR = "curator"
+    AUTHOR = "author"
+
+
+class Contributor(BaseModel):
+    """A contributor to a story with royalty share."""
+    wallet_address: str = Field(..., description="Ethereum wallet address")
+    contributor_type: ContributorType
+    share_percentage: float = Field(..., ge=0, le=100)
+
+
+class RegisterIpAssetRequest(BaseModel):
+    """Request to register a story as an IP Asset."""
+    content_id: str = Field(..., description="Unique content identifier")
+    content_title: str = Field(..., description="Title of the story")
+    contributors: list[Contributor] = Field(..., min_length=1)
+    metadata_uri: str | None = Field(None, description="IPFS URI for metadata")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "content_id": "story-12345",
+                "content_title": "The Dragon's Quest",
+                "contributors": [
+                    {"wallet_address": "0x1234...", "contributor_type": "publisher", "share_percentage": 10},
+                    {"wallet_address": "0x5678...", "contributor_type": "curator", "share_percentage": 10}
+                ],
+                "metadata_uri": "ipfs://Qm..."
+            }
+        }
+    }
+
+
+class IpAssetStatus(str, Enum):
+    """Status of IP Asset registration."""
+    PENDING = "pending"
+    PROCESSING = "processing"
+    REGISTERED = "registered"
+    FAILED = "failed"
+
+
+class IpAssetResponse(BaseModel):
+    """Response after IP Asset registration."""
+    content_id: str
+    ip_asset_id: str | None = None
+    transaction_hash: str | None = None
+    status: IpAssetStatus
+    registered_at: datetime | None = None
+    error_message: str | None = None
+
+
+class PayRoyaltyRequest(BaseModel):
+    """Request to pay royalties to an IP Asset."""
+    ip_asset_id: str = Field(..., description="Story Protocol IP Asset ID")
+    amount_wei: str = Field(..., description="Amount in wei to distribute")
+    currency_token: str = Field(default="0x0", description="Token address (0x0 for native)")
+
+
+class RoyaltyPaymentResponse(BaseModel):
+    """Response after royalty payment."""
+    ip_asset_id: str
+    transaction_hash: str | None = None
+    amount_wei: str
+    status: str
+    error_message: str | None = None
+
+
+class ErrorDetail(BaseModel):
+    """Error details for API responses."""
+    code: str
+    message: str
+    details: dict | None = None
+
+
+class ErrorResponse(BaseModel):
+    """Standard error response format."""
+    error: ErrorDetail
+    request_id: str | None = None
+```
+
+#### Dockerfile
+
+```dockerfile
+# Dockerfile for Mystira.Chain
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY app/ ./app/
+
+# Create non-root user for security
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+
+# Run application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+#### requirements.txt
+
+```txt
+# Core
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Story Protocol SDK
+# story-protocol-python-sdk>=0.1.0  # Uncomment when available
+
+# Web3
+web3>=6.15.0
+
+# Observability
+opentelemetry-api>=1.22.0
+opentelemetry-sdk>=1.22.0
+opentelemetry-instrumentation-fastapi>=0.43b0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.23.0
+httpx>=0.26.0
+```
+
 #### 2. .NET Adapter: `ChainServiceAdapter`
 
 Replace current `StoryProtocolService` registration with new HTTP-based adapter:
@@ -474,6 +640,7 @@ services.AddScoped<IStoryProtocolService>(sp =>
 - **ADR-0003**: Hexagonal Architecture (this decision maintains port/adapter pattern)
 - **ADR-0005**: Separate API and Admin API (blockchain operations via Admin API)
 - **ADR-0011**: Unified Workspace Repository (Mystira.Chain included in workspace)
+- **ADR-0012**: Infrastructure as Code (networking and Front Door for Mystira.Chain)
 
 ---
 

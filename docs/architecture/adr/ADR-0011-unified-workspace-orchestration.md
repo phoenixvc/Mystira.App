@@ -8,6 +8,17 @@
 
 **Tags**: architecture, monorepo, workspace, developer-experience, ai-tooling
 
+**Supersedes**: None (new capability)
+
+---
+
+## Approvals
+
+| Role | Name | Date | Status |
+|------|------|------|--------|
+| Tech Lead | | | ⏳ Pending |
+| DevOps | | | ⏳ Pending |
+
 ---
 
 ## Context
@@ -23,6 +34,7 @@ The Mystira ecosystem has grown organically with multiple repositories and appli
 | `Mystira.App` | Main platform - API, Admin API, PWA | .NET 9, Blazor, Cosmos DB | ✅ Existing |
 | `Mystira.StoryGenerator` | Interactive story generation engine | .NET, AI/ML | ✅ Existing |
 | `Mystira.Chain` | Blockchain integration (Story Protocol) | Python, FastAPI | 🆕 ADR-0010 |
+| `Mystira.Infra` | Infrastructure as Code (Azure) | Bicep, Azure CLI | 🆕 ADR-0012 |
 | `Mystira.workspace` | Multi-repo workspace & centralized docs | Scripts, Markdown | 🆕 This ADR |
 
 **GitHub Topics for all repos:** `mystira`, `interactive-fiction`, `web3`
@@ -136,6 +148,7 @@ Options discussed:
 │   └── README.md
 ├── Mystira.App/               # Main platform (.NET)
 ├── Mystira.Chain/             # Blockchain service (Python)
+├── Mystira.Infra/             # Infrastructure as Code (Bicep)
 ├── Mystira.StoryGenerator/    # Story generation (.NET)
 └── [future repos]/
 ```
@@ -273,6 +286,111 @@ git clone https://github.com/phoenixvc/Mystira.workspace.git .workspace
 }
 ```
 
+### VS Code Tasks
+
+Cross-repo tasks for common operations:
+
+```jsonc
+// .vscode/tasks.json
+{
+  "version": "2.0.0",
+  "tasks": [
+    // === Build Tasks ===
+    {
+      "label": "Build: All .NET Projects",
+      "type": "shell",
+      "command": "dotnet build ../Mystira.App/Mystira.App.sln && dotnet build ../Mystira.StoryGenerator/Mystira.StoryGenerator.sln",
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Build: Mystira.App",
+      "type": "shell",
+      "command": "dotnet build",
+      "options": { "cwd": "${workspaceFolder}/../Mystira.App" },
+      "group": "build",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Build: Mystira.Chain (Docker)",
+      "type": "shell",
+      "command": "docker build -t mystira-chain .",
+      "options": { "cwd": "${workspaceFolder}/../Mystira.Chain" },
+      "group": "build"
+    },
+
+    // === Test Tasks ===
+    {
+      "label": "Test: All .NET Projects",
+      "type": "shell",
+      "command": "dotnet test ../Mystira.App/Mystira.App.sln && dotnet test ../Mystira.StoryGenerator/Mystira.StoryGenerator.sln",
+      "group": "test",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Test: Mystira.Chain (pytest)",
+      "type": "shell",
+      "command": "pytest",
+      "options": { "cwd": "${workspaceFolder}/../Mystira.Chain" },
+      "group": "test"
+    },
+
+    // === Run Tasks ===
+    {
+      "label": "Run: Mystira.App API",
+      "type": "shell",
+      "command": "dotnet run --project src/Mystira.App.Api/Mystira.App.Api.csproj",
+      "options": { "cwd": "${workspaceFolder}/../Mystira.App" },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*Starting.*$",
+          "endsPattern": "^.*Now listening on.*$"
+        }
+      }
+    },
+    {
+      "label": "Run: Mystira.Chain (uvicorn)",
+      "type": "shell",
+      "command": "uvicorn app.main:app --reload --port 8000",
+      "options": { "cwd": "${workspaceFolder}/../Mystira.Chain" },
+      "isBackground": true
+    },
+    {
+      "label": "Run: All Services",
+      "dependsOn": ["Run: Mystira.App API", "Run: Mystira.Chain (uvicorn)"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+
+    // === Utility Tasks ===
+    {
+      "label": "Update: All Repos",
+      "type": "shell",
+      "command": "./scripts/update-all.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint: Mystira.Chain (ruff)",
+      "type": "shell",
+      "command": "ruff check app/",
+      "options": { "cwd": "${workspaceFolder}/../Mystira.Chain" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Format: Mystira.Chain (black)",
+      "type": "shell",
+      "command": "black app/",
+      "options": { "cwd": "${workspaceFolder}/../Mystira.Chain" },
+      "problemMatcher": []
+    }
+  ]
+}
+```
+
 ### Setup Script
 
 **Initial clone** (one-time):
@@ -295,6 +413,7 @@ GITHUB_ORG="phoenixvc"
 repos=(
   "Mystira.App"
   "Mystira.Chain"
+  "Mystira.Infra"
   "Mystira.StoryGenerator"
 )
 
@@ -369,7 +488,7 @@ Also add a `.gitignore`:
 $ParentDir = Split-Path -Parent (Get-Location)
 $GitHubOrg = "phoenixvc"
 
-$repos = @("Mystira.App", "Mystira.Chain", "Mystira.StoryGenerator")
+$repos = @("Mystira.App", "Mystira.Chain", "Mystira.Infra", "Mystira.StoryGenerator")
 
 Write-Host "🚀 Setting up Mystira workspace..." -ForegroundColor Cyan
 
@@ -397,6 +516,7 @@ PARENT_DIR=$(dirname $(pwd))
 repos=(
   "Mystira.App"
   "Mystira.Chain"
+  "Mystira.Infra"
   "Mystira.StoryGenerator"
 )
 
@@ -522,6 +642,7 @@ This matches the experience: "dit het nie so lekker gewerk om dit buite v0 te ed
 
 - **ADR-0010**: Story Protocol SDK Integration (chain service will be in workspace)
 - **ADR-0005**: Separate API and Admin API (both visible in workspace)
+- **ADR-0012**: Infrastructure as Code (Mystira.Infra included in workspace)
 
 ---
 
