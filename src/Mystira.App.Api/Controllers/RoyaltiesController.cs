@@ -164,7 +164,7 @@ public class RoyaltiesController : ControllerBase
             });
         }
         // Optionally, catch specific custom exceptions here.
-        catch (Exception ex) // As a last resort
+        catch (Exception ex) when (!IsFatalException(ex)) // As a last resort, only handle non-fatal exceptions
         {
             _logger.LogError(ex, "Unexpected error paying royalty to IP Asset {IpAssetId}", ipAssetId);
             return StatusCode(500, new ErrorResponse
@@ -176,6 +176,20 @@ public class RoyaltiesController : ControllerBase
     }
 
     /// <summary>
+    /// <summary>
+    /// Helper to determine if an exception is fatal and should not be caught by controller.
+    /// </summary>
+    private static bool IsFatalException(Exception ex)
+    {
+        return ex is OutOfMemoryException
+            || ex is StackOverflowException
+            || ex is ThreadAbortException
+            || ex is AccessViolationException
+            || ex is AppDomainUnloadedException
+            || ex is BadImageFormatException
+            || ex is CannotUnloadAppDomainException
+            || ex is InvalidProgramException;
+    }
     /// Claim accumulated royalties for a contributor wallet. Requires authentication.
     /// </summary>
     /// <param name="ipAssetId">The Story Protocol IP Asset ID</param>
