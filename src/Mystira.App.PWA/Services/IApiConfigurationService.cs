@@ -63,8 +63,9 @@ public interface IApiConfigurationService
     /// Validates an endpoint by checking if it's reachable.
     /// </summary>
     /// <param name="url">The URL to validate.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the health check.</param>
     /// <returns>Health check result with status and any error message.</returns>
-    Task<EndpointHealthResult> ValidateEndpointAsync(string url);
+    Task<EndpointHealthResult> ValidateEndpointAsync(string url, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Invalidates the cached endpoints list, forcing a reload from configuration on next access.

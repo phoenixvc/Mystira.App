@@ -41,6 +41,9 @@ var defaultApiUrl = builder.Configuration.GetValue<string>("ApiConfiguration:Def
                     ?? builder.Configuration.GetConnectionString("MystiraApiBaseUrl")
                     ?? "https://api.mystira.app/";
 
+// Validate API configuration at startup
+ValidateApiConfiguration(builder.Configuration, defaultApiUrl);
+
 // Log API configuration details
 var environment = builder.Configuration.GetValue<string>("ApiConfiguration:Environment") ?? "Unknown";
 var allowSwitching = builder.Configuration.GetValue<bool>("ApiConfiguration:AllowEndpointSwitching");
@@ -246,5 +249,61 @@ static void SetDevelopmentModeForApiClients(IServiceProvider services, bool isDe
             // Log unexpected errors during service resolution that are not related to registration
             logger.LogWarning(ex, "Unexpected error setting development mode for {ServiceType}", interfaceType.Name);
         }
+    }
+}
+
+static void ValidateApiConfiguration(IConfiguration configuration, string defaultApiUrl)
+{
+    var errors = new List<string>();
+
+    // Validate default API URL
+    if (string.IsNullOrWhiteSpace(defaultApiUrl))
+    {
+        errors.Add("DefaultApiBaseUrl is not configured");
+    }
+    else if (!Uri.TryCreate(defaultApiUrl, UriKind.Absolute, out var uri))
+    {
+        errors.Add($"DefaultApiBaseUrl is not a valid URL: {defaultApiUrl}");
+    }
+    else if (uri.Scheme != Uri.UriSchemeHttps && !uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+    {
+        errors.Add($"DefaultApiBaseUrl must use HTTPS for non-localhost: {defaultApiUrl}");
+    }
+
+    // Validate available endpoints if configured
+    var endpointsSection = configuration.GetSection("ApiConfiguration:AvailableEndpoints");
+    if (endpointsSection.Exists())
+    {
+        foreach (var child in endpointsSection.GetChildren())
+        {
+            var url = child["Url"] ?? child["url"];
+            var name = child["Name"] ?? child["name"] ?? "unnamed";
+
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                errors.Add($"Endpoint '{name}' has no URL configured");
+                continue;
+            }
+
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var endpointUri))
+            {
+                errors.Add($"Endpoint '{name}' has invalid URL: {url}");
+            }
+            else if (endpointUri.Scheme != Uri.UriSchemeHttps && !endpointUri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add($"Endpoint '{name}' must use HTTPS for non-localhost: {url}");
+            }
+        }
+    }
+
+    // Log warnings for configuration issues (don't fail startup)
+    foreach (var error in errors)
+    {
+        Console.WriteLine($"[Config Warning] {error}");
+    }
+
+    if (errors.Count > 0)
+    {
+        Console.WriteLine($"[Config] Found {errors.Count} configuration warning(s). App will continue but may have issues.");
     }
 }

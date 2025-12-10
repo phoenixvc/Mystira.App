@@ -62,6 +62,8 @@
     </div>
 }
 
+@implements IDisposable
+
 @code {
     private bool _isAllowed;
     private bool _isSwitching;
@@ -72,11 +74,14 @@
     private IReadOnlyList<ApiEndpoint> _endpoints = Array.Empty<ApiEndpoint>();
     private Dictionary<string, EndpointHealthResult> _healthResults = new();
     private DateTime _lastHealthCheck = DateTime.MinValue;
+    private CancellationTokenSource? _cts;
     private static readonly TimeSpan HealthCheckCooldown = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan HealthResultsExpiration = TimeSpan.FromMinutes(5);
 
     protected override async Task OnInitializedAsync()
     {
+        _cts = new CancellationTokenSource();
+
         // Get current user's email to check allowlist
         var account = await AuthService.GetCurrentAccountAsync();
         var userEmail = account?.Email;
@@ -125,13 +130,19 @@
 
         try
         {
+            var cancellationToken = _cts?.Token ?? CancellationToken.None;
+
             // Run health checks in parallel for faster results
             var healthCheckTasks = _endpoints.Select(async endpoint =>
             {
                 try
                 {
-                    var result = await ApiConfigService.ValidateEndpointAsync(endpoint.Url);
+                    var result = await ApiConfigService.ValidateEndpointAsync(endpoint.Url, cancellationToken);
                     return (endpoint.Url, Result: result, Error: (Exception?)null);
+                }
+                catch (OperationCanceledException)
+                {
+                    return (endpoint.Url, Result: (EndpointHealthResult?)null, Error: (Exception?)null);
                 }
                 catch (Exception ex)
                 {
@@ -142,7 +153,7 @@
 
             var results = await Task.WhenAll(healthCheckTasks);
 
-            // Update results dictionary
+            // Update results dictionary (skip cancelled results)
             foreach (var (url, result, _) in results)
             {
                 if (result != null)
@@ -245,5 +256,11 @@
             _isSwitching = false;
             StateHasChanged();
         }
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
     }
 }

@@ -43,7 +43,7 @@ public class ApiBaseAddressHandler : DelegatingHandler
             var newUri = new Uri(newBaseUri, pathAndQuery);
             request.RequestUri = newUri;
 
-            _logger.LogInformation("Rewrote API request from {OldHost} to {NewHost}: {Path}",
+            _logger.LogDebug("Rewrote API request from {OldHost} to {NewHost}: {Path}",
                 originalUri.Host, newBaseUri.Host, pathAndQuery);
         }
         else if (!request.RequestUri.IsAbsoluteUri && !string.IsNullOrEmpty(_endpointCache.ApiBaseUrl))
@@ -51,7 +51,7 @@ public class ApiBaseAddressHandler : DelegatingHandler
             // Handle relative URIs by combining with cached base
             var baseUri = new Uri(_endpointCache.ApiBaseUrl);
             request.RequestUri = new Uri(baseUri, request.RequestUri.ToString());
-            _logger.LogInformation("Resolved relative API request to: {RequestUri}", request.RequestUri);
+            _logger.LogDebug("Resolved relative API request to: {RequestUri}", request.RequestUri);
         }
 
         return await base.SendAsync(request, cancellationToken);

@@ -229,21 +229,32 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
     /// <inheritdoc />
     public async Task ClearPersistedEndpointAsync()
     {
+        // Acquire lock to prevent race condition with EnsureInitializedAsync
+        await _initLock.WaitAsync();
         try
         {
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", ApiUrlStorageKey);
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", AdminApiUrlStorageKey);
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", EnvironmentStorageKey);
 
-            // Reset caches
-            _cachedApiUrl = null;
-            _cachedAdminApiUrl = null;
-            _cachedEnvironment = null;
-            _isInitialized = false;
-
-            // Reset singleton cache and reinitialize with defaults
+            // Reset singleton cache first
             _endpointCache.Clear();
-            _endpointCache.Initialize(GetDefaultApiUrl(), GetDefaultAdminApiUrl());
+
+            // Get defaults before resetting state
+            var defaultApiUrl = GetDefaultApiUrl();
+            var defaultAdminApiUrl = GetDefaultAdminApiUrl();
+            var defaultEnvironment = GetDefaultEnvironment();
+
+            // Reset caches atomically (while holding lock)
+            _cachedApiUrl = defaultApiUrl;
+            _cachedAdminApiUrl = defaultAdminApiUrl;
+            _cachedEnvironment = defaultEnvironment;
+
+            // Reinitialize cache with defaults
+            _endpointCache.Initialize(defaultApiUrl, defaultAdminApiUrl);
+
+            // Keep initialized = true to avoid re-reading from localStorage
+            // (we just cleared it, so we know defaults are correct)
 
             _logger.LogInformation("Cleared persisted API endpoint, reverting to default configuration");
         }
@@ -252,10 +263,14 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
             _logger.LogError(ex, "Failed to clear persisted API endpoint from localStorage");
             throw;
         }
+        finally
+        {
+            _initLock.Release();
+        }
     }
 
     /// <inheritdoc />
-    public async Task<EndpointHealthResult> ValidateEndpointAsync(string url)
+    public async Task<EndpointHealthResult> ValidateEndpointAsync(string url, CancellationToken cancellationToken = default)
     {
         if (!ValidateUrl(url, out var validationError))
         {
@@ -267,49 +282,89 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
             };
         }
 
-        try
-        {
-            var healthUrl = EnsureTrailingSlash(url) + "health";
+        var healthUrl = EnsureTrailingSlash(url) + "health";
+        const int maxRetries = 2;
 
-            var stopwatch = Stopwatch.StartNew();
-            var response = await _healthCheckClient.GetAsync(healthUrl);
-            stopwatch.Stop();
+        for (int attempt = 0; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                // Check cancellation before making request
+                cancellationToken.ThrowIfCancellationRequested();
 
-            return new EndpointHealthResult
+                var stopwatch = Stopwatch.StartNew();
+                var response = await _healthCheckClient.GetAsync(healthUrl, cancellationToken);
+                stopwatch.Stop();
+
+                return new EndpointHealthResult
+                {
+                    Url = url,
+                    IsHealthy = response.IsSuccessStatusCode,
+                    StatusCode = (int)response.StatusCode,
+                    ResponseTimeMs = (int)stopwatch.ElapsedMilliseconds
+                };
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                Url = url,
-                IsHealthy = response.IsSuccessStatusCode,
-                StatusCode = (int)response.StatusCode,
-                ResponseTimeMs = (int)stopwatch.ElapsedMilliseconds
-            };
+                // User cancelled - don't retry
+                return new EndpointHealthResult
+                {
+                    Url = url,
+                    IsHealthy = false,
+                    ErrorMessage = "Health check cancelled"
+                };
+            }
+            catch (HttpRequestException ex) when (attempt < maxRetries)
+            {
+                // Transient error - retry after short delay
+                _logger.LogDebug("Health check attempt {Attempt} failed for {Url}: {Error}. Retrying...",
+                    attempt + 1, url, ex.Message);
+                await Task.Delay(TimeSpan.FromMilliseconds(500 * (attempt + 1)), cancellationToken);
+                continue;
+            }
+            catch (HttpRequestException ex)
+            {
+                return new EndpointHealthResult
+                {
+                    Url = url,
+                    IsHealthy = false,
+                    ErrorMessage = $"Connection failed: {ex.Message}"
+                };
+            }
+            catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                // Timeout (not user cancellation)
+                if (attempt < maxRetries)
+                {
+                    _logger.LogDebug("Health check attempt {Attempt} timed out for {Url}. Retrying...",
+                        attempt + 1, url);
+                    continue;
+                }
+                return new EndpointHealthResult
+                {
+                    Url = url,
+                    IsHealthy = false,
+                    ErrorMessage = "Request timed out (5s)"
+                };
+            }
+            catch (Exception ex)
+            {
+                return new EndpointHealthResult
+                {
+                    Url = url,
+                    IsHealthy = false,
+                    ErrorMessage = $"Unexpected error: {ex.Message}"
+                };
+            }
         }
-        catch (HttpRequestException ex)
+
+        // Should not reach here, but just in case
+        return new EndpointHealthResult
         {
-            return new EndpointHealthResult
-            {
-                Url = url,
-                IsHealthy = false,
-                ErrorMessage = $"Connection failed: {ex.Message}"
-            };
-        }
-        catch (TaskCanceledException)
-        {
-            return new EndpointHealthResult
-            {
-                Url = url,
-                IsHealthy = false,
-                ErrorMessage = "Request timed out (5s)"
-            };
-        }
-        catch (Exception ex)
-        {
-            return new EndpointHealthResult
-            {
-                Url = url,
-                IsHealthy = false,
-                ErrorMessage = $"Unexpected error: {ex.Message}"
-            };
-        }
+            Url = url,
+            IsHealthy = false,
+            ErrorMessage = "Health check failed after retries"
+        };
     }
 
     private async Task EnsureInitializedAsync()

@@ -26,11 +26,14 @@ public interface ITelemetryService
 
 /// <summary>
 /// Implementation of telemetry service using Application Insights via JSInterop.
+/// Caches availability check to avoid repeated JSInterop calls when SDK is not loaded.
 /// </summary>
 public class TelemetryService : ITelemetryService
 {
     private readonly IJSRuntime _jsRuntime;
     private readonly ILogger<TelemetryService> _logger;
+    private bool? _isAvailable;
+    private bool _availabilityChecked;
 
     public TelemetryService(IJSRuntime jsRuntime, ILogger<TelemetryService> logger)
     {
@@ -40,6 +43,8 @@ public class TelemetryService : ITelemetryService
 
     public async Task TrackEventAsync(string eventName, IDictionary<string, string>? properties = null)
     {
+        if (!await IsAvailableAsync()) return;
+
         try
         {
             await _jsRuntime.InvokeVoidAsync("mystiraTelemetry.trackEvent", eventName, properties);
@@ -48,11 +53,14 @@ public class TelemetryService : ITelemetryService
         {
             // Don't throw on telemetry failures - it's non-critical
             _logger.LogDebug(ex, "Failed to track event: {EventName}", eventName);
+            _isAvailable = false; // Disable further attempts
         }
     }
 
     public async Task TrackExceptionAsync(Exception exception, IDictionary<string, string>? properties = null)
     {
+        if (!await IsAvailableAsync()) return;
+
         try
         {
             var errorProps = new Dictionary<string, string>(properties ?? new Dictionary<string, string>())
@@ -67,11 +75,14 @@ public class TelemetryService : ITelemetryService
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Failed to track exception");
+            _isAvailable = false;
         }
     }
 
     public async Task TrackMetricAsync(string metricName, double value, IDictionary<string, string>? properties = null)
     {
+        if (!await IsAvailableAsync()) return;
+
         try
         {
             await _jsRuntime.InvokeVoidAsync("mystiraTelemetry.trackMetric", metricName, value, properties);
@@ -79,6 +90,43 @@ public class TelemetryService : ITelemetryService
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Failed to track metric: {MetricName}", metricName);
+            _isAvailable = false;
+        }
+    }
+
+    private async Task<bool> IsAvailableAsync()
+    {
+        if (_isAvailable.HasValue)
+        {
+            return _isAvailable.Value;
+        }
+
+        if (_availabilityChecked)
+        {
+            return false;
+        }
+
+        _availabilityChecked = true;
+
+        try
+        {
+            // Check if mystiraTelemetry object exists in window
+            _isAvailable = await _jsRuntime.InvokeAsync<bool>(
+                "eval",
+                "typeof window.mystiraTelemetry !== 'undefined' && typeof window.mystiraTelemetry.trackEvent === 'function'");
+
+            if (!_isAvailable.Value)
+            {
+                _logger.LogDebug("Application Insights telemetry SDK not available");
+            }
+
+            return _isAvailable.Value;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to check telemetry availability");
+            _isAvailable = false;
+            return false;
         }
     }
 }
