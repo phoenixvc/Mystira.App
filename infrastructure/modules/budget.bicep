@@ -10,11 +10,13 @@ param monthlyBudget int = 100
 @description('Email addresses for budget alerts')
 param alertEmailReceivers array = []
 
-@description('Tags for all resources')
-param tags object = {}
+// Note: tags parameter removed as budgets don't support tags
 
 @description('Enable budget alerts')
 param enableBudget bool = true
+
+@description('Current UTC time - used for budget start date calculation')
+param currentTime string = utcNow()
 
 @description('First threshold percentage (default 50%)')
 param firstThresholdPercent int = 50
@@ -27,7 +29,7 @@ param thirdThresholdPercent int = 100
 
 // Calculate start and end dates for budget
 // Budget runs from start of current month to 10 years from now
-var startDate = '${substring(utcNow(), 0, 7)}-01' // First day of current month
+var startDate = '${substring(currentTime, 0, 7)}-01' // First day of current month
 var endDate = '2034-12-31' // Far future date
 
 resource budget 'Microsoft.Consumption/budgets@2023-05-01' = if (enableBudget && length(alertEmailReceivers) > 0) {

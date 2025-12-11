@@ -10,9 +10,6 @@ param location string = resourceGroup().location
 @description('Application Insights resource ID')
 param appInsightsId string
 
-@description('Application Insights name')
-param appInsightsName string
-
 @description('Tags for all resources')
 param tags object = {}
 

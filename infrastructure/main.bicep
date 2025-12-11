@@ -402,9 +402,9 @@ module actionGroup 'modules/action-group.bicep' = if (enableAlerts && length(ale
 }
 
 // Metric Alerts (HTTP errors, slow response, CPU/Memory, etc.)
+// Note: Implicit dependencies through output references (actionGroup.outputs, apiAppService.outputs)
 module metricAlerts 'modules/metric-alerts.bicep' = if (enableAlerts && length(alertEmailReceivers) > 0 && !skipAppServiceCreation) {
   name: 'deploy-metric-alerts'
-  dependsOn: [actionGroup, apiAppService]
   params: {
     environment: environment
     project: project
@@ -417,9 +417,9 @@ module metricAlerts 'modules/metric-alerts.bicep' = if (enableAlerts && length(a
 }
 
 // Availability Tests (synthetic monitoring)
+// Note: Implicit dependencies through output references (actionGroup.outputs, apiAppService.outputs, etc.)
 module availabilityTests 'modules/availability-tests.bicep' = if (enableAvailabilityTests && length(alertEmailReceivers) > 0 && !skipAppServiceCreation) {
   name: 'deploy-availability-tests'
-  dependsOn: [actionGroup, apiAppService, adminApiAppService]
   params: {
     environment: environment
     project: project
@@ -436,9 +436,9 @@ module availabilityTests 'modules/availability-tests.bicep' = if (enableAvailabi
 }
 
 // Security Alerts (brute force detection, rate limit monitoring, etc.)
+// Note: Implicit dependency through actionGroup.outputs.actionGroupId reference
 module securityAlerts 'modules/security-alerts.bicep' = if (enableAlerts && length(alertEmailReceivers) > 0) {
   name: 'deploy-security-alerts'
-  dependsOn: [actionGroup]
   params: {
     environment: environment
     project: project
@@ -450,9 +450,9 @@ module securityAlerts 'modules/security-alerts.bicep' = if (enableAlerts && leng
 }
 
 // Cosmos DB Alerts (RU consumption, throttling, latency, errors)
+// Note: Implicit dependencies through output references (actionGroup.outputs, cosmosDb.outputs)
 module cosmosAlerts 'modules/cosmos-alerts.bicep' = if (enableAlerts && length(alertEmailReceivers) > 0 && !skipCosmosCreation) {
   name: 'deploy-cosmos-alerts'
-  dependsOn: [actionGroup, cosmosDb]
   params: {
     environment: environment
     project: project
@@ -470,7 +470,6 @@ module monitoringDashboard 'modules/dashboard.bicep' = if (deployDashboard) {
     dashboardName: names.dashboard
     location: location
     appInsightsId: appInsights.outputs.appInsightsId
-    appInsightsName: appInsights.outputs.appInsightsName
     tags: tags
     environment: environment
     project: project
@@ -487,7 +486,6 @@ module budgetAlerts 'modules/budget.bicep' = if (deployBudget && length(alertEma
     budgetName: names.budget
     monthlyBudget: monthlyBudget
     alertEmailReceivers: alertEmailReceivers
-    tags: tags
     enableBudget: deployBudget
   }
 }
