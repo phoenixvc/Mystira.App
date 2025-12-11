@@ -26,6 +26,11 @@ public class SecurityHeadersOptions
     public string[] AdditionalStyleSources { get; set; } = Array.Empty<string>();
 
     /// <summary>
+    /// Additional allowed font sources.
+    /// </summary>
+    public string[] AdditionalFontSources { get; set; } = Array.Empty<string>();
+
+    /// <summary>
     /// Custom frame-ancestors value. Default: 'none' (no embedding).
     /// </summary>
     public string FrameAncestors { get; set; } = "'none'";
@@ -99,11 +104,18 @@ public class SecurityHeadersMiddleware
             styleSrc += " " + string.Join(" ", _options.AdditionalStyleSources);
         }
 
+        // Fonts: start with 'self' and allow data: URIs and https; then append any explicit hosts
+        var fontSrc = "'self' data: https:";
+        if (_options.AdditionalFontSources.Length > 0)
+        {
+            fontSrc += " " + string.Join(" ", _options.AdditionalFontSources);
+        }
+
         return $"default-src 'self'; " +
                $"script-src {scriptSrc}; " +
                $"style-src {styleSrc}; " +
                $"img-src 'self' data: https:; " +
-               $"font-src 'self'; " +
+               $"font-src {fontSrc}; " +
                $"connect-src 'self' https:; " +
                $"frame-ancestors {_options.FrameAncestors}";
     }
