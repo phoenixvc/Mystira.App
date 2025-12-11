@@ -7,6 +7,7 @@ using Mystira.App.Application.Ports.Storage;
 using Mystira.App.Application.UseCases.Media;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data;
+using Mystira.App.Shared.Media;
 
 namespace Mystira.App.Admin.Api.Services;
 
@@ -29,32 +30,6 @@ public class MediaApiService : IMediaApiService
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ILogger<MediaApiService> _logger;
     private readonly IAudioTranscodingService _audioTranscodingService;
-
-    private readonly Dictionary<string, string> _mimeTypeMap = new()
-    {
-        // Audio
-        { ".mp3", "audio/mpeg" },
-        { ".wav", "audio/wav" },
-        { ".ogg", "audio/ogg" },
-        { ".aac", "audio/aac" },
-        { ".m4a", "audio/mp4" },
-        { ".waptt", "audio/ogg" },
-        
-        // Video
-        { ".mp4", "video/mp4" },
-        { ".avi", "video/x-msvideo" },
-        { ".mov", "video/quicktime" },
-        { ".wmv", "video/x-ms-wmv" },
-        { ".mkv", "video/x-matroska" },
-        
-        // Images
-        { ".jpg", "image/jpeg" },
-        { ".jpeg", "image/jpeg" },
-        { ".png", "image/png" },
-        { ".gif", "image/gif" },
-        { ".bmp", "image/bmp" },
-        { ".webp", "image/webp" }
-    };
 
     public MediaApiService(
         GetMediaUseCase getMediaUseCase,
@@ -309,37 +284,22 @@ public class MediaApiService : IMediaApiService
         return stats;
     }
 
-    private void ValidateMediaFile(IFormFile file, string mediaType)
+    private static void ValidateMediaFile(IFormFile file, string mediaType)
     {
         if (file == null || file.Length == 0)
         {
             throw new ArgumentException("File is required");
         }
 
-        var maxSizeBytes = mediaType switch
-        {
-            "audio" => 50 * 1024 * 1024, // 50MB
-            "video" => 100 * 1024 * 1024, // 100MB
-            "image" => 10 * 1024 * 1024, // 10MB
-            _ => 10 * 1024 * 1024 // Default 10MB
-        };
-
+        var maxSizeBytes = MimeTypeRegistry.GetMaxFileSizeBytes(mediaType);
         if (file.Length > maxSizeBytes)
         {
             throw new ArgumentException($"File size exceeds maximum allowed size for {mediaType} files");
         }
 
-        var extension = Path.GetExtension(file.FileName).ToLower();
-        var allowedExtensions = mediaType switch
+        if (!MimeTypeRegistry.IsValidExtension(file.FileName, mediaType))
         {
-            "audio" => new[] { ".mp3", ".wav", ".ogg", ".aac", ".m4a", ".waptt" },
-            "video" => new[] { ".mp4", ".avi", ".mov", ".wmv", ".mkv" },
-            "image" => new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" },
-            _ => new string[0]
-        };
-
-        if (!allowedExtensions.Contains(extension))
-        {
+            var extension = Path.GetExtension(file.FileName);
             throw new ArgumentException($"File extension '{extension}' is not allowed for {mediaType} files");
         }
     }
@@ -350,33 +310,10 @@ public class MediaApiService : IMediaApiService
         return nameWithoutExtension.ToLower().Replace(" ", "-").Replace("_", "-");
     }
 
-    private string DetectMediaTypeFromExtension(string fileName)
-    {
-        var extension = Path.GetExtension(fileName).ToLower();
+    private static string DetectMediaTypeFromExtension(string fileName) =>
+        MimeTypeRegistry.GetMediaType(fileName) ?? "unknown";
 
-        if (new[] { ".mp3", ".wav", ".ogg", ".aac", ".m4a", ".waptt" }.Contains(extension))
-        {
-            return "audio";
-        }
-
-        if (new[] { ".mp4", ".avi", ".mov", ".wmv", ".mkv" }.Contains(extension))
-        {
-            return "video";
-        }
-
-        if (new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" }.Contains(extension))
-        {
-            return "image";
-        }
-
-        return "unknown";
-    }
-
-    private string GetMimeType(string fileName)
-    {
-        var extension = Path.GetExtension(fileName).ToLower();
-        return _mimeTypeMap.TryGetValue(extension, out var mimeType) ? mimeType : "application/octet-stream";
-    }
+    private static string GetMimeType(string fileName) => MimeTypeRegistry.GetMimeType(fileName);
 
     private string FormatBytes(long bytes)
     {
