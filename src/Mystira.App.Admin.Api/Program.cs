@@ -298,7 +298,7 @@ builder.Services.AddCors(options =>
         }
         else
         {
-            // Fallback to default origins (development/local + production SWAs)
+            // Fallback to default origins (development/local + production SWAs + API domains for Swagger UI)
             originsToUse = new[]
             {
                 "http://localhost:7001",
@@ -310,7 +310,14 @@ builder.Services.AddCors(options =>
                 "https://mystiraapp.azurewebsites.net",
                 "https://mystira.app",
                 "https://blue-water-0eab7991e.3.azurestaticapps.net",
-                "https://brave-meadow-0ecd87c03.3.azurestaticapps.net"
+                "https://brave-meadow-0ecd87c03.3.azurestaticapps.net",
+                // Admin API domains for Swagger UI and internal calls
+                "https://adminapi.dev.mystira.app",                           // Dev Admin API
+                "https://mys-dev-mystira-adminapi-san.azurewebsites.net",     // Dev Admin API (Azure default domain)
+                "https://adminapi.staging.mystira.app",                       // Staging Admin API
+                "https://mys-staging-mystira-adminapi-san.azurewebsites.net", // Staging Admin API (Azure default domain)
+                "https://adminapi.mystira.app",                               // Production Admin API
+                "https://mys-prod-mystira-adminapi-san.azurewebsites.net"     // Production Admin API (Azure default domain)
             };
         }
 
