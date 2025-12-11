@@ -33,7 +33,7 @@ public partial class MystiraAppDbContext : DbContext
     public DbSet<EchoTypeDefinition> EchoTypeDefinitions { get; set; }
     public DbSet<FantasyThemeDefinition> FantasyThemeDefinitions { get; set; }
     public DbSet<AgeGroupDefinition> AgeGroupDefinitions { get; set; }
-    
+
     // Badge System
     public DbSet<AxisAchievement> AxisAchievements { get; set; }
     public DbSet<Badge> Badges { get; set; }
@@ -366,7 +366,7 @@ public partial class MystiraAppDbContext : DbContext
 
             if (!isInMemoryDatabase)
             {
-                // Map Id property to lowercase 'id' to match container partition key path /id
+                // Map Id property to lowercase 'id' to satisfy EF Core Cosmos requirement and standardize on /id
                 entity.Property(e => e.Id).ToJsonProperty("id");
 
                 entity.ToContainer("AgeGroupDefinitions")
@@ -809,8 +809,8 @@ public partial class MystiraAppDbContext : DbContext
 
             if (!isInMemoryDatabase)
             {
-                // Map Axis property to lowercase 'axis' for partition key (consistent with other entities)
-                entity.Property(e => e.Axis).ToJsonProperty("axis");
+                // Cosmos DB requires an 'id' JSON property. Map Axis to 'id' so the key aligns with Cosmos expectations.
+                entity.Property(e => e.Axis).ToJsonProperty("id");
 
                 entity.ToContainer("CompassTrackings")
                       .HasPartitionKey(e => e.Axis);

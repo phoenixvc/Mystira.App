@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- Suppress NU1608: Nethereum packages haven't updated constraints for .NET 9 yet, but work fine -->
     <NoWarn>$(NoWarn);NU1608</NoWarn>
+    <UserSecretsId>ee1f7a64-08f0-43a7-8f4e-aea874c81036</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
