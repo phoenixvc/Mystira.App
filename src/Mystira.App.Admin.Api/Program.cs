@@ -640,8 +640,29 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    // In production keep strict CSP
-    app.UseSecurityHeaders();
+    // In production keep strict CSP but allow specific CDNs and use nonces for inline
+    app.UseSecurityHeaders(options =>
+    {
+        options.UseStrictCsp = true; // strict base
+        options.UseNonce = true;     // allow inline only when tagged with nonce
+        options.AdditionalScriptSources = new[]
+        {
+            "https://cdn.jsdelivr.net",
+            "https://cdnjs.cloudflare.com",
+            "https://code.jquery.com"
+        };
+        options.AdditionalStyleSources = new[]
+        {
+            "https://cdn.jsdelivr.net",
+            "https://cdnjs.cloudflare.com"
+        };
+        options.AdditionalFontSources = new[]
+        {
+            "https://cdnjs.cloudflare.com",
+            "https://cdn.jsdelivr.net",
+            "https://fonts.gstatic.com"
+        };
+    });
 }
 
 // Add rate limiting
