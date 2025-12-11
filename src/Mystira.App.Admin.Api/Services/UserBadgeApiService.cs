@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Contracts.Requests.Badges;
+using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data;
 
@@ -8,16 +9,16 @@ namespace Mystira.App.Admin.Api.Services;
 public class UserBadgeApiService : IUserBadgeApiService
 {
     private readonly MystiraAppDbContext _context;
-    private readonly IBadgeConfigurationApiService _badgeConfigService;
+    private readonly IBadgeRepository _badgeRepository;
     private readonly ILogger<UserBadgeApiService> _logger;
 
     public UserBadgeApiService(
         MystiraAppDbContext context,
-        IBadgeConfigurationApiService badgeConfigService,
+        IBadgeRepository badgeRepository,
         ILogger<UserBadgeApiService> logger)
     {
         _context = context;
-        _badgeConfigService = badgeConfigService;
+        _badgeRepository = badgeRepository;
         _logger = logger;
     }
 
@@ -38,8 +39,8 @@ public class UserBadgeApiService : IUserBadgeApiService
             }
 
             // Get badge configuration
-            var badgeConfig = await _badgeConfigService.GetBadgeConfigurationAsync(request.BadgeConfigurationId);
-            if (badgeConfig == null)
+            var badge = await _badgeRepository.GetByIdAsync(request.BadgeConfigurationId);
+            if (badge == null)
             {
                 throw new ArgumentException($"Badge configuration not found: {request.BadgeConfigurationId}");
             }
@@ -57,14 +58,15 @@ public class UserBadgeApiService : IUserBadgeApiService
             {
                 UserProfileId = request.UserProfileId,
                 BadgeConfigurationId = request.BadgeConfigurationId,
-                BadgeName = badgeConfig.Name,
-                BadgeMessage = badgeConfig.Message,
-                Axis = badgeConfig.Axis,
+                BadgeId = badge.Id,
+                BadgeName = badge.Title,
+                BadgeMessage = badge.Description,
+                Axis = badge.CompassAxisId,
                 TriggerValue = request.TriggerValue,
-                Threshold = badgeConfig.Threshold,
+                Threshold = badge.RequiredScore,
                 GameSessionId = request.GameSessionId,
                 ScenarioId = request.ScenarioId,
-                ImageId = badgeConfig.ImageId,
+                ImageId = badge.ImageId,
                 EarnedAt = DateTime.UtcNow
             };
 
@@ -72,7 +74,7 @@ public class UserBadgeApiService : IUserBadgeApiService
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Awarded badge {BadgeName} to user {UserProfileId}",
-                badgeConfig.Name, request.UserProfileId);
+                badge.Title, request.UserProfileId);
 
             return newBadge;
         }

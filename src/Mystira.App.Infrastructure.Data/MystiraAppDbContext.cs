@@ -33,6 +33,11 @@ public partial class MystiraAppDbContext : DbContext
     public DbSet<EchoTypeDefinition> EchoTypeDefinitions { get; set; }
     public DbSet<FantasyThemeDefinition> FantasyThemeDefinitions { get; set; }
     public DbSet<AgeGroupDefinition> AgeGroupDefinitions { get; set; }
+    
+    // Badge System
+    public DbSet<AxisAchievement> AxisAchievements { get; set; }
+    public DbSet<Badge> Badges { get; set; }
+    public DbSet<BadgeImage> BadgeImages { get; set; }
 
     // Media Management
     public DbSet<MediaAsset> MediaAssets { get; set; }
@@ -239,6 +244,51 @@ public partial class MystiraAppDbContext : DbContext
             }
         });
 
+        // Configure AxisAchievement (new badge system)
+        modelBuilder.Entity<AxisAchievement>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            if (!isInMemoryDatabase)
+            {
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                entity.ToContainer("AxisAchievements")
+                      .HasPartitionKey(e => e.Id);
+            }
+        });
+
+        // Configure Badge (new badge system)
+        modelBuilder.Entity<Badge>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            if (!isInMemoryDatabase)
+            {
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                entity.ToContainer("Badges")
+                      .HasPartitionKey(e => e.Id);
+            }
+        });
+
+        // Configure BadgeImage (new badge system)
+        modelBuilder.Entity<BadgeImage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            if (!isInMemoryDatabase)
+            {
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                entity.ToContainer("BadgeImages")
+                      .HasPartitionKey(e => e.Id);
+            }
+        });
+
         // Configure CompassAxis
         modelBuilder.Entity<CompassAxis>(entity =>
         {
@@ -316,11 +366,8 @@ public partial class MystiraAppDbContext : DbContext
 
             if (!isInMemoryDatabase)
             {
-                // Map Id property to lowercase 'id' to match container partition key path /id
-                entity.Property(e => e.Id).ToJsonProperty("id");
-
-                // Existing Cosmos container 'AgeGroupDefinitions' uses partition key path '/id' (lowercase).
-                // Use the Id property directly as the partition key.
+                // Note: Existing Cosmos container 'AgeGroupDefinitions' uses partition key path '/Id' (uppercase).
+                // Do NOT use ToJsonProperty("id") - keep default Id property mapping to match existing container.
                 entity.ToContainer("AgeGroupDefinitions")
                       .HasPartitionKey(e => e.Id);
             }

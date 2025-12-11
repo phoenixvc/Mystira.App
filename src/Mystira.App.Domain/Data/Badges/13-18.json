@@ -1,0 +1,107 @@
+{
+  "Age_Group_Id": "13-18",
+  "Axis_Achievements": [
+    {
+      "Compass_Axis_Id": "Self-Regulation",
+      "Axes_Direction": "positive",
+      "Description": "Advanced emotional intelligence and self-mastery"
+    },
+    {
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Axes_Direction": "positive",
+      "Description": "Driving personal growth and pursuing ambitious goals"
+    }
+  ],
+  "Badges": [
+    {
+      "Tier": "bronze",
+      "Tier_Order": 1,
+      "Title": "Truth Seeker",
+      "Description": "Pursued deeper understanding and meaning",
+      "Required_Score": 15.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/teen_truth_bronze.png"
+    },
+    {
+      "Tier": "silver",
+      "Tier_Order": 1,
+      "Title": "Catalyst",
+      "Description": "Sparked positive change through initiative",
+      "Required_Score": 30.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/teen_catalyst_silver.png"
+    },
+    {
+      "Tier": "gold",
+      "Tier_Order": 1,
+      "Title": "Innovator",
+      "Description": "Created novel solutions to meaningful problems",
+      "Required_Score": 50.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/teen_innovator_gold.png"
+    },
+    {
+      "Tier": "platinum",
+      "Tier_Order": 1,
+      "Title": "Changemaker",
+      "Description": "Led transformative initiatives with vision",
+      "Required_Score": 75.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/teen_changemaker_platinum.png"
+    },
+    {
+      "Tier": "diamond",
+      "Tier_Order": 1,
+      "Title": "Luminary",
+      "Description": "Inspired others through exceptional curiosity and initiative",
+      "Required_Score": 100.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/teen_luminary_diamond.png"
+    },
+    {
+      "Tier": "bronze",
+      "Tier_Order": 1,
+      "Title": "Self-Aware",
+      "Description": "Developed strong self-understanding",
+      "Required_Score": 15.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/teen_aware_bronze.png"
+    },
+    {
+      "Tier": "silver",
+      "Tier_Order": 1,
+      "Title": "Composed",
+      "Description": "Maintained balance under pressure",
+      "Required_Score": 30.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/teen_composed_silver.png"
+    },
+    {
+      "Tier": "gold",
+      "Tier_Order": 1,
+      "Title": "Centered",
+      "Description": "Achieved strong emotional equilibrium",
+      "Required_Score": 50.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/teen_centered_gold.png"
+    },
+    {
+      "Tier": "platinum",
+      "Tier_Order": 1,
+      "Title": "Enlightened",
+      "Description": "Demonstrated profound self-regulation and wisdom",
+      "Required_Score": 75.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/teen_enlightened_platinum.png"
+    },
+    {
+      "Tier": "diamond",
+      "Tier_Order": 1,
+      "Title": "Transcendent",
+      "Description": "Achieved mastery of self-regulation and emotional intelligence",
+      "Required_Score": 100.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/teen_transcendent_diamond.png"
+    }
+  ]
+}

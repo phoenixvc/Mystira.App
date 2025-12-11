@@ -16,6 +16,11 @@ public class UserBadge
     /// The badge configuration ID
     /// </summary>
     public string BadgeConfigurationId { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// The new badge ID (references Badge entity)
+    /// </summary>
+    public string? BadgeId { get; set; }
 
     /// <summary>
     /// The name of the badge at the time it was earned

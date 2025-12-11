@@ -390,6 +390,13 @@ Wire these into CI (GitHub Actions/Azure DevOps) to block merges when quality ga
 - `src/*/Validation/ScenarioSchemaDefinitions.cs` – Schema enforcement shared across services
 - `src/Mystira.App.Infrastructure.Azure/HealthChecks` – Cosmos/Blob readiness probes used by the APIs
 
+### Badge System
+- [`docs/domain/badge-system-v2.md`](docs/domain/badge-system-v2.md) – Complete badge system v2 documentation
+- Badge configuration files: `src/Mystira.App.Domain/Data/Badges/*.json`
+- JSON schema: `src/Mystira.App.Domain/Schemas/badge-configuration.schema.json`
+
+The badge system supports age-appropriate achievements with tiered progression. Configuration files are validated against a JSON schema and automatically seeded into the database on startup.
+
 ## AI Assistant Integration
 
 This repository includes configurations to enhance AI assistant capabilities:

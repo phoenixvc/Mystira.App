@@ -380,7 +380,6 @@ builder.Services.AddScoped<IBundleService, BundleService>();
 builder.Services.AddScoped<ICharacterMapFileService, CharacterMapFileService>();
 builder.Services.AddScoped<IMediaMetadataService, Mystira.App.Admin.Api.Services.MediaMetadataService>();
 builder.Services.AddScoped<ICharacterMediaMetadataService, CharacterMediaMetadataService>();
-builder.Services.AddScoped<IBadgeConfigurationApiService, BadgeConfigurationApiService>();
 builder.Services.AddScoped<IMediaApiService, MediaApiService>();
 builder.Services.AddScoped<IAvatarApiService, AvatarApiService>();
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
@@ -398,7 +397,6 @@ builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IScenarioRepository, ScenarioRepository>();
 builder.Services.AddScoped<ICharacterMapRepository, CharacterMapRepository>();
 builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
-builder.Services.AddScoped<IBadgeConfigurationRepository, BadgeConfigurationRepository>();
 builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
 builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
 builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
@@ -467,7 +465,8 @@ builder.Services.AddScoped<IAccountApiService, AccountApiService>();
 
 // Configure Health Checks
 builder.Services.AddHealthChecks()
-    .AddCheck<BlobStorageHealthCheck>("blob_storage");
+    .AddCheck<BlobStorageHealthCheck>("blob_storage")
+    .AddCheck<CosmosDbHealthCheck>("cosmos_db", tags: new[] { "ready", "db" });
 
 // Configure CORS for frontend integration (Best Practices)
 var policyName = "MystiraAdminPolicy";
@@ -486,7 +485,7 @@ builder.Services.AddCors(options =>
         }
         else
         {
-            // Fallback to default origins (development/local + production SWAs)
+            // Fallback to default origins (development/local + production SWAs + API domains for Swagger UI)
             originsToUse = new[]
             {
                 "http://localhost:7001",
@@ -498,7 +497,14 @@ builder.Services.AddCors(options =>
                 "https://mystiraapp.azurewebsites.net",
                 "https://mystira.app",
                 "https://blue-water-0eab7991e.3.azurestaticapps.net",
-                "https://brave-meadow-0ecd87c03.3.azurestaticapps.net"
+                "https://brave-meadow-0ecd87c03.3.azurestaticapps.net",
+                // Admin API domains for Swagger UI and internal calls
+                "https://adminapi.dev.mystira.app",                           // Dev Admin API
+                "https://mys-dev-mystira-adminapi-san.azurewebsites.net",     // Dev Admin API (Azure default domain)
+                "https://adminapi.staging.mystira.app",                       // Staging Admin API
+                "https://mys-staging-mystira-adminapi-san.azurewebsites.net", // Staging Admin API (Azure default domain)
+                "https://adminapi.mystira.app",                               // Production Admin API
+                "https://mys-prod-mystira-adminapi-san.azurewebsites.net"     // Production Admin API (Azure default domain)
             };
         }
 
@@ -636,7 +642,42 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Map health check endpoints
+// /health - checks all dependencies (blob storage, database)
 app.MapHealthChecks("/health");
+
+// /health/ready - checks only critical dependencies for readiness (database)
+// Use this endpoint in deployment health checks to verify database initialization is complete
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                duration = e.Value.Duration.TotalMilliseconds
+            }),
+            totalDuration = report.TotalDuration.TotalMilliseconds
+        });
+        await context.Response.WriteAsync(result);
+    }
+});
+
+// /health/live - simple liveness check (always returns 200 if app is running)
+// This endpoint runs no health checks (Predicate = _ => false excludes all checks)
+// and always returns Healthy status if the app can respond to requests
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false // Exclude all health checks - just verify app is responsive
+});
 
 // Initialize database (optional, controlled by configuration)
 var initializeDatabaseOnStartup = builder.Configuration.GetValue<bool>("InitializeDatabaseOnStartup", defaultValue: false);

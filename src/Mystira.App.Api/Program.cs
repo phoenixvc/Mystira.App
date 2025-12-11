@@ -384,7 +384,6 @@ builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IScenarioRepository, ScenarioRepository>();
 builder.Services.AddScoped<ICharacterMapRepository, CharacterMapRepository>();
 builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
-builder.Services.AddScoped<IBadgeConfigurationRepository, BadgeConfigurationRepository>();
 builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
 builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
 builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
@@ -485,7 +484,8 @@ builder.Services.AddSingleton<IQueryCacheInvalidationService, QueryCacheInvalida
 
 // Configure Health Checks
 builder.Services.AddHealthChecks()
-    .AddCheck<BlobStorageHealthCheck>("blob_storage");
+    .AddCheck<BlobStorageHealthCheck>("blob_storage")
+    .AddCheck<CosmosDbHealthCheck>("cosmos_db", tags: new[] { "ready", "db" });
 
 // Add Discord Bot Integration (Optional - controlled by configuration)
 var discordEnabled = builder.Configuration.GetValue<bool>("Discord:Enabled", false);
@@ -522,7 +522,7 @@ builder.Services.AddCors(options =>
         }
         else
         {
-            // Fallback to default origins (development/local + production SWAs)
+            // Fallback to default origins (development/local + production SWAs + API domains for Swagger UI)
             originsToUse = new[]
             {
                 "http://localhost:7000",
@@ -531,7 +531,14 @@ builder.Services.AddCors(options =>
                 "https://blue-water-0eab7991e.3.azurestaticapps.net",    // Prod SWA
                 "https://brave-meadow-0ecd87c03.3.azurestaticapps.net",  // Dev SWA (South Africa North)
                 "https://dev-euw-swa-mystira-app.azurestaticapps.net",   // Dev SWA (West Europe - if custom domain)
-                "https://dev-san-swa-mystira-app.azurestaticapps.net"    // Dev SWA (South Africa North - if custom domain)
+                "https://dev-san-swa-mystira-app.azurestaticapps.net",   // Dev SWA (South Africa North - if custom domain)
+                // API domains for Swagger UI and internal calls
+                "https://api.dev.mystira.app",                           // Dev API
+                "https://mys-dev-mystira-api-san.azurewebsites.net",     // Dev API (Azure default domain)
+                "https://api.staging.mystira.app",                       // Staging API
+                "https://mys-staging-mystira-api-san.azurewebsites.net", // Staging API (Azure default domain)
+                "https://api.mystira.app",                               // Production API
+                "https://mys-prod-mystira-api-san.azurewebsites.net"     // Production API (Azure default domain)
             };
         }
 
@@ -673,7 +680,42 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Map health check endpoints
+// /health - checks all dependencies (blob storage, database, discord if enabled)
 app.MapHealthChecks("/health");
+
+// /health/ready - checks only critical dependencies for readiness (database)
+// Use this endpoint in deployment health checks to verify database initialization is complete
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                duration = e.Value.Duration.TotalMilliseconds
+            }),
+            totalDuration = report.TotalDuration.TotalMilliseconds
+        });
+        await context.Response.WriteAsync(result);
+    }
+});
+
+// /health/live - simple liveness check (always returns 200 if app is running)
+// This endpoint runs no health checks (Predicate = _ => false excludes all checks)
+// and always returns Healthy status if the app can respond to requests
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false // Exclude all health checks - just verify app is responsive
+});
 
 // Initialize database
 // Check if database initialization should run on startup
