@@ -1,9 +1,9 @@
 using AutoFixture.Xunit2;
-using DMfinity.Domain.Models;
+using Mystira.App.Domain.Models;
 using FluentAssertions;
 using Xunit;
 
-namespace DMfinity.Domain.Tests.Models;
+namespace Mystira.App.Application.Tests.Models;
 
 public class UserProfileTests
 {

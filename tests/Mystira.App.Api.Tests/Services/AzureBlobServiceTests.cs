@@ -1,15 +1,21 @@
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using DMfinity.Infrastructure.Azure.Services;
+using Mystira.App.Infrastructure.Azure.Services;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Azure.Core;
 using Xunit;
 
-namespace DMfinity.Infrastructure.Azure.Tests.Services;
+namespace Mystira.App.Api.Tests.Services;
 
 public class AzureBlobServiceTests
 {
