@@ -14,7 +14,7 @@
                     <div class="alert alert-info">
                         <strong>Bundle Format:</strong> Upload a ZIP file containing scenarios and media files with the expected directory structure.
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-8">
                             <div class="card">
@@ -30,17 +30,17 @@
                                                 Maximum file size: 500MB
                                             </small>
                                         </div>
-                                        
+
                                         <div class="form-group mb-3">
                                             <label for="bundleName">Bundle Name</label>
                                             <input type="text" class="form-control" id="bundleName" name="bundleName" placeholder="e.g., Fantasy Adventure Pack" required>
                                         </div>
-                                        
+
                                         <div class="form-group mb-3">
                                             <label for="version">Version</label>
                                             <input type="text" class="form-control" id="version" name="version" placeholder="e.g., 1.0.0" required>
                                         </div>
-                                        
+
                                         <div class="form-check mb-3">
                                             <input class="form-check-input" type="checkbox" value="true" id="validateContent" name="validateContent" checked>
                                             <label class="form-check-label" for="validateContent">
@@ -50,7 +50,7 @@
                                                 Checks scenarios against media references and validates structure
                                             </small>
                                         </div>
-                                        
+
                                         <div class="form-check mb-3">
                                             <input class="form-check-input" type="checkbox" value="true" id="overwriteExisting" name="overwriteExisting">
                                             <label class="form-check-label" for="overwriteExisting">
@@ -60,14 +60,14 @@
                                                 Warning: This will replace existing scenarios and media with the same IDs
                                             </small>
                                         </div>
-                                        
+
                                         <button type="submit" class="btn btn-primary">Upload and Import Bundle</button>
                                         <button type="button" class="btn btn-info" onclick="validateOnly()">Validate Only (No Import)</button>
                                     </form>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Sidebar -->
                         <div class="col-md-4">
                             <div class="card">
@@ -96,7 +96,7 @@ bundle.zip
                                     </pre>
                                 </div>
                             </div>
-                            
+
                             <div class="card mt-3">
                                 <div class="card-header">
                                     <h5>Validation Rules</h5>
@@ -114,7 +114,7 @@ bundle.zip
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Progress and Results -->
                     <div class="row mt-4">
                         <div class="col-md-12">
@@ -129,9 +129,9 @@ bundle.zip
                                         </div>
                                         <div id="progressText">Preparing import...</div>
                                     </div>
-                                    
+
                                     <div id="importResults"></div>
-                                    
+
                                     <div id="validationResults" style="display: none;">
                                         <h6>Validation Results</h6>
                                         <div id="validationDetails"></div>
@@ -146,7 +146,8 @@ bundle.zip
     </div>
 </div>
 
-<script>
+@{ var cspNonce = Context.Items["CspNonce"] as string; }
+<script nonce="@cspNonce">
 document.getElementById('bundleUploadForm').addEventListener('submit', function(e) {
     e.preventDefault();
     importBundle();
@@ -155,9 +156,9 @@ document.getElementById('bundleUploadForm').addEventListener('submit', function(
 function importBundle() {
     const form = document.getElementById('bundleUploadForm');
     const formData = new FormData(form);
-    
+
     showProgress('Uploading bundle...');
-    
+
     fetch('/admin/bundles/upload', {
         method: 'POST',
         body: formData
@@ -165,22 +166,22 @@ function importBundle() {
     .then(response => response.json())
     .then(data => {
         hideProgress();
-        
+
         if (data.success) {
             showImportResult('success', `Bundle imported successfully!`);
-            
+
             if (data.summary) {
                 showImportSummary(data.summary);
             }
-            
+
             if (data.warnings && data.warnings.length > 0) {
                 showImportResult('warning', `Warnings: ${data.warnings.join(', ')}`);
             }
-            
+
             form.reset();
         } else {
             showImportResult('error', data.message || 'Bundle import failed');
-            
+
             if (data.validationErrors) {
                 showValidationResults(data.validationErrors);
             }
@@ -196,9 +197,9 @@ function validateOnly() {
     const form = document.getElementById('bundleUploadForm');
     const formData = new FormData(form);
     formData.append('validateOnly', 'true');
-    
+
     showProgress('Validating bundle...');
-    
+
     fetch('/admin/bundles/validate', {
         method: 'POST',
         body: formData
@@ -206,7 +207,7 @@ function validateOnly() {
     .then(response => response.json())
     .then(data => {
         hideProgress();
-        
+
         if (data.valid) {
             showImportResult('success', 'Bundle structure is valid!');
             showValidationResults(data.details);
@@ -232,10 +233,10 @@ function hideProgress() {
 }
 
 function showImportResult(type, message) {
-    const alertClass = type === 'success' ? 'alert-success' : 
+    const alertClass = type === 'success' ? 'alert-success' :
                      type === 'warning' ? 'alert-warning' : 'alert-danger';
-    
-    document.getElementById('importResults').innerHTML += 
+
+    document.getElementById('importResults').innerHTML +=
         `<div class="alert ${alertClass} alert-dismissible fade show" role="alert">
             ${message}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -268,20 +269,20 @@ function showImportSummary(summary) {
             </div>
         </div>
     `;
-    
+
     document.getElementById('importResults').innerHTML += summaryHtml;
 }
 
 function showValidationResults(results) {
     document.getElementById('validationResults').style.display = 'block';
-    
+
     let resultHtml = '<div class="list-group list-group-flush">';
-    
+
     if (Array.isArray(results)) {
         results.forEach(result => {
-            const badgeClass = result.type === 'error' ? 'bg-danger' : 
+            const badgeClass = result.type === 'error' ? 'bg-danger' :
                               result.type === 'warning' ? 'bg-warning' : 'bg-success';
-            
+
             resultHtml += `
                 <div class="list-group-item">
                     <div class="d-flex w-100 justify-content-between">
@@ -293,7 +294,7 @@ function showValidationResults(results) {
             `;
         });
     }
-    
+
     resultHtml += '</div>';
     document.getElementById('validationDetails').innerHTML = resultHtml;
 }
