@@ -186,7 +186,7 @@ if (useCosmosDb)
                 httpClient.Timeout = TimeSpan.FromSeconds(30);
                 return httpClient;
             });
-            
+
             // Set request timeout for Cosmos operations
             cosmosOptions.RequestTimeout(TimeSpan.FromSeconds(30));
         })
@@ -385,6 +385,8 @@ builder.Services.AddScoped<IScenarioRepository, ScenarioRepository>();
 builder.Services.AddScoped<ICharacterMapRepository, CharacterMapRepository>();
 builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
 builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
+builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
+builder.Services.AddScoped<IBadgeImageRepository, BadgeImageRepository>();
 builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
 builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
 builder.Services.AddScoped<IMediaMetadataFileRepository, MediaMetadataFileRepository>();
