@@ -360,22 +360,14 @@ public partial class MystiraAppDbContext : DbContext
         });
 
         // Configure AgeGroupDefinition
-        // ⚠️ KNOWN INCONSISTENCY: This entity uses '/Id' (uppercase) partition key path instead of '/id' (lowercase).
-        // This is because the existing production container was created with the default uppercase path before
-        // the lowercase convention was established. To migrate:
-        // 1. Export all documents from the container
-        // 2. Delete the container
-        // 3. Uncomment the ToJsonProperty("id") line below
-        // 4. Re-import documents (the 'id' field will be created automatically by Cosmos DB)
-        // TODO: Consider migrating to '/id' for consistency in a future maintenance window.
         modelBuilder.Entity<AgeGroupDefinition>(entity =>
         {
             entity.HasKey(e => e.Id);
 
             if (!isInMemoryDatabase)
             {
-                // MIGRATION: Uncomment this line after recreating container with /id partition key:
-                // entity.Property(e => e.Id).ToJsonProperty("id");
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
 
                 entity.ToContainer("AgeGroupDefinitions")
                       .HasPartitionKey(e => e.Id);
@@ -811,13 +803,10 @@ public partial class MystiraAppDbContext : DbContext
         });
 
         // Configure CompassTracking as a separate container for analytics
-        // NOTE: If this container already exists with /Axis (uppercase), you may need to use
-        // a migration approach similar to AgeGroupDefinition above.
         modelBuilder.Entity<CompassTracking>(entity =>
         {
             entity.HasKey(e => e.Axis);
 
-            // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
                 // Map Axis property to lowercase 'axis' for partition key (consistent with other entities)
