@@ -27,14 +27,15 @@
 </div>
 
 @section Scripts {
-    <script>
+    @{ var cspNonce = Context.Items["CspNonce"] as string; }
+    <script nonce="@cspNonce">
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const errorElement = document.getElementById('loginError');
-            
+
             try {
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
@@ -44,7 +45,7 @@
                     body: JSON.stringify({ username, password }),
                     credentials: 'include' // Important for cookies
                 });
-                
+
                 if (response.ok) {
                     // Login successful, redirect to dashboard
                     window.location.href = '/admin';
