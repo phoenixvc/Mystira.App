@@ -278,7 +278,8 @@ builder.Services.AddScoped<IAccountApiService, AccountApiService>();
 
 // Configure Health Checks
 builder.Services.AddHealthChecks()
-    .AddCheck<BlobStorageHealthCheck>("blob_storage");
+    .AddCheck<BlobStorageHealthCheck>("blob_storage")
+    .AddCheck<CosmosDbHealthCheck>("cosmos_db", tags: new[] { "ready", "db" });
 
 // Configure CORS for frontend integration (Best Practices)
 var policyName = "MystiraAdminPolicy";
@@ -375,7 +376,40 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Map health check endpoints
+// /health - checks all dependencies (blob storage, database)
 app.MapHealthChecks("/health");
+
+// /health/ready - checks only critical dependencies for readiness (database)
+// Use this endpoint in deployment health checks to verify database initialization is complete
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                duration = e.Value.Duration.TotalMilliseconds
+            }),
+            totalDuration = report.TotalDuration.TotalMilliseconds
+        });
+        await context.Response.WriteAsync(result);
+    }
+});
+
+// /health/live - simple liveness check (always returns 200 if app is running)
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false // No checks, just return healthy if app is running
+});
 
 // Initialize database (optional, controlled by configuration)
 var initializeDatabaseOnStartup = builder.Configuration.GetValue<bool>("InitializeDatabaseOnStartup", defaultValue: false);
