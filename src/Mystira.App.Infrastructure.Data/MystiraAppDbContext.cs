@@ -360,14 +360,23 @@ public partial class MystiraAppDbContext : DbContext
         });
 
         // Configure AgeGroupDefinition
+        // ⚠️ KNOWN INCONSISTENCY: This entity uses '/Id' (uppercase) partition key path instead of '/id' (lowercase).
+        // This is because the existing production container was created with the default uppercase path before
+        // the lowercase convention was established. To migrate:
+        // 1. Export all documents from the container
+        // 2. Delete the container
+        // 3. Uncomment the ToJsonProperty("id") line below
+        // 4. Re-import documents (the 'id' field will be created automatically by Cosmos DB)
+        // TODO: Consider migrating to '/id' for consistency in a future maintenance window.
         modelBuilder.Entity<AgeGroupDefinition>(entity =>
         {
             entity.HasKey(e => e.Id);
 
             if (!isInMemoryDatabase)
             {
-                // Note: Existing Cosmos container 'AgeGroupDefinitions' uses partition key path '/Id' (uppercase).
-                // Do NOT use ToJsonProperty("id") - keep default Id property mapping to match existing container.
+                // MIGRATION: Uncomment this line after recreating container with /id partition key:
+                // entity.Property(e => e.Id).ToJsonProperty("id");
+
                 entity.ToContainer("AgeGroupDefinitions")
                       .HasPartitionKey(e => e.Id);
             }
@@ -802,20 +811,20 @@ public partial class MystiraAppDbContext : DbContext
         });
 
         // Configure CompassTracking as a separate container for analytics
+        // NOTE: If this container already exists with /Axis (uppercase), you may need to use
+        // a migration approach similar to AgeGroupDefinition above.
         modelBuilder.Entity<CompassTracking>(entity =>
         {
             entity.HasKey(e => e.Axis);
-            // Axis as key automatically maps to 'id' (lowercase) for document ID
 
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
-                // Add shadow property that maps to 'Axis' (uppercase) in JSON for partition key
-                entity.Property<string>("PartitionKeyAxis")
-                      .ToJsonProperty("Axis");
+                // Map Axis property to lowercase 'axis' for partition key (consistent with other entities)
+                entity.Property(e => e.Axis).ToJsonProperty("axis");
 
                 entity.ToContainer("CompassTrackings")
-                      .HasPartitionKey("PartitionKeyAxis");
+                      .HasPartitionKey(e => e.Axis);
             }
 
             entity.OwnsMany(e => e.History);
