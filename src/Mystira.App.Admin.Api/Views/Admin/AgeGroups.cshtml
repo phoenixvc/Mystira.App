@@ -69,13 +69,14 @@
                             </form>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
+</div>
+</div>
+</div>
+</div>
 </div>
 
-<script>
+@{ var cspNonce = Context.Items["CspNonce"] as string; }
+<script nonce="@cspNonce">
     const apiBase = '/api/admin/agegroups';
 
     async function loadAgeGroups() {
@@ -87,8 +88,8 @@
             tbody.innerHTML = '';
             data.forEach(ageGroup => {
                 const tr = document.createElement('tr');
-                const ageRange = ageGroup.minimumAge !== undefined && ageGroup.maximumAge !== undefined 
-                    ? `${ageGroup.minimumAge} - ${ageGroup.maximumAge}` 
+                const ageRange = ageGroup.minimumAge !== undefined && ageGroup.maximumAge !== undefined
+                    ? `${ageGroup.minimumAge} - ${ageGroup.maximumAge}`
                     : 'N/A';
                 tr.innerHTML = `
                     <td>${ageGroup.name}</td>
@@ -134,12 +135,12 @@
             return;
         }
 
-        const payload = { 
-            name, 
-            value, 
+        const payload = {
+            name,
+            value,
             minimumAge: minimumAge ? parseInt(minimumAge) : null,
             maximumAge: maximumAge ? parseInt(maximumAge) : null,
-            description 
+            description
         };
 
         try {

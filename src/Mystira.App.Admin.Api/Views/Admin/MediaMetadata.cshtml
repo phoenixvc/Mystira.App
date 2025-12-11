@@ -321,9 +321,10 @@
             </div>
         </div>
     </div>
-</div>
+ </div>
 
-<script>
+@{ var cspNonce = Context.Items["CspNonce"] as string; }
+<script nonce="@cspNonce">
 let currentMetadata = null;
 let allMediaAssets = [];
 let missingMetadataAssets = [];
@@ -347,13 +348,13 @@ async function loadMetadata() {
         const response = await fetch('/api/admin/mediametadataadmin');
         const data = await response.json();
         currentMetadata = data;
-        
-        document.getElementById('metadata-status').innerHTML = 
+
+        document.getElementById('metadata-status').innerHTML =
             `<strong>Metadata Entries:</strong> ${data.entries.length} | <strong>Version:</strong> ${data.version} | <strong>Updated:</strong> ${new Date(data.updatedAt).toLocaleString()}`;
-        
+
     } catch (error) {
         console.error('Error loading metadata:', error);
-        document.getElementById('metadata-status').innerHTML = 
+        document.getElementById('metadata-status').innerHTML =
             '<span class="text-danger">Error loading metadata</span>';
     }
 }
@@ -363,11 +364,11 @@ async function loadMediaAssets() {
         const response = await fetch('/api/admin/mediaadmin?page=1&pageSize=1000'); // Load all media
         const data = await response.json();
         allMediaAssets = data.media || [];
-        
+
         // Find missing metadata
         const metadataIds = new Set(currentMetadata?.entries?.map(e => e.id) || []);
         missingMetadataAssets = allMediaAssets.filter(asset => !metadataIds.has(asset.mediaId));
-        
+
     } catch (error) {
         console.error('Error loading media assets:', error);
         allMediaAssets = [];
@@ -380,7 +381,7 @@ function updateOverviewStatus() {
     const totalMetadata = currentMetadata?.entries?.length || 0;
     const missing = missingMetadataAssets.length;
     const withMetadata = totalMedia - missing;
-    
+
     document.getElementById('overview-status').innerHTML = `
         <strong>Total Media:</strong> ${totalMedia}<br>
         <strong>With Metadata:</strong> ${withMetadata}<br>
@@ -400,9 +401,9 @@ function renderAllMediaTable() {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center">No media assets found</td></tr>';
         return;
     }
-    
+
     const metadataIds = new Set(currentMetadata?.entries?.map(e => e.id) || []);
-    
+
     tbody.innerHTML = allMediaAssets.map(asset => `
         <tr>
             <td>${asset.mediaId}</td>
@@ -410,8 +411,8 @@ function renderAllMediaTable() {
             <td>${formatFileSize(asset.fileSizeBytes)}</td>
             <td>${asset.description || '-'}</td>
             <td>
-                ${metadataIds.has(asset.mediaId) 
-                    ? '<span class="badge bg-success">Yes</span>' 
+                ${metadataIds.has(asset.mediaId)
+                    ? '<span class="badge bg-success">Yes</span>'
                     : '<span class="badge bg-warning">No</span>'}
             </td>
             <td>
@@ -431,12 +432,12 @@ function renderAllMediaTable() {
 function renderWithMetadataTable() {
     const tbody = document.getElementById('with-metadata-tbody');
     const entries = currentMetadata?.entries || [];
-    
+
     if (entries.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center">No metadata entries found</td></tr>';
         return;
     }
-    
+
     tbody.innerHTML = entries.map(entry => `
         <tr>
             <td>${entry.id}</td>
@@ -458,12 +459,12 @@ function renderWithMetadataTable() {
 
 function renderMissingMetadataTable() {
     const tbody = document.getElementById('missing-metadata-tbody');
-    
+
     if (missingMetadataAssets.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="text-center">All media has metadata!</td></tr>';
         return;
     }
-    
+
     tbody.innerHTML = missingMetadataAssets.map(asset => `
         <tr>
             <td>
@@ -493,7 +494,7 @@ function formatFileSize(bytes) {
 function createEntry(mediaId) {
     const asset = allMediaAssets.find(a => a.mediaId === mediaId);
     if (!asset) return;
-    
+
     document.getElementById('createMediaId').value = mediaId;
     document.getElementById('createTitle').value = asset.description || mediaId;
     document.getElementById('createFileName').value = mediaId;
@@ -502,7 +503,7 @@ function createEntry(mediaId) {
     document.getElementById('createAgeRating').value = 'E';
     document.getElementById('createTags').value = asset.tags?.join(', ') || '';
     document.getElementById('createLoopable').checked = false;
-    
+
     new bootstrap.Modal(document.getElementById('createMetadataModal')).show();
 }
 
@@ -517,7 +518,7 @@ async function saveNewEntry() {
         tags: document.getElementById('createTags').value.split(',').map(t => t.trim()).filter(t => t),
         loopable: document.getElementById('createLoopable').checked
     };
-    
+
     try {
         const response = await fetch(`/api/admin/mediametadata/entries`, {
             method: 'POST',
@@ -526,7 +527,7 @@ async function saveNewEntry() {
             },
             body: JSON.stringify(entry)
         });
-        
+
         if (response.ok) {
             bootstrap.Modal.getInstance(document.getElementById('createMetadataModal')).hide();
             await loadAllData();
@@ -543,7 +544,7 @@ async function saveNewEntry() {
 function editEntry(entryId) {
     const entry = currentMetadata.entries.find(e => e.id === entryId);
     if (!entry) return;
-    
+
     document.getElementById('editEntryId').value = entry.id;
     document.getElementById('editTitle').value = entry.title;
     document.getElementById('editFileName').value = entry.fileName;
@@ -552,7 +553,7 @@ function editEntry(entryId) {
     document.getElementById('editAgeRating').value = entry.ageRating;
     document.getElementById('editTags').value = entry.tags.join(', ');
     document.getElementById('editLoopable').checked = entry.loopable;
-    
+
     new bootstrap.Modal(document.getElementById('editModal')).show();
 }
 
@@ -568,7 +569,7 @@ async function saveEntry() {
         tags: document.getElementById('editTags').value.split(',').map(t => t.trim()).filter(t => t),
         loopable: document.getElementById('editLoopable').checked
     };
-    
+
     try {
         const response = await fetch(`/api/admin/mediametadata/entries/${entryId}`, {
             method: 'PUT',
@@ -577,7 +578,7 @@ async function saveEntry() {
             },
             body: JSON.stringify(entry)
         });
-        
+
         if (response.ok) {
             bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
             await loadAllData();
@@ -593,12 +594,12 @@ async function saveEntry() {
 
 async function deleteEntry(entryId) {
     if (!confirm('Are you sure you want to delete this entry?')) return;
-    
+
     try {
         const response = await fetch(`/api/admin/mediametadata/entries/${entryId}`, {
             method: 'DELETE'
         });
-        
+
         if (response.ok) {
             await loadAllData();
             showAlert('Entry deleted successfully', 'success');
@@ -616,9 +617,9 @@ async function createMissingMetadata() {
         showAlert('No missing metadata found', 'info');
         return;
     }
-    
+
     if (!confirm(`Create metadata entries for ${missingMetadataAssets.length} missing media assets?`)) return;
-    
+
     const entries = missingMetadataAssets.map(asset => ({
         id: asset.mediaId,
         title: asset.description || asset.mediaId,
@@ -629,7 +630,7 @@ async function createMissingMetadata() {
         tags: asset.tags || [],
         loopable: false
     }));
-    
+
     try {
         for (const entry of entries) {
             const response = await fetch(`/api/admin/mediametadata/entries`, {
@@ -639,12 +640,12 @@ async function createMissingMetadata() {
                 },
                 body: JSON.stringify(entry)
             });
-            
+
             if (!response.ok) {
                 console.error(`Failed to create metadata for ${entry.id}`);
             }
         }
-        
+
         await loadAllData();
         showAlert(`Created metadata for ${entries.length} media assets`, 'success');
     } catch (error) {
@@ -655,14 +656,14 @@ async function createMissingMetadata() {
 async function bulkCreateMissingMetadata() {
     const selected = Array.from(document.querySelectorAll('.missing-metadata-checkbox:checked'))
         .map(cb => cb.value);
-    
+
     if (selected.length === 0) {
         showAlert('Please select media assets to create metadata for', 'warning');
         return;
     }
-    
+
     if (!confirm(`Create metadata entries for ${selected.length} selected media assets?`)) return;
-    
+
     const entries = selected.map(mediaId => {
         const asset = allMediaAssets.find(a => a.mediaId === mediaId);
         return {
@@ -676,7 +677,7 @@ async function bulkCreateMissingMetadata() {
             loopable: false
         };
     });
-    
+
     try {
         for (const entry of entries) {
             const response = await fetch(`/api/admin/mediametadata/entries`, {
@@ -686,12 +687,12 @@ async function bulkCreateMissingMetadata() {
                 },
                 body: JSON.stringify(entry)
             });
-            
+
             if (!response.ok) {
                 console.error(`Failed to create metadata for ${entry.id}`);
             }
         }
-        
+
         await loadAllData();
         showAlert(`Created metadata for ${entries.length} selected media assets`, 'success');
     } catch (error) {
@@ -702,7 +703,7 @@ async function bulkCreateMissingMetadata() {
 function toggleSelectAllMissing() {
     const selectAll = document.getElementById('selectAllMissing');
     const checkboxes = document.querySelectorAll('.missing-metadata-checkbox');
-    
+
     checkboxes.forEach(cb => {
         cb.checked = selectAll.checked;
     });
@@ -712,14 +713,14 @@ function updateImportFormat() {
     const format = document.getElementById('importFormat').value;
     const textSection = document.getElementById('textImportSection');
     const fileSection = document.getElementById('fileImportSection');
-    
+
     if (format === 'file') {
         textSection.classList.add('d-none');
         fileSection.classList.remove('d-none');
     } else {
         textSection.classList.remove('d-none');
         fileSection.classList.add('d-none');
-        
+
         const label = document.querySelector('label[for="metadataText"]');
         if (format === 'yaml') {
             label.textContent = 'Media Metadata YAML';
@@ -735,14 +736,14 @@ async function importMetadata() {
     const format = document.getElementById('importFormat').value;
     const overwriteExisting = document.getElementById('overwriteExisting').checked;
     let data = '';
-    
+
     if (format === 'file') {
         const fileInput = document.getElementById('metadataFile');
         if (!fileInput.files.length) {
             showAlert('Please select a file to import', 'warning');
             return;
         }
-        
+
         const file = fileInput.files[0];
         data = await file.text();
     } else {
@@ -752,10 +753,10 @@ async function importMetadata() {
             return;
         }
     }
-    
+
     try {
         let parsedData;
-        
+
         if (format === 'yaml' || (format === 'file' && data.includes(':'))) {
             // Parse YAML using a simple YAML parser
             parsedData = parseYAML(data);
@@ -763,7 +764,7 @@ async function importMetadata() {
             // Parse JSON
             parsedData = JSON.parse(data);
         }
-        
+
         const response = await fetch(`/api/admin/mediametadata/import?overwriteExisting=${overwriteExisting}`, {
             method: 'POST',
             headers: {
@@ -771,7 +772,7 @@ async function importMetadata() {
             },
             body: data
         });
-        
+
         if (response.ok) {
             bootstrap.Modal.getInstance(document.getElementById('importModal')).hide();
             await loadAllData();
@@ -792,7 +793,7 @@ function parseYAML(yamlText) {
     const lines = yamlText.split('\n').filter(line => line.trim());
     const result = [];
     let currentEntry = null;
-    
+
     for (const line of lines) {
         const trimmed = line.trim();
         if (trimmed.startsWith('- ')) {
@@ -809,7 +810,7 @@ function parseYAML(yamlText) {
             currentEntry[key] = parseValue(value);
         }
     }
-    
+
     if (currentEntry) result.push(currentEntry);
     return result;
 }
@@ -826,9 +827,9 @@ function parseValue(value) {
 
 function exportMetadata(format = 'json') {
     if (!currentMetadata) return;
-    
+
     let content, mimeType, filename;
-    
+
     if (format === 'yaml') {
         content = convertToYAML(currentMetadata.entries);
         mimeType = 'text/yaml';
@@ -838,7 +839,7 @@ function exportMetadata(format = 'json') {
         mimeType = 'application/json';
         filename = 'media-metadata.json';
     }
-    
+
     const dataStr = `data:${mimeType};charset=utf-8,` + encodeURIComponent(content);
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
@@ -850,7 +851,7 @@ function exportMetadata(format = 'json') {
 
 function convertToYAML(entries) {
     let yaml = '';
-    
+
     for (const entry of entries) {
         yaml += `- id: ${entry.id}\n`;
         yaml += `  title: ${entry.title}\n`;
@@ -861,7 +862,7 @@ function convertToYAML(entries) {
         yaml += `  tags: [${entry.tags.join(', ')}]\n`;
         yaml += `  loopable: ${entry.loopable}\n\n`;
     }
-    
+
     return yaml;
 }
 
@@ -873,7 +874,7 @@ function showAlert(message, type) {
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     document.body.appendChild(alert);
-    
+
     setTimeout(() => {
         alert.remove();
     }, 5000);

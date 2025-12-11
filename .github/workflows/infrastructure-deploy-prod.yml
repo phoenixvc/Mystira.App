@@ -233,8 +233,81 @@ jobs:
           --query "properties.outputs.appServiceUrl.value" -o tsv)
         echo "appServiceUrl=$APP_SERVICE_URL" >> $GITHUB_OUTPUT
 
+    - name: Verify and Fix SSL Certificates
+      run: |
+        echo "Verifying SSL certificate bindings..."
+
+        # Define the apps and their custom domains
+        declare -A APPS=(
+          ["mys-prod-mystira-api-san"]="api.mystira.app"
+          ["mys-prod-mystira-adminapi-san"]="admin.mystira.app"
+        )
+
+        for APP_NAME in "${!APPS[@]}"; do
+          CUSTOM_DOMAIN="${APPS[$APP_NAME]}"
+          echo "Checking $APP_NAME for domain $CUSTOM_DOMAIN..."
+
+          # Check if hostname binding exists with SSL
+          SSL_STATE=$(az webapp config hostname list \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --webapp-name "$APP_NAME" \
+            --query "[?name=='$CUSTOM_DOMAIN'].sslState" -o tsv 2>/dev/null || echo "")
+
+          if [ "$SSL_STATE" != "SniEnabled" ]; then
+            echo "SSL not enabled for $CUSTOM_DOMAIN on $APP_NAME. Fixing..."
+
+            # Get the App Service Plan ID
+            ASP_ID=$(az webapp show \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --name "$APP_NAME" \
+              --query "appServicePlanId" -o tsv)
+
+            # Check if managed certificate exists
+            CERT_THUMBPRINT=$(az webapp config ssl list \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --query "[?subjectName=='$CUSTOM_DOMAIN'].thumbprint" -o tsv 2>/dev/null || echo "")
+
+            if [ -z "$CERT_THUMBPRINT" ]; then
+              echo "Creating managed certificate for $CUSTOM_DOMAIN..."
+
+              # Create managed certificate (this waits for provisioning)
+              az webapp config ssl create \
+                --resource-group "${{ env.RESOURCE_GROUP }}" \
+                --name "$APP_NAME" \
+                --hostname "$CUSTOM_DOMAIN" \
+                --output none
+
+              # Get the new certificate thumbprint
+              CERT_THUMBPRINT=$(az webapp config ssl list \
+                --resource-group "${{ env.RESOURCE_GROUP }}" \
+                --query "[?subjectName=='$CUSTOM_DOMAIN'].thumbprint" -o tsv)
+            fi
+
+            if [ -n "$CERT_THUMBPRINT" ]; then
+              echo "Binding certificate to $CUSTOM_DOMAIN..."
+              az webapp config ssl bind \
+                --resource-group "${{ env.RESOURCE_GROUP }}" \
+                --name "$APP_NAME" \
+                --certificate-thumbprint "$CERT_THUMBPRINT" \
+                --ssl-type SNI \
+                --output none
+              echo "SSL binding complete for $CUSTOM_DOMAIN"
+            else
+              echo "::warning::Failed to provision certificate for $CUSTOM_DOMAIN"
+            fi
+          else
+            echo "SSL already enabled for $CUSTOM_DOMAIN"
+          fi
+        done
+
+        echo "Certificate verification complete!"
+
     - name: Deployment Summary
       run: |
         echo "Infrastructure deployed successfully!"
         echo "Resource Group: ${{ env.RESOURCE_GROUP }}"
         echo "App Service URL: ${{ steps.outputs.outputs.appServiceUrl }}"
+        echo ""
+        echo "Custom Domains:"
+        echo "  - https://api.mystira.app"
+        echo "  - https://admin.mystira.app"
