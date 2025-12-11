@@ -683,17 +683,30 @@ if (initializeDatabaseOnStartup || isInMemory)
     try
     {
         startupLogger.LogInformation("Starting database initialization (InitializeDatabaseOnStartup={Init}, InMemory={InMemory})...", initializeDatabaseOnStartup, isInMemory);
-        
+
         // Use Task.WhenAny with timeout for more reliable timeout handling
         // CancellationToken doesn't always work well with Cosmos DB SDK
         var initTask = context.Database.EnsureCreatedAsync();
         var timeoutTask = Task.Delay(TimeSpan.FromSeconds(30));
         var completedTask = await Task.WhenAny(initTask, timeoutTask);
-        
+
         if (completedTask == timeoutTask)
         {
-            // Timeout occurred
+            // Timeout occurred - initTask may still be running
             startupLogger.LogWarning("Database initialization timed out after 30 seconds. The application will start without database initialization. Ensure Azure Cosmos DB is accessible and configured correctly. Set 'InitializeDatabaseOnStartup'=false to skip this check.");
+
+            // Handle the background task to prevent unobserved exceptions and track completion
+            _ = initTask.ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    startupLogger.LogError(t.Exception, "Background database initialization failed after timeout");
+                }
+                else if (t.IsCompletedSuccessfully)
+                {
+                    startupLogger.LogInformation("Background database initialization completed successfully after initial timeout");
+                }
+            }, TaskScheduler.Default);
         }
         else
         {
