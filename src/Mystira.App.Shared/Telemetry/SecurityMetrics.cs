@@ -131,17 +131,19 @@ public class SecurityMetrics : ISecurityMetrics
     private void CleanupDictionary(ConcurrentDictionary<string, List<DateTime>> dictionary, DateTime cutoff, string context)
     {
         // First pass: Remove old timestamps and empty entries
-        foreach (var ip in dictionary.Keys.ToList())
+        // Using LINQ to filter keys that exist in the dictionary
+        var keysWithTimestamps = dictionary.Keys.ToList()
+            .Select(ip => new { Ip = ip, Timestamps = dictionary.TryGetValue(ip, out var ts) ? ts : null })
+            .Where(x => x.Timestamps != null);
+
+        foreach (var item in keysWithTimestamps)
         {
-            if (dictionary.TryGetValue(ip, out var timestamps))
+            lock (item.Timestamps!)
             {
-                lock (timestamps)
+                item.Timestamps.RemoveAll(t => t < cutoff);
+                if (item.Timestamps.Count == 0)
                 {
-                    timestamps.RemoveAll(t => t < cutoff);
-                    if (timestamps.Count == 0)
-                    {
-                        dictionary.TryRemove(ip, out _);
-                    }
+                    dictionary.TryRemove(item.Ip, out _);
                 }
             }
         }

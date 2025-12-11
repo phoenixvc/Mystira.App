@@ -282,13 +282,26 @@ builder.Services.AddAuthentication(options =>
         if (!string.IsNullOrWhiteSpace(jwtRsaPublicKey))
         {
             // Use RSA public key for asymmetric verification (recommended)
+            // Note: The RSA instance is intentionally not disposed here because RsaSecurityKey holds
+            // a reference to it for the lifetime of the application. Disposing it would break JWT validation.
+            // The RSA instance will be cleaned up when the application terminates.
             try
             {
                 var rsa = System.Security.Cryptography.RSA.Create();
                 rsa.ImportFromPem(jwtRsaPublicKey);
                 validationParameters.IssuerSigningKey = new RsaSecurityKey(rsa);
             }
-            catch (Exception ex)
+            catch (System.Security.Cryptography.CryptographicException ex)
+            {
+                throw new InvalidOperationException(
+                    "Failed to load RSA public key. Ensure JwtSettings:RsaPublicKey contains a valid PEM-encoded RSA public key.", ex);
+            }
+            catch (FormatException ex)
+            {
+                throw new InvalidOperationException(
+                    "Failed to load RSA public key. Ensure JwtSettings:RsaPublicKey contains a valid PEM-encoded RSA public key.", ex);
+            }
+            catch (ArgumentException ex)
             {
                 throw new InvalidOperationException(
                     "Failed to load RSA public key. Ensure JwtSettings:RsaPublicKey contains a valid PEM-encoded RSA public key.", ex);
@@ -724,8 +737,9 @@ else
 
     app.Run();
 }
-catch (Exception ex)
+catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
 {
+    // Don't catch critical exceptions (OutOfMemoryException, StackOverflowException) - let them crash the process
     Log.Fatal(ex, "Application terminated unexpectedly");
 }
 finally

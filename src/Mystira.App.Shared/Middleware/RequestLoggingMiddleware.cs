@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -153,9 +154,19 @@ public class RequestLoggingMiddleware
             // Redact sensitive fields (basic implementation)
             return RedactSensitiveData(body);
         }
-        catch (Exception ex)
+        catch (IOException ex)
         {
-            _logger.LogDebug(ex, "Failed to read request body for logging");
+            _logger.LogDebug(ex, "Failed to read request body for logging (I/O error)");
+            return null;
+        }
+        catch (ObjectDisposedException ex)
+        {
+            _logger.LogDebug(ex, "Failed to read request body for logging (stream disposed)");
+            return null;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogDebug(ex, "Failed to read request body for logging (invalid operation)");
             return null;
         }
     }

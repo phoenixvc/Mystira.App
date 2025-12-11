@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Serilog.Context;
+using System.Linq;
 
 namespace Mystira.App.Shared.Middleware;
 
@@ -78,27 +79,30 @@ public class CorrelationIdMiddleware
             return correlationId.ToString();
         }
 
-        // Check alternative headers
-        foreach (var header in AlternativeHeaders)
-        {
-            if (request.Headers.TryGetValue(header, out var altCorrelationId) &&
-                !string.IsNullOrWhiteSpace(altCorrelationId))
+        // Check alternative headers using LINQ for cleaner filtering
+        var foundCorrelationId = AlternativeHeaders
+            .Select(header =>
             {
-                // For traceparent, extract the trace-id portion (second segment)
-                var value = altCorrelationId.ToString();
-                if (header == "traceparent" && value.Contains('-'))
+                if (request.Headers.TryGetValue(header, out var altCorrelationId) &&
+                    !string.IsNullOrWhiteSpace(altCorrelationId))
                 {
-                    var parts = value.Split('-');
-                    if (parts.Length >= 2)
+                    // For traceparent, extract the trace-id portion (second segment)
+                    var value = altCorrelationId.ToString();
+                    if (header == "traceparent" && value.Contains('-'))
                     {
-                        return parts[1]; // Return the trace-id portion
+                        var parts = value.Split('-');
+                        if (parts.Length >= 2)
+                        {
+                            return parts[1]; // Return the trace-id portion
+                        }
                     }
+                    return value;
                 }
-                return value;
-            }
-        }
+                return null;
+            })
+            .FirstOrDefault(val => !string.IsNullOrWhiteSpace(val));
 
-        return null;
+        return foundCorrelationId;
     }
 
     private static string GenerateCorrelationId()
