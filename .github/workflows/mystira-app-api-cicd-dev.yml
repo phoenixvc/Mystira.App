@@ -190,43 +190,85 @@ jobs:
 
       - name: Smoke test - Health check
         id: smoke-test
+        env:
+          # Configurable startup wait time (default 30s for dev)
+          POST_DEPLOY_WAIT_SECONDS: ${{ vars.POST_DEPLOY_WAIT_SECONDS || '30' }}
         run: |
           APP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
           echo "🔍 Running post-deployment smoke tests for ${APP_URL}"
 
-          # Wait for deployment to stabilize
-          sleep 30
+          # Wait for deployment to stabilize (configurable via repository variable)
+          echo "⏳ Waiting ${POST_DEPLOY_WAIT_SECONDS}s for App Service startup..."
+          sleep ${POST_DEPLOY_WAIT_SECONDS}
 
-          # Retry logic for health check
-          MAX_RETRIES=5
-          RETRY_DELAY=10
+          # Retry logic with exponential backoff
+          MAX_RETRIES=6
+          INITIAL_DELAY=5
+          MAX_DELAY=30
 
+          # Test 1: Basic health check (liveness)
+          echo ""
+          echo "📋 Test 1: Liveness check (/health)"
           for i in $(seq 1 $MAX_RETRIES); do
-            echo "Attempt $i of $MAX_RETRIES..."
+            DELAY=$((INITIAL_DELAY * (2 ** (i-1))))
+            [ $DELAY -gt $MAX_DELAY ] && DELAY=$MAX_DELAY
+
+            echo "  Attempt $i of $MAX_RETRIES..."
 
             HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-              --connect-timeout 10 \
-              --max-time 30 \
+              --connect-timeout 15 \
+              --max-time 45 \
               "${APP_URL}/health" || echo "000")
 
-            echo "  Status: ${HTTP_STATUS}"
+            echo "    /health status: ${HTTP_STATUS}"
 
             if [ "$HTTP_STATUS" = "200" ]; then
-              echo "✅ Health check passed!"
+              echo "  ✅ Liveness check passed!"
+              break
+            fi
+
+            if [ $i -eq $MAX_RETRIES ]; then
+              echo "❌ Liveness check failed after $MAX_RETRIES attempts"
+              echo "health_status=unhealthy" >> $GITHUB_OUTPUT
+              echo "::warning::Health check failed - deployment may need investigation"
+              exit 0  # Don't fail dev builds
+            fi
+
+            echo "    Retrying in ${DELAY}s (exponential backoff)..."
+            sleep $DELAY
+          done
+
+          # Test 2: Readiness check (includes database connectivity)
+          echo ""
+          echo "📋 Test 2: Readiness check (/health/ready)"
+          for i in $(seq 1 $MAX_RETRIES); do
+            DELAY=$((INITIAL_DELAY * (2 ** (i-1))))
+            [ $DELAY -gt $MAX_DELAY ] && DELAY=$MAX_DELAY
+
+            echo "  Attempt $i of $MAX_RETRIES..."
+
+            READY_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 10 \
+              --max-time 30 \
+              "${APP_URL}/health/ready" || echo "000")
+
+            echo "    /health/ready status: ${READY_STATUS}"
+
+            if [ "$READY_STATUS" = "200" ]; then
+              echo "  ✅ Readiness check passed!"
               echo "health_status=healthy" >> $GITHUB_OUTPUT
               exit 0
             fi
 
-            if [ $i -lt $MAX_RETRIES ]; then
-              echo "  Retrying in ${RETRY_DELAY}s..."
-              sleep $RETRY_DELAY
+            if [ $i -eq $MAX_RETRIES ]; then
+              echo "⚠️ Readiness check failed after $MAX_RETRIES attempts (app may still be initializing)"
+              echo "health_status=degraded" >> $GITHUB_OUTPUT
+              exit 0  # Don't fail dev builds
             fi
-          done
 
-          echo "❌ Health check failed after $MAX_RETRIES attempts"
-          echo "health_status=unhealthy" >> $GITHUB_OUTPUT
-          # Don't fail the workflow for dev - just warn
-          echo "::warning::Health check failed - deployment may need investigation"
+            echo "    Retrying in ${DELAY}s (exponential backoff)..."
+            sleep $DELAY
+          done
 
       - name: Azure Logout
         if: always()
