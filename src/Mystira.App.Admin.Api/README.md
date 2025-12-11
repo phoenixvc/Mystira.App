@@ -192,6 +192,21 @@ public class AdminController : Controller
 }
 ```
 
+### Badge Administration Experience
+
+The badge tooling lives entirely inside the admin console and mirrors the new REST endpoints:
+
+- **UI**
+  - `/admin/badges` &mdash; list/grid view with filtering, badge create/edit form, axis achievement editor and JSON import card with schema validation feedback.
+  - `/admin/badges/images` &mdash; upload/search/delete badge artwork with inline previews.
+- **APIs**
+  - `GET|POST|PUT|DELETE /api/admin/badges` to manage badge definitions.
+  - `GET|POST|PUT|DELETE /api/admin/badges/axis-achievements` for age-group specific axis milestones.
+  - `POST /api/admin/badges/import` for per-age-group JSON imports that must satisfy `badge-configuration.schema.json`.
+  - `GET|POST|DELETE /api/admin/badges/images` for artwork uploads and lookups by `Image_Id` (used by both the editor and the badge image library).
+
+Studio staff can now jump to the badges tooling directly from the left-hand navigation, manage artwork in one tab, and immediately reuse those ImageIds in the badge editor.
+
 ## YAML Import Service
 
 Admin API includes YAML import for bulk content management:
