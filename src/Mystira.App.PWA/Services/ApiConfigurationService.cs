@@ -16,7 +16,7 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
     private readonly ILogger<ApiConfigurationService> _logger;
     private readonly IApiEndpointCache _endpointCache;
     private readonly ITelemetryService _telemetry;
-    private readonly HttpClient _healthCheckClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private bool _disposed;
 
     // LocalStorage keys - using specific prefix to avoid conflicts
@@ -37,19 +37,15 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
         IConfiguration configuration,
         ILogger<ApiConfigurationService> logger,
         IApiEndpointCache endpointCache,
-        ITelemetryService telemetry)
+        ITelemetryService telemetry,
+        IHttpClientFactory httpClientFactory)
     {
         _jsRuntime = jsRuntime;
         _configuration = configuration;
         _logger = logger;
         _endpointCache = endpointCache;
         _telemetry = telemetry;
-
-        // Create a simple HttpClient for health checks (no auth needed)
-        _healthCheckClient = new HttpClient
-        {
-            Timeout = TimeSpan.FromSeconds(5)
-        };
+        _httpClientFactory = httpClientFactory;
     }
 
     /// <summary>
@@ -299,8 +295,11 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
                 // Check cancellation before making request
                 cancellationToken.ThrowIfCancellationRequested();
 
+                using var httpClient = _httpClientFactory.CreateClient();
+                httpClient.Timeout = TimeSpan.FromSeconds(5);
+
                 var stopwatch = Stopwatch.StartNew();
-                var response = await _healthCheckClient.GetAsync(healthUrl, cancellationToken);
+                var response = await httpClient.GetAsync(healthUrl, cancellationToken);
                 stopwatch.Stop();
 
                 return new EndpointHealthResult
@@ -538,7 +537,6 @@ public class ApiConfigurationService : IApiConfigurationService, IDisposable
     {
         if (!_disposed)
         {
-            _healthCheckClient.Dispose();
             _initLock.Dispose();
             _disposed = true;
         }

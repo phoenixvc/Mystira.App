@@ -10,10 +10,8 @@ on:
   pull_request:
     branches: [dev]
     types: [opened, synchronize, reopened, closed]
-    paths:
-      - "src/Mystira.App.PWA/**"
-      - "src/Mystira.App.Contracts/**"
-      - ".github/workflows/mystira-app-pwa-cicd-dev.yml"
+    # Note: No path filter to ensure cleanup job always runs when PR is closed
+    # The build-and-deploy job has its own path filtering via job-level conditions
   workflow_run:
     workflows: ["Infrastructure Deploy - Dev"]
     types: [completed]

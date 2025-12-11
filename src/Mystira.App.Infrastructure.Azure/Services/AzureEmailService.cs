@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Communication.Email;
@@ -19,6 +20,7 @@ public class AzureEmailService : IEmailService
     private readonly ILogger<AzureEmailService> _logger;
     private readonly string _senderEmail;
     private readonly bool _isEnabled;
+    private const int EmailSendTimeoutSeconds = 10; // Timeout for email send operations to detect ACS configuration issues
 
     public AzureEmailService(IConfiguration configuration, ILogger<AzureEmailService> logger)
     {
@@ -101,22 +103,22 @@ public class AzureEmailService : IEmailService
                 "From: {SenderEmail}, To: {ToEmail}, Subject: {Subject}",
                 operationId, _senderEmail, toEmail, "Your Mystira Verification Code");
 
-            var operation = await _emailClient.SendAsync(WaitUntil.Completed, emailMessage);
+            // Use WaitUntil.Started to avoid blocking on email delivery
+            // This prevents timeouts when ACS is misconfigured
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(EmailSendTimeoutSeconds));
+            var operation = await _emailClient.SendAsync(WaitUntil.Started, emailMessage, cts.Token);
 
-            if (operation.HasCompleted)
-            {
-                _logger.LogInformation(
-                    "[{OperationId}] Verification email sent successfully. " +
-                    "Recipient: {Email}, Status: {Status}",
-                    operationId, toEmail, operation.HasValue ? operation.Value.Status.ToString() : "Unknown");
-                return (true, null);
-            }
-
-            _logger.LogWarning(
-                "[{OperationId}] Email operation did not complete successfully. " +
-                "Recipient: {Email}, HasCompleted: {HasCompleted}, HasValue: {HasValue}",
-                operationId, toEmail, operation.HasCompleted, operation.HasValue);
-            return (false, "Email sending did not complete");
+            _logger.LogInformation(
+                "[{OperationId}] Verification email queued successfully. " +
+                "Recipient: {Email}, MessageId: {MessageId}",
+                operationId, toEmail, operation.Id);
+            return (true, null);
+        }
+        catch (OperationCanceledException ex)
+        {
+            // Handles both OperationCanceledException and TaskCanceledException (subclass)
+            _logger.LogError(ex, "Email operation canceled");
+            return HandleEmailTimeout(operationId, toEmail, "Signup");
         }
         catch (RequestFailedException ex)
         {
@@ -124,7 +126,9 @@ public class AzureEmailService : IEmailService
                 "[{OperationId}] Azure Communication Services request failed. " +
                 "Recipient: {Email}, ErrorCode: {ErrorCode}, Status: {Status}, Message: {Message}",
                 operationId, toEmail, ex.ErrorCode, ex.Status, ex.Message);
-            return (false, $"Failed to send email: {ex.Message}");
+            
+            var userMessage = GetUserFriendlyErrorMessage(ex.ErrorCode, $"Failed to send email: {ex.Message}");
+            return (false, userMessage);
         }
         catch (InvalidOperationException ex)
         {
@@ -132,7 +136,7 @@ public class AzureEmailService : IEmailService
                 "[{OperationId}] Invalid operation error sending verification email. " +
                 "Recipient: {Email}",
                 operationId, toEmail);
-            return (false, "Operation was invalid while sending email");
+            return (false, "Email service configuration error. Please contact support.");
         }
         catch (ArgumentException ex)
         {
@@ -140,7 +144,7 @@ public class AzureEmailService : IEmailService
                 "[{OperationId}] Argument error sending verification email. " +
                 "Recipient: {Email}",
                 operationId, toEmail);
-            return (false, "Invalid argument provided for sending email");
+            return (false, "Invalid email address or configuration. Please contact support.");
         }
     }
 
@@ -176,22 +180,22 @@ public class AzureEmailService : IEmailService
                 "From: {SenderEmail}, To: {ToEmail}",
                 operationId, _senderEmail, toEmail);
 
-            var operation = await _emailClient.SendAsync(WaitUntil.Completed, emailMessage);
+            // Use WaitUntil.Started to avoid blocking on email delivery
+            // This prevents timeouts when ACS is misconfigured
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(EmailSendTimeoutSeconds));
+            var operation = await _emailClient.SendAsync(WaitUntil.Started, emailMessage, cts.Token);
 
-            if (operation.HasCompleted)
-            {
-                _logger.LogInformation(
-                    "[{OperationId}] Sign-in email sent successfully. " +
-                    "Recipient: {Email}, Status: {Status}",
-                    operationId, toEmail, operation.HasValue ? operation.Value.Status.ToString() : "Unknown");
-                return (true, null);
-            }
-
-            _logger.LogWarning(
-                "[{OperationId}] Sign-in email operation did not complete successfully. " +
-                "Recipient: {Email}, HasCompleted: {HasCompleted}, HasValue: {HasValue}",
-                operationId, toEmail, operation.HasCompleted, operation.HasValue);
-            return (false, "Email sending did not complete");
+            _logger.LogInformation(
+                "[{OperationId}] Sign-in email queued successfully. " +
+                "Recipient: {Email}, MessageId: {MessageId}",
+                operationId, toEmail, operation.Id);
+            return (true, null);
+        }
+        catch (OperationCanceledException ex)
+        {
+            // Handles both OperationCanceledException and TaskCanceledException (subclass)
+            _logger.LogError(ex, "Email operation canceled");
+            return HandleEmailTimeout(operationId, toEmail, "Sign-in");
         }
         catch (RequestFailedException ex)
         {
@@ -199,7 +203,9 @@ public class AzureEmailService : IEmailService
                 "[{OperationId}] Azure Communication Services request failed for sign-in email. " +
                 "Recipient: {Email}, ErrorCode: {ErrorCode}, Status: {Status}, Message: {Message}",
                 operationId, toEmail, ex.ErrorCode, ex.Status, ex.Message);
-            return (false, $"Failed to send sign-in email: {ex.Message}");
+            
+            var userMessage = GetUserFriendlyErrorMessage(ex.ErrorCode, $"Failed to send sign-in email: {ex.Message}");
+            return (false, userMessage);
         }
         catch (InvalidOperationException ex)
         {
@@ -207,7 +213,7 @@ public class AzureEmailService : IEmailService
                 "[{OperationId}] Invalid operation error sending sign-in email. " +
                 "Recipient: {Email}",
                 operationId, toEmail);
-            return (false, "Operation was invalid while sending sign-in email");
+            return (false, "Email service configuration error. Please contact support.");
         }
         catch (ArgumentException ex)
         {
@@ -215,7 +221,7 @@ public class AzureEmailService : IEmailService
                 "[{OperationId}] Argument error sending sign-in email. " +
                 "Recipient: {Email}",
                 operationId, toEmail);
-            return (false, "Invalid argument provided for sending sign-in email");
+            return (false, "Invalid email address or configuration. Please contact support.");
         }
     }
 
@@ -401,5 +407,32 @@ public class AzureEmailService : IEmailService
     </div>
 </body>
 </html>";
+    }
+
+    /// <summary>
+    /// Handles timeout errors for email operations with detailed logging and helpful error messages.
+    /// </summary>
+    private (bool Success, string ErrorMessage) HandleEmailTimeout(string operationId, string toEmail, string emailType)
+    {
+        _logger.LogError(
+            "[{OperationId}] {EmailType} email operation timed out. " +
+            "Recipient: {Email}. This may indicate Azure Communication Services is not properly configured. " +
+            "Please verify: 1) Connection string is valid, 2) Sender email domain is verified in Azure, " +
+            "3) Email domain has proper DNS records (SPF, DKIM, DMARC)",
+            operationId, emailType, toEmail);
+        return (false, "Email service configuration error. Please contact support or verify your email domain setup.");
+    }
+
+    /// <summary>
+    /// Maps ACS error codes to user-friendly error messages.
+    /// </summary>
+    private static string GetUserFriendlyErrorMessage(string? errorCode, string defaultMessage)
+    {
+        return errorCode switch
+        {
+            "Unauthorized" => "Email service authentication failed. Please contact support.",
+            "InvalidSenderAddress" => "Email sender address is not verified. Please contact support.",
+            _ => defaultMessage
+        };
     }
 }

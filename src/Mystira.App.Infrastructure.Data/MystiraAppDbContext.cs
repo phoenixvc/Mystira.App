@@ -63,10 +63,13 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
-                // Existing containers use partition key path '/Id' (uppercase)
-                entity.Property<string>("PartitionKeyIdUpper").ToJsonProperty("Id");
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                // Existing Cosmos container 'UserProfiles' uses partition key path '/id' (lowercase).
+                // Use the Id property directly as the partition key.
                 entity.ToContainer("UserProfiles")
-                      .HasPartitionKey("PartitionKeyIdUpper");
+                      .HasPartitionKey(e => e.Id);
             }
 
             entity.Property(e => e.PreferredFantasyThemes)
@@ -120,6 +123,9 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
                 // Existing Cosmos container 'Accounts' uses partition key path '/id' (lowercase).
                 // Use the Id property directly as the partition key.
                 entity.ToContainer("Accounts")
@@ -157,9 +163,13 @@ public partial class MystiraAppDbContext : DbContext
 
             if (!isInMemoryDatabase)
             {
-                entity.Property<string>("PartitionKeyIdUpper").ToJsonProperty("Id");
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                // Existing Cosmos container 'ContentBundles' uses partition key path '/id' (lowercase).
+                // Use the Id property directly as the partition key.
                 entity.ToContainer("ContentBundles")
-                      .HasPartitionKey("PartitionKeyIdUpper");
+                      .HasPartitionKey(e => e.Id);
             }
 
             entity.Property(e => e.ScenarioIds)
@@ -189,9 +199,13 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
-                entity.Property<string>("PartitionKeyIdUpper").ToJsonProperty("Id");
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                // Existing Cosmos container 'CharacterMaps' uses partition key path '/id' (lowercase).
+                // Use the Id property directly as the partition key.
                 entity.ToContainer("CharacterMaps")
-                      .HasPartitionKey("PartitionKeyIdUpper");
+                      .HasPartitionKey(e => e.Id);
             }
 
             entity.OwnsOne(e => e.Metadata, metadata =>
@@ -215,9 +229,13 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
-                entity.Property<string>("PartitionKeyIdUpper").ToJsonProperty("Id");
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                // Existing Cosmos container 'BadgeConfigurations' uses partition key path '/id' (lowercase).
+                // Use the Id property directly as the partition key.
                 entity.ToContainer("BadgeConfigurations")
-                      .HasPartitionKey("PartitionKeyIdUpper");
+                      .HasPartitionKey(e => e.Id);
             }
         });
 
@@ -229,9 +247,13 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
-                entity.Property<string>("PartitionKeyIdUpper").ToJsonProperty("Id");
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                // Existing Cosmos container 'CompassAxes' uses partition key path '/id' (lowercase).
+                // Use the Id property directly as the partition key.
                 entity.ToContainer("CompassAxes")
-                      .HasPartitionKey("PartitionKeyIdUpper");
+                      .HasPartitionKey(e => e.Id);
             }
         });
 
@@ -243,6 +265,9 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
                 // Existing Cosmos container 'ArchetypeDefinitions' uses partition key path '/id' (lowercase).
                 // Map partition key to the entity key so EF Core targets '/id'.
                 entity.ToContainer("ArchetypeDefinitions")
@@ -257,10 +282,13 @@ public partial class MystiraAppDbContext : DbContext
 
             if (!isInMemoryDatabase)
             {
-                // Existing containers use partition key path '/Id' (uppercase)
-                entity.Property<string>("PartitionKeyIdUpper").ToJsonProperty("Id");
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                // Existing Cosmos container 'EchoTypeDefinitions' uses partition key path '/id' (lowercase).
+                // Use the Id property directly as the partition key.
                 entity.ToContainer("EchoTypeDefinitions")
-                      .HasPartitionKey("PartitionKeyIdUpper");
+                      .HasPartitionKey(e => e.Id);
             }
         });
 
@@ -271,10 +299,13 @@ public partial class MystiraAppDbContext : DbContext
 
             if (!isInMemoryDatabase)
             {
-                // Existing containers use partition key path '/Id' (uppercase)
-                entity.Property<string>("PartitionKeyIdUpper").ToJsonProperty("Id");
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                // Existing Cosmos container 'FantasyThemeDefinitions' uses partition key path '/id' (lowercase).
+                // Use the Id property directly as the partition key.
                 entity.ToContainer("FantasyThemeDefinitions")
-                      .HasPartitionKey("PartitionKeyIdUpper");
+                      .HasPartitionKey(e => e.Id);
             }
         });
 
@@ -285,10 +316,13 @@ public partial class MystiraAppDbContext : DbContext
 
             if (!isInMemoryDatabase)
             {
-                // Existing containers use partition key path '/Id' (uppercase)
-                entity.Property<string>("PartitionKeyIdUpper").ToJsonProperty("Id");
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                // Existing Cosmos container 'AgeGroupDefinitions' uses partition key path '/id' (lowercase).
+                // Use the Id property directly as the partition key.
                 entity.ToContainer("AgeGroupDefinitions")
-                      .HasPartitionKey("PartitionKeyIdUpper");
+                      .HasPartitionKey(e => e.Id);
             }
         });
 
@@ -300,9 +334,13 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
-                entity.Property<string>("PartitionKeyIdUpper").ToJsonProperty("Id");
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                // Existing Cosmos container 'Scenarios' uses partition key path '/id' (lowercase).
+                // Use the Id property directly as the partition key.
                 entity.ToContainer("Scenarios")
-                      .HasPartitionKey("PartitionKeyIdUpper");
+                      .HasPartitionKey(e => e.Id);
             }
 
             entity.Property(e => e.Tags)
@@ -407,6 +445,10 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
+                // Map AccountId property to match container partition key path
+                // Note: Different from other entities, GameSession uses AccountId as partition key
+                entity.Property(e => e.AccountId).ToJsonProperty("accountId");
+
                 entity.ToContainer("GameSessions")
                       .HasPartitionKey(e => e.AccountId);
             }
@@ -488,6 +530,10 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
+                // Map MediaType property to match container partition key path
+                // Note: Different from other entities, MediaAsset uses MediaType as partition key
+                entity.Property(e => e.MediaType).ToJsonProperty("mediaType");
+
                 entity.ToContainer("MediaAssets")
                       .HasPartitionKey(e => e.MediaType);
             }
@@ -542,9 +588,13 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
-                entity.Property<string>("PartitionKeyIdUpper").ToJsonProperty("Id");
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                // Existing Cosmos container 'MediaMetadataFiles' uses partition key path '/id' (lowercase).
+                // Use the Id property directly as the partition key.
                 entity.ToContainer("MediaMetadataFiles")
-                      .HasPartitionKey("PartitionKeyIdUpper");
+                      .HasPartitionKey(e => e.Id);
             }
 
             // Use OwnsMany for proper JSON handling in Cosmos DB
@@ -581,9 +631,13 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
-                entity.Property<string>("PartitionKeyIdUpper").ToJsonProperty("Id");
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                // Existing Cosmos container 'CharacterMediaMetadataFiles' uses partition key path '/id' (lowercase).
+                // Use the Id property directly as the partition key.
                 entity.ToContainer("CharacterMediaMetadataFiles")
-                      .HasPartitionKey("PartitionKeyIdUpper");
+                      .HasPartitionKey(e => e.Id);
             }
 
             // Use OwnsMany for proper JSON handling in Cosmos DB
@@ -608,9 +662,13 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
-                entity.Property<string>("PartitionKeyIdUpper").ToJsonProperty("Id");
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                // Existing Cosmos container 'CharacterMapFiles' uses partition key path '/id' (lowercase).
+                // Use the Id property directly as the partition key.
                 entity.ToContainer("CharacterMapFiles")
-                      .HasPartitionKey("PartitionKeyIdUpper");
+                      .HasPartitionKey(e => e.Id);
             }
 
             // Use OwnsMany for proper JSON handling in Cosmos DB
@@ -657,10 +715,13 @@ public partial class MystiraAppDbContext : DbContext
             // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
-                // Containers use partition key '/Id' (uppercase) in Cosmos
-                entity.Property<string>("PartitionKeyIdUpper").ToJsonProperty("Id");
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                // Existing Cosmos container 'AvatarConfigurationFiles' uses partition key path '/id' (lowercase).
+                // Use the Id property directly as the partition key.
                 entity.ToContainer("AvatarConfigurationFiles")
-                      .HasPartitionKey("PartitionKeyIdUpper");
+                      .HasPartitionKey(e => e.Id);
             }
 
             // Convert Dictionary<string, List<string>> for storage

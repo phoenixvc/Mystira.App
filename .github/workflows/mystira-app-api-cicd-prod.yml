@@ -160,6 +160,16 @@ jobs:
               {"name": "StoryProtocol__PrivateKey", "value": "${{ secrets.STORY_PROTOCOL_WALLET_PRIVATE_KEY_PROD }}", "slotSetting": false}
             ]
 
+      - name: Configure Database Settings
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-settings-json: |
+            [
+              {"name": "InitializeDatabaseOnStartup", "value": "true", "slotSetting": false},
+              {"name": "SeedMasterDataOnStartup", "value": "false", "slotSetting": false}
+            ]
+
       - name: Create deployment annotation in Application Insights
         if: success()
         run: |
