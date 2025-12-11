@@ -2,7 +2,7 @@ using FluentAssertions;
 using Mystira.App.Domain.Models;
 using Xunit;
 
-namespace DMfinity.Domain.Tests.Models;
+namespace Mystira.App.Application.Tests.Models;
 
 public class StoryProtocolMetadataTests
 {

@@ -1,11 +1,14 @@
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using System;
 using System.Net;
+using System.Net.Http;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Xunit;
 
-namespace DMfinity.Api.Tests.Integration;
+namespace Mystira.App.Api.Tests.Integration;
 
 /// <summary>
 /// Integration tests that verify the system operates in a healthy state

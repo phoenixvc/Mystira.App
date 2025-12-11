@@ -1,14 +1,15 @@
-using DMfinity.Api.Controllers;
-using DMfinity.Api.Models;
-using DMfinity.Api.Services;
+using Mystira.App.Api.Controllers;
+using Mystira.App.Api.Models;
+using Mystira.App.Api.Services;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Moq;
+using System.Threading.Tasks;
 using Xunit;
 
-namespace DMfinity.Api.Tests.Controllers;
+namespace Mystira.App.Api.Tests.Controllers;
 
 public class HealthControllerTests
 {

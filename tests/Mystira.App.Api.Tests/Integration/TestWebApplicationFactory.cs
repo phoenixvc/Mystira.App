@@ -5,11 +5,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using DMfinity.Api.Data;
-using DMfinity.Infrastructure.Azure.Services;
+using Mystira.App.Infrastructure.Data;
+using Mystira.App.Infrastructure.Azure.Services;
 using Moq;
+using System;
+using System.Collections.Generic;
+using System.IO;
 
-namespace DMfinity.Api.Tests.Integration;
+namespace Mystira.App.Api.Tests.Integration;
 
 public class TestWebApplicationFactory<TStartup> : WebApplicationFactory<TStartup> where TStartup : class
 {
@@ -31,11 +34,11 @@ public class TestWebApplicationFactory<TStartup> : WebApplicationFactory<TStartu
         builder.ConfigureServices(services =>
         {
             // Remove the real database context registration
-            services.RemoveAll(typeof(DbContextOptions<DMfinityDbContext>));
-            services.RemoveAll(typeof(DMfinityDbContext));
+            services.RemoveAll(typeof(DbContextOptions<MystiraAppDbContext>));
+            services.RemoveAll(typeof(MystiraAppDbContext));
 
             // Add in-memory database for testing with simplified configuration
-            services.AddDbContext<DMfinityDbContext>(options =>
+            services.AddDbContext<MystiraAppDbContext>(options =>
             {
                 options.UseInMemoryDatabase("TestDb");
                 // Configure options to be less strict for testing
@@ -73,7 +76,7 @@ public class TestWebApplicationFactory<TStartup> : WebApplicationFactory<TStartu
             // Ensure the database is created for each test with error handling
             var serviceProvider = services.BuildServiceProvider();
             using var scope = serviceProvider.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<DMfinityDbContext>();
+            var context = scope.ServiceProvider.GetRequiredService<MystiraAppDbContext>();
             try
             {
                 context.Database.EnsureCreated();

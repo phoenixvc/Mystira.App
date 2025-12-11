@@ -1,14 +1,17 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
+using System;
 using System.Net;
+using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Newtonsoft.Json;
 using Xunit;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
-namespace DMfinity.Api.Tests.Integration;
+namespace Mystira.App.Api.Tests.Integration;
 
 public class ApiIntegrationTests : IClassFixture<TestWebApplicationFactory<Program>>
 {

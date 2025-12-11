@@ -6,13 +6,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Mystira.App.Api.Data;
+using Mystira.App.Infrastructure.Data;
 using Mystira.App.Api.Models;
 using Mystira.App.Api.Services;
 using Mystira.App.Infrastructure.Azure.Services;
 using Xunit;
 
-namespace DMfinity.Api.Tests.Services;
+namespace Mystira.App.Api.Tests.Services;
 
 public class MediaApiServiceTests
 {
