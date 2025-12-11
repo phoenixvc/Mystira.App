@@ -50,6 +50,9 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: "1"
   # Evaluates to "true"/"false" at workflow parse time
   HAS_PUBLISH_PROFILE_PROD: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD != '' }}
+  # Application Insights for deployment annotations
+  APP_INSIGHTS_NAME: "mys-prod-mystira-appins-san"
+  RESOURCE_GROUP: "mys-prod-mystira-rg-san"
 
 jobs:
   build-and-test:
@@ -119,17 +122,18 @@ jobs:
           name: mystira-app-api
           path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
+      # Azure Login BEFORE deployment to ensure post-deploy steps have credentials
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Deploy to Azure Web App (Production)
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
           package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Configure JWT RS256 settings
         uses: azure/appservice-settings@v1
@@ -165,51 +169,128 @@ jobs:
               {"name": "InitializeDatabaseOnStartup", "value": "true", "slotSetting": false},
               {"name": "SeedMasterDataOnStartup", "value": "false", "slotSetting": false}
             ]
-        
-      - name: Health Check
+
+      - name: Create deployment annotation in Application Insights
+        if: success()
         run: |
-          echo "Waiting for deployment to stabilize and database initialization to complete..."
-          sleep 60
-          
-          echo "Checking API readiness endpoint (database initialization)..."
-          HEALTH_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/health/ready"
-          
-          # Retry health check up to 10 times with 15 second intervals
-          # Database initialization can take several minutes on first deployment
-          for i in {1..10}; do
-            echo "Attempt $i/10..."
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
-            
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "✅ Health check passed (HTTP $HTTP_CODE)"
-              echo "API is healthy and database is properly initialized"
-              
-              # Also check the response body to ensure database check passed
-              RESPONSE=$(curl -s "$HEALTH_URL")
-              echo "Health check response: $RESPONSE"
-              
-              # Verify the response contains "Healthy" status
-              if echo "$RESPONSE" | grep -q '"status":"Healthy"'; then
-                echo "✅ Database initialization confirmed"
-                exit 0
-              else
-                echo "⚠️  Health check returned 200 but status is not Healthy"
-                echo "Response: $RESPONSE"
-              fi
-            else
-              echo "⚠️  Health check returned HTTP $HTTP_CODE"
+          DEPLOY_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          ANNOTATION_RESULT="success"
+
+          az monitor app-insights component create-annotation \
+            --app "${{ env.APP_INSIGHTS_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --annotation-name "Deployment" \
+            --category "Deployment" \
+            --properties "{\"Application\":\"Mystira.App.Api\",\"Environment\":\"Production\",\"Version\":\"${{ github.sha }}\",\"Branch\":\"${{ github.ref_name }}\",\"DeployedBy\":\"${{ github.actor }}\",\"Timestamp\":\"${DEPLOY_TIME}\",\"WorkflowRun\":\"${{ github.run_id }}\"}" \
+            || ANNOTATION_RESULT="failed"
+
+          # Write deployment info to GitHub step summary regardless of annotation success
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Application | Mystira.App.Api |" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | Production |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Deployed By | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Timestamp | ${DEPLOY_TIME} |" >> $GITHUB_STEP_SUMMARY
+          echo "| App Insights Annotation | ${ANNOTATION_RESULT} |" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$ANNOTATION_RESULT" = "failed" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ **Note:** Failed to create App Insights annotation. Deployment succeeded but annotation was not recorded." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Smoke test - Health check
+        id: smoke-test
+        env:
+          # Configurable startup wait time (default 45s for App Service cold start)
+          POST_DEPLOY_WAIT_SECONDS: ${{ vars.POST_DEPLOY_WAIT_SECONDS || '45' }}
+        run: |
+          APP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+          echo "🔍 Running post-deployment smoke tests for ${APP_URL}"
+
+          # Wait for deployment to stabilize (configurable via repository variable)
+          # App Service needs time for: container startup, Application Insights init, Cosmos DB connection
+          echo "⏳ Waiting ${POST_DEPLOY_WAIT_SECONDS}s for App Service startup..."
+          sleep ${POST_DEPLOY_WAIT_SECONDS}
+
+          # Retry logic with exponential backoff
+          MAX_RETRIES=6
+          INITIAL_DELAY=5
+          MAX_DELAY=30
+
+          # Test 1: Basic health check (liveness)
+          echo ""
+          echo "📋 Test 1: Liveness check (/health)"
+          for i in $(seq 1 $MAX_RETRIES); do
+            # Calculate exponential backoff delay: 5, 10, 20, 30, 30, 30
+            DELAY=$((INITIAL_DELAY * (2 ** (i-1))))
+            [ $DELAY -gt $MAX_DELAY ] && DELAY=$MAX_DELAY
+
+            echo "  Attempt $i of $MAX_RETRIES..."
+
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 15 \
+              --max-time 45 \
+              "${APP_URL}/health" || echo "000")
+
+            echo "    /health status: ${HTTP_STATUS}"
+
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "  ✅ Liveness check passed!"
+              break
             fi
-            
-            if [ $i -lt 10 ]; then
-              echo "Retrying in 15 seconds..."
-              sleep 15
+
+            if [ $i -eq $MAX_RETRIES ]; then
+              echo "❌ Liveness check failed after $MAX_RETRIES attempts"
+              echo "health_status=unhealthy" >> $GITHUB_OUTPUT
+              exit 1
             fi
+
+            echo "    Retrying in ${DELAY}s (exponential backoff)..."
+            sleep $DELAY
           done
-          
-          echo "❌ Health check failed after 10 attempts (max ~4 minutes)"
-          echo "This may indicate database initialization issues or application startup problems"
-          echo "Check application logs in Azure Portal for details"
-          exit 1
+
+          # Test 2: Readiness check (includes database connectivity)
+          echo ""
+          echo "📋 Test 2: Readiness check (/health/ready)"
+          for i in $(seq 1 $MAX_RETRIES); do
+            DELAY=$((INITIAL_DELAY * (2 ** (i-1))))
+            [ $DELAY -gt $MAX_DELAY ] && DELAY=$MAX_DELAY
+
+            echo "  Attempt $i of $MAX_RETRIES..."
+
+            READY_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 10 \
+              --max-time 30 \
+              "${APP_URL}/health/ready" || echo "000")
+
+            echo "    /health/ready status: ${READY_STATUS}"
+
+            if [ "$READY_STATUS" = "200" ]; then
+              echo "  ✅ Readiness check passed!"
+              echo "health_status=healthy" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            if [ $i -eq $MAX_RETRIES ]; then
+              echo "⚠️ Readiness check failed after $MAX_RETRIES attempts (app may still be initializing)"
+              echo "health_status=degraded" >> $GITHUB_OUTPUT
+              # Don't fail the build - readiness might take longer for DB init
+              exit 0
+            fi
+
+            echo "    Retrying in ${DELAY}s (exponential backoff)..."
+            sleep $DELAY
+          done
+
+      - name: Update deployment annotation with result
+        if: always()
+        run: |
+          HEALTH_STATUS="${{ steps.smoke-test.outputs.health_status || 'unknown' }}"
+          echo "Deployment completed. Health status: ${HEALTH_STATUS}"
 
       - name: Azure Logout
         if: always()

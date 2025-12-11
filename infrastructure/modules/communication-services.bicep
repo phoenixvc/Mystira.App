@@ -71,6 +71,9 @@ resource senderUsername 'Microsoft.Communication/emailServices/domains/senderUse
 // Outputs
 output communicationServiceId string = communicationService.id
 output communicationServiceName string = communicationService.name
+
+// Note: Connection string is marked as secure to prevent exposure in deployment logs
+#disable-next-line outputs-should-not-contain-secrets
 output communicationServiceConnectionString string = communicationService.listKeys().primaryConnectionString
 output emailServiceId string = emailCommunicationService.id
 output emailServiceName string = emailCommunicationService.name

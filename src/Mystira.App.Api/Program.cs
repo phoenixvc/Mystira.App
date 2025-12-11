@@ -24,14 +24,81 @@ using Mystira.App.Infrastructure.Azure.Services;
 using Mystira.App.Infrastructure.Data;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.Services;
+using Microsoft.ApplicationInsights.Extensibility;
 using Mystira.App.Infrastructure.Discord;
 using Mystira.App.Infrastructure.Discord.Services;
 using Mystira.App.Infrastructure.StoryProtocol;
 using Mystira.App.Shared.Middleware;
+using Mystira.App.Shared.Telemetry;
+using Serilog;
+using Serilog.Events;
 
-var builder = WebApplication.CreateBuilder(args);
+// ═══════════════════════════════════════════════════════════════════════════════
+// SERILOG BOOTSTRAP LOGGING (before host is built)
+// ═══════════════════════════════════════════════════════════════════════════════
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
 
-// Add services to the container
+try
+{
+    Log.Information("Starting Mystira.App.Api");
+
+    var builder = WebApplication.CreateBuilder(args);
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SERILOG CONFIGURATION (reads from appsettings.json)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    builder.Host.UseSerilog((context, services, configuration) => configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .Enrich.WithMachineName()
+        .Enrich.WithThreadId()
+        .Enrich.WithCorrelationId()
+        .Enrich.WithProperty("Application", "Mystira.App.Api")
+        .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName)
+        .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+        .WriteTo.ApplicationInsights(
+            services.GetService<TelemetryConfiguration>(),
+            TelemetryConverter.Traces));
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // APPLICATION INSIGHTS TELEMETRY CONFIGURATION
+    // ═══════════════════════════════════════════════════════════════════════════════
+    builder.Services.AddApplicationInsightsTelemetry(options =>
+    {
+        // Enable adaptive sampling only in production to reduce telemetry volume
+        options.EnableAdaptiveSampling = builder.Environment.IsProduction();
+        options.EnableDependencyTrackingTelemetryModule = true;
+        options.EnableQuickPulseMetricStream = true; // Live Metrics
+        options.EnablePerformanceCounterCollectionModule = true;
+        options.EnableRequestTrackingTelemetryModule = true;
+        options.EnableEventCounterCollectionModule = true;
+    });
+
+    // Configure cloud role name for Application Map and distributed tracing
+    builder.Services.AddSingleton<ITelemetryInitializer>(sp =>
+    {
+        var env = sp.GetRequiredService<IWebHostEnvironment>();
+        return new CloudRoleNameInitializer("Mystira.App.Api", env.EnvironmentName);
+    });
+
+    // Register custom metrics service for business KPIs
+    builder.Services.AddCustomMetrics(builder.Environment.EnvironmentName);
+
+    // Register security metrics service for auth tracking, rate limiting, etc.
+    builder.Services.AddSecurityMetrics(builder.Environment.EnvironmentName);
+
+    // Register user journey analytics for tracking user flows and engagement
+    builder.Services.AddUserJourneyAnalytics(builder.Environment.EnvironmentName);
+
+    // Configure request logging options from configuration
+    builder.Services.Configure<RequestLoggingOptions>(builder.Configuration.GetSection("RequestLogging"));
+
+    // Add services to the container
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(options =>
     {
@@ -114,10 +181,8 @@ if (useCosmosDb)
             // Default timeout is too long for startup scenarios
             cosmosOptions.HttpClientFactory(() =>
             {
-                var httpClient = new HttpClient(new HttpClientHandler
-                {
-                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-                });
+                // Use default certificate validation (secure) with custom timeout
+                var httpClient = new HttpClient();
                 httpClient.Timeout = TimeSpan.FromSeconds(30);
                 return httpClient;
             });
@@ -206,16 +271,17 @@ builder.Services.AddAuthentication(options =>
         if (!string.IsNullOrWhiteSpace(jwksEndpoint))
         {
             // Use JWKS endpoint for key rotation support (most secure)
+            // The JwtBearer middleware handles JWKS fetching asynchronously with caching
             options.MetadataAddress = jwksEndpoint;
-            options.RequireHttpsMetadata = true; // Always require HTTPS in production
-            validationParameters.IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>
-            {
-                // This will automatically fetch keys from the JWKS endpoint
-                using var client = new HttpClient();
-                var response = client.GetStringAsync(jwksEndpoint).Result;
-                var keys = new JsonWebKeySet(response);
-                return keys.Keys;
-            };
+            options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+
+            // Configure refresh interval for JWKS keys (handles key rotation)
+            options.RefreshInterval = TimeSpan.FromHours(1);
+            options.AutomaticRefreshInterval = TimeSpan.FromHours(24);
+
+            // Let the built-in ConfigurationManager handle key fetching asynchronously
+            // This avoids the blocking .Result call that can cause deadlocks
+            Log.Information("JWT configured to use JWKS endpoint: {JwksEndpoint}", jwksEndpoint);
         }
         else if (!string.IsNullOrWhiteSpace(jwtRsaPublicKey))
         {
@@ -237,8 +303,8 @@ builder.Services.AddAuthentication(options =>
         {
             // Fall back to symmetric key (legacy - should be phased out)
             validationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-            // Log warning during startup (will be logged when app runs)
-            Console.WriteLine("WARNING: Using symmetric HS256 JWT signing. Consider migrating to asymmetric RS256 with JWKS for better security.");
+            // Log warning through Serilog so it appears in Application Insights
+            Log.Warning("Using symmetric HS256 JWT signing. Consider migrating to asymmetric RS256 with JWKS for better security.");
         }
 
         options.TokenValidationParameters = validationParameters;
@@ -278,12 +344,25 @@ builder.Services.AddAuthentication(options =>
                 var ua = context.HttpContext.Request.Headers["User-Agent"].ToString();
                 var path = context.HttpContext.Request.Path;
                 logger.LogError(context.Exception, "JWT authentication failed on {Path} (UA: {UserAgent})", path, ua);
+
+                // Track in security metrics
+                var securityMetrics = context.HttpContext.RequestServices.GetService<ISecurityMetrics>();
+                var clientIp = context.HttpContext.Connection.RemoteIpAddress?.ToString();
+                var reason = context.Exception?.GetType().Name ?? "Unknown";
+                securityMetrics?.TrackTokenValidationFailed(clientIp, reason);
+
                 return Task.CompletedTask;
             },
             OnTokenValidated = context =>
             {
                 var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                logger.LogInformation("JWT token validated for user: {User}", context.Principal?.Identity?.Name);
+                var userId = context.Principal?.Identity?.Name;
+                logger.LogInformation("JWT token validated for user: {User}", userId);
+
+                // Track successful authentication in security metrics
+                var securityMetrics = context.HttpContext.RequestServices.GetService<ISecurityMetrics>();
+                securityMetrics?.TrackAuthenticationSuccess("JWT", userId);
+
                 return Task.CompletedTask;
             },
             OnChallenge = context =>
@@ -472,6 +551,7 @@ builder.Services.AddCors(options =>
             "Content-Type",
             "Authorization",
             "X-Requested-With",
+            "X-Correlation-Id",
             "Accept",
             "Origin",
             "User-Agent",
@@ -489,6 +569,9 @@ builder.Services.AddCors(options =>
 
         // Allow credentials for authenticated requests (required for cookies/auth headers)
         policy.AllowCredentials();
+
+        // Expose headers that clients need to read from responses
+        policy.WithExposedHeaders("X-Correlation-Id");
 
         // Set preflight cache duration (24 hours)
         policy.SetPreflightMaxAge(TimeSpan.FromHours(24));
@@ -525,9 +608,15 @@ builder.Services.AddRateLimiter(options =>
         options.QueueLimit = 0;
     });
 
-    // Rejection response
+    // Rejection response with security metrics tracking
     options.OnRejected = async (context, cancellationToken) =>
     {
+        // Track rate limit hit in security metrics
+        var securityMetrics = context.HttpContext.RequestServices.GetService<ISecurityMetrics>();
+        var clientIp = context.HttpContext.Connection.RemoteIpAddress?.ToString();
+        var endpoint = context.HttpContext.Request.Path.Value ?? "unknown";
+        securityMetrics?.TrackRateLimitHit(clientIp, endpoint);
+
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
         await context.HttpContext.Response.WriteAsync(
             "Too many requests. Please try again later.",
@@ -561,6 +650,26 @@ app.UseSecurityHeaders();
 
 // Add rate limiting (BUG-5)
 app.UseRateLimiter();
+
+// Add correlation ID middleware (early in pipeline for tracing)
+app.UseCorrelationId();
+
+// Add Serilog request logging (replaces default request logging)
+app.UseSerilogRequestLogging(options =>
+{
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
+        diagnosticContext.Set("UserAgent", httpContext.Request.Headers["User-Agent"].FirstOrDefault());
+        if (httpContext.Items.TryGetValue("CorrelationId", out var correlationId))
+        {
+            diagnosticContext.Set("CorrelationId", correlationId);
+        }
+    };
+});
+
+// Add custom request logging middleware for detailed tracking
+app.UseRequestLogging();
 
 app.UseRouting();
 
@@ -614,26 +723,68 @@ var initializeDb = builder.Configuration.GetValue<bool>("InitializeDatabaseOnSta
 
 if (initializeDb)
 {
-    using (var scope = app.Services.CreateScope())
-    {
-        var context = scope.ServiceProvider.GetRequiredService<MystiraAppDbContext>();
-        var startupLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    using var scope = app.Services.CreateScope();
+    var context = scope.ServiceProvider.GetRequiredService<MystiraAppDbContext>();
+    var startupLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var isInMemory = !useCosmosDb;
 
-        try
+    try
+    {
+        startupLogger.LogInformation("Starting database initialization (InitializeDatabaseOnStartup={Init}, InMemory={InMemory})...", initializeDb, isInMemory);
+
+        // Use Task.WhenAny with timeout for more reliable timeout handling
+        // CancellationToken doesn't always work well with Cosmos DB SDK
+        var initTask = context.Database.EnsureCreatedAsync();
+        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(30));
+        var completedTask = await Task.WhenAny(initTask, timeoutTask);
+
+        if (completedTask == timeoutTask)
         {
-            await context.Database.EnsureCreatedAsync();
+            // Timeout occurred - initTask may still be running
+            startupLogger.LogWarning("Database initialization timed out after 30 seconds. The application will start without database initialization. Ensure Azure Cosmos DB is accessible and configured correctly. Set 'InitializeDatabaseOnStartup'=false to skip this check.");
+
+            // Handle the background task to prevent unobserved exceptions and track completion
+            _ = initTask.ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    startupLogger.LogError(t.Exception, "Background database initialization failed after timeout");
+                }
+                else if (t.IsCompletedSuccessfully)
+                {
+                    startupLogger.LogInformation("Background database initialization completed successfully after initial timeout");
+                }
+            }, TaskScheduler.Default);
+        }
+        else
+        {
+            // Await the actual task to catch any exceptions
+            await initTask;
+            startupLogger.LogInformation("Database initialization succeeded. Verified containers for current model are present.");
 
             // Gate master-data seeding by configuration and environment to avoid Cosmos SDK query issues in some setups
             // Defaults: seed only for InMemory or when explicitly enabled via configuration
             var seedOnStartup = builder.Configuration.GetValue<bool>("SeedMasterDataOnStartup");
-            var isInMemory = !useCosmosDb;
             if (seedOnStartup || isInMemory)
             {
                 try
                 {
                     var seeder = scope.ServiceProvider.GetRequiredService<MasterDataSeederService>();
-                    await seeder.SeedAllAsync();
-                    startupLogger.LogInformation("Master data seeding completed (SeedMasterDataOnStartup={Seed}, InMemory={InMemory}).", seedOnStartup, isInMemory);
+
+                    // Also apply timeout to seeding operations
+                    var seedTask = seeder.SeedAllAsync();
+                    var seedTimeoutTask = Task.Delay(TimeSpan.FromSeconds(60));
+                    var seedCompletedTask = await Task.WhenAny(seedTask, seedTimeoutTask);
+
+                    if (seedCompletedTask == seedTimeoutTask)
+                    {
+                        startupLogger.LogWarning("Master data seeding timed out after 60 seconds. The application will continue to start.");
+                    }
+                    else
+                    {
+                        await seedTask;
+                        startupLogger.LogInformation("Master data seeding completed (SeedMasterDataOnStartup={Seed}, InMemory={InMemory}).", seedOnStartup, isInMemory);
+                    }
                 }
                 catch (Exception seedEx)
                 {
@@ -641,15 +792,13 @@ if (initializeDb)
                     startupLogger.LogError(seedEx, "Master data seeding failed. The application will continue to start. Set 'SeedMasterDataOnStartup'=false to skip seeding or use InMemory provider for local dev seeding.");
                 }
             }
-
-            startupLogger.LogInformation("Database initialization succeeded. Verified containers for current model are present.");
         }
-        catch (Exception ex)
-        {
-            // Fail fast with clear guidance so missing Cosmos containers/permissions are visible immediately
-            startupLogger.LogCritical(ex, "Failed to initialize database during startup. Ensure Azure Cosmos DB database 'MystiraAppDb' exists and app identity has permissions to create/read containers. Expected containers include: CompassAxes (PK /Id), BadgeConfigurations (PK /Id), CharacterMaps (PK /Id), ContentBundles (PK /Id), Scenarios (PK /Id), MediaMetadataFiles (PK /Id), CharacterMediaMetadataFiles (PK /Id), CharacterMapFiles (PK /Id), UserProfiles (PK /Id), Accounts (PK /Id), PendingSignups (PK /email), GameSessions (PK /AccountId), MediaAssets (PK /MediaType).");
-            throw;
-        }
+    }
+    catch (Exception ex)
+    {
+        // Fail fast with clear guidance so missing Cosmos containers/permissions are visible immediately
+        startupLogger.LogCritical(ex, "Failed to initialize database during startup. Ensure Azure Cosmos DB database 'MystiraAppDb' exists and app identity has permissions to create/read containers. Expected containers include: CompassAxes (PK /Id), BadgeConfigurations (PK /Id), CharacterMaps (PK /Id), ContentBundles (PK /Id), Scenarios (PK /Id), MediaMetadataFiles (PK /Id), CharacterMediaMetadataFiles (PK /Id), CharacterMapFiles (PK /Id), UserProfiles (PK /Id), Accounts (PK /Id), PendingSignups (PK /email), GameSessions (PK /AccountId), MediaAssets (PK /MediaType).");
+        throw;
     }
 }
 else
@@ -658,7 +807,16 @@ else
     startupLogger.LogInformation("Database initialization skipped (InitializeDatabaseOnStartup=false). Ensure database and containers are pre-configured in Azure.");
 }
 
-app.Run();
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
 // Make Program class accessible for testing
 namespace Mystira.App.Api

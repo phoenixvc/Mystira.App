@@ -244,6 +244,51 @@ public partial class MystiraAppDbContext : DbContext
             }
         });
 
+        // Configure AxisAchievement (new badge system)
+        modelBuilder.Entity<AxisAchievement>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            if (!isInMemoryDatabase)
+            {
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                entity.ToContainer("AxisAchievements")
+                      .HasPartitionKey(e => e.Id);
+            }
+        });
+
+        // Configure Badge (new badge system)
+        modelBuilder.Entity<Badge>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            if (!isInMemoryDatabase)
+            {
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                entity.ToContainer("Badges")
+                      .HasPartitionKey(e => e.Id);
+            }
+        });
+
+        // Configure BadgeImage (new badge system)
+        modelBuilder.Entity<BadgeImage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            if (!isInMemoryDatabase)
+            {
+                // Map Id property to lowercase 'id' to match container partition key path /id
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                entity.ToContainer("BadgeImages")
+                      .HasPartitionKey(e => e.Id);
+            }
+        });
+
         // Configure CompassAxis
         modelBuilder.Entity<CompassAxis>(entity =>
         {
@@ -324,8 +369,6 @@ public partial class MystiraAppDbContext : DbContext
                 // Map Id property to lowercase 'id' to match container partition key path /id
                 entity.Property(e => e.Id).ToJsonProperty("id");
 
-                // Existing Cosmos container 'AgeGroupDefinitions' uses partition key path '/id' (lowercase).
-                // Use the Id property directly as the partition key.
                 entity.ToContainer("AgeGroupDefinitions")
                       .HasPartitionKey(e => e.Id);
             }
@@ -763,17 +806,14 @@ public partial class MystiraAppDbContext : DbContext
         modelBuilder.Entity<CompassTracking>(entity =>
         {
             entity.HasKey(e => e.Axis);
-            // Axis as key automatically maps to 'id' (lowercase) for document ID
 
-            // Only apply Cosmos DB configurations when not using in-memory database
             if (!isInMemoryDatabase)
             {
-                // Add shadow property that maps to 'Axis' (uppercase) in JSON for partition key
-                entity.Property<string>("PartitionKeyAxis")
-                      .ToJsonProperty("Axis");
+                // Map Axis property to lowercase 'axis' for partition key (consistent with other entities)
+                entity.Property(e => e.Axis).ToJsonProperty("axis");
 
                 entity.ToContainer("CompassTrackings")
-                      .HasPartitionKey("PartitionKeyAxis");
+                      .HasPartitionKey(e => e.Axis);
             }
 
             entity.OwnsMany(e => e.History);

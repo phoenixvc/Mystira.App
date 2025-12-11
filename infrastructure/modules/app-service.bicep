@@ -332,6 +332,8 @@ resource customDomainBinding 'Microsoft.Web/sites/hostNameBindings@2023-01-01' =
 
 // Step 2: Create managed certificate AFTER hostname binding exists
 // Azure automatically provisions and renews this certificate (free)
+// Note: Explicit dependsOn required - Azure managed certs require hostname binding to exist first
+#disable-next-line no-unnecessary-dependson
 resource managedCertificate 'Microsoft.Web/certificates@2023-01-01' = if (enableCustomDomain && customDomain != '' && enableManagedCert) {
   name: '${appServiceName}-${replace(customDomain, '.', '-')}-cert'
   location: location
@@ -345,6 +347,8 @@ resource managedCertificate 'Microsoft.Web/certificates@2023-01-01' = if (enable
 
 // Step 3: Update hostname binding with SSL after cert is created
 // This is a separate resource that updates the binding to use SNI SSL
+// Note: Explicit dependsOn required - SSL binding needs certificate thumbprint
+#disable-next-line no-unnecessary-dependson
 resource customDomainSslBinding 'Microsoft.Web/sites/hostNameBindings@2023-01-01' = if (enableCustomDomain && customDomain != '' && enableManagedCert) {
   name: customDomain
   parent: appService
@@ -353,6 +357,7 @@ resource customDomainSslBinding 'Microsoft.Web/sites/hostNameBindings@2023-01-01
     siteName: appService.name
     hostNameType: 'Verified'
     sslState: 'SniEnabled'
+    // managedCertificate always exists when this resource is deployed (same deployment condition)
     thumbprint: managedCertificate.properties.thumbprint
   }
 }
