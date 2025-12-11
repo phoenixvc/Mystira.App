@@ -48,33 +48,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'requests/count'
+                          aggregationType: 7
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Server requests'
+                          }
+                        }
+                      ]
+                      title: 'Request Rate'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 3600000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'requests/count'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT1H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Request Rate'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Response Time Chart
@@ -88,33 +112,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'requests/duration'
+                          aggregationType: 4
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Server response time'
+                          }
+                        }
+                      ]
+                      title: 'Response Time (Avg)'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 3600000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'requests/duration'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT1H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Response Time (Avg)'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Error Rate Chart
@@ -128,33 +176,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'requests/failed'
+                          aggregationType: 7
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Failed requests'
+                          }
+                        }
+                      ]
+                      title: 'Failed Requests'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 3600000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'requests/failed'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT1H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Failed Requests'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Availability Chart
@@ -168,33 +240,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'availabilityResults/availabilityPercentage'
+                          aggregationType: 4
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Availability'
+                          }
+                        }
+                      ]
+                      title: 'Availability %'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 86400000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'availabilityResults/availabilityPercentage'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT24H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Availability %'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Exceptions Chart
@@ -208,33 +304,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'exceptions/count'
+                          aggregationType: 7
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Exceptions'
+                          }
+                        }
+                      ]
+                      title: 'Exceptions'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 3600000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'exceptions/count'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT1H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Exceptions'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Dependencies Chart
@@ -248,33 +368,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'dependencies/count'
+                          aggregationType: 7
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Dependency calls'
+                          }
+                        }
+                      ]
+                      title: 'Dependency Calls'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 3600000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'dependencies/count'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT1H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Dependency Calls'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Security Metrics Header
@@ -310,33 +454,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'customEvents/count'
+                          aggregationType: 7
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Custom events'
+                          }
+                        }
+                      ]
+                      title: 'Custom Events (Security)'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 86400000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'customEvents/count'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT24H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Custom Events (Security)'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // 429 Response Rate (Rate Limiting)
@@ -350,39 +518,69 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
-                  isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'Dimensions'
+                  name: 'options'
                   value: {
-                    'request/resultCode': '429'
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'requests/count'
+                          aggregationType: 7
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Rate Limited (429)'
+                            resourceDisplayName: appInsightsId
+                          }
+                        }
+                      ]
+                      title: 'Rate Limited Requests (429)'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 4
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      filterCollection: {
+                        filters: [
+                          {
+                            key: 'request/resultCode'
+                            operator: 0
+                            values: [
+                              '429'
+                            ]
+                          }
+                        ]
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 86400000
+                        }
+                      }
+                    }
                   }
-                }
-                {
-                  name: 'MetricName'
-                  value: 'requests/count'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT24H'
+                  isOptional: true
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Rate Limited Requests (429)'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 4 // Bar chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // 401/403 Auth Failures
@@ -396,39 +594,69 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
-                  isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'Dimensions'
+                  name: 'options'
                   value: {
-                    'request/resultCode': ['401', '403']
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'requests/count'
+                          aggregationType: 7
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Auth Failures (401/403)'
+                          }
+                        }
+                      ]
+                      title: 'Auth Failures (401/403)'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 4
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      filterCollection: {
+                        filters: [
+                          {
+                            key: 'request/resultCode'
+                            operator: 0
+                            values: [
+                              '401'
+                              '403'
+                            ]
+                          }
+                        ]
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 86400000
+                        }
+                      }
+                    }
                   }
-                }
-                {
-                  name: 'MetricName'
-                  value: 'requests/count'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT24H'
+                  isOptional: true
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Auth Failures (401/403)'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 4 // Bar chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Server Errors 5xx
@@ -442,39 +670,71 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
-                  isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'Dimensions'
+                  name: 'options'
                   value: {
-                    'request/resultCode': ['500', '502', '503', '504']
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'requests/count'
+                          aggregationType: 7
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Server Errors (5xx)'
+                          }
+                        }
+                      ]
+                      title: 'Server Errors (5xx)'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 4
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      filterCollection: {
+                        filters: [
+                          {
+                            key: 'request/resultCode'
+                            operator: 0
+                            values: [
+                              '500'
+                              '502'
+                              '503'
+                              '504'
+                            ]
+                          }
+                        ]
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 86400000
+                        }
+                      }
+                    }
                   }
-                }
-                {
-                  name: 'MetricName'
-                  value: 'requests/count'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT24H'
+                  isOptional: true
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Server Errors (5xx)'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 4 // Bar chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Application Insights Resource Link
@@ -554,33 +814,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: !empty(appServiceId) ? appServiceId : appInsightsId
+                          }
+                          name: !empty(appServiceId) ? 'CpuPercentage' : 'performanceCounters/processCpuPercentage'
+                          aggregationType: 4
+                          namespace: !empty(appServiceId) ? 'Microsoft.Web/sites' : 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'CPU Usage %'
+                          }
+                        }
+                      ]
+                      title: 'CPU Usage %'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 3
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 14400000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: !empty(appServiceId) ? appServiceId : appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'CpuPercentage'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT4H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'CPU Usage %'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 3 // Area chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // App Service Memory Percentage
@@ -594,33 +878,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: !empty(appServiceId) ? appServiceId : appInsightsId
+                          }
+                          name: !empty(appServiceId) ? 'MemoryWorkingSet' : 'performanceCounters/processPrivateBytes'
+                          aggregationType: 4
+                          namespace: !empty(appServiceId) ? 'Microsoft.Web/sites' : 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Memory Usage'
+                          }
+                        }
+                      ]
+                      title: 'Memory Usage'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 3
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 14400000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: !empty(appServiceId) ? appServiceId : appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'MemoryWorkingSet'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT4H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Memory Usage'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 3 // Area chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // App Service Connections
@@ -634,33 +942,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: !empty(appServiceId) ? appServiceId : appInsightsId
+                          }
+                          name: !empty(appServiceId) ? 'AppConnections' : 'performanceCounters/requestsInQueue'
+                          aggregationType: 4
+                          namespace: !empty(appServiceId) ? 'Microsoft.Web/sites' : 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Active Connections'
+                          }
+                        }
+                      ]
+                      title: 'Active Connections'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 14400000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: !empty(appServiceId) ? appServiceId : appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'AppConnections'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT4H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Active Connections'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // ═══════════════════════════════════════════════════════════════════════════════
@@ -700,33 +1032,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: !empty(cosmosDbId) ? cosmosDbId : appInsightsId
+                          }
+                          name: !empty(cosmosDbId) ? 'NormalizedRUConsumption' : 'dependencies/duration'
+                          aggregationType: 3
+                          namespace: !empty(cosmosDbId) ? 'Microsoft.DocumentDB/databaseAccounts' : 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'RU Consumption %'
+                          }
+                        }
+                      ]
+                      title: 'RU Consumption %'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 3
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 14400000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: !empty(cosmosDbId) ? cosmosDbId : appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'NormalizedRUConsumption'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT4H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'RU Consumption %'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 3 // Area chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Cosmos DB Total Request Units
@@ -740,33 +1096,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: !empty(cosmosDbId) ? cosmosDbId : appInsightsId
+                          }
+                          name: !empty(cosmosDbId) ? 'TotalRequestUnits' : 'dependencies/count'
+                          aggregationType: 1
+                          namespace: !empty(cosmosDbId) ? 'Microsoft.DocumentDB/databaseAccounts' : 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Total Request Units'
+                          }
+                        }
+                      ]
+                      title: 'Total Request Units'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 14400000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: !empty(cosmosDbId) ? cosmosDbId : appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'TotalRequestUnits'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT4H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Total Request Units'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Cosmos DB Throttled Requests (429s)
@@ -780,39 +1160,68 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
-                  isOptional: true
-                  value: !empty(cosmosDbId) ? cosmosDbId : appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'TotalRequests'
-                }
-                {
-                  name: 'Dimensions'
+                  name: 'options'
                   value: {
-                    StatusCode: '429'
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: !empty(cosmosDbId) ? cosmosDbId : appInsightsId
+                          }
+                          name: !empty(cosmosDbId) ? 'TotalRequests' : 'dependencies/failed'
+                          aggregationType: 7
+                          namespace: !empty(cosmosDbId) ? 'Microsoft.DocumentDB/databaseAccounts' : 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Throttled Requests'
+                          }
+                        }
+                      ]
+                      title: 'Throttled Requests (429)'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 4
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      filterCollection: !empty(cosmosDbId) ? {
+                        filters: [
+                          {
+                            key: 'StatusCode'
+                            operator: 0
+                            values: [
+                              '429'
+                            ]
+                          }
+                        ]
+                      } : {}
+                      timespan: {
+                        relative: {
+                          duration: 86400000
+                        }
+                      }
+                    }
                   }
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT24H'
+                  isOptional: true
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Throttled Requests (429)'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 4 // Bar chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Cosmos DB Server Side Latency
@@ -826,33 +1235,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: !empty(cosmosDbId) ? cosmosDbId : appInsightsId
+                          }
+                          name: !empty(cosmosDbId) ? 'ServerSideLatency' : 'dependencies/duration'
+                          aggregationType: 4
+                          namespace: !empty(cosmosDbId) ? 'Microsoft.DocumentDB/databaseAccounts' : 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Server Side Latency (ms)'
+                          }
+                        }
+                      ]
+                      title: 'Server Side Latency (ms)'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 14400000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: !empty(cosmosDbId) ? cosmosDbId : appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'ServerSideLatency'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT4H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Server Side Latency (ms)'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Cosmos DB Document Count
@@ -866,33 +1299,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: !empty(cosmosDbId) ? cosmosDbId : appInsightsId
+                          }
+                          name: !empty(cosmosDbId) ? 'DocumentCount' : 'traces/count'
+                          aggregationType: 1
+                          namespace: !empty(cosmosDbId) ? 'Microsoft.DocumentDB/databaseAccounts' : 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Document Count'
+                          }
+                        }
+                      ]
+                      title: 'Document Count'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 86400000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: !empty(cosmosDbId) ? cosmosDbId : appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'DocumentCount'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT24H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Document Count'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // ═══════════════════════════════════════════════════════════════════════════════
@@ -932,33 +1389,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'pageViews/count'
+                          aggregationType: 7
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Page views'
+                          }
+                        }
+                      ]
+                      title: 'Page Views'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 86400000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'pageViews/count'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT24H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Page Views'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Active Users (Sessions)
@@ -972,33 +1453,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'sessions/count'
+                          aggregationType: 5
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Sessions'
+                          }
+                        }
+                      ]
+                      title: 'Active Sessions'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 86400000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'sessions/count'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT24H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Active Sessions'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Users Count
@@ -1012,33 +1517,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'users/count'
+                          aggregationType: 5
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Users'
+                          }
+                        }
+                      ]
+                      title: 'Unique Users'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 86400000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'users/count'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT24H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Unique Users'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Browser Timings
@@ -1052,36 +1581,60 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'browserTimings/totalDuration'
+                          aggregationType: 4
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Browser page load time'
+                          }
+                        }
+                      ]
+                      title: 'Browser Load Time'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 86400000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'browserTimings/totalDuration'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT24H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Browser Load Time'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
-          // Custom Metrics (Business Events)
+          // Custom Metrics (Business Events) - Content Plays
           {
             position: {
               x: 6
@@ -1092,33 +1645,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'customMetrics/Mystira.ContentPlays'
+                          aggregationType: 1
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Content Plays'
+                          }
+                        }
+                      ]
+                      title: 'Content Plays'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 86400000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'customMetrics/Mystira.ContentPlays'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'PT24H'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Content Plays'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // ═══════════════════════════════════════════════════════════════════════════════
@@ -1158,33 +1735,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'customMetrics/Journey.DailyActiveUsers'
+                          aggregationType: 1
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Daily Active Users'
+                          }
+                        }
+                      ]
+                      title: 'Daily Active Users'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 4
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 604800000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'customMetrics/Journey.DailyActiveUsers'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'P7D'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Daily Active Users'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 4 // Bar chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // New User Registrations
@@ -1198,33 +1799,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'customMetrics/Journey.NewUsers'
+                          aggregationType: 1
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'New Users'
+                          }
+                        }
+                      ]
+                      title: 'New User Registrations'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 4
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 604800000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'customMetrics/Journey.NewUsers'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'P7D'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'New User Registrations'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 4 // Bar chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Scenario Plays
@@ -1238,36 +1863,60 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'customMetrics/Journey.ScenarioPlays'
+                          aggregationType: 1
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Scenario Plays'
+                          }
+                        }
+                      ]
+                      title: 'Scenario Plays'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 604800000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'customMetrics/Journey.ScenarioPlays'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'P7D'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Scenario Plays'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
-          // Scenario Completions vs Abandons
+          // Scenario Completions
           {
             position: {
               x: 0
@@ -1278,33 +1927,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'customMetrics/Journey.ScenarioCompletions'
+                          aggregationType: 1
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Scenario Completions'
+                          }
+                        }
+                      ]
+                      title: 'Scenario Completions'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 604800000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'customMetrics/Journey.ScenarioCompletions'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'P7D'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Scenario Completions'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Scenario Abandons
@@ -1318,33 +1991,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'customMetrics/Journey.ScenarioAbandons'
+                          aggregationType: 1
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Scenario Abandons'
+                          }
+                        }
+                      ]
+                      title: 'Scenario Abandons'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 4
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 604800000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'customMetrics/Journey.ScenarioAbandons'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'P7D'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Scenario Abandons'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 4 // Bar chart - to highlight problem areas
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Average Scenario Duration
@@ -1358,33 +2055,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'customMetrics/Journey.ScenarioDuration'
+                          aggregationType: 4
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Avg Scenario Duration'
+                          }
+                        }
+                      ]
+                      title: 'Avg Scenario Duration (sec)'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 604800000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'customMetrics/Journey.ScenarioDuration'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'P7D'
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Avg Scenario Duration (sec)'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // User Journey Info
@@ -1401,7 +2122,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
               settings: {
                 content: {
                   settings: {
-                    content: '### Journey Metrics Guide\n\n- **Daily Active Users**: Unique users who started a session\n- **New Users**: First-time registrations\n- **Scenario Plays**: Total scenario starts\n- **Completions**: Successfully finished scenarios\n- **Abandons**: Scenarios left incomplete (high rates may indicate UX issues)\n- **Duration**: Average time to complete scenarios\n\n📊 Use these metrics to identify drop-off points and optimize user experience.'
+                    content: '### Journey Metrics Guide\n\n- **Daily Active Users**: Unique users who started a session\n- **New Users**: First-time registrations\n- **Scenario Plays**: Total scenario starts\n- **Completions**: Successfully finished scenarios\n- **Abandons**: Scenarios left incomplete (high rates may indicate UX issues)\n- **Duration**: Average time to complete scenarios\n\nUse these metrics to identify drop-off points and optimize user experience.'
                     title: ''
                     subtitle: ''
                   }
@@ -1435,7 +2156,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
               }
             }
           }
-          // Deployment Annotations Timeline (Application Insights shows these automatically)
+          // Deployment Annotations Timeline
           {
             position: {
               x: 0
@@ -1446,38 +2167,57 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
             metadata: {
               inputs: [
                 {
-                  name: 'resourceTypeMode'
+                  name: 'sharedTimeRange'
                   isOptional: true
                 }
                 {
-                  name: 'ComponentId'
+                  name: 'options'
+                  value: {
+                    chart: {
+                      metrics: [
+                        {
+                          resourceMetadata: {
+                            id: appInsightsId
+                          }
+                          name: 'requests/count'
+                          aggregationType: 7
+                          namespace: 'microsoft.insights/components'
+                          metricVisualization: {
+                            displayName: 'Server requests'
+                          }
+                        }
+                      ]
+                      title: 'Request Rate with Deployment Markers'
+                      titleKind: 1
+                      visualization: {
+                        chartType: 2
+                        legendVisualization: {
+                          isVisible: true
+                          position: 2
+                          hideSubtitle: false
+                        }
+                        axisVisualization: {
+                          x: {
+                            isVisible: true
+                            axisType: 2
+                          }
+                          y: {
+                            isVisible: true
+                            axisType: 1
+                          }
+                        }
+                      }
+                      timespan: {
+                        relative: {
+                          duration: 604800000
+                        }
+                      }
+                    }
+                  }
                   isOptional: true
-                  value: appInsightsId
-                }
-                {
-                  name: 'MetricName'
-                  value: 'requests/count'
-                }
-                {
-                  name: 'TimeRange'
-                  value: 'P7D' // 7 days to see deployment patterns
-                }
-                {
-                  name: 'showAnnotations'
-                  value: true
                 }
               ]
-              type: 'Extension/Microsoft_Azure_Monitoring/PartType/MetricsChartPart'
-              settings: {
-                chartSettings: {
-                  title: 'Request Rate with Deployment Markers'
-                  titleKind: 1
-                  visualization: {
-                    chartType: 2 // Line chart
-                  }
-                  showAnnotations: true
-                }
-              }
+              type: 'Extension/HubsExtension/PartType/MonitorChartPart'
             }
           }
           // Deployment Info Markdown
@@ -1494,7 +2234,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
               settings: {
                 content: {
                   settings: {
-                    content: '### Deployment Annotations\n\nDeployment markers are automatically added via CI/CD pipelines. Each deployment creates an annotation in Application Insights showing:\n- **Version** (Git commit SHA)\n- **Branch** deployed\n- **Deployer** (GitHub actor)\n- **Timestamp**\n\n📍 Hover over vertical markers on the chart above to see deployment details.'
+                    content: '### Deployment Annotations\n\nDeployment markers are automatically added via CI/CD pipelines. Each deployment creates an annotation in Application Insights showing:\n- **Version** (Git commit SHA)\n- **Branch** deployed\n- **Deployer** (GitHub actor)\n- **Timestamp**\n\nHover over vertical markers on the chart above to see deployment details.'
                     title: ''
                     subtitle: ''
                   }
@@ -1511,7 +2251,7 @@ resource dashboard 'Microsoft.Portal/dashboards@2020-09-01-preview' = {
           value: {
             relative: {
               duration: 24
-              timeUnit: 1 // Hours
+              timeUnit: 1
             }
           }
           type: 'MsPortalFx.Composition.Configuration.ValueTypes.TimeRange'
