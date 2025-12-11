@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Badge Configuration Schema",
+  "description": "Schema for per-age-group badge and achievement configuration",
+  "type": "object",
+  "required": ["Age_Group_Id", "Axis_Achievements", "Badges"],
+  "properties": {
+    "Age_Group_Id": {
+      "type": "string",
+      "description": "Age group identifier (e.g., '1-2', '3-5', '6-9', '10-12', '13-18')",
+      "pattern": "^[0-9]+-[0-9]+$"
+    },
+    "Axis_Achievements": {
+      "type": "array",
+      "description": "List of axis achievements that can be earned",
+      "items": {
+        "type": "object",
+        "required": ["Compass_Axis_Id", "Axes_Direction", "Description"],
+        "properties": {
+          "Compass_Axis_Id": {
+            "type": "string",
+            "description": "Reference to a compass axis (e.g., 'honesty', 'courage')"
+          },
+          "Axes_Direction": {
+            "type": "string",
+            "description": "Direction on the axis (e.g., 'positive', 'negative')",
+            "enum": ["positive", "negative"]
+          },
+          "Description": {
+            "type": "string",
+            "description": "Description of what this axis achievement represents"
+          }
+        }
+      }
+    },
+    "Badges": {
+      "type": "array",
+      "description": "List of badges that can be earned for this age group",
+      "items": {
+        "type": "object",
+        "required": ["Tier", "Tier_Order", "Title", "Description", "Required_Score", "Compass_Axis_Id", "Image_Id"],
+        "properties": {
+          "Tier": {
+            "type": "string",
+            "description": "Badge tier (e.g., 'bronze', 'silver', 'gold', 'platinum')",
+            "enum": ["bronze", "silver", "gold", "platinum", "diamond"]
+          },
+          "Tier_Order": {
+            "type": "integer",
+            "description": "Numeric order within the tier (1, 2, 3, etc.)",
+            "minimum": 1
+          },
+          "Title": {
+            "type": "string",
+            "description": "Display title of the badge"
+          },
+          "Description": {
+            "type": "string",
+            "description": "Description of the achievement"
+          },
+          "Required_Score": {
+            "type": "number",
+            "description": "Score threshold required to earn this badge",
+            "minimum": 0
+          },
+          "Compass_Axis_Id": {
+            "type": "string",
+            "description": "Reference to the compass axis this badge is associated with"
+          },
+          "Image_Id": {
+            "type": "string",
+            "description": "Reference to the badge image (media path or media asset ID)"
+          }
+        }
+      }
+    }
+  }
+}

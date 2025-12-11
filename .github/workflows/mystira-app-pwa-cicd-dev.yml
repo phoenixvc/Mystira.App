@@ -10,10 +10,8 @@ on:
   pull_request:
     branches: [dev]
     types: [opened, synchronize, reopened, closed]
-    paths:
-      - "src/Mystira.App.PWA/**"
-      - "src/Mystira.App.Contracts/**"
-      - ".github/workflows/mystira-app-pwa-cicd-dev.yml"
+    # Note: No path filter to ensure cleanup job always runs when PR is closed
+    # The build-and-deploy job has its own path filtering via job-level conditions
   workflow_run:
     workflows: ["Infrastructure Deploy - Dev"]
     types: [completed]
@@ -51,8 +49,58 @@ jobs:
       - name: Install wasm-tools workload
         run: dotnet workload install wasm-tools
 
+      - name: Validate API Configuration
+        run: |
+          echo "Validating appsettings configuration for dev..."
+
+          # Check base config (dev uses the default appsettings.json)
+          DEFAULT_API_URL=$(jq -r '.ApiConfiguration.DefaultApiBaseUrl // empty' src/Mystira.App.PWA/wwwroot/appsettings.json)
+          if [ -z "$DEFAULT_API_URL" ]; then
+            echo "ERROR: Missing DefaultApiBaseUrl in appsettings.json"
+            exit 1
+          fi
+
+          # Validate URL format
+          if ! [[ "$DEFAULT_API_URL" =~ ^https:// ]]; then
+            echo "ERROR: API URL must use HTTPS: $DEFAULT_API_URL"
+            exit 1
+          fi
+
+          # Check that AvailableEndpoints exist and have valid URLs
+          ENDPOINTS=$(jq -r '.ApiConfiguration.AvailableEndpoints[]?.Url // empty' src/Mystira.App.PWA/wwwroot/appsettings.json)
+          if [ -z "$ENDPOINTS" ]; then
+            echo "ERROR: No AvailableEndpoints configured in appsettings.json"
+            exit 1
+          fi
+
+          # Validate each endpoint URL
+          VALIDATION_FAILED=0
+          while IFS= read -r url; do
+            if [ -n "$url" ] && ! [[ "$url" =~ ^https:// ]]; then
+              echo "ERROR: Endpoint URL must use HTTPS: $url"
+              VALIDATION_FAILED=1
+            fi
+          done <<< "$ENDPOINTS"
+
+          if [ "$VALIDATION_FAILED" -eq 1 ]; then
+            exit 1
+          fi
+
+          echo "✓ API configuration validation passed"
+          echo "  - Default API: $DEFAULT_API_URL"
+          echo "  - Available endpoints:"
+          jq -r '.ApiConfiguration.AvailableEndpoints[] | "    - \(.Name): \(.Url)"' src/Mystira.App.PWA/wwwroot/appsettings.json
+
       - name: Build Blazor WASM
         run: dotnet publish src/Mystira.App.PWA/Mystira.App.PWA.csproj -c Release -o publish
+
+      - name: Configure Environment Header for Development
+        run: |
+          echo "Setting Blazor-Environment header to Development..."
+          jq '.globalHeaders = (.globalHeaders // {}) | .globalHeaders."Blazor-Environment" = "Development"' publish/wwwroot/staticwebapp.config.json > temp.json
+          mv temp.json publish/wwwroot/staticwebapp.config.json
+          echo "✓ Blazor-Environment header set to Development"
+          cat publish/wwwroot/staticwebapp.config.json | grep -A 1 "globalHeaders"
 
       - name: Deploy to Azure Static Web App
         uses: Azure/static-web-apps-deploy@v1

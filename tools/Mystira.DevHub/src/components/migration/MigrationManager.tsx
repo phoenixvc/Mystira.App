@@ -12,18 +12,33 @@ function MigrationManager() {
   const { toasts, showToast, dismissToast } = useToast();
   const [currentStep, setCurrentStep] = useState<MigrationStep>('configure');
   const [config, setConfig] = useState<MigrationConfig>({
+    sourceEnvironment: '',
+    destEnvironment: '',
     sourceCosmosConnection: '',
     destCosmosConnection: '',
     sourceStorageConnection: '',
     destStorageConnection: '',
-    databaseName: 'MystiraDb',
+    databaseName: 'MystiraAppDb',
     containerName: 'media-assets',
   });
 
   const [selectedResources, setSelectedResources] = useState<ResourceSelection>({
+    // Core content
     scenarios: true,
     bundles: true,
     mediaMetadata: true,
+    // User data
+    userProfiles: true,
+    gameSessions: true,
+    accounts: true,
+    compassTrackings: true,
+    // Reference data
+    characterMaps: true,
+    characterMapFiles: true,
+    characterMediaMetadataFiles: true,
+    avatarConfigurationFiles: true,
+    badgeConfigurations: true,
+    // Storage
     blobStorage: false,
   });
 
@@ -42,6 +57,15 @@ function MigrationManager() {
       scenarios: true,
       bundles: true,
       mediaMetadata: true,
+      userProfiles: true,
+      gameSessions: true,
+      accounts: true,
+      compassTrackings: true,
+      characterMaps: true,
+      characterMapFiles: true,
+      characterMediaMetadataFiles: true,
+      avatarConfigurationFiles: true,
+      badgeConfigurations: true,
       blobStorage: true,
     });
   };
@@ -51,6 +75,15 @@ function MigrationManager() {
       scenarios: false,
       bundles: false,
       mediaMetadata: false,
+      userProfiles: false,
+      gameSessions: false,
+      accounts: false,
+      compassTrackings: false,
+      characterMaps: false,
+      characterMapFiles: false,
+      characterMediaMetadataFiles: false,
+      avatarConfigurationFiles: false,
+      badgeConfigurations: false,
       blobStorage: false,
     });
   };
@@ -70,17 +103,32 @@ function MigrationManager() {
   const resetMigration = () => {
     setCurrentStep('configure');
     setConfig({
+      sourceEnvironment: '',
+      destEnvironment: '',
       sourceCosmosConnection: '',
       destCosmosConnection: '',
       sourceStorageConnection: '',
       destStorageConnection: '',
-      databaseName: 'MystiraDb',
+      databaseName: 'MystiraAppDb',
       containerName: 'media-assets',
     });
     setSelectedResources({
+      // Core content
       scenarios: true,
       bundles: true,
       mediaMetadata: true,
+      // User data
+      userProfiles: true,
+      gameSessions: true,
+      accounts: true,
+      compassTrackings: true,
+      // Reference data
+      characterMaps: true,
+      characterMapFiles: true,
+      characterMediaMetadataFiles: true,
+      avatarConfigurationFiles: true,
+      badgeConfigurations: true,
+      // Storage
       blobStorage: false,
     });
   };
@@ -92,7 +140,8 @@ function MigrationManager() {
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Migration Manager</h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Migrate Cosmos DB data and Azure Blob Storage between environments
+            Migrate Cosmos DB data and Azure Blob Storage from old environments to new environments.
+            Select preset environments to auto-fetch connection strings from Azure.
           </p>
         </div>
 

@@ -1,0 +1,71 @@
+{
+  "Age_Group_Id": "3-5",
+  "Axis_Achievements": [
+    {
+      "Compass_Axis_Id": "Self-Regulation",
+      "Axes_Direction": "positive",
+      "Description": "Learning to control impulses and express emotions appropriately"
+    },
+    {
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Axes_Direction": "positive",
+      "Description": "Asking questions and trying new challenges"
+    }
+  ],
+  "Badges": [
+    {
+      "Tier": "bronze",
+      "Tier_Order": 1,
+      "Title": "Question Asker",
+      "Description": "Asked great questions to learn more",
+      "Required_Score": 8.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/preschool_question_bronze.png"
+    },
+    {
+      "Tier": "silver",
+      "Tier_Order": 1,
+      "Title": "Creative Thinker",
+      "Description": "Found clever solutions to problems",
+      "Required_Score": 15.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/preschool_thinker_silver.png"
+    },
+    {
+      "Tier": "gold",
+      "Tier_Order": 1,
+      "Title": "Master Explorer",
+      "Description": "Showed exceptional curiosity and initiative",
+      "Required_Score": 25.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/preschool_explorer_gold.png"
+    },
+    {
+      "Tier": "bronze",
+      "Tier_Order": 1,
+      "Title": "Patient Player",
+      "Description": "Waited your turn and shared nicely",
+      "Required_Score": 8.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/preschool_patient_bronze.png"
+    },
+    {
+      "Tier": "silver",
+      "Tier_Order": 1,
+      "Title": "Emotion Captain",
+      "Description": "Handled strong feelings with maturity",
+      "Required_Score": 15.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/preschool_emotion_silver.png"
+    },
+    {
+      "Tier": "gold",
+      "Tier_Order": 1,
+      "Title": "Self-Control Star",
+      "Description": "Demonstrated exceptional self-regulation",
+      "Required_Score": 25.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/preschool_control_gold.png"
+    }
+  ]
+}

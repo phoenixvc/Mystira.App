@@ -41,8 +41,10 @@ public abstract class CqrsIntegrationTestBase : IDisposable
         services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<IScenarioRepository, ScenarioRepository>();
         services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
-        services.AddScoped<IBadgeConfigurationRepository, BadgeConfigurationRepository>();
         services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
+        services.AddScoped<IBadgeRepository, BadgeRepository>();
+        services.AddScoped<IAxisAchievementRepository, AxisAchievementRepository>();
+        services.AddScoped<IBadgeImageRepository, BadgeImageRepository>();
         services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
 
         // Add Unit of Work

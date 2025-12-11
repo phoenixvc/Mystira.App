@@ -9,6 +9,10 @@ on:
       - "src/Mystira.App.Contracts/**"
       - "src/Mystira.App.Application/**"
       - "src/Mystira.App.Infrastructure.Data/**"
+      - "src/Mystira.App.Infrastructure.Azure/**"
+      - "src/Mystira.App.Infrastructure.Discord/**"
+      - "src/Mystira.App.Infrastructure.StoryProtocol/**"
+      - "src/Mystira.App.Shared/**"
       - ".github/workflows/mystira-app-api-cicd-dev.yml"
   pull_request:
     branches: [dev] # PRs targeting dev
@@ -19,6 +23,10 @@ on:
       - "src/Mystira.App.Contracts/**"
       - "src/Mystira.App.Application/**"
       - "src/Mystira.App.Infrastructure.Data/**"
+      - "src/Mystira.App.Infrastructure.Azure/**"
+      - "src/Mystira.App.Infrastructure.Discord/**"
+      - "src/Mystira.App.Infrastructure.StoryProtocol/**"
+      - "src/Mystira.App.Shared/**"
       - ".github/workflows/mystira-app-api-cicd-dev.yml"
   workflow_run:
     workflows: ["Infrastructure Deploy - Dev"]
@@ -43,6 +51,9 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: "1"
   # Evaluates to "true"/"false" at workflow parse time
   HAS_PUBLISH_PROFILE_DEV: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV != '' }}
+  # Application Insights for deployment annotations
+  APP_INSIGHTS_NAME: "mys-dev-mystira-appins-san"
+  RESOURCE_GROUP: "mys-dev-mystira-rg-san"
 
 jobs:
   build-and-test:
@@ -86,6 +97,7 @@ jobs:
     # - Direct push to dev
     # - PR into dev is CLOSED *and* MERGED
     # - Infrastructure Deploy workflow completed successfully
+    # - Manual workflow dispatch
     if: >
       (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
       (github.event_name == 'pull_request' &&
@@ -93,7 +105,8 @@ jobs:
        github.event.pull_request.merged == true &&
        github.base_ref == 'dev') ||
       (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success')
+       github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'workflow_dispatch')
 
     environment: development
 
@@ -151,6 +164,111 @@ jobs:
               {"name": "JwtSettings__Issuer", "value": "MystiraAPI", "slotSetting": false},
               {"name": "JwtSettings__Audience", "value": "MystiraPWA", "slotSetting": false}
             ]
+
+      - name: Configure Story Protocol settings
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-settings-json: |
+            [
+              {"name": "StoryProtocol__Enabled", "value": "false", "slotSetting": false},
+              {"name": "StoryProtocol__UseMockImplementation", "value": "true", "slotSetting": false},
+              {"name": "StoryProtocol__Network", "value": "aeneid", "slotSetting": false},
+              {"name": "StoryProtocol__RpcUrl", "value": "${{ secrets.STORY_PROTOCOL_RPC_URL || 'https://aeneid.storyrpc.io' }}", "slotSetting": false},
+              {"name": "StoryProtocol__PrivateKey", "value": "${{ secrets.STORY_PROTOCOL_WALLET_PRIVATE_KEY }}", "slotSetting": false}
+            ]
+
+      - name: Configure Database Settings
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-settings-json: |
+            [
+              {"name": "InitializeDatabaseOnStartup", "value": "true", "slotSetting": false},
+              {"name": "SeedMasterDataOnStartup", "value": "true", "slotSetting": false}
+            ]
+
+      - name: Smoke test - Health check
+        id: smoke-test
+        env:
+          # Configurable startup wait time (default 30s for dev)
+          POST_DEPLOY_WAIT_SECONDS: ${{ vars.POST_DEPLOY_WAIT_SECONDS || '30' }}
+        run: |
+          APP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+          echo "🔍 Running post-deployment smoke tests for ${APP_URL}"
+
+          # Wait for deployment to stabilize (configurable via repository variable)
+          echo "⏳ Waiting ${POST_DEPLOY_WAIT_SECONDS}s for App Service startup..."
+          sleep ${POST_DEPLOY_WAIT_SECONDS}
+
+          # Retry logic with exponential backoff
+          MAX_RETRIES=6
+          INITIAL_DELAY=5
+          MAX_DELAY=30
+
+          # Test 1: Basic health check (liveness)
+          echo ""
+          echo "📋 Test 1: Liveness check (/health)"
+          for i in $(seq 1 $MAX_RETRIES); do
+            DELAY=$((INITIAL_DELAY * (2 ** (i-1))))
+            [ $DELAY -gt $MAX_DELAY ] && DELAY=$MAX_DELAY
+
+            echo "  Attempt $i of $MAX_RETRIES..."
+
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 15 \
+              --max-time 45 \
+              "${APP_URL}/health" || echo "000")
+
+            echo "    /health status: ${HTTP_STATUS}"
+
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "  ✅ Liveness check passed!"
+              break
+            fi
+
+            if [ $i -eq $MAX_RETRIES ]; then
+              echo "❌ Liveness check failed after $MAX_RETRIES attempts"
+              echo "health_status=unhealthy" >> $GITHUB_OUTPUT
+              echo "::warning::Health check failed - deployment may need investigation"
+              exit 0  # Don't fail dev builds
+            fi
+
+            echo "    Retrying in ${DELAY}s (exponential backoff)..."
+            sleep $DELAY
+          done
+
+          # Test 2: Readiness check (includes database connectivity)
+          echo ""
+          echo "📋 Test 2: Readiness check (/health/ready)"
+          for i in $(seq 1 $MAX_RETRIES); do
+            DELAY=$((INITIAL_DELAY * (2 ** (i-1))))
+            [ $DELAY -gt $MAX_DELAY ] && DELAY=$MAX_DELAY
+
+            echo "  Attempt $i of $MAX_RETRIES..."
+
+            READY_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 10 \
+              --max-time 30 \
+              "${APP_URL}/health/ready" || echo "000")
+
+            echo "    /health/ready status: ${READY_STATUS}"
+
+            if [ "$READY_STATUS" = "200" ]; then
+              echo "  ✅ Readiness check passed!"
+              echo "health_status=healthy" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            if [ $i -eq $MAX_RETRIES ]; then
+              echo "⚠️ Readiness check failed after $MAX_RETRIES attempts (app may still be initializing)"
+              echo "health_status=degraded" >> $GITHUB_OUTPUT
+              exit 0  # Don't fail dev builds
+            fi
+
+            echo "    Retrying in ${DELAY}s (exponential backoff)..."
+            sleep $DELAY
+          done
 
       - name: Azure Logout
         if: always()

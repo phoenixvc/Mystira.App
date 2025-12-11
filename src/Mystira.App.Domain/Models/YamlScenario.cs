@@ -63,10 +63,10 @@ public class YamlScenario
             Tags = Tags,
             Difficulty = Enum.Parse<DifficultyLevel>(Difficulty),
             SessionLength = Enum.Parse<SessionLength>(SessionLength),
-            Archetypes = Archetypes.Select(Archetype.Parse).Where(a => a != null).ToList()!,
+            Archetypes = Archetypes.Where(a => Archetype.Parse(a) != null).Select(Archetype.Parse).ToList()!,
             AgeGroup = AgeGroup,
             MinimumAge = MinimumAge,
-            CoreAxes = axes.Select(CoreAxis.Parse).Where(a => a != null).ToList()!,
+            CoreAxes = axes.Where(a => CoreAxis.Parse(a) != null).Select(CoreAxis.Parse).ToList()!,
             CreatedAt = DateTime.TryParse(CreatedAt, out var createdAt) ? createdAt : DateTime.UtcNow,
             Scenes = Scenes.Select(s => s.ToDomainModel()).ToList()
         };

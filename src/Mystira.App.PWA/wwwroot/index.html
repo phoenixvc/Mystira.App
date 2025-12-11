@@ -67,6 +67,23 @@
     <!-- Scripts -->
     <script src="js/imageCacheManager.js"></script>
 
+    <!-- API Configuration Persistence (Read-only) -->
+    <!-- All write operations are handled by C# ApiConfigurationService via JSInterop -->
+    <script>
+        // Read persisted API configuration from localStorage BEFORE Blazor starts
+        // This allows early logging but all actual config management is done in C#
+        (function() {
+            var apiUrl = localStorage.getItem('mystira_api_base_url');
+            var env = localStorage.getItem('mystira_api_environment');
+
+            if (apiUrl) {
+                console.log('[MystiraConfig] Persisted endpoint:', apiUrl, '(' + (env || 'unknown') + ')');
+            } else {
+                console.log('[MystiraConfig] No persisted config, using appsettings default');
+            }
+        })();
+    </script>
+
     <!-- Application Insights -->
     <script type="text/javascript">
         !function(T,l,y){
@@ -84,6 +101,37 @@
                 n=S.protocol==="https:"?"https:":"http:",
                 u=function(e){e.queue=[],e.version=2;var t=l.createElement(k);t.async=!0,t.src=n+"//js.monitor.azure.com/scripts/b/ai.2.min.js",t.setAttribute("crossorigin","anonymous");var i=l.getElementsByTagName(k)[0];i.parentNode.insertBefore(t,i)};var i={config:{connectionString:"InstrumentationKey=6c9db606-e0bd-4b74-ade5-68c3bf5b2865;IngestionEndpoint=https://westeurope-5.in.applicationinsights.azure.com/;LiveEndpoint=https://westeurope.livediagnostics.monitor.azure.com/;ApplicationId=009864dd-fb88-4dce-bc62-7a9b8df50c1f",enableAutoRouteTracking:!0}};var s=T[e]||function(e){function t(e){i[e]=function(){var t=arguments;i.queue.push(function(){i[e].apply(i,t)})}}var i={config:e};i.initialize=!0;var n=l.createElement(k);n.src=e.url||"https://js.monitor.azure.com/scripts/b/ai.2.min.js",l.getElementsByTagName(k)[0].parentNode.appendChild(n);try{i.cookie=l.cookie}catch(e){}i.queue=[],i.version=2;for(var a=["trackEvent","trackPageView","trackException","trackTrace","trackDependencyData","trackMetric","startTrackEvent","stopTrackEvent","startTrackPage","stopTrackPage","flush"],o=0;o<a.length;o++)t(a[o]);return i}(i.config);T[e]=s,s.queue&&0===s.queue.length?s.trackPageView({}):l.write("<"+'script src="https://js.monitor.azure.com/scripts/b/ai.2.min.js"><\/script>')
         }(window,document);
+    </script>
+
+    <!-- Telemetry wrapper for Blazor JSInterop -->
+    <script>
+        window.mystiraTelemetry = {
+            isAvailable: function() {
+                return !!(window.appInsights && typeof window.appInsights.trackEvent === 'function');
+            },
+            trackEvent: function(eventName, properties) {
+                if (window.appInsights && window.appInsights.trackEvent) {
+                    window.appInsights.trackEvent({ name: eventName, properties: properties || {} });
+                }
+            },
+            trackException: function(properties) {
+                if (window.appInsights && window.appInsights.trackException) {
+                    window.appInsights.trackException({
+                        exception: new Error(properties.message || 'Unknown error'),
+                        properties: properties
+                    });
+                }
+            },
+            trackMetric: function(metricName, value, properties) {
+                if (window.appInsights && window.appInsights.trackMetric) {
+                    window.appInsights.trackMetric({
+                        name: metricName,
+                        average: value,
+                        properties: properties || {}
+                    });
+                }
+            }
+        };
     </script>
 
 </head>

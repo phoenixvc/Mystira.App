@@ -95,6 +95,12 @@ param cosmosDbDatabaseName string = 'MystiraAppDb'
 @description('Tags for all resources')
 param tags object = {}
 
+@description('Custom domain to bind (e.g., "api.mystira.app")')
+param customDomain string = ''
+
+@description('Enable custom domain binding (requires DNS CNAME to be configured first)')
+param enableCustomDomain bool = false
+
 // Helper: Check if Key Vault is configured
 var useKeyVault = !empty(keyVaultUri)
 
@@ -302,9 +308,65 @@ resource diagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-pr
   }
 }
 
+// Custom domain binding with managed SSL certificate
+// CNAME should point: customDomain -> appServiceName.azurewebsites.net
+//
+// Azure managed certificates require the hostname binding to exist FIRST.
+// We create the binding without SSL, then create the cert, then the cert
+// automatically gets associated when we create the SSL-enabled binding.
+
+@description('Enable managed SSL certificate (requires hostname binding to exist first)')
+param enableManagedCert bool = false
+
+// Step 1: ALWAYS create hostname binding first (required for managed cert)
+// This binding is created without SSL initially
+resource customDomainBinding 'Microsoft.Web/sites/hostNameBindings@2023-01-01' = if (enableCustomDomain && customDomain != '') {
+  name: customDomain
+  parent: appService
+  properties: {
+    siteName: appService.name
+    hostNameType: 'Verified'
+    sslState: 'Disabled'
+  }
+}
+
+// Step 2: Create managed certificate AFTER hostname binding exists
+// Azure automatically provisions and renews this certificate (free)
+// Note: Explicit dependsOn required - Azure managed certs require hostname binding to exist first
+#disable-next-line no-unnecessary-dependson
+resource managedCertificate 'Microsoft.Web/certificates@2023-01-01' = if (enableCustomDomain && customDomain != '' && enableManagedCert) {
+  name: '${appServiceName}-${replace(customDomain, '.', '-')}-cert'
+  location: location
+  tags: tags
+  dependsOn: [customDomainBinding] // Must wait for hostname binding
+  properties: {
+    serverFarmId: appServicePlan.id
+    canonicalName: customDomain
+  }
+}
+
+// Step 3: Update hostname binding with SSL after cert is created
+// This is a separate resource that updates the binding to use SNI SSL
+// Note: Explicit dependsOn required - SSL binding needs certificate thumbprint
+#disable-next-line no-unnecessary-dependson
+resource customDomainSslBinding 'Microsoft.Web/sites/hostNameBindings@2023-01-01' = if (enableCustomDomain && customDomain != '' && enableManagedCert) {
+  name: customDomain
+  parent: appService
+  dependsOn: [managedCertificate] // Must wait for cert to be provisioned
+  properties: {
+    siteName: appService.name
+    hostNameType: 'Verified'
+    sslState: 'SniEnabled'
+    // managedCertificate always exists when this resource is deployed (same deployment condition)
+    thumbprint: managedCertificate.properties.thumbprint
+  }
+}
+
 // Outputs
 output appServiceName string = appService.name
 output appServiceId string = appService.id
 output appServiceUrl string = 'https://${appService.properties.defaultHostName}'
+output appServiceDefaultHostname string = appService.properties.defaultHostName
 output appServicePlanId string = appServicePlan.id
 output appServicePrincipalId string = appService.identity.principalId
+output customDomainUrl string = enableCustomDomain && customDomain != '' ? 'https://${customDomain}' : ''

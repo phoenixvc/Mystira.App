@@ -20,6 +20,12 @@ This directory contains comprehensive setup and configuration guides for the Mys
 |----------|---------|----------|
 | **[Email Setup](EMAIL_SETUP.md)** | Azure Communication Services configuration | DevOps, Backend Developers |
 
+### 💾 Database & Data
+
+| Document | Purpose | Audience |
+|----------|---------|----------|
+| **[Database Setup](database-setup.md)** | Database initialization and master data seeding | Developers, DevOps |
+
 ### 🏗️ Infrastructure & Naming
 
 | Document | Purpose | Audience |

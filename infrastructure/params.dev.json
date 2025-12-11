@@ -21,7 +21,7 @@
       "value": "eastus2"
     },
     "appServiceSku": {
-      "value": "F1"
+      "value": "B1"
     },
     "storageSku": {
       "value": "Standard_LRS"
@@ -42,7 +42,7 @@
       "value": "mystira.app"
     },
     "corsAllowedOrigins": {
-      "value": "http://localhost:7000,https://localhost:7000,https://mystira.app,https://blue-water-0eab7991e.3.azurestaticapps.net,https://brave-meadow-0ecd87c03.3.azurestaticapps.net"
+      "value": "http://localhost:7000,https://localhost:7000,https://dev.mystira.app,https://api.dev.mystira.app,https://admin.dev.mystira.app,https://mystira.app,https://blue-water-0eab7991e.3.azurestaticapps.net,https://brave-meadow-0ecd87c03.3.azurestaticapps.net"
     },
     "deployAzureBot": {
       "value": false
@@ -64,6 +64,48 @@
     },
     "staticWebAppBranch": {
       "value": "dev"
+    },
+    "enableCustomDomain": {
+      "value": true
+    },
+    "dnsZoneName": {
+      "value": "mystira.app"
+    },
+    "dnsZoneResourceGroup": {
+      "value": "mys-prod-mystira-rg-glob"
+    },
+    "customDomainSubdomain": {
+      "value": "dev"
+    },
+    "enableApiCustomDomain": {
+      "value": true
+    },
+    "apiSubdomainPrefix": {
+      "value": "api"
+    },
+    "adminApiSubdomainPrefix": {
+      "value": "admin"
+    },
+    "enableManagedCert": {
+      "value": true
+    },
+    "enableAlerts": {
+      "value": false
+    },
+    "enableAvailabilityTests": {
+      "value": false
+    },
+    "alertEmailReceivers": {
+      "value": []
+    },
+    "deployDashboard": {
+      "value": true
+    },
+    "deployBudget": {
+      "value": false
+    },
+    "monthlyBudget": {
+      "value": 50
     }
   }
 }

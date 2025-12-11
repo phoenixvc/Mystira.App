@@ -9,6 +9,10 @@ on:
       - "src/Mystira.App.Contracts/**"
       - "src/Mystira.App.Application/**"
       - "src/Mystira.App.Infrastructure.Data/**"
+      - "src/Mystira.App.Infrastructure.Azure/**"
+      - "src/Mystira.App.Infrastructure.Discord/**"
+      - "src/Mystira.App.Infrastructure.StoryProtocol/**"
+      - "src/Mystira.App.Shared/**"
       - ".github/workflows/mystira-app-api-cicd-staging.yml"
   pull_request:
     branches: [staging]
@@ -19,6 +23,10 @@ on:
       - "src/Mystira.App.Contracts/**"
       - "src/Mystira.App.Application/**"
       - "src/Mystira.App.Infrastructure.Data/**"
+      - "src/Mystira.App.Infrastructure.Azure/**"
+      - "src/Mystira.App.Infrastructure.Discord/**"
+      - "src/Mystira.App.Infrastructure.StoryProtocol/**"
+      - "src/Mystira.App.Shared/**"
       - ".github/workflows/mystira-app-api-cicd-staging.yml"
   workflow_run:
     workflows: ["Infrastructure Deploy - Staging"]
@@ -132,6 +140,111 @@ jobs:
               {"name": "JwtSettings__Issuer", "value": "MystiraAPI", "slotSetting": false},
               {"name": "JwtSettings__Audience", "value": "MystiraPWA", "slotSetting": false}
             ]
+
+      - name: Configure Story Protocol settings
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-settings-json: |
+            [
+              {"name": "StoryProtocol__Enabled", "value": "false", "slotSetting": false},
+              {"name": "StoryProtocol__UseMockImplementation", "value": "true", "slotSetting": false},
+              {"name": "StoryProtocol__Network", "value": "aeneid", "slotSetting": false},
+              {"name": "StoryProtocol__RpcUrl", "value": "${{ secrets.STORY_PROTOCOL_RPC_URL || 'https://aeneid.storyrpc.io' }}", "slotSetting": false},
+              {"name": "StoryProtocol__PrivateKey", "value": "${{ secrets.STORY_PROTOCOL_WALLET_PRIVATE_KEY }}", "slotSetting": false}
+            ]
+
+      - name: Configure Database Settings
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-settings-json: |
+            [
+              {"name": "InitializeDatabaseOnStartup", "value": "true", "slotSetting": false},
+              {"name": "SeedMasterDataOnStartup", "value": "true", "slotSetting": false}
+            ]
+
+      - name: Smoke test - Health check
+        id: smoke-test
+        env:
+          # Configurable startup wait time (default 45s for staging)
+          POST_DEPLOY_WAIT_SECONDS: ${{ vars.POST_DEPLOY_WAIT_SECONDS || '45' }}
+        run: |
+          APP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+          echo "🔍 Running post-deployment smoke tests for ${APP_URL}"
+
+          # Wait for deployment to stabilize (configurable via repository variable)
+          echo "⏳ Waiting ${POST_DEPLOY_WAIT_SECONDS}s for App Service startup..."
+          sleep ${POST_DEPLOY_WAIT_SECONDS}
+
+          # Retry logic with exponential backoff
+          MAX_RETRIES=6
+          INITIAL_DELAY=5
+          MAX_DELAY=30
+
+          # Test 1: Basic health check (liveness)
+          echo ""
+          echo "📋 Test 1: Liveness check (/health)"
+          for i in $(seq 1 $MAX_RETRIES); do
+            DELAY=$((INITIAL_DELAY * (2 ** (i-1))))
+            [ $DELAY -gt $MAX_DELAY ] && DELAY=$MAX_DELAY
+
+            echo "  Attempt $i of $MAX_RETRIES..."
+
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 15 \
+              --max-time 45 \
+              "${APP_URL}/health" || echo "000")
+
+            echo "    /health status: ${HTTP_STATUS}"
+
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "  ✅ Liveness check passed!"
+              break
+            fi
+
+            if [ $i -eq $MAX_RETRIES ]; then
+              echo "❌ Liveness check failed after $MAX_RETRIES attempts"
+              echo "health_status=unhealthy" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+
+            echo "    Retrying in ${DELAY}s (exponential backoff)..."
+            sleep $DELAY
+          done
+
+          # Test 2: Readiness check (includes database connectivity)
+          echo ""
+          echo "📋 Test 2: Readiness check (/health/ready)"
+          for i in $(seq 1 $MAX_RETRIES); do
+            DELAY=$((INITIAL_DELAY * (2 ** (i-1))))
+            [ $DELAY -gt $MAX_DELAY ] && DELAY=$MAX_DELAY
+
+            echo "  Attempt $i of $MAX_RETRIES..."
+
+            READY_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 10 \
+              --max-time 30 \
+              "${APP_URL}/health/ready" || echo "000")
+
+            echo "    /health/ready status: ${READY_STATUS}"
+
+            if [ "$READY_STATUS" = "200" ]; then
+              echo "  ✅ Readiness check passed!"
+              echo "health_status=healthy" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            if [ $i -eq $MAX_RETRIES ]; then
+              echo "⚠️ Readiness check failed after $MAX_RETRIES attempts (app may still be initializing)"
+              echo "health_status=degraded" >> $GITHUB_OUTPUT
+              # Don't fail staging builds - readiness might take longer for DB init
+              exit 0
+            fi
+
+            echo "    Retrying in ${DELAY}s (exponential backoff)..."
+            sleep $DELAY
+          done
 
       - name: Azure Logout
         if: always()

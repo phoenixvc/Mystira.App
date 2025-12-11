@@ -77,6 +77,10 @@ var names = {
   // Monitoring
   logAnalytics: '${namePrefix}-log-${region}'
   appInsights: '${namePrefix}-appins-${region}'
+  actionGroup: '${namePrefix}-alerts-${region}'
+  actionGroupShort: '${org}${envShort}alerts' // Max 12 chars for action group short name
+  dashboard: '${namePrefix}-dashboard-${region}'
+  budget: '${namePrefix}-budget-${region}'
 
   // Communication (global service)
   communicationService: '${namePrefix}-acs-glob'
@@ -286,6 +290,59 @@ param staticWebAppRepositoryUrl string = ''
 param staticWebAppBranch string = 'dev'
 
 // ─────────────────────────────────────────────────────────────────
+// DNS / Custom Domain Parameters
+// ─────────────────────────────────────────────────────────────────
+
+@description('Enable custom domain for Static Web App')
+param enableCustomDomain bool = false
+
+@description('DNS zone name (e.g., mystira.app)')
+param dnsZoneName string = 'mystira.app'
+
+@description('Resource group where the DNS zone exists (defaults to current RG)')
+param dnsZoneResourceGroup string = ''
+
+@description('Subdomain for the environment (empty for apex/prod, "dev" for dev, "staging" for staging)')
+param customDomainSubdomain string = ''
+
+@description('Enable custom domain for API App Services')
+param enableApiCustomDomain bool = false
+
+@description('API subdomain prefix (e.g., "api" for api.mystira.app or api.dev.mystira.app)')
+param apiSubdomainPrefix string = 'api'
+
+@description('Admin API subdomain prefix (e.g., "admin" for admin.mystira.app)')
+param adminApiSubdomainPrefix string = 'admin'
+
+@description('Enable managed SSL certificates for custom domains (requires hostname binding first)')
+param enableManagedCert bool = false
+
+// ─────────────────────────────────────────────────────────────────
+// Monitoring & Alerting Parameters
+// ─────────────────────────────────────────────────────────────────
+
+@description('Enable metric alerts (recommended to disable for dev to reduce noise)')
+param enableAlerts bool = true
+
+@description('Enable availability tests')
+param enableAvailabilityTests bool = true
+
+@description('Email addresses for alert notifications (comma-separated or array)')
+param alertEmailReceivers array = []
+
+@description('Webhook URLs for alert notifications')
+param alertWebhookReceivers array = []
+
+@description('Deploy Azure Dashboard for monitoring')
+param deployDashboard bool = true
+
+@description('Deploy budget alerts for cost management')
+param deployBudget bool = true
+
+@description('Monthly budget amount in USD')
+param monthlyBudget int = 100
+
+// ─────────────────────────────────────────────────────────────────
 // Computed Values
 // ─────────────────────────────────────────────────────────────────
 
@@ -295,6 +352,16 @@ var storageConnString = skipStorageCreation && existingStorageConnectionString !
 
 // Key Vault URI for App Service secret references
 var keyVaultUriComputed = 'https://${names.keyVault}${az.environment().suffixes.keyvaultDns}/'
+
+// DNS Zone resource group (defaults to current RG if not specified)
+var dnsZoneRg = dnsZoneResourceGroup == '' ? resourceGroup().name : dnsZoneResourceGroup
+
+// Custom domain name (e.g., "dev.mystira.app" or "mystira.app" for apex)
+var customDomainFull = customDomainSubdomain == '' ? dnsZoneName : '${customDomainSubdomain}.${dnsZoneName}'
+
+// API custom domains (e.g., "api.dev.mystira.app" or "api.mystira.app" for prod)
+var apiCustomDomain = customDomainSubdomain == '' ? '${apiSubdomainPrefix}.${dnsZoneName}' : '${apiSubdomainPrefix}.${customDomainSubdomain}.${dnsZoneName}'
+var adminApiCustomDomain = customDomainSubdomain == '' ? '${adminApiSubdomainPrefix}.${dnsZoneName}' : '${adminApiSubdomainPrefix}.${customDomainSubdomain}.${dnsZoneName}'
 
 // ─────────────────────────────────────────────────────────────────
 // Module Deployments
@@ -318,6 +385,108 @@ module appInsights 'modules/application-insights.bicep' = {
     appInsightsName: names.appInsights
     location: location
     logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+  }
+}
+
+// Action Group for Alert Notifications
+module actionGroup 'modules/action-group.bicep' = if (enableAlerts && length(alertEmailReceivers) > 0) {
+  name: 'deploy-action-group'
+  params: {
+    actionGroupName: names.actionGroup
+    actionGroupShortName: names.actionGroupShort
+    emailReceivers: alertEmailReceivers
+    webhookReceivers: alertWebhookReceivers
+    tags: tags
+    enabled: true
+  }
+}
+
+// Metric Alerts (HTTP errors, slow response, CPU/Memory, etc.)
+// Note: Implicit dependencies through output references (actionGroup.outputs, apiAppService.outputs)
+module metricAlerts 'modules/metric-alerts.bicep' = if (enableAlerts && length(alertEmailReceivers) > 0 && !skipAppServiceCreation) {
+  name: 'deploy-metric-alerts'
+  params: {
+    environment: environment
+    project: project
+    appInsightsId: appInsights.outputs.appInsightsId
+    appServicePlanId: apiAppService.outputs.appServicePlanId
+    actionGroupId: enableAlerts && length(alertEmailReceivers) > 0 ? actionGroup.outputs.actionGroupId : ''
+    tags: tags
+    enableAlerts: enableAlerts
+  }
+}
+
+// Availability Tests (synthetic monitoring)
+// Note: Implicit dependencies through output references (actionGroup.outputs, apiAppService.outputs, etc.)
+module availabilityTests 'modules/availability-tests.bicep' = if (enableAvailabilityTests && length(alertEmailReceivers) > 0 && !skipAppServiceCreation) {
+  name: 'deploy-availability-tests'
+  params: {
+    environment: environment
+    project: project
+    location: location
+    appInsightsId: appInsights.outputs.appInsightsId
+    actionGroupId: enableAlerts && length(alertEmailReceivers) > 0 ? actionGroup.outputs.actionGroupId : ''
+    apiBaseUrl: 'https://${apiAppService.outputs.appServiceDefaultHostname}'
+    adminApiBaseUrl: 'https://${adminApiAppService.outputs.appServiceDefaultHostname}'
+    pwaBaseUrl: deployStaticWebApp ? 'https://${staticWebApp.outputs.staticWebAppDefaultHostname}' : ''
+    tags: tags
+    enableAvailabilityTests: enableAvailabilityTests
+    testFrequencySeconds: environment == 'prod' ? 300 : 600 // 5 min for prod, 10 min for others
+  }
+}
+
+// Security Alerts (brute force detection, rate limit monitoring, etc.)
+// Note: Implicit dependency through actionGroup.outputs.actionGroupId reference
+module securityAlerts 'modules/security-alerts.bicep' = if (enableAlerts && length(alertEmailReceivers) > 0) {
+  name: 'deploy-security-alerts'
+  params: {
+    environment: environment
+    project: project
+    appInsightsId: appInsights.outputs.appInsightsId
+    actionGroupId: enableAlerts && length(alertEmailReceivers) > 0 ? actionGroup.outputs.actionGroupId : ''
+    tags: tags
+    enableSecurityAlerts: enableAlerts
+  }
+}
+
+// Cosmos DB Alerts (RU consumption, throttling, latency, errors)
+// Note: Implicit dependencies through output references (actionGroup.outputs, cosmosDb.outputs)
+module cosmosAlerts 'modules/cosmos-alerts.bicep' = if (enableAlerts && length(alertEmailReceivers) > 0 && !skipCosmosCreation) {
+  name: 'deploy-cosmos-alerts'
+  params: {
+    environment: environment
+    project: project
+    cosmosDbId: cosmosDb.outputs.cosmosDbAccountId
+    actionGroupId: enableAlerts && length(alertEmailReceivers) > 0 ? actionGroup.outputs.actionGroupId : ''
+    tags: tags
+    enableCosmosAlerts: enableAlerts
+  }
+}
+
+// Monitoring Dashboard
+module monitoringDashboard 'modules/dashboard.bicep' = if (deployDashboard) {
+  name: 'deploy-monitoring-dashboard'
+  params: {
+    dashboardName: names.dashboard
+    location: location
+    appInsightsId: appInsights.outputs.appInsightsId
+    tags: tags
+    environment: environment
+    project: project
+    // Infrastructure metrics (optional - dashboard gracefully handles empty values)
+    appServiceId: skipAppServiceCreation ? '' : apiAppService.outputs.appServiceId
+    cosmosDbId: skipCosmosCreation ? '' : cosmosDb.outputs.cosmosDbAccountId
+  }
+}
+
+// Budget Alerts for Cost Management
+module budgetAlerts 'modules/budget.bicep' = if (deployBudget && length(alertEmailReceivers) > 0) {
+  name: 'deploy-budget-alerts'
+  params: {
+    budgetName: names.budget
+    monthlyBudget: monthlyBudget
+    alertEmailReceivers: alertEmailReceivers
+    enableBudget: deployBudget
   }
 }
 
@@ -364,7 +533,6 @@ module azureBot 'modules/azure-bot.bicep' = if (deployAzureBot && botMicrosoftAp
     botName: names.azureBot
     botDisplayName: 'Mystira Bot'
     microsoftAppId: botMicrosoftAppId
-    microsoftAppPassword: botMicrosoftAppPassword
     botEndpoint: botEndpoint != '' ? botEndpoint : 'https://${names.apiApp}.azurewebsites.net/api/messages/teams'
     location: 'global'
     sku: botSku
@@ -472,6 +640,143 @@ module staticWebApp 'modules/static-web-app.bicep' = if (deployStaticWebApp) {
     repositoryUrl: staticWebAppRepositoryUrl
     branch: staticWebAppBranch
     tags: tags
+    // Custom domain will be bound after DNS record is created
+    customDomain: ''
+    enableCustomDomain: false
+  }
+}
+
+// DNS Records for Static Web App Custom Domain
+// Creates CNAME/TXT record in existing DNS zone pointing to SWA
+module swaDnsRecord 'modules/dns-zone.bicep' = if (deployStaticWebApp && enableCustomDomain) {
+  name: 'deploy-swa-dns-record'
+  scope: resourceGroup(dnsZoneRg)
+  params: {
+    dnsZoneName: dnsZoneName
+    subdomain: customDomainSubdomain
+    targetHostname: staticWebApp.outputs.staticWebAppDefaultHostname
+    recordType: customDomainSubdomain == '' ? 'TXT' : 'CNAME'
+    enableCustomDomain: true
+    tags: tags
+  }
+}
+
+// DNS Records for Main API Custom Domain
+// Creates CNAME record: api.mystira.app or api.dev.mystira.app -> App Service hostname
+module apiDnsRecord 'modules/dns-zone.bicep' = if (!skipAppServiceCreation && enableApiCustomDomain) {
+  name: 'deploy-api-dns-record'
+  scope: resourceGroup(dnsZoneRg)
+  params: {
+    dnsZoneName: dnsZoneName
+    subdomain: customDomainSubdomain == '' ? apiSubdomainPrefix : '${apiSubdomainPrefix}.${customDomainSubdomain}'
+    targetHostname: apiAppService.outputs.appServiceDefaultHostname
+    recordType: 'CNAME'
+    enableCustomDomain: true
+    tags: tags
+  }
+}
+
+// DNS Records for Admin API Custom Domain
+// Creates CNAME record: admin.mystira.app or admin.dev.mystira.app -> App Service hostname
+module adminApiDnsRecord 'modules/dns-zone.bicep' = if (!skipAppServiceCreation && enableApiCustomDomain) {
+  name: 'deploy-admin-api-dns-record'
+  scope: resourceGroup(dnsZoneRg)
+  params: {
+    dnsZoneName: dnsZoneName
+    subdomain: customDomainSubdomain == '' ? adminApiSubdomainPrefix : '${adminApiSubdomainPrefix}.${customDomainSubdomain}'
+    targetHostname: adminApiAppService.outputs.appServiceDefaultHostname
+    recordType: 'CNAME'
+    enableCustomDomain: true
+    tags: tags
+  }
+}
+
+// Static Web App Custom Domain Binding (after DNS record exists)
+// This is a separate deployment to ensure DNS propagates first
+module staticWebAppCustomDomain 'modules/static-web-app.bicep' = if (deployStaticWebApp && enableCustomDomain) {
+  name: 'deploy-static-web-app-custom-domain'
+  dependsOn: [swaDnsRecord]
+  params: {
+    staticWebAppName: names.staticWebApp
+    location: fallbackRegion
+    sku: staticWebAppSku
+    repositoryUrl: staticWebAppRepositoryUrl
+    branch: staticWebAppBranch
+    tags: tags
+    customDomain: customDomainFull
+    enableCustomDomain: true
+  }
+}
+
+// API Custom Domain Binding (after DNS record exists)
+module apiCustomDomainBinding 'modules/app-service.bicep' = if (!skipAppServiceCreation && enableApiCustomDomain) {
+  name: 'deploy-api-custom-domain-binding'
+  dependsOn: [apiDnsRecord]
+  params: {
+    appServiceName: names.apiApp
+    appServicePlanName: names.appServicePlan
+    location: location
+    sku: appServiceSku
+    aspnetEnvironment: environment == 'prod' ? 'Production' : (environment == 'staging' ? 'Staging' : 'Development')
+    cosmosDbConnectionString: skipCosmosCreation ? cosmosConnString : cosmosDb.outputs.cosmosDbConnectionString
+    storageConnectionString: skipStorageCreation ? storageConnString : storage.outputs.storageConnectionString
+    jwtRsaPrivateKey: jwtRsaPrivateKey
+    jwtRsaPublicKey: jwtRsaPublicKey
+    jwtIssuer: jwtIssuer
+    jwtAudience: jwtAudience
+    keyVaultUri: keyVaultUriComputed
+    acsConnectionString: skipCommServiceCreation ? acsConnectionString : communicationServices.outputs.communicationServiceConnectionString
+    acsSenderEmail: acsSenderEmail
+    corsAllowedOrigins: corsAllowedOrigins
+    appInsightsConnectionString: appInsights.outputs.connectionString
+    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+    discordBotToken: discordBotToken
+    botMicrosoftAppId: botMicrosoftAppId
+    botMicrosoftAppPassword: botMicrosoftAppPassword
+    whatsAppChannelRegistrationId: whatsAppChannelRegistrationId
+    whatsAppPhoneNumberId: whatsAppPhoneNumberId
+    whatsAppBusinessAccountId: whatsAppBusinessAccountId
+    whatsAppWebhookVerifyToken: whatsAppWebhookVerifyToken
+    tags: tags
+    customDomain: apiCustomDomain
+    enableCustomDomain: true
+    enableManagedCert: enableManagedCert
+  }
+}
+
+// Admin API Custom Domain Binding (after DNS record exists)
+module adminApiCustomDomainBinding 'modules/app-service.bicep' = if (!skipAppServiceCreation && enableApiCustomDomain) {
+  name: 'deploy-admin-api-custom-domain-binding'
+  dependsOn: [adminApiDnsRecord]
+  params: {
+    appServiceName: names.adminApiApp
+    appServicePlanName: names.appServicePlan
+    location: location
+    sku: appServiceSku
+    aspnetEnvironment: environment == 'prod' ? 'Production' : (environment == 'staging' ? 'Staging' : 'Development')
+    cosmosDbConnectionString: skipCosmosCreation ? cosmosConnString : cosmosDb.outputs.cosmosDbConnectionString
+    storageConnectionString: skipStorageCreation ? storageConnString : storage.outputs.storageConnectionString
+    jwtRsaPrivateKey: jwtRsaPrivateKey
+    jwtRsaPublicKey: jwtRsaPublicKey
+    jwtIssuer: jwtIssuer
+    jwtAudience: jwtAudience
+    keyVaultUri: keyVaultUriComputed
+    acsConnectionString: skipCommServiceCreation ? acsConnectionString : communicationServices.outputs.communicationServiceConnectionString
+    acsSenderEmail: acsSenderEmail
+    corsAllowedOrigins: corsAllowedOrigins
+    appInsightsConnectionString: appInsights.outputs.connectionString
+    logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+    discordBotToken: discordBotToken
+    botMicrosoftAppId: botMicrosoftAppId
+    botMicrosoftAppPassword: botMicrosoftAppPassword
+    whatsAppChannelRegistrationId: whatsAppChannelRegistrationId
+    whatsAppPhoneNumberId: whatsAppPhoneNumberId
+    whatsAppBusinessAccountId: whatsAppBusinessAccountId
+    whatsAppWebhookVerifyToken: whatsAppWebhookVerifyToken
+    tags: tags
+    customDomain: adminApiCustomDomain
+    enableCustomDomain: true
+    enableManagedCert: enableManagedCert
   }
 }
 
@@ -540,6 +845,8 @@ output cosmosDbConnectionString string = skipCosmosCreation ? cosmosConnString :
 // App Services
 output apiAppServiceUrl string = skipAppServiceCreation ? '' : apiAppService.outputs.appServiceUrl
 output adminApiAppServiceUrl string = skipAppServiceCreation ? '' : adminApiAppService.outputs.appServiceUrl
+output apiCustomDomainUrl string = !skipAppServiceCreation && enableApiCustomDomain ? 'https://${apiCustomDomain}' : ''
+output adminApiCustomDomainUrl string = !skipAppServiceCreation && enableApiCustomDomain ? 'https://${adminApiCustomDomain}' : ''
 
 // Azure Bot
 output azureBotId string = deployAzureBot && botMicrosoftAppId != '' ? azureBot.outputs.botId : ''
@@ -556,6 +863,8 @@ output discordBotConfigured bool = discordBotToken != ''
 output staticWebAppUrl string = deployStaticWebApp ? staticWebApp.outputs.staticWebAppUrl : ''
 output staticWebAppName string = deployStaticWebApp ? staticWebApp.outputs.staticWebAppName : ''
 output staticWebAppFallbackRegion string = fallbackRegion
+output staticWebAppCustomDomain string = deployStaticWebApp && enableCustomDomain ? customDomainFull : ''
+output staticWebAppCustomDomainUrl string = deployStaticWebApp && enableCustomDomain ? 'https://${customDomainFull}' : ''
 
 // Key Vault
 output keyVaultName string = keyVault.outputs.keyVaultName
@@ -565,3 +874,10 @@ output keyVaultUri string = keyVault.outputs.keyVaultUri
 output primaryRegion string = location
 output primaryRegionCode string = region
 output fallbackRegionForSWA string = fallbackRegion
+
+// Monitoring & Alerting
+output actionGroupId string = enableAlerts && length(alertEmailReceivers) > 0 ? actionGroup.outputs.actionGroupId : ''
+output alertsEnabled bool = enableAlerts
+output availabilityTestsEnabled bool = enableAvailabilityTests
+output dashboardId string = deployDashboard ? monitoringDashboard.outputs.dashboardId : ''
+output budgetConfigured bool = deployBudget && length(alertEmailReceivers) > 0

@@ -55,77 +55,143 @@ public class MigrationCommands
 
             var results = new List<MigrationResult>();
 
+            // Helper to validate cosmos connections
+            bool HasCosmosConnections() => !string.IsNullOrEmpty(sourceCosmosConnection) && !string.IsNullOrEmpty(destCosmosConnection);
+
+            // Create migration options
+            var migrationOptions = new MigrationOptions
+            {
+                DryRun = args.DryRun,
+                MaxRetries = args.MaxRetries,
+                UseBulkOperations = args.UseBulkOperations
+            };
+
             switch (args.Type.ToLower())
             {
                 case "scenarios":
-                    if (string.IsNullOrEmpty(sourceCosmosConnection) || string.IsNullOrEmpty(destCosmosConnection))
-                    {
+                    if (!HasCosmosConnections())
                         return CommandResponse.Fail("Source and destination Cosmos DB connection strings are required");
-                    }
-                    var scenarioResult = await _migrationService.MigrateScenariosAsync(sourceCosmosConnection, destCosmosConnection, args.DatabaseName);
-                    results.Add(scenarioResult);
+                    results.Add(await _migrationService.MigrateScenariosAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, migrationOptions));
                     break;
 
                 case "bundles":
-                    if (string.IsNullOrEmpty(sourceCosmosConnection) || string.IsNullOrEmpty(destCosmosConnection))
-                    {
+                    if (!HasCosmosConnections())
                         return CommandResponse.Fail("Source and destination Cosmos DB connection strings are required");
-                    }
-                    var bundleResult = await _migrationService.MigrateContentBundlesAsync(sourceCosmosConnection, destCosmosConnection, args.DatabaseName);
-                    results.Add(bundleResult);
+                    results.Add(await _migrationService.MigrateContentBundlesAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, migrationOptions));
                     break;
 
                 case "media-metadata":
-                    if (string.IsNullOrEmpty(sourceCosmosConnection) || string.IsNullOrEmpty(destCosmosConnection))
-                    {
+                    if (!HasCosmosConnections())
                         return CommandResponse.Fail("Source and destination Cosmos DB connection strings are required");
-                    }
-                    var mediaResult = await _migrationService.MigrateMediaAssetsAsync(sourceCosmosConnection, destCosmosConnection, args.DatabaseName);
-                    results.Add(mediaResult);
+                    results.Add(await _migrationService.MigrateMediaAssetsAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, migrationOptions));
+                    break;
+
+                // User data containers - using generic migration
+                case "user-profiles":
+                    if (!HasCosmosConnections())
+                        return CommandResponse.Fail("Source and destination Cosmos DB connection strings are required");
+                    results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "UserProfiles", "/id", migrationOptions));
+                    break;
+
+                case "game-sessions":
+                    if (!HasCosmosConnections())
+                        return CommandResponse.Fail("Source and destination Cosmos DB connection strings are required");
+                    results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "GameSessions", "/id", migrationOptions));
+                    break;
+
+                case "accounts":
+                    if (!HasCosmosConnections())
+                        return CommandResponse.Fail("Source and destination Cosmos DB connection strings are required");
+                    results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "Accounts", "/id", migrationOptions));
+                    break;
+
+                case "compass-trackings":
+                    if (!HasCosmosConnections())
+                        return CommandResponse.Fail("Source and destination Cosmos DB connection strings are required");
+                    results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "CompassTrackings", "/id", migrationOptions));
+                    break;
+
+                // Reference data containers - using generic migration
+                case "character-maps":
+                    if (!HasCosmosConnections())
+                        return CommandResponse.Fail("Source and destination Cosmos DB connection strings are required");
+                    results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "CharacterMaps", "/id", migrationOptions));
+                    break;
+
+                case "character-map-files":
+                    if (!HasCosmosConnections())
+                        return CommandResponse.Fail("Source and destination Cosmos DB connection strings are required");
+                    results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "CharacterMapFiles", "/id", migrationOptions));
+                    break;
+
+                case "character-media-metadata-files":
+                    if (!HasCosmosConnections())
+                        return CommandResponse.Fail("Source and destination Cosmos DB connection strings are required");
+                    results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "CharacterMediaMetadataFiles", "/id", migrationOptions));
+                    break;
+
+                case "avatar-configuration-files":
+                    if (!HasCosmosConnections())
+                        return CommandResponse.Fail("Source and destination Cosmos DB connection strings are required");
+                    results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "AvatarConfigurationFiles", "/id", migrationOptions));
+                    break;
+
+                case "badge-configurations":
+                    if (!HasCosmosConnections())
+                        return CommandResponse.Fail("Source and destination Cosmos DB connection strings are required");
+                    results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "BadgeConfigurations", "/id", migrationOptions));
                     break;
 
                 case "blobs":
                     if (string.IsNullOrEmpty(sourceStorageConnection) || string.IsNullOrEmpty(destStorageConnection))
-                    {
                         return CommandResponse.Fail("Source and destination storage connection strings are required");
-                    }
-                    var blobResult = await _migrationService.MigrateBlobStorageAsync(sourceStorageConnection, destStorageConnection, args.ContainerName);
-                    results.Add(blobResult);
+                    results.Add(await _migrationService.MigrateBlobStorageAsync(sourceStorageConnection, destStorageConnection, args.ContainerName, migrationOptions));
                     break;
 
                 case "master-data":
                     if (string.IsNullOrEmpty(destCosmosConnection))
-                    {
                         return CommandResponse.Fail("Destination Cosmos DB connection string is required");
-                    }
-                    var masterDataResult = await _migrationService.SeedMasterDataAsync(destCosmosConnection, args.DatabaseName, jsonFilesPath);
-                    results.Add(masterDataResult);
+                    results.Add(await _migrationService.SeedMasterDataAsync(destCosmosConnection, args.DestDatabaseName, jsonFilesPath, migrationOptions));
                     break;
 
                 case "all":
-                    // Migrate all Cosmos DB data
-                    if (!string.IsNullOrEmpty(sourceCosmosConnection) && !string.IsNullOrEmpty(destCosmosConnection))
+                    // Migrate all Cosmos DB containers
+                    if (HasCosmosConnections())
                     {
-                        results.Add(await _migrationService.MigrateScenariosAsync(sourceCosmosConnection, destCosmosConnection, args.DatabaseName));
-                        results.Add(await _migrationService.MigrateContentBundlesAsync(sourceCosmosConnection, destCosmosConnection, args.DatabaseName));
-                        results.Add(await _migrationService.MigrateMediaAssetsAsync(sourceCosmosConnection, destCosmosConnection, args.DatabaseName));
+                        // Core content
+                        results.Add(await _migrationService.MigrateScenariosAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, migrationOptions));
+                        results.Add(await _migrationService.MigrateContentBundlesAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, migrationOptions));
+                        results.Add(await _migrationService.MigrateMediaAssetsAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, migrationOptions));
+
+                        // User data
+                        results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "UserProfiles", "/id", migrationOptions));
+                        results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "GameSessions", "/id", migrationOptions));
+                        results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "Accounts", "/id", migrationOptions));
+                        results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "CompassTrackings", "/id", migrationOptions));
+
+                        // Reference data
+                        results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "CharacterMaps", "/id", migrationOptions));
+                        results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "CharacterMapFiles", "/id", migrationOptions));
+                        results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "CharacterMediaMetadataFiles", "/id", migrationOptions));
+                        results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "AvatarConfigurationFiles", "/id", migrationOptions));
+                        results.Add(await _migrationService.MigrateContainerAsync(sourceCosmosConnection, destCosmosConnection, args.SourceDatabaseName, args.DestDatabaseName, "BadgeConfigurations", "/id", migrationOptions));
                     }
 
                     // Seed master data
                     if (!string.IsNullOrEmpty(destCosmosConnection))
                     {
-                        results.Add(await _migrationService.SeedMasterDataAsync(destCosmosConnection, args.DatabaseName, jsonFilesPath));
+                        results.Add(await _migrationService.SeedMasterDataAsync(destCosmosConnection, args.DestDatabaseName, jsonFilesPath, migrationOptions));
                     }
 
                     // Migrate Blob Storage
                     if (!string.IsNullOrEmpty(sourceStorageConnection) && !string.IsNullOrEmpty(destStorageConnection))
                     {
-                        results.Add(await _migrationService.MigrateBlobStorageAsync(sourceStorageConnection, destStorageConnection, args.ContainerName));
+                        results.Add(await _migrationService.MigrateBlobStorageAsync(sourceStorageConnection, destStorageConnection, args.ContainerName, migrationOptions));
                     }
                     break;
 
                 default:
-                    return CommandResponse.Fail($"Unknown migration type: {args.Type}");
+                    return CommandResponse.Fail($"Unknown migration type: {args.Type}. Valid types: scenarios, bundles, media-metadata, user-profiles, game-sessions, accounts, compass-trackings, character-maps, character-map-files, character-media-metadata-files, avatar-configuration-files, badge-configurations, blobs, master-data, all");
             }
 
             var overallSuccess = results.All(r => r.Success);
@@ -154,7 +220,7 @@ public class MigrationCommands
     private static string FindMasterDataJsonPath()
     {
         var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        
+
         // Search for the Data directory containing CoreAxes.json
         var searchPaths = new[]
         {

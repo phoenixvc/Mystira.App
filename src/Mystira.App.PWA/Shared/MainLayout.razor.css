@@ -119,6 +119,7 @@ footer {
     background-color: var(--card, rgba(255,255,255,0.85)) !important;
     border-top: 1px solid var(--border, rgba(17,24,39,0.08));
     color: var(--fg, #111827) !important;
+    padding-bottom: 28px; /* Add space for environment indicator when present */
 }
 
 .profile-menu-dropdown {

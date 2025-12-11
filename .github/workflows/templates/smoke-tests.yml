@@ -1,0 +1,140 @@
+# Smoke Tests Template
+# This is a reusable workflow for post-deployment validation
+# Usage: Called from deployment workflows after deployment completes
+
+name: Smoke Tests
+
+on:
+  workflow_call:
+    inputs:
+      app_url:
+        description: 'Base URL of the deployed application'
+        required: true
+        type: string
+      health_endpoint:
+        description: 'Health check endpoint path'
+        required: false
+        type: string
+        default: '/health'
+      ready_endpoint:
+        description: 'Readiness endpoint path'
+        required: false
+        type: string
+        default: '/health/ready'
+      max_retries:
+        description: 'Maximum number of retry attempts'
+        required: false
+        type: number
+        default: 5
+      retry_delay:
+        description: 'Delay between retries in seconds'
+        required: false
+        type: number
+        default: 10
+      environment:
+        description: 'Environment name for logging'
+        required: false
+        type: string
+        default: 'unknown'
+    outputs:
+      health_status:
+        description: 'Health check result'
+        value: ${{ jobs.smoke-tests.outputs.health_status }}
+      response_time_ms:
+        description: 'Response time in milliseconds'
+        value: ${{ jobs.smoke-tests.outputs.response_time_ms }}
+
+jobs:
+  smoke-tests:
+    name: Post-Deployment Smoke Tests
+    runs-on: ubuntu-latest
+    outputs:
+      health_status: ${{ steps.health-check.outputs.status }}
+      response_time_ms: ${{ steps.health-check.outputs.response_time }}
+
+    steps:
+      - name: Wait for deployment to stabilize
+        run: sleep 30
+
+      - name: Health Check with Retry
+        id: health-check
+        run: |
+          APP_URL="${{ inputs.app_url }}"
+          HEALTH_ENDPOINT="${{ inputs.health_endpoint }}"
+          MAX_RETRIES=${{ inputs.max_retries }}
+          RETRY_DELAY=${{ inputs.retry_delay }}
+
+          echo "🔍 Starting smoke tests for ${APP_URL}${HEALTH_ENDPOINT}"
+          echo "   Environment: ${{ inputs.environment }}"
+          echo "   Max retries: ${MAX_RETRIES}"
+          echo "   Retry delay: ${RETRY_DELAY}s"
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo ""
+            echo "Attempt $i of $MAX_RETRIES..."
+
+            START_TIME=$(date +%s%3N)
+
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 10 \
+              --max-time 30 \
+              "${APP_URL}${HEALTH_ENDPOINT}" || echo "000")
+
+            END_TIME=$(date +%s%3N)
+            RESPONSE_TIME=$((END_TIME - START_TIME))
+
+            echo "   Status: ${HTTP_STATUS}"
+            echo "   Response time: ${RESPONSE_TIME}ms"
+
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo ""
+              echo "✅ Health check passed!"
+              echo "status=healthy" >> $GITHUB_OUTPUT
+              echo "response_time=${RESPONSE_TIME}" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            if [ $i -lt $MAX_RETRIES ]; then
+              echo "   Retrying in ${RETRY_DELAY}s..."
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo ""
+          echo "❌ Health check failed after $MAX_RETRIES attempts"
+          echo "status=unhealthy" >> $GITHUB_OUTPUT
+          echo "response_time=-1" >> $GITHUB_OUTPUT
+          exit 1
+
+      - name: Readiness Check
+        if: success()
+        run: |
+          APP_URL="${{ inputs.app_url }}"
+          READY_ENDPOINT="${{ inputs.ready_endpoint }}"
+
+          echo "🔍 Checking readiness endpoint: ${APP_URL}${READY_ENDPOINT}"
+
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --connect-timeout 10 \
+            --max-time 30 \
+            "${APP_URL}${READY_ENDPOINT}" || echo "000")
+
+          echo "   Status: ${HTTP_STATUS}"
+
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ Readiness check passed!"
+          else
+            echo "⚠️ Readiness check returned ${HTTP_STATUS} (non-fatal)"
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Smoke Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ inputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| URL | ${{ inputs.app_url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Health Check | ${{ steps.health-check.outputs.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Response Time | ${{ steps.health-check.outputs.response_time }}ms |" >> $GITHUB_STEP_SUMMARY

@@ -50,7 +50,7 @@
 
 ### **Critical Architectural Rules**
 
-**From `docs/architecture/ARCHITECTURAL_RULES.md`:**
+**From `docs/architecture/architectural-rules.md`:**
 
 1. **API Layer:** Controllers ONLY. No business logic, no services.
    - Maps DTOs → Use Case input models
@@ -154,6 +154,45 @@
    - Added CSS dark mode support with `prefers-color-scheme`
    - Manual theme toggle ready via `data-theme` attribute
 
+## Quick Start Commands
+
+### **Build & Restore**
+```bash
+dotnet restore              # Restore all dependencies
+dotnet build                # Build entire solution
+dotnet build -c Release     # Build for Release
+dotnet publish src/Mystira.App.Api -c Release -o ./publish/api       # Publish API
+dotnet publish src/Mystira.App.PWA -c Release -o ./publish/pwa       # Publish PWA
+```
+
+### **Run Applications**
+```bash
+# Backend API (https://localhost:5001, Swagger at /swagger)
+cd src/Mystira.App.Api && dotnet run
+
+# Admin API
+cd src/Mystira.App.Admin.Api && dotnet run
+
+# PWA Frontend (https://localhost:7000)
+cd src/Mystira.App.PWA && dotnet run
+
+# Cosmos Console (Database Reporting)
+cd src/Mystira.App.CosmosConsole && dotnet run
+```
+
+### **Testing**
+```bash
+dotnet test                                    # Run all tests
+dotnet test tests/Mystira.App.Api.Tests        # Run specific test project
+dotnet test --collect:"XPlat Code Coverage"    # With code coverage
+dotnet test --filter "FullyQualifiedName~ScenarioTests" --verbosity normal  # Specific test
+```
+
+### **Database**
+- **Local Development**: Uses in-memory database by default (no setup required)
+- **Cloud**: Uses Azure Cosmos DB when `ConnectionStrings:CosmosDb` is configured
+- Database is automatically initialized on startup via `EnsureCreatedAsync()`
+
 ## Development Guidelines
 
 ### **When Adding/Modifying Features**
@@ -209,7 +248,7 @@ From `docs/best-practices.md`:
    - Use Blazor **Scoped CSS** (`.razor.css` files) for component-specific styles
    - Global CSS (`app.css`) for design system foundations only
    - NO CSS Modules (designed for JavaScript, not Blazor)
-   - See `docs/features/CSS_STYLING_APPROACH.md`
+   - See `docs/features/css-styling-approach.md`
 
 ### **Commit Standards**
 
@@ -320,9 +359,9 @@ Mystira.App/
 ### **Must-Read Docs**
 
 1. **Architecture:**
-   - `docs/architecture/ARCHITECTURAL_RULES.md` (CRITICAL)
-   - `docs/architecture/patterns/HEXAGONAL_ARCHITECTURE.md`
-   - `docs/architecture/patterns/REPOSITORY_PATTERN.md`
+   - `docs/architecture/architectural-rules.md` (CRITICAL)
+   - `docs/architecture/patterns/hexagonal-architecture.md`
+   - `docs/architecture/patterns/repository-pattern.md`
 
 2. **Development:**
    - `docs/best-practices.md`
@@ -338,8 +377,7 @@ Mystira.App/
    - Specific use case docs (e.g., `docs/usecases/gamesessions/create-game-session.md`)
 
 5. **Roadmap:**
-   - `docs/POTENTIAL_ENHANCEMENTS_ROADMAP.md` (comprehensive 1100+ line roadmap)
-   - `PRODUCTION_REVIEW_REPORT.md` (this review's findings)
+   - `docs/roadmap.md` (consolidated roadmap - single source of truth for all pending work)
 
 ### **API Documentation**
 
@@ -605,7 +643,7 @@ In `Mystira.App.PWA.csproj`:
 
 ### **When Reviewing Code**
 
-Use this checklist from `docs/architecture/ARCHITECTURAL_RULES.md`:
+Use this checklist from `docs/architecture/architectural-rules.md`:
 
 - [ ] No business logic in controllers
 - [ ] No services in API/AdminAPI layers
@@ -644,25 +682,16 @@ Use this checklist from `docs/architecture/ARCHITECTURAL_RULES.md`:
 
 ## Final Notes
 
-- **Production Readiness:** Project has strong foundations with recent improvements (November 24, 2025)
-- **Priority:** FEAT-INC-1 (COPPA compliance) is the only remaining blocker for production launch
-- **Architecture:** Well-documented; architectural violations (80+ services in API layer) documented for Wave 5 refactoring
-- **Documentation:** Comprehensive - use it! 72+ markdown files including:
-  - ✅ Master PRD: `docs/prd/master-prd.md` (comprehensive product requirements)
-  - ✅ COPPA PRD: `docs/prd/features/coppa-compliance.md` (706 lines)
-  - ✅ Updated Review: `PRODUCTION_REVIEW_REPORT_UPDATED.md` (59 items tracked)
-  - ✅ Master Summary Table: `MASTER_SUMMARY_TABLE.md` (complete tracking)
-- **Recent Fixes (November 24, 2025):**
-  - ✅ SDK 9.0.100
-  - ✅ Domain → net9.0
-  - ✅ Blazor AOT + IL linking enabled
-  - ✅ Dark mode implemented
-  - ✅ Master PRD created
+- **Production Readiness:** Project has strong foundations with recent improvements
+- **Priority:** COPPA compliance is the remaining blocker for production launch
+- **Architecture:** Well-documented; architectural violations tracked in `docs/roadmap.md`
+- **Key Documentation:**
+  - `docs/roadmap.md` - All pending work and technical debt
+  - `docs/prd/master-prd.md` - Comprehensive product requirements
+  - `docs/prd/features/coppa-compliance.md` - COPPA compliance requirements
 
 **Remember:** This is a children's platform. Privacy, safety, and compliance are not optional. When in doubt about COPPA implications, consult `docs/prd/features/coppa-compliance.md` or ask for clarification.
 
 ---
 
-*Last Updated: November 24, 2025*
-*Review Report: PRODUCTION_REVIEW_REPORT_UPDATED.md*
-*Master PRD: docs/prd/master-prd.md*
+*Last Updated: 2025-12-10*

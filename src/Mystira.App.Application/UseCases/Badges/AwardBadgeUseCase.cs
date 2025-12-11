@@ -5,27 +5,24 @@ using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.UseCases.Badges;
 
-/// <summary>
-/// Use case for awarding a badge to a user profile
-/// </summary>
 public class AwardBadgeUseCase
 {
     private readonly IUserBadgeRepository _badgeRepository;
     private readonly IUserProfileRepository _userProfileRepository;
-    private readonly IBadgeConfigurationRepository _badgeConfigRepository;
+    private readonly IBadgeRepository _newBadgeRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AwardBadgeUseCase> _logger;
 
     public AwardBadgeUseCase(
         IUserBadgeRepository badgeRepository,
         IUserProfileRepository userProfileRepository,
-        IBadgeConfigurationRepository badgeConfigRepository,
+        IBadgeRepository newBadgeRepository,
         IUnitOfWork unitOfWork,
         ILogger<AwardBadgeUseCase> logger)
     {
         _badgeRepository = badgeRepository;
         _userProfileRepository = userProfileRepository;
-        _badgeConfigRepository = badgeConfigRepository;
+        _newBadgeRepository = newBadgeRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -37,7 +34,6 @@ public class AwardBadgeUseCase
             throw new ArgumentNullException(nameof(request));
         }
 
-        // Check if user already has this badge
         var existingBadge = await _badgeRepository.GetByUserProfileIdAndBadgeConfigIdAsync(
             request.UserProfileId, request.BadgeConfigurationId);
 
@@ -48,49 +44,45 @@ public class AwardBadgeUseCase
             return existingBadge;
         }
 
-        // Get badge configuration
-        var badgeConfig = await _badgeConfigRepository.GetByIdAsync(request.BadgeConfigurationId);
-        if (badgeConfig == null)
+        var badge = await _newBadgeRepository.GetByIdAsync(request.BadgeConfigurationId);
+        if (badge == null)
         {
-            throw new ArgumentException($"Badge configuration not found: {request.BadgeConfigurationId}", nameof(request));
+            throw new ArgumentException($"Badge not found: {request.BadgeConfigurationId}", nameof(request));
         }
 
-        // Verify user profile exists
         var userProfile = await _userProfileRepository.GetByIdAsync(request.UserProfileId);
         if (userProfile == null)
         {
             throw new ArgumentException($"User profile not found: {request.UserProfileId}", nameof(request));
         }
 
-        // Create new badge
         var newBadge = new UserBadge
         {
             Id = Guid.NewGuid().ToString(),
             UserProfileId = request.UserProfileId,
             BadgeConfigurationId = request.BadgeConfigurationId,
-            BadgeName = badgeConfig.Name,
-            BadgeMessage = badgeConfig.Message,
-            Axis = badgeConfig.Axis,
+            BadgeId = badge.Id,
+            BadgeName = badge.Title,
+            BadgeMessage = badge.Description,
+            Axis = badge.CompassAxisId,
             TriggerValue = request.TriggerValue,
-            Threshold = badgeConfig.Threshold,
+            Threshold = badge.RequiredScore,
             GameSessionId = request.GameSessionId,
             ScenarioId = request.ScenarioId,
-            ImageId = badgeConfig.ImageId,
+            ImageId = badge.ImageId,
             EarnedAt = DateTime.UtcNow
         };
 
         await _badgeRepository.AddAsync(newBadge);
 
-        // Also add to user profile's earned badges list
         userProfile.AddEarnedBadge(newBadge);
         await _userProfileRepository.UpdateAsync(userProfile);
 
         await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Awarded badge {BadgeName} to user {UserProfileId}",
-            badgeConfig.Name, request.UserProfileId);
+            badge.Title, request.UserProfileId);
 
         return newBadge;
     }
 }
-

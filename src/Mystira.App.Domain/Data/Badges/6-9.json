@@ -1,0 +1,89 @@
+{
+  "Age_Group_Id": "6-9",
+  "Axis_Achievements": [
+    {
+      "Compass_Axis_Id": "Self-Regulation",
+      "Axes_Direction": "positive",
+      "Description": "Developing emotional intelligence and impulse control"
+    },
+    {
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Axes_Direction": "positive",
+      "Description": "Taking initiative and pursuing interests with determination"
+    }
+  ],
+  "Badges": [
+    {
+      "Tier": "bronze",
+      "Tier_Order": 1,
+      "Title": "Curious Mind",
+      "Description": "Demonstrated curiosity and asked insightful questions",
+      "Required_Score": 10.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/school_curious_bronze.png"
+    },
+    {
+      "Tier": "silver",
+      "Tier_Order": 1,
+      "Title": "Problem Solver",
+      "Description": "Found creative solutions to challenges",
+      "Required_Score": 20.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/school_solver_silver.png"
+    },
+    {
+      "Tier": "gold",
+      "Tier_Order": 1,
+      "Title": "Innovation Champion",
+      "Description": "Showed exceptional creativity and initiative",
+      "Required_Score": 35.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/school_innovation_gold.png"
+    },
+    {
+      "Tier": "platinum",
+      "Tier_Order": 1,
+      "Title": "Master Inventor",
+      "Description": "Consistently demonstrated outstanding curiosity and initiative",
+      "Required_Score": 50.0,
+      "Compass_Axis_Id": "Curiosity & Initiative",
+      "Image_Id": "media/badges/school_inventor_platinum.png"
+    },
+    {
+      "Tier": "bronze",
+      "Tier_Order": 1,
+      "Title": "Self-Aware",
+      "Description": "Recognized and managed your emotions",
+      "Required_Score": 10.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/school_aware_bronze.png"
+    },
+    {
+      "Tier": "silver",
+      "Tier_Order": 1,
+      "Title": "Emotion Master",
+      "Description": "Handled difficult situations with composure",
+      "Required_Score": 20.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/school_master_silver.png"
+    },
+    {
+      "Tier": "gold",
+      "Tier_Order": 1,
+      "Title": "Balance Guardian",
+      "Description": "Demonstrated exceptional emotional regulation",
+      "Required_Score": 35.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/school_balance_gold.png"
+    },
+    {
+      "Tier": "platinum",
+      "Tier_Order": 1,
+      "Title": "Zen Master",
+      "Description": "Achieved mastery in self-regulation and emotional balance",
+      "Required_Score": 50.0,
+      "Compass_Axis_Id": "Self-Regulation",
+      "Image_Id": "media/badges/school_zen_platinum.png"
+    }
+  ]
+}

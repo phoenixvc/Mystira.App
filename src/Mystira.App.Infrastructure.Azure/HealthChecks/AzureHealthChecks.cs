@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Storage.Blobs;
+using Microsoft.Azure.Cosmos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
@@ -22,11 +23,11 @@ public class CosmosDbHealthCheck : IHealthCheck
     {
         try
         {
-            // Lightweight connectivity check. This should not be an expensive query.
-            var canConnect = await _context.Database.CanConnectAsync(cancellationToken).ConfigureAwait(false);
-            return canConnect
-                ? HealthCheckResult.Healthy("Cosmos DB connection is healthy")
-                : HealthCheckResult.Unhealthy("Cosmos DB connection test returned false");
+            // EF Core Cosmos provider does not support CanConnectAsync.
+            // Use the underlying CosmosClient to perform a lightweight connectivity check.
+            var cosmosClient = _context.Database.GetCosmosClient();
+            await cosmosClient.ReadAccountAsync().ConfigureAwait(false);
+            return HealthCheckResult.Healthy("Cosmos DB connection is healthy");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

@@ -55,13 +55,13 @@ public class GetScenariosUseCase
 
         if (request.Archetypes != null && request.Archetypes.Count > 0)
         {
-            var archetypeValues = request.Archetypes.Select(a => Archetype.Parse(a)?.Value).Where(v => v != null).ToList();
+            var archetypeValues = request.Archetypes.Where(a => Archetype.Parse(a)?.Value != null).Select(a => Archetype.Parse(a)!.Value).ToList();
             query = query.Where(s => s.Archetypes.Any(a => archetypeValues.Contains(a.Value)));
         }
 
         if (request.CoreAxes != null && request.CoreAxes.Count > 0)
         {
-            var axisValues = request.CoreAxes.Select(a => CoreAxis.Parse(a)?.Value).Where(v => v != null).ToList();
+            var axisValues = request.CoreAxes.Where(a => CoreAxis.Parse(a)?.Value != null).Select(a => CoreAxis.Parse(a)!.Value).ToList();
             query = query.Where(s => s.CoreAxes.Any(a => axisValues.Contains(a.Value)));
         }
 

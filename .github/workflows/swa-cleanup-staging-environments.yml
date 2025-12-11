@@ -1,0 +1,78 @@
+name: SWA Cleanup - Staging Environments
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to cleanup (dev/staging/prod)'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      pr_number:
+        description: 'PR number to cleanup (optional - leave empty to cleanup current context)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    name: Cleanup SWA Staging Environment
+
+    steps:
+      - name: Validate inputs
+        run: |
+          echo "Environment: ${{ inputs.environment }}"
+          echo "PR Number: ${{ inputs.pr_number || 'current context' }}"
+
+      - name: Cleanup Dev Environment
+        if: inputs.environment == 'dev'
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DEV }}
+          action: "close"
+
+      - name: Cleanup Staging Environment
+        if: inputs.environment == 'staging'
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_STAGING }}
+          action: "close"
+
+      - name: Cleanup Production Environment
+        if: inputs.environment == 'prod'
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_PROD }}
+          action: "close"
+
+      - name: Comment on PR (if PR number provided)
+        if: inputs.pr_number != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = parseInt('${{ inputs.pr_number }}');
+            const environment = '${{ inputs.environment }}';
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `🧹 **SWA Staging Environment Cleanup**\n\nManually cleaned up \`${environment}\` staging environment for this PR.\n\n*Triggered by: @${context.actor}*`
+            });
+
+      - name: Summary
+        run: |
+          echo "✅ Cleanup complete for ${{ inputs.environment }} environment"
+          echo ""
+          echo "📋 What was done:"
+          echo "  - Sent cleanup request to Azure Static Web Apps"
+          echo "  - This will remove the staging/preview environment"
+          echo ""
+          echo "⚠️  Note: It may take a few minutes for the environment to be fully removed."

@@ -1,0 +1,115 @@
+@using Mystira.App.PWA.Services
+@inject IApiConfigurationService ApiConfigService
+
+@if (_showIndicator)
+{
+    <div class="environment-indicator @_indicatorClass">
+        <i class="@_iconClass me-1"></i>
+        @_environment Environment
+        @if (!string.IsNullOrEmpty(_apiHost))
+        {
+            <span class="ms-2 opacity-75">(@_apiHost)</span>
+        }
+    </div>
+}
+
+<style>
+    .environment-indicator {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 4px 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-align: center;
+        z-index: 9999;
+        opacity: 0.9;
+    }
+
+    .environment-indicator:hover {
+        opacity: 1;
+    }
+
+    .environment-indicator.env-development {
+        background: linear-gradient(90deg, #059669, #10b981);
+        color: white;
+    }
+
+    .environment-indicator.env-staging {
+        background: linear-gradient(90deg, #d97706, #f59e0b);
+        color: white;
+    }
+
+    .environment-indicator.env-local {
+        background: linear-gradient(90deg, #7c3aed, #8b5cf6);
+        color: white;
+    }
+
+    .environment-indicator.env-unknown {
+        background: linear-gradient(90deg, #6b7280, #9ca3af);
+        color: white;
+    }
+</style>
+
+@code {
+    private bool _showIndicator;
+    private string _environment = string.Empty;
+    private string _indicatorClass = string.Empty;
+    private string _iconClass = string.Empty;
+    private string _apiHost = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _environment = await ApiConfigService.GetCurrentEnvironmentAsync();
+            var apiUrl = await ApiConfigService.GetApiBaseUrlAsync();
+
+            // Only show for non-production environments
+            _showIndicator = !_environment.Equals("Production", StringComparison.OrdinalIgnoreCase) &&
+                            !_environment.Equals("prod", StringComparison.OrdinalIgnoreCase);
+
+            if (_showIndicator)
+            {
+                // Extract host from API URL for display
+                if (Uri.TryCreate(apiUrl, UriKind.Absolute, out var uri))
+                {
+                    _apiHost = uri.Host;
+                }
+
+                // Set styling based on environment
+                switch (_environment.ToLowerInvariant())
+                {
+                    case "development":
+                    case "dev":
+                        _indicatorClass = "env-development";
+                        _iconClass = "fas fa-code";
+                        _environment = "Development";
+                        break;
+                    case "staging":
+                    case "stage":
+                        _indicatorClass = "env-staging";
+                        _iconClass = "fas fa-flask";
+                        _environment = "Staging";
+                        break;
+                    case "local":
+                    case "localhost":
+                        _indicatorClass = "env-local";
+                        _iconClass = "fas fa-laptop-code";
+                        _environment = "Local";
+                        break;
+                    default:
+                        _indicatorClass = "env-unknown";
+                        _iconClass = "fas fa-question-circle";
+                        break;
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Don't show indicator if we can't determine environment
+            _showIndicator = false;
+        }
+    }
+}

@@ -1,0 +1,53 @@
+{
+  "// ⚠️ LOCAL DEVELOPMENT CONFIGURATION": "Copy this file to appsettings.local.json and customize for your environment",
+  "// ⚠️ SECURITY": "appsettings.local.json is gitignored to prevent committing secrets",
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore": "Information"
+    }
+  },
+  "ConnectionStrings": {
+    "CosmosDb": "",
+    "// CosmosDb_Note": "Leave empty to use InMemory database, or add Cosmos DB connection string",
+    "AzureStorage": "UseDevelopmentStorage=true",
+    "// AzureStorage_Note": "Use Azurite emulator or replace with your storage account connection string"
+  },
+  "Azure": {
+    "CosmosDb": {
+      "DatabaseName": "MystiraAppDb"
+    },
+    "BlobStorage": {
+      "ContainerName": "mystira-app-media",
+      "MaxFileSizeMB": 10
+    }
+  },
+  "AzureCommunicationServices": {
+    "ConnectionString": "",
+    "// ConnectionString_Note": "Optional: Add your Azure Communication Services connection string",
+    "SenderEmail": ""
+  },
+  "JwtSettings": {
+    "// Algorithm_Note": "Using RS256 asymmetric signing (recommended)",
+    "RsaPrivateKey": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDbnlQ7tTRx2q6Y\ne+jssAP9//VhK0b9YCpQrTkYt5aUAhzjt6c+V+ybDkLBK1ZQilnC1vUiu4OBJCxW\nagfoMigGOnz7rczVFSALsXqR5EX+J7orDJGmjwAbn9EmvhGqeAh3w9/0Qd4gfeEA\nys7mWpr803V0aBMtcy2TVghyTidrRU0sJ5hMOmzf5hcQ0E/oIyTbcLLi9M7ZZiTR\nVxuZ+BVcmXPCjYNXYNjFl8vaGiNzQJI/446YfS6OdgSYb+wAyAyAKBnZwyf6xWtJ\nUIr/KluMm79zl+mUxOoJihQVge4mWDd5Ru80eQ/VfSX2bKcwMS5kmMeww/zAU+of\n+UcsU5UVAgMBAAECggEATI6BQ30TxpqaIVqUZCmpgpn+sjwxV3L13UC9NhINYhPo\neTMUkEV7G8QZXhga0yGfT626LzzZhyOSdx8oGXeefylVVzCLRj5CeQEJvqCqC4JS\nwd30SfDwczC/and4VgnYvdMglxd89Kucyzdnb2JnQ7n86DK9eKr9WK51bE81K42M\nHLbg9jSEocCJFII26FAiLwihfURZP5E1Z4sHU65pFV3EUvA9atlsxzrGM3HErRZv\n2DUjMrGpWK0a+pASNfktuuRkC6jVDpW2h1qf11qvJvaoPMgwGK4E2GSP0hEXOrbK\nrQuqIihygLNxRUzgZNIF/hjAqFBN+OUkiebRuyXDwwKBgQDtztqTcKx+3rjm4ns5\nvCe9tzNTRI7tTuGDP5TW+K/GpV6OanG1uNaVZjwTi/5R3PoIVi/V/zACeOyChLZn\n/8xcyiZC0jE7KpXpZCYM1rKAZ+paYbJ3be2GdeZBL4InC7CW9C/kXUu3OoOf9cZc\nYLCx9el8ksg2wTAqHyjdYcHLswKBgQDsa0H2awsxzTx2pcgrkC1ra5ar6fiY4O0A\nXHn51c0Krss5J6vU74UYjcKyERJPLqTV5D68C+XwbUAXmTkrAfK1VHAPXC+JWMCK\nptUgIwcMT/RohZ5TG5hbSRVz8geKPKWmhEpj95VIaVWC7IFzh6beIjKLBFWESLzJ\nf+CSBSiYFwKBgB3oL9DvEKJ7/CD9RqYCJbVUPt4v9xGdI/tPmbZXXDPNRFEAzgAe\nmM39J30F1BwTgFZgEHAHQdBtyMC5U/9MSjU5LwqkSJC6UFQjxi1DKvu/Fdf8BWfD\nqWWJmkWEZgfnDnRNjWBY41bNwxPw4ttnRZF77bs+8nMAZMBHXupIiwjFAoGBAJag\no683djNturcxWr5+pqGJM78mW9Azhmyzfrdxw6ipwysQHoeVb2w8ba579/lhE35/\nZIT047RyNuKSKf0/yX5EZP00U8kjNdFhB+roxkXO7z5k24HB1CldAAEWVD179GKK\naMcWaBNxoRzASJ3t8KAYk7FEuqOEoFuVUORXywxTAoGACp6vXaVX7YWV3WjoB+5C\nTkZvt4LOCVkOX9T0I5rzFTv4qpcjDwhcRIbS3GiP0ZnXQjXH3OF/uFa5vPyohPJl\nn6bjFgPio+QC4aaRR9K/bYThEFOsz+9uMNofv+6TFS8DLKSKRWrYpnhOjk9Pj5Ga\nqezmNuL8yfgbWOehKPnIVjw=\n-----END PRIVATE KEY-----",
+    "RsaPublicKey": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA255UO7U0cdqumHvo7LAD\n/f/1YStG/WAqUK05GLeWlAIc47enPlfsmw5CwStWUIpZwtb1IruDgSQsVmoH6DIo\nBjp8+63M1RUgC7F6keRF/ie6KwyRpo8AG5/RJr4RqngId8Pf9EHeIH3hAMrO5lqa\n/NN1dGgTLXMtk1YIck4na0VNLCeYTDps3+YXENBP6CMk23Cy4vTO2WYk0VcbmfgV\nXJlzwo2DV2DYxZfL2hojc0CSP+OOmH0ujnYEmG/sAMgMgCgZ2cMn+sVrSVCK/ypb\njJu/c5fplMTqCYoUFYHuJlg3eUbvNHkP1X0l9mynMDEuZJjHsMP8wFPqH/lHLFOV\nFQIDAQAB\n-----END PUBLIC KEY-----",
+    "Issuer": "MystiraAPI",
+    "Audience": "MystiraPWA",
+    "// RsaKey_Note": "⚠️ LOCAL DEVELOPMENT ONLY: In production, load keys from Azure Key Vault"
+  },
+  "CorsSettings": {
+    "AllowedOrigins": "http://localhost:7000,https://localhost:7000"
+  },
+  "Discord": {
+    "Enabled": false,
+    "BotToken": "",
+    "GuildId": 0,
+    "RegisterCommandsGlobally": false,
+    "EnableSlashCommands": true
+  },
+  "InitializeDatabaseOnStartup": true,
+  "// InitializeDatabaseOnStartup_Note": "Set to false to skip database initialization (requires pre-configured database). Default: true",
+  "SeedMasterDataOnStartup": false,
+  "// SeedMasterDataOnStartup_Note": "Set to true to seed master data on startup (for Cosmos DB). InMemory database seeds automatically."
+}
