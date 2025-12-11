@@ -183,7 +183,7 @@ if (useCosmosDb)
                 httpClient.Timeout = TimeSpan.FromSeconds(30);
                 return httpClient;
             });
-            
+
             // Set request timeout for Cosmos operations
             cosmosOptions.RequestTimeout(TimeSpan.FromSeconds(30));
         })
@@ -256,8 +256,11 @@ builder.Services.AddAuthentication(options =>
     {
         options.Cookie.Name = "Mystira.Admin.Auth";
         options.Cookie.HttpOnly = true;
-        options.Cookie.SameSite = SameSiteMode.Strict;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        // In development we must allow cookies over HTTP and avoid overly strict SameSite,
+        // otherwise the auth cookie is rejected and login appears to do nothing.
+        var isDev = builder.Environment.IsDevelopment();
+        options.Cookie.SameSite = isDev ? SameSiteMode.Lax : SameSiteMode.Strict;
+        options.Cookie.SecurePolicy = isDev ? CookieSecurePolicy.None : CookieSecurePolicy.Always;
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
         options.SlidingExpiration = true;
         options.LoginPath = "/admin/login";
@@ -609,7 +612,37 @@ if (app.Environment.IsDevelopment())
 }
 
 // Add OWASP security headers
-app.UseSecurityHeaders();
+if (app.Environment.IsDevelopment())
+{
+    // In development allow inline scripts and CDN resources so Razor views work
+    app.UseSecurityHeaders(options =>
+    {
+        options.UseStrictCsp = false; // allow inline scripts/styles used by views
+        options.AdditionalScriptSources = new[]
+        {
+            "https://cdn.jsdelivr.net",
+            "https://cdnjs.cloudflare.com",
+            "https://code.jquery.com"
+        };
+        options.AdditionalStyleSources = new[]
+        {
+            "https://cdn.jsdelivr.net",
+            "https://cdnjs.cloudflare.com"
+        };
+        // Allow font files (Font Awesome, etc.) from CDNs in development
+        options.AdditionalFontSources = new[]
+        {
+            "https://cdnjs.cloudflare.com",
+            "https://cdn.jsdelivr.net",
+            "https://fonts.gstatic.com"
+        };
+    });
+}
+else
+{
+    // In production keep strict CSP
+    app.UseSecurityHeaders();
+}
 
 // Add rate limiting
 app.UseRateLimiter();
@@ -732,12 +765,12 @@ if (initializeDatabaseOnStartup || isInMemory)
                 try
                 {
                     var seeder = scope.ServiceProvider.GetRequiredService<MasterDataSeederService>();
-                    
+
                     // Also apply timeout to seeding operations
                     var seedTask = seeder.SeedAllAsync();
                     var seedTimeoutTask = Task.Delay(TimeSpan.FromSeconds(60));
                     var seedCompletedTask = await Task.WhenAny(seedTask, seedTimeoutTask);
-                    
+
                     if (seedCompletedTask == seedTimeoutTask)
                     {
                         startupLogger.LogWarning("Master data seeding timed out after 60 seconds. The application will continue to start.");
@@ -762,7 +795,7 @@ if (initializeDatabaseOnStartup || isInMemory)
     {
         // Log error but don't crash the app in production - allow health checks to detect the issue
         startupLogger.LogError(ex, "Failed to initialize database during startup. The application will start in degraded mode. Ensure Azure Cosmos DB database 'MystiraAppDb' exists and app identity has permissions to create/read containers. Expected containers include: CompassAxes (PK /Id), BadgeConfigurations (PK /Id), CharacterMaps (PK /Id), ContentBundles (PK /Id), Scenarios (PK /Id), MediaMetadataFiles (PK /Id), CharacterMediaMetadataFiles (PK /Id), CharacterMapFiles (PK /Id), UserProfiles (PK /Id), Accounts (PK /Id), PendingSignups (PK /email). Set 'InitializeDatabaseOnStartup'=false to skip this check.");
-        
+
         // Only fail fast in development/local environments where we expect the database to work
         if (isInMemory)
         {
