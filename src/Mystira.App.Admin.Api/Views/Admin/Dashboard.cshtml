@@ -149,7 +149,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-lg-6">
         <div class="card shadow mb-4">
             <div class="card-header py-3">
@@ -309,7 +309,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Scenarios with Missing References -->
                 <div id="missingReferencesSection" style="display: none;">
                     <h6 class="text-warning">Scenarios with Missing References:</h6>
@@ -330,7 +330,7 @@
                         </table>
                     </div>
                 </div>
-                
+
                 <div id="scenarioRefLoading" class="text-center">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
@@ -343,7 +343,8 @@
 </div>
 
 @section Scripts {
-<script>
+@{ var cspNonce = Context.Items["CspNonce"] as string; }
+<script nonce="@cspNonce">
 $(document).ready(function() {
     loadDashboardData();
     loadScenarioReferences();
@@ -409,7 +410,7 @@ function loadDashboardData() {
 
     // Load storage usage (placeholder for now - will be implemented later)
     $('#storageUsed').text('Calculating...');
-    
+
     $('#scenarioLastUpdated').text(new Date().toLocaleDateString());
 }
 
@@ -432,7 +433,7 @@ async function initializeSampleData() {
     if (!confirm('This will initialize sample data including characters and metadata. Continue?')) {
         return;
     }
-    
+
     try {
         const response = await fetch('/admin/initialize-sample-data', {
             method: 'POST',
@@ -440,7 +441,7 @@ async function initializeSampleData() {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         const result = await response.json();
         if (result.success) {
             alert('Sample data initialized successfully!');
@@ -458,7 +459,7 @@ async function fixMetadataFormat() {
     if (!confirm('This will fix metadata format issues by recreating metadata files. This will clear existing metadata. Continue?')) {
         return;
     }
-    
+
     try {
         const response = await fetch('/admin/fix-metadata-format', {
             method: 'POST',
@@ -466,7 +467,7 @@ async function fixMetadataFormat() {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         const result = await response.json();
         if (result.success) {
             alert('Metadata format fixed successfully!');
@@ -483,25 +484,25 @@ async function fixMetadataFormat() {
 function loadScenarioReferences() {
     $('#scenarioRefLoading').show();
     $('#missingReferencesSection').hide();
-    
+
     $.get('/api/admin/scenariosadmin/validate-all-references', function(data) {
         const totalScenarios = data.length;
         const scenariosWithMissing = data.filter(s => s.hasMissingReferences);
         const validScenarios = totalScenarios - scenariosWithMissing.length;
         const totalMissingRefs = data.reduce((sum, s) => sum + s.missingReferencesCount, 0);
-        
+
         // Update stats
         $('#totalScenariosRef').text(totalScenarios);
         $('#validScenarios').text(validScenarios);
         $('#scenariosWithMissing').text(scenariosWithMissing.length);
         $('#totalMissingRefs').text(totalMissingRefs);
-        
+
         // Show missing references table if there are any
         if (scenariosWithMissing.length > 0) {
             displayMissingReferences(scenariosWithMissing);
             $('#missingReferencesSection').show();
         }
-        
+
         $('#scenarioRefLoading').hide();
     }).fail(function(xhr) {
         console.error('Failed to load scenario references:', xhr.responseText);
@@ -512,15 +513,15 @@ function loadScenarioReferences() {
 function displayMissingReferences(scenarios) {
     const tbody = $('#missingReferencesTable');
     tbody.empty();
-    
+
     scenarios.forEach(scenario => {
         const mediaIssues = scenario.missingReferences.filter(r => r.referenceType === 'media').length;
         const characterIssues = scenario.missingReferences.filter(r => r.referenceType === 'character').length;
-        
+
         let issuesText = [];
         if (mediaIssues > 0) issuesText.push(`${mediaIssues} media`);
         if (characterIssues > 0) issuesText.push(`${characterIssues} character`);
-        
+
         const row = $(`
             <tr>
                 <td>

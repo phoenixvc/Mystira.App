@@ -77,9 +77,10 @@
             </div>
         </div>
     </div>
-</div>
+ </div>
 
-<script>
+@{ var cspNonce = Context.Items["CspNonce"] as string; }
+<script nonce="@cspNonce">
     const apiBase = '/api/admin/echotypes';
 
     async function loadEchoTypes() {
@@ -112,7 +113,7 @@
         const filter = input.value.toLowerCase();
         const tbody = document.getElementById('echoTypesTableBody');
         const rows = tbody.getElementsByTagName('tr');
-        
+
         for (let i = 0; i < rows.length; i++) {
             const cells = rows[i].getElementsByTagName('td');
             let found = false;

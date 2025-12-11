@@ -76,7 +76,8 @@
     </div>
 </div>
 
-<script>
+@{ var cspNonce = Context.Items["CspNonce"] as string; }
+<script nonce="@cspNonce">
     const apiBase = '/api/admin/bundlesadmin';
 
     async function loadBundles() {
