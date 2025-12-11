@@ -671,14 +671,9 @@ public class BadgeAdminService : IBadgeAdminService
             dto.AgeGroupName = AgeGroupConstants.GetDisplayName(badge.AgeGroupId);
         }
 
-        if (axisLookup != null && axisLookup.TryGetValue(badge.CompassAxisId, out var axis))
-        {
-            dto.CompassAxisName = string.IsNullOrWhiteSpace(axis.Name) ? axis.Id : axis.Name;
-        }
-        else
-        {
-            dto.CompassAxisName = badge.CompassAxisId;
-        }
+        dto.CompassAxisName = (axisLookup != null && axisLookup.TryGetValue(badge.CompassAxisId, out var axis))
+            ? (string.IsNullOrWhiteSpace(axis.Name) ? axis.Id : axis.Name)
+            : badge.CompassAxisId;
 
         if (imageLookup != null && imageLookup.TryGetValue(badge.ImageId, out var image))
         {
@@ -701,14 +696,9 @@ public class BadgeAdminService : IBadgeAdminService
             UpdatedAt = entity.UpdatedAt
         };
 
-        if (axisLookup.TryGetValue(entity.CompassAxisId, out var axis))
-        {
-            dto.CompassAxisName = string.IsNullOrWhiteSpace(axis.Name) ? axis.Id : axis.Name;
-        }
-        else
-        {
-            dto.CompassAxisName = entity.CompassAxisId;
-        }
+        dto.CompassAxisName = axisLookup.TryGetValue(entity.CompassAxisId, out var axis)
+            ? (string.IsNullOrWhiteSpace(axis.Name) ? axis.Id : axis.Name)
+            : entity.CompassAxisId;
 
         return dto;
     }
