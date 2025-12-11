@@ -46,14 +46,11 @@ public class HealthControllerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.Result.Should().BeOfType<ObjectResult>();
+        var objResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        objResult.StatusCode.Should().Be(200);
         
-        var objResult = result.Result as ObjectResult;
-        objResult!.StatusCode.Should().Be(200);
-        objResult.Value.Should().BeOfType<HealthCheckResponse>();
-        
-        var response = objResult.Value as HealthCheckResponse;
-        response!.Status.Should().Be("Healthy");
+        var response = objResult.Value.Should().BeOfType<HealthCheckResponse>().Subject;
+        response.Status.Should().Be("Healthy");
     }
 
     [Fact]
@@ -78,14 +75,11 @@ public class HealthControllerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.Result.Should().BeOfType<ObjectResult>();
+        var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(503); // Service Unavailable
         
-        var objectResult = result.Result as ObjectResult;
-        objectResult!.StatusCode.Should().Be(503); // Service Unavailable
-        
-        objectResult.Value.Should().BeOfType<HealthCheckResponse>();
-        var response = objectResult.Value as HealthCheckResponse;
-        response!.Status.Should().Be("Unhealthy");
+        var response = objectResult.Value.Should().BeOfType<HealthCheckResponse>().Subject;
+        response.Status.Should().Be("Unhealthy");
     }
 
     [Fact]
@@ -110,14 +104,11 @@ public class HealthControllerTests
 
         // Assert
         result.Should().NotBeNull();
-        result.Result.Should().BeOfType<ObjectResult>();
+        var objResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        objResult.StatusCode.Should().Be(200);
         
-        var objResult = result.Result as ObjectResult;
-        objResult!.StatusCode.Should().Be(200);
-        objResult.Value.Should().BeOfType<HealthCheckResponse>();
-        
-        var response = objResult.Value as HealthCheckResponse;
-        response!.Status.Should().Be("Degraded");
+        var response = objResult.Value.Should().BeOfType<HealthCheckResponse>().Subject;
+        response.Status.Should().Be("Degraded");
     }
 
     [Fact]
@@ -138,11 +129,10 @@ public class HealthControllerTests
         var result = await _controller.GetHealth();
 
         // Assert
-        var objResult = result.Result as ObjectResult;
-        objResult.Should().NotBeNull();
+        var objResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        var response = objResult.Value.Should().BeOfType<HealthCheckResponse>().Subject;
         
-        var response = objResult!.Value as HealthCheckResponse;
-        response!.Duration.Should().Be(TimeSpan.FromMilliseconds(150));
+        response.Duration.Should().Be(TimeSpan.FromMilliseconds(150));
         response.Status.Should().Be("Healthy");
     }
 
@@ -168,13 +158,10 @@ public class HealthControllerTests
         var result = await _controller.GetHealth();
 
         // Assert
-        var objResult = result.Result as ObjectResult;
-        objResult.Should().NotBeNull();
+        var objResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        var response = objResult.Value.Should().BeOfType<HealthCheckResponse>().Subject;
 
-        var response = objResult!.Value as HealthCheckResponse;
-        response.Should().NotBeNull();
-
-        response!.Results.Should().HaveCount(2);
+        response.Results.Should().HaveCount(2);
         response.Results.Should().ContainKey("database");
         response.Results.Should().ContainKey("storage");
         
