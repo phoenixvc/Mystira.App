@@ -33,6 +33,11 @@ public partial class MystiraAppDbContext : DbContext
     public DbSet<EchoTypeDefinition> EchoTypeDefinitions { get; set; }
     public DbSet<FantasyThemeDefinition> FantasyThemeDefinitions { get; set; }
     public DbSet<AgeGroupDefinition> AgeGroupDefinitions { get; set; }
+    
+    // Badge System
+    public DbSet<AxisAchievement> AxisAchievements { get; set; }
+    public DbSet<Badge> Badges { get; set; }
+    public DbSet<BadgeImage> BadgeImages { get; set; }
 
     // Media Management
     public DbSet<MediaAsset> MediaAssets { get; set; }

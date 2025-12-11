@@ -305,7 +305,6 @@ builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IScenarioRepository, ScenarioRepository>();
 builder.Services.AddScoped<ICharacterMapRepository, CharacterMapRepository>();
 builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
-builder.Services.AddScoped<IBadgeConfigurationRepository, BadgeConfigurationRepository>();
 builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
 builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
 builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
