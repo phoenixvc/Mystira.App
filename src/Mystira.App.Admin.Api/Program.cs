@@ -406,9 +406,11 @@ app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.Health
 });
 
 // /health/live - simple liveness check (always returns 200 if app is running)
+// This endpoint runs no health checks (Predicate = _ => false excludes all checks)
+// and always returns Healthy status if the app can respond to requests
 app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
-    Predicate = _ => false // No checks, just return healthy if app is running
+    Predicate = _ => false // Exclude all health checks - just verify app is responsive
 });
 
 // Initialize database (optional, controlled by configuration)
