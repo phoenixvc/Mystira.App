@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Contracts.Models.GameSessions;
 using Mystira.App.Contracts.Responses.GameSessions;
 using Mystira.App.Domain.Models;
 
@@ -33,13 +34,22 @@ public class GetSessionStatsQueryHandler : IQueryHandler<GetSessionStatsQuery, S
             return null;
         }
 
-        // Build compass values (convert CompassTracking.CurrentValue to double)
+        session.RecalculateCompassProgressFromHistory();
+
         var compassValues = session.CompassValues?.ToDictionary(
             kvp => kvp.Key,
             kvp => kvp.Value.CurrentValue
         ) ?? new Dictionary<string, double>();
 
-        // Get recent echo logs from EchoHistory
+        var playerProgress = session.PlayerCompassProgressTotals
+            .Select(p => new PlayerCompassProgressDto
+            {
+                PlayerId = p.PlayerId,
+                Axis = p.Axis,
+                Total = p.Total
+            })
+            .ToList();
+
         var recentEchoes = session.EchoHistory?
             .TakeLast(10)
             .ToList() ?? new List<EchoLog>();
@@ -47,6 +57,7 @@ public class GetSessionStatsQueryHandler : IQueryHandler<GetSessionStatsQuery, S
         var stats = new SessionStatsResponse
         {
             CompassValues = compassValues,
+            PlayerCompassProgressTotals = playerProgress,
             RecentEchoes = recentEchoes,
             Achievements = session.Achievements ?? new List<SessionAchievement>(),
             TotalChoices = session.ChoiceHistory?.Count ?? 0,

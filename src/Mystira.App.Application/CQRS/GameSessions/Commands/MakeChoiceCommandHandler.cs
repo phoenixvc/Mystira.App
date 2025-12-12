@@ -30,7 +30,6 @@ public class MakeChoiceCommandHandler : ICommandHandler<MakeChoiceCommand, GameS
     {
         var request = command.Request;
 
-        // Validate request
         if (string.IsNullOrEmpty(request.SessionId))
         {
             throw new ArgumentException("SessionId is required");
@@ -58,37 +57,83 @@ public class MakeChoiceCommandHandler : ICommandHandler<MakeChoiceCommand, GameS
             return null;
         }
 
-        // Verify session is in progress
         if (session.Status != SessionStatus.InProgress)
         {
             throw new InvalidOperationException($"Cannot make choice in session with status: {session.Status}");
         }
 
-        // Record the choice
+        var playerId = !string.IsNullOrWhiteSpace(request.PlayerId)
+            ? request.PlayerId
+            : session.ProfileId;
+
+        var (compassAxis, compassDirection, compassDelta) = NormalizeCompass(request.CompassAxis, request.CompassDirection, request.CompassDelta);
+
         var choice = new SessionChoice
         {
             SceneId = request.SceneId,
             ChoiceText = request.ChoiceText,
             NextScene = request.NextSceneId,
-            ChosenAt = DateTime.UtcNow
+            PlayerId = playerId ?? string.Empty,
+            CompassAxis = compassAxis,
+            CompassDirection = compassDirection,
+            CompassDelta = compassDelta,
+            ChosenAt = DateTime.UtcNow,
+            CompassChange = !string.IsNullOrWhiteSpace(compassAxis) && compassDelta.HasValue
+                ? new CompassChange { Axis = compassAxis, Delta = compassDelta.Value }
+                : null
         };
 
         session.ChoiceHistory ??= new List<SessionChoice>();
         session.ChoiceHistory.Add(choice);
 
-        // Update current scene
         session.CurrentSceneId = request.NextSceneId;
+        session.ElapsedTime = DateTime.UtcNow - session.StartTime;
 
-        // Update in repository
+        session.RecalculateCompassProgressFromHistory();
+
         await _repository.UpdateAsync(session);
-
-        // Persist changes
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
-            "Recorded choice in session {SessionId}: {ChoiceText} -> {NextSceneId}",
-            session.Id, request.ChoiceText, request.NextSceneId);
+            "Recorded choice in session {SessionId}: {ChoiceText} -> {NextSceneId} (PlayerId={PlayerId})",
+            session.Id,
+            request.ChoiceText,
+            request.NextSceneId,
+            playerId);
 
         return session;
+    }
+
+    private static (string? Axis, string? Direction, double? Delta) NormalizeCompass(string? axis, string? direction, double? delta)
+    {
+        if (string.IsNullOrWhiteSpace(axis) || !delta.HasValue)
+        {
+            return (null, null, null);
+        }
+
+        var effectiveDelta = delta.Value;
+        var normalizedDirection = direction?.Trim().ToLowerInvariant();
+
+        if (!string.IsNullOrWhiteSpace(normalizedDirection))
+        {
+            if (normalizedDirection is "negative" or "neg" or "-" or "down")
+            {
+                effectiveDelta = -Math.Abs(effectiveDelta);
+                normalizedDirection = "negative";
+            }
+            else if (normalizedDirection is "positive" or "pos" or "+" or "up")
+            {
+                effectiveDelta = Math.Abs(effectiveDelta);
+                normalizedDirection = "positive";
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(normalizedDirection))
+        {
+            normalizedDirection = effectiveDelta < 0 ? "negative" : "positive";
+        }
+
+        effectiveDelta = Math.Max(GameSession.CompassMinValue, Math.Min(GameSession.CompassMaxValue, effectiveDelta));
+        return (axis, normalizedDirection, effectiveDelta);
     }
 }

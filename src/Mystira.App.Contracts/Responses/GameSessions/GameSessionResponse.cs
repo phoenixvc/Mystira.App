@@ -11,6 +11,7 @@ public class GameSessionResponse
     public string ProfileId { get; set; } = string.Empty;
     public List<string> PlayerNames { get; set; } = new();
     public List<CharacterAssignmentDto> CharacterAssignments { get; set; } = new();
+    public List<PlayerCompassProgressDto> PlayerCompassProgressTotals { get; set; } = new();
     public SessionStatus Status { get; set; }
     public string CurrentSceneId { get; set; } = string.Empty;
     public int ChoiceCount { get; set; }
@@ -23,4 +24,3 @@ public class GameSessionResponse
     public int SceneCount { get; set; }
     public string TargetAgeGroup { get; set; } = string.Empty;
 }
-

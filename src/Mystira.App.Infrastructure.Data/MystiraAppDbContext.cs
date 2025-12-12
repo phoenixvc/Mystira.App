@@ -532,6 +532,13 @@ public partial class MystiraAppDbContext : DbContext
             });
             entity.OwnsMany(e => e.Achievements);
 
+            entity.OwnsMany(e => e.PlayerCompassProgressTotals, progress =>
+            {
+                progress.WithOwner();
+                progress.Property(p => p.PlayerId).IsRequired();
+                progress.Property(p => p.Axis).IsRequired();
+            });
+
             // CharacterAssignments owned collection with nested owned PlayerAssignment
             entity.OwnsMany(e => e.CharacterAssignments, assignment =>
             {

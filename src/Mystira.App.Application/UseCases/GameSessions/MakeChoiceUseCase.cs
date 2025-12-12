@@ -58,53 +58,65 @@ public class MakeChoiceUseCase
             throw new ArgumentException("Choice not found in scene");
         }
 
-        // Record the choice
+        var playerId = !string.IsNullOrWhiteSpace(request.PlayerId)
+            ? request.PlayerId
+            : session.ProfileId;
+
+        var (compassAxis, compassDirection, compassDelta) = NormalizeCompass(
+            request.CompassAxis,
+            request.CompassDirection,
+            request.CompassDelta,
+            branch.CompassChange);
+
         var sessionChoice = new SessionChoice
         {
             SceneId = request.SceneId,
             SceneTitle = currentScene.Title,
             ChoiceText = request.ChoiceText,
             NextScene = request.NextSceneId,
+            PlayerId = playerId ?? string.Empty,
+            CompassAxis = compassAxis,
+            CompassDirection = compassDirection,
+            CompassDelta = compassDelta,
             ChosenAt = DateTime.UtcNow,
             EchoGenerated = branch.EchoLog,
-            CompassChange = branch.CompassChange
+            CompassChange = !string.IsNullOrWhiteSpace(compassAxis) && compassDelta.HasValue
+                ? new CompassChange { Axis = compassAxis, Delta = compassDelta.Value }
+                : null
         };
 
         session.ChoiceHistory.Add(sessionChoice);
 
-        // Process echo log if present
         if (branch.EchoLog != null)
         {
-            var echo = new EchoLog
+            session.EchoHistory.Add(new EchoLog
             {
                 EchoType = branch.EchoLog.EchoType,
                 Description = branch.EchoLog.Description,
                 Strength = branch.EchoLog.Strength,
                 Timestamp = DateTime.UtcNow
-            };
-            session.EchoHistory.Add(echo);
+            });
         }
 
-        // Process compass change if present
-        if (branch.CompassChange != null && session.CompassValues.TryGetValue(branch.CompassChange.Axis, out var tracking))
+        session.CompassValues ??= new Dictionary<string, CompassTracking>();
+        foreach (var axis in scenario.CoreAxes)
         {
-            tracking.CurrentValue += branch.CompassChange.Delta;
-            tracking.CurrentValue = Math.Max(-2.0f, Math.Min(2.0f, tracking.CurrentValue)); // Clamp to [-2, 2]
-
-            var compassChange = new CompassChange
+            if (!session.CompassValues.ContainsKey(axis.Value))
             {
-                Axis = branch.CompassChange.Axis,
-                Delta = branch.CompassChange.Delta
-            };
-            tracking.History.Add(compassChange);
-            tracking.LastUpdated = DateTime.UtcNow;
+                session.CompassValues[axis.Value] = new CompassTracking
+                {
+                    Axis = axis.Value,
+                    CurrentValue = 0.0,
+                    StartingValue = 0.0,
+                    History = new List<CompassChange>(),
+                    LastUpdated = DateTime.UtcNow
+                };
+            }
         }
 
-        // Update session state
         session.CurrentSceneId = request.NextSceneId;
         session.ElapsedTime = DateTime.UtcNow - session.StartTime;
 
-        // Check if session is complete (reached end scene or no more branches)
         var nextScene = scenario.Scenes.FirstOrDefault(s => s.Id == request.NextSceneId);
         if (nextScene == null || (!nextScene.Branches.Any() && string.IsNullOrEmpty(nextScene.NextSceneId)))
         {
@@ -112,13 +124,67 @@ public class MakeChoiceUseCase
             session.EndTime = DateTime.UtcNow;
         }
 
+        session.RecalculateCompassProgressFromHistory();
+
         await _repository.UpdateAsync(session);
         await _unitOfWork.SaveChangesAsync();
 
-        _logger.LogInformation("Choice made in session {SessionId}: {ChoiceText} -> {NextScene}",
-            session.Id, request.ChoiceText, request.NextSceneId);
+        _logger.LogInformation(
+            "Choice made in session {SessionId}: {ChoiceText} -> {NextScene} (PlayerId={PlayerId})",
+            session.Id,
+            request.ChoiceText,
+            request.NextSceneId,
+            playerId);
 
         return session;
     }
-}
 
+    private static (string? Axis, string? Direction, double? Delta) NormalizeCompass(
+        string? requestAxis,
+        string? requestDirection,
+        double? requestDelta,
+        CompassChange? fallback)
+    {
+        if (!string.IsNullOrWhiteSpace(requestAxis) && requestDelta.HasValue)
+        {
+            var (axis, direction, delta) = Normalize(requestAxis, requestDirection, requestDelta.Value);
+            return (axis, direction, delta);
+        }
+
+        if (fallback != null && !string.IsNullOrWhiteSpace(fallback.Axis))
+        {
+            var (axis, direction, delta) = Normalize(fallback.Axis, null, fallback.Delta);
+            return (axis, direction, delta);
+        }
+
+        return (null, null, null);
+    }
+
+    private static (string Axis, string Direction, double Delta) Normalize(string axis, string? direction, double delta)
+    {
+        var effectiveDelta = delta;
+        var normalizedDirection = direction?.Trim().ToLowerInvariant();
+
+        if (!string.IsNullOrWhiteSpace(normalizedDirection))
+        {
+            if (normalizedDirection is "negative" or "neg" or "-" or "down")
+            {
+                effectiveDelta = -Math.Abs(effectiveDelta);
+                normalizedDirection = "negative";
+            }
+            else if (normalizedDirection is "positive" or "pos" or "+" or "up")
+            {
+                effectiveDelta = Math.Abs(effectiveDelta);
+                normalizedDirection = "positive";
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(normalizedDirection))
+        {
+            normalizedDirection = effectiveDelta < 0 ? "negative" : "positive";
+        }
+
+        effectiveDelta = Math.Max(GameSession.CompassMinValue, Math.Min(GameSession.CompassMaxValue, effectiveDelta));
+        return (axis, normalizedDirection, effectiveDelta);
+    }
+}

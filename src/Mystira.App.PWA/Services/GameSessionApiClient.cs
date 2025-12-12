@@ -271,7 +271,15 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         }
     }
 
-    public async Task<GameSession?> MakeChoiceAsync(string sessionId, string sceneId, string choiceText, string nextSceneId)
+    public async Task<GameSession?> MakeChoiceAsync(
+        string sessionId,
+        string sceneId,
+        string choiceText,
+        string nextSceneId,
+        string? playerId = null,
+        string? compassAxis = null,
+        string? compassDirection = null,
+        double? compassDelta = null)
     {
         try
         {
@@ -280,7 +288,18 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
             // Set authorization header - required for the [Authorize] attribute on the API endpoint
             await SetAuthorizationHeaderAsync();
 
-            var requestData = new { sessionId, sceneId, choiceText, nextSceneId };
+            var requestData = new
+            {
+                sessionId,
+                sceneId,
+                choiceText,
+                nextSceneId,
+                playerId,
+                compassAxis,
+                compassDirection,
+                compassDelta
+            };
+
             var response = await HttpClient.PostAsJsonAsync($"api/gamesessions/choice", requestData, JsonOptions);
 
             if (response.IsSuccessStatusCode)
@@ -289,12 +308,10 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
                 Logger.LogInformation("Choice recorded successfully in session: {SessionId}", sessionId);
                 return gameSession;
             }
-            else
-            {
-                Logger.LogWarning("Failed to record choice with status: {StatusCode} for session: {SessionId}",
-                    response.StatusCode, sessionId);
-                return null;
-            }
+
+            Logger.LogWarning("Failed to record choice with status: {StatusCode} for session: {SessionId}",
+                response.StatusCode, sessionId);
+            return null;
         }
         catch (HttpRequestException ex)
         {
