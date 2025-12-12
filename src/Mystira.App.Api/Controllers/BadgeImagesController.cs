@@ -50,7 +50,15 @@ public class BadgeImagesController : ControllerBase
             Response.Headers.CacheControl = "public, max-age=604800";
             return File(image.ImageData, image.ContentType);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (
+            ex is not StackOverflowException &&
+            ex is not OutOfMemoryException &&
+            ex is not ThreadAbortException &&
+            ex is not AccessViolationException &&
+            ex is not AppDomainUnloadedException &&
+            ex is not BadImageFormatException &&
+            ex is not CannotUnloadAppDomainException
+        )
         {
             _logger.LogError(ex, "Error getting badge image {ImageId}", imageId);
             return StatusCode(500, new ErrorResponse
