@@ -31,13 +31,14 @@ public static class EntityConfigurationExtensions
         this PropertyBuilder<List<string>> propertyBuilder)
         where TEntity : class
     {
-        return propertyBuilder
+        propertyBuilder
             .HasConversion(
                 v => string.Join(',', v),
-                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
-            .Metadata.SetValueComparer(StringListComparer)
-            .GetProperty()
-            .Builder as PropertyBuilder<List<string>> ?? propertyBuilder;
+                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList());
+        
+        propertyBuilder.Metadata.SetValueComparer(StringListComparer);
+        
+        return propertyBuilder;
     }
 
     /// <summary>
@@ -110,7 +111,7 @@ public static class EntityConfigurationExtensions
     {
         return new ValueComparer<List<T>>(
             (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
-            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v?.GetHashCode() ?? 0)),
+            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v != null ? v.GetHashCode() : 0)),
             c => c.ToList()
         );
     }
