@@ -690,7 +690,7 @@ public class MediaUseCaseTests
         {
             StatusCode = System.Net.HttpStatusCode.NotFound
         });
-        var httpClient = new HttpClient(mockHandler);
+        using var httpClient = new HttpClient(mockHandler);
         mockHttpClientFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
 
         var useCase = new DownloadMediaUseCase(mockRepo.Object, mockHttpClientFactory.Object, mockLogger.Object);
