@@ -82,11 +82,15 @@ public class BadgeAdminService : IBadgeAdminService
             query = query.Where(b => b.Title.ToLower().Contains(search) || b.Description.ToLower().Contains(search));
         }
 
-        var badges = await query
+        // Cosmos DB requires a composite index for multi-property OrderBy.
+        // To avoid BadRequest (400) due to missing composite index, materialize first
+        // and then perform ordering in-memory. Filters still execute server-side.
+        var filtered = await query.ToListAsync();
+        var badges = filtered
             .OrderBy(b => b.AgeGroupId)
             .ThenBy(b => b.CompassAxisId)
             .ThenBy(b => b.TierOrder)
-            .ToListAsync();
+            .ToList();
 
         return await MapBadgesAsync(badges, options.IncludeAxisMetadata, options.IncludeImages);
     }
@@ -233,10 +237,14 @@ public class BadgeAdminService : IBadgeAdminService
             query = query.Where(a => a.CompassAxisId.ToLower() == axisFilter);
         }
 
-        var entities = await query
+        // Cosmos DB requires a composite index for multi-property OrderBy.
+        // To avoid BadRequest (400) due to missing composite index, materialize first
+        // and then perform ordering in-memory. Filters still execute server-side.
+        var filtered = await query.ToListAsync();
+        var entities = filtered
             .OrderBy(a => a.AgeGroupId)
             .ThenBy(a => a.CompassAxisId)
-            .ToListAsync();
+            .ToList();
 
         var axisLookup = await GetAxisLookupAsync();
 

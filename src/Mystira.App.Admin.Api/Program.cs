@@ -6,7 +6,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Mystira.App.Admin.Api.Adapters;
+using MediatR;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Application.Behaviors;
+using Mystira.App.Application.Services;
+// Note: Avoid unqualified IJwtService to prevent ambiguity with Application port interface
+using Mystira.App.Application.Ports.Health;
+using Mystira.App.Application.Ports.Messaging;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Ports.Media;
 using Mystira.App.Application.UseCases.Contributors;
@@ -23,6 +29,9 @@ using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.Services;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
 using Mystira.App.Infrastructure.StoryProtocol;
+using Mystira.App.Infrastructure.Discord.Services;
+using Mystira.App.Api.Services; // JwtService
+using Mystira.App.Api.Adapters; // JwtServiceAdapter, HealthCheckPortAdapter
 using Microsoft.ApplicationInsights.Extensibility;
 using Mystira.App.Shared.Middleware;
 using Mystira.App.Shared.Telemetry;
@@ -163,6 +172,26 @@ builder.Services.AddSwaggerGen(c =>
         return type.Name;
     });
 });
+
+// Configure Memory Cache for query caching (used by MediatR behaviors)
+builder.Services.AddMemoryCache(options =>
+{
+    options.SizeLimit = 1024; // Limit cache to 1024 entries
+    options.CompactionPercentage = 0.25; // Compact 25% when size limit reached
+});
+
+// Configure MediatR for CQRS handlers from Application assembly
+builder.Services.AddMediatR(cfg =>
+{
+    // Register all handlers from Application assembly
+    cfg.RegisterServicesFromAssembly(typeof(Mystira.App.Application.CQRS.ICommand<>).Assembly);
+
+    // Add query caching pipeline behavior
+    cfg.AddOpenBehavior(typeof(QueryCachingBehavior<,>));
+});
+
+// Register query cache invalidation service
+builder.Services.AddSingleton<IQueryCacheInvalidationService, QueryCacheInvalidationService>();
 
 // Configure Database: Azure Cosmos DB (Cloud) or In-Memory (Local Development)
 var cosmosConnectionString = builder.Configuration.GetConnectionString("CosmosDb");
@@ -378,14 +407,16 @@ builder.Services.AddAuthorization();
 // Register application services - Admin API services
 builder.Services.AddScoped<IScenarioApiService, ScenarioApiService>();
 builder.Services.AddScoped<ICharacterMapApiService, CharacterMapApiService>();
-builder.Services.AddScoped<IAppStatusService, AppStatusService>();
+builder.Services.AddScoped<Mystira.App.Admin.Api.Services.IAppStatusService, Mystira.App.Admin.Api.Services.AppStatusService>();
 builder.Services.AddScoped<IBundleService, BundleService>();
 builder.Services.AddScoped<ICharacterMapFileService, CharacterMapFileService>();
 builder.Services.AddScoped<IMediaMetadataService, Mystira.App.Admin.Api.Services.MediaMetadataService>();
 builder.Services.AddScoped<ICharacterMediaMetadataService, CharacterMediaMetadataService>();
 builder.Services.AddScoped<IMediaApiService, MediaApiService>();
 builder.Services.AddScoped<IAvatarApiService, AvatarApiService>();
-builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
+builder.Services.AddScoped<Mystira.App.Admin.Api.Services.IHealthCheckService, Mystira.App.Admin.Api.Adapters.HealthCheckServiceAdapter>();
+// Badges admin service
+builder.Services.AddScoped<Mystira.App.Admin.Api.Services.IBadgeAdminService, Mystira.App.Admin.Api.Services.BadgeAdminService>();
 // Register email service for consistency across all APIs
 builder.Services.AddAzureEmailService(builder.Configuration);
 // Register Application.Ports.IMediaMetadataService for use cases
@@ -400,6 +431,9 @@ builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IScenarioRepository, ScenarioRepository>();
 builder.Services.AddScoped<ICharacterMapRepository, CharacterMapRepository>();
 builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
+builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
+builder.Services.AddScoped<IBadgeImageRepository, BadgeImageRepository>();
+builder.Services.AddScoped<IAxisAchievementRepository, AxisAchievementRepository>();
 builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
 builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
 builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
@@ -413,6 +447,19 @@ builder.Services.AddScoped<IEchoTypeRepository, EchoTypeRepository>();
 builder.Services.AddScoped<IFantasyThemeRepository, FantasyThemeRepository>();
 builder.Services.AddScoped<IAgeGroupRepository, AgeGroupRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+// Auth and application ports/adapters
+builder.Services.AddScoped<Mystira.App.Api.Services.IJwtService, Mystira.App.Api.Services.JwtService>();
+builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, Mystira.App.Api.Adapters.JwtServiceAdapter>();
+
+// Health port adapter for CQRS handlers
+builder.Services.AddScoped<Mystira.App.Application.Ports.Health.IHealthCheckPort, Mystira.App.Api.Adapters.HealthCheckPortAdapter>();
+
+// Discord/Messaging: keep as No-Op in this environment
+builder.Services.AddSingleton<NoOpChatBotService>();
+builder.Services.AddSingleton<IChatBotService>(sp => sp.GetRequiredService<NoOpChatBotService>());
+builder.Services.AddSingleton<IMessagingService>(sp => sp.GetRequiredService<NoOpChatBotService>());
+builder.Services.AddSingleton<IBotCommandService>(sp => sp.GetRequiredService<NoOpChatBotService>());
 
 // Register Master Data Seeder Service
 builder.Services.AddScoped<MasterDataSeederService>();

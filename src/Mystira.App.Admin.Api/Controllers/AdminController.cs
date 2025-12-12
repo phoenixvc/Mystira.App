@@ -90,6 +90,24 @@ public class AdminController : Controller
     }
 
     /// <summary>
+    /// Badges management page
+    /// </summary>
+    [HttpGet("badges")]
+    public IActionResult Badges()
+    {
+        return View("Badges");
+    }
+
+    /// <summary>
+    /// Badge Images management page
+    /// </summary>
+    [HttpGet("badges/images")]
+    public IActionResult BadgeImages()
+    {
+        return View("BadgeImages");
+    }
+
+    /// <summary>
     /// Media management page
     /// </summary>
     [HttpGet("media")]
