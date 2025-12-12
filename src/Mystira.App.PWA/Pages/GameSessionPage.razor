@@ -115,6 +115,22 @@ else
                             <!-- Choice Scene -->
                             <div class="text-center">
                                 <h5 class="mb-4 text-muted">What do you choose?</h5>
+
+                                @if (playerOptions.Count > 1)
+                                {
+                                    <div class="mb-3 d-flex justify-content-center">
+                                        <div style="max-width: 320px;">
+                                            <label class="form-label text-muted">Who's choosing?</label>
+                                            <select class="form-select" @bind="selectedPlayerId" disabled="@isProcessing">
+                                                @foreach (var player in playerOptions)
+                                                {
+                                                    <option value="@player.Id">@player.DisplayName</option>
+                                                }
+                                            </select>
+                                        </div>
+                                    </div>
+                                }
+
                                 <div class="d-flex flex-row flex-wrap justify-content-center gap-3">
                                     @foreach (var choice in gameSession.CurrentScene.Choices.OrderBy(c => c.Order))
                                     {
@@ -272,15 +288,21 @@ else
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ILogger<GameSessionPage> Logger { get; set; } = default!;
 
+    private sealed record PlayerOption(string Id, string DisplayName);
+
     private GameSession? gameSession;
     private bool isProcessing = false;
     private int? rollResult = null;
     private bool hasNavigatedHome = false;
 
+    private List<PlayerOption> playerOptions = new();
+    private string? selectedPlayerId;
+
     protected override void OnInitialized()
     {
         // Get current game session
         gameSession = GameSessionService.CurrentGameSession;
+        BuildPlayerOptions(gameSession);
 
         // Subscribe to changes
         GameSessionService.GameSessionChanged += OnGameSessionChanged;
@@ -296,6 +318,7 @@ else
     private void OnGameSessionChanged(object? sender, GameSession? session)
     {
         gameSession = session;
+        BuildPlayerOptions(session);
         rollResult = null; // Reset roll result when scene changes
 
         // If the session has been completed elsewhere (e.g., via Continue when no next scene),
@@ -326,6 +349,55 @@ else
         return "Game Session • Mystira";
     }
 
+    private void BuildPlayerOptions(GameSession? session)
+    {
+        playerOptions = new List<PlayerOption>();
+
+        if (session == null)
+        {
+            selectedPlayerId = null;
+            return;
+        }
+
+        void Add(string id, string displayName)
+        {
+            if (string.IsNullOrWhiteSpace(id) || playerOptions.Any(p => p.Id == id))
+            {
+                return;
+            }
+
+            playerOptions.Add(new PlayerOption(id, displayName));
+        }
+
+        if (!string.IsNullOrWhiteSpace(session.ProfileId))
+        {
+            Add(session.ProfileId, "Session Owner");
+        }
+
+        foreach (var assignment in session.CharacterAssignments)
+        {
+            var pa = assignment.PlayerAssignment;
+            if (pa == null)
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(pa.ProfileId))
+            {
+                Add(pa.ProfileId!, pa.ProfileName ?? assignment.CharacterName);
+            }
+            else if (!string.IsNullOrWhiteSpace(pa.GuestName))
+            {
+                Add($"guest:{pa.GuestName}", pa.GuestName!);
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(selectedPlayerId) || playerOptions.All(p => p.Id != selectedPlayerId))
+        {
+            selectedPlayerId = playerOptions.FirstOrDefault()?.Id;
+        }
+    }
+
     private async Task HandleChoice(Choice choice)
     {
         if (gameSession?.CurrentScene == null || string.IsNullOrEmpty(choice.NextSceneId))
@@ -342,7 +414,11 @@ else
                 gameSession.Id,
                 gameSession.CurrentScene.Id,
                 choice.Text,
-                choice.NextSceneId);
+                choice.NextSceneId,
+                selectedPlayerId,
+                choice.CompassAxis,
+                choice.CompassDirection,
+                choice.CompassDelta);
         }
         catch (Exception ex)
         {

@@ -105,6 +105,8 @@ public class GameSessionService : IGameSessionService
                 Scenario = scenario,
                 ScenarioId = scenario.Id,
                 ScenarioName = scenario.Title,
+                AccountId = !string.IsNullOrWhiteSpace(apiGameSession.AccountId) ? apiGameSession.AccountId : accountId,
+                ProfileId = !string.IsNullOrWhiteSpace(apiGameSession.ProfileId) ? apiGameSession.ProfileId : profileId,
                 CurrentScene = startingScene,
                 StartedAt = apiGameSession.StartedAt,
                 CompletedScenes = new List<Scene>(),
@@ -465,7 +467,15 @@ public class GameSessionService : IGameSessionService
         }
     }
 
-    public async Task MakeChoiceAsync(string gameSessionId, string currentSceneId, string choiceText, string choiceNextSceneId)
+    public async Task MakeChoiceAsync(
+        string gameSessionId,
+        string currentSceneId,
+        string choiceText,
+        string choiceNextSceneId,
+        string? playerId = null,
+        string? compassAxis = null,
+        string? compassDirection = null,
+        double? compassDelta = null)
     {
         try
         {
@@ -489,8 +499,21 @@ public class GameSessionService : IGameSessionService
             _logger.LogInformation("Making choice '{ChoiceText}' to navigate to scene '{NextSceneTitle}' ({NextSceneId})",
                 choiceText, nextScene.Title, nextScene.Id);
 
+            var effectivePlayerId = !string.IsNullOrWhiteSpace(playerId)
+                ? playerId
+                : CurrentGameSession.ProfileId;
+
             // Notify the server about the choice that was made
-            var updatedSession = await _apiClient.MakeChoiceAsync(gameSessionId, currentSceneId, choiceText, nextScene.Id);
+            var updatedSession = await _apiClient.MakeChoiceAsync(
+                gameSessionId,
+                currentSceneId,
+                choiceText,
+                nextScene.Id,
+                effectivePlayerId,
+                compassAxis,
+                compassDirection,
+                compassDelta);
+
             if (updatedSession == null)
             {
                 _logger.LogWarning("API did not return an updated session after making choice. Continuing locally.");
