@@ -467,9 +467,14 @@ builder.Services.AddScoped<IGameSessionApiService, GameSessionApiService>();
 builder.Services.AddScoped<IAccountApiService, AccountApiService>();
 
 // Configure Health Checks
-builder.Services.AddHealthChecks()
-    .AddCheck<BlobStorageHealthCheck>("blob_storage")
-    .AddCheck<CosmosDbHealthCheck>("cosmos_db", tags: new[] { "ready", "db" });
+var healthChecksBuilder = builder.Services.AddHealthChecks()
+    .AddCheck<BlobStorageHealthCheck>("blob_storage");
+
+// Only add Cosmos DB health check when using Cosmos DB (not in-memory)
+if (useCosmosDb)
+{
+    healthChecksBuilder.AddCheck<CosmosDbHealthCheck>("cosmos_db", tags: new[] { "ready", "db" });
+}
 
 // Configure CORS for frontend integration (Best Practices)
 var policyName = "MystiraAdminPolicy";
