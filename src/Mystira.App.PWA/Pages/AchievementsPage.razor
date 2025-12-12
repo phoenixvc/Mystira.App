@@ -1,0 +1,388 @@
+@page "/achievements"
+@inject NavigationManager NavigationManager
+@inject IAuthService AuthService
+@inject IProfileService ProfileService
+@inject IPlayerContextService PlayerContextService
+@inject IAchievementsService AchievementsService
+@inject ILogger<AchievementsPage> Logger
+@using Mystira.App.PWA.Models
+@using Mystira.App.PWA.Services
+
+<PageTitle>Achievements • Mystira</PageTitle>
+
+<div class="container-fluid py-4 achievements-page @GetAgeGroupCssClass(model?.AgeGroupId)">
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center align-items-center loading-container">
+            <div class="text-center">
+                <div class="spinner-border text-primary-custom mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-muted">Loading achievements...</p>
+            </div>
+        </div>
+    }
+    else if (!isAuthenticated)
+    {
+        <div class="d-flex justify-content-center align-items-center loading-container">
+            <div class="text-center">
+                <i class="fas fa-lock fa-3x text-warning mb-3"></i>
+                <h3>Authentication Required</h3>
+                <p class="text-muted mb-4">Please sign in to see your achievements.</p>
+                <a href="/signin" class="btn btn-primary-custom">
+                    <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                </a>
+            </div>
+        </div>
+    }
+    else if (!profiles.Any())
+    {
+        <EmptyState IconClass="fas fa-user-friends fa-4x"
+                   Title="Create a Profile to Start Earning Badges"
+                   Message="Profiles help Mystira pick the right adventures and achievements for each player."
+                   ShowClearButton="false">
+            <a class="btn btn-primary-custom" href="/profiles">
+                <i class="fas fa-users me-2"></i>Manage Profiles
+            </a>
+        </EmptyState>
+    }
+    else if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <EmptyState IconClass="fas fa-exclamation-triangle fa-4x"
+                   Title="Couldn't Load Achievements"
+                   Message="@errorMessage"
+                   ShowClearButton="false"
+                   ShowRetryButton="true"
+                   OnRetry="ReloadAsync">
+            <a class="btn btn-outline-secondary" href="/adventures">
+                <i class="fas fa-compass me-2"></i>Continue Adventures
+            </a>
+        </EmptyState>
+    }
+    else if (model == null || model.Axes.Sum(a => a.Tiers.Count) == 0)
+    {
+        <EmptyState IconClass="fas fa-trophy fa-4x"
+                   Title="No Badges Yet"
+                   Message="Complete adventures to start earning achievements!"
+                   ShowClearButton="false">
+            <a class="btn btn-primary-custom" href="/adventures">
+                <i class="fas fa-compass me-2"></i>Continue Adventures
+            </a>
+        </EmptyState>
+    }
+    else
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                    <div>
+                        <h2 class="mb-1">@GetHeaderTitle(model.AgeGroupId)</h2>
+                        <p class="text-muted mb-0">
+                            Tracking progress for <strong>@(selectedProfile?.Name ?? model.ProfileName)</strong>
+                            <span class="ms-1">(@AgeRanges.GetDisplayName(model.AgeGroupId))</span>
+                        </p>
+                    </div>
+
+                    <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-2">
+                        @if (profiles.Count > 1)
+                        {
+                            <select class="form-select form-select-sm profile-select" @onchange="OnProfileChanged">
+                                @foreach (var p in profiles)
+                                {
+                                    <option value="@p.Id" selected="@(p.Id == selectedProfile?.Id)">@p.Name</option>
+                                }
+                            </select>
+                        }
+
+                        <div class="filter-toggles">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="filter-earned" @bind="filterOptions.ShowEarned" />
+                                <label class="form-check-label" for="filter-earned">Earned</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="filter-inprogress" @bind="filterOptions.ShowInProgress" />
+                                <label class="form-check-label" for="filter-inprogress">In Progress</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        var visibleAxes = AchievementsFiltering.Apply(model, filterOptions);
+
+        @if (visibleAxes.Count == 0)
+        {
+            <EmptyState IconClass="fas fa-filter fa-4x"
+                       Title="Nothing Matches Your Filters"
+                       Message="Try showing earned or in-progress badges."
+                       ShowClearButton="false">
+                <button class="btn btn-outline-secondary" @onclick="ResetFilters">
+                    <i class="fas fa-undo me-2"></i>Reset Filters
+                </button>
+            </EmptyState>
+        }
+        else
+        {
+            @foreach (var axis in visibleAxes)
+            {
+                <div class="card axis-card mb-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-3">
+                            <div>
+                                <h5 class="mb-1">@axis.AxisName</h5>
+                                <small class="text-muted">Current score: @axis.CurrentScore</small>
+                            </div>
+                            <span class="badge bg-secondary">@axis.Tiers.Count tier@(axis.Tiers.Count == 1 ? "" : "s")</span>
+                        </div>
+
+                        @if (axis.AxisCopy.Any())
+                        {
+                            <div class="axis-copy mb-3">
+                                @foreach (var copy in axis.AxisCopy)
+                                {
+                                    <div class="axis-copy-item">
+                                        <span class="axis-copy-direction">@GetDirectionLabel(copy.Direction)</span>
+                                        <span class="axis-copy-text">@copy.Description</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <div class="row g-3">
+                            @foreach (var tier in axis.Tiers)
+                            {
+                                <div class="col-12 col-md-6 col-lg-4">
+                                    <div class="tier-card tier-@GetTierCssSuffix(tier.Tier) @(tier.IsEarned ? "earned" : "")" data-tier="@tier.Tier">
+                                        <div class="tier-card-header">
+                                            <div class="tier-image">
+                                                @if (!string.IsNullOrWhiteSpace(tier.ImageUrl))
+                                                {
+                                                    <img src="@tier.ImageUrl" alt="@tier.Title" loading="lazy" />
+                                                }
+                                                else
+                                                {
+                                                    <i class="fas fa-medal"></i>
+                                                }
+                                            </div>
+                                            <div class="tier-title">
+                                                <div class="tier-label">@tier.Tier</div>
+                                                <div class="tier-name">@tier.Title</div>
+                                            </div>
+                                            @if (tier.IsEarned)
+                                            {
+                                                <div class="tier-earned-badge" title="Earned">
+                                                    <i class="fas fa-star"></i>
+                                                </div>
+                                            }
+                                        </div>
+
+                                        <div class="tier-card-body">
+                                            <p class="tier-description">@tier.Description</p>
+
+                                            <div class="tier-progress">
+                                                <div class="progress" role="progressbar" aria-valuenow="@tier.ProgressPercent" aria-valuemin="0" aria-valuemax="100">
+                                                    <div class="progress-bar" style="width: @tier.ProgressPercent%"></div>
+                                                </div>
+                                                <div class="tier-progress-meta">
+                                                    <span>@tier.CurrentScore / @tier.RequiredScore</span>
+                                                    @if (tier.IsEarned)
+                                                    {
+                                                        <span class="text-success">Earned</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">@tier.RemainingScore remaining</span>
+                                                    }
+                                                </div>
+                                            </div>
+
+                                            @if (tier.IsEarned && tier.EarnedAt.HasValue)
+                                            {
+                                                <div class="tier-earned-at">
+                                                    <i class="fas fa-calendar-check me-1"></i>
+                                                    Earned @tier.EarnedAt.Value.ToLocalTime().ToString("dd-MMM-yyyy")
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    }
+</div>
+
+@code {
+    private bool isLoading = true;
+    private bool isAuthenticated;
+    private List<UserProfile> profiles = new();
+    private UserProfile? selectedProfile;
+    private AchievementsViewModel? model;
+    private string? errorMessage;
+
+    private readonly AchievementsFilterOptions filterOptions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await InitializeAsync();
+    }
+
+    private async Task InitializeAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        model = null;
+
+        try
+        {
+            isAuthenticated = await AuthService.IsAuthenticatedAsync();
+            if (!isAuthenticated)
+            {
+                return;
+            }
+
+            var account = await AuthService.GetCurrentAccountAsync();
+            if (account == null)
+            {
+                errorMessage = "Unable to load your account.";
+                return;
+            }
+
+            profiles = await ProfileService.GetUserProfilesAsync(account.Id) ?? new List<UserProfile>();
+            if (!profiles.Any())
+            {
+                return;
+            }
+
+            var selectedId = await PlayerContextService.GetSelectedProfileIdAsync();
+            selectedProfile = profiles.FirstOrDefault(p => p.Id == selectedId) ?? profiles.First();
+
+            if (selectedProfile != null)
+            {
+                await PlayerContextService.SetSelectedProfileIdAsync(selectedProfile.Id);
+                await LoadAchievementsAsync(selectedProfile);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing achievements page");
+            errorMessage = "Something went wrong while loading achievements.";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAchievementsAsync(UserProfile profile)
+    {
+        var result = await AchievementsService.GetAchievementsAsync(profile);
+        if (!result.IsSuccess)
+        {
+            errorMessage = result.ErrorMessage;
+            model = null;
+            return;
+        }
+
+        model = result.Data;
+        errorMessage = null;
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (selectedProfile != null)
+        {
+            isLoading = true;
+            errorMessage = null;
+            StateHasChanged();
+
+            await InitializeAsync();
+        }
+        else
+        {
+            await InitializeAsync();
+        }
+    }
+
+    private async Task OnProfileChanged(ChangeEventArgs e)
+    {
+        var newProfileId = e.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(newProfileId))
+        {
+            return;
+        }
+
+        var profile = profiles.FirstOrDefault(p => p.Id == newProfileId);
+        if (profile == null)
+        {
+            return;
+        }
+
+        selectedProfile = profile;
+        await PlayerContextService.SetSelectedProfileIdAsync(profile.Id);
+
+        isLoading = true;
+        errorMessage = null;
+        StateHasChanged();
+
+        await LoadAchievementsAsync(profile);
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void ResetFilters()
+    {
+        filterOptions.ShowEarned = true;
+        filterOptions.ShowInProgress = true;
+    }
+
+    private static string GetTierCssSuffix(string tier)
+    {
+        return tier.Trim().ToLowerInvariant() switch
+        {
+            "bronze" => "bronze",
+            "silver" => "silver",
+            "gold" => "gold",
+            _ => "default"
+        };
+    }
+
+    private static string GetDirectionLabel(string direction)
+    {
+        return direction.Trim().ToLowerInvariant() switch
+        {
+            "positive" => "Positive choices",
+            "negative" => "Other choices",
+            _ => ""
+        };
+    }
+
+    private static string GetHeaderTitle(string ageGroupId)
+    {
+        return ageGroupId switch
+        {
+            "1-2" or "3-5" or "6-9" => "Your Adventure Badges",
+            _ => "Achievements"
+        };
+    }
+
+    private static string GetAgeGroupCssClass(string? ageGroupId)
+    {
+        if (string.IsNullOrWhiteSpace(ageGroupId))
+        {
+            return "";
+        }
+
+        return ageGroupId switch
+        {
+            "19+" => "age-group-19plus",
+            _ => $"age-group-{ageGroupId.Replace("+", "plus")}".Replace(" ", "")
+        };
+    }
+}

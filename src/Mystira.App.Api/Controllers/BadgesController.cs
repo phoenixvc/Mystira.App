@@ -17,6 +17,7 @@ public class BadgesController : ControllerBase
 {
     private readonly IBadgeRepository _badgeRepository;
     private readonly ICompassAxisRepository _axisRepository;
+    private readonly IAxisAchievementRepository _axisAchievementRepository;
     private readonly IUserBadgeRepository _userBadgeRepository;
     private readonly IUserProfileRepository _profileRepository;
     private readonly ILogger<BadgesController> _logger;
@@ -24,12 +25,14 @@ public class BadgesController : ControllerBase
     public BadgesController(
         IBadgeRepository badgeRepository,
         ICompassAxisRepository axisRepository,
+        IAxisAchievementRepository axisAchievementRepository,
         IUserBadgeRepository userBadgeRepository,
         IUserProfileRepository profileRepository,
         ILogger<BadgesController> logger)
     {
         _badgeRepository = badgeRepository;
         _axisRepository = axisRepository;
+        _axisAchievementRepository = axisAchievementRepository;
         _userBadgeRepository = userBadgeRepository;
         _profileRepository = profileRepository;
         _logger = logger;
@@ -78,6 +81,66 @@ public class BadgesController : ControllerBase
             return StatusCode(500, new ErrorResponse
             {
                 Message = "Internal server error while fetching badges",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get axis achievement copy for a specific age group
+    /// </summary>
+    [HttpGet("axis-achievements")]
+    public async Task<ActionResult<List<AxisAchievementResponse>>> GetAxisAchievements([FromQuery] string ageGroupId)
+    {
+        if (string.IsNullOrWhiteSpace(ageGroupId))
+        {
+            return BadRequest(new ErrorResponse
+            {
+                Message = "ageGroupId query parameter is required",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+
+        try
+        {
+            var achievements = await _axisAchievementRepository.GetByAgeGroupAsync(ageGroupId);
+            var axes = await _axisRepository.GetAllAsync();
+
+            var axisLookup = axes
+                .SelectMany(a => new[] { (Key: a.Id, Value: a), (Key: a.Name, Value: a) })
+                .Where(x => !string.IsNullOrWhiteSpace(x.Key))
+                .ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase);
+
+            var response = achievements
+                .OrderBy(a => a.CompassAxisId)
+                .ThenBy(a => a.AxesDirection)
+                .Select(a =>
+                {
+                    axisLookup.TryGetValue(a.CompassAxisId, out var axis);
+                    var axisName = axis != null && !string.IsNullOrWhiteSpace(axis.Name)
+                        ? axis.Name
+                        : (axis?.Id ?? a.CompassAxisId);
+
+                    return new AxisAchievementResponse
+                    {
+                        Id = a.Id,
+                        AgeGroupId = a.AgeGroupId,
+                        CompassAxisId = a.CompassAxisId,
+                        CompassAxisName = axisName,
+                        AxesDirection = a.AxesDirection,
+                        Description = a.Description
+                    };
+                })
+                .ToList();
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting axis achievements for age group {AgeGroup}", ageGroupId);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = "Internal server error while fetching axis achievements",
                 TraceId = HttpContext.TraceIdentifier
             });
         }
