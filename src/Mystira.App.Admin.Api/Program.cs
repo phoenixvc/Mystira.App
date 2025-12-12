@@ -6,7 +6,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Mystira.App.Admin.Api.Adapters;
+using MediatR;
 using Mystira.App.Admin.Api.Services;
+using Mystira.App.Application.Behaviors;
+using Mystira.App.Application.Services;
+// Note: Avoid unqualified IJwtService to prevent ambiguity with Application port interface
+using Mystira.App.Application.Ports.Health;
+using Mystira.App.Application.Ports.Messaging;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Ports.Media;
 using Mystira.App.Application.UseCases.Contributors;
@@ -23,6 +29,9 @@ using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.Services;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
 using Mystira.App.Infrastructure.StoryProtocol;
+using Mystira.App.Infrastructure.Discord.Services;
+using Mystira.App.Api.Services; // JwtService
+using Mystira.App.Api.Adapters; // JwtServiceAdapter, HealthCheckPortAdapter
 using Microsoft.ApplicationInsights.Extensibility;
 using Mystira.App.Shared.Middleware;
 using Mystira.App.Shared.Telemetry;
@@ -164,6 +173,26 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+// Configure Memory Cache for query caching (used by MediatR behaviors)
+builder.Services.AddMemoryCache(options =>
+{
+    options.SizeLimit = 1024; // Limit cache to 1024 entries
+    options.CompactionPercentage = 0.25; // Compact 25% when size limit reached
+});
+
+// Configure MediatR for CQRS handlers from Application assembly
+builder.Services.AddMediatR(cfg =>
+{
+    // Register all handlers from Application assembly
+    cfg.RegisterServicesFromAssembly(typeof(Mystira.App.Application.CQRS.ICommand<>).Assembly);
+
+    // Add query caching pipeline behavior
+    cfg.AddOpenBehavior(typeof(QueryCachingBehavior<,>));
+});
+
+// Register query cache invalidation service
+builder.Services.AddSingleton<IQueryCacheInvalidationService, QueryCacheInvalidationService>();
+
 // Configure Database: Azure Cosmos DB (Cloud) or In-Memory (Local Development)
 var cosmosConnectionString = builder.Configuration.GetConnectionString("CosmosDb");
 var useCosmosDb = !string.IsNullOrEmpty(cosmosConnectionString);
@@ -183,7 +212,7 @@ if (useCosmosDb)
                 httpClient.Timeout = TimeSpan.FromSeconds(30);
                 return httpClient;
             });
-            
+
             // Set request timeout for Cosmos operations
             cosmosOptions.RequestTimeout(TimeSpan.FromSeconds(30));
         })
@@ -256,8 +285,11 @@ builder.Services.AddAuthentication(options =>
     {
         options.Cookie.Name = "Mystira.Admin.Auth";
         options.Cookie.HttpOnly = true;
-        options.Cookie.SameSite = SameSiteMode.Strict;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        // In development we must allow cookies over HTTP and avoid overly strict SameSite,
+        // otherwise the auth cookie is rejected and login appears to do nothing.
+        var isDev = builder.Environment.IsDevelopment();
+        options.Cookie.SameSite = isDev ? SameSiteMode.Lax : SameSiteMode.Strict;
+        options.Cookie.SecurePolicy = isDev ? CookieSecurePolicy.None : CookieSecurePolicy.Always;
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
         options.SlidingExpiration = true;
         options.LoginPath = "/admin/login";
@@ -375,14 +407,16 @@ builder.Services.AddAuthorization();
 // Register application services - Admin API services
 builder.Services.AddScoped<IScenarioApiService, ScenarioApiService>();
 builder.Services.AddScoped<ICharacterMapApiService, CharacterMapApiService>();
-builder.Services.AddScoped<IAppStatusService, AppStatusService>();
+builder.Services.AddScoped<Mystira.App.Admin.Api.Services.IAppStatusService, Mystira.App.Admin.Api.Services.AppStatusService>();
 builder.Services.AddScoped<IBundleService, BundleService>();
 builder.Services.AddScoped<ICharacterMapFileService, CharacterMapFileService>();
 builder.Services.AddScoped<IMediaMetadataService, Mystira.App.Admin.Api.Services.MediaMetadataService>();
 builder.Services.AddScoped<ICharacterMediaMetadataService, CharacterMediaMetadataService>();
 builder.Services.AddScoped<IMediaApiService, MediaApiService>();
 builder.Services.AddScoped<IAvatarApiService, AvatarApiService>();
-builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
+builder.Services.AddScoped<Mystira.App.Admin.Api.Services.IHealthCheckService, Mystira.App.Admin.Api.Adapters.HealthCheckServiceAdapter>();
+// Badges admin service
+builder.Services.AddScoped<Mystira.App.Admin.Api.Services.IBadgeAdminService, Mystira.App.Admin.Api.Services.BadgeAdminService>();
 // Register email service for consistency across all APIs
 builder.Services.AddAzureEmailService(builder.Configuration);
 // Register Application.Ports.IMediaMetadataService for use cases
@@ -397,6 +431,9 @@ builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IScenarioRepository, ScenarioRepository>();
 builder.Services.AddScoped<ICharacterMapRepository, CharacterMapRepository>();
 builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
+builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
+builder.Services.AddScoped<IBadgeImageRepository, BadgeImageRepository>();
+builder.Services.AddScoped<IAxisAchievementRepository, AxisAchievementRepository>();
 builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
 builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
 builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
@@ -410,6 +447,19 @@ builder.Services.AddScoped<IEchoTypeRepository, EchoTypeRepository>();
 builder.Services.AddScoped<IFantasyThemeRepository, FantasyThemeRepository>();
 builder.Services.AddScoped<IAgeGroupRepository, AgeGroupRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+// Auth and application ports/adapters
+builder.Services.AddScoped<Mystira.App.Api.Services.IJwtService, Mystira.App.Api.Services.JwtService>();
+builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, Mystira.App.Api.Adapters.JwtServiceAdapter>();
+
+// Health port adapter for CQRS handlers
+builder.Services.AddScoped<Mystira.App.Application.Ports.Health.IHealthCheckPort, Mystira.App.Api.Adapters.HealthCheckPortAdapter>();
+
+// Discord/Messaging: keep as No-Op in this environment
+builder.Services.AddSingleton<NoOpChatBotService>();
+builder.Services.AddSingleton<IChatBotService>(sp => sp.GetRequiredService<NoOpChatBotService>());
+builder.Services.AddSingleton<IMessagingService>(sp => sp.GetRequiredService<NoOpChatBotService>());
+builder.Services.AddSingleton<IBotCommandService>(sp => sp.GetRequiredService<NoOpChatBotService>());
 
 // Register Master Data Seeder Service
 builder.Services.AddScoped<MasterDataSeederService>();
@@ -464,9 +514,14 @@ builder.Services.AddScoped<IGameSessionApiService, GameSessionApiService>();
 builder.Services.AddScoped<IAccountApiService, AccountApiService>();
 
 // Configure Health Checks
-builder.Services.AddHealthChecks()
-    .AddCheck<BlobStorageHealthCheck>("blob_storage")
-    .AddCheck<CosmosDbHealthCheck>("cosmos_db", tags: new[] { "ready", "db" });
+var healthChecksBuilder = builder.Services.AddHealthChecks()
+    .AddCheck<BlobStorageHealthCheck>("blob_storage");
+
+// Only add Cosmos DB health check when using Cosmos DB (not in-memory)
+if (useCosmosDb)
+{
+    healthChecksBuilder.AddCheck<CosmosDbHealthCheck>("cosmos_db", tags: new[] { "ready", "db" });
+}
 
 // Configure CORS for frontend integration (Best Practices)
 var policyName = "MystiraAdminPolicy";
@@ -609,7 +664,58 @@ if (app.Environment.IsDevelopment())
 }
 
 // Add OWASP security headers
-app.UseSecurityHeaders();
+if (app.Environment.IsDevelopment())
+{
+    // In development allow inline scripts and CDN resources so Razor views work
+    app.UseSecurityHeaders(options =>
+    {
+        options.UseStrictCsp = false; // allow inline scripts/styles used by views
+        options.AdditionalScriptSources = new[]
+        {
+            "https://cdn.jsdelivr.net",
+            "https://cdnjs.cloudflare.com",
+            "https://code.jquery.com"
+        };
+        options.AdditionalStyleSources = new[]
+        {
+            "https://cdn.jsdelivr.net",
+            "https://cdnjs.cloudflare.com"
+        };
+        // Allow font files (Font Awesome, etc.) from CDNs in development
+        options.AdditionalFontSources = new[]
+        {
+            "https://cdnjs.cloudflare.com",
+            "https://cdn.jsdelivr.net",
+            "https://fonts.gstatic.com"
+        };
+    });
+}
+else
+{
+    // In production keep strict CSP but allow specific CDNs and use nonces for inline
+    app.UseSecurityHeaders(options =>
+    {
+        options.UseStrictCsp = true; // strict base
+        options.UseNonce = true;     // allow inline only when tagged with nonce
+        options.AdditionalScriptSources = new[]
+        {
+            "https://cdn.jsdelivr.net",
+            "https://cdnjs.cloudflare.com",
+            "https://code.jquery.com"
+        };
+        options.AdditionalStyleSources = new[]
+        {
+            "https://cdn.jsdelivr.net",
+            "https://cdnjs.cloudflare.com"
+        };
+        options.AdditionalFontSources = new[]
+        {
+            "https://cdnjs.cloudflare.com",
+            "https://cdn.jsdelivr.net",
+            "https://fonts.gstatic.com"
+        };
+    });
+}
 
 // Add rate limiting
 app.UseRateLimiter();
@@ -732,12 +838,12 @@ if (initializeDatabaseOnStartup || isInMemory)
                 try
                 {
                     var seeder = scope.ServiceProvider.GetRequiredService<MasterDataSeederService>();
-                    
+
                     // Also apply timeout to seeding operations
                     var seedTask = seeder.SeedAllAsync();
                     var seedTimeoutTask = Task.Delay(TimeSpan.FromSeconds(60));
                     var seedCompletedTask = await Task.WhenAny(seedTask, seedTimeoutTask);
-                    
+
                     if (seedCompletedTask == seedTimeoutTask)
                     {
                         startupLogger.LogWarning("Master data seeding timed out after 60 seconds. The application will continue to start.");
@@ -762,7 +868,7 @@ if (initializeDatabaseOnStartup || isInMemory)
     {
         // Log error but don't crash the app in production - allow health checks to detect the issue
         startupLogger.LogError(ex, "Failed to initialize database during startup. The application will start in degraded mode. Ensure Azure Cosmos DB database 'MystiraAppDb' exists and app identity has permissions to create/read containers. Expected containers include: CompassAxes (PK /Id), BadgeConfigurations (PK /Id), CharacterMaps (PK /Id), ContentBundles (PK /Id), Scenarios (PK /Id), MediaMetadataFiles (PK /Id), CharacterMediaMetadataFiles (PK /Id), CharacterMapFiles (PK /Id), UserProfiles (PK /Id), Accounts (PK /Id), PendingSignups (PK /email). Set 'InitializeDatabaseOnStartup'=false to skip this check.");
-        
+
         // Only fail fast in development/local environments where we expect the database to work
         if (isInMemory)
         {

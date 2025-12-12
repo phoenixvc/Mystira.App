@@ -26,7 +26,7 @@
                                                 Upload a YAML file containing character map configuration
                                             </small>
                                         </div>
-                                        
+
                                         <div class="form-group mb-3">
                                             <label for="name">Character Map Name (Optional)</label>
                                             <input type="text" class="form-control" id="name" name="name" placeholder="e.g., Fantasy Heroes">
@@ -34,7 +34,7 @@
                                                 If provided, this will override the name in the YAML file
                                             </small>
                                         </div>
-                                        
+
                                         <div class="form-check mb-3">
                                             <input class="form-check-input" type="checkbox" value="true" id="validateReferences" name="validateReferences" checked>
                                             <label class="form-check-label" for="validateReferences">
@@ -44,7 +44,7 @@
                                                 Checks that all image references in the character map exist in the media database
                                             </small>
                                         </div>
-                                        
+
                                         <div class="form-check mb-3">
                                             <input class="form-check-input" type="checkbox" value="true" id="overwriteExisting" name="overwriteExisting">
                                             <label class="form-check-label" for="overwriteExisting">
@@ -54,7 +54,7 @@
                                                 Warning: This will replace an existing character map with the same ID
                                             </small>
                                         </div>
-                                        
+
                                         <div class="mt-3">
                                             <button type="submit" class="btn btn-primary">Upload Character Map</button>
                                             <button type="button" class="btn btn-info" onclick="validateYamlFile()">Validate YAML</button>
@@ -63,7 +63,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Sidebar -->
                         <div class="col-md-4">
                             <div class="card">
@@ -101,8 +101,8 @@
         - "responsible"
         - "fair-minded"
       backstory: >
-        Maple is a young bear whose quiet strength comes not from his size, but from his immense patience and kindness. 
-        He moves through the world with a gentle and thoughtful nature, preferring to listen and understand rather than act rashly. 
+        Maple is a young bear whose quiet strength comes not from his size, but from his immense patience and kindness.
+        He moves through the world with a gentle and thoughtful nature, preferring to listen and understand rather than act rashly.
         His core belief is that a caring heart is the best guide in any situation.
 
   - id: "FoxJinxYoungerKids"
@@ -130,14 +130,14 @@
         - "confident"
         - "loyal"
       backstory: >
-        Jinx is a bold young fox with clever eyes and a tail that's often twitching with excitement. 
-        He is the first to leap into a new adventure. 
-        He is brave, full of energy, and believes the best way to solve a problem is to face it head-on. 
+        Jinx is a bold young fox with clever eyes and a tail that's often twitching with excitement.
+        He is the first to leap into a new adventure.
+        He is brave, full of energy, and believes the best way to solve a problem is to face it head-on.
         While his impulsiveness sometimes gets him into tricky spots, his loyal heart and courageous spirit always shine through.
 </code></pre>
                                 </div>
                             </div>
-                            
+
                             <div class="card mt-3">
                                 <div class="card-header">
                                     <h5>Character Archetypes</h5>
@@ -162,17 +162,18 @@
     </div>
 </div>
 
-<script>
+@{ var cspNonce = Context.Items["CspNonce"] as string; }
+<script nonce="@cspNonce">
 function validateYamlFile() {
     const fileInput = document.getElementById('yamlFile');
     if (!fileInput.files.length) {
         alert('Please select a YAML file first');
         return;
     }
-    
+
     const file = fileInput.files[0];
     const reader = new FileReader();
-    
+
     reader.onload = function(e) {
         try {
             // Basic validation - check if it looks like YAML
@@ -181,27 +182,27 @@ function validateYamlFile() {
                 alert('Warning: This doesn\'t look like a valid character map YAML file.\nExpected to find "name:" and "characters:" fields.');
                 return;
             }
-            
+
             alert('YAML file appears to be valid. Click "Upload Character Map" to proceed.');
         } catch (error) {
             alert('Error reading file: ' + error.message);
         }
     };
-    
+
     reader.readAsText(file);
 }
 
 document.getElementById('characterMapForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     const formData = new FormData(this);
-    
+
     // Show loading state
     const submitBtn = this.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
     submitBtn.textContent = 'Uploading...';
     submitBtn.disabled = true;
-    
+
     fetch('/admin/charactermaps/import', {
         method: 'POST',
         body: formData

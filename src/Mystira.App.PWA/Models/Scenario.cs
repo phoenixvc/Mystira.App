@@ -16,8 +16,10 @@ public class Scenario
     public string Id { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+
     // Optional cover image media id for scenario cards (served from api/media/{id})
     public string? Image { get; set; }
+
     public List<Scene> Scenes { get; set; } = new();
     public string[] Tags { get; set; } = [];
     public string Difficulty { get; set; } = string.Empty;
@@ -70,8 +72,12 @@ public class Scene
         Id = i + 1,
         Text = b.Choice ?? "Continue",
         NextSceneId = b.NextSceneId ?? "",
-        Order = i + 1
+        Order = i + 1,
+        CompassAxis = b.CompassAxis,
+        CompassDirection = b.CompassDirection,
+        CompassDelta = b.CompassDelta
     }).Where(c => !string.IsNullOrEmpty(c.Text) && c.Text != "Continue").ToList();
+
     public bool IsStartingScene { get; set; } = false;
     public int Order { get; set; }
 
@@ -94,6 +100,10 @@ public class SceneBranch
 {
     public string? Choice { get; set; }
     public string? NextSceneId { get; set; }
+
+    public string? CompassAxis { get; set; }
+    public string? CompassDirection { get; set; }
+    public double? CompassDelta { get; set; }
 }
 
 public class Choice
@@ -102,6 +112,10 @@ public class Choice
     public string Text { get; set; } = string.Empty;
     public string? NextSceneId { get; set; }
     public int Order { get; set; }
+
+    public string? CompassAxis { get; set; }
+    public string? CompassDirection { get; set; }
+    public double? CompassDelta { get; set; }
 }
 
 public class GameSession
@@ -109,16 +123,23 @@ public class GameSession
     public string Id { get; set; } = string.Empty;
     public string ScenarioId { get; set; } = string.Empty;
     public string ScenarioName { get; set; } = string.Empty;
+
+    public string AccountId { get; set; } = string.Empty;
+    public string ProfileId { get; set; } = string.Empty;
+
     public Scene? CurrentScene { get; set; }
     public List<Scene> CompletedScenes { get; set; } = new();
     public List<string> PlayerNames { get; set; } = new();
+
     [JsonPropertyName("startTime")]
     public DateTime StartedAt { get; set; }
+
     public bool IsCompleted { get; set; }
     public Scenario Scenario { get; set; } = new();
     public string CurrentSceneId { get; set; } = string.Empty;
     public int ChoiceCount { get; set; }
     public string Status { get; set; } = string.Empty;
+
     // Selected character assignments for this session (story character -> player)
     public List<CharacterAssignment> CharacterAssignments { get; set; } = new();
 }

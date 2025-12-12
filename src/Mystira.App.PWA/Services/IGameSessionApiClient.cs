@@ -12,6 +12,14 @@ public interface IGameSessionApiClient
     Task<GameSession?> ProgressSessionSceneAsync(string sessionId, string sceneId);
     Task<List<GameSession>?> GetSessionsByAccountAsync(string accountId);
     Task<List<GameSession>?> GetInProgressSessionsAsync(string accountId);
-    Task<GameSession?> MakeChoiceAsync(string sessionId, string sceneId, string choiceText, string nextSceneId);
-}
 
+    Task<GameSession?> MakeChoiceAsync(
+        string sessionId,
+        string sceneId,
+        string choiceText,
+        string nextSceneId,
+        string? playerId = null,
+        string? compassAxis = null,
+        string? compassDirection = null,
+        double? compassDelta = null);
+}

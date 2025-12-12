@@ -65,6 +65,10 @@ Each ADR follows this structure:
 | [ADR-0007](ADR-0007-implement-azure-front-door.md) | Implement Azure Front Door for Edge Security | 💭 Proposed | 2025-12-07 | infrastructure, security, azure, front-door, waf |
 | [ADR-0008](ADR-0008-separate-staging-environment.md) | Implement Separate Staging Environment | 💭 Proposed | 2025-12-07 | infrastructure, environments, staging, devops |
 | [ADR-0009](ADR-0009-staging-pwa-deployment-strategy.md) | Use App Service for Staging PWA Deployment | ✅ Accepted | 2025-12-08 | infrastructure, deployment, pwa, staging, azure, static-web-apps, app-service |
+| [ADR-0010](ADR-0010-story-protocol-sdk-integration-strategy.md) | Story Protocol SDK Integration Strategy | 💭 Proposed | 2025-12-10 | architecture, blockchain, story-protocol, sdk-integration, infrastructure |
+| [ADR-0011](ADR-0011-unified-workspace-orchestration.md) | Unified Workspace Orchestration | 💭 Proposed | 2025-12-10 | infrastructure, workspace, orchestration |
+| [ADR-0012](ADR-0012-infrastructure-as-code.md) | Infrastructure as Code | 💭 Proposed | 2025-12-10 | infrastructure, iac, bicep, azure |
+| [ADR-0013](ADR-0013-grpc-for-csharp-python-integration.md) | Adopt gRPC for C# to Python Integration | 💭 Proposed | 2025-12-11 | architecture, grpc, python, microservices, performance |
 
 ---
 

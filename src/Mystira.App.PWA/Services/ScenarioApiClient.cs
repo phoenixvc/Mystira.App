@@ -353,12 +353,38 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
 
                     foreach (var br in arr.EnumerateArray().Where(br => br.ValueKind == JsonValueKind.Object))
                     {
+                        string? compassAxis = null;
+                        string? compassDirection = null;
+                        double? compassDelta = null;
+
+                        if (br.TryGetProperty("compassChange", out var compassChange) && compassChange.ValueKind == JsonValueKind.Object)
+                        {
+                            compassAxis = GetString(compassChange, "axis");
+                            if (compassChange.TryGetProperty("delta", out var deltaProp))
+                            {
+                                if (deltaProp.ValueKind == JsonValueKind.Number && deltaProp.TryGetDouble(out var deltaValue))
+                                {
+                                    compassDirection = deltaValue < 0 ? "negative" : "positive";
+                                    compassDelta = deltaValue;
+                                }
+                                else if (deltaProp.ValueKind == JsonValueKind.String && double.TryParse(deltaProp.GetString(), out var deltaString))
+                                {
+                                    compassDirection = deltaString < 0 ? "negative" : "positive";
+                                    compassDelta = deltaString;
+                                }
+                            }
+                        }
+
                         branches.Add(new SceneBranch
                         {
                             Choice = GetString(br, "choice"),
-                            NextSceneId = GetString(br, "nextSceneId")
+                            NextSceneId = GetString(br, "nextSceneId"),
+                            CompassAxis = !string.IsNullOrWhiteSpace(compassAxis) ? compassAxis : null,
+                            CompassDirection = compassDirection,
+                            CompassDelta = compassDelta
                         });
                     }
+
                     return branches;
                 }
 

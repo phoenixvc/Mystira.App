@@ -26,9 +26,20 @@ public class SecurityHeadersOptions
     public string[] AdditionalStyleSources { get; set; } = Array.Empty<string>();
 
     /// <summary>
+    /// Additional allowed font sources.
+    /// </summary>
+    public string[] AdditionalFontSources { get; set; } = Array.Empty<string>();
+
+    /// <summary>
     /// Custom frame-ancestors value. Default: 'none' (no embedding).
     /// </summary>
     public string FrameAncestors { get; set; } = "'none'";
+
+    /// <summary>
+    /// When true, generate a per-request nonce and add it to script-src and style-src policies.
+    /// Add the same nonce to inline <script> and <style> tags to allow them.
+    /// </summary>
+    public bool UseNonce { get; set; } = false;
 }
 
 /// <summary>
@@ -48,6 +59,14 @@ public class SecurityHeadersMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        // Generate a per-request nonce if enabled
+        string? nonce = null;
+        if (_options.UseNonce)
+        {
+            nonce = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16));
+            context.Items["CspNonce"] = nonce;
+        }
+
         // X-Content-Type-Options: Prevents MIME-type sniffing
         context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
 
@@ -61,7 +80,7 @@ public class SecurityHeadersMiddleware
         context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
 
         // Content-Security-Policy: Helps prevent XSS and data injection attacks
-        var cspPolicy = BuildCspPolicy();
+        var cspPolicy = BuildCspPolicy(nonce);
         context.Response.Headers.Append("Content-Security-Policy", cspPolicy);
 
         // Permissions-Policy: Controls browser features
@@ -78,7 +97,7 @@ public class SecurityHeadersMiddleware
         await _next(context);
     }
 
-    private string BuildCspPolicy()
+    private string BuildCspPolicy(string? nonce)
     {
         var scriptSrc = _options.UseStrictCsp
             ? "'self'" // Strict: no inline scripts
@@ -87,6 +106,13 @@ public class SecurityHeadersMiddleware
         var styleSrc = _options.UseStrictCsp
             ? "'self'" // Strict: no inline styles
             : "'self' 'unsafe-inline'"; // Permissive: needed for Blazor WASM
+
+        // If nonces are enabled, allow inline execution guarded by the nonce
+        if (_options.UseNonce && !string.IsNullOrWhiteSpace(nonce))
+        {
+            scriptSrc += $" 'nonce-{nonce}'";
+            styleSrc += $" 'nonce-{nonce}'";
+        }
 
         // Add additional sources if configured
         if (_options.AdditionalScriptSources.Length > 0)
@@ -99,11 +125,18 @@ public class SecurityHeadersMiddleware
             styleSrc += " " + string.Join(" ", _options.AdditionalStyleSources);
         }
 
+        // Fonts: start with 'self' and allow data: URIs and https; then append any explicit hosts
+        var fontSrc = "'self' data: https:";
+        if (_options.AdditionalFontSources.Length > 0)
+        {
+            fontSrc += " " + string.Join(" ", _options.AdditionalFontSources);
+        }
+
         return $"default-src 'self'; " +
                $"script-src {scriptSrc}; " +
                $"style-src {styleSrc}; " +
                $"img-src 'self' data: https:; " +
-               $"font-src 'self'; " +
+               $"font-src {fontSrc}; " +
                $"connect-src 'self' https:; " +
                $"frame-ancestors {_options.FrameAncestors}";
     }

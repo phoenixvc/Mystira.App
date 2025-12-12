@@ -1,0 +1,894 @@
+@{
+    ViewData["Title"] = "Badge Management";
+}
+
+<div class="container-fluid">
+    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between mb-4 gap-3">
+        <div>
+            <h1 class="h3 mb-1">Badge Management</h1>
+            <p class="text-muted mb-0">Create, edit and import badge definitions per age group. Use the filters to review the current achievement map.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <select class="form-select" id="ageGroupSelect" aria-label="Age group selector"></select>
+            <a class="btn btn-outline-secondary" href="/admin/badges/images">
+                <i class="fas fa-images me-1"></i>
+                Manage Images
+            </a>
+            <button class="btn btn-outline-primary" id="refreshSnapshotBtn">
+                <i class="fas fa-arrows-rotate me-1"></i>
+                Refresh Snapshot
+            </button>
+        </div>
+    </div>
+
+    <div class="row gy-4">
+        <div class="col-xl-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between">
+                    <div>
+                        <h2 class="h5 mb-0">Badge Filters</h2>
+                    </div>
+                    <div class="btn-group" role="group" aria-label="View mode">
+                        <input type="radio" class="btn-check" name="badgeView" id="badgeViewList" autocomplete="off" value="list" checked>
+                        <label class="btn btn-outline-primary btn-sm" for="badgeViewList"><i class="fas fa-list me-1"></i>List</label>
+                        <input type="radio" class="btn-check" name="badgeView" id="badgeViewGrid" autocomplete="off" value="grid">
+                        <label class="btn btn-outline-primary btn-sm" for="badgeViewGrid"><i class="fas fa-table-cells me-1"></i>Grid</label>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="axisFilter" class="form-label">Compass Axis</label>
+                            <select class="form-select" id="axisFilter">
+                                <option value="">All axes</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="tierFilter" class="form-label">Tier</label>
+                            <select class="form-select" id="tierFilter">
+                                <option value="">All tiers</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="badgeSearch" class="form-label">Search</label>
+                            <input type="search" class="form-control" id="badgeSearch" placeholder="Title or description">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="badgeSort" class="form-label">Sort</label>
+                            <select class="form-select" id="badgeSort">
+                                <option value="tier">Tier order</option>
+                                <option value="axis">Axis name</option>
+                                <option value="score">Required score</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <button class="btn btn-primary w-100" id="applyBadgeFilters">
+                                <i class="fas fa-filter me-1"></i>
+                                Apply Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h2 class="h5 mb-0">Badges</h2>
+                    <span class="badge bg-light text-dark" id="badgeCount">0 badges</span>
+                </div>
+                <div class="card-body">
+                    <div id="badgeList" class="table-responsive" aria-live="polite"></div>
+                    <div id="badgeGrid" class="row row-cols-1 row-cols-md-2 g-3 d-none" aria-live="polite"></div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2 class="h5 mb-0">Axis Achievements</h2>
+                    <button class="btn btn-sm btn-outline-primary" id="startAxisCreate">
+                        <i class="fas fa-plus me-1"></i>
+                        Add Achievement
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Axis</th>
+                                    <th>Direction</th>
+                                    <th>Description</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="axisAchievementRows">
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No achievements loaded.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h2 class="h6 mb-0" id="badgeFormTitle">Create Badge</h2>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger d-none" id="badgeFormAlert"></div>
+                    <form id="badgeForm">
+                        <input type="hidden" id="badgeId" />
+                        <div class="mb-3">
+                            <label class="form-label">Age Group</label>
+                            <input type="text" class="form-control" id="badgeAgeGroup" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="badgeAxis">Compass Axis</label>
+                            <select class="form-select" id="badgeAxis" required></select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="badgeTitle">Title</label>
+                            <input type="text" class="form-control" id="badgeTitle" required maxlength="120">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="badgeDescription">Description</label>
+                            <textarea class="form-control" id="badgeDescription" rows="3" required maxlength="500"></textarea>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="badgeTier">Tier</label>
+                                <select class="form-select" id="badgeTier" required></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="badgeTierOrder">Tier Order</label>
+                                <input type="number" class="form-control" id="badgeTierOrder" min="1" value="1" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="badgeScore">Required Score</label>
+                            <input type="number" class="form-control" id="badgeScore" min="0.01" step="0.01" value="1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="badgeImageId">Image Id</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="badgeImageId" required>
+                                <button class="btn btn-outline-secondary" type="button" id="openImageSearch">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div class="mt-2 text-center">
+                                <img id="badgeImagePreview" class="img-fluid rounded shadow-sm d-none" alt="Badge preview" />
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1" id="badgeSubmitBtn">
+                                <i class="fas fa-save me-1"></i>
+                                Save Badge
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="resetBadgeForm">Reset</button>
+                        </div>
+                        <button type="button" class="btn btn-link text-danger d-none mt-2" id="deleteBadgeBtn">Delete badge</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h2 class="h6 mb-0" id="axisFormTitle">Axis Achievement</h2>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger d-none" id="axisFormAlert"></div>
+                    <form id="axisForm">
+                        <input type="hidden" id="axisId" />
+                        <div class="mb-3">
+                            <label class="form-label">Age Group</label>
+                            <input type="text" class="form-control" id="axisAgeGroup" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="axisCompass">Compass Axis</label>
+                            <select class="form-select" id="axisCompass" required></select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="axisDirection">Direction</label>
+                            <select class="form-select" id="axisDirection" required>
+                                <option value="positive">Positive</option>
+                                <option value="negative">Negative</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="axisDescription">Description</label>
+                            <textarea class="form-control" id="axisDescription" rows="3" required maxlength="500"></textarea>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-outline-primary flex-grow-1" id="axisSubmitBtn">
+                                <i class="fas fa-save me-1"></i>
+                                Save Achievement
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="resetAxisForm">Reset</button>
+                        </div>
+                        <button type="button" class="btn btn-link text-danger d-none mt-2" id="deleteAxisBtn">Delete achievement</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h2 class="h6 mb-0">Badge Image Search</h2>
+                </div>
+                <div class="card-body">
+                    <form id="imageSearchForm" class="mb-3">
+                        <div class="input-group">
+                            <input type="search" class="form-control" id="imageSearchQuery" placeholder="Image Id contains...">
+                            <button class="btn btn-outline-primary" type="submit">Search</button>
+                        </div>
+                    </form>
+                    <div class="small text-muted mb-2">Click an image to attach it to the badge form.</div>
+                    <div class="row g-2" id="imageSearchResults">
+                        <div class="col-12 text-muted text-center">Search results will appear here.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h2 class="h6 mb-0">Bulk Import (JSON)</h2>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info small">
+                        Upload a per age-group JSON configuration validated against <code>badge-configuration.schema.json</code>.
+                    </div>
+                    <div class="alert alert-danger d-none" id="importErrors"></div>
+                    <div class="alert alert-success d-none" id="importSuccess"></div>
+                    <form id="importForm">
+                        <div class="mb-3">
+                            <label class="form-label" for="importFile">Badge JSON</label>
+                            <input type="file" class="form-control" id="importFile" accept=".json" required>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="importOverwrite">
+                            <label class="form-check-label" for="importOverwrite">Overwrite existing age-group data</label>
+                        </div>
+                        <button type="submit" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-file-import me-1"></i>
+                            Import JSON
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(() => {
+    const badgeApi = '/api/admin/badges';
+    const ageGroupApi = '/api/admin/agegroups';
+    const axisApi = '/api/admin/compassaxes';
+    const tierOptions = ["Bronze", "Silver", "Gold", "Platinum", "Diamond"];
+
+    const state = {
+        ageGroups: [],
+        axes: [],
+        selectedAgeGroup: '',
+        badges: [],
+        axisAchievements: [],
+        viewMode: 'list',
+        filters: {
+            axis: '',
+            tier: '',
+            search: '',
+            sort: 'tier'
+        },
+        editingBadgeId: null,
+        editingAxisId: null
+    };
+
+    document.addEventListener('DOMContentLoaded', init);
+
+    function init() {
+        document.getElementById('badgeAgeGroup').value = 'Select an age group';
+        document.getElementById('axisAgeGroup').value = 'Select an age group';
+        document.getElementById('applyBadgeFilters').addEventListener('click', evt => {
+            evt.preventDefault();
+            captureFilters();
+            refreshBadges();
+        });
+        document.getElementById('refreshSnapshotBtn').addEventListener('click', loadSnapshot);
+        document.getElementById('badgeForm').addEventListener('submit', onBadgeSubmit);
+        document.getElementById('axisForm').addEventListener('submit', onAxisSubmit);
+        document.getElementById('resetBadgeForm').addEventListener('click', resetBadgeForm);
+        document.getElementById('resetAxisForm').addEventListener('click', resetAxisForm);
+        document.getElementById('deleteBadgeBtn').addEventListener('click', onDeleteBadge);
+        document.getElementById('deleteAxisBtn').addEventListener('click', onDeleteAxis);
+        document.getElementById('badgeImageId').addEventListener('change', updateImagePreview);
+        document.getElementById('openImageSearch').addEventListener('click', () => document.getElementById('imageSearchQuery').focus());
+        document.getElementById('imageSearchForm').addEventListener('submit', onImageSearch);
+        document.getElementById('badgeViewList').addEventListener('change', () => switchView('list'));
+        document.getElementById('badgeViewGrid').addEventListener('change', () => switchView('grid'));
+        document.getElementById('startAxisCreate').addEventListener('click', () => {
+            resetAxisForm();
+            document.getElementById('axisDescription').focus();
+        });
+        document.getElementById('importForm').addEventListener('submit', onImportSubmit);
+        document.getElementById('ageGroupSelect').addEventListener('change', onAgeGroupChange);
+        document.getElementById('badgeSearch').addEventListener('keyup', (evt) => {
+            if (evt.key === 'Enter') {
+                captureFilters();
+                refreshBadges();
+            }
+        });
+
+        populateTierOptions();
+        loadInitialData();
+    }
+
+    async function loadInitialData() {
+        await Promise.all([loadAgeGroups(), loadAxes()]);
+        if (state.ageGroups.length > 0) {
+            state.selectedAgeGroup = state.ageGroups[0].value;
+            document.getElementById('ageGroupSelect').value = state.selectedAgeGroup;
+            syncAgeGroupFields();
+            await loadSnapshot();
+            await refreshBadges();
+        }
+    }
+
+    function populateTierOptions() {
+        const tierSelect = document.getElementById('badgeTier');
+        const filterSelect = document.getElementById('tierFilter');
+        tierSelect.innerHTML = '';
+        filterSelect.innerHTML = '<option value="">All tiers</option>';
+        tierOptions.forEach(tier => {
+            const tierOption = document.createElement('option');
+            tierOption.value = tier;
+            tierOption.textContent = tier;
+            tierSelect.appendChild(tierOption);
+
+            const filterOption = document.createElement('option');
+            filterOption.value = tier;
+            filterOption.textContent = tier;
+            filterSelect.appendChild(filterOption);
+        });
+    }
+
+    async function loadAgeGroups() {
+        const response = await fetch(ageGroupApi);
+        if (!response.ok) {
+            console.error('Failed to load age groups');
+            return;
+        }
+        state.ageGroups = await response.json();
+        const select = document.getElementById('ageGroupSelect');
+        select.innerHTML = '';
+        state.ageGroups.forEach(group => {
+            const option = document.createElement('option');
+            option.value = group.value || group.id;
+            option.textContent = group.name ? `${group.name} (${group.value})` : group.value;
+            select.appendChild(option);
+        });
+    }
+
+    async function loadAxes() {
+        const response = await fetch(axisApi);
+        if (!response.ok) {
+            console.error('Failed to load axes');
+            return;
+        }
+        state.axes = await response.json();
+        const badgeAxis = document.getElementById('badgeAxis');
+        const axisFilter = document.getElementById('axisFilter');
+        const axisCompass = document.getElementById('axisCompass');
+        badgeAxis.innerHTML = '';
+        axisCompass.innerHTML = '';
+        state.axes.forEach(axis => {
+            // Always use the axis ID for values sent to the backend
+            // Labels may display the friendly name when available
+            const value = axis.id || axis.name;
+            const label = axis.name || axis.id;
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = label;
+            badgeAxis.appendChild(option.cloneNode(true));
+            axisCompass.appendChild(option.cloneNode(true));
+            const filterOption = document.createElement('option');
+            filterOption.value = value;
+            filterOption.textContent = label;
+            axisFilter.appendChild(filterOption);
+        });
+    }
+
+    async function onAgeGroupChange() {
+        state.selectedAgeGroup = document.getElementById('ageGroupSelect').value;
+        syncAgeGroupFields();
+        await loadSnapshot();
+        await refreshBadges();
+    }
+
+    function syncAgeGroupFields() {
+        document.getElementById('badgeAgeGroup').value = state.selectedAgeGroup || '';
+        document.getElementById('axisAgeGroup').value = state.selectedAgeGroup || '';
+    }
+
+    async function loadSnapshot() {
+        if (!state.selectedAgeGroup) {
+            return;
+        }
+        const response = await fetch(`${badgeApi}/age-groups/${encodeURIComponent(state.selectedAgeGroup)}/snapshot`);
+        if (!response.ok) {
+            console.error('Unable to load snapshot');
+            return;
+        }
+        const snapshot = await response.json();
+        state.axisAchievements = snapshot.axisAchievements || [];
+        renderAxisAchievements();
+    }
+
+    async function refreshBadges() {
+        if (!state.selectedAgeGroup) {
+            return;
+        }
+        const query = new URLSearchParams({
+            ageGroupId: state.selectedAgeGroup,
+            includeAxisMetadata: 'true',
+            includeImages: 'true'
+        });
+        if (state.filters.axis) query.append('compassAxisId', state.filters.axis);
+        if (state.filters.tier) query.append('tier', state.filters.tier);
+        if (state.filters.search) query.append('search', state.filters.search);
+
+        const response = await fetch(`${badgeApi}?${query.toString()}`);
+        if (!response.ok) {
+            console.error('Failed to load badges');
+            return;
+        }
+        state.badges = await response.json();
+        sortBadges();
+        renderBadges();
+    }
+
+    function captureFilters() {
+        state.filters.axis = document.getElementById('axisFilter').value;
+        state.filters.tier = document.getElementById('tierFilter').value;
+        state.filters.search = document.getElementById('badgeSearch').value.trim();
+        state.filters.sort = document.getElementById('badgeSort').value;
+    }
+
+    function sortBadges() {
+        switch (state.filters.sort) {
+            case 'axis':
+                state.badges.sort((a, b) => a.compassAxisName.localeCompare(b.compassAxisName));
+                break;
+            case 'score':
+                state.badges.sort((a, b) => a.requiredScore - b.requiredScore);
+                break;
+            default:
+                state.badges.sort((a, b) => a.tierOrder - b.tierOrder || a.requiredScore - b.requiredScore);
+                break;
+        }
+    }
+
+    function renderBadges() {
+        document.getElementById('badgeCount').textContent = `${state.badges.length} badge${state.badges.length === 1 ? '' : 's'}`;
+        if (state.viewMode === 'list') {
+            renderBadgeTable();
+        } else {
+            renderBadgeGrid();
+        }
+    }
+
+    function renderBadgeTable() {
+        const tableContainer = document.getElementById('badgeList');
+        const grid = document.getElementById('badgeGrid');
+        grid.classList.add('d-none');
+        tableContainer.parentElement.classList.remove('d-none');
+
+        if (!state.badges.length) {
+            tableContainer.innerHTML = '<div class="text-center text-muted py-3">No badges found for this filter.</div>';
+            return;
+        }
+
+        const rows = state.badges.map(badge => `
+            <tr>
+                <td>
+                    <div class="fw-semibold">${badge.title}</div>
+                    <div class="text-muted small">${badge.description}</div>
+                </td>
+                <td>
+                    <div>${badge.compassAxisName}</div>
+                    <span class="badge bg-light text-dark">${badge.tier}</span>
+                </td>
+                <td>
+                    <div class="fw-semibold">${badge.requiredScore.toFixed(2)}</div>
+                    <div class="text-muted small">Score</div>
+                </td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-outline-primary me-1" data-action="edit-badge" data-id="${badge.id}">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" data-action="delete-badge" data-id="${badge.id}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+        tableContainer.innerHTML = `
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Badge</th>
+                        <th>Axis & Tier</th>
+                        <th>Score</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+
+        tableContainer.querySelectorAll('button[data-action="edit-badge"]').forEach(btn => btn.addEventListener('click', () => startBadgeEdit(btn.dataset.id)));
+        tableContainer.querySelectorAll('button[data-action="delete-badge"]').forEach(btn => btn.addEventListener('click', () => confirmDeleteBadge(btn.dataset.id)));
+    }
+
+    function renderBadgeGrid() {
+        const grid = document.getElementById('badgeGrid');
+        const tableContainer = document.getElementById('badgeList');
+        tableContainer.parentElement.classList.add('d-none');
+        grid.classList.remove('d-none');
+
+        if (!state.badges.length) {
+            grid.innerHTML = '<div class="col-12 text-center text-muted py-3">No badges found for this filter.</div>';
+            return;
+        }
+
+        grid.innerHTML = state.badges.map(badge => `
+            <div class="col">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h3 class="h6 mb-0">${badge.title}</h3>
+                                <small class="text-muted">${badge.compassAxisName}</small>
+                            </div>
+                            <span class="badge bg-primary-subtle text-primary">${badge.tier}</span>
+                        </div>
+                        <p class="text-muted small">${badge.description}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-semibold">${badge.requiredScore.toFixed(2)}</div>
+                                <small class="text-muted">Required score</small>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-primary" data-action="edit-badge" data-id="${badge.id}"><i class="fas fa-pen"></i></button>
+                                <button class="btn btn-sm btn-outline-danger" data-action="delete-badge" data-id="${badge.id}"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        grid.querySelectorAll('button[data-action="edit-badge"]').forEach(btn => btn.addEventListener('click', () => startBadgeEdit(btn.dataset.id)));
+        grid.querySelectorAll('button[data-action="delete-badge"]').forEach(btn => btn.addEventListener('click', () => confirmDeleteBadge(btn.dataset.id)));
+    }
+
+    function switchView(view) {
+        state.viewMode = view;
+        renderBadges();
+    }
+
+    function renderAxisAchievements() {
+        const tbody = document.getElementById('axisAchievementRows');
+        if (!state.axisAchievements.length) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No achievements defined.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = state.axisAchievements.map(achievement => `
+            <tr>
+                <td>${achievement.compassAxisName}</td>
+                <td><span class="badge bg-light text-dark text-capitalize">${achievement.axesDirection}</span></td>
+                <td>${achievement.description}</td>
+                <td class="text-end">
+                    <button class="btn btn-sm btn-outline-primary" data-action="edit-axis" data-id="${achievement.id}">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+        tbody.querySelectorAll('button[data-action="edit-axis"]').forEach(btn => btn.addEventListener('click', () => startAxisEdit(btn.dataset.id)));
+    }
+
+    function startBadgeEdit(id) {
+        const badge = state.badges.find(b => b.id === id);
+        if (!badge) return;
+        state.editingBadgeId = id;
+        document.getElementById('badgeId').value = badge.id;
+        document.getElementById('badgeAgeGroup').value = badge.ageGroupId;
+        document.getElementById('badgeAxis').value = badge.compassAxisId;
+        document.getElementById('badgeTitle').value = badge.title;
+        document.getElementById('badgeDescription').value = badge.description;
+        document.getElementById('badgeTier').value = badge.tier;
+        document.getElementById('badgeTierOrder').value = badge.tierOrder;
+        document.getElementById('badgeScore').value = badge.requiredScore;
+        document.getElementById('badgeImageId').value = badge.imageId;
+        document.getElementById('badgeFormTitle').textContent = 'Edit Badge';
+        document.getElementById('badgeSubmitBtn').innerHTML = '<i class="fas fa-save me-1"></i> Update Badge';
+        document.getElementById('deleteBadgeBtn').classList.remove('d-none');
+        document.getElementById('badgeFormAlert').classList.add('d-none');
+        updateImagePreview();
+        window.scrollTo({ top: document.getElementById('badgeForm').offsetTop - 80, behavior: 'smooth' });
+    }
+
+    function startAxisEdit(id) {
+        const achievement = state.axisAchievements.find(a => a.id === id);
+        if (!achievement) return;
+        state.editingAxisId = id;
+        document.getElementById('axisId').value = achievement.id;
+        document.getElementById('axisCompass').value = achievement.compassAxisId;
+        document.getElementById('axisDirection').value = achievement.axesDirection;
+        document.getElementById('axisDescription').value = achievement.description;
+        document.getElementById('axisFormTitle').textContent = 'Edit Axis Achievement';
+        document.getElementById('deleteAxisBtn').classList.remove('d-none');
+        document.getElementById('axisFormAlert').classList.add('d-none');
+        window.scrollTo({ top: document.getElementById('axisForm').offsetTop - 80, behavior: 'smooth' });
+    }
+
+    function resetBadgeForm() {
+        state.editingBadgeId = null;
+        document.getElementById('badgeForm').reset();
+        document.getElementById('badgeId').value = '';
+        document.getElementById('badgeAgeGroup').value = state.selectedAgeGroup;
+        document.getElementById('badgeFormTitle').textContent = 'Create Badge';
+        document.getElementById('badgeSubmitBtn').innerHTML = '<i class="fas fa-save me-1"></i> Save Badge';
+        document.getElementById('deleteBadgeBtn').classList.add('d-none');
+        document.getElementById('badgeFormAlert').classList.add('d-none');
+        document.getElementById('badgeTierOrder').value = 1;
+        document.getElementById('badgeScore').value = 1;
+        updateImagePreview();
+    }
+
+    function resetAxisForm() {
+        state.editingAxisId = null;
+        document.getElementById('axisForm').reset();
+        document.getElementById('axisId').value = '';
+        document.getElementById('axisAgeGroup').value = state.selectedAgeGroup;
+        document.getElementById('axisFormTitle').textContent = 'Axis Achievement';
+        document.getElementById('deleteAxisBtn').classList.add('d-none');
+        document.getElementById('axisFormAlert').classList.add('d-none');
+        document.getElementById('axisDirection').value = 'positive';
+    }
+
+    async function onBadgeSubmit(evt) {
+        evt.preventDefault();
+        if (!state.selectedAgeGroup) return;
+        const title = document.getElementById('badgeTitle').value.trim();
+        const description = document.getElementById('badgeDescription').value.trim();
+        const tier = document.getElementById('badgeTier').value;
+        const axisId = document.getElementById('badgeAxis').value;
+        const imgId = document.getElementById('badgeImageId').value.trim();
+
+        // Coerce numeric values and enforce model constraints to avoid automatic 400 from [ApiController]
+        let tierOrder = Number(document.getElementById('badgeTierOrder').value);
+        if (!Number.isFinite(tierOrder) || tierOrder < 1) tierOrder = 1;
+        if (tierOrder > 100) tierOrder = 100;
+
+        let requiredScore = Number(document.getElementById('badgeScore').value);
+        if (!Number.isFinite(requiredScore) || requiredScore < 0.01) requiredScore = 1.0;
+        if (requiredScore > 1000) requiredScore = 1000;
+
+        // Lightweight client-side validation aligned with data annotations in CreateBadgeRequest
+        if (!axisId) { showBadgeError('Please select a compass axis.'); return; }
+        if (!title || title.length < 3) { showBadgeError('Title must be at least 3 characters.'); return; }
+        if (!description || description.length < 10) { showBadgeError('Description must be at least 10 characters.'); return; }
+        if (!tier) { showBadgeError('Please select a tier.'); return; }
+        if (!imgId || imgId.length < 2) { showBadgeError('Image Id is required.'); return; }
+
+        const payload = {
+            ageGroupId: state.selectedAgeGroup,
+            compassAxisId: axisId,
+            title,
+            description,
+            tier,
+            tierOrder,
+            requiredScore,
+            imageId: imgId
+        };
+
+        const method = state.editingBadgeId ? 'PUT' : 'POST';
+        const url = state.editingBadgeId ? `${badgeApi}/${state.editingBadgeId}` : badgeApi;
+
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ message: 'Unable to save badge' }));
+            showBadgeError(error.message || 'Unable to save badge');
+            return;
+        }
+
+        resetBadgeForm();
+        await refreshBadges();
+    }
+
+    async function onAxisSubmit(evt) {
+        evt.preventDefault();
+        if (!state.selectedAgeGroup) return;
+        const axisId = document.getElementById('axisCompass').value;
+        const axesDirection = document.getElementById('axisDirection').value;
+        const description = document.getElementById('axisDescription').value.trim();
+
+        if (!axisId) { showAxisError('Please select a compass axis.'); return; }
+        if (!['positive','negative'].includes(axesDirection)) { showAxisError('Direction must be positive or negative.'); return; }
+        if (!description || description.length < 10) { showAxisError('Description must be at least 10 characters.'); return; }
+
+        const payload = {
+            ageGroupId: state.selectedAgeGroup,
+            compassAxisId: axisId,
+            axesDirection,
+            description
+        };
+
+        const method = state.editingAxisId ? 'PUT' : 'POST';
+        const url = state.editingAxisId ? `${badgeApi}/axis-achievements/${state.editingAxisId}` : `${badgeApi}/axis-achievements`;
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ message: 'Unable to save achievement' }));
+            showAxisError(error.message || 'Unable to save achievement');
+            return;
+        }
+
+        resetAxisForm();
+        await loadSnapshot();
+    }
+
+    function showBadgeError(message) {
+        const alert = document.getElementById('badgeFormAlert');
+        alert.textContent = message;
+        alert.classList.remove('d-none');
+    }
+
+    function showAxisError(message) {
+        const alert = document.getElementById('axisFormAlert');
+        alert.textContent = message;
+        alert.classList.remove('d-none');
+    }
+
+    async function confirmDeleteBadge(id) {
+        if (!confirm('Delete this badge?')) return;
+        await deleteBadge(id);
+    }
+
+    async function deleteBadge(id) {
+        const response = await fetch(`${badgeApi}/${id}`, { method: 'DELETE' });
+        if (!response.ok) {
+            showBadgeError('Unable to delete badge');
+            return;
+        }
+        await refreshBadges();
+    }
+
+    async function onDeleteBadge() {
+        if (!state.editingBadgeId) return;
+        await deleteBadge(state.editingBadgeId);
+        resetBadgeForm();
+    }
+
+    async function confirmDeleteAxis(id) {
+        if (!confirm('Delete this axis achievement?')) return;
+        await deleteAxis(id);
+    }
+
+    async function deleteAxis(id) {
+        const response = await fetch(`${badgeApi}/axis-achievements/${id}`, { method: 'DELETE' });
+        if (!response.ok) {
+            showAxisError('Unable to delete axis achievement');
+            return;
+        }
+        await loadSnapshot();
+    }
+
+    async function onDeleteAxis() {
+        if (!state.editingAxisId) return;
+        if (!confirm('Delete this axis achievement?')) return;
+        await deleteAxis(state.editingAxisId);
+        resetAxisForm();
+    }
+
+    function updateImagePreview() {
+        const imageId = document.getElementById('badgeImageId').value.trim();
+        const preview = document.getElementById('badgeImagePreview');
+        if (!imageId) {
+            preview.classList.add('d-none');
+            preview.src = '';
+            return;
+        }
+        fetch(`/api/admin/badges/images/${encodeURIComponent(imageId)}`)
+            .then(res => res.ok ? res.json() : null)
+            .then(image => {
+                if (!image || !image.dataUrl) {
+                    preview.classList.add('d-none');
+                    preview.src = '';
+                    return;
+                }
+                preview.src = image.dataUrl;
+                preview.classList.remove('d-none');
+            })
+            .catch(() => {
+                preview.classList.add('d-none');
+            });
+    }
+
+    async function onImageSearch(evt) {
+        evt.preventDefault();
+        const query = document.getElementById('imageSearchQuery').value.trim();
+        const response = await fetch(`/api/admin/badges/images?imageId=${encodeURIComponent(query)}`);
+        if (!response.ok) {
+            return;
+        }
+        const images = await response.json();
+        const container = document.getElementById('imageSearchResults');
+        if (!images.length) {
+            container.innerHTML = '<div class="col-12 text-center text-muted">No images found.</div>';
+            return;
+        }
+        container.innerHTML = images.map(image => `
+            <div class="col-6">
+                <button type="button" class="btn btn-light w-100 border" data-image-id="${image.imageId}">
+                    <div class="small text-truncate">${image.imageId}</div>
+                    ${image.dataUrl ? `<img src="${image.dataUrl}" alt="${image.imageId}" class="img-fluid rounded mt-2">` : ''}
+                </button>
+            </div>
+        `).join('');
+        container.querySelectorAll('button[data-image-id]').forEach(btn => btn.addEventListener('click', () => {
+            document.getElementById('badgeImageId').value = btn.dataset.imageId;
+            updateImagePreview();
+        }));
+    }
+
+    async function onImportSubmit(evt) {
+        evt.preventDefault();
+        const fileInput = document.getElementById('importFile');
+        if (!fileInput.files.length) {
+            return;
+        }
+        const formData = new FormData();
+        formData.append('configFile', fileInput.files[0]);
+        formData.append('overwrite', document.getElementById('importOverwrite').checked);
+        const response = await fetch(`${badgeApi}/import`, {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json().catch(() => ({ success: false, errors: ['Import failed'] }));
+        const successAlert = document.getElementById('importSuccess');
+        const errorsAlert = document.getElementById('importErrors');
+        if (!response.ok || !result.success) {
+            errorsAlert.textContent = (result.errors || ['Import failed']).join('\n');
+            errorsAlert.classList.remove('d-none');
+            successAlert.classList.add('d-none');
+            return;
+        }
+        errorsAlert.classList.add('d-none');
+        successAlert.textContent = `Imported configuration for ${result.ageGroupId}. Created ${result.createdBadges} badge(s).`;
+        successAlert.classList.remove('d-none');
+        fileInput.value = '';
+        await loadSnapshot();
+        await refreshBadges();
+    }
+})();
+</script>
+}

@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ServiceWorkerAssetsManifest Condition="'$(Configuration)' == 'Release'">service-worker-assets.js</ServiceWorkerAssetsManifest>
+    <UserSecretsId>bacfaeff-b9f0-4d46-af29-3755bbcc5dd2</UserSecretsId>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -14,8 +15,7 @@
     <BlazorWebAssemblyEnableLinking Condition="'$(Configuration)' == 'Release'">true</BlazorWebAssemblyEnableLinking>
     <BlazorWebAssemblyEnableLinking Condition="'$(Configuration)' != 'Release'">false</BlazorWebAssemblyEnableLinking>
     <!-- Enable AOT compilation for production builds for better runtime performance -->
-    <RunAOTCompilation Condition="'$(Configuration)' == 'Release'">true</RunAOTCompilation>
-    <RunAOTCompilation Condition="'$(Configuration)' != 'Release'">false</RunAOTCompilation>
+    <RunAOTCompilation>false</RunAOTCompilation>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">

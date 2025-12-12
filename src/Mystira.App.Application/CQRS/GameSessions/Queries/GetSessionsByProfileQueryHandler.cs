@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Contracts.Models.GameSessions;
 using Mystira.App.Contracts.Responses.GameSessions;
 using Mystira.App.Domain.Specifications;
 
@@ -34,24 +35,35 @@ public class GetSessionsByProfileQueryHandler : IQueryHandler<GetSessionsByProfi
         var spec = new SessionsByProfileSpecification(request.ProfileId);
         var sessions = await _repository.ListAsync(spec);
 
-        var response = sessions.Select(s => new GameSessionResponse
+        var response = sessions.Select(s =>
         {
-            Id = s.Id,
-            ScenarioId = s.ScenarioId,
-            AccountId = s.AccountId,
-            ProfileId = s.ProfileId,
-            PlayerNames = s.PlayerNames,
-            Status = s.Status,
-            CurrentSceneId = s.CurrentSceneId,
-            ChoiceCount = s.ChoiceHistory?.Count ?? 0,
-            EchoCount = s.EchoHistory?.Count ?? 0,
-            AchievementCount = s.Achievements?.Count ?? 0,
-            StartTime = s.StartTime,
-            EndTime = s.EndTime,
-            ElapsedTime = s.GetTotalElapsedTime(),
-            IsPaused = s.Status == Domain.Models.SessionStatus.Paused,
-            SceneCount = s.ChoiceHistory?.Select(c => c.SceneId).Distinct().Count() ?? 0,
-            TargetAgeGroup = s.TargetAgeGroup.Value
+            s.RecalculateCompassProgressFromHistory();
+
+            return new GameSessionResponse
+            {
+                Id = s.Id,
+                ScenarioId = s.ScenarioId,
+                AccountId = s.AccountId,
+                ProfileId = s.ProfileId,
+                PlayerNames = s.PlayerNames,
+                PlayerCompassProgressTotals = s.PlayerCompassProgressTotals.Select(p => new PlayerCompassProgressDto
+                {
+                    PlayerId = p.PlayerId,
+                    Axis = p.Axis,
+                    Total = p.Total
+                }).ToList(),
+                Status = s.Status,
+                CurrentSceneId = s.CurrentSceneId,
+                ChoiceCount = s.ChoiceHistory?.Count ?? 0,
+                EchoCount = s.EchoHistory?.Count ?? 0,
+                AchievementCount = s.Achievements?.Count ?? 0,
+                StartTime = s.StartTime,
+                EndTime = s.EndTime,
+                ElapsedTime = s.GetTotalElapsedTime(),
+                IsPaused = s.Status == Domain.Models.SessionStatus.Paused,
+                SceneCount = s.ChoiceHistory?.Select(c => c.SceneId).Distinct().Count() ?? 0,
+                TargetAgeGroup = s.TargetAgeGroup.Value
+            };
         }).ToList();
 
         _logger.LogDebug("Retrieved {Count} sessions for profile {ProfileId}", response.Count, request.ProfileId);

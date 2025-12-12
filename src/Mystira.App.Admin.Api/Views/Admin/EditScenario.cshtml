@@ -29,12 +29,12 @@
                                             <label for="title">Title</label>
                                             <input type="text" class="form-control" id="title" name="title" value="@Model.Title" required>
                                         </div>
-                                        
+
                                         <div class="form-group mb-3">
                                             <label for="description">Description</label>
                                             <textarea class="form-control" id="description" name="description" rows="4" required>@Model.Description</textarea>
                                         </div>
-                                        
+
                                         <div class="row">
                                             <div class="col-md-4">
                                                 <div class="form-group mb-3">
@@ -63,17 +63,17 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         <div class="form-group mb-3">
                                             <label for="tags">Tags (comma-separated)</label>
                                             <input type="text" class="form-control" id="tags" name="tags" value="@string.Join(", ", Model.Tags)">
                                         </div>
-                                        
+
                                         <div class="form-group mb-3">
                                             <label for="archetypes">Archetypes (comma-separated)</label>
                                             <input type="text" class="form-control" id="archetypes" name="archetypes" value="@string.Join(", ", Model.Archetypes)">
                                         </div>
-                                        
+
                                         <div class="form-group mb-3">
                                             <label for="compassAxes">Compass Axes (comma-separated, max 4)</label>
                                             <input type="text" class="form-control" id="compassAxes" name="compassAxes" value="@string.Join(", ", Model.CoreAxes)">
@@ -86,7 +86,7 @@
                                         </div>
                                         </div>
                                         </div>
-                                
+
                                 <!-- Scenes Section -->
                                 <div class="card">
                                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -139,7 +139,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Sidebar -->
                             <div class="col-md-4">
                                 <div class="card">
@@ -152,14 +152,14 @@
                                             <button type="button" class="btn btn-warning" onclick="validateScenario()">Validate Media References</button>
                                             <button type="button" class="btn btn-secondary" onclick="exportScenario()">Export as YAML</button>
                                         </div>
-                                        
+
                                         <hr>
-                                        
+
                                         <div class="mb-3">
                                             <strong>Created:</strong><br>
                                             <small>@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm")</small>
                                         </div>
-                                        
+
                                         <div class="mb-3">
                                             <strong>Scenario ID:</strong><br>
                                             <small class="text-muted">@Model.Id</small>
@@ -175,7 +175,8 @@
     </div>
 </div>
 
-<script>
+@{ var cspNonce = Context.Items["CspNonce"] as string; }
+<script nonce="@cspNonce">
 function addScene() {
     // Basic scene addition - in a real implementation, this would be more sophisticated
     alert('Scene addition functionality would be implemented here');
@@ -193,39 +194,39 @@ function previewScenario() {
 
 async function validateScenario() {
     const scenarioId = '@Model.Id';
-    
+
     try {
         // Show loading indicator
         const button = event.target;
         const originalText = button.textContent;
         button.disabled = true;
         button.textContent = 'Validating...';
-        
+
         const response = await fetch(`/api/admin/ScenariosAdmin/${scenarioId}/validate-references`);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         const validationResult = await response.json();
-        
+
         // Debug: Log the validation result to console
         console.log('Validation Result:', validationResult);
-        
+
         // Restore button
         button.disabled = false;
         button.textContent = originalText;
-        
+
         displayValidationResults(validationResult);
-        
+
     } catch (error) {
         console.error('Error validating scenario references:', error);
-        
+
         // Restore button
         const button = event.target;
         button.disabled = false;
         button.textContent = 'Validate Media References';
-        
+
         alert(`Error validating references: ${error.message}`);
     }
 }
@@ -236,17 +237,17 @@ function displayValidationResults(validationResult) {
     if (existingResults) {
         existingResults.remove();
     }
-    
+
     // Debug: Log individual properties
     console.log('HasMissingReferences:', validationResult.HasMissingReferences);
     console.log('MissingReferences:', validationResult.MissingReferences);
     console.log('TotalReferences:', validationResult.TotalReferences);
-    
+
     // Create validation results container
     const resultsContainer = document.createElement('div');
     resultsContainer.id = 'validationResults';
     resultsContainer.className = 'card mt-3';
-    
+
     let resultsHtml = `
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Reference Validation Results</h5>
@@ -256,7 +257,7 @@ function displayValidationResults(validationResult) {
         </div>
         <div class="card-body">
     `;
-    
+
     if (!validationResult.HasMissingReferences) {
         resultsHtml += `
             <div class="alert alert-success">
@@ -273,28 +274,28 @@ function displayValidationResults(validationResult) {
                 <br><small class="text-muted">${validationResult.MissingReferencesCount} of ${validationResult.TotalReferences} references have issues</small>
             </div>
         `;
-        
+
         if (validationResult.MissingReferences && validationResult.MissingReferences.length > 0) {
             resultsHtml += `<div class="mb-3">`;
-            
+
             // Group by reference type
             const mediaRefs = validationResult.MissingReferences.filter(ref => ref.ReferenceType === 'media');
             const characterRefs = validationResult.MissingReferences.filter(ref => ref.ReferenceType === 'character');
-            
+
             console.log('Media refs found:', mediaRefs.length);
             console.log('Character refs found:', characterRefs.length);
-            
+
             if (mediaRefs.length > 0) {
                 resultsHtml += `
                     <h6 class="text-danger">Missing Media References (${mediaRefs.length}):</h6>
                     <div class="list-group list-group-flush mb-3">
                 `;
-                
+
                 mediaRefs.forEach(ref => {
                     // Determine media type from issue description or reference ID
                     const mediaType = ref.ReferenceId.includes('.jpg') || ref.ReferenceId.includes('.png') || ref.ReferenceId.includes('.jpeg') ? 'image' :
                                      ref.ReferenceId.includes('.mp3') || ref.ReferenceId.includes('.wav') ? 'audio' : 'video';
-                    const typeIcon = mediaType === 'image' ? 'fa-image' : 
+                    const typeIcon = mediaType === 'image' ? 'fa-image' :
                                    mediaType === 'audio' ? 'fa-volume-up' : 'fa-video';
                     resultsHtml += `
                         <div class="list-group-item">
@@ -312,16 +313,16 @@ function displayValidationResults(validationResult) {
                         </div>
                     `;
                 });
-                
+
                 resultsHtml += `</div>`;
             }
-            
+
             if (characterRefs.length > 0) {
                 resultsHtml += `
                     <h6 class="text-danger">Missing Character References (${characterRefs.length}):</h6>
                     <div class="list-group list-group-flush">
                 `;
-                
+
                 characterRefs.forEach(ref => {
                     resultsHtml += `
                         <div class="list-group-item">
@@ -339,19 +340,19 @@ function displayValidationResults(validationResult) {
                         </div>
                     `;
                 });
-                
+
                 resultsHtml += `</div>`;
             }
-            
+
             resultsHtml += `</div>`;
-            
+
             // If no media or character refs were found but we have missing references, show them raw
             if (mediaRefs.length === 0 && characterRefs.length === 0) {
                 resultsHtml += `
                     <h6 class="text-warning">Unrecognized Missing References (${validationResult.MissingReferences.length}):</h6>
                     <div class="list-group list-group-flush mb-3">
                 `;
-                
+
                 validationResult.MissingReferences.forEach(ref => {
                     resultsHtml += `
                         <div class="list-group-item">
@@ -371,7 +372,7 @@ function displayValidationResults(validationResult) {
                         </div>
                     `;
                 });
-                
+
                 resultsHtml += `</div>`;
             }
         } else if (validationResult.HasMissingReferences) {
@@ -383,7 +384,7 @@ function displayValidationResults(validationResult) {
                 </div>
             `;
         }
-        
+
         // Add summary and recommendations
         resultsHtml += `
             <div class="alert alert-info">
@@ -397,15 +398,15 @@ function displayValidationResults(validationResult) {
             </div>
         `;
     }
-    
+
     resultsHtml += `</div>`;
-    
+
     resultsContainer.innerHTML = resultsHtml;
-    
+
     // Insert the results after the sidebar card
     const sidebar = document.querySelector('.col-md-4');
     sidebar.appendChild(resultsContainer);
-    
+
     // Scroll to results
     resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }

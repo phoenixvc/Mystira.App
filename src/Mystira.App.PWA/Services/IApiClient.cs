@@ -19,7 +19,17 @@ public interface IApiClient
     Task<GameSession?> PauseGameSessionAsync(string sessionId);
     Task<GameSession?> ResumeGameSessionAsync(string sessionId);
     Task<GameSession?> ProgressSessionSceneAsync(string sessionId, string sceneId);
-    Task<GameSession?> MakeChoiceAsync(string sessionId, string sceneId, string choiceText, string nextSceneId);
+
+    Task<GameSession?> MakeChoiceAsync(
+        string sessionId,
+        string sceneId,
+        string choiceText,
+        string nextSceneId,
+        string? playerId = null,
+        string? compassAxis = null,
+        string? compassDirection = null,
+        double? compassDelta = null);
+
     Task<List<GameSession>?> GetSessionsByAccountAsync(string accountId);
     Task<Account?> GetAccountByEmailAsync(string email);
 
