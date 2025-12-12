@@ -7,20 +7,14 @@
 @inject ILogger<AchievementsPage> Logger
 @using Mystira.App.PWA.Models
 @using Mystira.App.PWA.Services
+@using Mystira.App.PWA.Components
 
 <PageTitle>Achievements • Mystira</PageTitle>
 
 <div class="container-fluid py-4 achievements-page @GetAgeGroupCssClass(model?.AgeGroupId)">
     @if (isLoading)
     {
-        <div class="d-flex justify-content-center align-items-center loading-container">
-            <div class="text-center">
-                <div class="spinner-border text-primary-custom mb-3" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="text-muted">Loading achievements...</p>
-            </div>
-        </div>
+        <LoadingIndicator Message="Loading achievements..." />
     }
     else if (!isAuthenticated)
     {
