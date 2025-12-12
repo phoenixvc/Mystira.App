@@ -49,6 +49,9 @@ public partial class MystiraAppDbContext : DbContext
     // Game Session Management
     public DbSet<GameSession> GameSessions { get; set; }
 
+    // Scoring and Analytics
+    public DbSet<PlayerScenarioScore> PlayerScenarioScores { get; set; }
+
     // Tracking and Analytics
     public DbSet<CompassTracking> CompassTrackings { get; set; }
 
