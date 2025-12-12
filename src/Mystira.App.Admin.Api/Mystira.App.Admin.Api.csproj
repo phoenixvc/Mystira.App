@@ -7,6 +7,8 @@
     <!-- Suppress NU1608: Nethereum packages haven't updated constraints for .NET 9 yet, but work fine -->
     <NoWarn>$(NoWarn);NU1608</NoWarn>
     <UserSecretsId>fb17b0bc-b708-4cd3-9527-9a3d99c7afae</UserSecretsId>
+    <!-- Allow duplicate publish files - we'll filter them in a custom target -->
+    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>
 
   <ItemGroup>
@@ -38,6 +40,7 @@
     <ProjectReference Include="..\Mystira.App.Contracts\Mystira.App.Contracts.csproj" />
     <ProjectReference Include="..\Mystira.App.Application\Mystira.App.Application.csproj" />
     <!-- Reuse JWT adapters and health port adapter from primary API -->
+    <!-- ReferenceOutputAssembly=false would exclude the DLL which we need, so we need a different approach -->
     <ProjectReference Include="..\Mystira.App.Api\Mystira.App.Api.csproj" />
   </ItemGroup>
 
