@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Mystira.App.Domain\Mystira.App.Domain.csproj" />
     <ProjectReference Include="..\Mystira.App.Contracts\Mystira.App.Contracts.csproj" />
+    <ProjectReference Include="..\Mystira.App.Shared\Mystira.App.Shared.csproj" />
   </ItemGroup>
 
 </Project>
