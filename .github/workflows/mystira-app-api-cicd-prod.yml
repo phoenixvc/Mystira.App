@@ -1,37 +1,23 @@
 name: API CI/CD - Production Environment
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "src/Mystira.App.Api/**"
-      - "src/Mystira.App.Domain/**"
-      - "src/Mystira.App.Contracts/**"
-      - "src/Mystira.App.Application/**"
-      - "src/Mystira.App.Infrastructure.Data/**"
-      - "src/Mystira.App.Infrastructure.Azure/**"
-      - "src/Mystira.App.Infrastructure.Discord/**"
-      - "src/Mystira.App.Infrastructure.StoryProtocol/**"
-      - "src/Mystira.App.Shared/**"
-      - ".github/workflows/mystira-app-api-cicd-prod.yml"
-  pull_request:
-    branches: [main] # PRs targeting main
-    types: [opened, synchronize, reopened, closed]
-    paths:
-      - "src/Mystira.App.Api/**"
-      - "src/Mystira.App.Domain/**"
-      - "src/Mystira.App.Contracts/**"
-      - "src/Mystira.App.Application/**"
-      - "src/Mystira.App.Infrastructure.Data/**"
-      - "src/Mystira.App.Infrastructure.Azure/**"
-      - "src/Mystira.App.Infrastructure.Discord/**"
-      - "src/Mystira.App.Infrastructure.StoryProtocol/**"
-      - "src/Mystira.App.Shared/**"
-      - ".github/workflows/mystira-app-api-cicd-prod.yml"
+  # Production deployments are MANUAL ONLY for safety
+  # Use workflow_dispatch to trigger a production deployment
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests (use with caution)'
+        required: false
+        type: boolean
+        default: false
+  # Also trigger after infrastructure deployment
   workflow_run:
     workflows: ["Infrastructure Deploy - Production"]
     types: [completed]
-  workflow_dispatch:
+  # Trigger on version tags for releases
+  push:
+    tags:
+      - 'v*.*.*'
 
 # Least-privilege defaults
 permissions:
@@ -93,19 +79,14 @@ jobs:
     needs: build-and-test
 
     # Deploy on:
-    # - Direct push to main
-    # - PR into main is CLOSED *and* MERGED
-    # - Infrastructure Deploy workflow completed successfully
     # - Manual workflow dispatch
+    # - Infrastructure Deploy workflow completed successfully
+    # - Version tag push (v*.*.*)
     if: >
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'pull_request' &&
-       github.event.action == 'closed' &&
-       github.event.pull_request.merged == true &&
-       github.base_ref == 'main') ||
+      (github.event_name == 'workflow_dispatch') ||
       (github.event_name == 'workflow_run' &&
        github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'workflow_dispatch')
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
 
     environment: production
 

@@ -42,7 +42,7 @@ env:
   # Application Insights for deployment annotations
   APP_INSIGHTS_NAME: "mys-staging-mystira-appins-san"
   RESOURCE_GROUP: "mys-staging-mystira-rg-san"
-  HAS_PUBLISH_PROFILE_STAGING: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING_ADMIN != '' }}
+  HAS_PUBLISH_PROFILE_STAGING_ADMIN: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING_ADMIN != '' }}
 
 jobs:
   build-and-test:
@@ -101,9 +101,9 @@ jobs:
 
     steps:
       - name: Validate required secrets for staging deployment
-        if: env.HAS_PUBLISH_PROFILE_STAGING != 'true'
+        if: env.HAS_PUBLISH_PROFILE_STAGING_ADMIN != 'true'
         run: |
-          echo "ERROR: Secret AZURE_WEBAPP_PUBLISH_PROFILE_STAGING is not set."
+          echo "ERROR: Secret AZURE_WEBAPP_PUBLISH_PROFILE_STAGING_ADMIN is not set."
           exit 1
 
       - name: Download artifact from build job
@@ -116,13 +116,35 @@ jobs:
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING_ADMIN }}
           package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
       - name: Azure Login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Configure JWT RS256 settings
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-settings-json: |
+            [
+              {"name": "JwtSettings__RsaPrivateKey", "value": "${{ secrets.JWT_RSA_PRIVATE_KEY_STAGING }}", "slotSetting": false},
+              {"name": "JwtSettings__RsaPublicKey", "value": "${{ secrets.JWT_RSA_PUBLIC_KEY_STAGING }}", "slotSetting": false},
+              {"name": "JwtSettings__Issuer", "value": "MystiraAPI", "slotSetting": false},
+              {"name": "JwtSettings__Audience", "value": "MystiraPWA", "slotSetting": false}
+            ]
+
+      - name: Configure Database Settings
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-settings-json: |
+            [
+              {"name": "InitializeDatabaseOnStartup", "value": "true", "slotSetting": false},
+              {"name": "SeedMasterDataOnStartup", "value": "true", "slotSetting": false}
+            ]
 
       - name: Create deployment annotation in Application Insights
         if: success()
