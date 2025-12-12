@@ -62,6 +62,8 @@ public class GameSession
 
     public void RecalculateCompassProgressFromHistory()
     {
+        var validProfileIds = GetValidProfileIds();
+
         var totalsByPlayerAndAxis = new Dictionary<(string PlayerId, string Axis), double>();
         var totalsByAxis = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
         var historyByAxis = new Dictionary<string, List<CompassChange>>(StringComparer.OrdinalIgnoreCase);
@@ -74,20 +76,8 @@ public class GameSession
                 continue;
             }
 
-            var playerId = string.IsNullOrWhiteSpace(choice.PlayerId) ? ProfileId : choice.PlayerId;
-            if (string.IsNullOrWhiteSpace(playerId))
-            {
-                continue;
-            }
-
-            delta = Clamp(delta, CompassMinValue, CompassMaxValue);
-
-            var key = (PlayerId: playerId, Axis: axis);
-            totalsByPlayerAndAxis.TryGetValue(key, out var playerTotal);
-            totalsByPlayerAndAxis[key] = Clamp(playerTotal + delta, CompassMinValue, CompassMaxValue);
-
             totalsByAxis.TryGetValue(axis, out var axisTotal);
-            totalsByAxis[axis] = Clamp(axisTotal + delta, CompassMinValue, CompassMaxValue);
+            totalsByAxis[axis] = axisTotal + delta;
 
             if (!historyByAxis.TryGetValue(axis, out var history))
             {
@@ -102,6 +92,16 @@ public class GameSession
             });
 
             lastUpdatedByAxis[axis] = choice.ChosenAt;
+
+            var playerId = string.IsNullOrWhiteSpace(choice.PlayerId) ? ProfileId : choice.PlayerId;
+            if (string.IsNullOrWhiteSpace(playerId) || !validProfileIds.Contains(playerId))
+            {
+                continue;
+            }
+
+            var key = (PlayerId: playerId, Axis: axis);
+            totalsByPlayerAndAxis.TryGetValue(key, out var playerTotal);
+            totalsByPlayerAndAxis[key] = playerTotal + delta;
         }
 
         PlayerCompassProgressTotals = totalsByPlayerAndAxis
@@ -133,9 +133,30 @@ public class GameSession
 
             tracking.Axis = axis;
             tracking.CurrentValue = total;
-            tracking.History = historyByAxis.TryGetValue(axis, out var history) ? history : new List<CompassChange>();
+            tracking.History = historyByAxis.TryGetValue(axis, out var axisHistory) ? axisHistory : new List<CompassChange>();
             tracking.LastUpdated = lastUpdatedByAxis.TryGetValue(axis, out var last) ? last : DateTime.UtcNow;
         }
+    }
+
+    private HashSet<string> GetValidProfileIds()
+    {
+        var profileIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(ProfileId))
+        {
+            profileIds.Add(ProfileId);
+        }
+
+        foreach (var assignment in CharacterAssignments)
+        {
+            var profileId = assignment.PlayerAssignment?.ProfileId;
+            if (!string.IsNullOrWhiteSpace(profileId))
+            {
+                profileIds.Add(profileId);
+            }
+        }
+
+        return profileIds;
     }
 
     private static bool TryGetCompassDelta(SessionChoice choice, out string axis, out double delta)
@@ -146,7 +167,7 @@ public class GameSession
         if (!string.IsNullOrWhiteSpace(choice.CompassAxis) && choice.CompassDelta.HasValue)
         {
             axis = choice.CompassAxis;
-            delta = ApplyDirection(choice.CompassDelta.Value, choice.CompassDirection);
+            delta = choice.CompassDelta.Value;
             return true;
         }
 
@@ -158,32 +179,6 @@ public class GameSession
         }
 
         return false;
-    }
-
-    private static double ApplyDirection(double delta, string? direction)
-    {
-        if (string.IsNullOrWhiteSpace(direction))
-        {
-            return delta;
-        }
-
-        var normalized = direction.Trim().ToLowerInvariant();
-        if (normalized is "negative" or "neg" or "-" or "down")
-        {
-            return -Math.Abs(delta);
-        }
-
-        if (normalized is "positive" or "pos" or "+" or "up")
-        {
-            return Math.Abs(delta);
-        }
-
-        return delta;
-    }
-
-    private static double Clamp(double value, double min, double max)
-    {
-        return Math.Max(min, Math.Min(max, value));
     }
 }
 

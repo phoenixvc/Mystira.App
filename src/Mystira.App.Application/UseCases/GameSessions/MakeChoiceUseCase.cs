@@ -62,11 +62,9 @@ public class MakeChoiceUseCase
             ? request.PlayerId
             : session.ProfileId;
 
-        var (compassAxis, compassDirection, compassDelta) = NormalizeCompass(
-            request.CompassAxis,
-            request.CompassDirection,
-            request.CompassDelta,
-            branch.CompassChange);
+        var compassAxis = request.CompassAxis ?? branch.CompassChange?.Axis;
+        var compassDelta = request.CompassDelta ?? branch.CompassChange?.Delta;
+        var compassDirection = request.CompassDirection;
 
         var sessionChoice = new SessionChoice
         {
@@ -137,54 +135,5 @@ public class MakeChoiceUseCase
             playerId);
 
         return session;
-    }
-
-    private static (string? Axis, string? Direction, double? Delta) NormalizeCompass(
-        string? requestAxis,
-        string? requestDirection,
-        double? requestDelta,
-        CompassChange? fallback)
-    {
-        if (!string.IsNullOrWhiteSpace(requestAxis) && requestDelta.HasValue)
-        {
-            var (axis, direction, delta) = Normalize(requestAxis, requestDirection, requestDelta.Value);
-            return (axis, direction, delta);
-        }
-
-        if (fallback != null && !string.IsNullOrWhiteSpace(fallback.Axis))
-        {
-            var (axis, direction, delta) = Normalize(fallback.Axis, null, fallback.Delta);
-            return (axis, direction, delta);
-        }
-
-        return (null, null, null);
-    }
-
-    private static (string Axis, string Direction, double Delta) Normalize(string axis, string? direction, double delta)
-    {
-        var effectiveDelta = delta;
-        var normalizedDirection = direction?.Trim().ToLowerInvariant();
-
-        if (!string.IsNullOrWhiteSpace(normalizedDirection))
-        {
-            if (normalizedDirection is "negative" or "neg" or "-" or "down")
-            {
-                effectiveDelta = -Math.Abs(effectiveDelta);
-                normalizedDirection = "negative";
-            }
-            else if (normalizedDirection is "positive" or "pos" or "+" or "up")
-            {
-                effectiveDelta = Math.Abs(effectiveDelta);
-                normalizedDirection = "positive";
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(normalizedDirection))
-        {
-            normalizedDirection = effectiveDelta < 0 ? "negative" : "positive";
-        }
-
-        effectiveDelta = Math.Max(GameSession.CompassMinValue, Math.Min(GameSession.CompassMaxValue, effectiveDelta));
-        return (axis, normalizedDirection, effectiveDelta);
     }
 }

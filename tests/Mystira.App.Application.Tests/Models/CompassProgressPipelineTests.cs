@@ -18,7 +18,21 @@ public class CompassProgressPipelineTests
             AccountId = "a1",
             ProfileId = "owner",
             Status = SessionStatus.InProgress,
-            StartTime = DateTime.UtcNow
+            StartTime = DateTime.UtcNow,
+            CharacterAssignments = new List<SessionCharacterAssignment>
+            {
+                new()
+                {
+                    CharacterId = "c1",
+                    CharacterName = "Hero",
+                    PlayerAssignment = new SessionPlayerAssignment
+                    {
+                        Type = "Player",
+                        ProfileId = "p1",
+                        ProfileName = "Player One"
+                    }
+                }
+            }
         };
 
         session.ChoiceHistory.AddRange([
@@ -40,7 +54,7 @@ public class CompassProgressPipelineTests
                 PlayerId = "p1",
                 CompassAxis = "honesty",
                 CompassDirection = "negative",
-                CompassDelta = 0.5
+                CompassDelta = -0.5
             },
             new SessionChoice
             {
@@ -54,7 +68,7 @@ public class CompassProgressPipelineTests
                 SceneId = "scene4",
                 ChoiceText = "D",
                 NextScene = "scene5",
-                PlayerId = "p2",
+                PlayerId = "guest:buddy",
                 CompassAxis = "kindness",
                 CompassDirection = "positive",
                 CompassDelta = 10.0
@@ -77,15 +91,10 @@ public class CompassProgressPipelineTests
             Total = 0.7
         });
 
-        session.PlayerCompassProgressTotals.Should().ContainEquivalentOf(new PlayerCompassProgress
-        {
-            PlayerId = "p2",
-            Axis = "kindness",
-            Total = 2.0
-        });
+        session.PlayerCompassProgressTotals.Should().NotContain(p => p.PlayerId == "guest:buddy");
 
         session.CompassValues["honesty"].CurrentValue.Should().BeApproximately(1.2, 0.0001);
-        session.CompassValues["kindness"].CurrentValue.Should().BeApproximately(2.0, 0.0001);
+        session.CompassValues["kindness"].CurrentValue.Should().BeApproximately(10.0, 0.0001);
     }
 
     [Fact]
@@ -103,7 +112,21 @@ public class CompassProgressPipelineTests
             AccountId = "a1",
             ProfileId = "owner",
             Status = SessionStatus.InProgress,
-            StartTime = DateTime.UtcNow
+            StartTime = DateTime.UtcNow,
+            CharacterAssignments = new List<SessionCharacterAssignment>
+            {
+                new()
+                {
+                    CharacterId = "c1",
+                    CharacterName = "Hero",
+                    PlayerAssignment = new SessionPlayerAssignment
+                    {
+                        Type = "Player",
+                        ProfileId = "p1",
+                        ProfileName = "Player One"
+                    }
+                }
+            }
         };
 
         session.ChoiceHistory.Add(new SessionChoice

@@ -365,12 +365,12 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                                 if (deltaProp.ValueKind == JsonValueKind.Number && deltaProp.TryGetDouble(out var deltaValue))
                                 {
                                     compassDirection = deltaValue < 0 ? "negative" : "positive";
-                                    compassDelta = Math.Abs(deltaValue);
+                                    compassDelta = deltaValue;
                                 }
                                 else if (deltaProp.ValueKind == JsonValueKind.String && double.TryParse(deltaProp.GetString(), out var deltaString))
                                 {
                                     compassDirection = deltaString < 0 ? "negative" : "positive";
-                                    compassDelta = Math.Abs(deltaString);
+                                    compassDelta = deltaString;
                                 }
                             }
                         }
@@ -384,8 +384,9 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                             CompassDelta = compassDelta
                         });
                     }
+
                     return branches;
-                    }
+                }
 
                 List<Scene> ReadScenes(JsonElement obj)
                 {
