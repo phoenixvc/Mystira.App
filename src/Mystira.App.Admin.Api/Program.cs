@@ -6,12 +6,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Mystira.App.Admin.Api.Adapters;
-using MediatR;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Application.Behaviors;
 using Mystira.App.Application.Services;
 // Note: Avoid unqualified IJwtService to prevent ambiguity with Application port interface
-using Mystira.App.Application.Ports.Health;
 using Mystira.App.Application.Ports.Messaging;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Ports.Media;
@@ -30,8 +28,6 @@ using Mystira.App.Infrastructure.Data.Services;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
 using Mystira.App.Infrastructure.StoryProtocol;
 using Mystira.App.Infrastructure.Discord.Services;
-using Mystira.App.Api.Services; // JwtService
-using Mystira.App.Api.Adapters; // JwtServiceAdapter, HealthCheckPortAdapter
 using Microsoft.ApplicationInsights.Extensibility;
 using Mystira.App.Shared.Middleware;
 using Mystira.App.Shared.Telemetry;
@@ -449,11 +445,11 @@ builder.Services.AddScoped<IAgeGroupRepository, AgeGroupRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Auth and application ports/adapters
-builder.Services.AddScoped<Mystira.App.Api.Services.IJwtService, Mystira.App.Api.Services.JwtService>();
-builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, Mystira.App.Api.Adapters.JwtServiceAdapter>();
+builder.Services.AddScoped<Mystira.App.Shared.Services.IJwtService, Mystira.App.Shared.Services.JwtService>();
+builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, Mystira.App.Admin.Api.Adapters.JwtServiceAdapter>();
 
 // Health port adapter for CQRS handlers
-builder.Services.AddScoped<Mystira.App.Application.Ports.Health.IHealthCheckPort, Mystira.App.Api.Adapters.HealthCheckPortAdapter>();
+builder.Services.AddScoped<Mystira.App.Application.Ports.Health.IHealthCheckPort, Mystira.App.Shared.Adapters.HealthCheckPortAdapter>();
 
 // Discord/Messaging: keep as No-Op in this environment
 builder.Services.AddSingleton<NoOpChatBotService>();

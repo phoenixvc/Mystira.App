@@ -1,6 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.CQRS.Badges.Queries;
 using Mystira.App.Contracts.Responses.Badges;
 using Mystira.App.Contracts.Responses.Common;
 
@@ -15,26 +15,12 @@ namespace Mystira.App.Api.Controllers;
 [Produces("application/json")]
 public class BadgesController : ControllerBase
 {
-    private readonly IBadgeRepository _badgeRepository;
-    private readonly ICompassAxisRepository _axisRepository;
-    private readonly IAxisAchievementRepository _axisAchievementRepository;
-    private readonly IUserBadgeRepository _userBadgeRepository;
-    private readonly IUserProfileRepository _profileRepository;
+    private readonly IMediator _mediator;
     private readonly ILogger<BadgesController> _logger;
 
-    public BadgesController(
-        IBadgeRepository badgeRepository,
-        ICompassAxisRepository axisRepository,
-        IAxisAchievementRepository axisAchievementRepository,
-        IUserBadgeRepository userBadgeRepository,
-        IUserProfileRepository profileRepository,
-        ILogger<BadgesController> logger)
+    public BadgesController(IMediator mediator, ILogger<BadgesController> logger)
     {
-        _badgeRepository = badgeRepository;
-        _axisRepository = axisRepository;
-        _axisAchievementRepository = axisAchievementRepository;
-        _userBadgeRepository = userBadgeRepository;
-        _profileRepository = profileRepository;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -55,24 +41,7 @@ public class BadgesController : ControllerBase
 
         try
         {
-            var badges = await _badgeRepository.GetByAgeGroupAsync(ageGroup);
-            var response = badges
-                .OrderBy(b => b.CompassAxisId)
-                .ThenBy(b => b.TierOrder)
-                .Select(b => new BadgeResponse
-                {
-                    Id = b.Id,
-                    AgeGroupId = b.AgeGroupId,
-                    CompassAxisId = b.CompassAxisId,
-                    Tier = b.Tier,
-                    TierOrder = b.TierOrder,
-                    Title = b.Title,
-                    Description = b.Description,
-                    RequiredScore = b.RequiredScore,
-                    ImageId = b.ImageId
-                })
-                .ToList();
-
+            var response = await _mediator.Send(new GetBadgesByAgeGroupQuery(ageGroup));
             return Ok(response);
         }
         catch (Exception ex)
@@ -103,36 +72,7 @@ public class BadgesController : ControllerBase
 
         try
         {
-            var achievements = await _axisAchievementRepository.GetByAgeGroupAsync(ageGroupId);
-            var axes = await _axisRepository.GetAllAsync();
-
-            var axisLookup = axes
-                .SelectMany(a => new[] { (Key: a.Id, Value: a), (Key: a.Name, Value: a) })
-                .Where(x => !string.IsNullOrWhiteSpace(x.Key))
-                .ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase);
-
-            var response = achievements
-                .OrderBy(a => a.CompassAxisId)
-                .ThenBy(a => a.AxesDirection)
-                .Select(a =>
-                {
-                    axisLookup.TryGetValue(a.CompassAxisId, out var axis);
-                    var axisName = axis != null && !string.IsNullOrWhiteSpace(axis.Name)
-                        ? axis.Name
-                        : (axis?.Id ?? a.CompassAxisId);
-
-                    return new AxisAchievementResponse
-                    {
-                        Id = a.Id,
-                        AgeGroupId = a.AgeGroupId,
-                        CompassAxisId = a.CompassAxisId,
-                        CompassAxisName = axisName,
-                        AxesDirection = a.AxesDirection,
-                        Description = a.Description
-                    };
-                })
-                .ToList();
-
+            var response = await _mediator.Send(new GetAxisAchievementsQuery(ageGroupId));
             return Ok(response);
         }
         catch (Exception ex)
@@ -154,7 +94,7 @@ public class BadgesController : ControllerBase
     {
         try
         {
-            var badge = await _badgeRepository.GetByIdAsync(badgeId);
+            var badge = await _mediator.Send(new GetBadgeDetailQuery(badgeId));
             if (badge == null)
             {
                 return NotFound(new ErrorResponse
@@ -164,20 +104,7 @@ public class BadgesController : ControllerBase
                 });
             }
 
-            var response = new BadgeResponse
-            {
-                Id = badge.Id,
-                AgeGroupId = badge.AgeGroupId,
-                CompassAxisId = badge.CompassAxisId,
-                Tier = badge.Tier,
-                TierOrder = badge.TierOrder,
-                Title = badge.Title,
-                Description = badge.Description,
-                RequiredScore = badge.RequiredScore,
-                ImageId = badge.ImageId
-            };
-
-            return Ok(response);
+            return Ok(badge);
         }
         catch (Exception ex)
         {
@@ -198,8 +125,8 @@ public class BadgesController : ControllerBase
     {
         try
         {
-            var profile = await _profileRepository.GetByIdAsync(profileId);
-            if (profile == null)
+            var progress = await _mediator.Send(new GetProfileBadgeProgressQuery(profileId));
+            if (progress == null)
             {
                 return NotFound(new ErrorResponse
                 {
@@ -207,71 +134,7 @@ public class BadgesController : ControllerBase
                     TraceId = HttpContext.TraceIdentifier
                 });
             }
-
-            var ageGroupId = profile.AgeGroup?.Value ?? "6-9";
-
-            // Get all badges for this age group
-            var badgesByAxis = (await _badgeRepository.GetByAgeGroupAsync(ageGroupId))
-                .GroupBy(b => b.CompassAxisId)
-                .ToDictionary(g => g.Key, g => g.OrderBy(b => b.TierOrder).ToList());
-
-            // Get earned badges for this profile
-            var earnedBadges = (await _userBadgeRepository.GetByUserProfileIdAsync(profileId))
-                .ToDictionary(b => b.BadgeId ?? string.Empty, b => b);
-
-            // Get all axes for this age group
-            var axes = await _axisRepository.GetAllAsync();
-            var axisDictionary = axes.ToDictionary(a => a.Id, a => a);
-
-            // Build response
-            var response = new BadgeProgressResponse
-            {
-                AgeGroupId = ageGroupId,
-                AxisProgresses = new List<AxisProgressResponse>()
-            };
-
-            // Calculate progress for each axis that has badges
-            foreach (var (axisId, badges) in badgesByAxis.OrderBy(x => x.Key))
-            {
-                var axis = axisDictionary.TryGetValue(axisId, out var a) ? a : null;
-                var axisName = axis?.Name ?? axisId;
-
-                // Get score for this axis from player's total axis scores
-                // Note: We'd need to query PlayerScenarioScores to get the aggregate score
-                // For now, using 0 as default (in production, calculate from session history)
-                var currentScore = 0f;
-
-                var axisTiers = new List<BadgeTierProgressResponse>();
-                foreach (var badge in badges)
-                {
-                    var isEarned = earnedBadges.TryGetValue(badge.Id, out var earnedBadge);
-
-                    axisTiers.Add(new BadgeTierProgressResponse
-                    {
-                        BadgeId = badge.Id,
-                        Tier = badge.Tier,
-                        TierOrder = badge.TierOrder,
-                        Title = badge.Title,
-                        Description = badge.Description,
-                        RequiredScore = badge.RequiredScore,
-                        ImageId = badge.ImageId,
-                        IsEarned = isEarned,
-                        EarnedAt = isEarned ? earnedBadge.EarnedAt : null,
-                        ProgressToThreshold = currentScore,
-                        RemainingScore = Math.Max(0, badge.RequiredScore - currentScore)
-                    });
-                }
-
-                response.AxisProgresses.Add(new AxisProgressResponse
-                {
-                    AxisId = axisId,
-                    AxisName = axisName,
-                    CurrentScore = currentScore,
-                    Tiers = axisTiers
-                });
-            }
-
-            return Ok(response);
+            return Ok(progress);
         }
         catch (Exception ex)
         {

@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Mystira.App.Application.CQRS;
 using Mystira.App.Application.Ports;
 using Mystira.App.Domain.Models;
 

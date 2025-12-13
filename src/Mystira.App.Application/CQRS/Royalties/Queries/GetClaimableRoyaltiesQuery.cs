@@ -1,4 +1,3 @@
-using Mystira.App.Application.CQRS;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.Royalties.Queries;

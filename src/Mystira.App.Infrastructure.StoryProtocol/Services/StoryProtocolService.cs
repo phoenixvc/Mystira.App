@@ -9,7 +9,6 @@ using Microsoft.Extensions.Options;
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using Nethereum.Web3;
-using Nethereum.Web3.Accounts;
 using Nethereum.Hex.HexTypes;
 using Nethereum.RPC.Eth.DTOs;
 using Mystira.App.Application.Ports;

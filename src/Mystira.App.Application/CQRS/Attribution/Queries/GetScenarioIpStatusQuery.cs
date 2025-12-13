@@ -1,4 +1,3 @@
-using Mystira.App.Application.CQRS;
 using Mystira.App.Application.Interfaces;
 using Mystira.App.Contracts.Responses.Attribution;
 

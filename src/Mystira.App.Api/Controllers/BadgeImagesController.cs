@@ -1,6 +1,7 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.CQRS.Badges.Queries;
 using Mystira.App.Contracts.Responses.Common;
 
 namespace Mystira.App.Api.Controllers;
@@ -9,12 +10,12 @@ namespace Mystira.App.Api.Controllers;
 [Route("api/badges/images")]
 public class BadgeImagesController : ControllerBase
 {
-    private readonly IBadgeImageRepository _badgeImageRepository;
+    private readonly IMediator _mediator;
     private readonly ILogger<BadgeImagesController> _logger;
 
-    public BadgeImagesController(IBadgeImageRepository badgeImageRepository, ILogger<BadgeImagesController> logger)
+    public BadgeImagesController(IMediator mediator, ILogger<BadgeImagesController> logger)
     {
-        _badgeImageRepository = badgeImageRepository;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -33,12 +34,9 @@ public class BadgeImagesController : ControllerBase
 
         try
         {
-            var decodedId = Uri.UnescapeDataString(imageId);
+            var result = await _mediator.Send(new GetBadgeImageQuery(imageId));
 
-            var image = await _badgeImageRepository.GetByImageIdAsync(decodedId)
-                        ?? await _badgeImageRepository.GetByIdAsync(decodedId);
-
-            if (image?.ImageData is not { Length: > 0 })
+            if (result is null)
             {
                 return NotFound(new ErrorResponse
                 {
@@ -48,7 +46,7 @@ public class BadgeImagesController : ControllerBase
             }
 
             Response.Headers.CacheControl = "public, max-age=604800";
-            return File(image.ImageData, image.ContentType);
+            return File(result.ImageData, result.ContentType);
         }
         catch (Exception ex) when (
             ex is not StackOverflowException &&
