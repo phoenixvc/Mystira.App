@@ -18,10 +18,10 @@
                                     <h5>Upload Character Map YAML</h5>
                                 </div>
                                 <div class="card-body">
-                                    <form id="characterMapForm" method="post" enctype="multipart/form-data" action="/admin/charactermaps/import">
+                                    <form id="characterMapForm" method="post" enctype="multipart/form-data" action="/api/admin/charactermapsadmin/import">
                                         <div class="form-group mb-3">
                                             <label for="yamlFile">Character Map YAML File</label>
-                                            <input type="file" class="form-control" id="yamlFile" name="yamlFile" accept=".yaml,.yml" required>
+                                            <input type="file" class="form-control" id="yamlFile" name="file" accept=".yaml,.yml" required>
                                             <small class="form-text text-muted">
                                                 Upload a YAML file containing character map configuration
                                             </small>
@@ -203,18 +203,21 @@ document.getElementById('characterMapForm').addEventListener('submit', function(
     submitBtn.textContent = 'Uploading...';
     submitBtn.disabled = true;
 
-    fetch('/admin/charactermaps/import', {
+    fetch('/api/admin/charactermapsadmin/import', {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Character map uploaded successfully!');
-            window.location.href = '/admin/charactermaps';
-        } else {
-            alert('Error uploading character map: ' + data.message);
+    .then(async response => {
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            const message = data.message || data.Message || 'Error uploading character map';
+            throw new Error(message);
         }
+
+        const count = Array.isArray(data) ? data.length : (data.count ?? 0);
+        alert(`Character map uploaded successfully! Imported ${count} map(s).`);
+        window.location.href = '/admin/charactermaps';
     })
     .catch(error => {
         alert('Error: ' + error.message);

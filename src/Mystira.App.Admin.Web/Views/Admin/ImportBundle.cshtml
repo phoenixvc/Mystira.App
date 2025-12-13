@@ -22,7 +22,7 @@
                                     <h5>Upload Bundle</h5>
                                 </div>
                                 <div class="card-body">
-                                    <form id="bundleUploadForm" method="post" enctype="multipart/form-data" action="/admin/bundles/upload">
+                                    <form id="bundleUploadForm" method="post" enctype="multipart/form-data" action="/api/admin/bundles/upload">
                                         <div class="form-group mb-3">
                                             <label for="bundleFile">Select Bundle File (ZIP)</label>
                                             <input type="file" class="form-control" id="bundleFile" name="bundleFile" accept=".zip" required>
@@ -159,31 +159,39 @@ function importBundle() {
 
     showProgress('Uploading bundle...');
 
-    fetch('/admin/bundles/upload', {
+    fetch('/api/admin/bundles/upload', {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
-    .then(data => {
+    .then(async response => {
+        const data = await response.json().catch(() => ({}));
         hideProgress();
 
-        if (data.success) {
-            showImportResult('success', `Bundle imported successfully!`);
+        if (!response.ok) {
+            const message = data.message || data.Message || 'Bundle import failed';
+            throw new Error(message);
+        }
 
-            if (data.summary) {
-                showImportSummary(data.summary);
-            }
+        if (data.success) {
+            showImportResult('success', data.message || 'Bundle imported successfully!');
+
+            const scenariosImported = data.scenariosImported ?? 0;
+            const mediaImported = data.mediaImported ?? 0;
+            showImportResult('success', `Imported ${scenariosImported} scenario(s) and ${mediaImported} media file(s).`);
 
             if (data.warnings && data.warnings.length > 0) {
                 showImportResult('warning', `Warnings: ${data.warnings.join(', ')}`);
             }
 
+            if (data.errors && data.errors.length > 0) {
+                showImportResult('error', `Errors: ${data.errors.join(', ')}`);
+            }
+
             form.reset();
         } else {
             showImportResult('error', data.message || 'Bundle import failed');
-
-            if (data.validationErrors) {
-                showValidationResults(data.validationErrors);
+            if (data.errors && data.errors.length > 0) {
+                showValidationResults(data.errors);
             }
         }
     })
@@ -196,23 +204,32 @@ function importBundle() {
 function validateOnly() {
     const form = document.getElementById('bundleUploadForm');
     const formData = new FormData(form);
-    formData.append('validateOnly', 'true');
 
     showProgress('Validating bundle...');
 
-    fetch('/admin/bundles/validate', {
+    fetch('/api/admin/bundles/validate', {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
-    .then(data => {
+    .then(async response => {
+        const data = await response.json().catch(() => ({}));
         hideProgress();
 
-        if (data.valid) {
+        if (!response.ok) {
+            const message = data.message || data.Message || 'Bundle validation failed';
+            throw new Error(message);
+        }
+
+        if (data.isValid) {
             showImportResult('success', 'Bundle structure is valid!');
-            showValidationResults(data.details);
+            if (data.warnings && data.warnings.length > 0) {
+                showImportResult('warning', `Warnings: ${data.warnings.join(', ')}`);
+            }
         } else {
             showImportResult('error', 'Bundle validation failed');
+        }
+
+        if (data.errors && data.errors.length > 0) {
             showValidationResults(data.errors);
         }
     })

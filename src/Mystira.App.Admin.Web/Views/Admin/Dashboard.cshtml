@@ -353,7 +353,7 @@ async function initializeSampleData() {
     }
 
     try {
-        const response = await fetch('/admin/initialize-sample-data', {
+        const response = await fetch('/api/admin/tools/initialize-sample-data', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -379,7 +379,7 @@ async function fixMetadataFormat() {
     }
 
     try {
-        const response = await fetch('/admin/fix-metadata-format', {
+        const response = await fetch('/api/admin/tools/fix-metadata-format', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
