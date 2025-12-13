@@ -16,6 +16,7 @@ public interface IAuthService
     Task<(bool Success, string Message, string? Token, string? RefreshToken)> RefreshTokenAsync(string token, string refreshToken);
     Task<string?> GetCurrentTokenAsync();
     void SetRememberMe(bool rememberMe);
+    Task<bool> GetRememberMeAsync();
 
     /// <summary>
     /// Gets the token expiry time in UTC

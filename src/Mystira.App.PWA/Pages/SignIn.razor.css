@@ -19,8 +19,7 @@
 }
 
 /* Dark mode via media query or data attribute */
-@media (prefers-color-scheme: dark),
-html[data-theme="dark"] {
+@media (prefers-color-scheme: dark) {
     :root {
         --auth-card-bg: linear-gradient(135deg, #1e1b4b 0%, #14122b 100%);
         --auth-card-border: rgba(99, 102, 241, 0.2);
@@ -34,6 +33,20 @@ html[data-theme="dark"] {
                              0 0 20px rgba(99, 102, 241, 0.3),
                              inset 0 0 10px rgba(99, 102, 241, 0.05);
     }
+}
+
+html[data-theme="dark"] {
+    --auth-card-bg: linear-gradient(135deg, #1e1b4b 0%, #14122b 100%);
+    --auth-card-border: rgba(99, 102, 241, 0.2);
+    --auth-input-bg: #14122b;
+    --auth-input-border: #2d2a5e;
+    --auth-input-focus-border: #818cf8;
+    --auth-input-focus-bg: #1a1740;
+    --auth-text-primary: #f1f5f9;
+    --auth-text-muted: #a5b4fc;
+    --auth-focus-shadow: 0 0 0 4px rgba(129, 140, 248, 0.25),
+                         0 0 20px rgba(99, 102, 241, 0.3),
+                         inset 0 0 10px rgba(99, 102, 241, 0.05);
 }
 
 /* ========================================
@@ -107,6 +120,23 @@ html[data-theme="dark"] {
     border-radius: 12px;
     padding: 16px 20px;
     transition: all 0.3s ease;
+}
+
+/* ========================================
+   Checkbox: make the tick black (on white box)
+   ======================================== */
+/* Target the remember-me checkbox within the auth card */
+.auth-card .form-check-input[type="checkbox"]:checked {
+    background-color: #ffffff !important;
+    border-color: #000000 !important;
+    /* For Bootstrap 5.3+, override the CSS var used for the checkmark */
+    --bs-form-check-bg-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23000' stroke-width='3' d='M3 9l3 3 7-7'/%3e%3c/svg%3e");
+    background-image: var(--bs-form-check-bg-image) !important;
+}
+
+/* Maintain focus styles consistency */
+.auth-card .form-check-input[type="checkbox"]:focus {
+    box-shadow: var(--auth-focus-shadow);
 }
 
 .verification-code-input::placeholder {

@@ -14,6 +14,7 @@ public class AuthService : IAuthService
     private const string RefreshTokenStorageKey = "mystira_refresh_token";
     private const string AccountStorageKey = "mystira_account";
     private const string TokenExpiryStorageKey = "mystira_token_expiry";
+    private const string RememberMeStorageKey = "mystira_remember_me";
 
     private bool _isAuthenticated;
     private string? _currentToken;
@@ -103,6 +104,33 @@ public class AuthService : IAuthService
     public void SetRememberMe(bool rememberMe)
     {
         _rememberMe = rememberMe;
+        try
+        {
+            // Persist the user's preference so the checkbox retains its state across reloads
+            _jsRuntime.InvokeVoidAsync("localStorage.setItem", RememberMeStorageKey, rememberMe ? "true" : "false");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to persist rememberMe preference");
+        }
+    }
+
+    public async Task<bool> GetRememberMeAsync()
+    {
+        try
+        {
+            var value = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", RememberMeStorageKey);
+            if (bool.TryParse(value, out var result))
+            {
+                _rememberMe = result;
+                return result;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load rememberMe preference");
+        }
+        return false;
     }
 
     public Task<bool> LoginAsync(string email, string password)
