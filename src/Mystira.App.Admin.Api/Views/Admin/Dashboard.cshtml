@@ -311,7 +311,7 @@
                 </div>
 
                 <!-- Scenarios with Missing References -->
-                <div id="missingReferencesSection" style="display: none;">
+                <div id="missingReferencesSection" class="d-none">
                     <h6 class="text-warning">Scenarios with Missing References:</h6>
                     <div class="table-responsive">
                         <table class="table table-sm table-striped">
@@ -482,8 +482,8 @@ async function fixMetadataFormat() {
 }
 
 function loadScenarioReferences() {
-    $('#scenarioRefLoading').show();
-    $('#missingReferencesSection').hide();
+    $('#scenarioRefLoading').removeClass('d-none');
+    $('#missingReferencesSection').addClass('d-none');
 
     $.get('/api/admin/scenariosadmin/validate-all-references', function(data) {
         const totalScenarios = data.length;
@@ -500,10 +500,10 @@ function loadScenarioReferences() {
         // Show missing references table if there are any
         if (scenariosWithMissing.length > 0) {
             displayMissingReferences(scenariosWithMissing);
-            $('#missingReferencesSection').show();
+            $('#missingReferencesSection').removeClass('d-none');
         }
 
-        $('#scenarioRefLoading').hide();
+        $('#scenarioRefLoading').addClass('d-none');
     }).fail(function(xhr) {
         console.error('Failed to load scenario references:', xhr.responseText);
         $('#scenarioRefLoading').html('<div class="alert alert-danger">Failed to load scenario reference data</div>');
