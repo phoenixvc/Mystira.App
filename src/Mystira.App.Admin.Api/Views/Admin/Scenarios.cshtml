@@ -97,6 +97,17 @@ $(document).ready(function() {
     document.getElementById('difficultyFilter')?.addEventListener('change', filterScenarios);
     document.getElementById('ageGroupFilter')?.addEventListener('change', filterScenarios);
 
+    // Delegate click handlers for dynamically-rendered action buttons (CSP-safe)
+    $(document).on('click', '.btn-view-scenario', function() {
+        const id = $(this).data('id');
+        if (id) viewScenario(id);
+    });
+
+    $(document).on('click', '.btn-delete-scenario', function() {
+        const id = $(this).data('id');
+        if (id) deleteScenario(id);
+    });
+
     loadScenarios();
     loadScenarioReferences();
 });
@@ -177,10 +188,10 @@ function displayListView(scenarios) {
                  <td><small>${new Date(scenario.createdAt).toLocaleDateString()}</small></td>
                  <td>
                      <div class="btn-group btn-group-sm">
-                         <button class="btn btn-outline-primary" onclick="viewScenario('${scenario.id}')">
+                         <button class="btn btn-outline-primary btn-view-scenario" data-id="${scenario.id}">
                              <i class="fas fa-eye"></i>
                          </button>
-                         <button class="btn btn-outline-danger" onclick="deleteScenario('${scenario.id}')">
+                         <button class="btn btn-outline-danger btn-delete-scenario" data-id="${scenario.id}">
                              <i class="fas fa-trash"></i>
                          </button>
                      </div>
@@ -211,10 +222,10 @@ function displayGridView(scenarios) {
                     </div>
                     <div class="card-footer">
                         <div class="btn-group w-100">
-                            <button class="btn btn-outline-primary btn-sm" onclick="viewScenario('${scenario.id}')">
+                            <button class="btn btn-outline-primary btn-sm btn-view-scenario" data-id="${scenario.id}">
                                 <i class="fas fa-eye"></i> View
                             </button>
-                            <button class="btn btn-outline-danger btn-sm" onclick="deleteScenario('${scenario.id}')">
+                            <button class="btn btn-outline-danger btn-sm btn-delete-scenario" data-id="${scenario.id}">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -310,7 +321,11 @@ function viewScenario(scenarioId) {
                 ${referencesHtml}
             </div>
         `);
-        $('#deleteScenarioBtn').attr('onclick', `deleteScenario('${scenarioId}')`);
+        // Set the id on the delete button and bind click in a CSP-safe way
+        $('#deleteScenarioBtn').data('scenarioId', scenarioId).off('click').on('click', function() {
+            const id = $(this).data('scenarioId');
+            if (id) deleteScenario(id);
+        });
         $('#scenarioModal').modal('show');
     });
 }
