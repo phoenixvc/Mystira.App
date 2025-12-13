@@ -45,7 +45,7 @@ jobs:
         id: check
         run: |
           echo "has-azure-secrets=${{ secrets.AZURE_CREDENTIALS != '' }}" >> $GITHUB_OUTPUT
-          echo "has-jwt-secrets=${{ secrets.JWT_RSA_PRIVATE_KEY != '' && secrets.JWT_RSA_PUBLIC_KEY != '' }}" >> $GITHUB_OUTPUT
+          echo "has-jwt-secrets=${{ secrets.JWT_RSA_PRIVATE_KEY_STAGING != '' && secrets.JWT_RSA_PUBLIC_KEY_STAGING != '' }}" >> $GITHUB_OUTPUT
 
   validate:
     if: |
@@ -79,7 +79,7 @@ jobs:
           --resource-group "${{ env.RESOURCE_GROUP }}" \
           --template-file './infrastructure/main.bicep' \
           --parameters '@./infrastructure/params.staging.json' \
-          --parameters jwtRsaPrivateKey=dummy jwtRsaPublicKey=dummy \
+          --parameters jwtRsaPrivateKey="${{ secrets.JWT_RSA_PRIVATE_KEY_STAGING }}" jwtRsaPublicKey="${{ secrets.JWT_RSA_PUBLIC_KEY_STAGING }}" \
           --output json
 
   preview:
@@ -116,7 +116,7 @@ jobs:
           --resource-group "${{ env.RESOURCE_GROUP }}" \
           --template-file './infrastructure/main.bicep' \
           --parameters '@./infrastructure/params.staging.json' \
-          --parameters jwtRsaPrivateKey="${{ secrets.JWT_RSA_PRIVATE_KEY }}" jwtRsaPublicKey="${{ secrets.JWT_RSA_PUBLIC_KEY }}" \
+          --parameters jwtRsaPrivateKey="${{ secrets.JWT_RSA_PRIVATE_KEY_STAGING }}" jwtRsaPublicKey="${{ secrets.JWT_RSA_PUBLIC_KEY_STAGING }}" \
           --output json > what-if-output.json
         cat what-if-output.json
 
@@ -220,7 +220,7 @@ jobs:
           --resource-group "${{ env.RESOURCE_GROUP }}" \
           --template-file './infrastructure/main.bicep' \
           --parameters '@./infrastructure/params.staging.json' \
-          --parameters jwtRsaPrivateKey="${{ secrets.JWT_RSA_PRIVATE_KEY }}" jwtRsaPublicKey="${{ secrets.JWT_RSA_PUBLIC_KEY }}" \
+          --parameters jwtRsaPrivateKey="${{ secrets.JWT_RSA_PRIVATE_KEY_STAGING }}" jwtRsaPublicKey="${{ secrets.JWT_RSA_PUBLIC_KEY_STAGING }}" \
           --mode Incremental \
           --name "mys-staging-mystira-$(date +%Y%m%d-%H%M%S)" \
           --output json
@@ -234,8 +234,76 @@ jobs:
           --query "properties.outputs.appServiceUrl.value" -o tsv)
         echo "appServiceUrl=$APP_SERVICE_URL" >> $GITHUB_OUTPUT
 
+    - name: Verify and Fix SSL Certificates
+      run: |
+        echo "Verifying SSL certificate bindings for staging..."
+
+        # Define the apps and their custom domains for staging
+        declare -A APPS=(
+          ["mys-staging-mystira-api-san"]="api.staging.mystira.app"
+          ["mys-staging-mystira-adminapi-san"]="admin.staging.mystira.app"
+        )
+
+        for APP_NAME in "${!APPS[@]}"; do
+          CUSTOM_DOMAIN="${APPS[$APP_NAME]}"
+          echo "Checking $APP_NAME for domain $CUSTOM_DOMAIN..."
+
+          # Check if hostname binding exists with SSL
+          SSL_STATE=$(az webapp config hostname list \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --webapp-name "$APP_NAME" \
+            --query "[?name=='$CUSTOM_DOMAIN'].sslState" -o tsv 2>/dev/null || echo "")
+
+          if [ "$SSL_STATE" != "SniEnabled" ]; then
+            echo "SSL not enabled for $CUSTOM_DOMAIN on $APP_NAME. Attempting to fix..."
+
+            # Check if managed certificate exists
+            CERT_THUMBPRINT=$(az webapp config ssl list \
+              --resource-group "${{ env.RESOURCE_GROUP }}" \
+              --query "[?subjectName=='$CUSTOM_DOMAIN'].thumbprint" -o tsv 2>/dev/null || echo "")
+
+            if [ -z "$CERT_THUMBPRINT" ]; then
+              echo "Creating managed certificate for $CUSTOM_DOMAIN..."
+
+              # Create managed certificate
+              az webapp config ssl create \
+                --resource-group "${{ env.RESOURCE_GROUP }}" \
+                --name "$APP_NAME" \
+                --hostname "$CUSTOM_DOMAIN" \
+                --output none 2>/dev/null || echo "::warning::Could not create certificate for $CUSTOM_DOMAIN"
+
+              # Get the new certificate thumbprint
+              CERT_THUMBPRINT=$(az webapp config ssl list \
+                --resource-group "${{ env.RESOURCE_GROUP }}" \
+                --query "[?subjectName=='$CUSTOM_DOMAIN'].thumbprint" -o tsv 2>/dev/null || echo "")
+            fi
+
+            if [ -n "$CERT_THUMBPRINT" ]; then
+              echo "Binding certificate to $CUSTOM_DOMAIN..."
+              az webapp config ssl bind \
+                --resource-group "${{ env.RESOURCE_GROUP }}" \
+                --name "$APP_NAME" \
+                --certificate-thumbprint "$CERT_THUMBPRINT" \
+                --ssl-type SNI \
+                --output none 2>/dev/null || echo "::warning::Could not bind certificate for $CUSTOM_DOMAIN"
+              echo "SSL binding complete for $CUSTOM_DOMAIN"
+            else
+              echo "::warning::Failed to provision certificate for $CUSTOM_DOMAIN"
+            fi
+          else
+            echo "SSL already enabled for $CUSTOM_DOMAIN"
+          fi
+        done
+
+        echo "Certificate verification complete!"
+
     - name: Deployment Summary
       run: |
         echo "Infrastructure deployed successfully!"
         echo "Resource Group: ${{ env.RESOURCE_GROUP }}"
         echo "App Service URL: ${{ steps.outputs.outputs.appServiceUrl }}"
+        echo ""
+        echo "Custom Domains (staging):"
+        echo "  - https://api.staging.mystira.app"
+        echo "  - https://admin.staging.mystira.app"
+        echo "  - https://staging.mystira.app"

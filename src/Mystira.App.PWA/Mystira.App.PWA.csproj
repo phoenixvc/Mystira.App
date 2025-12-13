@@ -15,8 +15,7 @@
     <BlazorWebAssemblyEnableLinking Condition="'$(Configuration)' == 'Release'">true</BlazorWebAssemblyEnableLinking>
     <BlazorWebAssemblyEnableLinking Condition="'$(Configuration)' != 'Release'">false</BlazorWebAssemblyEnableLinking>
     <!-- Enable AOT compilation for production builds for better runtime performance -->
-    <RunAOTCompilation Condition="'$(Configuration)' == 'Release'">true</RunAOTCompilation>
-    <RunAOTCompilation Condition="'$(Configuration)' != 'Release'">false</RunAOTCompilation>
+    <RunAOTCompilation>false</RunAOTCompilation>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">

@@ -385,7 +385,9 @@
         badgeAxis.innerHTML = '';
         axisCompass.innerHTML = '';
         state.axes.forEach(axis => {
-            const value = axis.name || axis.id;
+            // Always use the axis ID for values sent to the backend
+            // Labels may display the friendly name when available
+            const value = axis.id || axis.name;
             const label = axis.name || axis.id;
             const option = document.createElement('option');
             option.value = value;
@@ -664,15 +666,37 @@
     async function onBadgeSubmit(evt) {
         evt.preventDefault();
         if (!state.selectedAgeGroup) return;
+        const title = document.getElementById('badgeTitle').value.trim();
+        const description = document.getElementById('badgeDescription').value.trim();
+        const tier = document.getElementById('badgeTier').value;
+        const axisId = document.getElementById('badgeAxis').value;
+        const imgId = document.getElementById('badgeImageId').value.trim();
+
+        // Coerce numeric values and enforce model constraints to avoid automatic 400 from [ApiController]
+        let tierOrder = Number(document.getElementById('badgeTierOrder').value);
+        if (!Number.isFinite(tierOrder) || tierOrder < 1) tierOrder = 1;
+        if (tierOrder > 100) tierOrder = 100;
+
+        let requiredScore = Number(document.getElementById('badgeScore').value);
+        if (!Number.isFinite(requiredScore) || requiredScore < 0.01) requiredScore = 1.0;
+        if (requiredScore > 1000) requiredScore = 1000;
+
+        // Lightweight client-side validation aligned with data annotations in CreateBadgeRequest
+        if (!axisId) { showBadgeError('Please select a compass axis.'); return; }
+        if (!title || title.length < 3) { showBadgeError('Title must be at least 3 characters.'); return; }
+        if (!description || description.length < 10) { showBadgeError('Description must be at least 10 characters.'); return; }
+        if (!tier) { showBadgeError('Please select a tier.'); return; }
+        if (!imgId || imgId.length < 2) { showBadgeError('Image Id is required.'); return; }
+
         const payload = {
             ageGroupId: state.selectedAgeGroup,
-            compassAxisId: document.getElementById('badgeAxis').value,
-            title: document.getElementById('badgeTitle').value.trim(),
-            description: document.getElementById('badgeDescription').value.trim(),
-            tier: document.getElementById('badgeTier').value,
-            tierOrder: Number(document.getElementById('badgeTierOrder').value),
-            requiredScore: Number(document.getElementById('badgeScore').value),
-            imageId: document.getElementById('badgeImageId').value.trim()
+            compassAxisId: axisId,
+            title,
+            description,
+            tier,
+            tierOrder,
+            requiredScore,
+            imageId: imgId
         };
 
         const method = state.editingBadgeId ? 'PUT' : 'POST';
@@ -681,6 +705,7 @@
         const response = await fetch(url, {
             method,
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify(payload)
         });
 
@@ -697,11 +722,19 @@
     async function onAxisSubmit(evt) {
         evt.preventDefault();
         if (!state.selectedAgeGroup) return;
+        const axisId = document.getElementById('axisCompass').value;
+        const axesDirection = document.getElementById('axisDirection').value;
+        const description = document.getElementById('axisDescription').value.trim();
+
+        if (!axisId) { showAxisError('Please select a compass axis.'); return; }
+        if (!['positive','negative'].includes(axesDirection)) { showAxisError('Direction must be positive or negative.'); return; }
+        if (!description || description.length < 10) { showAxisError('Description must be at least 10 characters.'); return; }
+
         const payload = {
             ageGroupId: state.selectedAgeGroup,
-            compassAxisId: document.getElementById('axisCompass').value,
-            axesDirection: document.getElementById('axisDirection').value,
-            description: document.getElementById('axisDescription').value.trim()
+            compassAxisId: axisId,
+            axesDirection,
+            description
         };
 
         const method = state.editingAxisId ? 'PUT' : 'POST';
@@ -709,6 +742,7 @@
         const response = await fetch(url, {
             method,
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify(payload)
         });
 

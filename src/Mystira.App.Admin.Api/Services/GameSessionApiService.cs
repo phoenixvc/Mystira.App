@@ -187,6 +187,14 @@ public class GameSessionApiService : IGameSessionApiService
             throw new ArgumentException("Choice not found in scene");
         }
 
+        var playerId = !string.IsNullOrWhiteSpace(request.PlayerId)
+            ? request.PlayerId
+            : session.ProfileId;
+
+        var compassAxis = request.CompassAxis ?? branch.CompassChange?.Axis;
+        var compassDelta = request.CompassDelta ?? branch.CompassChange?.Delta;
+        var compassDirection = request.CompassDirection;
+
         // Record the choice
         var sessionChoice = new SessionChoice
         {
@@ -194,9 +202,15 @@ public class GameSessionApiService : IGameSessionApiService
             SceneTitle = currentScene.Title,
             ChoiceText = request.ChoiceText,
             NextScene = request.NextSceneId,
+            PlayerId = playerId ?? string.Empty,
+            CompassAxis = compassAxis,
+            CompassDirection = compassDirection,
+            CompassDelta = compassDelta,
             ChosenAt = DateTime.UtcNow,
             EchoGenerated = branch.EchoLog,
-            CompassChange = branch.CompassChange
+            CompassChange = !string.IsNullOrWhiteSpace(compassAxis) && compassDelta.HasValue
+                ? new CompassChange { Axis = compassAxis, Delta = compassDelta.Value }
+                : branch.CompassChange
         };
 
         session.ChoiceHistory.Add(sessionChoice);
@@ -214,20 +228,7 @@ public class GameSessionApiService : IGameSessionApiService
             session.EchoHistory.Add(echo);
         }
 
-        // Process compass change if present
-        if (branch.CompassChange != null && session.CompassValues.TryGetValue(branch.CompassChange.Axis, out var tracking))
-        {
-            tracking.CurrentValue += branch.CompassChange.Delta;
-            tracking.CurrentValue = Math.Max(-2.0f, Math.Min(2.0f, tracking.CurrentValue)); // Clamp to [-2, 2]
-
-            var compassChange = new CompassChange
-            {
-                Axis = branch.CompassChange.Axis,
-                Delta = branch.CompassChange.Delta
-            };
-            tracking.History.Add(compassChange);
-            tracking.LastUpdated = DateTime.UtcNow;
-        }
+        session.RecalculateCompassProgressFromHistory();
 
         // Update session state
         session.CurrentSceneId = request.NextSceneId;

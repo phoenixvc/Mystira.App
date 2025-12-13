@@ -15,5 +15,10 @@ public class MakeChoiceRequest
 
     [Required]
     public string NextSceneId { get; set; } = string.Empty;
-}
 
+    public string? PlayerId { get; set; }
+
+    public string? CompassAxis { get; set; }
+    public string? CompassDirection { get; set; }
+    public double? CompassDelta { get; set; }
+}

@@ -23,6 +23,7 @@ public class GameSessionTests
         gameSession.ChoiceHistory.Should().NotBeNull().And.BeEmpty();
         gameSession.EchoHistory.Should().NotBeNull().And.BeEmpty();
         gameSession.CompassValues.Should().NotBeNull().And.BeEmpty();
+        gameSession.PlayerCompassProgressTotals.Should().NotBeNull().And.BeEmpty();
         gameSession.Achievements.Should().NotBeNull().And.BeEmpty();
         gameSession.IsPaused.Should().BeFalse();
         gameSession.SceneCount.Should().Be(0);

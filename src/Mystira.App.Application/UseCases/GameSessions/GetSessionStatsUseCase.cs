@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Contracts.Models.GameSessions;
 using Mystira.App.Contracts.Responses.GameSessions;
 
 namespace Mystira.App.Application.UseCases.GameSessions;
@@ -34,10 +35,21 @@ public class GetSessionStatsUseCase
             return null;
         }
 
+        session.RecalculateCompassProgressFromHistory();
+
         var compassValues = session.CompassValues.ToDictionary(
             kvp => kvp.Key,
             kvp => kvp.Value.CurrentValue
         );
+
+        var progress = session.PlayerCompassProgressTotals
+            .Select(p => new PlayerCompassProgressDto
+            {
+                PlayerId = p.PlayerId,
+                Axis = p.Axis,
+                Total = p.Total
+            })
+            .ToList();
 
         var recentEchoes = session.EchoHistory
             .OrderByDescending(e => e.Timestamp)
@@ -47,6 +59,7 @@ public class GetSessionStatsUseCase
         var stats = new SessionStatsResponse
         {
             CompassValues = compassValues,
+            PlayerCompassProgressTotals = progress,
             RecentEchoes = recentEchoes,
             Achievements = session.Achievements,
             TotalChoices = session.ChoiceHistory.Count,
@@ -57,4 +70,3 @@ public class GetSessionStatsUseCase
         return stats;
     }
 }
-

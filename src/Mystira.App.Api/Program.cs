@@ -485,9 +485,14 @@ builder.Services.AddMediatR(cfg =>
 builder.Services.AddSingleton<IQueryCacheInvalidationService, QueryCacheInvalidationService>();
 
 // Configure Health Checks
-builder.Services.AddHealthChecks()
-    .AddCheck<BlobStorageHealthCheck>("blob_storage")
-    .AddCheck<CosmosDbHealthCheck>("cosmos_db", tags: new[] { "ready", "db" });
+var healthChecksBuilder = builder.Services.AddHealthChecks()
+    .AddCheck<BlobStorageHealthCheck>("blob_storage");
+
+// Only add Cosmos DB health check when using Cosmos DB (not in-memory)
+if (useCosmosDb)
+{
+    healthChecksBuilder.AddCheck<CosmosDbHealthCheck>("cosmos_db", tags: new[] { "ready", "db" });
+}
 
 // Add Discord Bot Integration (Optional - controlled by configuration)
 var discordEnabled = builder.Configuration.GetValue<bool>("Discord:Enabled", false);
