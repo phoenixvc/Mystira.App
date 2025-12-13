@@ -73,7 +73,7 @@
                             </div>
 
                             <!-- Single File Upload -->
-                            <div class="card mb-4" id="singleUploadCard" style="display: none;">
+                            <div class="card mb-4 d-none" id="singleUploadCard">
                                 <div class="card-header">
                                     <h5>
                                         <i class="fas fa-file-upload me-2"></i>
@@ -135,7 +135,7 @@
                                             </small>
                                         </div>
 
-                                        <div id="metadataMatchInfo" class="alert alert-secondary" style="display: none;">
+                                        <div id="metadataMatchInfo" class="alert alert-secondary d-none">
                                             <strong>Metadata Match:</strong> <span id="matchedMetadata"></span>
                                         </div>
 
@@ -150,7 +150,7 @@
                             </div>
 
                             <!-- Bulk Upload -->
-                            <div class="card" id="bulkUploadCard" style="display: none;">
+                            <div class="card d-none" id="bulkUploadCard">
                                 <div class="card-header">
                                     <h5>
                                         <i class="fas fa-files me-2"></i>
@@ -195,7 +195,7 @@
                                             </label>
                                         </div>
 
-                                        <div id="fileValidationStatus" class="mb-3" style="display: none;">
+                                        <div id="fileValidationStatus" class="mb-3 d-none">
                                             <div class="alert alert-secondary">
                                                 <strong>File Validation:</strong> <span id="validationSummary"></span>
                                                 <div id="validationDetails" class="mt-2"></div>
@@ -213,7 +213,7 @@
                             </div>
 
                             <!-- Zip Upload -->
-                            <div class="card" id="zipUploadCard" style="display: none;">
+                            <div class="card d-none" id="zipUploadCard">
                                 <div class="card-header bg-info text-white">
                                     <h5 class="mb-0">
                                         <i class="fas fa-file-archive me-2"></i>
@@ -317,9 +317,9 @@
                                     <h5>Upload Progress</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div id="uploadProgress" style="display: none;">
+                                    <div id="uploadProgress" class="d-none">
                                         <div class="progress mb-2">
-                                            <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                            <div id="progressBar" class="progress-bar w-0" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
                                         </div>
                                         <div id="progressText">Preparing upload...</div>
                                     </div>

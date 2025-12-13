@@ -1,6 +1,3 @@
-@{
-    ViewData["Title"] = "Compass Axes Management";
-}
 
 <div class="container-fluid">
     <div class="row">
@@ -72,10 +69,15 @@
             tbody.innerHTML = '';
             data.forEach(axis => {
                 const tr = document.createElement('tr');
+
                 const tdName = document.createElement('td');
                 tdName.textContent = axis.name;
+                tr.appendChild(tdName);
+
                 const tdDesc = document.createElement('td');
                 tdDesc.textContent = axis.description || '';
+                tr.appendChild(tdDesc);
+
                 const tdActions = document.createElement('td');
 
                 const editBtn = document.createElement('button');
@@ -96,10 +98,8 @@
 
                 tdActions.appendChild(editBtn);
                 tdActions.appendChild(delBtn);
-
-                tr.appendChild(tdName);
-                tr.appendChild(tdDesc);
                 tr.appendChild(tdActions);
+
                 tbody.appendChild(tr);
             });
         } catch (e) {
@@ -187,39 +187,36 @@
         setTimeout(() => alert.classList.add('d-none'), 5000);
     }
 
-    // Wire up events without inline handlers
+    // Wire up events without inline handlers and initial load
     document.addEventListener('DOMContentLoaded', () => {
-        // Form submit
         const form = document.getElementById('axisForm');
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             saveAxis();
         });
 
-        // Reset button
         const resetBtn = document.getElementById('resetAxisBtn');
         resetBtn.addEventListener('click', () => resetForm());
 
-        // Delegate clicks on actions in table
+        // Delegate actions in the table
         const tbody = document.getElementById('axesTableBody');
         tbody.addEventListener('click', (e) => {
-            const target = e.target.closest('button');
-            if (!target) return;
-            const action = target.getAttribute('data-action');
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const action = btn.getAttribute('data-action');
             if (action === 'edit') {
                 const axis = {
-                    id: target.getAttribute('data-id'),
-                    name: target.getAttribute('data-name') || '',
-                    description: target.getAttribute('data-description') || ''
+                    id: btn.getAttribute('data-id'),
+                    name: btn.getAttribute('data-name') || '',
+                    description: btn.getAttribute('data-description') || ''
                 };
                 editAxis(axis);
             } else if (action === 'delete') {
-                const id = target.getAttribute('data-id');
+                const id = btn.getAttribute('data-id');
                 if (id) deleteAxis(id);
             }
         });
 
-        // Initial load
         loadAxes();
     });
 </script>
