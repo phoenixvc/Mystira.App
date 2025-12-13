@@ -12,6 +12,7 @@ public static class ScenarioSchemaDefinitions
   "required": [
     "title",
     "description",
+    "image",
     "tags",
     "difficulty",
     "session_length",
@@ -25,6 +26,7 @@ public static class ScenarioSchemaDefinitions
   "properties": {
     "title": { "type": "string", "minLength": 1, "maxLength": 200, "description": "The title of the story" },
     "description": { "type": "string", "minLength": 1, "maxLength": 1000, "description": "Brief description of the story" },
+    "image": { "type": "string", "description": "Cover image id for the story" },
     "tags": {
       "type": "array",
       "items": { "type": "string" },
