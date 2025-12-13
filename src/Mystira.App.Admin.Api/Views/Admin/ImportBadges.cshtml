@@ -127,9 +127,9 @@
                                     <h5>Upload Progress</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div id="uploadProgress" style="display: none;">
+                                    <div id="uploadProgress" class="d-none">
                                         <div class="progress mb-3">
-                                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated w-0" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
                                         </div>
                                         <div id="progressText">Preparing upload...</div>
                                     </div>
@@ -225,13 +225,16 @@ document.getElementById('badgeUploadForm').addEventListener('submit', function(e
 });
 
 function showProgress(message) {
-    document.getElementById('uploadProgress').style.display = 'block';
-    document.getElementById('progressBar').style.width = '25%';
+    const container = document.getElementById('uploadProgress');
+    const bar = document.getElementById('progressBar');
+    container.classList.remove('d-none');
+    bar.classList.remove('w-0','w-25','w-50','w-75','w-100');
+    bar.classList.add('w-25');
     document.getElementById('progressText').textContent = message;
 }
 
 function hideProgress() {
-    document.getElementById('uploadProgress').style.display = 'none';
+    document.getElementById('uploadProgress').classList.add('d-none');
 }
 
 function showUploadResult(type, message) {

@@ -31,7 +31,7 @@
 </div>
 
 <!-- Current Avatars for Selected Age Group -->
-<div id="avatarContainer" style="display: none;">
+<div id="avatarContainer" class="d-none">
     <div class="card mb-4">
         <div class="card-header bg-light">
             <h5 class="mb-0">Current Avatars for <span id="selectedAgeGroup" class="badge bg-primary"></span></h5>
@@ -65,7 +65,7 @@
             </div>
         </div>
 
-        <div id="availableMediaContainer" style="display: none;">
+        <div id="availableMediaContainer" class="d-none">
             <h6 class="mb-3">Available Media</h6>
             <div class="row" id="availableMediaGrid">
                 <div class="col-12 text-center py-4">
@@ -140,13 +140,13 @@ async function onAgeGroupChange() {
     currentAgeGroup = select.value;
 
     if (!currentAgeGroup) {
-        document.getElementById('avatarContainer').style.display = 'none';
-        document.getElementById('availableMediaContainer').style.display = 'none';
+        document.getElementById('avatarContainer').classList.add('d-none');
+        document.getElementById('availableMediaContainer').classList.add('d-none');
         return;
     }
 
     document.getElementById('selectedAgeGroup').textContent = select.options[select.selectedIndex].text;
-    document.getElementById('avatarContainer').style.display = 'block';
+    document.getElementById('avatarContainer').classList.remove('d-none');
 
     displayCurrentAvatars();
 }
@@ -166,7 +166,7 @@ async function displayCurrentAvatars() {
             <div class="col-md-3 mb-3">
                 <div class="card h-100">
                     <div class="card-body text-center">
-                        <img src="/api/admin/mediaadmin/${mediaId}" alt="Avatar" class="img-fluid mb-2" style="max-width: 100%; max-height: 200px; object-fit: contain;">
+                        <img src="/api/admin/mediaadmin/${mediaId}" alt="Avatar" class="img-fluid mb-2 max-w-100 max-h-200 of-contain">
                         <p class="small text-muted">${mediaId}</p>
                         <button class="btn btn-sm btn-danger" data-action="remove-avatar" data-media-id="${mediaId}">
                             <i class="fas fa-trash me-1"></i>Remove
@@ -211,7 +211,7 @@ function displayAvailableMedia(mediaList) {
             <div class="col-md-3 mb-3">
                 <div class="card h-100">
                     <div class="card-body text-center">
-                        <img src="${media.url}" alt="${media.mediaId}" class="img-fluid mb-2" style="max-width: 100%; max-height: 150px; object-fit: contain;">
+                        <img src="${media.url}" alt="${media.mediaId}" class="img-fluid mb-2 max-w-100 max-h-150 of-contain">
                         <p class="small text-muted">${media.mediaId}</p>
                         <button class="btn btn-sm ${btnClass} w-100" data-action="add-avatar" data-media-id="${media.mediaId}" ${btnDisabled}>
                             ${btnText}
@@ -263,7 +263,7 @@ async function searchAvailableMedia() {
             availableMediaCache[media.mediaId] = media;
         });
 
-        document.getElementById('availableMediaContainer').style.display = 'block';
+        document.getElementById('availableMediaContainer').classList.remove('d-none');
         displayAvailableMedia(allMedia);
     } catch (error) {
         console.error('Error loading available media:', error);

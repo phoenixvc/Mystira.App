@@ -1,5 +1,7 @@
 @{
     ViewData["Title"] = "Badge Management";
+    // CSP nonce for inline scripts (required in production where strict CSP is enabled)
+    var cspNonce = Context.Items["CspNonce"] as string;
 }
 
 <div class="container-fluid">
@@ -263,7 +265,7 @@
 </div>
 
 @section Scripts {
-<script>
+<script nonce="@cspNonce">
 (() => {
     const badgeApi = '/api/admin/badges';
     const ageGroupApi = '/api/admin/agegroups';
