@@ -7,7 +7,7 @@
     <h1 class="h2">🎨 Avatar Management</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadAvatars()">
+            <button type="button" id="refreshAvatarsBtn" class="btn btn-sm btn-outline-secondary">
                 <i class="fas fa-refresh"></i> Refresh
             </button>
         </div>
@@ -18,7 +18,7 @@
 <div class="row mb-4">
     <div class="col-md-6">
         <label class="form-label">Select Age Group</label>
-        <select class="form-select" id="ageGroupSelect" onchange="onAgeGroupChange()">
+        <select class="form-select" id="ageGroupSelect">
             <option value="">-- Select an age group --</option>
             <option value="1-2">Ages 1-2 (Toddlers)</option>
             <option value="3-5">Ages 3-5 (Preschoolers)</option>
@@ -94,6 +94,23 @@ let availableMediaCache = {};
 
 $(document).ready(function() {
     loadAvatars();
+
+    // Bind UI events (no inline handlers to satisfy CSP)
+    $('#refreshAvatarsBtn').on('click', () => loadAvatars());
+    $('#ageGroupSelect').on('change', () => onAgeGroupChange());
+    $('#searchMediaBtn').on('click', (e) => { e.preventDefault(); searchAvailableMedia(); });
+    $('#mediaSearch').on('input', () => searchAvailableMedia());
+
+    // Delegate clicks in dynamic grids
+    $('#avatarGrid').on('click', 'button[data-action="remove-avatar"]', function() {
+        const mediaId = this.getAttribute('data-media-id');
+        if (mediaId) removeAvatar(mediaId);
+    });
+
+    $('#availableMediaGrid').on('click', 'button[data-action="add-avatar"]', function() {
+        const mediaId = this.getAttribute('data-media-id');
+        if (mediaId) addAvatarToGroup(mediaId);
+    });
 });
 
 async function loadAvatars() {
