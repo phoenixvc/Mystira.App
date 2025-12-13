@@ -325,7 +325,8 @@ FQIDAQAB
             {
                 ["JwtSettings:Issuer"] = "MystiraAPI",
                 ["JwtSettings:Audience"] = "MystiraPWA",
-                ["JwtSettings:RsaPrivateKey"] = TestRsaPrivateKey
+                ["JwtSettings:RsaPrivateKey"] = TestRsaPrivateKey,
+                ["JwtSettings:RsaPublicKey"] = TestRsaPublicKey,
             })
             .Build();
     }
