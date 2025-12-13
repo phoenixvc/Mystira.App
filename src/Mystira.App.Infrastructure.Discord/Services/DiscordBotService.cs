@@ -1,9 +1,7 @@
 using System.Reflection;
 using Discord;
 using Discord.Interactions;
-using Discord.Net;
 using Discord.WebSocket;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Mystira.App.Application.Ports.Messaging;

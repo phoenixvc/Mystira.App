@@ -1,6 +1,4 @@
 
-using System.Linq;
-
 namespace Mystira.App.Shared.Errors;
 /// <summary>
 /// Provides troubleshooting suggestions for common errors.

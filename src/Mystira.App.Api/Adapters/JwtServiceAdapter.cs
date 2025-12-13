@@ -1,3 +1,5 @@
+using Mystira.App.Shared.Services;
+
 namespace Mystira.App.Api.Adapters;
 
 /// <summary>
@@ -5,46 +7,46 @@ namespace Mystira.App.Api.Adapters;
 /// </summary>
 public class JwtServiceAdapter : Application.Ports.Auth.IJwtService
 {
-    private readonly Services.IJwtService _apiService;
+    private readonly IJwtService _jwtService;
 
-    public JwtServiceAdapter(Services.IJwtService apiService)
+    public JwtServiceAdapter(IJwtService jwtService)
     {
-        _apiService = apiService;
+        _jwtService = jwtService;
     }
 
     public string GenerateAccessToken(string userId, string email, string displayName, string? role = null)
     {
-        return _apiService.GenerateAccessToken(userId, email, displayName, role);
+        return _jwtService.GenerateAccessToken(userId, email, displayName, role);
     }
 
     public string GenerateRefreshToken()
     {
-        return _apiService.GenerateRefreshToken();
+        return _jwtService.GenerateRefreshToken();
     }
 
     public bool ValidateToken(string token)
     {
-        return _apiService.ValidateToken(token);
+        return _jwtService.ValidateToken(token);
     }
 
     public bool ValidateRefreshToken(string token, string storedRefreshToken)
     {
-        return _apiService.ValidateRefreshToken(token, storedRefreshToken);
+        return _jwtService.ValidateRefreshToken(token, storedRefreshToken);
     }
 
     public string? GetUserIdFromToken(string token)
     {
-        return _apiService.GetUserIdFromToken(token);
+        return _jwtService.GetUserIdFromToken(token);
     }
 
     public (bool IsValid, string? UserId) ValidateAndExtractUserId(string token)
     {
-        return _apiService.ValidateAndExtractUserId(token);
+        return _jwtService.ValidateAndExtractUserId(token);
     }
 
     public (bool IsValid, string? UserId) ExtractUserIdIgnoringExpiry(string token)
     {
-        return _apiService.ExtractUserIdIgnoringExpiry(token);
+        return _jwtService.ExtractUserIdIgnoringExpiry(token);
     }
 }
 

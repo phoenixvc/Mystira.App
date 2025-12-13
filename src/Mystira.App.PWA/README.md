@@ -129,7 +129,12 @@ User profile management:
 - Age group preference
 - Fantasy theme selection
 - Onboarding status
-- Badge collection display
+
+### AchievementsPage.razor
+Achievement/badge progress:
+- Pulls badge configuration + per-profile progress from the public `/api/badges` endpoints
+- Shows compass-axis sections with Bronze/Silver/Gold tier progress
+- Remembers the last selected profile in `localStorage` under `mystira_selected_profile_id`
 
 ### GameSessionPage.razor
 Interactive story gameplay:
