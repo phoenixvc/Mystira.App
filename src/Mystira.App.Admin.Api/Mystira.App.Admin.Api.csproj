@@ -38,7 +38,7 @@
     <ProjectReference Include="..\Mystira.App.Contracts\Mystira.App.Contracts.csproj" />
     <ProjectReference Include="..\Mystira.App.Application\Mystira.App.Application.csproj" />
     <!-- Reuse JWT adapters and health port adapter from primary API -->
-    <ProjectReference Include="..\Mystira.App.Api\Mystira.App.Api.csproj" />
+    <!--ProjectReference Include="..\Mystira.App.Api\Mystira.App.Api.csproj" /-->
   </ItemGroup>
 
   <ItemGroup>

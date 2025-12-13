@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using Mystira.App.Infrastructure.StoryProtocol.Configuration;
 using Nethereum.Hex.HexTypes;
 using Nethereum.Web3;
-using Nethereum.Web3.Accounts;
 
 namespace Mystira.App.Infrastructure.StoryProtocol.Services;
 

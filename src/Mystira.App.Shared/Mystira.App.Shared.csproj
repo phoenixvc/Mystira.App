@@ -8,6 +8,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.5.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
     <!-- Application Insights for telemetry initializers and custom metrics -->
@@ -22,6 +23,7 @@
     <PackageReference Include="Serilog.Settings.Configuration" Version="8.0.4" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../Mystira.App.Domain/Mystira.App.Domain.csproj" />
+    <ProjectReference Include="..\Mystira.App.Application\Mystira.App.Application.csproj" />
+    <ProjectReference Include="..\Mystira.App.Domain\Mystira.App.Domain.csproj" />
   </ItemGroup>
 </Project>

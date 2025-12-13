@@ -2,7 +2,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.JSInterop;
 using Mystira.App.PWA;
 using Mystira.App.PWA.Services;
 using Polly;
@@ -149,6 +148,11 @@ builder.Services.AddHttpClient<IAttributionApiClient, AttributionApiClient>(Conf
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
+builder.Services.AddHttpClient<IBadgesApiClient, BadgesApiClient>(ConfigureApiHttpClient)
+    .AddPolicyHandler(CreateResiliencePolicy("BadgesApi"))
+    .AddHttpMessageHandler<ApiBaseAddressHandler>()
+    .AddHttpMessageHandler<AuthHeaderHandler>();
+
 // Register main ApiClient that composes all domain clients
 builder.Services.AddScoped<IApiClient, ApiClient>();
 
@@ -168,6 +172,8 @@ builder.Services.AddScoped<IGameSessionService, GameSessionService>();
 builder.Services.AddScoped<IIndexedDbService, IndexedDbService>();
 builder.Services.AddScoped<ICharacterAssignmentService, CharacterAssignmentService>();
 builder.Services.AddSingleton<IImageCacheService, ImageCacheService>();
+builder.Services.AddScoped<IPlayerContextService, PlayerContextService>();
+builder.Services.AddScoped<IAchievementsService, AchievementsService>();
 
 // UI Services
 builder.Services.AddScoped<ToastService>();
@@ -236,8 +242,9 @@ static void SetDevelopmentModeForApiClients(IServiceProvider services, bool isDe
         typeof(IContentBundleApiClient),
         typeof(ICharacterApiClient),
         typeof(IDiscordApiClient),
-        typeof(IAttributionApiClient)
-    };
+        typeof(IAttributionApiClient),
+        typeof(IBadgesApiClient)
+        };
 
     foreach (var interfaceType in apiClientTypes)
     {
