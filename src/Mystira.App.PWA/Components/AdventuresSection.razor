@@ -490,7 +490,7 @@
                 if (sessions != null)
                 {
                     completedScenarioIds = sessions
-                        .Where(s => s.Status == SessionStatus.Completed.ToString())
+                        .Where(s => s.Status == SessionStatus.Completed)
                         .Select(s => s.ScenarioId)
                         .ToHashSet();
                     Logger.LogInformation("Loaded {Count} completed scenarios for account {AccountId}",
