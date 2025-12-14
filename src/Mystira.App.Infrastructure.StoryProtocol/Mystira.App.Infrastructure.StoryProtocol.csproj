@@ -6,6 +6,20 @@
     <LangVersion>latest</LangVersion>
     <!-- Suppress NU1608: Nethereum packages haven't updated constraints for .NET 9 yet, but work fine -->
     <NoWarn>$(NoWarn);NU1608;NU1603</NoWarn>
+    
+    <!-- NuGet Package Metadata -->
+    <PackageId>Mystira.App.Infrastructure.StoryProtocol</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Mystira Team</Authors>
+    <Company>Phoenix VC</Company>
+    <Description>Mystira platform Story Protocol blockchain integration. IP asset management, NFT registration, and Story Protocol SDK integration via Nethereum.</Description>
+    <RepositoryUrl>https://github.com/phoenixvc/Mystira.App</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>PROPRIETARY</PackageLicenseExpression>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PackageTags>mystira;infrastructure;story-protocol;blockchain;nft;internal</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

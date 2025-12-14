@@ -3,6 +3,20 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    
+    <!-- NuGet Package Metadata -->
+    <PackageId>Mystira.App.Shared</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Mystira Team</Authors>
+    <Company>Phoenix VC</Company>
+    <Description>Mystira platform shared services and utilities. JWT services, telemetry, middleware, logging, and cross-cutting concerns used by all API projects.</Description>
+    <RepositoryUrl>https://github.com/phoenixvc/Mystira.App</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>PROPRIETARY</PackageLicenseExpression>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PackageTags>mystira;shared;services;jwt;telemetry;middleware;internal</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

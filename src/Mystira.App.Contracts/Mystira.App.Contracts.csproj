@@ -1,10 +1,24 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+    
+    <!-- NuGet Package Metadata -->
+    <PackageId>Mystira.App.Contracts</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Mystira Team</Authors>
+    <Company>Phoenix VC</Company>
+    <Description>Mystira platform shared request/response DTOs and API contracts. Used by API projects and potentially external clients.</Description>
+    <RepositoryUrl>https://github.com/phoenixvc/Mystira.App</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>PROPRIETARY</PackageLicenseExpression>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PackageTags>mystira;contracts;dto;api;internal</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
