@@ -149,6 +149,46 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         }
     }
 
+    public async Task<FinalizeSessionResponse?> FinalizeGameSessionAsync(string sessionId)
+    {
+        try
+        {
+            Logger.LogInformation("Finalizing game session: {SessionId}", sessionId);
+
+            await SetAuthorizationHeaderAsync();
+
+            var response = await HttpClient.PostAsync($"api/gamesessions/{sessionId}/finalize", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var payload = await response.Content.ReadFromJsonAsync<FinalizeSessionResponse>(JsonOptions);
+                Logger.LogInformation("Game session finalized successfully: {SessionId}", sessionId);
+                return payload;
+            }
+            else
+            {
+                Logger.LogWarning("Failed to finalize game session with status: {StatusCode} for session: {SessionId}",
+                    response.StatusCode, sessionId);
+                return null;
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Network error finalizing game session: {SessionId}", sessionId);
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Logger.LogError(ex, "Request timed out finalizing game session: {SessionId}", sessionId);
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogError(ex, "Error parsing API response when finalizing game session: {SessionId}", sessionId);
+            return null;
+        }
+    }
+
     public async Task<GameSession?> PauseGameSessionAsync(string sessionId)
     {
         try
