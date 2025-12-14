@@ -53,6 +53,7 @@ public class ApiClient : IApiClient
     }
 
     public Task<GameSession?> EndGameSessionAsync(string sessionId) => _gameSessionClient.EndGameSessionAsync(sessionId);
+    public Task<FinalizeSessionResponse?> FinalizeGameSessionAsync(string sessionId) => _gameSessionClient.FinalizeGameSessionAsync(sessionId);
     public Task<GameSession?> PauseGameSessionAsync(string sessionId) => _gameSessionClient.PauseGameSessionAsync(sessionId);
     public Task<GameSession?> ResumeGameSessionAsync(string sessionId) => _gameSessionClient.ResumeGameSessionAsync(sessionId);
     public Task<GameSession?> ProgressSessionSceneAsync(string sessionId, string sceneId) => _gameSessionClient.ProgressSessionSceneAsync(sessionId, sceneId);

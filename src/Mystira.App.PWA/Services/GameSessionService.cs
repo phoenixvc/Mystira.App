@@ -233,6 +233,29 @@ public class GameSessionService : IGameSessionService
                 // Still mark as completed locally for UI consistency
             }
 
+            // Finalize session: calculate scoring and award badges
+            try
+            {
+                var finalize = await _apiClient.FinalizeGameSessionAsync(CurrentGameSession.Id);
+                if (finalize?.Awards?.Count > 0)
+                {
+                    foreach (var award in finalize.Awards)
+                    {
+                        foreach (var badge in award.NewBadges)
+                        {
+                            _logger.LogInformation(
+                                "Congratulations! Profile {ProfileId} earned badge {BadgeName} (BadgeId: {BadgeId})",
+                                award.ProfileId, badge.BadgeName, badge.BadgeId);
+                        }
+                    }
+                    // Note: UI layer can subscribe to GameSessionChanged and query for latest awards via a separate service/store
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error finalizing session for scoring/awards");
+            }
+
             // Mark scenario as completed for the account
             var account = await _authService.GetCurrentAccountAsync();
             if (account != null && CurrentGameSession != null)
