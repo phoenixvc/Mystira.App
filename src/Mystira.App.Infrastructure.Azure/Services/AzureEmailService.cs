@@ -94,7 +94,7 @@ public class AzureEmailService : IEmailService
 
             var emailMessage = new EmailMessage(
                 senderAddress: _senderEmail,
-                content: new EmailContent("Your Mystira Verification Code") { Html = emailContent },
+                content: new EmailContent($"Your Mystira Verification Code is {code}") { Html = emailContent },
                 recipients: new EmailRecipients(new List<EmailAddress> { new EmailAddress(toEmail) })
             );
 
