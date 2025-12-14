@@ -74,10 +74,9 @@ public class BadgeRepository : IBadgeRepository
 
     public async Task<IEnumerable<Badge>> GetByAgeGroupAsync(string ageGroupId)
     {
+        // Avoid Cosmos ORDER BY to prevent composite index requirement; sort in memory at caller.
         return await _context.Badges
             .Where(x => x.AgeGroupId == ageGroupId)
-            .OrderBy(x => x.Tier)
-            .ThenBy(x => x.TierOrder)
             .ToListAsync();
     }
 
@@ -94,8 +93,8 @@ public class BadgeRepository : IBadgeRepository
     public async Task<Badge?> GetByAgeGroupAxisAndTierAsync(string ageGroupId, string compassAxisId, int tierOrder)
     {
         return await _context.Badges
-            .FirstOrDefaultAsync(x => x.AgeGroupId == ageGroupId 
-                                   && x.CompassAxisId == compassAxisId 
+            .FirstOrDefaultAsync(x => x.AgeGroupId == ageGroupId
+                                   && x.CompassAxisId == compassAxisId
                                    && x.TierOrder == tierOrder);
     }
 

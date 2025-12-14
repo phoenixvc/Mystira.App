@@ -29,9 +29,18 @@ public sealed class GetProfileBadgeProgressQueryHandler : IQueryHandler<GetProfi
 
         var ageGroupId = profile.AgeGroup?.Value ?? "6-9";
 
-        var badgesByAxis = (await _badgeRepository.GetByAgeGroupAsync(ageGroupId))
+        // Retrieve badges for the age group. Some Cosmos providers may attempt to use
+        // ORDER BY in the query which requires a composite index. To avoid runtime
+        // failures when composite indexes are not yet deployed, always perform
+        // ordering in-memory here.
+        var allBadges = await _badgeRepository.GetByAgeGroupAsync(ageGroupId);
+
+        var badgesByAxis = allBadges
             .GroupBy(b => b.CompassAxisId)
-            .ToDictionary(g => g.Key, g => g.OrderBy(b => b.TierOrder).ToList());
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderBy(b => b.TierOrder).ToList()
+            );
 
         var earnedBadges = (await _userBadgeRepository.GetByUserProfileIdAsync(request.ProfileId))
             .ToDictionary(b => b.BadgeId ?? string.Empty, b => b);

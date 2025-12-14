@@ -582,33 +582,10 @@
 
             GameSessionService.ClearGameSession();
 
-            if (scenario.AgeGroup == "1-2")
-            {
-                Logger.LogInformation("Skipping character assignment for age group {AgeGroup}, starting game directly", scenario.AgeGroup);
-
-                var fullScenario = await ApiClient.GetScenarioAsync(scenario.Id);
-                if (fullScenario == null)
-                {
-                    Logger.LogError("Failed to load full scenario details for: {ScenarioName}", scenario.Name);
-                    return;
-                }
-
-                var success = await GameSessionService.StartGameSessionAsync(fullScenario);
-                if (success)
-                {
-                    NavigationManager.NavigateTo("/game");
-                }
-                else
-                {
-                    Logger.LogError("Failed to start game session directly for scenario: {ScenarioName}", scenario.Name);
-                }
-            }
-            else
-            {
-                Logger.LogInformation("Navigating to character assignment for scenario: {ScenarioId}", scenario.Id);
-                await Task.CompletedTask;
-                NavigationManager.NavigateTo($"/character-assignment/{scenario.Id}");
-            }
+            // Always route through character assignment so the initial profile prompt is shown
+            Logger.LogInformation("Navigating to character assignment for scenario: {ScenarioId}", scenario.Id);
+            await Task.CompletedTask;
+            NavigationManager.NavigateTo($"/character-assignment/{scenario.Id}");
         }
         catch (Exception ex)
         {
