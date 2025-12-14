@@ -40,6 +40,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.Infrastructure.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.Infrastructure.WhatsApp", "src\Mystira.App.Infrastructure.WhatsApp\Mystira.App.Infrastructure.WhatsApp.csproj", "{5B9F4D2E-6C3A-4F7B-AD8E-9F0A1B2C3D4E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.Admin.Web", "src\Mystira.App.Admin.Web\Mystira.App.Admin.Web.csproj", "{667CCD02-FFB2-4C32-A88E-A07B6DADB7EC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -266,6 +268,18 @@ Global
 		{5B9F4D2E-6C3A-4F7B-AD8E-9F0A1B2C3D4E}.Release|x64.Build.0 = Release|Any CPU
 		{5B9F4D2E-6C3A-4F7B-AD8E-9F0A1B2C3D4E}.Release|x86.ActiveCfg = Release|Any CPU
 		{5B9F4D2E-6C3A-4F7B-AD8E-9F0A1B2C3D4E}.Release|x86.Build.0 = Release|Any CPU
+		{667CCD02-FFB2-4C32-A88E-A07B6DADB7EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{667CCD02-FFB2-4C32-A88E-A07B6DADB7EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{667CCD02-FFB2-4C32-A88E-A07B6DADB7EC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{667CCD02-FFB2-4C32-A88E-A07B6DADB7EC}.Debug|x64.Build.0 = Debug|Any CPU
+		{667CCD02-FFB2-4C32-A88E-A07B6DADB7EC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{667CCD02-FFB2-4C32-A88E-A07B6DADB7EC}.Debug|x86.Build.0 = Debug|Any CPU
+		{667CCD02-FFB2-4C32-A88E-A07B6DADB7EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{667CCD02-FFB2-4C32-A88E-A07B6DADB7EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{667CCD02-FFB2-4C32-A88E-A07B6DADB7EC}.Release|x64.ActiveCfg = Release|Any CPU
+		{667CCD02-FFB2-4C32-A88E-A07B6DADB7EC}.Release|x64.Build.0 = Release|Any CPU
+		{667CCD02-FFB2-4C32-A88E-A07B6DADB7EC}.Release|x86.ActiveCfg = Release|Any CPU
+		{667CCD02-FFB2-4C32-A88E-A07B6DADB7EC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -289,5 +303,6 @@ Global
 		{B9985F52-F312-4292-841C-D33F86C8317A} = {636A8ADA-1901-4A23-88BB-A86586F1F765}
 		{4A8E3C1D-5B2F-4E6A-9C7D-8E9F0A1B2C3D} = {636A8ADA-1901-4A23-88BB-A86586F1F765}
 		{5B9F4D2E-6C3A-4F7B-AD8E-9F0A1B2C3D4E} = {636A8ADA-1901-4A23-88BB-A86586F1F765}
+		{667CCD02-FFB2-4C32-A88E-A07B6DADB7EC} = {636A8ADA-1901-4A23-88BB-A86586F1F765}
 	EndGlobalSection
 EndGlobal

@@ -28,7 +28,9 @@ using Microsoft.ApplicationInsights.Extensibility;
 using Mystira.App.Infrastructure.Discord;
 using Mystira.App.Infrastructure.Discord.Services;
 using Mystira.App.Infrastructure.StoryProtocol;
+using Mystira.App.Shared.Adapters;
 using Mystira.App.Shared.Middleware;
+using Mystira.App.Shared.Services;
 using Mystira.App.Shared.Telemetry;
 using Serilog;
 using Serilog.Events;
@@ -456,14 +458,13 @@ builder.Services.AddScoped<DownloadMediaUseCase>();
 
 // Register application services
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
-builder.Services.AddScoped<IAppStatusService, AppStatusService>();
-builder.Services.AddScoped<Mystira.App.Shared.Services.IJwtService, Mystira.App.Shared.Services.JwtService>();
+builder.Services.AddScoped<IJwtService, JwtService>();
 
 // Register Application.Ports adapters for CQRS handlers
 builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, JwtServiceAdapter>();
 // Use infrastructure email service directly - configuration is read from AzureCommunicationServices section
 builder.Services.AddAzureEmailService(builder.Configuration);
-builder.Services.AddScoped<IHealthCheckPort, Mystira.App.Shared.Adapters.HealthCheckPortAdapter>();
+builder.Services.AddScoped<IHealthCheckPort, HealthCheckPortAdapter>();
 builder.Services.AddScoped<IMediaMetadataService, MediaMetadataService>();
 
 // Configure Memory Cache for query caching

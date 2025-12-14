@@ -25,7 +25,7 @@
 
 @code {
     private readonly List<ToastMessage> _toasts = new();
-    private Dictionary<Guid, System.Threading.Timer> _timers = new();
+    private Dictionary<Guid, Timer> _timers = new();
 
     protected override void OnInitialized()
     {
@@ -39,7 +39,7 @@
         StateHasChanged();
 
         // Auto-remove after duration
-        var timer = new System.Threading.Timer(_ =>
+        var timer = new Timer(_ =>
         {
             InvokeAsync(() => RemoveToast(toast.Id));
         }, null, toast.DurationMs, Timeout.Infinite);

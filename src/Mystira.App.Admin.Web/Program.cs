@@ -1,7 +1,4 @@
-using System.IO;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
-using Mystira.App.Admin.Web.Services;
 using Mystira.App.Shared.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,8 +14,6 @@ builder.Services
     .AddControllersWithViews();
 
 builder.Services.AddHttpClient();
-
-builder.Services.AddScoped<IAppStatusService, AppStatusService>();
 
 builder.Services
     .AddAuthentication("Cookies")
@@ -45,6 +40,12 @@ builder.Services.AddAuthorization();
 builder.Services
     .AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+
+// Configure HTTPS redirection port for development profile
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddHttpsRedirection(options => options.HttpsPort = 7097);
+}
 
 var app = builder.Build();
 
@@ -121,6 +122,9 @@ app.MapControllers();
 
 // Keep proxy mapping after controllers so local routes (e.g. /api/auth/**) win.
 app.MapReverseProxy();
+
+// Provide a default handler for root requests in Admin.Web
+app.MapGet("/", () => Results.Redirect("/admin/login", permanent: false));
 
 app.Run();
 

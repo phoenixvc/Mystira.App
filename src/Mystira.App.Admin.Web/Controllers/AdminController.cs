@@ -1,8 +1,5 @@
-using System.Net.Http.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Mystira.App.Admin.Web.Models;
-using Mystira.App.Admin.Web.Services;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Admin.Web.Controllers;
@@ -11,16 +8,13 @@ namespace Mystira.App.Admin.Web.Controllers;
 [Route("admin")]
 public class AdminController : Controller
 {
-    private readonly IAppStatusService _appStatusService;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<AdminController> _logger;
 
     public AdminController(
-        IAppStatusService appStatusService,
         IHttpClientFactory httpClientFactory,
         ILogger<AdminController> logger)
     {
-        _appStatusService = appStatusService;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
@@ -85,17 +79,8 @@ public class AdminController : Controller
     [HttpGet("archetypes")]
     public IActionResult Archetypes() => View("Archetypes");
 
-    [HttpGet("echotypes")]
-    public IActionResult EchoTypes() => View("EchoTypes");
-
-    [HttpGet("fantasythemes")]
-    public IActionResult FantasyThemes() => View("FantasyThemes");
-
     [HttpGet("agegroups")]
     public IActionResult AgeGroups() => View("AgeGroups");
-
-    [HttpGet("charactermaps")]
-    public IActionResult CharacterMaps() => View("CharacterMaps");
 
     [HttpGet("charactermaps/import")]
     public IActionResult ImportCharacterMap() => View("ImportCharacterMap");
@@ -120,41 +105,6 @@ public class AdminController : Controller
         {
             _logger.LogError(ex, "Error loading scenario for editing: {ScenarioId}", id);
             return StatusCode(500, "Error loading scenario");
-        }
-    }
-
-    [HttpGet("status")]
-    public async Task<IActionResult> AppStatus()
-    {
-        try
-        {
-            var appStatus = await _appStatusService.GetAppStatusAsync();
-            return View("AppStatus", appStatus);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error loading app status");
-            return StatusCode(500, "Error loading app status");
-        }
-    }
-
-    [HttpPost("status")]
-    public async Task<IActionResult> UpdateAppStatus([FromForm] AppStatusConfiguration config)
-    {
-        try
-        {
-            config.MaintenanceMessage ??= string.Empty;
-            config.UpdateMessage ??= string.Empty;
-
-            await _appStatusService.UpdateAppStatusAsync(config);
-            TempData["SuccessMessage"] = "App status configuration updated successfully.";
-            return RedirectToAction(nameof(AppStatus));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating app status configuration");
-            TempData["ErrorMessage"] = "Failed to update app status configuration.";
-            return RedirectToAction(nameof(AppStatus));
         }
     }
 

@@ -73,4 +73,12 @@
     <_ContentIncludedByDefault Remove="Views\_ViewStart.cshtml" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="logs\mystira-api-dev-20251213.log" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="logs\" />
+  </ItemGroup>
+
 </Project>

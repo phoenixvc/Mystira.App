@@ -16,4 +16,8 @@
     <ProjectReference Include="..\Mystira.App.Shared\Mystira.App.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Services\" />
+  </ItemGroup>
+
 </Project>
