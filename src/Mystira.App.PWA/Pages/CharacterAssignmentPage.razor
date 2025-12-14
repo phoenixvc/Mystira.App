@@ -421,6 +421,139 @@ else
     OnCancel="CancelGuestWarning">
 </GuestWarningModal>
 
+<!-- Initial Assignment Prompt Modal (shown on load for toddler scenarios only) -->
+@if (showInitialAssignmentPrompt)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-user-friends me-2"></i>
+                        Who is playing?
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">
+                        Choose a player once and we will assign them to all active characters for this adventure.
+                    </p>
+
+                    <!-- Tabs Navigation -->
+                    <ul class="nav nav-tabs mb-3">
+                        <li class="nav-item">
+                            <button class="@ProfilesTabClass()" @onclick="SetTabProfiles">
+                                <i class="fas fa-id-badge me-1"></i> Profiles
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="@NewProfileTabClass()" @onclick="SetTabNewProfile">
+                                <i class="fas fa-user-plus me-1"></i> New Profile
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="@GuestTabClass()" @onclick="SetTabGuest">
+                                <i class="fas fa-user-clock me-1"></i> Guest
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Contents -->
+                    <div>
+                        @if (assignmentTab == "profiles")
+                        {
+                            <div class="mb-3">
+                                @if (!availableProfiles.Any())
+                                {
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        No profiles yet. Create a new one or continue as a guest.
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="list-group">
+                                        @foreach (var profile in availableProfiles.OrderBy(p => p.Name))
+                                        {
+                                            <label class="list-group-item d-flex align-items-center" for="ip_@profile.Id">
+                                                <input type="radio"
+                                                       id="ip_@profile.Id"
+                                                       name="initialProfile"
+                                                       class="form-check-input me-3"
+                                                       value="@profile.Id"
+                                                       @onchange="(e => selectedProfileId = e.Value?.ToString() ?? string.Empty)"
+                                                       checked="@(selectedProfileId == profile.Id)" />
+                                                <div class="flex-grow-1">
+                                                    <div class="fw-semibold">@profile.Name</div>
+                                                    <small class="text-muted">Age: @profile.DisplayAgeRange</small>
+                                                </div>
+                                            </label>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else if (assignmentTab == "new-profile")
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Name *</label>
+                                <input type="text" class="form-control" @bind="newProfileName" placeholder="Enter name" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Age Range *</label>
+                                <select class="form-select" @bind="newProfileAgeRange">
+                                    <option value="">Select age range</option>
+                                    @foreach (var range in AgeRanges.All)
+                                    {
+                                        <option value="@range">@AgeRanges.GetDisplayName(range)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Choose an avatar (optional)</label>
+                                @if (string.IsNullOrEmpty(newProfileAgeRange))
+                                {
+                                    <div class="alert alert-secondary">Select an age range to see avatar options.</div>
+                                }
+                                else
+                                {
+                                    <AvatarCarousel AgeGroup="@newProfileAgeRange" OnAvatarSelected="OnAvatarSelected" />
+                                }
+                            </div>
+                        }
+                        else if (assignmentTab == "guest")
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Display Name *</label>
+                                <input type="text" class="form-control" @bind="guestName" placeholder="Enter guest name" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Age Range</label>
+                                <select class="form-select" @bind="guestAgeRange">
+                                    <option value="">Prefer not to say</option>
+                                    @foreach (var range in AgeRanges.All)
+                                    {
+                                        <option value="@range">@AgeRanges.GetDisplayName(range)</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(validationMessage))
+                    {
+                        <div class="alert alert-danger mt-3">@validationMessage</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" @onclick="ConfirmInitialAssignment" disabled="@(!CanConfirmInitialAssignment())">
+                        Assign to All
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter] public string ScenarioId { get; set; } = string.Empty;
 
@@ -434,12 +567,14 @@ else
     private bool showPlayerAssignmentModal = false;
     private bool showImagePreview = false;
     private bool showGuestWarningModal = false;
+    private bool showInitialAssignmentPrompt = false;
     private string assignmentTab = "profiles";
     private CharacterAssignment? currentAssignment;
     private int currentAssignmentIndex = -1;
 
     // Form state
     private string selectedProfileId = string.Empty;
+    private string selectedToddlerProfileId = string.Empty; // Deprecated with toddler-only, kept if needed elsewhere
     private string guestName = string.Empty;
     private string guestAgeRange = string.Empty;
     private string newProfileName = string.Empty;
@@ -448,6 +583,9 @@ else
     private string? previewImage;
     private string validationMessage = string.Empty;
     private bool isAvatarSelected = false;
+
+    // Mode helpers
+    private bool IsToddlerScenario => assignmentData?.Scenario?.AgeGroup == "1-2";
 
     // Audio
     private string? isPlayingAudio = null;
@@ -459,6 +597,9 @@ else
         {
             Logger.LogInformation("Initializing character assignment for scenario: {ScenarioId}", ScenarioId);
             await LoadCharacterAssignmentData();
+
+            // Show the initial bulk assignment prompt only for toddler scenarios (age group 1-2)
+            showInitialAssignmentPrompt = IsToddlerScenario;
 
             // Load the audio module when component initializes
             audioModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
@@ -485,6 +626,162 @@ else
             characterAssignments = assignmentData.CharacterAssignments;
             availableProfiles = assignmentData.AvailableProfiles;
         }
+    }
+
+    private bool CanConfirmInitialAssignment()
+    {
+        if (assignmentTab == "profiles")
+        {
+            return !string.IsNullOrWhiteSpace(selectedProfileId);
+        }
+        if (assignmentTab == "new-profile")
+        {
+            return !string.IsNullOrWhiteSpace(newProfileName) && !string.IsNullOrWhiteSpace(newProfileAgeRange);
+        }
+        if (assignmentTab == "guest")
+        {
+            return !string.IsNullOrWhiteSpace(guestName);
+        }
+        return false;
+    }
+
+    private async Task ConfirmInitialAssignment()
+    {
+        validationMessage = string.Empty;
+
+        if (assignmentTab == "profiles")
+        {
+            var profile = availableProfiles.FirstOrDefault(p => p.Id == selectedProfileId);
+            if (profile == null)
+            {
+                validationMessage = "Please select a profile.";
+                StateHasChanged();
+                return;
+            }
+
+            foreach (var ca in characterAssignments)
+            {
+                if (ca.IsUnused) continue;
+                ca.PlayerAssignment = new PlayerAssignment
+                {
+                    Type = "Profile",
+                    ProfileId = profile.Id,
+                    ProfileName = profile.Name,
+                    SelectedAvatarMediaId = profile.SelectedAvatarMediaId
+                };
+            }
+
+            showInitialAssignmentPrompt = false;
+            // For 1-2 age group, start immediately after a single selection
+            if (IsToddlerScenario)
+            {
+                await ContinueWithGameSession();
+                return;
+            }
+
+            StateHasChanged();
+            return;
+        }
+
+        if (assignmentTab == "new-profile")
+        {
+            var account = await AuthService.GetCurrentAccountAsync();
+            if (account == null)
+            {
+                validationMessage = "Unable to create profile. Please try again.";
+                StateHasChanged();
+                return;
+            }
+
+            var profileRequest = new CreateUserProfileRequest
+            {
+                Name = newProfileName,
+                AgeGroup = newProfileAgeRange,
+                AccountId = account.Id,
+                IsGuest = false,
+                AvatarMediaId = selectedAvatarMediaId,
+                SelectedAvatarMediaId = selectedAvatarMediaId
+            };
+
+            var createdProfile = await ApiClient.CreateProfileAsync(profileRequest);
+            if (createdProfile == null)
+            {
+                validationMessage = "Failed to create profile. Please try again.";
+                StateHasChanged();
+                return;
+            }
+
+            // Add to available profiles for later use
+            availableProfiles.Add(createdProfile);
+
+            foreach (var ca in characterAssignments)
+            {
+                if (ca.IsUnused) continue;
+                ca.PlayerAssignment = new PlayerAssignment
+                {
+                    Type = "Profile",
+                    ProfileId = createdProfile.Id,
+                    ProfileName = createdProfile.Name,
+                    SelectedAvatarMediaId = createdProfile.SelectedAvatarMediaId
+                };
+            }
+
+            showInitialAssignmentPrompt = false;
+            // Reset new profile form state
+            newProfileName = string.Empty;
+            newProfileAgeRange = string.Empty;
+            selectedAvatarMediaId = null;
+            isAvatarSelected = false;
+            if (IsToddlerScenario)
+            {
+                await ContinueWithGameSession();
+                return;
+            }
+
+            StateHasChanged();
+            return;
+        }
+
+        if (assignmentTab == "guest")
+        {
+            // Defer to guest warning modal before applying
+            pendingInitialGuestApplyAll = true;
+            showGuestWarningModal = true;
+            StateHasChanged();
+            return;
+        }
+    }
+
+    private bool pendingInitialGuestApplyAll = false;
+
+    private string ProfilesTabClass()
+    {
+        return $"nav-link {(assignmentTab == "profiles" ? "active" : string.Empty)}";
+    }
+
+    private string NewProfileTabClass()
+    {
+        return $"nav-link {(assignmentTab == "new-profile" ? "active" : string.Empty)}";
+    }
+
+    private string GuestTabClass()
+    {
+        return $"nav-link {(assignmentTab == "guest" ? "active" : string.Empty)}";
+    }
+
+    private void SetTabProfiles()
+    {
+        assignmentTab = "profiles";
+    }
+
+    private void SetTabNewProfile()
+    {
+        assignmentTab = "new-profile";
+    }
+
+    private void SetTabGuest()
+    {
+        assignmentTab = "guest";
     }
 
     private void GoBack()
@@ -538,6 +835,11 @@ else
     {
         try
         {
+            // In toddler scenarios, do not allow per-character assignments
+            if (IsToddlerScenario)
+            {
+                return;
+            }
             currentAssignmentIndex = index;
             currentAssignment = characterAssignments[index];
             showPlayerAssignmentModal = true;
@@ -690,13 +992,20 @@ else
 
     private void RemovePlayerAssignment(int index)
     {
+        // Disallow removing assignments in toddler mode to prevent mixed selections
+        if (IsToddlerScenario)
+        {
+            return;
+        }
+
         characterAssignments[index].PlayerAssignment = null;
         StateHasChanged();
     }
 
     private async Task BeginSession()
     {
-        if (!CanBeginSession) return;
+        // Do not allow starting the session until the initial assignment prompt is resolved
+        if (showInitialAssignmentPrompt || !CanBeginSession) return;
 
         try
         {
@@ -813,12 +1122,47 @@ else
     private async Task ContinueWithGuestAssignments()
     {
         showGuestWarningModal = false;
+
+        if (pendingInitialGuestApplyAll)
+        {
+            // Apply guest assignment to all active characters, then close the initial prompt
+            foreach (var ca in characterAssignments)
+            {
+                if (ca.IsUnused) continue;
+                ca.PlayerAssignment = new PlayerAssignment
+                {
+                    Type = "Guest",
+                    GuestName = guestName,
+                    GuestAgeRange = guestAgeRange,
+                    SaveAsProfile = false
+                };
+            }
+
+            pendingInitialGuestApplyAll = false;
+            showInitialAssignmentPrompt = false;
+
+            // For toddler scenarios, auto-start immediately after choosing guest
+            if (IsToddlerScenario)
+            {
+                await ContinueWithGameSession();
+                return;
+            }
+
+            StateHasChanged();
+            return;
+        }
+
         await ContinueWithGameSession();
     }
 
     private void CancelGuestWarning()
     {
         showGuestWarningModal = false;
+        if (pendingInitialGuestApplyAll)
+        {
+            // Keep the initial prompt open; do not apply guest assignments
+            pendingInitialGuestApplyAll = false;
+        }
         StateHasChanged();
     }
 
@@ -970,8 +1314,14 @@ else
     {
         get
         {
+            // Block starting while the initial assignment prompt is still visible
+            if (showInitialAssignmentPrompt)
+            {
+                return false;
+            }
+
             return characterAssignments.All(ca =>
-            ca.IsUnused || (ca.PlayerAssignment != null && !string.IsNullOrEmpty(ca.PlayerAssignment.Type)));
+                ca.IsUnused || (ca.PlayerAssignment != null && !string.IsNullOrEmpty(ca.PlayerAssignment.Type)));
         }
     }
 
@@ -995,6 +1345,11 @@ else
 
     private void FillRemainingWithGuests()
     {
+        if (IsToddlerScenario)
+        {
+            // Prevent changing assignments in toddler mode
+            return;
+        }
         foreach (var assignment in characterAssignments)
         {
             if (!assignment.IsUnused && assignment.PlayerAssignment == null)
@@ -1013,6 +1368,11 @@ else
 
     private void FillRemainingWithAI()
     {
+        if (IsToddlerScenario)
+        {
+            // Prevent changing assignments in toddler mode
+            return;
+        }
         foreach (var assignment in characterAssignments)
         {
             if (!assignment.IsUnused && assignment.PlayerAssignment == null)

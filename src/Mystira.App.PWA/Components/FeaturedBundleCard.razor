@@ -7,25 +7,25 @@
         </div>
         <div class="row g-0">
             <div class="col-md-4">
-                <CachedMystiraImage 
-                    MediaId="@Bundle.ImageId"
-                    Alt="@Bundle.Title"
-                    Width="400"
-                    Height="300"
-                    ImageClass="featured-bundle-image" />
+                <div class="featured-image-wrapper">
+                    <CachedMystiraImage
+                        MediaId="@Bundle.ImageId"
+                        Alt="@Bundle.Title"
+                        ImageClass="featured-bundle-image" />
+                </div>
             </div>
             <div class="col-md-8">
                 <div class="card-body">
                     <h4 class="card-title">@Bundle.Title</h4>
                     <p class="card-text">@Bundle.Description</p>
-                    
+
                     @{
                         var totalInBundle = Bundle.ScenarioIds?.Count ?? 0;
-                        var completedInBundle = CompletedScenarioIds.Count == 0 
-                            ? 0 
+                        var completedInBundle = CompletedScenarioIds.Count == 0
+                            ? 0
                             : (Bundle.ScenarioIds?.Count(id => CompletedScenarioIds.Contains(id)) ?? 0);
                     }
-                    
+
                     <div class="featured-pills mb-3">
                         <span class="featured-pill pill-adventures" title="@totalInBundle adventure@(totalInBundle != 1 ? "s" : "") included in this bundle">
                             <i class="fas fa-book"></i>
@@ -33,7 +33,7 @@
                         </span>
                         @if (ShowGameState)
                         {
-                            <span class="featured-pill @(completedInBundle > 0 ? "pill-completed" : "pill-pending")" 
+                            <span class="featured-pill @(completedInBundle > 0 ? "pill-completed" : "pill-pending")"
                                   title="@completedInBundle of @totalInBundle adventure@(totalInBundle != 1 ? "s" : "") completed">
                                 <i class="fas @(completedInBundle > 0 ? "fa-check-circle" : "fa-clock")"></i>
                                 <span>@completedInBundle completed</span>
@@ -51,7 +51,7 @@
                             </span>
                         }
                     </div>
-                    
+
                     <button class="btn btn-warning btn-lg" @onclick="OnExploreClick">
                         <i class="fas fa-play me-2"></i>Explore Adventures
                     </button>
@@ -64,16 +64,16 @@
 @code {
     [Parameter, EditorRequired]
     public ContentBundle Bundle { get; set; } = null!;
-    
+
     [Parameter]
     public HashSet<string> CompletedScenarioIds { get; set; } = new();
-    
+
     [Parameter]
     public bool ShowGameState { get; set; } = false;
-    
+
     [Parameter]
     public EventCallback<ContentBundle> OnExplore { get; set; }
-    
+
     private async Task OnExploreClick()
     {
         if (OnExplore.HasDelegate)

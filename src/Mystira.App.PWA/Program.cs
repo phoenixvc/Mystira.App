@@ -138,10 +138,20 @@ builder.Services.AddHttpClient<ICharacterApiClient, CharacterApiClient>(Configur
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
-builder.Services.AddHttpClient<IDiscordApiClient, DiscordApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("DiscordApi"))
-    .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+// Feature flag: Discord integration can be disabled via configuration
+var discordEnabled = builder.Configuration.GetValue<bool>("Features:Discord:Enabled");
+if (discordEnabled)
+{
+    builder.Services.AddHttpClient<IDiscordApiClient, DiscordApiClient>(ConfigureApiHttpClient)
+        .AddPolicyHandler(CreateResiliencePolicy("DiscordApi"))
+        .AddHttpMessageHandler<ApiBaseAddressHandler>()
+        .AddHttpMessageHandler<AuthHeaderHandler>();
+}
+else
+{
+    // Register a no-op implementation to satisfy DI and avoid runtime warnings
+    builder.Services.AddScoped<IDiscordApiClient, NullDiscordApiClient>();
+}
 
 builder.Services.AddHttpClient<IAttributionApiClient, AttributionApiClient>(ConfigureApiHttpClient)
     .AddPolicyHandler(CreateResiliencePolicy("AttributionApi"))
@@ -326,7 +336,7 @@ static string GetDefaultApiUrlForEnvironment(IConfiguration configuration, strin
             var envName = child["Environment"] ?? child["environment"];
             var url = child["Url"] ?? child["url"];
 
-            if (!string.IsNullOrEmpty(envName) && 
+            if (!string.IsNullOrEmpty(envName) &&
                 envName.Equals(environment, StringComparison.OrdinalIgnoreCase) &&
                 !string.IsNullOrEmpty(url))
             {

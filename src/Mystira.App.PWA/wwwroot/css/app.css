@@ -747,6 +747,8 @@ input[type="checkbox"]#rememberMe {
     border-color: #000 !important;
     border-width: 2px;
     border-style: solid !important;
+    /* Some browsers ignore checkbox borders with native appearance; use an inset box-shadow for a consistent visible border */
+    box-shadow: 0 0 0 2px #000 inset !important;
     background-color: #fff;
     width: 1.1rem;
     height: 1.1rem;
@@ -761,7 +763,7 @@ input[type="checkbox"]#rememberMe:focus {
 
 #rememberMe.form-check-input:hover,
 input[type="checkbox"]#rememberMe:hover {
-    box-shadow: 0 0 0 1px #000 inset;
+    box-shadow: 0 0 0 2px #000 inset;
 }
 
 /* Improve check color inside the box for supported browsers */
@@ -776,6 +778,8 @@ input[type="checkbox"]#rememberMe:hover {
         border-color: #fff !important;
         border-width: 2px;
         border-style: solid !important;
+        /* Force visible border in dark mode as well */
+        box-shadow: 0 0 0 2px #fff inset !important;
         background-color: transparent;
     }
 
@@ -788,7 +792,7 @@ input[type="checkbox"]#rememberMe:hover {
 
     #rememberMe.form-check-input:hover,
     input[type="checkbox"]#rememberMe:hover {
-        box-shadow: 0 0 0 1px #fff inset;
+        box-shadow: 0 0 0 2px #fff inset;
     }
 
     /* Checkmark color in dark mode */
@@ -803,6 +807,7 @@ html[data-theme="dark"] input[type="checkbox"]#rememberMe {
     border-color: #fff !important;
     border-width: 2px;
     border-style: solid !important;
+    box-shadow: 0 0 0 2px #fff inset !important;
     background-color: transparent;
 }
 
@@ -815,8 +820,122 @@ html[data-theme="dark"] input[type="checkbox"]#rememberMe:focus {
 
 html[data-theme="dark"] #rememberMe.form-check-input:hover,
 html[data-theme="dark"] input[type="checkbox"]#rememberMe:hover {
-    box-shadow: 0 0 0 1px #fff inset;
+    box-shadow: 0 0 0 2px #fff inset;
+}
+
+/* High contrast/forced-colors mode: rely on system colors but ensure visibility */
+@media (forced-colors: active) {
+    #rememberMe.form-check-input,
+    input[type="checkbox"]#rememberMe {
+        forced-color-adjust: none;
+        border-color: CanvasText !important;
+        box-shadow: 0 0 0 2px CanvasText inset !important;
+        background-color: Canvas !important;
+    }
 }
 
 /* Checkmark color in dark mode (manual toggle) */
 html[data-theme="dark"] #rememberMe { accent-color: #fff; }
+
+/* --- Scoped custom checkbox for #rememberMe to ensure consistent border across Android/Chrome variants --- */
+/* Keep native input for semantics but visually replace it with a CSS-rendered box using the label */
+.form-check #rememberMe.form-check-input {
+    position: absolute;
+    opacity: 0;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0; /* avoid layout shifts */
+}
+
+/* Ensure the label provides sufficient tap target and left padding for the custom box */
+.form-check label.form-check-label[for="rememberMe"] {
+    position: relative;
+    padding-left: 1.75rem; /* room for the 1.1rem box + gap */
+    min-height: 2.75rem;   /* ≥44px for mobile accessibility */
+    display: inline-flex;
+    align-items: center;
+}
+
+/* The visual box */
+.form-check label.form-check-label[for="rememberMe"]::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 2px solid #000;
+    border-radius: .25rem; /* match Bootstrap rounded corners */
+    background: #fff;
+    box-sizing: border-box;
+}
+
+/* Hover emphasis */
+.form-check:hover label.form-check-label[for="rememberMe"]::before {
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.08);
+}
+
+/* Checkmark using borders (crisp, no assets) */
+.form-check #rememberMe:checked + label.form-check-label::after,
+.form-check input[type="checkbox"]#rememberMe:checked + label.form-check-label::after {
+    content: "";
+    position: absolute;
+    left: 0.28rem;
+    top: calc(50% - 0.05rem);
+    width: 0.35rem;
+    height: 0.7rem;
+    border: solid #000;
+    border-width: 0 0.2rem 0.2rem 0;
+    transform: translateY(-50%) rotate(45deg);
+}
+
+/* Focus-visible ring around the box when the input is focused */
+.form-check #rememberMe:focus-visible + label.form-check-label::before,
+.form-check #rememberMe:focus + label.form-check-label::before {
+    outline: 2px solid #000;
+    outline-offset: 2px;
+}
+
+/* Dark theme variants */
+@media (prefers-color-scheme: dark) {
+    .form-check label.form-check-label[for="rememberMe"]::before {
+        border-color: #fff;
+        background: transparent;
+    }
+    .form-check #rememberMe:checked + label.form-check-label::after,
+    .form-check input[type="checkbox"]#rememberMe:checked + label.form-check-label::after {
+        border-color: #fff;
+    }
+    .form-check #rememberMe:focus-visible + label.form-check-label::before,
+    .form-check #rememberMe:focus + label.form-check-label::before {
+        outline-color: #fff;
+    }
+}
+
+html[data-theme="dark"] .form-check label.form-check-label[for="rememberMe"]::before {
+    border-color: #fff;
+    background: transparent;
+}
+html[data-theme="dark"] .form-check #rememberMe:checked + label.form-check-label::after,
+html[data-theme="dark"] .form-check input[type="checkbox"]#rememberMe:checked + label.form-check-label::after {
+    border-color: #fff;
+}
+html[data-theme="dark"] .form-check #rememberMe:focus-visible + label.form-check-label::before,
+html[data-theme="dark"] .form-check #rememberMe:focus + label.form-check-label::before {
+    outline-color: #fff;
+}
+
+/* High contrast / forced colors: rely on system colors and avoid hiding semantics */
+@media (forced-colors: active) {
+    .form-check label.form-check-label[for="rememberMe"]::before {
+        forced-color-adjust: none;
+        background: Canvas;
+        border-color: CanvasText;
+    }
+    .form-check #rememberMe:checked + label.form-check-label::after,
+    .form-check input[type="checkbox"]#rememberMe:checked + label.form-check-label::after {
+        forced-color-adjust: none;
+        border-color: CanvasText;
+    }
+}
