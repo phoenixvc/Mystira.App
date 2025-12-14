@@ -126,7 +126,7 @@ public class AzureEmailService : IEmailService
                 "[{OperationId}] Azure Communication Services request failed. " +
                 "Recipient: {Email}, ErrorCode: {ErrorCode}, Status: {Status}, Message: {Message}",
                 operationId, toEmail, ex.ErrorCode, ex.Status, ex.Message);
-            
+
             var userMessage = GetUserFriendlyErrorMessage(ex.ErrorCode, $"Failed to send email: {ex.Message}");
             return (false, userMessage);
         }
@@ -171,7 +171,7 @@ public class AzureEmailService : IEmailService
 
             var emailMessage = new EmailMessage(
                 senderAddress: _senderEmail,
-                content: new EmailContent("Your Mystira Sign-In Code") { Html = emailContent },
+                content: new EmailContent($"Your Mystira Sign-In Code is {code}") { Html = emailContent },
                 recipients: new EmailRecipients(new List<EmailAddress> { new EmailAddress(toEmail) })
             );
 
@@ -203,7 +203,7 @@ public class AzureEmailService : IEmailService
                 "[{OperationId}] Azure Communication Services request failed for sign-in email. " +
                 "Recipient: {Email}, ErrorCode: {ErrorCode}, Status: {Status}, Message: {Message}",
                 operationId, toEmail, ex.ErrorCode, ex.Status, ex.Message);
-            
+
             var userMessage = GetUserFriendlyErrorMessage(ex.ErrorCode, $"Failed to send sign-in email: {ex.Message}");
             return (false, userMessage);
         }
