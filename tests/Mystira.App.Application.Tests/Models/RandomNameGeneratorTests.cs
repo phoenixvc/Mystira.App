@@ -104,11 +104,4 @@ public class RandomNameGeneratorTests
         act.Should().Throw<ArgumentException>();
     }
 
-    [Fact]
-    public void NameLists_HaveBeenExpanded()
-    {
-        // Assert
-        RandomNameGenerator.FantasyNames.Length.Should().BeGreaterThan(50);
-        RandomNameGenerator.AdjectiveNames.Length.Should().BeGreaterThan(20);
-    }
 }

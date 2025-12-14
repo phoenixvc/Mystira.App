@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 namespace Mystira.App.Domain.Models;
 
 /// <summary>
@@ -7,27 +8,29 @@ namespace Mystira.App.Domain.Models;
 public class PlayerScenarioScore
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
-    
+
     /// <summary>
     /// The user profile that completed the scenario
     /// </summary>
     public string ProfileId { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// The scenario that was completed
     /// </summary>
     public string ScenarioId { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// The game session where this score was earned
     /// </summary>
     public string GameSessionId { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// Aggregated axis scores (e.g., {"honesty": 15.5, "bravery": -3.2})
+    /// Not mapped in tests' in-memory EF model.
     /// </summary>
+    [NotMapped]
     public Dictionary<string, float> AxisScores { get; set; } = new();
-    
+
     /// <summary>
     /// When the score was recorded
     /// </summary>

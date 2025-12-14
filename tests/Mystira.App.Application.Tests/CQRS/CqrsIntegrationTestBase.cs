@@ -47,8 +47,8 @@ public abstract class CqrsIntegrationTestBase : IDisposable
         services.AddScoped<IBadgeImageRepository, BadgeImageRepository>();
         services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
 
-        // Add Unit of Work
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        // Add Unit of Work (explicitly use Application port as service type)
+        services.AddScoped<Mystira.App.Application.Ports.Data.IUnitOfWork, Mystira.App.Infrastructure.Data.UnitOfWork.UnitOfWork>();
 
         // Add Memory Cache
         services.AddMemoryCache(options =>
@@ -63,7 +63,8 @@ public abstract class CqrsIntegrationTestBase : IDisposable
         // Add MediatR with caching behavior
         services.AddMediatR(cfg =>
         {
-            cfg.RegisterServicesFromAssembly(typeof(Application.Interfaces.ICommand<>).Assembly);
+            // Register handlers from Application assembly; using IQuery<> marker type
+            cfg.RegisterServicesFromAssembly(typeof(Mystira.App.Application.CQRS.IQuery<>).Assembly);
             cfg.AddOpenBehavior(typeof(QueryCachingBehavior<,>));
         });
 

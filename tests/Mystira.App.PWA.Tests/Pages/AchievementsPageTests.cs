@@ -69,6 +69,7 @@ public class AchievementsPageTests : TestContext
         public Task<(bool Success, string Message, string? Token, string? RefreshToken)> RefreshTokenAsync(string token, string refreshToken) => Task.FromResult((false, string.Empty, (string?)null, (string?)null));
         public Task<string?> GetCurrentTokenAsync() => Task.FromResult<string?>(null);
         public void SetRememberMe(bool rememberMe) { }
+        public Task<bool> GetRememberMeAsync() => Task.FromResult(false);
         public DateTime? GetTokenExpiryTime() => null;
         public Task<bool> EnsureTokenValidAsync(int expiryBufferMinutes = 5) => Task.FromResult(true);
         public event EventHandler? TokenExpiryWarning;
