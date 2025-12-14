@@ -123,16 +123,16 @@ bundle.zip
                                     <h5>Import Progress</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div id="importProgress" style="display: none;">
+                                    <div id="importProgress" class="d-none">
                                         <div class="progress mb-3">
-                                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated w-0" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
                                         </div>
                                         <div id="progressText">Preparing import...</div>
                                     </div>
 
                                     <div id="importResults"></div>
 
-                                    <div id="validationResults" style="display: none;">
+                                    <div id="validationResults" class="d-none">
                                         <h6>Validation Results</h6>
                                         <div id="validationDetails"></div>
                                     </div>
@@ -223,13 +223,17 @@ function validateOnly() {
 }
 
 function showProgress(message) {
-    document.getElementById('importProgress').style.display = 'block';
-    document.getElementById('progressBar').style.width = '25%';
+    const progress = document.getElementById('importProgress');
+    const bar = document.getElementById('progressBar');
+    progress.classList.remove('d-none');
+    // reset width classes then set to 25%
+    bar.classList.remove('w-0','w-25','w-50','w-75','w-100');
+    bar.classList.add('w-25');
     document.getElementById('progressText').textContent = message;
 }
 
 function hideProgress() {
-    document.getElementById('importProgress').style.display = 'none';
+    document.getElementById('importProgress').classList.add('d-none');
 }
 
 function showImportResult(type, message) {
@@ -274,7 +278,7 @@ function showImportSummary(summary) {
 }
 
 function showValidationResults(results) {
-    document.getElementById('validationResults').style.display = 'block';
+    document.getElementById('validationResults').classList.remove('d-none');
 
     let resultHtml = '<div class="list-group list-group-flush">';
 

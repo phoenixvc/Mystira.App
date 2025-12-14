@@ -2,6 +2,7 @@ using Bunit;
 using FluentAssertions;
 using Mystira.App.PWA.Components;
 using Xunit;
+using AngleSharp.Dom;
 
 namespace Mystira.App.PWA.Tests.Components;
 
@@ -109,9 +110,9 @@ public class LoadingIndicatorTests : TestContext
 
         // Assert
         var skeletonItem = cut.Find(".skeleton-item");
-        skeletonItem.FindAll(".skeleton-line").Should().HaveCount(3);
-        skeletonItem.FindAll(".skeleton-line-title").Should().HaveCount(1);
-        skeletonItem.FindAll(".skeleton-line-text").Should().HaveCount(2);
+        skeletonItem.QuerySelectorAll(".skeleton-line").Length.Should().Be(3);
+        skeletonItem.QuerySelectorAll(".skeleton-line-title").Length.Should().Be(1);
+        skeletonItem.QuerySelectorAll(".skeleton-line-text").Length.Should().Be(2);
     }
 
     [Theory]

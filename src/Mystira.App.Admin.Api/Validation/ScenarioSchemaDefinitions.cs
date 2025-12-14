@@ -12,6 +12,7 @@ public static class ScenarioSchemaDefinitions
   "required": [
     "title",
     "description",
+    "image",
     "tags",
     "difficulty",
     "session_length",
@@ -25,6 +26,7 @@ public static class ScenarioSchemaDefinitions
   "properties": {
     "title": { "type": "string", "minLength": 1, "maxLength": 200, "description": "The title of the story" },
     "description": { "type": "string", "minLength": 1, "maxLength": 1000, "description": "Brief description of the story" },
+    "image": { "type": "string", "description": "Cover image id for the story" },
     "tags": {
       "type": "array",
       "items": { "type": "string" },
@@ -91,6 +93,7 @@ public static class ScenarioSchemaDefinitions
           },
           "title": { "type": "string", "minLength": 1, "description": "Scene title" },
           "type": { "type": "string", "enum": ["narrative", "choice", "roll", "special"], "description": "Scene type" },
+          "active_character": { "type": ["string", "null"], "description": "Required per scene. May be null. Must be populated with a valid character in choice scenes." },
           "description": { "type": "string", "minLength": 1, "description": "Scene description" },
           "next_scene": {
             "anyOf": [
@@ -187,8 +190,9 @@ public static class ScenarioSchemaDefinitions
           { "if": { "properties": { "type": { "const": "roll" } } }, "then": { "required": ["difficulty", "branches"] } },
           { "if": { "properties": { "type": { "const": "choice" } } }, "then": { "required": ["branches"] } },
           { "if": { "properties": { "type": { "const": "narrative" } } }, "then": { "required": ["next_scene"] } },
-          { "if": { "properties": { "type": { "const": "special" } } }, "then": { "properties": { "next_scene": { "type": "null" } } } }
-        ]
+          { "if": { "properties": { "type": { "const": "special" } } }, "then": { "properties": { "next_scene": { "type": "null" } } } },
+          { "if": { "properties": { "type": { "const": "choice" } } }, "then": { "properties": { "active_character": { "type": "string" } } }
+        ],
       }
     }
   },

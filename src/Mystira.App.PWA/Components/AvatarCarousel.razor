@@ -33,12 +33,12 @@
                 <div class="d-flex flex-column align-items-center gap-3">
                     <!-- Avatar Display -->
                     <div class="avatar-display">
-                        <CachedMystiraImage
-                            MediaId="@(currentAvatarMediaId)"
-                            Alt="Avatar"
-                            ImageClass="avatar-image"
-                            Width="300"
-                            Height="300" />
+                        <div class="avatar-image-wrapper">
+                            <CachedMystiraImage
+                                MediaId="@(currentAvatarMediaId)"
+                                Alt="Avatar"
+                                ImageClass="avatar-image" />
+                        </div>
                     </div>
 
                     <!-- Navigation Controls -->

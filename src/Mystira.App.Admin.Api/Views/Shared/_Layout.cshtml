@@ -30,6 +30,13 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
         }
+
+        /* CSP-safe utility helpers (use classes instead of inline styles) */
+        .of-contain { object-fit: contain; }
+        .max-h-150 { max-height: 150px; }
+        .max-h-200 { max-height: 200px; }
+        .max-w-100 { max-width: 100%; }
+        .w-0 { width: 0% !important; }
     </style>
 </head>
 <body>
@@ -71,12 +78,6 @@
                             <a class="nav-link" href="/admin/media">
                                 <i class="fas fa-image me-2"></i>
                                 Media
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/api">
-                                <i class="fas fa-code me-2"></i>
-                                API Docs
                             </a>
                         </li>
                     </ul>

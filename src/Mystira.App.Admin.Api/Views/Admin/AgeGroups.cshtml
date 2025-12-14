@@ -37,7 +37,7 @@
 
                         <div class="col-md-5">
                             <h5 id="formTitle">Create / Update Age Group</h5>
-                            <form id="ageGroupForm" onsubmit="return false;">
+                            <form id="ageGroupForm">
                                 <input type="hidden" id="ageGroupId" />
                                 <div class="mb-3">
                                     <label for="ageGroupName" class="form-label">Name *</label>
@@ -63,8 +63,8 @@
                                 </div>
 
                                 <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-primary" onclick="saveAgeGroup()">Save</button>
-                                    <button type="button" class="btn btn-secondary" onclick="resetForm()">Reset</button>
+                                    <button type="submit" id="saveAgeGroupBtn" class="btn btn-primary">Save</button>
+                                    <button type="button" id="resetAgeGroupBtn" class="btn btn-secondary">Reset</button>
                                 </div>
                             </form>
                         </div>
@@ -91,15 +91,49 @@
                 const ageRange = ageGroup.minimumAge !== undefined && ageGroup.maximumAge !== undefined
                     ? `${ageGroup.minimumAge} - ${ageGroup.maximumAge}`
                     : 'N/A';
-                tr.innerHTML = `
-                    <td>${ageGroup.name}</td>
-                    <td><code>${ageGroup.value}</code></td>
-                    <td>${ageRange}</td>
-                    <td>${ageGroup.description || ''}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary" onclick='editAgeGroup(${JSON.stringify(ageGroup)})'>Edit</button>
-                        <button class="btn btn-sm btn-outline-danger" onclick='deleteAgeGroup("${ageGroup.id}")'>Delete</button>
-                    </td>`;
+
+                const tdName = document.createElement('td');
+                tdName.textContent = ageGroup.name;
+                tr.appendChild(tdName);
+
+                const tdValue = document.createElement('td');
+                const code = document.createElement('code');
+                code.textContent = ageGroup.value;
+                tdValue.appendChild(code);
+                tr.appendChild(tdValue);
+
+                const tdRange = document.createElement('td');
+                tdRange.textContent = ageRange;
+                tr.appendChild(tdRange);
+
+                const tdDesc = document.createElement('td');
+                tdDesc.textContent = ageGroup.description || '';
+                tr.appendChild(tdDesc);
+
+                const tdActions = document.createElement('td');
+                const editBtn = document.createElement('button');
+                editBtn.type = 'button';
+                editBtn.className = 'btn btn-sm btn-outline-primary me-2';
+                editBtn.textContent = 'Edit';
+                editBtn.setAttribute('data-action', 'edit');
+                editBtn.setAttribute('data-id', ageGroup.id);
+                editBtn.setAttribute('data-name', ageGroup.name ?? '');
+                editBtn.setAttribute('data-value', ageGroup.value ?? '');
+                editBtn.setAttribute('data-min', ageGroup.minimumAge ?? '');
+                editBtn.setAttribute('data-max', ageGroup.maximumAge ?? '');
+                editBtn.setAttribute('data-description', ageGroup.description ?? '');
+
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.className = 'btn btn-sm btn-outline-danger';
+                delBtn.textContent = 'Delete';
+                delBtn.setAttribute('data-action', 'delete');
+                delBtn.setAttribute('data-id', ageGroup.id);
+
+                tdActions.appendChild(editBtn);
+                tdActions.appendChild(delBtn);
+                tr.appendChild(tdActions);
+
                 tbody.appendChild(tr);
             });
         } catch (e) {
@@ -204,6 +238,39 @@
         setTimeout(() => alert.classList.add('d-none'), 5000);
     }
 
-    // Load on page load
-    loadAgeGroups();
+    // Wire up events without inline handlers and initial load
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('ageGroupForm');
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveAgeGroup();
+        });
+
+        const resetBtn = document.getElementById('resetAgeGroupBtn');
+        resetBtn.addEventListener('click', () => resetForm());
+
+        // Delegate table actions
+        const tbody = document.getElementById('ageGroupsTableBody');
+        tbody.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const action = btn.getAttribute('data-action');
+            if (action === 'edit') {
+                const ageGroup = {
+                    id: btn.getAttribute('data-id'),
+                    name: btn.getAttribute('data-name') || '',
+                    value: btn.getAttribute('data-value') || '',
+                    minimumAge: btn.getAttribute('data-min') || '',
+                    maximumAge: btn.getAttribute('data-max') || '',
+                    description: btn.getAttribute('data-description') || ''
+                };
+                editAgeGroup(ageGroup);
+            } else if (action === 'delete') {
+                const id = btn.getAttribute('data-id');
+                if (id) deleteAgeGroup(id);
+            }
+        });
+
+        loadAgeGroups();
+    });
 </script>

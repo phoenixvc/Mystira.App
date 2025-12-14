@@ -1,5 +1,3 @@
-using Mystira.App.Application.CQRS;
-
 namespace Mystira.App.Application.CQRS.Royalties.Commands;
 
 /// <summary>

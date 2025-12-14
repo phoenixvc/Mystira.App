@@ -1,5 +1,7 @@
 @{
     ViewData["Title"] = "Content Bundles";
+    // Per-request CSP nonce provided by SecurityHeadersMiddleware (prod)
+    var cspNonce = Context?.Items["CspNonce"] as string;
 }
 
 <div class="container-fluid">
@@ -36,7 +38,7 @@
 
                         <div class="col-md-5">
                             <h5 id="formTitle">Create / Update Bundle</h5>
-                            <form id="bundleForm" onsubmit="return false;">
+                            <form id="bundleForm">
                                 <input type="hidden" id="bundleId" />
                                 <div class="mb-3">
                                     <label for="title" class="form-label">Title</label>
@@ -64,8 +66,8 @@
                                 </div>
 
                                 <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-primary" onclick="saveBundle()">Save</button>
-                                    <button type="button" class="btn btn-secondary" onclick="resetForm()">Reset</button>
+                                    <button type="submit" id="saveBtn" class="btn btn-primary">Save</button>
+                                    <button type="button" id="resetBtn" class="btn btn-secondary">Reset</button>
                                 </div>
                             </form>
                         </div>
@@ -76,7 +78,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="@cspNonce">
     const apiBase = '/api/admin/bundlesadmin';
 
     async function loadBundles() {
@@ -88,13 +90,41 @@
             tbody.innerHTML = '';
             data.forEach(b => {
                const tr = document.createElement('tr');
-               tr.innerHTML = `
-                   <td>${b.title}</td>
-                   <td>${b.ageGroup || ''}</td>
-                   <td>${(b.scenarioIds || []).length}</td>
-                   <td>${b.isFree ? 'Yes' : 'No'}</td>
-                   <td><button class="btn btn-sm btn-outline-primary" onclick='editBundle(${JSON.stringify(b)})'>Edit</button></td>
-                   <td><button class="btn btn-sm btn-outline-danger" data-bundle-id='${b.id}' data-bundle-title='${b.title}' onclick='deleteBundleHandler(this)'>Delete</button></td>`;
+
+               const tdTitle = document.createElement('td');
+               tdTitle.textContent = b.title || '';
+               tr.appendChild(tdTitle);
+
+               const tdAge = document.createElement('td');
+               tdAge.textContent = b.ageGroup || '';
+               tr.appendChild(tdAge);
+
+               const tdScenarios = document.createElement('td');
+               tdScenarios.textContent = (b.scenarioIds || []).length;
+               tr.appendChild(tdScenarios);
+
+               const tdFree = document.createElement('td');
+               tdFree.textContent = b.isFree ? 'Yes' : 'No';
+               tr.appendChild(tdFree);
+
+               const tdEdit = document.createElement('td');
+               const editBtn = document.createElement('button');
+               editBtn.className = 'btn btn-sm btn-outline-primary';
+               editBtn.type = 'button';
+               editBtn.textContent = 'Edit';
+               editBtn.addEventListener('click', () => editBundle(b));
+               tdEdit.appendChild(editBtn);
+               tr.appendChild(tdEdit);
+
+               const tdDelete = document.createElement('td');
+               const delBtn = document.createElement('button');
+               delBtn.className = 'btn btn-sm btn-outline-danger';
+               delBtn.type = 'button';
+               delBtn.textContent = 'Delete';
+               delBtn.addEventListener('click', () => deleteBundle(b.id, b.title));
+               tdDelete.appendChild(delBtn);
+               tr.appendChild(tdDelete);
+
                tbody.appendChild(tr);
             });
         } catch (e) {
@@ -152,12 +182,6 @@
         }
     }
 
-    function deleteBundleHandler(button) {
-        const bundleId = button.getAttribute('data-bundle-id');
-        const bundleTitle = button.getAttribute('data-bundle-title');
-        deleteBundle(bundleId, bundleTitle);
-    }
-
     async function deleteBundle(bundleId, bundleTitle) {
         if (!confirm(`Are you sure you want to delete the bundle "${bundleTitle}"?`)) {
             return;
@@ -185,5 +209,17 @@
         el.classList.remove('d-none');
     }
 
-    document.addEventListener('DOMContentLoaded', loadBundles);
+    // Wire up form and actions without inline handlers (CSP-safe)
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('bundleForm');
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveBundle();
+        });
+
+        const resetBtn = document.getElementById('resetBtn');
+        resetBtn.addEventListener('click', () => resetForm());
+
+        loadBundles();
+    });
 </script>

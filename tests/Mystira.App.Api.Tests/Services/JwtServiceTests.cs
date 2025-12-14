@@ -9,7 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Moq;
-using Mystira.App.Api.Services;
+using Mystira.App.Shared.Services;
 using Xunit;
 
 namespace Mystira.App.Api.Tests.Services;
@@ -325,7 +325,8 @@ FQIDAQAB
             {
                 ["JwtSettings:Issuer"] = "MystiraAPI",
                 ["JwtSettings:Audience"] = "MystiraPWA",
-                ["JwtSettings:RsaPrivateKey"] = TestRsaPrivateKey
+                ["JwtSettings:RsaPrivateKey"] = TestRsaPrivateKey,
+                ["JwtSettings:RsaPublicKey"] = TestRsaPublicKey,
             })
             .Build();
     }

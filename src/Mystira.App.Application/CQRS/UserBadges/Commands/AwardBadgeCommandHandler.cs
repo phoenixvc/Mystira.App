@@ -7,18 +7,18 @@ namespace Mystira.App.Application.CQRS.UserBadges.Commands;
 public class AwardBadgeCommandHandler : ICommandHandler<AwardBadgeCommand, UserBadge>
 {
     private readonly IUserBadgeRepository _repository;
-    private readonly IBadgeRepository _badgeRepository;
+    private readonly IRepository<BadgeConfiguration> _badgeConfigRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AwardBadgeCommandHandler> _logger;
 
     public AwardBadgeCommandHandler(
         IUserBadgeRepository repository,
-        IBadgeRepository badgeRepository,
+        IRepository<BadgeConfiguration> badgeConfigRepository,
         IUnitOfWork unitOfWork,
         ILogger<AwardBadgeCommandHandler> logger)
     {
         _repository = repository;
-        _badgeRepository = badgeRepository;
+        _badgeConfigRepository = badgeConfigRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -37,8 +37,8 @@ public class AwardBadgeCommandHandler : ICommandHandler<AwardBadgeCommand, UserB
             throw new ArgumentException("BadgeConfigurationId is required");
         }
 
-        var badgeDefinition = await _badgeRepository.GetByIdAsync(request.BadgeConfigurationId);
-        if (badgeDefinition == null)
+        var badgeConfig = await _badgeConfigRepository.GetByIdAsync(request.BadgeConfigurationId);
+        if (badgeConfig == null)
         {
             throw new ArgumentException($"Badge not found: {request.BadgeConfigurationId}");
         }
@@ -48,15 +48,15 @@ public class AwardBadgeCommandHandler : ICommandHandler<AwardBadgeCommand, UserB
             Id = Guid.NewGuid().ToString(),
             UserProfileId = request.UserProfileId,
             BadgeConfigurationId = request.BadgeConfigurationId,
-            BadgeId = badgeDefinition.Id,
-            BadgeName = badgeDefinition.Title,
-            BadgeMessage = badgeDefinition.Description,
-            Axis = badgeDefinition.CompassAxisId,
+            BadgeId = badgeConfig.Id,
+            BadgeName = badgeConfig.Name,
+            BadgeMessage = badgeConfig.Message,
+            Axis = badgeConfig.Axis,
             TriggerValue = request.TriggerValue,
-            Threshold = badgeDefinition.RequiredScore,
+            Threshold = badgeConfig.Threshold,
             GameSessionId = request.GameSessionId,
             ScenarioId = request.ScenarioId,
-            ImageId = badgeDefinition.ImageId,
+            ImageId = badgeConfig.ImageId,
             EarnedAt = DateTime.UtcNow
         };
 

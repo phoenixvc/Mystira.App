@@ -2,7 +2,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.JSInterop;
 using Mystira.App.PWA;
 using Mystira.App.PWA.Services;
 using Polly;
@@ -139,13 +138,28 @@ builder.Services.AddHttpClient<ICharacterApiClient, CharacterApiClient>(Configur
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
-builder.Services.AddHttpClient<IDiscordApiClient, DiscordApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("DiscordApi"))
-    .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+// Feature flag: Discord integration can be disabled via configuration
+var discordEnabled = builder.Configuration.GetValue<bool>("Features:Discord:Enabled");
+if (discordEnabled)
+{
+    builder.Services.AddHttpClient<IDiscordApiClient, DiscordApiClient>(ConfigureApiHttpClient)
+        .AddPolicyHandler(CreateResiliencePolicy("DiscordApi"))
+        .AddHttpMessageHandler<ApiBaseAddressHandler>()
+        .AddHttpMessageHandler<AuthHeaderHandler>();
+}
+else
+{
+    // Register a no-op implementation to satisfy DI and avoid runtime warnings
+    builder.Services.AddScoped<IDiscordApiClient, NullDiscordApiClient>();
+}
 
 builder.Services.AddHttpClient<IAttributionApiClient, AttributionApiClient>(ConfigureApiHttpClient)
     .AddPolicyHandler(CreateResiliencePolicy("AttributionApi"))
+    .AddHttpMessageHandler<ApiBaseAddressHandler>()
+    .AddHttpMessageHandler<AuthHeaderHandler>();
+
+builder.Services.AddHttpClient<IBadgesApiClient, BadgesApiClient>(ConfigureApiHttpClient)
+    .AddPolicyHandler(CreateResiliencePolicy("BadgesApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
@@ -168,6 +182,8 @@ builder.Services.AddScoped<IGameSessionService, GameSessionService>();
 builder.Services.AddScoped<IIndexedDbService, IndexedDbService>();
 builder.Services.AddScoped<ICharacterAssignmentService, CharacterAssignmentService>();
 builder.Services.AddSingleton<IImageCacheService, ImageCacheService>();
+builder.Services.AddScoped<IPlayerContextService, PlayerContextService>();
+builder.Services.AddScoped<IAchievementsService, AchievementsService>();
 
 // UI Services
 builder.Services.AddScoped<ToastService>();
@@ -236,8 +252,9 @@ static void SetDevelopmentModeForApiClients(IServiceProvider services, bool isDe
         typeof(IContentBundleApiClient),
         typeof(ICharacterApiClient),
         typeof(IDiscordApiClient),
-        typeof(IAttributionApiClient)
-    };
+        typeof(IAttributionApiClient),
+        typeof(IBadgesApiClient)
+        };
 
     foreach (var interfaceType in apiClientTypes)
     {
@@ -319,7 +336,7 @@ static string GetDefaultApiUrlForEnvironment(IConfiguration configuration, strin
             var envName = child["Environment"] ?? child["environment"];
             var url = child["Url"] ?? child["url"];
 
-            if (!string.IsNullOrEmpty(envName) && 
+            if (!string.IsNullOrEmpty(envName) &&
                 envName.Equals(environment, StringComparison.OrdinalIgnoreCase) &&
                 !string.IsNullOrEmpty(url))
             {

@@ -138,7 +138,9 @@ public class GameSession
     public Scenario Scenario { get; set; } = new();
     public string CurrentSceneId { get; set; } = string.Empty;
     public int ChoiceCount { get; set; }
-    public string Status { get; set; } = string.Empty;
+    // Align with API contract which returns SessionStatus enum
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public Mystira.App.Domain.Models.SessionStatus Status { get; set; }
 
     // Selected character assignments for this session (story character -> player)
     public List<CharacterAssignment> CharacterAssignments { get; set; } = new();

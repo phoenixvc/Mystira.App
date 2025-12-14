@@ -15,6 +15,15 @@ public class MasterDataSeederService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MasterDataSeederService> _logger;
 
+    // Cosmos EF Core provider may translate Any/Exists into an unsupported EXISTS query.
+    // Avoid constant projection + FirstOrDefault which can cause LIMIT/OFFSET in a subquery for Cosmos.
+    // Instead materialize up to 1 entity and check if any returned.
+    private static async Task<bool> HasAnyAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default) where T : class
+    {
+        var list = await query.AsNoTracking().Take(1).ToListAsync(cancellationToken);
+        return list.Count > 0;
+    }
+
     public MasterDataSeederService(
         IServiceProvider serviceProvider,
         ILogger<MasterDataSeederService> logger)
@@ -37,7 +46,7 @@ public class MasterDataSeederService
 
     private async Task SeedCompassAxesAsync(MystiraAppDbContext context)
     {
-        if (await context.CompassAxes.AnyAsync())
+        if (await HasAnyAsync(context.CompassAxes))
         {
             _logger.LogInformation("CompassAxes already seeded, skipping");
             return;
@@ -75,7 +84,7 @@ public class MasterDataSeederService
 
     private async Task SeedArchetypesAsync(MystiraAppDbContext context)
     {
-        if (await context.ArchetypeDefinitions.AnyAsync())
+        if (await HasAnyAsync(context.ArchetypeDefinitions))
         {
             _logger.LogInformation("Archetypes already seeded, skipping");
             return;
@@ -113,7 +122,7 @@ public class MasterDataSeederService
 
     private async Task SeedEchoTypesAsync(MystiraAppDbContext context)
     {
-        if (await context.EchoTypeDefinitions.AnyAsync())
+        if (await HasAnyAsync(context.EchoTypeDefinitions))
         {
             _logger.LogInformation("EchoTypes already seeded, skipping");
             return;
@@ -152,7 +161,7 @@ public class MasterDataSeederService
 
     private async Task SeedFantasyThemesAsync(MystiraAppDbContext context)
     {
-        if (await context.FantasyThemeDefinitions.AnyAsync())
+        if (await HasAnyAsync(context.FantasyThemeDefinitions))
         {
             _logger.LogInformation("FantasyThemes already seeded, skipping");
             return;
@@ -190,7 +199,7 @@ public class MasterDataSeederService
 
     private async Task SeedAgeGroupsAsync(MystiraAppDbContext context)
     {
-        if (await context.AgeGroupDefinitions.AnyAsync())
+        if (await HasAnyAsync(context.AgeGroupDefinitions))
         {
             _logger.LogInformation("AgeGroups already seeded, skipping");
             return;

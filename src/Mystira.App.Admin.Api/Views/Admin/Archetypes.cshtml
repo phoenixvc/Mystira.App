@@ -35,7 +35,7 @@
 
                         <div class="col-md-5">
                             <h5 id="formTitle">Create / Update Archetype</h5>
-                            <form id="archetypeForm" onsubmit="return false;">
+                            <form id="archetypeForm">
                                 <input type="hidden" id="archetypeId" />
                                 <div class="mb-3">
                                     <label for="archetypeName" class="form-label">Name *</label>
@@ -47,8 +47,8 @@
                                 </div>
 
                                 <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-primary" onclick="saveArchetype()">Save</button>
-                                    <button type="button" class="btn btn-secondary" onclick="resetForm()">Reset</button>
+                                    <button type="submit" id="saveArchetypeBtn" class="btn btn-primary">Save</button>
+                                    <button type="button" id="resetArchetypeBtn" class="btn btn-secondary">Reset</button>
                                 </div>
                             </form>
                         </div>
@@ -72,13 +72,36 @@
             tbody.innerHTML = '';
             data.forEach(archetype => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${archetype.name}</td>
-                    <td>${archetype.description || ''}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary" onclick='editArchetype(${JSON.stringify(archetype)})'>Edit</button>
-                        <button class="btn btn-sm btn-outline-danger" onclick='deleteArchetype("${archetype.id}")'>Delete</button>
-                    </td>`;
+
+                const tdName = document.createElement('td');
+                tdName.textContent = archetype.name;
+                tr.appendChild(tdName);
+
+                const tdDesc = document.createElement('td');
+                tdDesc.textContent = archetype.description || '';
+                tr.appendChild(tdDesc);
+
+                const tdActions = document.createElement('td');
+                const editBtn = document.createElement('button');
+                editBtn.type = 'button';
+                editBtn.className = 'btn btn-sm btn-outline-primary me-2';
+                editBtn.textContent = 'Edit';
+                editBtn.setAttribute('data-action', 'edit');
+                editBtn.setAttribute('data-id', archetype.id);
+                editBtn.setAttribute('data-name', archetype.name ?? '');
+                editBtn.setAttribute('data-description', archetype.description ?? '');
+
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.className = 'btn btn-sm btn-outline-danger';
+                delBtn.textContent = 'Delete';
+                delBtn.setAttribute('data-action', 'delete');
+                delBtn.setAttribute('data-id', archetype.id);
+
+                tdActions.appendChild(editBtn);
+                tdActions.appendChild(delBtn);
+                tr.appendChild(tdActions);
+
                 tbody.appendChild(tr);
             });
         } catch (e) {
@@ -166,6 +189,35 @@
         setTimeout(() => alert.classList.add('d-none'), 5000);
     }
 
-    // Load on page load
-    loadArchetypes();
+    // Wire up events without inline handlers and initial load
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('archetypeForm');
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveArchetype();
+        });
+
+        const resetBtn = document.getElementById('resetArchetypeBtn');
+        resetBtn.addEventListener('click', () => resetForm());
+
+        const tbody = document.getElementById('archetypesTableBody');
+        tbody.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const action = btn.getAttribute('data-action');
+            if (action === 'edit') {
+                const archetype = {
+                    id: btn.getAttribute('data-id'),
+                    name: btn.getAttribute('data-name') || '',
+                    description: btn.getAttribute('data-description') || ''
+                };
+                editArchetype(archetype);
+            } else if (action === 'delete') {
+                const id = btn.getAttribute('data-id');
+                if (id) deleteArchetype(id);
+            }
+        });
+
+        loadArchetypes();
+    });
 </script>

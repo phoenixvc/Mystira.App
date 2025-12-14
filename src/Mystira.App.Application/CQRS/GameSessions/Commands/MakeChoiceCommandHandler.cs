@@ -62,7 +62,17 @@ public class MakeChoiceCommandHandler : ICommandHandler<MakeChoiceCommand, GameS
             throw new InvalidOperationException($"Cannot make choice in session with status: {session.Status}");
         }
 
-        var playerId = !string.IsNullOrWhiteSpace(request.PlayerId)
+        // Resolve deciding player using ActiveCharacter when possible (CQRS layer doesn't have scenario context,
+        // so we rely on request providing SceneId and session CharacterAssignments)
+        string? playerId = null;
+        if (!string.IsNullOrWhiteSpace(request.SceneId))
+        {
+            // If the session already recorded the current scene, try to match assignment by SelectedCharacterId
+            // Note: Without scenario context, we cannot read Scene.ActiveCharacter here.
+            // We still prioritize explicit PlayerId in request when provided.
+        }
+
+        playerId = !string.IsNullOrWhiteSpace(request.PlayerId)
             ? request.PlayerId
             : session.ProfileId;
 
