@@ -12,7 +12,7 @@ Before publishing packages to the internal NuGet feed, ensure:
 - [ ] All projects build successfully
 - [ ] All tests pass
 - [ ] Azure DevOps Artifacts feed is created
-- [ ] GitHub Secrets are configured (AZURE_ORG, AZURE_PROJECT, AZURE_USER, AZURE_PAT, NUGET_FEED)
+- [ ] GitHub Secrets are configured (MYSTIRA_DEVOPS_AZURE_ORG, MYSTIRA_DEVOPS_AZURE_PROJECT, MYSTIRA_DEVOPS_AZURE_PAT, MYSTIRA_DEVOPS_NUGET_FEED)
 
 ## Package Metadata Checklist
 

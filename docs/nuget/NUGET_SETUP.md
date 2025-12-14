@@ -103,11 +103,10 @@ Store credentials in user-level NuGet config:
 
 Add these secrets to your GitHub repository:
 
-- `AZURE_ORG` - Your Azure DevOps organization name
-- `AZURE_PROJECT` - Your Azure DevOps project name
-- `AZURE_USER` - Username (email or service principal)
-- `AZURE_PAT` - Personal Access Token with Packaging (Read & Write) permissions
-- `NUGET_FEED` - Feed name (e.g., `Mystira-Internal`)
+- `MYSTIRA_DEVOPS_AZURE_ORG` - Your Azure DevOps organization name
+- `MYSTIRA_DEVOPS_AZURE_PROJECT` - Your Azure DevOps project name
+- `MYSTIRA_DEVOPS_AZURE_PAT` - Personal Access Token with Packaging (Read & Write) permissions
+- `MYSTIRA_DEVOPS_NUGET_FEED` - Feed name (e.g., `Mystira-Internal`)
 
 ### Service Principal (Recommended for CI/CD)
 

@@ -60,11 +60,10 @@ Created `.github/workflows/publish-shared-packages.yml`:
 2. Configure feed permissions (Readers, Contributors)
 3. Get feed URL
 4. Add GitHub secrets:
-   - `AZURE_ORG` - Azure DevOps organization name
-   - `AZURE_PROJECT` - Azure DevOps project name
-   - `AZURE_USER` - Username or service principal
-   - `AZURE_PAT` - Personal Access Token with Packaging (Read & Write)
-   - `NUGET_FEED` - Feed name (`Mystira-Internal`)
+   - `MYSTIRA_DEVOPS_AZURE_ORG` - Azure DevOps organization name
+   - `MYSTIRA_DEVOPS_AZURE_PROJECT` - Azure DevOps project name
+   - `MYSTIRA_DEVOPS_AZURE_PAT` - Personal Access Token with Packaging (Read & Write)
+   - `MYSTIRA_DEVOPS_NUGET_FEED` - Feed name (`Mystira-Internal`)
 
 ### ⏳ Initial Package Publishing
 
