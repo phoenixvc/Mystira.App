@@ -87,6 +87,9 @@ public class YamlScene
     [YamlMember(Alias = "description")]
     public string Description { get; set; } = string.Empty;
 
+    [YamlMember(Alias = "active_character")]
+    public string? ActiveCharacter { get; set; }
+
     [YamlMember(Alias = "next_scene")]
     public string? NextScene { get; set; }
 
@@ -119,6 +122,7 @@ public class YamlScene
             Title = Title,
             Type = Enum.Parse<SceneType>(Type, true),
             Description = Description,
+            ActiveCharacter = ActiveCharacter,
             NextSceneId = string.IsNullOrWhiteSpace(nextSceneId) ? null : nextSceneId,
             Difficulty = Difficulty,
             Media = Media?.ToDomainModel(),

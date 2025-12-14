@@ -122,7 +122,29 @@ public class ValidateScenarioUseCase
         }
 
         // Note: Character references in scenes are not currently stored in the Scene model
-        // This validation would need to be added if scenes reference characters directly
+        // Additional validation: For choice scenes, ActiveCharacter must match a Scenario.Character id.
+        if (scenario.Scenes != null && scenario.Characters != null)
+        {
+            var characterIds = scenario.Characters.Select(c => c.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var scene in scenario.Scenes)
+            {
+                if (scene.Type == SceneType.Choice)
+                {
+                    if (string.IsNullOrWhiteSpace(scene.ActiveCharacter))
+                    {
+                        _logger.LogError(
+                            "Scenario '{ScenarioId}' scene '{SceneId}' is a choice scene but has no active_character set.",
+                            scenario.Id, scene.Id);
+                    }
+                    else if (!characterIds.Contains(scene.ActiveCharacter))
+                    {
+                        _logger.LogError(
+                            "Scenario '{ScenarioId}' scene '{SceneId}' has active_character '{ActiveCharacter}' that does not match any scenario character ids.",
+                            scenario.Id, scene.Id, scene.ActiveCharacter);
+                    }
+                }
+            }
+        }
     }
 }
 
