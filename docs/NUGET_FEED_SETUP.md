@@ -177,3 +177,4 @@ dotnet add package Mystira.App.Domain --version 1.1.0
 - [ADR-0007: NuGet Feed Strategy](../../../docs/architecture/adr/0007-nuget-feed-strategy-for-shared-libraries.md)
 - [Migration Plan: Admin API Extraction](../../../docs/migration/ADMIN_API_EXTRACTION_PLAN.md)
 - [Azure DevOps Artifacts Documentation](https://docs.microsoft.com/en-us/azure/devops/artifacts/)
+

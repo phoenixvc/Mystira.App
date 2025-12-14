@@ -253,3 +253,4 @@ When a new version is published:
 - [ADR-0007: NuGet Feed Strategy](../../../../docs/architecture/adr/0007-nuget-feed-strategy-for-shared-libraries.md)
 - [ADR-0006: Admin API Repository Extraction](../../../../docs/architecture/adr/0006-admin-api-repository-extraction.md)
 - [Migration Plan](../../../../docs/migration/ADMIN_API_EXTRACTION_PLAN.md)
+
