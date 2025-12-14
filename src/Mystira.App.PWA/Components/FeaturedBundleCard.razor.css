@@ -4,11 +4,17 @@
     animation: fadeIn 0.5s ease-out;
 }
 
-.featured-bundle-image {
-    /* Ensure image never overflows its column/card */
+/* Aspect-ratio wrapper to prevent stretching in responsive rows */
+.featured-image-wrapper {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+}
+
+/* Image lives inside child component (CachedMystiraImage) */
+.featured-image-wrapper ::deep .featured-bundle-image {
     display: block;
     width: 100%;
-    max-width: 100%;
     height: 100%;
     object-fit: cover;
 }
