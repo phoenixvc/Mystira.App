@@ -1,6 +1,3 @@
-@{
-    ViewData["Title"] = "Compass Axes Management";
-}
 
 <div class="container-fluid">
     <div class="row">
@@ -35,7 +32,7 @@
 
                         <div class="col-md-5">
                             <h5 id="formTitle">Create / Update Axis</h5>
-                            <form id="axisForm" onsubmit="return false;">
+                            <form id="axisForm">
                                 <input type="hidden" id="axisId" />
                                 <div class="mb-3">
                                     <label for="axisName" class="form-label">Name *</label>
@@ -47,8 +44,8 @@
                                 </div>
 
                                 <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-primary" onclick="saveAxis()">Save</button>
-                                    <button type="button" class="btn btn-secondary" onclick="resetForm()">Reset</button>
+                                    <button type="submit" id="saveAxisBtn" class="btn btn-primary">Save</button>
+                                    <button type="button" id="resetAxisBtn" class="btn btn-secondary">Reset</button>
                                 </div>
                             </form>
                         </div>
@@ -72,13 +69,37 @@
             tbody.innerHTML = '';
             data.forEach(axis => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${axis.name}</td>
-                    <td>${axis.description || ''}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary" onclick='editAxis(${JSON.stringify(axis)})'>Edit</button>
-                        <button class="btn btn-sm btn-outline-danger" onclick='deleteAxis("${axis.id}")'>Delete</button>
-                    </td>`;
+
+                const tdName = document.createElement('td');
+                tdName.textContent = axis.name;
+                tr.appendChild(tdName);
+
+                const tdDesc = document.createElement('td');
+                tdDesc.textContent = axis.description || '';
+                tr.appendChild(tdDesc);
+
+                const tdActions = document.createElement('td');
+
+                const editBtn = document.createElement('button');
+                editBtn.type = 'button';
+                editBtn.className = 'btn btn-sm btn-outline-primary me-2';
+                editBtn.textContent = 'Edit';
+                editBtn.setAttribute('data-action', 'edit');
+                editBtn.setAttribute('data-id', axis.id);
+                editBtn.setAttribute('data-name', axis.name ?? '');
+                editBtn.setAttribute('data-description', axis.description ?? '');
+
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.className = 'btn btn-sm btn-outline-danger';
+                delBtn.textContent = 'Delete';
+                delBtn.setAttribute('data-action', 'delete');
+                delBtn.setAttribute('data-id', axis.id);
+
+                tdActions.appendChild(editBtn);
+                tdActions.appendChild(delBtn);
+                tr.appendChild(tdActions);
+
                 tbody.appendChild(tr);
             });
         } catch (e) {
@@ -166,6 +187,36 @@
         setTimeout(() => alert.classList.add('d-none'), 5000);
     }
 
-    // Load on page load
-    loadAxes();
+    // Wire up events without inline handlers and initial load
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('axisForm');
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveAxis();
+        });
+
+        const resetBtn = document.getElementById('resetAxisBtn');
+        resetBtn.addEventListener('click', () => resetForm());
+
+        // Delegate actions in the table
+        const tbody = document.getElementById('axesTableBody');
+        tbody.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const action = btn.getAttribute('data-action');
+            if (action === 'edit') {
+                const axis = {
+                    id: btn.getAttribute('data-id'),
+                    name: btn.getAttribute('data-name') || '',
+                    description: btn.getAttribute('data-description') || ''
+                };
+                editAxis(axis);
+            } else if (action === 'delete') {
+                const id = btn.getAttribute('data-id');
+                if (id) deleteAxis(id);
+            }
+        });
+
+        loadAxes();
+    });
 </script>

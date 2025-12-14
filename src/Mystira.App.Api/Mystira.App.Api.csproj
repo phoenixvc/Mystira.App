@@ -39,6 +39,13 @@
     <ProjectReference Include="..\Mystira.App.Shared\Mystira.App.Shared.csproj" />
   </ItemGroup>
 
+  <!-- Exclude legacy types moved to Shared library -->
+  <ItemGroup>
+    <Compile Remove="Services\JwtService.cs" />
+    <Compile Remove="Services\IJwtService.cs" />
+    <Compile Remove="Adapters\HealthCheckPortAdapter.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <Content Include="..\..\.dockerignore">
       <Link>.dockerignore</Link>

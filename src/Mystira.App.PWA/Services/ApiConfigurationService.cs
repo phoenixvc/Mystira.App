@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using Microsoft.Extensions.Configuration;
 using Microsoft.JSInterop;
 
 namespace Mystira.App.PWA.Services;

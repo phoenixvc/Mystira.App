@@ -13,6 +13,13 @@ public class BadgeConfigurationLoaderService
     private readonly ILogger<BadgeConfigurationLoaderService> _logger;
     private const long MaxImageSizeBytes = 5 * 1024 * 1024;
 
+    // Cosmos EF Core provider may translate Any/Exists into an unsupported EXISTS query.
+    // Use a TOP 1 style projection to check for existence safely.
+    private static async Task<bool> HasAnyAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
+    {
+        return await query.Select(_ => 1).Take(1).FirstOrDefaultAsync(cancellationToken) == 1;
+    }
+
     public BadgeConfigurationLoaderService(
         IServiceProvider serviceProvider,
         ILogger<BadgeConfigurationLoaderService> logger)
@@ -26,7 +33,7 @@ public class BadgeConfigurationLoaderService
         using var scope = _serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<MystiraAppDbContext>();
 
-        if (await context.AxisAchievements.AnyAsync() || await context.Badges.AnyAsync())
+        if (await HasAnyAsync(context.AxisAchievements) || await HasAnyAsync(context.Badges))
         {
             _logger.LogInformation("Badge configuration already seeded, skipping");
             return;
@@ -166,7 +173,7 @@ public class BadgeConfigurationLoaderService
             Path.Combine(currentDir, "badge-configuration.schema.json")
         };
 
-        return possiblePaths.Select(Path.GetFullPath).FirstOrDefault(File.Exists) 
+        return possiblePaths.Select(Path.GetFullPath).FirstOrDefault(File.Exists)
                ?? Path.Combine(schemaDir, "badge-configuration.schema.json");
     }
 
@@ -182,7 +189,7 @@ public class BadgeConfigurationLoaderService
             Path.Combine(currentDir, "Badges", $"{ageGroupId}.json")
         };
 
-        return possiblePaths.Select(Path.GetFullPath).FirstOrDefault(File.Exists) 
+        return possiblePaths.Select(Path.GetFullPath).FirstOrDefault(File.Exists)
                ?? Path.Combine(badgesDir, $"{ageGroupId}.json");
     }
 

@@ -39,7 +39,8 @@
                                 <input type="checkbox"
                                        class="form-check-input"
                                        id="rememberMe"
-                                       @bind="rememberMe"
+                                       checked="@rememberMe"
+                                       @onchange="OnRememberMeChanged"
                                        aria-label="Remember me for 30 days" />
                                 <label class="form-check-label" for="rememberMe">
                                     Remember me for 30 days
@@ -201,6 +202,7 @@
     private int resendCountdown = 0;
     private bool isResendingCode = false;
     private bool rememberMe = false;
+    private bool rememberMeUserSet = false;
     private System.Timers.Timer? countdownTimer;
 
     private async Task RequestSigninCode()
@@ -384,11 +386,43 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Load previously saved remember-me preference so the checkbox keeps its state across reloads
+        var savedRemember = await AuthService.GetRememberMeAsync();
+        if (!rememberMeUserSet)
+        {
+            rememberMe = savedRemember;
+        }
+
         var isAuthenticated = await AuthService.IsAuthenticatedAsync();
         if (isAuthenticated)
         {
             Navigation.NavigateTo("/");
         }
+    }
+
+    private void OnRememberMeChanged(ChangeEventArgs e)
+    {
+        if (e?.Value is bool b)
+        {
+            rememberMe = b;
+        }
+        else
+        {
+            // Fallback parse in case of unexpected value type
+            var str = e?.Value?.ToString();
+            if (bool.TryParse(str, out var parsed))
+            {
+                rememberMe = parsed;
+            }
+            else
+            {
+                rememberMe = !rememberMe; // toggle as last resort
+            }
+        }
+
+        rememberMeUserSet = true;
+        AuthService.SetRememberMe(rememberMe);
+        StateHasChanged();
     }
 
     public void Dispose()

@@ -116,21 +116,6 @@ else
                             <div class="text-center">
                                 <h5 class="mb-4 text-muted">What do you choose?</h5>
 
-                                @if (playerOptions.Count > 1)
-                                {
-                                    <div class="mb-3 d-flex justify-content-center">
-                                        <div style="max-width: 320px;">
-                                            <label class="form-label text-muted">Who's choosing?</label>
-                                            <select class="form-select" @bind="selectedPlayerId" disabled="@isProcessing">
-                                                @foreach (var player in playerOptions)
-                                                {
-                                                    <option value="@player.Id">@player.DisplayName</option>
-                                                }
-                                            </select>
-                                        </div>
-                                    </div>
-                                }
-
                                 <div class="d-flex flex-row flex-wrap justify-content-center gap-3">
                                     @foreach (var choice in gameSession.CurrentScene.Choices.OrderBy(c => c.Order))
                                     {
@@ -170,37 +155,11 @@ else
                                             <i class="fas fa-dice me-2"></i>
                                             You rolled: @rollResult
                                         </h3>
-                                        <div class="alert @(rollResult >= gameSession.CurrentScene.RollTarget ? "alert-success" : "alert-warning")">
+                                        <div class="alert @((lastRollSuccess ?? (rollResult >= gameSession.CurrentScene.RollTarget)) ? "alert-success" : "alert-warning")">
                                             @{
-                                                bool isSuccess = rollResult >= gameSession.CurrentScene.RollTarget;
-                                                string resultMessage;
-                                                
-                                                if (gameSession.Scenario.AgeGroup == "1-2")
-                                                {
-                                                    // Age group 1-2: Always show success with young exclamations
-                                                    string[] youngExclamations = new[] { "Yipee!", "Hooray!", "Wow!" };
-                                                    resultMessage = youngExclamations[new Random().Next(youngExclamations.Length)];
-                                                    isSuccess = true; // Always treat as success for 1-2 age group
-                                                }
-                                                else if (gameSession.Scenario.AgeGroup == "3-5")
-                                                {
-                                                    // Age group 3-5: Show success or failure exclamations based on roll
-                                                    if (isSuccess)
-                                                    {
-                                                        string[] successExclamations = new[] { "Yay!", "Hooray!", "Wow!", "Yippee!", "Super!", "Yes!" };
-                                                        resultMessage = successExclamations[new Random().Next(successExclamations.Length)];
-                                                    }
-                                                    else
-                                                    {
-                                                        string[] failureExclamations = new[] { "Oops!", "Uh-oh!", "Whoops!", "Oh dear!", "Whoopsie!" };
-                                                        resultMessage = failureExclamations[new Random().Next(failureExclamations.Length)];
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    // Other age groups: Standard success/fail messages
-                                                    resultMessage = isSuccess ? "Success!" : "Fail!";
-                                                }
+                                                // Use cached outcome/message to avoid flicker changes on re-render
+                                                bool isSuccess = lastRollSuccess ?? (rollResult >= gameSession.CurrentScene.RollTarget);
+                                                string resultMessage = lastRollMessage ?? (isSuccess ? "Success!" : "Fail!");
                                             }
 
                                             @if (isSuccess)
@@ -293,6 +252,8 @@ else
     private GameSession? gameSession;
     private bool isProcessing = false;
     private int? rollResult = null;
+    private bool? lastRollSuccess = null;
+    private string? lastRollMessage = null;
     private bool hasNavigatedHome = false;
 
     private List<PlayerOption> playerOptions = new();
@@ -319,7 +280,10 @@ else
     {
         gameSession = session;
         BuildPlayerOptions(session);
-        rollResult = null; // Reset roll result when scene changes
+        // Reset roll-related state when scene changes
+        rollResult = null;
+        lastRollSuccess = null;
+        lastRollMessage = null;
 
         // If the session has been completed elsewhere (e.g., via Continue when no next scene),
         // automatically navigate back to Home once, to finish the adventure flow.
@@ -518,8 +482,18 @@ else
             isProcessing = true;
             StateHasChanged();
 
-            // Determine if the roll was successful
-            bool isSuccess = rollResult.Value >= (gameSession.CurrentScene.RollTarget ?? 0);
+            // Determine if the roll was successful using the cached outcome to avoid mismatch with UI
+            bool isSuccess;
+            if (gameSession.Scenario.AgeGroup == "1-2")
+            {
+                // Always success for age group 1-2
+                isSuccess = true;
+            }
+            else
+            {
+                // Use cached success if available; otherwise compute against target
+                isSuccess = lastRollSuccess ?? (rollResult.Value >= (gameSession.CurrentScene.RollTarget ?? 0));
+            }
 
             Logger.LogInformation("Processing roll result: {RollResult}, Target: {Target}, Success: {IsSuccess}",
                 rollResult.Value, gameSession.CurrentScene.RollTarget, isSuccess);
@@ -576,6 +550,45 @@ else
     private Task HandleRollResult(int arg)
     {
         rollResult = arg;
+
+        // Compute and cache outcome/message to keep UI and navigation consistent
+        if (gameSession?.CurrentScene != null && gameSession.Scenario != null)
+        {
+            bool isSuccess;
+            string message;
+
+            if (gameSession.Scenario.AgeGroup == "1-2")
+            {
+                // Always success with young exclamations
+                string[] youngExclamations = new[] { "Yipee!", "Hooray!", "Wow!" };
+                message = youngExclamations[new Random().Next(youngExclamations.Length)];
+                isSuccess = true;
+            }
+            else if (gameSession.Scenario.AgeGroup == "3-5")
+            {
+                int target = gameSession.CurrentScene.RollTarget ?? 0;
+                isSuccess = arg >= target;
+                if (isSuccess)
+                {
+                    string[] successExclamations = new[] { "Yay!", "Hooray!", "Wow!", "Yippee!", "Super!", "Yes!" };
+                    message = successExclamations[new Random().Next(successExclamations.Length)];
+                }
+                else
+                {
+                    string[] failureExclamations = new[] { "Oops!", "Uh-oh!", "Whoops!", "Oh dear!", "Whoopsie!" };
+                    message = failureExclamations[new Random().Next(failureExclamations.Length)];
+                }
+            }
+            else
+            {
+                int target = gameSession.CurrentScene.RollTarget ?? 0;
+                isSuccess = arg >= target;
+                message = isSuccess ? "Success!" : "Fail!";
+            }
+
+            lastRollSuccess = isSuccess;
+            lastRollMessage = message;
+        }
 
         return Task.CompletedTask;
     }
