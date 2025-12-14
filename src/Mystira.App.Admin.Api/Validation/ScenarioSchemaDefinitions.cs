@@ -91,6 +91,7 @@ public static class ScenarioSchemaDefinitions
           },
           "title": { "type": "string", "minLength": 1, "description": "Scene title" },
           "type": { "type": "string", "enum": ["narrative", "choice", "roll", "special"], "description": "Scene type" },
+          "active_character": { "type": ["string", "null"], "description": "Required per scene. May be null. Must be populated with a valid character in choice scenes." },
           "description": { "type": "string", "minLength": 1, "description": "Scene description" },
           "next_scene": {
             "anyOf": [
@@ -187,8 +188,9 @@ public static class ScenarioSchemaDefinitions
           { "if": { "properties": { "type": { "const": "roll" } } }, "then": { "required": ["difficulty", "branches"] } },
           { "if": { "properties": { "type": { "const": "choice" } } }, "then": { "required": ["branches"] } },
           { "if": { "properties": { "type": { "const": "narrative" } } }, "then": { "required": ["next_scene"] } },
-          { "if": { "properties": { "type": { "const": "special" } } }, "then": { "properties": { "next_scene": { "type": "null" } } } }
-        ]
+          { "if": { "properties": { "type": { "const": "special" } } }, "then": { "properties": { "next_scene": { "type": "null" } } } },
+          { "if": { "properties": { "type": { "const": "choice" } } }, "then": { "properties": { "active_character": { "type": "string" } } }
+        ],
       }
     }
   },

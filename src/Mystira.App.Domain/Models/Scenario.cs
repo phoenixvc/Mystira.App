@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Mystira.App.Domain.Models;
 
 public class Scenario
@@ -63,6 +65,8 @@ public class Scenario
                         errors.Add($"Scene '{scene.Title}' has a branch with an invalid NextSceneId: {branch.NextSceneId}");
                     }
                 }
+
+                // Note: ActiveCharacter validation is handled non-throwing via use case logging
             }
         }
 
@@ -100,6 +104,10 @@ public class Scene
     public List<Branch> Branches { get; set; } = new();
     public List<EchoReveal> EchoReveals { get; set; } = new();
     public int? Difficulty { get; set; }
+
+    // For choice scenes, must correspond to one of the Scenario.Characters (by id). May be empty otherwise.
+    [JsonPropertyName("active_character")]
+    public string? ActiveCharacter { get; set; }
 }
 
 public class Branch
