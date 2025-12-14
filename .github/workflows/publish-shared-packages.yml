@@ -373,6 +373,14 @@ jobs:
           if [ "${{ needs.detect-changes.outputs.infrastructure-storyprotocol }}" == "true" ]; then echo "- ✅ Mystira.App.Infrastructure.StoryProtocol" >> $GITHUB_STEP_SUMMARY; fi
           if [ "${{ needs.detect-changes.outputs.shared }}" == "true" ]; then echo "- ✅ Mystira.App.Shared" >> $GITHUB_STEP_SUMMARY; fi
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Publish Status:** ${{ needs.publish-packages.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Publish Results:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Domain: ${{ needs.publish-domain.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Application: ${{ needs.publish-application.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Contracts: ${{ needs.publish-contracts.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Infrastructure.Azure: ${{ needs.publish-infrastructure-azure.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Infrastructure.Data: ${{ needs.publish-infrastructure-data.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Infrastructure.Discord: ${{ needs.publish-infrastructure-discord.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Infrastructure.StoryProtocol: ${{ needs.publish-infrastructure-storyprotocol.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Shared: ${{ needs.publish-shared.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Packages published to: ${{ env.NUGET_FEED_URL }}" >> $GITHUB_STEP_SUMMARY
