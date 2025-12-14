@@ -421,7 +421,7 @@ else
     OnCancel="CancelGuestWarning">
 </GuestWarningModal>
 
-<!-- Initial Assignment Prompt Modal (always shown on load) -->
+<!-- Initial Assignment Prompt Modal (shown on load for toddler scenarios only) -->
 @if (showInitialAssignmentPrompt)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.5);">
@@ -584,6 +584,9 @@ else
     private string validationMessage = string.Empty;
     private bool isAvatarSelected = false;
 
+    // Mode helpers
+    private bool IsToddlerScenario => assignmentData?.Scenario?.AgeGroup == "1-2";
+
     // Audio
     private string? isPlayingAudio = null;
     private IJSObjectReference? audioModule;
@@ -595,8 +598,8 @@ else
             Logger.LogInformation("Initializing character assignment for scenario: {ScenarioId}", ScenarioId);
             await LoadCharacterAssignmentData();
 
-            // Always show initial assignment prompt on load
-            showInitialAssignmentPrompt = true;
+            // Show the initial bulk assignment prompt only for toddler scenarios (age group 1-2)
+            showInitialAssignmentPrompt = IsToddlerScenario;
 
             // Load the audio module when component initializes
             audioModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
@@ -669,6 +672,13 @@ else
             }
 
             showInitialAssignmentPrompt = false;
+            // For 1-2 age group, start immediately after a single selection
+            if (IsToddlerScenario)
+            {
+                await ContinueWithGameSession();
+                return;
+            }
+
             StateHasChanged();
             return;
         }
@@ -722,6 +732,12 @@ else
             newProfileAgeRange = string.Empty;
             selectedAvatarMediaId = null;
             isAvatarSelected = false;
+            if (IsToddlerScenario)
+            {
+                await ContinueWithGameSession();
+                return;
+            }
+
             StateHasChanged();
             return;
         }
@@ -819,6 +835,11 @@ else
     {
         try
         {
+            // In toddler scenarios, do not allow per-character assignments
+            if (IsToddlerScenario)
+            {
+                return;
+            }
             currentAssignmentIndex = index;
             currentAssignment = characterAssignments[index];
             showPlayerAssignmentModal = true;
@@ -971,13 +992,20 @@ else
 
     private void RemovePlayerAssignment(int index)
     {
+        // Disallow removing assignments in toddler mode to prevent mixed selections
+        if (IsToddlerScenario)
+        {
+            return;
+        }
+
         characterAssignments[index].PlayerAssignment = null;
         StateHasChanged();
     }
 
     private async Task BeginSession()
     {
-        if (!CanBeginSession) return;
+        // Do not allow starting the session until the initial assignment prompt is resolved
+        if (showInitialAssignmentPrompt || !CanBeginSession) return;
 
         try
         {
@@ -1112,6 +1140,14 @@ else
 
             pendingInitialGuestApplyAll = false;
             showInitialAssignmentPrompt = false;
+
+            // For toddler scenarios, auto-start immediately after choosing guest
+            if (IsToddlerScenario)
+            {
+                await ContinueWithGameSession();
+                return;
+            }
+
             StateHasChanged();
             return;
         }
@@ -1278,8 +1314,14 @@ else
     {
         get
         {
+            // Block starting while the initial assignment prompt is still visible
+            if (showInitialAssignmentPrompt)
+            {
+                return false;
+            }
+
             return characterAssignments.All(ca =>
-            ca.IsUnused || (ca.PlayerAssignment != null && !string.IsNullOrEmpty(ca.PlayerAssignment.Type)));
+                ca.IsUnused || (ca.PlayerAssignment != null && !string.IsNullOrEmpty(ca.PlayerAssignment.Type)));
         }
     }
 
@@ -1303,6 +1345,11 @@ else
 
     private void FillRemainingWithGuests()
     {
+        if (IsToddlerScenario)
+        {
+            // Prevent changing assignments in toddler mode
+            return;
+        }
         foreach (var assignment in characterAssignments)
         {
             if (!assignment.IsUnused && assignment.PlayerAssignment == null)
@@ -1321,6 +1368,11 @@ else
 
     private void FillRemainingWithAI()
     {
+        if (IsToddlerScenario)
+        {
+            // Prevent changing assignments in toddler mode
+            return;
+        }
         foreach (var assignment in characterAssignments)
         {
             if (!assignment.IsUnused && assignment.PlayerAssignment == null)

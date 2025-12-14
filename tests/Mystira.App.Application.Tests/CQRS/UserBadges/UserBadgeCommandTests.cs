@@ -43,7 +43,7 @@ public class UserBadgeCommandTests : CqrsIntegrationTestBase
                 Id = "profile-1",
                 AccountId = "account-1",
                 Name = "Test User",
-                AgeGroup = "10-12",
+                AgeGroup = new AgeGroup("10-12"),
                 IsGuest = false
             }
         };

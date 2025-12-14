@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+    <add key="Mystira-Internal"
+         value="https://pkgs.dev.azure.com/{YOUR_ORG}/{YOUR_PROJECT}/_packaging/{FEED_NAME}/nuget/v3/index.json" />
+  </packageSources>
+  <packageSourceCredentials>
+    <Mystira-Internal>
+      <add key="Username" value="{YOUR_EMAIL}" />
+      <add key="ClearTextPassword" value="{YOUR_PAT_TOKEN}" />
+    </Mystira-Internal>
+  </packageSourceCredentials>
+</configuration>
+
