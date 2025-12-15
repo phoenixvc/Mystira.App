@@ -40,6 +40,15 @@
     color: var(--bs-primary);
 }
 
+/* Support avatar image inside CachedMystiraImage */
+.profile-icon ::deep .profile-avatar-image {
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+    object-fit: cover;
+    display: block;
+}
+
 .profile-title {
     font-weight: 700;
     font-size: 1.05rem;
