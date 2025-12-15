@@ -36,7 +36,7 @@ public class AxisScoringService : IAxisScoringService
         }
 
         // Aggregate axis scores from the session's choice history
-        var axisScores = AggregateAxisScores(session);
+        var axisScores = AggregateAxisScores(session, profile.Id);
 
         // Create the score record
         var playerScore = new PlayerScenarioScore
@@ -59,21 +59,17 @@ public class AxisScoringService : IAxisScoringService
         return playerScore;
     }
 
-    private Dictionary<string, float> AggregateAxisScores(GameSession session)
+    private Dictionary<string, float> AggregateAxisScores(GameSession session, string profileId)
     {
         var axisScores = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var choice in session.ChoiceHistory)
         {
-            if (!TryGetCompassDelta(choice, out var axis, out var delta))
-            {
-                continue;
-            }
+            if (choice.PlayerId != profileId) continue;
 
-            if (!axisScores.ContainsKey(axis))
-            {
-                axisScores[axis] = 0f;
-            }
+            if (!TryGetCompassDelta(choice, out var axis, out var delta)) continue;
+
+            if (!axisScores.ContainsKey(axis)) axisScores[axis] = 0f;
 
             axisScores[axis] += (float)delta;
         }
