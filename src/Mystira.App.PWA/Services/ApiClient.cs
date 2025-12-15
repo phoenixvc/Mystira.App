@@ -117,4 +117,21 @@ public class ApiClient : IApiClient
         var mediaUrl = _mediaClient.GetMediaResourceEndpointUrl("test");
         return mediaUrl.Replace("api/media/test", "");
     }
+
+    public string GetBadgeImageUrl(string imageId)
+    {
+        if (string.IsNullOrWhiteSpace(imageId))
+        {
+            return string.Empty;
+        }
+
+        var baseUrl = GetApiBaseAddress();
+        // Ensure single slash joining
+        if (!baseUrl.EndsWith("/"))
+        {
+            baseUrl += "/";
+        }
+
+        return $"{baseUrl}api/badges/images/{Uri.EscapeDataString(imageId)}";
+    }
 }

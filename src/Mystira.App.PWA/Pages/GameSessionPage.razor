@@ -262,7 +262,16 @@ else
                                     <div class="d-flex flex-column align-items-center gap-2 p-3 rounded badge-award-item" style="background-color:#f8f9fa; flex: 0 1 auto; max-width: 150px;">
                                         @if (!string.IsNullOrWhiteSpace(badge.ImageId))
                                         {
-                                            <img src="@ApiClient.GetMediaResourceEndpointUrl(badge.ImageId!)" alt="@badge.BadgeName" style="width:80px;height:80px;object-fit:cover;border-radius:12px;" />
+                                            <img src="@ApiClient.GetBadgeImageUrl(badge.ImageId!)"
+                                                 alt="@badge.BadgeName"
+                                                 loading="lazy"
+                                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block'"
+                                                 style="width:80px;height:80px;object-fit:cover;border-radius:12px;" />
+                                            <i class="fas fa-certificate text-warning" style="display:none; font-size:64px;"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="fas fa-certificate text-warning" style="font-size:64px;"></i>
                                         }
                                         <div class="text-center">
                                             <div class="fw-semibold small">@badge.BadgeName</div>

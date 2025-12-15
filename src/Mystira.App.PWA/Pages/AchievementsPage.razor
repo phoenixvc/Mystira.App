@@ -108,9 +108,16 @@
             </div>
         </div>
 
-        var visibleAxes = AchievementsFiltering.Apply(model, filterOptions);
+        // Only compute visible axes when we actually have a model loaded.
+        IReadOnlyList<AxisAchievementsSectionViewModel> visibleAxes = model is null
+            ? Array.Empty<AxisAchievementsSectionViewModel>()
+            : AchievementsFiltering.Apply(model, filterOptions);
 
-        @if (visibleAxes.Count == 0)
+        @if (isSelectingProfile && profiles.Count > 1)
+        {
+            <!-- When selecting a profile, suppress achievements empty-state rendering -->
+        }
+        else if (visibleAxes.Count == 0)
         {
             <EmptyState IconClass="fas fa-trophy fa-4x"
                        Title="No Badges Yet"
