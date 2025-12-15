@@ -100,8 +100,14 @@
                                 <i class="fas fa-arrow-left me-2"></i>Back
                             </button>
                         }
-
-
+                        <div class="btn-group view-toggle" role="group" aria-label="View mode">
+                            <button type="button" class="btn btn-sm @(viewMode == ViewMode.Simplified ? "btn-primary" : "btn-outline-secondary")" @onclick="(() => SetViewMode(ViewMode.Simplified))">
+                                <i class="fas fa-th me-2"></i>Simplified
+                            </button>
+                            <button type="button" class="btn btn-sm @(viewMode == ViewMode.Advanced ? "btn-primary" : "btn-outline-secondary")" @onclick="(() => SetViewMode(ViewMode.Advanced))">
+                                <i class="fas fa-list me-2"></i>Advanced
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -129,99 +135,179 @@
         }
         else
         {
-            @foreach (var axis in visibleAxes)
+            if (viewMode == ViewMode.Simplified)
             {
-                <div class="card axis-card mb-4">
-                    <div class="card-body">
-                        <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-3">
-                            <div>
-                                <h5 class="mb-1">@axis.AxisName</h5>
-                                <small class="text-muted">Current score: @axis.CurrentScore</small>
-                            </div>
-                            <span class="badge bg-secondary">@axis.Tiers.Count tier@(axis.Tiers.Count == 1 ? "" : "s")</span>
-                        </div>
-
-                        @if (axis.AxisCopy.Any())
-                        {
-                            <div class="axis-copy mb-3">
-                                @foreach (var copy in axis.AxisCopy)
-                                {
-                                    <div class="axis-copy-item">
-                                        <span class="axis-copy-direction">@GetDirectionLabel(copy.Direction)</span>
-                                        <span class="axis-copy-text">@copy.Description</span>
-                                    </div>
-                                }
-                            </div>
-                        }
-
-                        <div class="row g-3">
-                            @foreach (var tier in axis.Tiers)
+                // Simplified grid: badges only
+                var allTiers = visibleAxes.SelectMany(a => a.Tiers)
+                    .Where(t => t.IsEarned)
+                    .ToList();
+                <div class="simplified-grid">
+                    @foreach (var tier in allTiers)
+                    {
+                        <button type="button" class="badge-thumb earned" title="@tier.Title" @onclick="(() => OpenTierModal(tier))">
+                            @if (!string.IsNullOrWhiteSpace(tier.ImageUrl))
                             {
-                                <div class="col-12 col-md-6 col-lg-4">
-                                    <div class="tier-card tier-@GetTierCssSuffix(tier.Tier) @(tier.IsEarned ? "earned" : "") @(IsTierExpanded(tier) ? "expanded" : "")" data-tier="@tier.Tier">
-                                        <div class="tier-card-header">
-                                            <div class="tier-image">
-                                                @if (!string.IsNullOrWhiteSpace(tier.ImageUrl))
-                                                {
-                                                    <img src="@tier.ImageUrl" alt="@tier.Title" loading="lazy" />
-                                                }
-                                                else
-                                                {
-                                                    <i class="fas fa-medal"></i>
-                                                }
-                                            </div>
-                                            <div class="tier-title">
-                                                <div class="tier-label">@tier.Tier</div>
-                                                <div class="tier-name">@tier.Title</div>
-                                            </div>
-                                            @if (tier.IsEarned)
+                                <img src="@tier.ImageUrl" alt="@tier.Title" loading="lazy" />
+                            }
+                            else
+                            {
+                                <i class="fas fa-medal"></i>
+                            }
+                        </button>
+                    }
+                </div>
+
+                @if (modalTier is not null)
+                {
+                    <div class="modal fade show d-block modal-backdrop">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">@modalTier.Title (@modalTier.Tier)</h5>
+                                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseTierModal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="d-flex flex-column gap-3">
+                                        <div class="ratio ratio-16x9">
+                                            @if (!string.IsNullOrWhiteSpace(modalTier.ImageUrl))
                                             {
-                                                <div class="tier-earned-badge" title="Earned">
-                                                    <i class="fas fa-star"></i>
-                                                </div>
+                                                <img src="@modalTier.ImageUrl" alt="@modalTier.Title" class="w-100 h-100 object-cover rounded" />
                                             }
-                                            @if (tier.IsEarned)
+                                            else
                                             {
-                                                <button type="button" class="btn btn-link btn-sm tier-info-toggle" title="More info" @onclick="(() => ToggleTierInfo(tier))">
-                                                    <i class="fas fa-info-circle"></i>
-                                                </button>
+                                                <div class="d-flex align-items-center justify-content-center bg-light rounded">
+                                                    <i class="fas fa-medal fa-3x opacity-75"></i>
+                                                </div>
                                             }
                                         </div>
 
-                                        <div class="tier-card-body">
-                                             @if (IsTierExpanded(tier))
-                                             {
-                                                 <p class="tier-description">@tier.Description</p>
-                                             }
-
-                                             @if (tier.IsEarned)
-                                             {
-                                                 <div class="text-success fw-semibold">Earned</div>
-                                             }
-
-                                             @if (tier.IsEarned && tier.EarnedAt.HasValue)
-                                             {
-                                                 <div class="tier-earned-at">
-                                                     <i class="fas fa-calendar-check me-1"></i>
-                                                     Earned @tier.EarnedAt.Value.ToLocalTime().ToString("dd-MMM-yyyy")
-                                                 </div>
-                                             }
-
-                                             @if (!tier.IsEarned)
-                                             {
-                                                 <div class="tier-progress-container">
-                                                     <div class="progress">
-                                                         <div class="progress-bar" role="progressbar" style="width: @($"{tier.ProgressPercent}%")" aria-valuenow="@((int)tier.ProgressPercent)" aria-valuemin="0" aria-valuemax="100"></div>
-                                                     </div>
-                                                  </div>
-                                              }
-                                          </div>
-                                     </div>
+                                        <div>
+                                            <p class="mb-2">@modalTier.Description</p>
+                                            @if (modalTier.IsEarned)
+                                            {
+                                                <div class="text-success fw-semibold mb-1">Earned</div>
+                                            }
+                                            @if (modalTier.IsEarned && modalTier.EarnedAt.HasValue)
+                                            {
+                                                <div class="text-success small">
+                                                    <i class="fas fa-calendar-check me-1"></i>
+                                                    Earned @modalTier.EarnedAt.Value.ToLocalTime().ToString("dd-MMM-yyyy")
+                                                </div>
+                                            }
+                                            @if (!modalTier.IsEarned)
+                                            {
+                                                <div class="tier-progress-container">
+                                                    <div class="progress">
+                                                        <div class="progress-bar" role="progressbar" style="width: @($"{modalTier.ProgressPercent}%")" aria-valuenow="@((int)modalTier.ProgressPercent)" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
                                 </div>
-                            }
+                                <div class="modal-footer">
+                                    <button class="btn btn-secondary" @onclick="CloseTierModal">Close</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                }
+            }
+            else
+            {
+                @foreach (var axis in visibleAxes)
+                {
+                    <div class="card axis-card mb-4">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-3">
+                                <div>
+                                    <h5 class="mb-1">@axis.AxisName</h5>
+                                </div>
+                                <span class="badge bg-secondary">@axis.Tiers.Count tier@(axis.Tiers.Count == 1 ? "" : "s")</span>
+                            </div>
+
+                            @if (axis.AxisCopy.Any())
+                            {
+                                <div class="axis-copy mb-3">
+                                    @foreach (var copy in axis.AxisCopy)
+                                    {
+                                        <div class="axis-copy-item">
+                                            <span class="axis-copy-direction">@GetDirectionLabel(copy.Direction)</span>
+                                            <span class="axis-copy-text">@copy.Description</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            <div class="row g-3">
+                                @foreach (var tier in axis.Tiers)
+                                {
+                                    <div class="col-12 col-md-6 col-lg-4">
+                                        <div class="tier-card tier-@GetTierCssSuffix(tier.Tier) @(tier.IsEarned ? "earned" : "") @(IsTierExpanded(tier) ? "expanded" : "")" data-tier="@tier.Tier">
+                                            <div class="tier-card-header">
+                                                <div class="tier-image">
+                                                    @if (!string.IsNullOrWhiteSpace(tier.ImageUrl))
+                                                    {
+                                                        <img src="@tier.ImageUrl" alt="@tier.Title" loading="lazy" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="fas fa-medal"></i>
+                                                    }
+                                                </div>
+                                                <div class="tier-title">
+                                                    <div class="tier-label">@tier.Tier</div>
+                                                    <div class="tier-name">@tier.Title</div>
+                                                </div>
+                                                @if (tier.IsEarned)
+                                                {
+                                                    <div class="tier-earned-badge" title="Earned">
+                                                        <i class="fas fa-star"></i>
+                                                    </div>
+                                                }
+                                                @if (tier.IsEarned)
+                                                {
+                                                    <button type="button" class="btn btn-link btn-sm tier-info-toggle" title="More info" @onclick="(() => ToggleTierInfo(tier))">
+                                                        <i class="fas fa-info-circle"></i>
+                                                    </button>
+                                                }
+                                            </div>
+
+                                            <div class="tier-card-body">
+                                                 @if (IsTierExpanded(tier))
+                                                 {
+                                                     <p class="tier-description">@tier.Description</p>
+                                                 }
+
+                                                 @if (tier.IsEarned)
+                                                 {
+                                                     <div class="text-success fw-semibold">Earned</div>
+                                                 }
+
+                                                 @if (tier.IsEarned && tier.EarnedAt.HasValue)
+                                                 {
+                                                     <div class="tier-earned-at">
+                                                         <i class="fas fa-calendar-check me-1"></i>
+                                                         Earned @tier.EarnedAt.Value.ToLocalTime().ToString("dd-MMM-yyyy")
+                                                     </div>
+                                                 }
+
+                                                 @if (!tier.IsEarned)
+                                                 {
+                                                     <div class="tier-progress-container">
+                                                         <div class="progress">
+                                                             <div class="progress-bar" role="progressbar" style="width: @($"{tier.ProgressPercent}%")" aria-valuenow="@((int)tier.ProgressPercent)" aria-valuemin="0" aria-valuemax="100"></div>
+                                                         </div>
+                                                      </div>
+                                                  }
+                                              </div>
+                                         </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
             }
         }
     }
@@ -236,6 +322,8 @@
     private string? errorMessage;
     private bool isSelectingProfile;
     private readonly HashSet<string> expandedTierKeys = new(StringComparer.OrdinalIgnoreCase);
+    private ViewMode viewMode = ViewMode.Simplified;
+    private BadgeTierViewModel? modalTier;
 
     private readonly AchievementsFilterOptions filterOptions = new() { ShowEarned = true, ShowInProgress = true };
 
@@ -350,6 +438,18 @@
 
     private void ResetFilters() { }
 
+    private void SetViewMode(ViewMode mode) => viewMode = mode;
+
+    private void OpenTierModal(BadgeTierViewModel tier)
+    {
+        modalTier = tier;
+    }
+
+    private void CloseTierModal()
+    {
+        modalTier = null;
+    }
+
     private string GetTierKey(BadgeTierViewModel tier) => $"{tier.BadgeId}:{tier.Tier}";
     private bool IsTierExpanded(BadgeTierViewModel tier) => expandedTierKeys.Contains(GetTierKey(tier));
     private void ToggleTierInfo(BadgeTierViewModel tier)
@@ -403,5 +503,13 @@
             "19+" => "age-group-19plus",
             _ => $"age-group-{ageGroupId.Replace("+", "plus")}".Replace(" ", "")
         };
+    }
+}
+
+@code {
+    private enum ViewMode
+    {
+        Simplified,
+        Advanced
     }
 }
