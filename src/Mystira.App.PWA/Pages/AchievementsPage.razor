@@ -144,16 +144,19 @@
                 <div class="simplified-grid">
                     @foreach (var tier in allTiers)
                     {
-                        <button type="button" class="badge-thumb earned" title="@tier.Title" @onclick="(() => OpenTierModal(tier))">
-                            @if (!string.IsNullOrWhiteSpace(tier.ImageUrl))
-                            {
-                                <img src="@tier.ImageUrl" alt="@tier.Title" loading="lazy" />
-                            }
-                            else
-                            {
-                                <i class="fas fa-medal"></i>
-                            }
-                        </button>
+                        <div class="badge-cell">
+                            <button type="button" class="badge-thumb earned" title="@tier.Title" @onclick="(() => OpenTierModal(tier))">
+                                @if (!string.IsNullOrWhiteSpace(tier.ImageUrl))
+                                {
+                                    <img src="@tier.ImageUrl" alt="@tier.Title" loading="lazy" />
+                                }
+                                else
+                                {
+                                    <i class="fas fa-medal"></i>
+                                }
+                                <span class="badge-info-icon" title="More info"><i class="fas fa-info-circle"></i></span>
+                            </button>
+                        </div>
                     }
                 </div>
 

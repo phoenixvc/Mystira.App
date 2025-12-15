@@ -225,19 +225,26 @@
 
 .tier-card.locked .tier-info-toggle { display: none; }
 
-/* --- Simplified view sizing (kept as-is) --- */
+/* --- Simplified view: 3 equal columns, each tile keeps 16:9, overlay info icon --- */
 .simplified-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
 }
 
+.badge-cell {
+    display: flex;
+}
+
 .badge-thumb {
-    width: 500px;
+    position: relative;
+    display: block;
+    width: 100%;
     aspect-ratio: 16 / 9;
     background: transparent;
     padding: 0;
     border: none;
+    cursor: pointer;
 }
 
 .badge-thumb img {
@@ -248,14 +255,21 @@
     display: block;
 }
 
-@media (max-width: 576px) {
-    .simplified-grid {
-        grid-template-columns: repeat(auto-fill, minmax(144px, 1fr));
-    }
-    .badge-thumb {
-        width: 144px;
-    }
+.badge-info-icon {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
 }
+
+.badge-info-icon i { font-size: 0.95rem; }
 
 .tier-card.tier-bronze {
     border-color: rgba(205, 127, 50, 0.45);
