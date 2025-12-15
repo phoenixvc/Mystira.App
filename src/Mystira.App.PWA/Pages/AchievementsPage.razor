@@ -63,7 +63,27 @@
     }
     else
     {
-        <div class="row mb-4">
+        @if (isSelectingProfile && profiles.Count > 1)
+        {
+            <div class="row g-3 profile-grid mb-4">
+                @foreach (var p in profiles)
+                {
+                    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                        <div class="card profile-card h-100" @onclick="(() => OnProfileCardClicked(p))">
+                            <div class="card-body d-flex flex-column align-items-center text-center">
+                                <div class="profile-icon mb-3">
+                                    <i class="fas fa-user-circle"></i>
+                                </div>
+                                <div class="profile-title">@p.Name</div>
+                                <div class="text-muted small">@AgeRanges.GetDisplayName(p.AgeGroup ?? model?.AgeGroupId ?? "")</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="row mb-4" hidden="@(isSelectingProfile && profiles.Count > 1)">
             <div class="col-12">
                 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
                     <div>
@@ -77,12 +97,9 @@
                     <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-2">
                         @if (profiles.Count > 1)
                         {
-                            <select class="form-select form-select-sm profile-select" @onchange="OnProfileChanged">
-                                @foreach (var p in profiles)
-                                {
-                                    <option value="@p.Id" selected="@(p.Id == selectedProfile?.Id)">@p.Name</option>
-                                }
-                            </select>
+                            <button class="btn btn-outline-secondary btn-sm" @onclick="ShowProfileSelection">
+                                <i class="fas fa-arrow-left me-2"></i>Back
+                            </button>
                         }
 
                         <div class="filter-toggles">
@@ -144,7 +161,7 @@
                             @foreach (var tier in axis.Tiers)
                             {
                                 <div class="col-12 col-md-6 col-lg-4">
-                                    <div class="tier-card tier-@GetTierCssSuffix(tier.Tier) @(tier.IsEarned ? "earned" : "")" data-tier="@tier.Tier">
+                                    <div class="tier-card tier-@GetTierCssSuffix(tier.Tier) @(tier.IsEarned ? "earned" : "") @(IsTierExpanded(tier) ? "expanded" : "")" data-tier="@tier.Tier">
                                         <div class="tier-card-header">
                                             <div class="tier-image">
                                                 @if (!string.IsNullOrWhiteSpace(tier.ImageUrl))
@@ -166,14 +183,20 @@
                                                     <i class="fas fa-star"></i>
                                                 </div>
                                             }
+                                            <button type="button" class="btn btn-link btn-sm tier-info-toggle" title="More info" @onclick="(() => ToggleTierInfo(tier))">
+                                                <i class="fas fa-info-circle"></i>
+                                            </button>
                                         </div>
 
                                         <div class="tier-card-body">
-                                            <p class="tier-description">@tier.Description</p>
+                                            @if (IsTierExpanded(tier))
+                                            {
+                                                <p class="tier-description">@tier.Description</p>
+                                            }
 
                                             <div class="tier-progress">
                                                 <div class="progress" role="progressbar" aria-valuenow="@tier.ProgressPercent" aria-valuemin="0" aria-valuemax="100">
-                                                    <div class="progress-bar" style="width: @tier.ProgressPercent%"></div>
+                                                    <div class="progress-bar" style="width: @($"{tier.ProgressPercent}%")"></div>
                                                 </div>
                                                 <div class="tier-progress-meta">
                                                     <span>@tier.CurrentScore / @tier.RequiredScore</span>
@@ -214,6 +237,8 @@
     private UserProfile? selectedProfile;
     private AchievementsViewModel? model;
     private string? errorMessage;
+    private bool isSelectingProfile;
+    private readonly HashSet<string> expandedTierKeys = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly AchievementsFilterOptions filterOptions = new();
 
@@ -249,13 +274,17 @@
                 return;
             }
 
-            var selectedId = await PlayerContextService.GetSelectedProfileIdAsync();
-            selectedProfile = profiles.FirstOrDefault(p => p.Id == selectedId) ?? profiles.First();
-
-            if (selectedProfile != null)
+            // If only one profile, auto-select and load achievements; otherwise show selection grid
+            if (profiles.Count == 1)
             {
+                selectedProfile = profiles[0];
                 await PlayerContextService.SetSelectedProfileIdAsync(selectedProfile.Id);
                 await LoadAchievementsAsync(selectedProfile);
+                isSelectingProfile = false;
+            }
+            else
+            {
+                isSelectingProfile = true;
             }
         }
         catch (Exception ex)
@@ -300,20 +329,14 @@
         }
     }
 
-    private async Task OnProfileChanged(ChangeEventArgs e)
+    private void ShowProfileSelection()
     {
-        var newProfileId = e.Value?.ToString();
-        if (string.IsNullOrWhiteSpace(newProfileId))
-        {
-            return;
-        }
+        isSelectingProfile = true;
+        model = null;
+    }
 
-        var profile = profiles.FirstOrDefault(p => p.Id == newProfileId);
-        if (profile == null)
-        {
-            return;
-        }
-
+    private async Task OnProfileCardClicked(UserProfile profile)
+    {
         selectedProfile = profile;
         await PlayerContextService.SetSelectedProfileIdAsync(profile.Id);
 
@@ -323,6 +346,7 @@
 
         await LoadAchievementsAsync(profile);
 
+        isSelectingProfile = false;
         isLoading = false;
         StateHasChanged();
     }
@@ -330,7 +354,18 @@
     private void ResetFilters()
     {
         filterOptions.ShowEarned = true;
-        filterOptions.ShowInProgress = true;
+        filterOptions.ShowInProgress = false;
+    }
+
+    private string GetTierKey(BadgeTierViewModel tier) => $"{tier.BadgeId}:{tier.Tier}";
+    private bool IsTierExpanded(BadgeTierViewModel tier) => expandedTierKeys.Contains(GetTierKey(tier));
+    private void ToggleTierInfo(BadgeTierViewModel tier)
+    {
+        var key = GetTierKey(tier);
+        if (!expandedTierKeys.Add(key))
+        {
+            expandedTierKeys.Remove(key);
+        }
     }
 
     private static string GetTierCssSuffix(string tier)

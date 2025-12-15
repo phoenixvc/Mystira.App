@@ -59,7 +59,12 @@ public sealed class GetProfileBadgeProgressQueryHandler : IQueryHandler<GetProfi
             var axis = axisDictionary.TryGetValue(axisId, out var a) ? a : null;
             var axisName = axis?.Name ?? axisId;
 
-            var currentScore = 0f; // Placeholder until score aggregation is implemented
+            // Derive current score for this axis from earned badges' trigger values (max observed)
+            var currentScore = earnedBadges.Values
+                .Where(ub => string.Equals(ub.Axis, axisId, StringComparison.OrdinalIgnoreCase))
+                .Select(ub => ub.TriggerValue)
+                .DefaultIfEmpty(0f)
+                .Max();
 
             var axisTiers = new List<BadgeTierProgressResponse>();
             foreach (var badge in badges)
