@@ -58,15 +58,17 @@ public sealed class GetProfileBadgeProgressQueryHandler : IQueryHandler<GetProfi
             var axis = axisDictionary.TryGetValue(axisId, out var a) ? a : null;
             var axisName = axis?.Name ?? axisId;
 
-            // Derive current score for this axis from earned badges' trigger values (max observed)
+            // Derive current score for this axis from earned badges' values (max of TriggerValue/Threshold)
+            // Match legacy data where Axis may store axis name instead of ID
             var axisUserBadges = userBadges
-                .Where(ub => string.Equals(ub.Axis, axisId, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(ub => ub.TriggerValue)
+                .Where(ub => string.Equals(ub.Axis, axisId, StringComparison.OrdinalIgnoreCase)
+                             || string.Equals(ub.Axis, axisName, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(ub => Math.Max(ub.TriggerValue, ub.Threshold))
                 .ThenByDescending(ub => ub.EarnedAt)
                 .ToList();
 
             var currentScore = axisUserBadges
-                .Select(ub => ub.TriggerValue)
+                .Select(ub => Math.Max(ub.TriggerValue, ub.Threshold))
                 .DefaultIfEmpty(0f)
                 .Max();
 
@@ -74,7 +76,7 @@ public sealed class GetProfileBadgeProgressQueryHandler : IQueryHandler<GetProfi
             foreach (var badge in badges)
             {
                 var matchedBadge = axisUserBadges
-                    .FirstOrDefault(ub => ub.TriggerValue >= badge.RequiredScore);
+                    .FirstOrDefault(ub => Math.Max(ub.TriggerValue, ub.Threshold) >= badge.RequiredScore);
                 var isEarned = matchedBadge != null;
 
                 axisTiers.Add(new BadgeTierProgressResponse

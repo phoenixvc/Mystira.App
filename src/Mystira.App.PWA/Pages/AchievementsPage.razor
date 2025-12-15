@@ -50,7 +50,7 @@
             </a>
         </EmptyState>
     }
-    else if (model == null || model.Axes.Sum(a => a.Tiers.Count) == 0)
+    else if ((model == null || model.Axes.Sum(a => a.Tiers.Count) == 0) && !(isSelectingProfile && profiles.Count > 1))
     {
         <EmptyState IconClass="fas fa-trophy fa-4x"
                    Title="No Badges Yet"
@@ -102,16 +102,7 @@
                             </button>
                         }
 
-                        <div class="filter-toggles">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="filter-earned" @bind="filterOptions.ShowEarned" />
-                                <label class="form-check-label" for="filter-earned">Earned</label>
-                            </div>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="filter-inprogress" @bind="filterOptions.ShowInProgress" />
-                                <label class="form-check-label" for="filter-inprogress">In Progress</label>
-                            </div>
-                        </div>
+
                     </div>
                 </div>
             </div>
@@ -121,13 +112,13 @@
 
         @if (visibleAxes.Count == 0)
         {
-            <EmptyState IconClass="fas fa-filter fa-4x"
-                       Title="Nothing Matches Your Filters"
-                       Message="Try showing earned or in-progress badges."
+            <EmptyState IconClass="fas fa-trophy fa-4x"
+                       Title="No Badges Yet"
+                       Message="Complete adventures to start earning achievements!"
                        ShowClearButton="false">
-                <button class="btn btn-outline-secondary" @onclick="ResetFilters">
-                    <i class="fas fa-undo me-2"></i>Reset Filters
-                </button>
+                <a class="btn btn-primary-custom" href="/adventures">
+                    <i class="fas fa-compass me-2"></i>Continue Adventures
+                </a>
             </EmptyState>
         }
         else
@@ -194,22 +185,10 @@
                                                 <p class="tier-description">@tier.Description</p>
                                             }
 
-                                            <div class="tier-progress">
-                                                <div class="progress" role="progressbar" aria-valuenow="@tier.ProgressPercent" aria-valuemin="0" aria-valuemax="100">
-                                                    <div class="progress-bar" style="width: @($"{tier.ProgressPercent}%")"></div>
-                                                </div>
-                                                <div class="tier-progress-meta">
-                                                    <span>@tier.CurrentScore / @tier.RequiredScore</span>
-                                                    @if (tier.IsEarned)
-                                                    {
-                                                        <span class="text-success">Earned</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="text-muted">@tier.RemainingScore remaining</span>
-                                                    }
-                                                </div>
-                                            </div>
+                                            @if (tier.IsEarned)
+                                            {
+                                                <div class="text-success fw-semibold">Earned</div>
+                                            }
 
                                             @if (tier.IsEarned && tier.EarnedAt.HasValue)
                                             {
@@ -240,7 +219,7 @@
     private bool isSelectingProfile;
     private readonly HashSet<string> expandedTierKeys = new(StringComparer.OrdinalIgnoreCase);
 
-    private readonly AchievementsFilterOptions filterOptions = new();
+    private readonly AchievementsFilterOptions filterOptions = new() { ShowEarned = true, ShowInProgress = false };
 
     protected override async Task OnInitializedAsync()
     {
@@ -351,11 +330,7 @@
         StateHasChanged();
     }
 
-    private void ResetFilters()
-    {
-        filterOptions.ShowEarned = true;
-        filterOptions.ShowInProgress = false;
-    }
+    private void ResetFilters() { }
 
     private string GetTierKey(BadgeTierViewModel tier) => $"{tier.BadgeId}:{tier.Tier}";
     private bool IsTierExpanded(BadgeTierViewModel tier) => expandedTierKeys.Contains(GetTierKey(tier));

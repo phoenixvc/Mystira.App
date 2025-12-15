@@ -5,7 +5,7 @@ namespace Mystira.App.PWA.Services;
 public class AchievementsFilterOptions
 {
     public bool ShowEarned { get; set; } = true;
-    public bool ShowInProgress { get; set; } = true;
+    public bool ShowInProgress { get; set; } = false;
 }
 
 public static class AchievementsFiltering

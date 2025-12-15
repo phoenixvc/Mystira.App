@@ -97,8 +97,8 @@
 }
 
 .tier-image {
-    width: 48px;
-    height: 48px;
+    width: 120px;
+    height: 120px;
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -108,13 +108,13 @@
 }
 
 .tier-image img {
-    width: 48px;
-    height: 48px;
+    width: 120px;
+    height: 120px;
     object-fit: cover;
 }
 
 .tier-image i {
-    font-size: 1.5rem;
+    font-size: 4rem;
     opacity: 0.7;
 }
 
