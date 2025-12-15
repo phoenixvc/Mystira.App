@@ -68,6 +68,14 @@ public static class SceneParser
                 : null;
         }
 
+        // Parse active character (nullable)
+        if (sceneDict.TryGetValue("active_character", out var activeCharObj) ||
+            sceneDict.TryGetValue("activeCharacter", out activeCharObj))
+        {
+            var ac = activeCharObj?.ToString();
+            scene.ActiveCharacter = string.IsNullOrWhiteSpace(ac) ? null : ac;
+        }
+
         // Parse branches (choices) - defaults to empty list if not found
         var branchesList = sceneDict.TryGetValue("branches", out var branchesObj) && branchesObj is IList<object> bl
             ? bl

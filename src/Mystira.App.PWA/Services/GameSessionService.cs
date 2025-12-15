@@ -582,7 +582,7 @@ public class GameSessionService : IGameSessionService
             {
                 string playerName = assignment.PlayerAssignment.Type switch
                 {
-                    "Player" => assignment.PlayerAssignment.ProfileName?.ToLower() == characterName
+                    "Profile" => assignment.PlayerAssignment.ProfileName?.ToLower() == characterName
                         ? "Player"
                         : assignment.PlayerAssignment.ProfileName ?? "Player",
                     "Guest" => assignment.PlayerAssignment.GuestName?.ToLower() == characterName

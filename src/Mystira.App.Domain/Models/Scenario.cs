@@ -106,7 +106,6 @@ public class Scene
     public int? Difficulty { get; set; }
 
     // For choice scenes, must correspond to one of the Scenario.Characters (by id). May be empty otherwise.
-    [JsonPropertyName("active_character")]
     public string? ActiveCharacter { get; set; }
 }
 
