@@ -184,6 +184,7 @@ builder.Services.AddScoped<ICharacterAssignmentService, CharacterAssignmentServi
 builder.Services.AddSingleton<IImageCacheService, ImageCacheService>();
 builder.Services.AddScoped<IPlayerContextService, PlayerContextService>();
 builder.Services.AddScoped<IAchievementsService, AchievementsService>();
+builder.Services.AddScoped<IAwardsState, AwardsState>();
 
 // UI Services
 builder.Services.AddScoped<ToastService>();
