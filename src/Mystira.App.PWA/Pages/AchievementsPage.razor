@@ -50,17 +50,9 @@
             </a>
         </EmptyState>
     }
-    else if ((model == null || model.Axes.Sum(a => a.Tiers.Count) == 0) && !(isSelectingProfile && profiles.Count > 1))
-    {
-        <EmptyState IconClass="fas fa-trophy fa-4x"
-                   Title="No Badges Yet"
-                   Message="Complete adventures to start earning achievements!"
-                   ShowClearButton="false">
-            <a class="btn btn-primary-custom" href="/adventures">
-                <i class="fas fa-compass me-2"></i>Continue Adventures
-            </a>
-        </EmptyState>
-    }
+    // Note: Do not render the empty state here to ensure the header/back button
+    // remains visible even when a profile has no badges. The empty state is
+    // rendered later, below the header, based on computed visibility.
     else
     {
         @if (isSelectingProfile && profiles.Count > 1)
@@ -72,7 +64,14 @@
                         <div class="card profile-card h-100" @onclick="(() => OnProfileCardClicked(p))">
                             <div class="card-body d-flex flex-column align-items-center text-center">
                                 <div class="profile-icon mb-3">
-                                    <i class="fas fa-user-circle"></i>
+                                    @if (!string.IsNullOrEmpty(p.SelectedAvatarMediaId))
+                                    {
+                                        <CachedMystiraImage MediaId="@p.SelectedAvatarMediaId" Alt="@($"{p.Name} avatar")" ImageClass="profile-avatar-image" />
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-user-circle"></i>
+                                    }
                                 </div>
                                 <div class="profile-title">@p.Name</div>
                                 <div class="text-muted small">@AgeRanges.GetDisplayName(p.AgeGroup ?? model?.AgeGroupId ?? "")</div>
