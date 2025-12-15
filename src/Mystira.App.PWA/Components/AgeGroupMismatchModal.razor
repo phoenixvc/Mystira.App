@@ -1,0 +1,88 @@
+﻿@using Mystira.App.Domain.Models
+@if (ShowModal)
+{
+    <div class="modal-backdrop fade show" style="display: block;"></div>
+    <div class="modal fade show" style="display: block;" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title">
+                        <i class="fas fa-info-circle text-primary me-2"></i>
+                        Mixed Age Groups Detected
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="OnCancel" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">
+                        This adventure is designed for <strong>@AgeGroupDisplayName</strong>.
+                    </p>
+                    <p class="mb-3">
+                        One or more selected players have profiles outside this age group. For those players, the story will <strong>not count toward their progress or achievements</strong>.
+                    </p>
+                    @if (MismatchedProfiles?.Any() == true)
+                    {
+                        <div class="mb-3">
+                            <div class="small text-muted mb-1">Profiles not in this story group:</div>
+                            <ul class="small mb-0">
+                                @foreach (var name in MismatchedProfiles)
+                                {
+                                    <li>@name</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="agm_dontshow" @bind="DontShowAgain" />
+                        <label class="form-check-label" for="agm_dontshow">
+                            Don't show this message again
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" @onclick="OnCancel">
+                        <i class="fas fa-arrow-left me-2"></i>Go Back
+                    </button>
+                    <button type="button" class="btn btn-primary-custom" @onclick="OnContinueClicked">
+                        <i class="fas fa-play me-2"></i>Continue
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool ShowModal { get; set; }
+
+    [Parameter]
+    public string AgeGroupDisplayName { get; set; } = string.Empty;
+
+    [Parameter]
+    public IEnumerable<string>? MismatchedProfiles { get; set; }
+
+    [Parameter]
+    public bool DontShowAgain { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> DontShowAgainChanged { get; set; }
+
+    [Parameter]
+    public EventCallback OnContinue { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private async Task OnContinueClicked()
+    {
+        if (DontShowAgainChanged.HasDelegate)
+        {
+            await DontShowAgainChanged.InvokeAsync(DontShowAgain);
+        }
+        if (OnContinue.HasDelegate)
+        {
+            await OnContinue.InvokeAsync();
+        }
+    }
+}
