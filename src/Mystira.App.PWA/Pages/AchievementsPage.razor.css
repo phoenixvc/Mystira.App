@@ -209,6 +209,54 @@
     pointer-events: none;
 }
 
+/* Locked (unearned) tiers: grey out and hide info icon */
+.tier-card.locked .tier-image img,
+.tier-card.locked .tier-image i {
+    filter: grayscale(100%);
+    opacity: 0.55;
+}
+
+.tier-card.locked .tier-title .tier-name,
+.tier-card.locked .tier-title .tier-label,
+.tier-card.locked .tier-description,
+.tier-card.locked .tier-earned-at {
+    opacity: 0.7;
+}
+
+.tier-card.locked .tier-info-toggle { display: none; }
+
+/* --- Simplified view sizing (kept as-is) --- */
+.simplified-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+    gap: 1rem;
+}
+
+.badge-thumb {
+    width: 500px;
+    aspect-ratio: 16 / 9;
+    background: transparent;
+    padding: 0;
+    border: none;
+}
+
+.badge-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+    display: block;
+}
+
+@media (max-width: 576px) {
+    .simplified-grid {
+        grid-template-columns: repeat(auto-fill, minmax(144px, 1fr));
+    }
+    .badge-thumb {
+        width: 144px;
+    }
+}
+
 .tier-card.tier-bronze {
     border-color: rgba(205, 127, 50, 0.45);
 }
