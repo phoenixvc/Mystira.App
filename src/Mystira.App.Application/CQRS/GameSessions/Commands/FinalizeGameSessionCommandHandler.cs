@@ -66,9 +66,18 @@ public class FinalizeGameSessionCommandHandler : ICommandHandler<FinalizeGameSes
 
             // Score first-time plays only (service skips if already scored)
             PlayerScenarioScore? score = await _scoringService.ScoreSessionAsync(session, profile);
+
             if (score == null)
             {
-                continue; // replay for this profile+scenario
+                // Replay for this profile+scenario: include entry with AlreadyPlayed marker and no new badges
+                result.Awards.Add(new ProfileBadgeAwards
+                {
+                    ProfileId = profile.Id,
+                    ProfileName = profile.Name,
+                    NewBadges = new List<UserBadge>(),
+                    AlreadyPlayed = true
+                });
+                continue;
             }
 
             // Award badges based on aggregated axis scores from this session
@@ -78,7 +87,8 @@ public class FinalizeGameSessionCommandHandler : ICommandHandler<FinalizeGameSes
             {
                 ProfileId = profile.Id,
                 ProfileName = profile.Name,
-                NewBadges = newBadges
+                NewBadges = newBadges,
+                AlreadyPlayed = false
             });
         }
 
