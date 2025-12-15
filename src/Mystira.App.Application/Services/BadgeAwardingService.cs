@@ -46,16 +46,53 @@ public class BadgeAwardingService : IBadgeAwardingService
                 .Cast<string>()
                 ?? new List<string>());
 
+        // Build a normalized map of axis scores to be resilient to formatting differences
+        // e.g., "Axis-Honesty" vs "honesty" vs "axis_honesty"
+        static string NormalizeAxisKey(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key)) return string.Empty;
+            key = key.Trim();
+            // Remove common prefixes
+            if (key.StartsWith("axis-", StringComparison.OrdinalIgnoreCase)) key = key[5..];
+            if (key.StartsWith("axis_", StringComparison.OrdinalIgnoreCase)) key = key[5..];
+            // Remove separators
+            key = key.Replace(" ", string.Empty)
+                     .Replace("-", string.Empty)
+                     .Replace("_", string.Empty);
+            return key.ToLowerInvariant();
+        }
+
+        var normalizedAxisScores = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kvp in axisScores)
+        {
+            var normalized = NormalizeAxisKey(kvp.Key);
+            // Prefer exact axis key if there are collisions; otherwise store normalized
+            if (!normalizedAxisScores.ContainsKey(normalized))
+            {
+                normalizedAxisScores[normalized] = kvp.Value;
+            }
+            else
+            {
+                // Sum if multiple variations collapse to the same normalized axis
+                normalizedAxisScores[normalized] += kvp.Value;
+            }
+        }
+
         // Group badges by axis and tier, sorted by tier order
         var badgesByAxis = availableBadges
-            .GroupBy(b => b.CompassAxisId)
-            .ToDictionary(g => g.Key, g => g.OrderBy(b => b.TierOrder).ToList());
+            .GroupBy(b => b.CompassAxisId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.OrderBy(b => b.TierOrder).ToList(), StringComparer.OrdinalIgnoreCase);
 
         // Evaluate each axis
         foreach (var (axis, badges) in badgesByAxis)
         {
-            // Get the score for this axis
+            // Get the score for this axis (try direct key first, then normalized)
             var hasScore = axisScores.TryGetValue(axis, out var score);
+            if (!hasScore)
+            {
+                var normalized = NormalizeAxisKey(axis);
+                hasScore = normalizedAxisScores.TryGetValue(normalized, out score);
+            }
             if (!hasScore)
             {
                 continue;

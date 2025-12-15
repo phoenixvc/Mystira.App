@@ -6,6 +6,46 @@
     min-width: 180px;
 }
 
+/* Profile selection grid */
+.profile-grid {
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.profile-card {
+    border-radius: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.profile-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.08);
+}
+
+.profile-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+    background: rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-icon i {
+    font-size: 2.25rem;
+    color: var(--bs-primary);
+}
+
+.profile-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin-bottom: 0.15rem;
+}
+
 .filter-toggles {
     display: flex;
     gap: 0.75rem;
@@ -57,8 +97,8 @@
 }
 
 .tier-image {
-    width: 48px;
-    height: 48px;
+    width: 160px;
+    height: 160px;
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -68,14 +108,19 @@
 }
 
 .tier-image img {
-    width: 48px;
-    height: 48px;
+    width: 160px;
+    height: 160px;
     object-fit: cover;
 }
 
 .tier-image i {
-    font-size: 1.5rem;
+    font-size: 5rem;
     opacity: 0.7;
+}
+
+.tier-card:not(.earned) .tier-image {
+    opacity: 0.4;
+    filter: grayscale(100%);
 }
 
 .tier-title {
@@ -106,6 +151,21 @@
     font-size: 1.1rem;
 }
 
+.tier-info-toggle {
+    margin-left: auto;
+    color: var(--bs-secondary-color);
+    text-decoration: none;
+}
+
+.tier-info-toggle:hover {
+    color: var(--bs-body-color);
+    text-decoration: none;
+}
+
+.tier-progress-container {
+    margin-top: 0.75rem;
+}
+
 .tier-progress-meta {
     display: flex;
     justify-content: space-between;
@@ -118,6 +178,11 @@
     margin-top: 0.5rem;
     font-size: 0.85rem;
     color: var(--bs-success);
+}
+
+.tier-card:not(.earned) {
+    opacity: 0.75;
+    cursor: not-allowed;
 }
 
 .tier-card.earned {

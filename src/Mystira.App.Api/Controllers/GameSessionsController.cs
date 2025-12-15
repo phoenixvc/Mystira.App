@@ -221,7 +221,7 @@ public class GameSessionsController : ControllerBase
     {
         try
         {
-            var command = new Mystira.App.Application.CQRS.GameSessions.Commands.FinalizeGameSessionCommand(id);
+            var command = new FinalizeGameSessionCommand(id);
             var result = await _mediator.Send(command);
 
             // Always return 200 with the aggregation result; if session not found, Awards will be empty
