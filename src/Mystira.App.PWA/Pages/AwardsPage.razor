@@ -37,8 +37,23 @@
 
         try
         {
-            // Build lists for players with no badges, split by age-group mismatch vs already-played vs general (priority: out-of-age-group > already-played > other)
+            // Determine scenario age group reliably (fallback to fetch if missing)
             var scenarioAgeGroup = AwardsState.ScenarioAgeGroup;
+            if (string.IsNullOrWhiteSpace(scenarioAgeGroup) && !string.IsNullOrWhiteSpace(AwardsState.ScenarioId))
+            {
+                try
+                {
+                    var scenario = await ApiClient.GetScenarioAsync(AwardsState.ScenarioId!);
+                    scenarioAgeGroup = scenario?.AgeGroup;
+                    Logger.LogDebug("[Awards] Loaded scenario age group via fallback: {ScenarioId} -> {AgeGroup}", AwardsState.ScenarioId, scenarioAgeGroup ?? "<null>");
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "[Awards] Failed to fetch scenario for age group using ScenarioId={ScenarioId}", AwardsState.ScenarioId);
+                }
+            }
+
+            // Build lists for players with no badges, split by age-group mismatch vs already-played vs general (priority: out-of-age-group > already-played > other)
             var allNoBadgeEntries = finalize.Awards
                 .Where(a => a.NewBadges == null || a.NewBadges.Count == 0)
                 .ToList();
@@ -61,11 +76,16 @@
                         if (p != null)
                         {
                             profilesById[pid] = p;
+                            Logger.LogDebug("[Awards] Loaded profile {ProfileId} ageGroup={AgeGroup}", pid, p.AgeGroup ?? "<null>");
+                        }
+                        else
+                        {
+                            Logger.LogWarning("[Awards] Profile fetch returned null for {ProfileId}", pid);
                         }
                     }
                     catch (Exception ex)
                     {
-                        Logger.LogWarning(ex, "Failed to load profile {ProfileId} for awards page", pid);
+                        Logger.LogWarning(ex, "[Awards] Failed to load profile {ProfileId} for awards page", pid);
                     }
                 }
 
@@ -73,11 +93,20 @@
                 {
                     var displayName = string.IsNullOrWhiteSpace(entry.ProfileName) ? "Player" : entry.ProfileName!;
                     var isOutOfAge = false;
-                    if (!string.IsNullOrWhiteSpace(scenarioAgeGroup) && profilesById.TryGetValue(entry.ProfileId, out var prof))
+                    UserProfile? prof = null;
+                    var canEvaluateAge = !string.IsNullOrWhiteSpace(scenarioAgeGroup) && profilesById.TryGetValue(entry.ProfileId, out prof);
+                    if (canEvaluateAge)
                     {
                         // If profile age group doesn't match scenario age group, treat as out-of-age-group
                         // Note: Age groups are represented as strings like "1-2", "3-5", "6-9" etc.
-                        isOutOfAge = !AgeGroupHelper.AgeGroupMatches(scenarioAgeGroup, prof.AgeGroup);
+                        isOutOfAge = !AgeGroupHelper.AgeGroupMatches(scenarioAgeGroup, prof!.AgeGroup);
+                        Logger.LogDebug("[Awards] Bucket eval for {Name} (ProfileId={Pid}): scenario={ScenarioAge} profile={ProfileAge} -> outOfAge={OutOfAge} alreadyPlayed={AlreadyPlayed}",
+                            displayName, entry.ProfileId, scenarioAgeGroup ?? "<null>", prof!.AgeGroup ?? "<null>", isOutOfAge, entry.AlreadyPlayed);
+                    }
+                    else
+                    {
+                        Logger.LogDebug("[Awards] Skipping age evaluation for {Name} (ProfileId={Pid}): scenarioAgeGroup={ScenarioAge} present={ScenarioPresent} profileLoaded={ProfileLoaded}",
+                            displayName, entry.ProfileId, scenarioAgeGroup ?? "<null>", !string.IsNullOrWhiteSpace(scenarioAgeGroup), profilesById.ContainsKey(entry.ProfileId));
                     }
 
                     if (isOutOfAge)
@@ -88,7 +117,7 @@
                     {
                         alreadyPlayedNoBadges.Add(displayName);
                     }
-                    else
+                    else if (canEvaluateAge)
                     {
                         otherNoBadges.Add(displayName);
                     }
