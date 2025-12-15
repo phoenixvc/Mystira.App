@@ -580,18 +580,23 @@ public class GameSessionService : IGameSessionService
             var characterName = assignment.CharacterName.ToLower();
             if (assignment.PlayerAssignment != null)
             {
+                var playerProfileName = assignment.PlayerAssignment.ProfileName;
+                var guestProfileName = assignment.PlayerAssignment.GuestName;
                 string playerName = assignment.PlayerAssignment.Type switch
                 {
-                    "Profile" => assignment.PlayerAssignment.ProfileName?.ToLower() == characterName
+                    "Player" => playerProfileName?.ToLower() == characterName
                         ? "Player"
-                        : assignment.PlayerAssignment.ProfileName ?? "Player",
-                    "Guest" => assignment.PlayerAssignment.GuestName?.ToLower() == characterName
+                        :  playerProfileName ?? "Player",
+                    "Profile" => playerProfileName?.ToLower() == characterName
+                        ? "Player"
+                        :  playerProfileName ?? "Player",
+                    "Guest" => guestProfileName?.ToLower() == characterName
                         ? "Guest"
-                        : assignment.PlayerAssignment.GuestName ?? "Guest",
+                        : guestProfileName ?? "Guest",
                     _ => "Player"
                 };
 
-                string placeholder = $"[c:{assignment.CharacterName.ToLower()}]";
+                string placeholder = $"[c:{characterName}]";
                 text = text.Replace(placeholder, playerName);
             }
         }
