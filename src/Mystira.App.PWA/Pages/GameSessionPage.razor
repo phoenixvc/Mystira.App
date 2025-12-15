@@ -745,9 +745,10 @@ else
                     if (anyAwards)
                     {
                         // Store results for the Awards page and navigate there
-                        AwardsState.Set(finalize!);
+                        AwardsState.Set(finalize!, gameSession.ScenarioId, gameSession.Scenario?.AgeGroup);
                         hasNavigatedHome = true; // prevent other flows
-                        Navigation.NavigateTo("/game/awards", true);
+                        // Navigate within the SPA so the scoped AwardsState is preserved
+                        Navigation.NavigateTo("/game/awards");
                         return;
                     }
                 }
