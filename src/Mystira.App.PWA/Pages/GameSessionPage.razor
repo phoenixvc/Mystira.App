@@ -240,12 +240,60 @@ else
             </div>
         </div>
     </div>
+
+    @if (showAwardsModal && finalizeResult != null)
+    {
+        <div style="position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1050; display:flex; align-items:center; justify-content:center;">
+            <div class="card shadow-lg" style="max-width: 720px; width: 92%;">
+                <div class="card-body p-4">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-award fa-3x text-warning mb-2"></i>
+                        <h3 class="mb-1">Congratulations!</h3>
+                        <p class="text-muted mb-0">You've earned new badges for this adventure.</p>
+                    </div>
+
+                    @foreach (var award in finalizeResult.Awards)
+                    {
+                        if (award.NewBadges == null || award.NewBadges.Count == 0) { continue; }
+                        <div class="mb-3">
+                            <div class="d-flex flex-row flex-wrap gap-3 justify-content-center">
+                                @foreach (var badge in award.NewBadges)
+                                {
+                                    <div class="d-flex align-items-center gap-2 p-2 rounded" style="background-color:#f8f9fa;">
+                                        @if (!string.IsNullOrWhiteSpace(badge.ImageId))
+                                        {
+                                            <img src="@ApiClient.GetMediaResourceEndpointUrl(badge.ImageId!)" alt="@badge.BadgeName" style="width:48px;height:48px;object-fit:cover;border-radius:8px;" />
+                                        }
+                                        <div>
+                                            <div class="fw-semibold">@badge.BadgeName</div>
+                                            @if (!string.IsNullOrWhiteSpace(badge.BadgeMessage))
+                                            {
+                                                <div class="text-muted small">@badge.BadgeMessage</div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <div class="text-center mt-3">
+                        <button class="btn btn-primary-custom btn-lg" @onclick="CloseAwardsAndExit">
+                            <i class="fas fa-check me-2"></i>
+                            Continue
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 }
 
 @code {
     [Inject] private IGameSessionService GameSessionService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ILogger<GameSessionPage> Logger { get; set; } = default!;
+    [Inject] private IApiClient ApiClient { get; set; } = default!;
 
     private sealed record PlayerOption(string Id, string DisplayName);
 
@@ -255,6 +303,10 @@ else
     private bool? lastRollSuccess = null;
     private string? lastRollMessage = null;
     private bool hasNavigatedHome = false;
+
+    // Awards modal state
+    private bool showAwardsModal = false;
+    private FinalizeSessionResponse? finalizeResult;
 
     private List<PlayerOption> playerOptions = new();
     private string? selectedPlayerId;
@@ -622,12 +674,28 @@ else
             // Complete the session
             await CompleteSession();
 
-            // Clear the current game session
-            GameSessionService.ClearGameSession();
+            // After completion, attempt to fetch awarded badges to display a congratulatory message
+            try
+            {
+                if (gameSession != null)
+                {
+                    var finalize = await ApiClient.FinalizeGameSessionAsync(gameSession.Id);
+                    var anyAwards = finalize?.Awards?.Any(a => a.NewBadges != null && a.NewBadges.Count > 0) == true;
+                    if (anyAwards)
+                    {
+                        finalizeResult = finalize;
+                        showAwardsModal = true;
+                        return; // Defer clearing/navigation until the user closes the modal
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Unable to retrieve finalize awards; proceeding to exit.");
+            }
 
-            // Navigate back to home
-            hasNavigatedHome = true;
-            Navigation.NavigateTo("/", true);
+            // No awards to show (or failed to fetch) — exit as before
+            ExitToHome();
         }
         catch (Exception ex)
         {
@@ -638,5 +706,29 @@ else
             isProcessing = false;
             StateHasChanged();
         }
+    }
+
+    private void ExitToHome()
+    {
+        try
+        {
+            // Clear the current game session
+            GameSessionService.ClearGameSession();
+
+            // Navigate back to home
+            hasNavigatedHome = true;
+            Navigation.NavigateTo("/", true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while exiting to home");
+        }
+    }
+
+    private void CloseAwardsAndExit()
+    {
+        showAwardsModal = false;
+        finalizeResult = null;
+        ExitToHome();
     }
 }
