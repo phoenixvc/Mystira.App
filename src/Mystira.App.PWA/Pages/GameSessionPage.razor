@@ -424,12 +424,54 @@ else
 
             Logger.LogInformation("Player chose: {ChoiceText} -> {NextScene}", choice.Text, choice.NextSceneId);
 
+            var scene = gameSession.CurrentScene;
+            string? playerId = null;
+
+            // Map ActiveCharacter to the playerId of the assigned player
+            if (!string.IsNullOrWhiteSpace(scene.ActiveCharacter))
+            {
+                var ac = scene.ActiveCharacter!;
+
+                // Try to find matching character assignment by name or id (case-insensitive)
+                var matches = gameSession.CharacterAssignments
+                    .Where(ca =>
+                        (!string.IsNullOrWhiteSpace(ca.CharacterName) &&
+                         string.Equals(ca.CharacterName, ac, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrWhiteSpace(ca.CharacterId) &&
+                         string.Equals(ca.CharacterId, ac, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+
+                if (matches.Count == 1)
+                {
+                    var pa = matches[0].PlayerAssignment;
+                    if (pa != null)
+                    {
+                        // Prefer ProfileId when present, otherwise guest:{GuestName}
+                        if (!string.IsNullOrWhiteSpace(pa.ProfileId))
+                        {
+                            playerId = pa.ProfileId;
+                        }
+                        else if (!string.IsNullOrWhiteSpace(pa.GuestName))
+                        {
+                            playerId = $"guest:{pa.GuestName}";
+                        }
+                    }
+                }
+                else if (matches.Count == 0)
+                {
+                    Logger.LogWarning("ActiveCharacter '{ActiveCharacter}' did not match any character assignment.", ac);
+                }
+                else
+                {
+                    Logger.LogWarning("ActiveCharacter '{ActiveCharacter}' matched multiple character assignments ({Count}). Using blank playerId.", ac, matches.Count);
+                }
+            }
             await GameSessionService.MakeChoiceAsync(
                 gameSession.Id,
                 gameSession.CurrentScene.Id,
                 choice.Text,
                 choice.NextSceneId,
-                selectedPlayerId,
+                playerId,
                 choice.CompassAxis,
                 choice.CompassDirection,
                 choice.CompassDelta);
