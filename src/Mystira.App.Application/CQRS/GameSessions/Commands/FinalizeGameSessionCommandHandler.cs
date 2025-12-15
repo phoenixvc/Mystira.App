@@ -78,6 +78,7 @@ public class FinalizeGameSessionCommandHandler : ICommandHandler<FinalizeGameSes
                 result.Awards.Add(new ProfileBadgeAwards
                 {
                     ProfileId = profile.Id,
+                    ProfileName = profile.Name,
                     NewBadges = newBadges
                 });
             }

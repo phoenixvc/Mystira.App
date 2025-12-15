@@ -13,5 +13,6 @@ public class FinalizeGameSessionResult
 public class ProfileBadgeAwards
 {
     public string ProfileId { get; set; } = string.Empty;
+    public string? ProfileName { get; set; }
     public List<UserBadge> NewBadges { get; set; } = new();
 }

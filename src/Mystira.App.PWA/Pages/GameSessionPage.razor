@@ -275,6 +275,10 @@ else
                                         }
                                         <div class="text-center">
                                             <div class="fw-semibold small">@badge.BadgeName</div>
+                                            @if (!string.IsNullOrWhiteSpace(award.ProfileName))
+                                            {
+                                                <div class="text-muted" style="font-size: 0.8rem;">@award.ProfileName</div>
+                                            }
                                         </div>
                                     </div>
                                 }

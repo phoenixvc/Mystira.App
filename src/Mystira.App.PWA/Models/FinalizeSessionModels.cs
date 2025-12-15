@@ -9,6 +9,7 @@ public class FinalizeSessionResponse
 public class ProfileBadgeAwardsResponse
 {
     public string ProfileId { get; set; } = string.Empty;
+    public string? ProfileName { get; set; }
     public List<UserBadgeResponse> NewBadges { get; set; } = new();
 }
 
