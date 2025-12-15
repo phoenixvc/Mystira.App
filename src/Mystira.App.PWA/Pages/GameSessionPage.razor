@@ -741,10 +741,9 @@ else
                 if (gameSession != null)
                 {
                     var finalize = await ApiClient.FinalizeGameSessionAsync(gameSession.Id);
-                    var anyAwards = finalize?.Awards?.Any(a => a.NewBadges != null && a.NewBadges.Count > 0) == true;
-                    if (anyAwards)
+                    if (finalize != null)
                     {
-                        // Store results for the Awards page and navigate there
+                        // Always show the Awards page if finalize succeeded, even when there are no new badges
                         AwardsState.Set(finalize!, gameSession.ScenarioId, gameSession.Scenario?.AgeGroup);
                         hasNavigatedHome = true; // prevent other flows
                         // Navigate within the SPA so the scoped AwardsState is preserved
