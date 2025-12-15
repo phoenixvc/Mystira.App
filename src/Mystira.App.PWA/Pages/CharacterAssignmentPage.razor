@@ -417,9 +417,21 @@ else
 <!-- Guest Warning Modal -->
 <GuestWarningModal
     ShowModal="showGuestWarningModal"
+    @bind-DoNotShowAgain="dontShowGuestWarning"
     OnContinue="ContinueWithGuestAssignments"
     OnCancel="CancelGuestWarning">
 </GuestWarningModal>
+
+<!-- Age Group Mismatch Modal -->
+<AgeGroupMismatchModal
+    ShowModal="showAgeGroupWarningModal"
+    AgeGroupDisplayName="@AgeRanges.GetDisplayName(assignmentData?.Scenario?.AgeGroup ?? string.Empty)"
+    MismatchedProfiles="@mismatchedProfileNames"
+    DontShowAgain="@ageGroupDontShowAgain"
+    DontShowAgainChanged="@((bool val) => ageGroupDontShowAgain = val)"
+    OnContinue="ContinueAfterAgeGroupWarning"
+    OnCancel="CancelAgeGroupWarning">
+</AgeGroupMismatchModal>
 
 <!-- Initial Assignment Prompt Modal (shown on load for toddler scenarios only) -->
 @if (showInitialAssignmentPrompt)
@@ -567,6 +579,7 @@ else
     private bool showPlayerAssignmentModal = false;
     private bool showImagePreview = false;
     private bool showGuestWarningModal = false;
+    private bool showAgeGroupWarningModal = false;
     private bool showInitialAssignmentPrompt = false;
     private string assignmentTab = "profiles";
     private CharacterAssignment? currentAssignment;
@@ -583,6 +596,9 @@ else
     private string? previewImage;
     private string validationMessage = string.Empty;
     private bool isAvatarSelected = false;
+    private bool ageGroupDontShowAgain = false;
+    private bool dontShowGuestWarning = false;
+    private List<string> mismatchedProfileNames = new();
 
     // Mode helpers
     private bool IsToddlerScenario => assignmentData?.Scenario?.AgeGroup == "1-2";
@@ -600,6 +616,9 @@ else
 
             // Show the initial bulk assignment prompt only for toddler scenarios (age group 1-2)
             showInitialAssignmentPrompt = IsToddlerScenario;
+
+            // Preload persisted flags
+            dontShowGuestWarning = await ShouldSkipGuestWarningAsync();
 
             // Load the audio module when component initializes
             audioModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
@@ -744,11 +763,20 @@ else
 
         if (assignmentTab == "guest")
         {
-            // Defer to guest warning modal before applying
-            pendingInitialGuestApplyAll = true;
-            showGuestWarningModal = true;
-            StateHasChanged();
-            return;
+            // Defer to guest warning modal before applying unless user opted out
+            if (dontShowGuestWarning)
+            {
+                pendingInitialGuestApplyAll = true;
+                await ContinueWithGuestAssignments();
+                return;
+            }
+            else
+            {
+                pendingInitialGuestApplyAll = true;
+                showGuestWarningModal = true;
+                StateHasChanged();
+                return;
+            }
         }
     }
 
@@ -1009,6 +1037,14 @@ else
 
         try
         {
+            // Check for age group mismatches among assigned user profiles
+            if (HasAgeGroupMismatch() && !await ShouldSkipAgeGroupWarningAsync())
+            {
+                showAgeGroupWarningModal = true;
+                StateHasChanged();
+                return;
+            }
+
             // Check if only guests are assigned (no user profiles)
             var assignedCharacters = characterAssignments
                 .Where(ca => !ca.IsUnused && ca.PlayerAssignment != null)
@@ -1020,10 +1056,18 @@ else
 
             if (hasOnlyGuests)
             {
-                // Show guest warning modal instead of starting immediately
-                showGuestWarningModal = true;
-                StateHasChanged();
-                return;
+                // Show guest warning modal unless the user opted out
+                if (dontShowGuestWarning)
+                {
+                    await ContinueWithGameSession();
+                    return;
+                }
+                else
+                {
+                    showGuestWarningModal = true;
+                    StateHasChanged();
+                    return;
+                }
             }
 
             await ContinueWithGameSession();
@@ -1034,6 +1078,81 @@ else
             isStartingSession = false;
             StateHasChanged();
         }
+    }
+
+    private bool HasAgeGroupMismatch()
+    {
+        mismatchedProfileNames.Clear();
+        var scenarioAge = assignmentData?.Scenario?.AgeGroup;
+        if (string.IsNullOrWhiteSpace(scenarioAge)) return false;
+
+        var assignedProfileIds = characterAssignments
+            .Where(ca => !ca.IsUnused && ca.PlayerAssignment?.Type == "Profile" && !string.IsNullOrEmpty(ca.PlayerAssignment.ProfileId))
+            .Select(ca => ca.PlayerAssignment!.ProfileId!)
+            .Distinct()
+            .ToList();
+
+        if (!assignedProfileIds.Any()) return false;
+
+        var mismatched = availableProfiles
+            .Where(p => assignedProfileIds.Contains(p.Id) && !string.Equals(p.AgeGroup, scenarioAge, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (mismatched.Any())
+        {
+            mismatchedProfileNames = mismatched.Select(p => p.Name).ToList();
+            return true;
+        }
+
+        return false;
+    }
+
+    private string GetAgeGroupSkipStorageKey()
+    {
+        // Keyed by scenario age group; additionally include scenario id to be safe
+        var age = assignmentData?.Scenario?.AgeGroup ?? "unknown";
+        return $"mystira_skip_age_group_warning_{age}_{ScenarioId}";
+    }
+
+    private async Task<bool> ShouldSkipAgeGroupWarningAsync()
+    {
+        try
+        {
+            var val = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", GetAgeGroupSkipStorageKey());
+            return string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Failed to read age group warning flag from localStorage");
+            return false;
+        }
+    }
+
+    private async Task PersistSkipAgeGroupWarningIfNeededAsync()
+    {
+        if (!ageGroupDontShowAgain) return;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", GetAgeGroupSkipStorageKey(), "true");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Failed to persist age group warning flag to localStorage");
+        }
+    }
+
+    private async Task ContinueAfterAgeGroupWarning()
+    {
+        showAgeGroupWarningModal = false;
+        await PersistSkipAgeGroupWarningIfNeededAsync();
+        await ContinueWithGameSession();
+    }
+
+    private void CancelAgeGroupWarning()
+    {
+        showAgeGroupWarningModal = false;
+        ageGroupDontShowAgain = false; // reset checkbox
+        StateHasChanged();
     }
 
     private async Task ContinueWithGameSession()
@@ -1123,6 +1242,9 @@ else
     {
         showGuestWarningModal = false;
 
+        // Persist preference if user checked the box in the modal
+        await PersistSkipGuestWarningIfNeededAsync();
+
         if (pendingInitialGuestApplyAll)
         {
             // Apply guest assignment to all active characters, then close the initial prompt
@@ -1158,12 +1280,43 @@ else
     private void CancelGuestWarning()
     {
         showGuestWarningModal = false;
+        // Reset modal checkbox when cancelling to avoid accidental persistence
+        dontShowGuestWarning = false;
         if (pendingInitialGuestApplyAll)
         {
             // Keep the initial prompt open; do not apply guest assignments
             pendingInitialGuestApplyAll = false;
         }
         StateHasChanged();
+    }
+
+    private string GetGuestWarningSkipStorageKey() => "mystira_skip_guest_warning";
+
+    private async Task<bool> ShouldSkipGuestWarningAsync()
+    {
+        try
+        {
+            var val = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", GetGuestWarningSkipStorageKey());
+            return string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Failed to read guest warning flag from localStorage");
+            return false;
+        }
+    }
+
+    private async Task PersistSkipGuestWarningIfNeededAsync()
+    {
+        if (!dontShowGuestWarning) return;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", GetGuestWarningSkipStorageKey(), "true");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Failed to persist guest warning flag to localStorage");
+        }
     }
 
     private void ManageProfiles()

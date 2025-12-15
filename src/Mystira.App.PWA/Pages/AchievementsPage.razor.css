@@ -1,222 +1,82 @@
-.achievements-page {
-    max-width: 1200px;
-}
-
-.profile-select {
-    min-width: 180px;
-}
-
-/* Profile selection grid */
-.profile-grid {
-    max-width: 1100px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.profile-card {
-    border-radius: 14px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    cursor: pointer;
-    transition: transform 0.12s ease, box-shadow 0.12s ease;
-}
-
-.profile-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.08);
-}
-
-.profile-icon {
-    width: 72px;
-    height: 72px;
-    border-radius: 16px;
-    background: rgba(0, 0, 0, 0.05);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.profile-icon i {
-    font-size: 2.25rem;
-    color: var(--bs-primary);
-}
-
-/* Support avatar image inside CachedMystiraImage */
-.profile-icon ::deep .profile-avatar-image {
-    width: 72px;
-    height: 72px;
-    border-radius: 16px;
-    object-fit: cover;
-    display: block;
-}
-
-.profile-title {
-    font-weight: 700;
-    font-size: 1.05rem;
-    margin-bottom: 0.15rem;
-}
-
-.filter-toggles {
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
-}
-
-.axis-card {
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 14px;
-}
-
-.axis-copy {
-    display: grid;
-    gap: 0.5rem;
-}
-
-.axis-copy-item {
-    display: flex;
-    gap: 0.5rem;
-    align-items: baseline;
-}
-
-.axis-copy-direction {
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: var(--bs-secondary-color);
-    white-space: nowrap;
-}
-
-.axis-copy-text {
-    color: var(--bs-body-color);
-}
-
-.tier-card {
-    height: 100%;
-    border-radius: 14px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    padding: 1rem;
-    background: var(--bs-body-bg);
-    position: relative;
-    overflow: hidden;
-}
-
-.tier-card-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-}
-
-.tier-image {
-    width: 160px;
-    height: 160px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.04);
-    flex-shrink: 0;
-}
-
-.tier-image img {
-    width: 160px;
-    height: 160px;
-    object-fit: cover;
-}
-
-.tier-image i {
-    font-size: 5rem;
-    opacity: 0.7;
-}
-
-.tier-card:not(.earned) .tier-image {
-    opacity: 0.4;
-    filter: grayscale(100%);
-}
-
-.tier-title {
-    min-width: 0;
-    flex-grow: 1;
-}
-
-.tier-label {
-    font-weight: 700;
-    font-size: 0.85rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-
-.tier-name {
-    font-weight: 600;
-    line-height: 1.2;
-}
-
-.tier-description {
-    font-size: 0.9rem;
-    color: var(--bs-secondary-color);
-    margin-bottom: 0.75rem;
-}
-
-.tier-earned-badge {
-    color: #f5c542;
-    font-size: 1.1rem;
-}
-
-.tier-info-toggle {
-    margin-left: auto;
-    color: var(--bs-secondary-color);
-    text-decoration: none;
-}
-
-.tier-info-toggle:hover {
-    color: var(--bs-body-color);
-    text-decoration: none;
-}
-
-.tier-progress-container {
-    margin-top: 0.75rem;
-}
-
-.tier-progress-meta {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.85rem;
-    margin-top: 0.35rem;
-    color: var(--bs-secondary-color);
-}
-
-.tier-earned-at {
-    margin-top: 0.5rem;
-    font-size: 0.85rem;
-    color: var(--bs-success);
-}
-
-.tier-card:not(.earned) {
-    opacity: 0.75;
-    cursor: not-allowed;
-}
-
-.tier-card.earned {
-    box-shadow: 0 0 0 2px rgba(25, 135, 84, 0.12);
-}
-
-.tier-card.earned::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at top right, rgba(245, 197, 66, 0.28), transparent 55%);
-    opacity: 1;
-    pointer-events: none;
-}
-
-.tier-card.tier-bronze {
-    border-color: rgba(205, 127, 50, 0.45);
-}
-
-.tier-card.tier-silver {
-    border-color: rgba(192, 192, 192, 0.65);
-}
 
 .tier-card.tier-gold {
     border-color: rgba(255, 215, 0, 0.55);
+}
+
+/* --- Simplified view --- */
+.simplified-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(144px, 1fr));
+    gap: 12px;
+}
+
+.badge-thumb {
+    position: relative;
+    width: 144px;
+    aspect-ratio: 16 / 9;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.08);
+    background: rgba(0,0,0,0.04);
+    overflow: hidden;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.badge-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.badge-thumb i {
+    font-size: 2rem;
+    opacity: 0.7;
+}
+
+.badge-thumb.locked {
+    opacity: 0.7;
+    filter: grayscale(100%);
+}
+
+.badge-thumb .badge-check {
+    position: absolute;
+    right: 6px;
+    top: 6px;
+    color: #f5c542;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+}
+
+/* Responsive sizing for phones */
+@media (max-width: 576px) {
+    .simplified-grid {
+        grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+        gap: 8px;
+    }
+    .badge-thumb {
+        width: 72px;
+        aspect-ratio: 16 / 9;
+        border-radius: 8px;
+    }
+}
+
+/* Advanced view: keep horizontal header layout on phones but scale badge icon down */
+@media (max-width: 576px) {
+    .tier-card-header {
+        flex-direction: row;
+        align-items: center;
+    }
+    .tier-image {
+        width: 56px;
+        min-width: 56px;
+        height: 56px;
+    }
+    .tier-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
 }
 
 .achievements-page.age-group-1-2 h2,

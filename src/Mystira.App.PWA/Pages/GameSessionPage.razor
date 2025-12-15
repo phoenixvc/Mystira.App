@@ -138,9 +138,9 @@ else
                             <div class="text-center">
                                 @if (!rollResult.HasValue)
                                 {
-                                    <h5 class="mb-4 text-muted">Time to test your luck!</h5>
                                     if (gameSession.Scenario.AgeGroup != "1-2")
                                     {
+                                        <h5 class="mb-4 text-muted">Time to test your luck!</h5>
                                         <p class="mb-4">You need to roll @gameSession.CurrentScene.RollTarget or higher.</p>
                                     }
                                     <div class="dice-roller-container">
@@ -275,16 +275,18 @@ else
                                         }
                                         <div class="text-center">
                                             <div class="fw-semibold small">@badge.BadgeName</div>
-                                            @if (!string.IsNullOrWhiteSpace(badge.BadgeMessage))
-                                            {
-                                                <div class="text-muted small">@badge.BadgeMessage</div>
-                                            }
                                         </div>
                                     </div>
                                 }
                             </div>
                         </div>
                     }
+
+                    <div class="text-center mt-2">
+                        <div class="text-muted">
+                            Visit the <a href="/achievements">Achievements</a> page for more details.
+                        </div>
+                    </div>
 
                     <div class="text-center mt-4">
                         <button class="btn btn-primary-custom btn-lg" @onclick="CloseAwardsAndExit">
