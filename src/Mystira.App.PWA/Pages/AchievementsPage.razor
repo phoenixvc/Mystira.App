@@ -174,30 +174,42 @@
                                                     <i class="fas fa-star"></i>
                                                 </div>
                                             }
-                                            <button type="button" class="btn btn-link btn-sm tier-info-toggle" title="More info" @onclick="(() => ToggleTierInfo(tier))">
-                                                <i class="fas fa-info-circle"></i>
-                                            </button>
+                                            @if (tier.IsEarned)
+                                            {
+                                                <button type="button" class="btn btn-link btn-sm tier-info-toggle" title="More info" @onclick="(() => ToggleTierInfo(tier))">
+                                                    <i class="fas fa-info-circle"></i>
+                                                </button>
+                                            }
                                         </div>
 
                                         <div class="tier-card-body">
-                                            @if (IsTierExpanded(tier))
-                                            {
-                                                <p class="tier-description">@tier.Description</p>
-                                            }
+                                             @if (IsTierExpanded(tier))
+                                             {
+                                                 <p class="tier-description">@tier.Description</p>
+                                             }
 
-                                            @if (tier.IsEarned)
-                                            {
-                                                <div class="text-success fw-semibold">Earned</div>
-                                            }
+                                             @if (tier.IsEarned)
+                                             {
+                                                 <div class="text-success fw-semibold">Earned</div>
+                                             }
 
-                                            @if (tier.IsEarned && tier.EarnedAt.HasValue)
-                                            {
-                                                <div class="tier-earned-at">
-                                                    <i class="fas fa-calendar-check me-1"></i>
-                                                    Earned @tier.EarnedAt.Value.ToLocalTime().ToString("dd-MMM-yyyy")
-                                                </div>
-                                            }
-                                        </div>
+                                             @if (tier.IsEarned && tier.EarnedAt.HasValue)
+                                             {
+                                                 <div class="tier-earned-at">
+                                                     <i class="fas fa-calendar-check me-1"></i>
+                                                     Earned @tier.EarnedAt.Value.ToLocalTime().ToString("dd-MMM-yyyy")
+                                                 </div>
+                                             }
+
+                                             @if (!tier.IsEarned)
+                                             {
+                                                 <div class="tier-progress-container">
+                                                     <div class="progress">
+                                                         <div class="progress-bar" role="progressbar" style="width: @(tier.ProgressPercent)%" aria-valuenow="@((int)tier.ProgressPercent)" aria-valuemin="0" aria-valuemax="100"></div>
+                                                     </div>
+                                                 </div>
+                                             }
+                                         </div>
                                     </div>
                                 </div>
                             }
@@ -219,7 +231,7 @@
     private bool isSelectingProfile;
     private readonly HashSet<string> expandedTierKeys = new(StringComparer.OrdinalIgnoreCase);
 
-    private readonly AchievementsFilterOptions filterOptions = new() { ShowEarned = true, ShowInProgress = false };
+    private readonly AchievementsFilterOptions filterOptions = new() { ShowEarned = true, ShowInProgress = true };
 
     protected override async Task OnInitializedAsync()
     {
