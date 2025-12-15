@@ -87,10 +87,10 @@
             <div class="col-12">
                 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
                     <div>
-                        <h2 class="mb-1">@GetHeaderTitle(model.AgeGroupId)</h2>
+                        <h2 class="mb-1">@GetHeaderTitle(model?.AgeGroupId ?? selectedProfile?.AgeGroup ?? "")</h2>
                         <p class="text-muted mb-0">
-                            Tracking progress for <strong>@(selectedProfile?.Name ?? model.ProfileName)</strong>
-                            <span class="ms-1">(@AgeRanges.GetDisplayName(model.AgeGroupId))</span>
+                            Tracking progress for <strong>@(selectedProfile?.Name ?? model?.ProfileName)</strong>
+                            <span class="ms-1">(@AgeRanges.GetDisplayName(model?.AgeGroupId ?? selectedProfile?.AgeGroup ?? ""))</span>
                         </p>
                     </div>
 
