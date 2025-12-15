@@ -63,4 +63,7 @@ public interface IApiClient
     string GetApiBaseAddress();
 
     string GetMediaResourceEndpointUrl(string mediaId);
+
+    // Badge images
+    string GetBadgeImageUrl(string imageId);
 }
