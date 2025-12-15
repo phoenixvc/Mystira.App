@@ -97,8 +97,8 @@
 }
 
 .tier-image {
-    width: 120px;
-    height: 120px;
+    width: 160px;
+    height: 160px;
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -108,14 +108,19 @@
 }
 
 .tier-image img {
-    width: 120px;
-    height: 120px;
+    width: 160px;
+    height: 160px;
     object-fit: cover;
 }
 
 .tier-image i {
-    font-size: 4rem;
+    font-size: 5rem;
     opacity: 0.7;
+}
+
+.tier-card:not(.earned) .tier-image {
+    opacity: 0.4;
+    filter: grayscale(100%);
 }
 
 .tier-title {
@@ -157,6 +162,10 @@
     text-decoration: none;
 }
 
+.tier-progress-container {
+    margin-top: 0.75rem;
+}
+
 .tier-progress-meta {
     display: flex;
     justify-content: space-between;
@@ -169,6 +178,11 @@
     margin-top: 0.5rem;
     font-size: 0.85rem;
     color: var(--bs-success);
+}
+
+.tier-card:not(.earned) {
+    opacity: 0.75;
+    cursor: not-allowed;
 }
 
 .tier-card.earned {
