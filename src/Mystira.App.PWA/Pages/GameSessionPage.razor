@@ -325,6 +325,7 @@ else
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ILogger<GameSessionPage> Logger { get; set; } = default!;
     [Inject] private IApiClient ApiClient { get; set; } = default!;
+    [Inject] private IAwardsState AwardsState { get; set; } = default!;
 
     private sealed record PlayerOption(string Id, string DisplayName);
 
@@ -734,7 +735,7 @@ else
             // Complete the session
             await CompleteSession();
 
-            // After completion, attempt to fetch awarded badges to display a congratulatory message
+            // After completion, attempt to fetch awarded badges to display on a dedicated page
             try
             {
                 if (gameSession != null)
@@ -743,9 +744,11 @@ else
                     var anyAwards = finalize?.Awards?.Any(a => a.NewBadges != null && a.NewBadges.Count > 0) == true;
                     if (anyAwards)
                     {
-                        finalizeResult = finalize;
-                        showAwardsModal = true;
-                        return; // Defer clearing/navigation until the user closes the modal
+                        // Store results for the Awards page and navigate there
+                        AwardsState.Set(finalize!);
+                        hasNavigatedHome = true; // prevent other flows
+                        Navigation.NavigateTo("/game/awards", true);
+                        return;
                     }
                 }
             }
