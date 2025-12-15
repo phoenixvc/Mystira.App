@@ -1,0 +1,152 @@
+﻿@page "/game/awards"
+@inject IAwardsState AwardsState
+@inject IApiClient ApiClient
+@inject IGameSessionService GameSessionService
+@inject NavigationManager Navigation
+@inject ILogger<AwardsPage> Logger
+
+@using Mystira.App.PWA.Models
+
+@code {
+    private FinalizeSessionResponse? finalize;
+    private bool isRedirecting;
+    private CancellationTokenSource? redirectCts;
+
+    protected override void OnInitialized()
+    {
+        // Ensure the active game session is cleared when we land here
+        try
+        {
+            GameSessionService.ClearGameSession();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to clear session on awards page");
+        }
+
+        finalize = AwardsState.Result;
+        if (finalize == null)
+        {
+            // No awards available (direct navigation or refresh) — go home
+            Navigation.NavigateTo("/", true);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && finalize != null)
+        {
+            // Optional auto-redirect to home after a short delay
+            redirectCts = new CancellationTokenSource();
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(8), redirectCts.Token);
+                GoHome();
+            }
+            catch (TaskCanceledException)
+            {
+                // ignored — user clicked Go Home
+            }
+        }
+    }
+
+    private void GoHome()
+    {
+        if (isRedirecting) return;
+        isRedirecting = true;
+        redirectCts?.Cancel();
+        AwardsState.Clear();
+        Navigation.NavigateTo("/", true);
+    }
+}
+
+@if (finalize is null)
+{
+    <div class="container py-5">
+        <div class="text-center text-muted">Loading…</div>
+    </div>
+}
+else
+{
+    <div class="container py-4">
+        <div class="text-center mb-4">
+            <i class="fas fa-award fa-4x text-warning mb-3"></i>
+            <h2 class="mb-2">Congratulations!</h2>
+            <p class="text-muted mb-0">You've earned new badges for this adventure.</p>
+        </div>
+
+        @foreach (var award in finalize.Awards)
+        {
+            if (award.NewBadges == null || award.NewBadges.Count == 0) { continue; }
+            <div class="mb-4">
+                <div class="d-flex flex-row flex-wrap gap-4 justify-content-center">
+                    @foreach (var badge in award.NewBadges)
+                    {
+                        <div class="d-flex flex-column align-items-center gap-2 p-3 rounded award-card">
+                            @if (!string.IsNullOrWhiteSpace(badge.ImageId))
+                            {
+                                <img src="@ApiClient.GetBadgeImageUrl(badge.ImageId!)"
+                                     alt="@badge.BadgeName"
+                                     loading="lazy"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block'"
+                                     class="award-img" />
+                                <i class="fas fa-certificate text-warning placeholder-icon"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-certificate text-warning" style="font-size:64px;"></i>
+                            }
+                            <div class="text-center">
+                                <div class="fw-semibold small">@badge.BadgeName</div>
+                                @if (!string.IsNullOrWhiteSpace(award.ProfileName))
+                                {
+                                    <div class="text-muted" style="font-size: 0.8rem;">@award.ProfileName</div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @{
+            var playersWithNoBadges = finalize.Awards
+                .Where(a => a.NewBadges == null || a.NewBadges.Count == 0)
+                .Select(a => string.IsNullOrWhiteSpace(a.ProfileName) ? "Player" : a.ProfileName!)
+                .Distinct()
+                .ToList();
+        }
+        @if (playersWithNoBadges.Count > 0)
+        {
+            <div class="alert alert-info mt-2" role="alert">
+                <div class="fw-semibold mb-1">No badges this time:</div>
+                <div class="mb-2">@string.Join(", ", playersWithNoBadges)</div>
+                <div class="mb-0">They didn’t necessarily make a bad choice — and that’s okay! It’s often not possible for all players to get a badge in a single round. Don’t be discouraged; try another adventure.</div>
+            </div>
+        }
+
+        <div class="text-center mt-4">
+            <div class="text-muted mb-3">
+                Visit the <a href="/achievements">Achievements</a> page for more details.
+            </div>
+            <button class="btn btn-primary-custom btn-lg" @onclick="GoHome">
+                <i class="fas fa-home me-2"></i>
+                Go Home
+            </button>
+        </div>
+    </div>
+}
+
+<style>
+    .award-card {
+        background-color: #f8f9fa;
+        border-radius: 0.75rem;
+        flex: 0 1 auto;
+        max-width: 160px;
+    }
+    .award-img { width: 80px; height: 80px; object-fit: cover; border-radius: 12px; }
+    .placeholder-icon { display:none; font-size:64px; }
+    @@media (max-width: 576px) {
+        .award-card { max-width: 140px; }
+    }
+</style>
