@@ -243,7 +243,7 @@
                                 @foreach (var tier in axis.Tiers)
                                 {
                                     <div class="col-12 col-md-6 col-lg-4">
-                                        <div class="tier-card tier-@GetTierCssSuffix(tier.Tier) @(tier.IsEarned ? "earned" : "") @(IsTierExpanded(tier) ? "expanded" : "")" data-tier="@tier.Tier">
+                                        <div class="tier-card tier-@GetTierCssSuffix(tier.Tier) @(tier.IsEarned ? "earned" : "locked") @(IsTierExpanded(tier) ? "expanded" : "")" data-tier="@tier.Tier">
                                             <div class="tier-card-header">
                                                 <div class="tier-image">
                                                     @if (!string.IsNullOrWhiteSpace(tier.ImageUrl))
@@ -296,7 +296,7 @@
                                                  {
                                                      <div class="tier-progress-container">
                                                          <div class="progress">
-                                                             <div class="progress-bar" role="progressbar" style="width: @($"{tier.ProgressPercent}%")" aria-valuenow="@((int)tier.ProgressPercent)" aria-valuemin="0" aria-valuemax="100"></div>
+                                                         <div class="progress-bar" role="progressbar" style="width: @($"{tier.ProgressPercent}%")" aria-valuenow="@((int)tier.ProgressPercent)" aria-valuemin="0" aria-valuemax="100"></div>
                                                          </div>
                                                       </div>
                                                   }
