@@ -1,3 +1,5 @@
+
+/* --- Advanced view (restored prior styles) --- */
 .achievements-page {
     max-width: 1200px;
 }
@@ -38,6 +40,15 @@
 .profile-icon i {
     font-size: 2.25rem;
     color: var(--bs-primary);
+}
+
+/* Support avatar image inside CachedMystiraImage */
+.profile-icon ::deep .profile-avatar-image {
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+    object-fit: cover;
+    display: block;
 }
 
 .profile-title {
@@ -198,6 +209,68 @@
     pointer-events: none;
 }
 
+/* Locked (unearned) tiers: grey out and hide info icon */
+.tier-card.locked .tier-image img,
+.tier-card.locked .tier-image i {
+    filter: grayscale(100%);
+    opacity: 0.55;
+}
+
+.tier-card.locked .tier-title .tier-name,
+.tier-card.locked .tier-title .tier-label,
+.tier-card.locked .tier-description,
+.tier-card.locked .tier-earned-at {
+    opacity: 0.7;
+}
+
+.tier-card.locked .tier-info-toggle { display: none; }
+
+/* --- Simplified view: 3 equal columns, each tile keeps 16:9, overlay info icon --- */
+.simplified-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.badge-cell {
+    display: flex;
+}
+
+.badge-thumb {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: transparent;
+    padding: 0;
+    border: none;
+    cursor: pointer;
+}
+
+.badge-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+    display: block;
+}
+
+.badge-info-icon {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+}
+
+.badge-info-icon i { font-size: 0.95rem; }
+
 .tier-card.tier-bronze {
     border-color: rgba(205, 127, 50, 0.45);
 }
@@ -220,4 +293,81 @@
 .achievements-page.age-group-3-5 .tier-name,
 .achievements-page.age-group-6-9 .tier-name {
     font-size: 1.05rem;
+}
+
+/* --- Simplified view (unchanged) --- */
+.simplified-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+    gap: 12px;
+}
+
+.badge-thumb {
+    position: relative;
+    width: 500px; /* Match modal image area width on desktop/tablet */
+    aspect-ratio: 16 / 9;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.08);
+    background: rgba(0,0,0,0.04);
+    overflow: hidden;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.badge-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.badge-thumb i {
+    font-size: 2rem;
+    opacity: 0.7;
+}
+
+.badge-thumb.locked {
+    opacity: 0.7;
+    filter: grayscale(100%);
+}
+
+.badge-thumb .badge-check {
+    position: absolute;
+    right: 6px;
+    top: 6px;
+    color: #f5c542;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+}
+
+/* Mobile: simplified badge width 144px */
+@media (max-width: 576px) {
+    .simplified-grid {
+        grid-template-columns: repeat(auto-fill, minmax(144px, 1fr));
+        gap: 8px;
+    }
+    .badge-thumb {
+        width: 144px;
+        aspect-ratio: 16 / 9;
+        border-radius: 8px;
+    }
+}
+
+/* Advanced view: explicit grey-out for locked and hide info icon */
+.tier-card.locked .tier-image img,
+.tier-card.locked .tier-image i {
+    filter: grayscale(100%);
+    opacity: 0.55;
+}
+
+.tier-card.locked .tier-title .tier-name,
+.tier-card.locked .tier-title .tier-label,
+.tier-card.locked .tier-earned-at,
+.tier-card.locked .tier-description {
+    opacity: 0.7;
+}
+
+/* Ensure info icon not shown for locked tiers */
+.tier-card.locked .tier-info-toggle {
+    display: none;
 }

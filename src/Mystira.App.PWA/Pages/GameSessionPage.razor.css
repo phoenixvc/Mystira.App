@@ -143,6 +143,8 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
+    /* Ensure option text is white */
+    color: #ffffff;
 }
 
 .choice-button::before {
@@ -186,15 +188,29 @@
     margin: 0;
     line-height: 1.5;
     font-weight: 500;
+    /* Inherit white color from button */
+    color: inherit;
 }
 
 .choice-button .markdown-content p {
     margin: 0;
+    color: inherit;
 }
 
 .choice-button .markdown-content strong,
 .choice-button .markdown-content b {
     color: white;
+}
+
+/* Make links in markdown white as well */
+.choice-button .markdown-content a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+.choice-button .markdown-content a:hover,
+.choice-button .markdown-content a:focus {
+    color: #f3f4f6; /* slightly lighter on hover for feedback */
 }
 
 .media-container {
