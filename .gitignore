@@ -12,3 +12,37 @@ find_dotnet.txt
 # Local configuration files (never commit secrets!)
 appsettings.local.json
 appsettings.Local.json
+
+# Node.js
+node_modules/
+package-lock.json
+package.json
+
+# Tools directory (DevHub and other tooling)
+tools/
+**/tools/
+
+# Build artifacts
+*.dll
+*.pdb
+*.exe
+*.cache
+
+# NuGet packages
+*.nupkg
+*.snupkg
+nupkg/
+nupkg-test/
+test-nupkg/
+
+# IDE
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# OS
+.DS_Store
+Thumbs.db
