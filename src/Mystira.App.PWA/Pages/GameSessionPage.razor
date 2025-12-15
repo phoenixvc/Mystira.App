@@ -757,7 +757,68 @@ else
                 Logger.LogWarning(ex, "Unable to retrieve finalize awards; proceeding to exit.");
             }
 
-            // No awards to show (or failed to fetch) — exit as before
+            // If we couldn't retrieve finalize results (e.g., playing as guest so finalize is unauthorized),
+            // synthesize a minimal awards payload from the local game session so we can still show the Awards page
+            if (gameSession != null)
+            {
+                try
+                {
+                    var synthetic = new FinalizeSessionResponse
+                    {
+                        SessionId = gameSession.Id,
+                        Awards = new()
+                    };
+
+                    var added = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    // Include DM/owner profile if present
+                    if (!string.IsNullOrWhiteSpace(gameSession.ProfileId))
+                    {
+                        synthetic.Awards.Add(new ProfileBadgeAwardsResponse
+                        {
+                            ProfileId = gameSession.ProfileId,
+                            ProfileName = "Session Owner",
+                            NewBadges = new(),
+                            AlreadyPlayed = false
+                        });
+                        added.Add(gameSession.ProfileId);
+                    }
+
+                    // Include any assigned player profiles (exclude guests)
+                    foreach (var assignment in gameSession.CharacterAssignments)
+                    {
+                        var pa = assignment.PlayerAssignment;
+                        if (pa == null) continue;
+                        if (!string.Equals(pa.Type, "Profile", StringComparison.OrdinalIgnoreCase)) continue;
+                        if (string.IsNullOrWhiteSpace(pa.ProfileId)) continue;
+                        if (added.Contains(pa.ProfileId)) continue;
+
+                        synthetic.Awards.Add(new ProfileBadgeAwardsResponse
+                        {
+                            ProfileId = pa.ProfileId!,
+                            ProfileName = string.IsNullOrWhiteSpace(pa.ProfileName) ? "Player" : pa.ProfileName,
+                            NewBadges = new(),
+                            AlreadyPlayed = false
+                        });
+                        added.Add(pa.ProfileId);
+                    }
+
+                    // If we have any profiles, navigate to Awards using the synthetic payload
+                    if (synthetic.Awards.Count > 0)
+                    {
+                        AwardsState.Set(synthetic, gameSession.ScenarioId, gameSession.Scenario?.AgeGroup);
+                        hasNavigatedHome = true;
+                        Navigation.NavigateTo("/game/awards");
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Failed to build synthetic awards payload from local session");
+                }
+            }
+
+            // No awards to show (or failed to fetch and no identifiable profiles) — exit as before
             ExitToHome();
         }
         catch (Exception ex)
