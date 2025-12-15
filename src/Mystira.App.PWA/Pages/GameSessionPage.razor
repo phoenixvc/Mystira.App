@@ -243,9 +243,9 @@ else
 
     @if (showAwardsModal && finalizeResult != null)
     {
-        <div style="position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1050; display:flex; align-items:center; justify-content:center;">
-            <div class="card shadow-lg" style="max-width: 720px; width: 92%;">
-                <div class="card-body p-4">
+        <div class="awards-modal-overlay">
+            <div class="card shadow-lg awards-modal-card">
+                <div class="card-body p-4 awards-modal-body">
                     <div class="text-center mb-4">
                         <i class="fas fa-award fa-4x text-warning mb-3"></i>
                         <h3 class="mb-1">Congratulations!</h3>
@@ -283,6 +283,22 @@ else
                                     </div>
                                 }
                             </div>
+                        </div>
+                    }
+
+                    @{
+                        var playersWithNoBadges = finalizeResult.Awards
+                            .Where(a => a.NewBadges == null || a.NewBadges.Count == 0)
+                            .Select(a => string.IsNullOrWhiteSpace(a.ProfileName) ? "Player" : a.ProfileName!)
+                            .Distinct()
+                            .ToList();
+                    }
+                    @if (playersWithNoBadges.Count > 0)
+                    {
+                        <div class="alert alert-info mt-2" role="alert">
+                            <div class="fw-semibold mb-1">No badges this time:</div>
+                            <div class="mb-2">@string.Join(", ", playersWithNoBadges)</div>
+                            <div class="mb-0">They didn’t necessarily make a bad choice — and that’s okay! It’s often not possible for all players to get a badge in a single round. Don’t be discouraged; try another adventure.</div>
                         </div>
                     }
 
@@ -776,3 +792,34 @@ else
         ExitToHome();
     }
 }
+
+<style>
+    /* Small scoped CSS for awards modal */
+    .awards-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 1050;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+    .awards-modal-card {
+        width: 92%;
+        max-width: 720px;
+        max-height: 85vh; /* rely on Bootstrap body scroll behavior style but ensure cap */
+        display: flex;
+        flex-direction: column;
+    }
+    .awards-modal-body {
+        overflow: auto; /* scroll if content overflows */
+    }
+    .badge-award-item {
+        min-width: 130px;
+    }
+    @@media (max-width: 576px) {
+        .awards-modal-card { max-height: 90vh; }
+        .badge-award-item { min-width: 110px; }
+    }
+</style>
