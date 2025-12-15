@@ -192,7 +192,7 @@ else
                                 }
                             </div>
                         }
-                        else if (gameSession.CurrentScene.NextSceneId == null)
+                        else if (gameSession.IsCompleted || gameSession.CurrentScene.NextSceneId == null)
                         {
                             <!-- Final Scene (no more scenes to go to) -->
                             <div class="text-center">
@@ -337,21 +337,8 @@ else
         lastRollSuccess = null;
         lastRollMessage = null;
 
-        // If the session has been completed elsewhere (e.g., via Continue when no next scene),
-        // automatically navigate back to Home once, to finish the adventure flow.
-        if (!hasNavigatedHome && session?.IsCompleted == true)
-        {
-            hasNavigatedHome = true; // guard against double navigation
-            // Ensure any local state is cleared
-            try
-            {
-                GameSessionService.ClearGameSession();
-            }
-            catch { /* ignore */ }
-
-            // Force-load home to reset any transient state
-            Navigation.NavigateTo("/", true);
-        }
+        // When the session is marked completed, allow the page to render the
+        // Finish flow (button + modal). Do not auto-navigate away here.
 
         InvokeAsync(StateHasChanged);
     }
