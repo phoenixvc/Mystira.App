@@ -1,39 +1,39 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Mystira.App.Api.Adapters;
-using Mystira.App.Api.Services;
+using Microsoft.AspNetCore.DataProtection;
+using Mystira.App.Admin.Api.Adapters;
+using Mystira.App.Admin.Api.Services;
 using Mystira.App.Application.Behaviors;
-using Mystira.App.Application.Ports;
-using Mystira.App.Application.Ports.Data;
-using Mystira.App.Application.Ports.Health;
-using Mystira.App.Application.Ports.Media;
-using Mystira.App.Application.Ports.Messaging;
 using Mystira.App.Application.Services;
-using Mystira.App.Application.UseCases.Accounts;
+using Mystira.App.Application.Ports.Messaging;
+using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Ports.Media;
+using Mystira.App.Application.UseCases.Contributors;
 using Mystira.App.Application.UseCases.GameSessions;
 using Mystira.App.Application.UseCases.Media;
 using Mystira.App.Application.UseCases.Scenarios;
 using Mystira.App.Application.UseCases.UserProfiles;
+using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
 using Mystira.App.Infrastructure.Data;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.Services;
-using Microsoft.ApplicationInsights.Extensibility;
-using Mystira.App.Infrastructure.Discord;
-using Mystira.App.Infrastructure.Discord.Services;
+using Mystira.App.Infrastructure.Data.UnitOfWork;
 using Mystira.App.Infrastructure.StoryProtocol;
-using Mystira.App.Shared.Adapters;
+using Mystira.App.Infrastructure.Discord.Services;
+using Microsoft.ApplicationInsights.Extensibility;
 using Mystira.App.Shared.Middleware;
-using Mystira.App.Shared.Services;
 using Mystira.App.Shared.Telemetry;
 using Serilog;
 using Serilog.Events;
+using IUnitOfWork = Mystira.App.Application.Ports.Data.IUnitOfWork;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SERILOG BOOTSTRAP LOGGING (before host is built)
@@ -46,9 +46,16 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    Log.Information("Starting Mystira.App.Api");
+    Log.Information("Starting Mystira.App.Admin.Api");
 
     var builder = WebApplication.CreateBuilder(args);
+
+    // Share DataProtection between Admin.Web and Admin.Api so auth cookies work across apps
+    var sharedKeysPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "..", ".aspnet-keys"));
+    builder.Services
+        .AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(sharedKeysPath))
+        .SetApplicationName("Mystira.Admin");
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // SERILOG CONFIGURATION (reads from appsettings.json)
@@ -60,7 +67,7 @@ try
         .Enrich.WithMachineName()
         .Enrich.WithThreadId()
         .Enrich.WithCorrelationId()
-        .Enrich.WithProperty("Application", "Mystira.App.Api")
+        .Enrich.WithProperty("Application", "Mystira.App.Admin.Api")
         .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName)
         .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
         .WriteTo.ApplicationInsights(
@@ -85,7 +92,7 @@ try
     builder.Services.AddSingleton<ITelemetryInitializer>(sp =>
     {
         var env = sp.GetRequiredService<IWebHostEnvironment>();
-        return new CloudRoleNameInitializer("Mystira.App.Api", env.EnvironmentName);
+        return new CloudRoleNameInitializer("Mystira.App.Admin.Api", env.EnvironmentName);
     });
 
     // Register custom metrics service for business KPIs
@@ -105,7 +112,7 @@ builder.Services.AddControllersWithViews()
     .AddJsonOptions(options =>
     {
         // Configure enums to serialize as strings instead of numbers
-        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
 // Add HttpClient factory for use cases that need to make HTTP requests
@@ -117,9 +124,9 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Mystira API",
+        Title = "Mystira Admin API",
         Version = "v1",
-        Description = "Backend API for Mystira - Dynamic Story App for Child Development",
+        Description = "Admin API for Mystira - Content Management & Administration",
         Contact = new OpenApiContact
         {
             Name = "Mystira Team",
@@ -155,12 +162,12 @@ builder.Services.AddSwaggerGen(c =>
     // Fix schema naming conflicts
     c.CustomSchemaIds(type =>
     {
-        if (type == typeof(Mystira.App.Domain.Models.CharacterMetadata))
+        if (type == typeof(CharacterMetadata))
         {
             return "DomainCharacterMetadata";
         }
 
-        if (type == typeof(Mystira.App.Api.Models.CharacterMetadata))
+        if (type == typeof(Mystira.App.Admin.Api.Models.CharacterMetadata))
         {
             return "ApiCharacterMetadata";
         }
@@ -168,6 +175,26 @@ builder.Services.AddSwaggerGen(c =>
         return type.Name;
     });
 });
+
+// Configure Memory Cache for query caching (used by MediatR behaviors)
+builder.Services.AddMemoryCache(options =>
+{
+    options.SizeLimit = 1024; // Limit cache to 1024 entries
+    options.CompactionPercentage = 0.25; // Compact 25% when size limit reached
+});
+
+// Configure MediatR for CQRS handlers from Application assembly
+builder.Services.AddMediatR(cfg =>
+{
+    // Register all handlers from Application assembly
+    cfg.RegisterServicesFromAssembly(typeof(Mystira.App.Application.CQRS.ICommand<>).Assembly);
+
+    // Add query caching pipeline behavior
+    cfg.AddOpenBehavior(typeof(QueryCachingBehavior<,>));
+});
+
+// Register query cache invalidation service
+builder.Services.AddSingleton<IQueryCacheInvalidationService, QueryCacheInvalidationService>();
 
 // Configure Database: Azure Cosmos DB (Cloud) or In-Memory (Local Development)
 var cosmosConnectionString = builder.Configuration.GetConnectionString("CosmosDb");
@@ -202,7 +229,7 @@ else
         options.UseInMemoryDatabase("MystiraAppInMemoryDb_Local"));
 }
 
-// Register DbContext base type for repositories and UnitOfWork that depend on it
+// Register DbContext base type for repository dependency injection
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<MystiraAppDbContext>());
 
 // Add Azure Infrastructure Services
@@ -214,46 +241,65 @@ builder.Services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingSe
 // Add Story Protocol Services
 builder.Services.AddStoryProtocolServices(builder.Configuration);
 
+// Register Content Bundle admin service
+builder.Services.AddScoped<IContentBundleAdminService, ContentBundleAdminService>();
+
 // Configure JWT Authentication - Load from secure configuration only
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];
 var jwtAudience = builder.Configuration["JwtSettings:Audience"];
 var jwtRsaPublicKey = builder.Configuration["JwtSettings:RsaPublicKey"];
 var jwtKey = builder.Configuration["JwtSettings:SecretKey"];
-var jwksEndpoint = builder.Configuration["JwtSettings:JwksEndpoint"];
 
-// Fail fast if JWT configuration is missing
-if (string.IsNullOrWhiteSpace(jwtIssuer))
+// Fail fast if JWT configuration is missing in non-development environments
+if (!builder.Environment.IsDevelopment())
 {
-    throw new InvalidOperationException("JWT Issuer (JwtSettings:Issuer) is not configured.");
+    if (string.IsNullOrWhiteSpace(jwtIssuer))
+    {
+        throw new InvalidOperationException("JWT Issuer (JwtSettings:Issuer) is not configured.");
+    }
+
+    if (string.IsNullOrWhiteSpace(jwtAudience))
+    {
+        throw new InvalidOperationException("JWT Audience (JwtSettings:Audience) is not configured.");
+    }
+
+    // Require at least one signing key method
+    if (string.IsNullOrWhiteSpace(jwtRsaPublicKey) && string.IsNullOrWhiteSpace(jwtKey))
+    {
+        throw new InvalidOperationException(
+            "JWT signing key not configured. Please provide either:\n" +
+            "- JwtSettings:RsaPublicKey for asymmetric RS256 verification (recommended), OR\n" +
+            "- JwtSettings:SecretKey for symmetric HS256 verification (legacy)\n" +
+            "Keys must be loaded from secure stores (Azure Key Vault, etc.).");
+    }
 }
 
-if (string.IsNullOrWhiteSpace(jwtAudience))
-{
-    throw new InvalidOperationException("JWT Audience (JwtSettings:Audience) is not configured.");
-}
-
-// Determine which signing method to use
-bool useAsymmetric = !string.IsNullOrWhiteSpace(jwtRsaPublicKey) || !string.IsNullOrWhiteSpace(jwksEndpoint);
-bool useSymmetric = !string.IsNullOrWhiteSpace(jwtKey);
-
-if (!useAsymmetric && !useSymmetric)
-{
-    throw new InvalidOperationException(
-        "JWT signing key not configured. Please provide either:\n" +
-        "- JwtSettings:RsaPublicKey for asymmetric RS256 verification (recommended), OR\n" +
-        "- JwtSettings:JwksEndpoint for JWKS-based key rotation (recommended), OR\n" +
-        "- JwtSettings:SecretKey for symmetric HS256 verification (legacy)\n" +
-        "Keys must be loaded from secure stores (Azure Key Vault, AWS Secrets Manager, etc.). " +
-        "Never hardcode secrets in source code.");
-}
+// Use defaults only in development
+jwtIssuer ??= "mystira-admin-api";
+jwtAudience ??= "mystira-app";
 
 builder.Services.AddAuthentication(options =>
     {
-        options.DefaultAuthenticateScheme = "Bearer";
-        options.DefaultChallengeScheme = "Bearer";
-        options.DefaultScheme = "Bearer";
+        options.DefaultScheme = "Cookies";
+        options.DefaultSignInScheme = "Cookies";
+        options.DefaultChallengeScheme = "Cookies";
     })
-    .AddJwtBearer("Bearer", options =>
+    .AddCookie("Cookies", options =>
+    {
+        options.Cookie.Name = "Mystira.Admin.Auth";
+        options.Cookie.HttpOnly = true;
+        // In development we must allow cookies over HTTP and avoid overly strict SameSite,
+        // otherwise the auth cookie is rejected and login appears to do nothing.
+        var isDev = builder.Environment.IsDevelopment();
+        options.Cookie.SameSite = isDev ? SameSiteMode.Lax : SameSiteMode.Strict;
+        options.Cookie.SecurePolicy = isDev ? CookieSecurePolicy.None : CookieSecurePolicy.Always;
+        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+        options.SlidingExpiration = true;
+        options.LoginPath = "/admin/login";
+        options.LogoutPath = "/admin/logout";
+        options.AccessDeniedPath = "/admin/forbidden";
+    })
+    .AddJwtBearer(options =>
     {
         var validationParameters = new TokenValidationParameters
         {
@@ -264,82 +310,65 @@ builder.Services.AddAuthentication(options =>
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtAudience,
             ClockSkew = TimeSpan.FromMinutes(5),
-            // Map JWT claim names to ClaimTypes for proper authorization
-            // This allows simple claim names like "role" to work with [Authorize(Roles = "...")]
-            RoleClaimType = "role",  // Map "role" claim to ClaimTypes.Role
-            NameClaimType = "name"   // Map "name" claim to ClaimTypes.Name
+            RoleClaimType = "role",
+            NameClaimType = "name"
         };
 
-        if (!string.IsNullOrWhiteSpace(jwksEndpoint))
-        {
-            // Use JWKS endpoint for key rotation support (most secure)
-            // The JwtBearer middleware handles JWKS fetching asynchronously with caching
-            options.MetadataAddress = jwksEndpoint;
-            options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
-
-            // Configure refresh interval for JWKS keys (handles key rotation)
-            options.RefreshInterval = TimeSpan.FromHours(1);
-            options.AutomaticRefreshInterval = TimeSpan.FromHours(24);
-
-            // Let the built-in ConfigurationManager handle key fetching asynchronously
-            // This avoids the blocking .Result call that can cause deadlocks
-            Log.Information("JWT configured to use JWKS endpoint: {JwksEndpoint}", jwksEndpoint);
-        }
-        else if (!string.IsNullOrWhiteSpace(jwtRsaPublicKey))
+        if (!string.IsNullOrWhiteSpace(jwtRsaPublicKey))
         {
             // Use RSA public key for asymmetric verification (recommended)
+            // Note: The RSA instance is intentionally not disposed here because RsaSecurityKey holds
+            // a reference to it for the lifetime of the application. Disposing it would break JWT validation.
+            // The RSA instance will be cleaned up when the application terminates.
             try
             {
                 var rsa = System.Security.Cryptography.RSA.Create();
                 rsa.ImportFromPem(jwtRsaPublicKey);
                 validationParameters.IssuerSigningKey = new RsaSecurityKey(rsa);
             }
-            catch (Exception ex)
+            catch (System.Security.Cryptography.CryptographicException ex)
             {
                 throw new InvalidOperationException(
-                    "Failed to load RSA public key. Ensure JwtSettings:RsaPublicKey contains a valid PEM-encoded RSA public key " +
-                    "from a secure store (Azure Key Vault, AWS Secrets Manager, etc.)", ex);
+                    "Failed to load RSA public key. Ensure JwtSettings:RsaPublicKey contains a valid PEM-encoded RSA public key.", ex);
+            }
+            catch (FormatException ex)
+            {
+                throw new InvalidOperationException(
+                    "Failed to load RSA public key. Ensure JwtSettings:RsaPublicKey contains a valid PEM-encoded RSA public key.", ex);
+            }
+            catch (ArgumentException ex)
+            {
+                throw new InvalidOperationException(
+                    "Failed to load RSA public key. Ensure JwtSettings:RsaPublicKey contains a valid PEM-encoded RSA public key.", ex);
             }
         }
         else if (!string.IsNullOrWhiteSpace(jwtKey))
         {
-            // Fall back to symmetric key (legacy - should be phased out)
+            // Fall back to symmetric key (legacy)
             validationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-            // Log warning through Serilog so it appears in Application Insights
-            Log.Warning("Using symmetric HS256 JWT signing. Consider migrating to asymmetric RS256 with JWKS for better security.");
+            if (!builder.Environment.IsDevelopment())
+            {
+                Log.Warning("Using symmetric HS256 JWT signing. Consider migrating to asymmetric RS256 for better security.");
+            }
+        }
+        else if (builder.Environment.IsDevelopment())
+        {
+            // In development, require explicit configuration via user secrets or environment variables
+            // This prevents accidental use of insecure defaults
+            Log.Warning("JWT key not configured for development. Set JwtSettings:SecretKey via user secrets: " +
+                        "dotnet user-secrets set 'JwtSettings:SecretKey' '<your-32+-char-secret>'");
+
+            // Use a generated key per-session for development (not persisted, requires re-login on restart)
+            var devKey = $"DevKey-{Guid.NewGuid():N}-{DateTime.UtcNow:yyyyMMdd}";
+            validationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(devKey));
+            Log.Warning("Using ephemeral development JWT key. Tokens will be invalidated on app restart.");
         }
 
         options.TokenValidationParameters = validationParameters;
 
+        // JWT events for security tracking
         options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
         {
-            OnMessageReceived = context =>
-            {
-                // Skip bearer processing for auth routes so expired tokens don't block refresh/sign-in
-                var path = context.HttpContext.Request.Path.Value ?? string.Empty;
-                // List of route prefixes to skip; keep in sync with PWA interceptor
-                // Include public, health-like endpoints where auth must not block request handling
-                string[] skipPrefixes = new[]
-                {
-                    "/api/auth/refresh",
-                    "/api/auth/signin",
-                    "/api/auth/verify",
-                    "/api/auth",
-                    "/api/discord/status"
-                };
-
-                if (skipPrefixes.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
-                {
-                    // Skip bearer processing for public/auth routes
-                    // Note: Using Debug level to avoid log spam from health check endpoints
-                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                    logger.LogDebug("Skipping JWT bearer processing for auth route: {Path}", path);
-                    context.NoResult();
-                    return Task.CompletedTask;
-                }
-
-                return Task.CompletedTask;
-            },
             OnAuthenticationFailed = context =>
             {
                 var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
@@ -378,21 +407,37 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// Register application services - Admin API services
+builder.Services.AddScoped<IScenarioApiService, ScenarioApiService>();
+builder.Services.AddScoped<ICharacterMapApiService, CharacterMapApiService>();
+builder.Services.AddScoped<IBundleService, BundleService>();
+builder.Services.AddScoped<ICharacterMapFileService, CharacterMapFileService>();
+builder.Services.AddScoped<IMediaMetadataService, Mystira.App.Admin.Api.Services.MediaMetadataService>();
+builder.Services.AddScoped<ICharacterMediaMetadataService, CharacterMediaMetadataService>();
+builder.Services.AddScoped<IMediaApiService, MediaApiService>();
+builder.Services.AddScoped<IAvatarApiService, AvatarApiService>();
+builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
+// Badges admin service
+builder.Services.AddScoped<IBadgeAdminService, BadgeAdminService>();
+// Register email service for consistency across all APIs
+builder.Services.AddAzureEmailService(builder.Configuration);
+// Register Application.Ports.IMediaMetadataService for use cases
+builder.Services.AddScoped<Mystira.App.Application.Ports.IMediaMetadataService, MediaMetadataServiceAdapter>();
 // Register repositories
-builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>)); // Generic repository
+builder.Services.AddScoped<IRepository<GameSession>, Repository<GameSession>>();
 builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();
+builder.Services.AddScoped<IRepository<UserProfile>, Repository<UserProfile>>();
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
+builder.Services.AddScoped<IRepository<Account>, Repository<Account>>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IScenarioRepository, ScenarioRepository>();
 builder.Services.AddScoped<ICharacterMapRepository, CharacterMapRepository>();
 builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
-builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
-builder.Services.AddScoped<IPlayerScenarioScoreRepository, PlayerScenarioScoreRepository>();
 builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
 builder.Services.AddScoped<IBadgeImageRepository, BadgeImageRepository>();
 builder.Services.AddScoped<IAxisAchievementRepository, AxisAchievementRepository>();
+builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
 builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
-
 builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
 builder.Services.AddScoped<IMediaMetadataFileRepository, MediaMetadataFileRepository>();
 builder.Services.AddScoped<ICharacterMediaMetadataFileRepository, CharacterMediaMetadataFileRepository>();
@@ -403,7 +448,20 @@ builder.Services.AddScoped<IArchetypeRepository, ArchetypeRepository>();
 builder.Services.AddScoped<IEchoTypeRepository, EchoTypeRepository>();
 builder.Services.AddScoped<IFantasyThemeRepository, FantasyThemeRepository>();
 builder.Services.AddScoped<IAgeGroupRepository, AgeGroupRepository>();
-builder.Services.AddScoped<IUnitOfWork, Mystira.App.Infrastructure.Data.UnitOfWork.UnitOfWork>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+// Auth and application ports/adapters
+builder.Services.AddScoped<Mystira.App.Shared.Services.IJwtService, Mystira.App.Shared.Services.JwtService>();
+builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, JwtServiceAdapter>();
+
+// Health port adapter for CQRS handlers
+builder.Services.AddScoped<Mystira.App.Application.Ports.Health.IHealthCheckPort, Mystira.App.Shared.Adapters.HealthCheckPortAdapter>();
+
+// Discord/Messaging: keep as No-Op in this environment
+builder.Services.AddSingleton<NoOpChatBotService>();
+builder.Services.AddSingleton<IChatBotService>(sp => sp.GetRequiredService<NoOpChatBotService>());
+builder.Services.AddSingleton<IMessagingService>(sp => sp.GetRequiredService<NoOpChatBotService>());
+builder.Services.AddSingleton<IBotCommandService>(sp => sp.GetRequiredService<NoOpChatBotService>());
 
 // Register Master Data Seeder Service
 builder.Services.AddScoped<MasterDataSeederService>();
@@ -433,15 +491,6 @@ builder.Services.AddScoped<GetSessionStatsUseCase>();
 builder.Services.AddScoped<CheckAchievementsUseCase>();
 builder.Services.AddScoped<DeleteGameSessionUseCase>();
 
-// Account Use Cases
-builder.Services.AddScoped<GetAccountByEmailUseCase>();
-builder.Services.AddScoped<GetAccountUseCase>();
-builder.Services.AddScoped<CreateAccountUseCase>();
-builder.Services.AddScoped<UpdateAccountUseCase>();
-builder.Services.AddScoped<AddUserProfileToAccountUseCase>();
-builder.Services.AddScoped<RemoveUserProfileFromAccountUseCase>();
-builder.Services.AddScoped<AddCompletedScenarioUseCase>();
-
 // UserProfile Use Cases
 builder.Services.AddScoped<CreateUserProfileUseCase>();
 builder.Services.AddScoped<UpdateUserProfileUseCase>();
@@ -457,39 +506,14 @@ builder.Services.AddScoped<UpdateMediaMetadataUseCase>();
 builder.Services.AddScoped<DeleteMediaUseCase>();
 builder.Services.AddScoped<DownloadMediaUseCase>();
 
-// Register application services
-builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
-builder.Services.AddScoped<Mystira.App.Shared.Services.IJwtService, Mystira.App.Shared.Services.JwtService>();
-// Domain services for scoring and awards
-builder.Services.AddScoped<IAxisScoringService, AxisScoringService>();
-builder.Services.AddScoped<IBadgeAwardingService, BadgeAwardingService>();
+// Contributor / Story Protocol Use Cases
+builder.Services.AddScoped<SetScenarioContributorsUseCase>();
+builder.Services.AddScoped<SetBundleContributorsUseCase>();
+builder.Services.AddScoped<RegisterScenarioIpAssetUseCase>();
+builder.Services.AddScoped<RegisterBundleIpAssetUseCase>();
 
-// Register Application.Ports adapters for CQRS handlers
-builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, JwtServiceAdapter>();
-// Use infrastructure email service directly - configuration is read from AzureCommunicationServices section
-builder.Services.AddAzureEmailService(builder.Configuration);
-builder.Services.AddScoped<IHealthCheckPort, HealthCheckPortAdapter>();
-builder.Services.AddScoped<IMediaMetadataService, MediaMetadataService>();
-
-// Configure Memory Cache for query caching
-builder.Services.AddMemoryCache(options =>
-{
-    options.SizeLimit = 1024; // Limit cache to 1024 entries
-    options.CompactionPercentage = 0.25; // Compact 25% when size limit reached
-});
-
-// Configure MediatR for CQRS pattern
-builder.Services.AddMediatR(cfg =>
-{
-    // Register all handlers from Application assembly
-    cfg.RegisterServicesFromAssembly(typeof(Mystira.App.Application.CQRS.ICommand<>).Assembly);
-
-    // Add query caching pipeline behavior
-    cfg.AddOpenBehavior(typeof(QueryCachingBehavior<,>));
-});
-
-// Register query cache invalidation service
-builder.Services.AddSingleton<IQueryCacheInvalidationService, QueryCacheInvalidationService>();
+builder.Services.AddScoped<IGameSessionApiService, GameSessionApiService>();
+builder.Services.AddScoped<IAccountApiService, AccountApiService>();
 
 // Configure Health Checks
 var healthChecksBuilder = builder.Services.AddHealthChecks()
@@ -501,26 +525,8 @@ if (useCosmosDb)
     healthChecksBuilder.AddCheck<CosmosDbHealthCheck>("cosmos_db", tags: new[] { "ready", "db" });
 }
 
-// Add Discord Bot Integration (Optional - controlled by configuration)
-var discordEnabled = builder.Configuration.GetValue<bool>("Discord:Enabled", false);
-if (discordEnabled)
-{
-    builder.Services.AddDiscordBot(builder.Configuration);
-    builder.Services.AddDiscordBotHostedService();
-    builder.Services.AddHealthChecks()
-        .AddDiscordBotHealthCheck();
-}
-else
-{
-    // Register No-Op implementations so MediatR handlers depending on chat bot ports still resolve
-    builder.Services.AddSingleton<NoOpChatBotService>();
-    builder.Services.AddSingleton<IChatBotService>(sp => sp.GetRequiredService<NoOpChatBotService>());
-    builder.Services.AddSingleton<IMessagingService>(sp => sp.GetRequiredService<NoOpChatBotService>());
-    builder.Services.AddSingleton<IBotCommandService>(sp => sp.GetRequiredService<NoOpChatBotService>());
-}
-
 // Configure CORS for frontend integration (Best Practices)
-var policyName = "MystiraAppPolicy";
+var policyName = "MystiraAdminPolicy";
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(policyName, policy =>
@@ -539,20 +545,23 @@ builder.Services.AddCors(options =>
             // Fallback to default origins (development/local + production SWAs + API domains for Swagger UI)
             originsToUse = new[]
             {
+                "http://localhost:7001",
+                "https://localhost:7001",
                 "http://localhost:7000",
                 "https://localhost:7000",
-                "https://mystira.app",                                    // Production domain
-                "https://blue-water-0eab7991e.3.azurestaticapps.net",    // Prod SWA
-                "https://brave-meadow-0ecd87c03.3.azurestaticapps.net",  // Dev SWA (South Africa North)
-                "https://dev-euw-swa-mystira-app.azurestaticapps.net",   // Dev SWA (West Europe - if custom domain)
-                "https://dev-san-swa-mystira-app.azurestaticapps.net",   // Dev SWA (South Africa North - if custom domain)
-                // API domains for Swagger UI and internal calls
-                "https://api.dev.mystira.app",                           // Dev API
-                "https://mys-dev-mystira-api-san.azurewebsites.net",     // Dev API (Azure default domain)
-                "https://api.staging.mystira.app",                       // Staging API
-                "https://mys-staging-mystira-api-san.azurewebsites.net", // Staging API (Azure default domain)
-                "https://api.mystira.app",                               // Production API
-                "https://mys-prod-mystira-api-san.azurewebsites.net"     // Production API (Azure default domain)
+                "https://admin.mystiraapp.azurewebsites.net",
+                "https://admin.mystira.app",
+                "https://mystiraapp.azurewebsites.net",
+                "https://mystira.app",
+                "https://blue-water-0eab7991e.3.azurestaticapps.net",
+                "https://brave-meadow-0ecd87c03.3.azurestaticapps.net",
+                // Admin API domains for Swagger UI and internal calls
+                "https://adminapi.dev.mystira.app",                           // Dev Admin API
+                "https://mys-dev-mystira-adminapi-san.azurewebsites.net",     // Dev Admin API (Azure default domain)
+                "https://adminapi.staging.mystira.app",                       // Staging Admin API
+                "https://mys-staging-mystira-adminapi-san.azurewebsites.net", // Staging Admin API (Azure default domain)
+                "https://adminapi.mystira.app",                               // Production Admin API
+                "https://mys-prod-mystira-adminapi-san.azurewebsites.net"     // Production Admin API (Azure default domain)
             };
         }
 
@@ -592,11 +601,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Configure logging
-builder.Logging.AddConsole();
-builder.Logging.AddAzureWebAppDiagnostics();
-
-// Configure Rate Limiting (BUG-5: Prevent brute-force attacks)
+// Configure Rate Limiting (protect against brute-force attacks)
 builder.Services.AddRateLimiter(options =>
 {
     // Global rate limit: 100 requests per minute per IP
@@ -614,12 +619,12 @@ builder.Services.AddRateLimiter(options =>
     });
 
     // Strict rate limit for authentication endpoints: 5 attempts per 15 minutes per IP
-    options.AddFixedWindowLimiter("auth", options =>
+    options.AddFixedWindowLimiter("auth", limiterOptions =>
     {
-        options.PermitLimit = 5;
-        options.Window = TimeSpan.FromMinutes(15);
-        options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        options.QueueLimit = 0;
+        limiterOptions.PermitLimit = 5;
+        limiterOptions.Window = TimeSpan.FromMinutes(15);
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiterOptions.QueueLimit = 0;
     });
 
     // Rejection response with security metrics tracking
@@ -640,17 +645,18 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
-var logger = app.Logger;
-logger.LogInformation(useCosmosDb ? "Using Azure Cosmos DB (Cloud Database)" : "Using In-Memory Database (Local Development)");
-logger.LogInformation(discordEnabled ? "Discord bot integration: ENABLED" : "Discord bot integration: DISABLED");
+Log.Information(useCosmosDb ? "Using Azure Cosmos DB (Cloud Database)" : "Using In-Memory Database (Local Development)");
 
 // Configure the HTTP request pipeline
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+if (app.Environment.IsDevelopment())
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Mystira API v1");
-    c.RoutePrefix = string.Empty; // Serve Swagger UI at root
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Mystira Admin API v1");
+        c.RoutePrefix = string.Empty; // Serve Swagger UI at root
+    });
+}
 
 // Only use HTTPS redirection in development
 // In production (Azure App Service), HTTPS is handled at the load balancer level
@@ -659,16 +665,67 @@ if (app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
-// Add OWASP security headers (BUG-6)
-app.UseSecurityHeaders();
+// Add OWASP security headers
+if (app.Environment.IsDevelopment())
+{
+    // In development allow inline scripts and CDN resources so Razor views work
+    app.UseSecurityHeaders(options =>
+    {
+        options.UseStrictCsp = false; // allow inline scripts/styles used by views
+        options.AdditionalScriptSources = new[]
+        {
+            "https://cdn.jsdelivr.net",
+            "https://cdnjs.cloudflare.com",
+            "https://code.jquery.com"
+        };
+        options.AdditionalStyleSources = new[]
+        {
+            "https://cdn.jsdelivr.net",
+            "https://cdnjs.cloudflare.com"
+        };
+        // Allow font files (Font Awesome, etc.) from CDNs in development
+        options.AdditionalFontSources = new[]
+        {
+            "https://cdnjs.cloudflare.com",
+            "https://cdn.jsdelivr.net",
+            "https://fonts.gstatic.com"
+        };
+    });
+}
+else
+{
+    // In production keep strict CSP but allow specific CDNs and use nonces for inline
+    app.UseSecurityHeaders(options =>
+    {
+        options.UseStrictCsp = true; // strict base
+        options.UseNonce = true;     // allow inline only when tagged with nonce
+        options.AdditionalScriptSources = new[]
+        {
+            "https://cdn.jsdelivr.net",
+            "https://cdnjs.cloudflare.com",
+            "https://code.jquery.com"
+        };
+        options.AdditionalStyleSources = new[]
+        {
+            "https://cdn.jsdelivr.net",
+            "https://cdnjs.cloudflare.com"
+        };
+        options.AdditionalFontSources = new[]
+        {
+            "https://cdnjs.cloudflare.com",
+            "https://cdn.jsdelivr.net",
+            "https://fonts.gstatic.com"
+        };
+    });
+}
 
-// Add rate limiting (BUG-5)
+// Add rate limiting
 app.UseRateLimiter();
 
 // Add correlation ID middleware (early in pipeline for tracing)
 app.UseCorrelationId();
 
-// Add Serilog request logging (replaces default request logging)
+// Add Serilog request logging
 app.UseSerilogRequestLogging(options =>
 {
     options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
@@ -689,14 +746,13 @@ app.UseRouting();
 
 // ✅ CORS must be between UseRouting and auth/endpoints
 app.UseCors(policyName);
-
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
 // Map health check endpoints
-// /health - checks all dependencies (blob storage, database, discord if enabled)
+// /health - checks all dependencies (blob storage, database)
 app.MapHealthChecks("/health");
 
 // /health/ready - checks only critical dependencies for readiness (database)
@@ -731,20 +787,20 @@ app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthC
     Predicate = _ => false // Exclude all health checks - just verify app is responsive
 });
 
-// Initialize database
-// Check if database initialization should run on startup
-var initializeDb = builder.Configuration.GetValue<bool>("InitializeDatabaseOnStartup", true); // Default to true for backward compatibility
+// Initialize database (optional, controlled by configuration)
+var initializeDatabaseOnStartup = builder.Configuration.GetValue<bool>("InitializeDatabaseOnStartup", defaultValue: false);
+var isInMemory = !useCosmosDb;
 
-if (initializeDb)
+// Always initialize for in-memory databases (local dev), optional for Cosmos DB (production)
+if (initializeDatabaseOnStartup || isInMemory)
 {
     using var scope = app.Services.CreateScope();
     var context = scope.ServiceProvider.GetRequiredService<MystiraAppDbContext>();
     var startupLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    var isInMemory = !useCosmosDb;
 
     try
     {
-        startupLogger.LogInformation("Starting database initialization (InitializeDatabaseOnStartup={Init}, InMemory={InMemory})...", initializeDb, isInMemory);
+        startupLogger.LogInformation("Starting database initialization (InitializeDatabaseOnStartup={Init}, InMemory={InMemory})...", initializeDatabaseOnStartup, isInMemory);
 
         // Use Task.WhenAny with timeout for more reliable timeout handling
         // CancellationToken doesn't always work well with Cosmos DB SDK
@@ -774,7 +830,7 @@ if (initializeDb)
         {
             // Await the actual task to catch any exceptions
             await initTask;
-            startupLogger.LogInformation("Database initialization succeeded. Verified containers for current model are present.");
+            startupLogger.LogInformation("Database EnsureCreatedAsync completed successfully");
 
             // Gate master-data seeding by configuration and environment to avoid Cosmos SDK query issues in some setups
             // Defaults: seed only for InMemory or when explicitly enabled via configuration
@@ -806,13 +862,20 @@ if (initializeDb)
                     startupLogger.LogError(seedEx, "Master data seeding failed. The application will continue to start. Set 'SeedMasterDataOnStartup'=false to skip seeding or use InMemory provider for local dev seeding.");
                 }
             }
+
+            startupLogger.LogInformation("Database initialization succeeded. Verified containers for current model are present.");
         }
     }
     catch (Exception ex)
     {
-        // Fail fast with clear guidance so missing Cosmos containers/permissions are visible immediately
-        startupLogger.LogCritical(ex, "Failed to initialize database during startup. Ensure Azure Cosmos DB database 'MystiraAppDb' exists and app identity has permissions to create/read containers. Expected containers include: CompassAxes (PK /Id), BadgeConfigurations (PK /Id), CharacterMaps (PK /Id), ContentBundles (PK /Id), Scenarios (PK /Id), MediaMetadataFiles (PK /Id), CharacterMediaMetadataFiles (PK /Id), CharacterMapFiles (PK /Id), UserProfiles (PK /Id), Accounts (PK /Id), PendingSignups (PK /email), GameSessions (PK /AccountId), MediaAssets (PK /MediaType).");
-        throw;
+        // Log error but don't crash the app in production - allow health checks to detect the issue
+        startupLogger.LogError(ex, "Failed to initialize database during startup. The application will start in degraded mode. Ensure Azure Cosmos DB database 'MystiraAppDb' exists and app identity has permissions to create/read containers. Expected containers include: CompassAxes (PK /Id), BadgeConfigurations (PK /Id), CharacterMaps (PK /Id), ContentBundles (PK /Id), Scenarios (PK /Id), MediaMetadataFiles (PK /Id), CharacterMediaMetadataFiles (PK /Id), CharacterMapFiles (PK /Id), UserProfiles (PK /Id), Accounts (PK /Id), PendingSignups (PK /email). Set 'InitializeDatabaseOnStartup'=false to skip this check.");
+
+        // Only fail fast in development/local environments where we expect the database to work
+        if (isInMemory)
+        {
+            throw;
+        }
     }
 }
 else
@@ -823,8 +886,9 @@ else
 
     app.Run();
 }
-catch (Exception ex)
+catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
 {
+    // Don't catch critical exceptions (OutOfMemoryException, StackOverflowException) - let them crash the process
     Log.Fatal(ex, "Application terminated unexpectedly");
 }
 finally
@@ -833,7 +897,7 @@ finally
 }
 
 // Make Program class accessible for testing
-namespace Mystira.App.Api
+namespace Mystira.App.Admin.Api
 {
-    public partial class Program { }
+    public class Program { }
 }

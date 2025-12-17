@@ -50,7 +50,7 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                 if (first == '{')
                 {
                     // Paginated response: Mystira.App.Contracts.Responses.Scenarios.ScenarioListResponse
-                    var dto = System.Text.Json.JsonSerializer.Deserialize<ScenarioListResponseDto>(content, JsonOptions);
+                    var dto = JsonSerializer.Deserialize<ScenarioListResponseDto>(content, JsonOptions);
                     if (dto?.Scenarios != null)
                     {
                         var mapped = dto.Scenarios.Select(s => new Scenario
@@ -195,7 +195,7 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                     return new List<Scenario>();
                 }
             }
-            catch (System.Text.Json.JsonException jsonEx)
+            catch (JsonException jsonEx)
             {
                 var preview = trimmed.Length > 256 ? trimmed.Substring(0, 256) + "..." : trimmed;
                 Logger.LogWarning(jsonEx, "Failed to parse scenarios payload. Preview: {Preview}", preview);

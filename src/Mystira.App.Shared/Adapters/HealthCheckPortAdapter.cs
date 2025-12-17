@@ -25,7 +25,7 @@ public class HealthCheckPortAdapter : IHealthCheckPort
             Duration = aspNetHealthReport.TotalDuration,
             Entries = aspNetHealthReport.Entries.ToDictionary(
                 e => e.Key,
-                e => new Application.Ports.Health.HealthCheckEntry
+                e => new HealthCheckEntry
                 {
                     Status = e.Value.Status.ToString(),
                     Description = e.Value.Description,

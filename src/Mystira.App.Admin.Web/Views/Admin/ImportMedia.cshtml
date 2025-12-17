@@ -1,0 +1,310 @@
+@{
+    ViewData["Title"] = "Import Media";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Import Media</h3>
+                    <a href="/admin/media" class="btn btn-secondary">Back to Media</a>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <!-- Zip Upload (only option) -->
+                            <div class="card" id="zipUploadCard">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-file-archive me-2"></i>
+                                        Zip Upload
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Upload metadata and media files together in a single zip archive. Metadata is processed first.
+                                    </div>
+
+                                    <form id="zipUploadForm" method="post" enctype="multipart/form-data">
+                                        <div class="form-group mb-3">
+                                            <label for="zipFile">Select Zip File</label>
+                                            <input type="file" class="form-control" id="zipFile" name="zipFile" accept=".zip" required>
+                                            <small class="form-text text-muted">
+                                                Zip must contain <strong>media-metadata.json</strong> and referenced media files.
+                                            </small>
+                                        </div>
+
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" value="true" id="zipOverwriteMetadata" name="zipOverwriteMetadata">
+                                            <label class="form-check-label" for="zipOverwriteMetadata">
+                                                Overwrite existing metadata entries
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" value="true" id="zipOverwriteMedia" name="zipOverwriteMedia">
+                                            <label class="form-check-label" for="zipOverwriteMedia">
+                                                Overwrite existing media files
+                                            </label>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-info" id="uploadZipBtn">
+                                            <i class="fas fa-upload me-2"></i>Upload Zip
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h5>Upload Progress</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="uploadProgress" class="d-none">
+                                        <div class="progress mb-2">
+                                            <div id="progressBar" class="progress-bar w-0" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                        <div id="progressText">Preparing upload...</div>
+                                    </div>
+                                    <div id="uploadResults"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sidebar -->
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Media Metadata Requirements</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-warning">
+                                        <strong>New Requirement:</strong> All media uploads now require existing metadata entries.
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <strong>Metadata Entry Format:</strong><br>
+                                        <small class="text-muted">Each media file needs a metadata entry with:</small>
+                                        <ul class="small mt-2">
+                                            <li><code>id</code> - Unique media identifier</li>
+                                            <li><code>fileName</code> - Exact filename to match</li>
+                                            <li><code>type</code> - audio, video, or image</li>
+                                            <li><code>title</code> - Display name</li>
+                                            <li><code>description</code> - Brief description</li>
+                                            <li><code>tags</code> - Array of tag strings</li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <strong>Example JSON Entry:</strong><br>
+                                        <pre class="small bg-light p-2 rounded mt-1"><code>{
+  "id": "forest-sounds",
+  "fileName": "forest_sounds.mp3",
+  "type": "audio",
+  "title": "Forest Sounds",
+  "description": "Peaceful ambience",
+  "tags": ["nature", "ambient"]
+}</code></pre>
+                                    </div>
+
+                                    <hr>
+
+                                    <div class="mb-3">
+                                        <strong>File Size Limits:</strong><br>
+                                        <small>Audio: 50MB max<br>
+                                        Video: 100MB max<br>
+                                        Images: 10MB max</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <h5>Upload Progress</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="uploadProgress" class="d-none">
+                                        <div class="progress mb-2">
+                                            <div id="progressBar" class="progress-bar w-0" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                        <div id="progressText">Preparing upload...</div>
+                                    </div>
+                                    <div id="uploadResults"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@{ var cspNonce = Context.Items["CspNonce"] as string; }
+<script nonce="@cspNonce">
+// Initialize page on load (Zip upload only)
+document.addEventListener('DOMContentLoaded', function() {
+    const zipForm = document.getElementById('zipUploadForm');
+    if (zipForm) {
+        zipForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            uploadZipFile();
+        });
+    }
+});
+
+// Upload zip file
+async function uploadZipFile() {
+    const form = document.getElementById('zipUploadForm');
+    const fileInput = document.getElementById('zipFile');
+    const overwriteMetadata = document.getElementById('zipOverwriteMetadata').checked;
+    const overwriteMedia = document.getElementById('zipOverwriteMedia').checked;
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+        showResult('error', 'Please select a zip file to upload');
+        return;
+    }
+
+    const file = fileInput.files[0];
+    if (!file.name.endsWith('.zip')) {
+        showResult('error', 'Selected file is not a zip file (.zip required)');
+        return;
+    }
+
+    showProgress('Processing zip file (this may take a moment)...');
+
+    try {
+        const formData = new FormData();
+        formData.append('zipFile', file);
+        formData.append('overwriteMetadata', overwriteMetadata);
+        formData.append('overwriteMedia', overwriteMedia);
+
+        // Use the confirmed backend route for zip uploads
+        const response = await fetch('/api/admin/mediaadmin/upload-zip', {
+            method: 'POST',
+            body: formData
+        });
+
+        let data = {};
+        const text = await response.text();
+        try {
+            data = text ? JSON.parse(text) : {};
+        } catch (_) {
+            data = { success: response.ok, message: text || (response.ok ? 'Upload completed' : 'Upload failed') };
+        }
+        hideProgress();
+
+        if (response.ok && (data.success === true || data.success === 'true')) {
+            showResult('success', data.message);
+            showZipResults(data);
+            form.reset();
+        } else if (response.ok) {
+            // Partial success (metadata OK but some media files failed)
+            showResult('warning', data.message);
+            showZipResults(data);
+            form.reset();
+        } else {
+            showResult('error', data.message || 'Zip upload failed');
+            if (data.allErrors && data.allErrors.length > 0) {
+                showResult('error', `Errors: ${data.allErrors.join(', ')}`);
+            }
+            showZipResults(data);
+        }
+    } catch (error) {
+        hideProgress();
+        showResult('error', `Zip upload failed: ${error.message}`);
+    }
+}
+
+// Utility functions
+function showProgress(message = 'Processing...') {
+    const container = document.getElementById('uploadProgress');
+    const bar = document.getElementById('progressBar');
+    container.classList.remove('d-none');
+    bar.classList.remove('w-0','w-25','w-50','w-75','w-100');
+    bar.classList.add('w-50');
+    document.getElementById('progressText').textContent = message;
+}
+
+function hideProgress() {
+    document.getElementById('uploadProgress').classList.add('d-none');
+}
+
+function showResult(type, message) {
+    const alertClass = type === 'success' ? 'alert-success' :
+                     type === 'warning' ? 'alert-warning' : 'alert-danger';
+
+    document.getElementById('uploadResults').innerHTML +=
+        `<div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+}
+
+// (bulk/single helpers removed; only Zip upload supported)
+
+function showZipResults(data) {
+    let resultHtml = '<div class="mt-3"><h6>Zip Upload Summary:</h6>';
+
+    // Metadata results
+    if (data.metadataResult) {
+        const metaStatus = data.metadataResult.success ? 'success' : 'danger';
+        resultHtml += `
+            <div class="card mb-2 border-${metaStatus}">
+                <div class="card-header bg-${metaStatus} text-white">
+                    <strong>Metadata Import</strong>
+                    <span class="float-end badge bg-${metaStatus}">${data.metadataResult.success ? 'SUCCESS' : 'FAILED'}</span>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1">${data.metadataResult.message}</p>
+        `;
+
+        if (data.metadataResult.errors && data.metadataResult.errors.length > 0) {
+            resultHtml += '<div class="alert alert-danger mb-0"><strong>Errors:</strong>';
+            data.metadataResult.errors.forEach(error => {
+                resultHtml += `<br>• ${error}`;
+            });
+            resultHtml += '</div>';
+        }
+
+        resultHtml += '</div></div>';
+    }
+
+    // Media upload results
+    const uploadedCount = typeof data.uploadedMediaCount === 'number' ? data.uploadedMediaCount
+                          : Array.isArray(data.successfulMediaUploads) ? data.successfulMediaUploads.length : 0;
+    const failedCount = typeof data.failedMediaCount === 'number' ? data.failedMediaCount
+                        : Array.isArray(data.mediaErrors) ? data.mediaErrors.length : 0;
+
+    resultHtml += `
+        <div class="card mb-2">
+            <div class="card-header bg-info text-white">
+                <strong>Media Upload</strong>
+                <span class="float-end badge bg-info">${uploadedCount} Success / ${failedCount} Failed</span>
+            </div>
+            <div class="card-body">
+    `;
+
+    if (Array.isArray(data.successfulMediaUploads) && data.successfulMediaUploads.length > 0) {
+        resultHtml += '<div class="mb-2"><strong class="text-success">Successfully Uploaded:</strong>';
+        data.successfulMediaUploads.forEach(mediaId => {
+            resultHtml += `<br><small class="text-success">✅ ${mediaId}</small>`;
+        });
+        resultHtml += '</div>';
+    }
+
+    if (Array.isArray(data.mediaErrors) && data.mediaErrors.length > 0) {
+        resultHtml += '<div class="mb-2"><strong class="text-danger">Failed Uploads:</strong>';
+        data.mediaErrors.forEach(error => {
+            resultHtml += `<br><small class="text-danger">❌ ${error}</small>`;
+        });
+        resultHtml += '</div>';
+    }
+
+    resultHtml += '</div></div>';
+
+    document.getElementById('uploadResults').innerHTML += resultHtml;
+}
+</script>

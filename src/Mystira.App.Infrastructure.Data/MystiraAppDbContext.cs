@@ -593,8 +593,8 @@ public partial class MystiraAppDbContext : DbContext
             // Configure CompassValues as a JSON property
             entity.Property(e => e.CompassValues)
                   .HasConversion(
-                      v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
-                      v => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, CompassTracking>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new()
+                      v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                      v => JsonSerializer.Deserialize<Dictionary<string, CompassTracking>>(v, (JsonSerializerOptions?)null) ?? new()
                   )
                   .Metadata.SetValueComparer(new ValueComparer<Dictionary<string, CompassTracking>>(
                       (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
@@ -628,8 +628,8 @@ public partial class MystiraAppDbContext : DbContext
             {
                 metadata.Property(m => m.AdditionalProperties)
                         .HasConversion(
-                            v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
-                            v => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new Dictionary<string, object>(),
+                            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                            v => JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, object>(),
                             new ValueComparer<Dictionary<string, object>>(
                                 (c1, c2) => c1 != null && c2 != null && c1.Count == c2.Count && !c1.Except(c2).Any(),
                                 c => c != null ? c.Aggregate(0, (a, v) => HashCode.Combine(a, v.Key.GetHashCode(), v.Value != null ? v.Value.GetHashCode() : 0)) : 0,
@@ -807,8 +807,8 @@ public partial class MystiraAppDbContext : DbContext
             // Convert Dictionary<string, List<string>> for storage
             entity.Property(e => e.AgeGroupAvatars)
                   .HasConversion(
-                      v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
-                      v => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, List<string>>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new Dictionary<string, List<string>>()
+                      v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                      v => JsonSerializer.Deserialize<Dictionary<string, List<string>>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, List<string>>()
                   )
                   .Metadata.SetValueComparer(new ValueComparer<Dictionary<string, List<string>>>(
                       (c1, c2) => c1 != null && c2 != null && c1.Count == c2.Count &&

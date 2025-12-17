@@ -1,0 +1,533 @@
+@{
+    ViewData["Title"] = "Character Management";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Character Management</h3>
+                    <div>
+                        <button class="btn btn-success" onclick="addNewCharacter()">Add Character</button>
+                        <button class="btn btn-info" onclick="exportCharacterMap()">Export All</button>
+                        <button class="btn btn-warning" onclick="importCharacterMap()">Import Characters</button>
+                        <a href="/admin" class="btn btn-secondary">Back to Dashboard</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="searchInput" placeholder="Search characters..." onkeyup="filterCharacters()">
+                                <button class="btn btn-outline-secondary" type="button" onclick="filterCharacters()">Search</button>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-control" id="speciesFilter" onchange="filterCharacters()">
+                                <option value="">All Species</option>
+                                <option value="bear">Bear</option>
+                                <option value="fox">Fox</option>
+                                <option value="wolf">Wolf</option>
+                                <option value="rabbit">Rabbit</option>
+                                <option value="elf">Elf</option>
+                                <option value="goblin">Goblin</option>
+                                <option value="dwarf">Dwarf</option>
+                                <option value="human">Human</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-control" id="ageFilter" onchange="filterCharacters()">
+                                <option value="">All Ages</option>
+                                <option value="0-5">0-5 years</option>
+                                <option value="6-10">6-10 years</option>
+                                <option value="11-20">11-20 years</option>
+                                <option value="21-50">21-50 years</option>
+                                <option value="51+">51+ years</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="charactersContainer">
+                        <div class="d-flex justify-content-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Character Modal -->
+<div class="modal fade" id="characterModal" tabindex="-1" aria-labelledby="characterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="characterModalLabel">Character Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="characterModalBody">
+                <!-- Character details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="editCharacterBtn">Edit</button>
+                <button type="button" class="btn btn-danger" id="deleteCharacterBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Character Modal -->
+<div class="modal fade" id="editCharacterModal" tabindex="-1" aria-labelledby="editCharacterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editCharacterModalLabel">Edit Character</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editCharacterForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editCharacterId" class="form-label">Character ID</label>
+                                <input type="text" class="form-control" id="editCharacterId" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editCharacterName" class="form-label">Name</label>
+                                <input type="text" class="form-control" id="editCharacterName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editCharacterImage" class="form-label">Image ID</label>
+                                <input type="text" class="form-control" id="editCharacterImage" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editCharacterSpecies" class="form-label">Species</label>
+                                <input type="text" class="form-control" id="editCharacterSpecies" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editCharacterAge" class="form-label">Age</label>
+                                <input type="number" class="form-control" id="editCharacterAge" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editCharacterRoles" class="form-label">Roles (comma-separated)</label>
+                                <textarea class="form-control" id="editCharacterRoles" rows="3"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editCharacterArchetypes" class="form-label">Archetypes (comma-separated)</label>
+                                <textarea class="form-control" id="editCharacterArchetypes" rows="3"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editCharacterTraits" class="form-label">Traits (comma-separated)</label>
+                                <textarea class="form-control" id="editCharacterTraits" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editCharacterBackstory" class="form-label">Backstory</label>
+                        <textarea class="form-control" id="editCharacterBackstory" rows="4"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveCharacter()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+ </div>
+
+@{ var cspNonce = Context.Items["CspNonce"] as string; }
+<script nonce="@cspNonce">
+let allCharacters = [];
+let filteredCharacters = [];
+let currentEditingCharacterId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadCharacters();
+});
+
+async function loadCharacters() {
+    try {
+        const response = await fetch('/api/admin/CharacterMapsAdmin');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const characterMap = await response.json();
+        allCharacters = characterMap.characters || [];
+        filteredCharacters = [...allCharacters];
+        displayCharacters(filteredCharacters);
+    } catch (error) {
+        console.error('Error loading characters:', error);
+        document.getElementById('charactersContainer').innerHTML =
+            '<div class="alert alert-danger">Error loading characters: ' + error.message + '</div>';
+    }
+}
+
+function displayCharacters(characters) {
+    let html = '';
+
+    if (characters.length === 0) {
+        html = '<div class="alert alert-info">No characters found</div>';
+    } else {
+        html = '<div class="row">';
+        characters.forEach(character => {
+            const characterImageHtml = character.image ?
+                `<div class="text-center mb-3">
+                    <img id="char-img-${character.id}" src="" class="img-fluid rounded" style="max-height: 80px; max-width: 80px; object-fit: cover;" alt="${character.name}" onerror="this.style.display='none';">
+                </div>` : '';
+
+            html += `
+                <div class="col-md-6 col-lg-4 col-xl-3 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            ${characterImageHtml}
+                            <h5 class="card-title">${character.name}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">${character.metadata.species} - Age ${character.metadata.age}</h6>
+                            <p class="card-text">
+                                <strong>Roles:</strong> ${character.metadata.roles.slice(0, 2).join(', ')}${character.metadata.roles.length > 2 ? '...' : ''}<br>
+                                <strong>Archetypes:</strong> ${character.metadata.archetypes.slice(0, 2).join(', ')}${character.metadata.archetypes.length > 2 ? '...' : ''}<br>
+                                <strong>Traits:</strong> ${character.metadata.traits.slice(0, 3).join(', ')}${character.metadata.traits.length > 3 ? '...' : ''}
+                            </p>
+                            <div class="mb-2">
+                                <span class="badge bg-primary">${character.metadata.species}</span>
+                                <span class="badge bg-secondary">Age ${character.metadata.age}</span>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="btn-group w-100">
+                                <button class="btn btn-outline-primary btn-sm" onclick="viewCharacter('${character.id}')">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="editCharacter('${character.id}')">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" onclick="deleteCharacter('${character.id}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+    }
+
+    document.getElementById('charactersContainer').innerHTML = html;
+
+    // Load character images
+    characters.forEach(character => {
+        if (character.image) {
+            loadCharacterImage(character.id, character.image);
+        }
+    });
+}
+
+async function loadCharacterImage(characterId, mediaId) {
+    try {
+        // Get media asset by ID to get the URL
+        const response = await fetch(`/api/admin/MediaAdmin/${mediaId}/info`, {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('authToken') || ''
+            }
+        });
+
+        if (response.ok) {
+            const mediaAsset = await response.json();
+            const imgElement = document.getElementById(`char-img-${characterId}`);
+            if (imgElement && mediaAsset.url) {
+                imgElement.src = mediaAsset.url;
+            }
+        }
+    } catch (error) {
+        console.warn('Failed to load character image:', error);
+    }
+}
+
+function filterCharacters() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const speciesFilter = document.getElementById('speciesFilter').value;
+    const ageFilter = document.getElementById('ageFilter').value;
+
+    filteredCharacters = allCharacters.filter(character => {
+        const matchesSearch = !searchTerm ||
+            character.name.toLowerCase().includes(searchTerm) ||
+            character.id.toLowerCase().includes(searchTerm) ||
+            character.metadata.roles.some(role => role.toLowerCase().includes(searchTerm)) ||
+            character.metadata.archetypes.some(archetype => archetype.toLowerCase().includes(searchTerm)) ||
+            character.metadata.traits.some(trait => trait.toLowerCase().includes(searchTerm));
+
+        const matchesSpecies = !speciesFilter || character.metadata.species === speciesFilter;
+
+        let matchesAge = true;
+        if (ageFilter) {
+            const age = character.metadata.age;
+            switch (ageFilter) {
+                case '0-5': matchesAge = age >= 0 && age <= 5; break;
+                case '6-10': matchesAge = age >= 6 && age <= 10; break;
+                case '11-20': matchesAge = age >= 11 && age <= 20; break;
+                case '21-50': matchesAge = age >= 21 && age <= 50; break;
+                case '51+': matchesAge = age >= 51; break;
+            }
+        }
+
+        return matchesSearch && matchesSpecies && matchesAge;
+    });
+
+    displayCharacters(filteredCharacters);
+}
+
+async function viewCharacter(id) {
+    try {
+        const character = allCharacters.find(c => c.id === id);
+        if (!character) {
+            alert('Character not found');
+            return;
+        }
+
+        const modalBody = document.getElementById('characterModalBody');
+        modalBody.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Basic Information</h6>
+                    <table class="table table-sm">
+                        <tr><td><strong>ID:</strong></td><td>${character.id}</td></tr>
+                        <tr><td><strong>Name:</strong></td><td>${character.name}</td></tr>
+                        <tr><td><strong>Species:</strong></td><td>${character.metadata.species}</td></tr>
+                        <tr><td><strong>Age:</strong></td><td>${character.metadata.age}</td></tr>
+                        <tr><td><strong>Image:</strong></td><td>${character.image}</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6>Roles</h6>
+                    <p>${character.metadata.roles.map(role => `<span class="badge bg-primary me-1">${role}</span>`).join('')}</p>
+
+                    <h6>Archetypes</h6>
+                    <p>${character.metadata.archetypes.map(archetype => `<span class="badge bg-secondary me-1">${archetype}</span>`).join('')}</p>
+
+                    <h6>Traits</h6>
+                    <p>${character.metadata.traits.map(trait => `<span class="badge bg-info me-1">${trait}</span>`).join('')}</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <h6>Backstory</h6>
+                    <p class="text-muted">${character.metadata.backstory}</p>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('characterModalLabel').textContent = character.name;
+        document.getElementById('editCharacterBtn').onclick = () => editCharacter(id);
+        document.getElementById('deleteCharacterBtn').onclick = () => deleteCharacter(id);
+
+        new bootstrap.Modal(document.getElementById('characterModal')).show();
+    } catch (error) {
+        console.error('Error viewing character:', error);
+        alert('Error loading character details');
+    }
+}
+
+function editCharacter(id) {
+    const character = allCharacters.find(c => c.id === id);
+    if (!character) {
+        alert('Character not found');
+        return;
+    }
+
+    currentEditingCharacterId = id;
+
+    // Populate form
+    document.getElementById('editCharacterId').value = character.id;
+    document.getElementById('editCharacterName').value = character.name;
+    document.getElementById('editCharacterImage').value = character.image;
+    document.getElementById('editCharacterSpecies').value = character.metadata.species;
+    document.getElementById('editCharacterAge').value = character.metadata.age;
+    document.getElementById('editCharacterRoles').value = character.metadata.roles.join(', ');
+    document.getElementById('editCharacterArchetypes').value = character.metadata.archetypes.join(', ');
+    document.getElementById('editCharacterTraits').value = character.metadata.traits.join(', ');
+    document.getElementById('editCharacterBackstory').value = character.metadata.backstory;
+
+    document.getElementById('editCharacterModalLabel').textContent = `Edit ${character.name}`;
+
+    // Hide view modal and show edit modal
+    bootstrap.Modal.getInstance(document.getElementById('characterModal'))?.hide();
+    new bootstrap.Modal(document.getElementById('editCharacterModal')).show();
+}
+
+async function saveCharacter() {
+    try {
+        const character = {
+            id: document.getElementById('editCharacterId').value,
+            name: document.getElementById('editCharacterName').value,
+            image: document.getElementById('editCharacterImage').value,
+            metadata: {
+                species: document.getElementById('editCharacterSpecies').value,
+                age: parseInt(document.getElementById('editCharacterAge').value),
+                roles: document.getElementById('editCharacterRoles').value.split(',').map(s => s.trim()).filter(s => s),
+                archetypes: document.getElementById('editCharacterArchetypes').value.split(',').map(s => s.trim()).filter(s => s),
+                traits: document.getElementById('editCharacterTraits').value.split(',').map(s => s.trim()).filter(s => s),
+                backstory: document.getElementById('editCharacterBackstory').value
+            }
+        };
+
+        // Validate required fields
+        if (!character.id || !character.name || !character.image) {
+            alert('Please fill in all required fields (ID, Name, Image)');
+            return;
+        }
+
+        let response;
+        let message;
+
+        if (currentEditingCharacterId) {
+            // Update existing character
+            response = await fetch(`/api/admin/CharacterAdmin/${currentEditingCharacterId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(character)
+            });
+            message = 'Character updated successfully';
+        } else {
+            // Add new character
+            response = await fetch('/api/admin/CharacterAdmin', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(character)
+            });
+            message = 'Character added successfully';
+        }
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+
+        alert(message);
+        bootstrap.Modal.getInstance(document.getElementById('editCharacterModal')).hide();
+        loadCharacters(); // Reload the character list
+
+    } catch (error) {
+        console.error('Error saving character:', error);
+        alert('Error saving character: ' + error.message);
+    }
+}
+
+async function deleteCharacter(id) {
+    if (!confirm('Are you sure you want to delete this character? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/admin/CharacterAdmin/${id}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        alert('Character deleted successfully');
+        bootstrap.Modal.getInstance(document.getElementById('characterModal'))?.hide();
+        loadCharacters(); // Reload the character list
+
+    } catch (error) {
+        console.error('Error deleting character:', error);
+        alert('Error deleting character: ' + error.message);
+    }
+}
+
+function addNewCharacter() {
+    currentEditingCharacterId = null;
+
+    // Clear form
+    document.getElementById('editCharacterId').value = '';
+    document.getElementById('editCharacterName').value = '';
+    document.getElementById('editCharacterImage').value = '';
+    document.getElementById('editCharacterSpecies').value = '';
+    document.getElementById('editCharacterAge').value = '';
+    document.getElementById('editCharacterRoles').value = '';
+    document.getElementById('editCharacterArchetypes').value = '';
+    document.getElementById('editCharacterTraits').value = '';
+    document.getElementById('editCharacterBackstory').value = '';
+
+    document.getElementById('editCharacterModalLabel').textContent = 'Add New Character';
+    document.getElementById('editCharacterId').readOnly = false;
+
+    new bootstrap.Modal(document.getElementById('editCharacterModal')).show();
+}
+
+async function exportCharacterMap() {
+    try {
+        const response = await fetch('/api/admin/CharacterMapsAdmin/export');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const jsonData = await response.text();
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'character-map.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+    } catch (error) {
+        console.error('Error exporting character map:', error);
+        alert('Error exporting character map: ' + error.message);
+    }
+}
+
+function importCharacterMap() {
+    // Create file input
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const overwrite = confirm('Do you want to overwrite existing characters with the same IDs?');
+
+            const response = await fetch(`/api/admin/CharacterMapsAdmin/import?overwriteExisting=${overwrite}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: text
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            alert('Character map imported successfully');
+            loadCharacters(); // Reload the character list
+
+        } catch (error) {
+            console.error('Error importing character map:', error);
+            alert('Error importing character map: ' + error.message);
+        }
+    };
+
+    input.click();
+}
+</script>

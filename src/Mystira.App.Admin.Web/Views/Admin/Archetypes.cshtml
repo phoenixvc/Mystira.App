@@ -1,0 +1,223 @@
+@{
+    ViewData["Title"] = "Archetypes Management";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Archetypes</h3>
+                    <a href="/admin" class="btn btn-secondary">Back to Dashboard</a>
+                </div>
+                <div class="card-body">
+                    <div id="errorAlert" class="alert alert-danger d-none"></div>
+                    <div id="successAlert" class="alert alert-success d-none"></div>
+
+                    <div class="row">
+                        <div class="col-md-7">
+                            <h5>Existing Archetypes</h5>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Description</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="archetypesTableBody">
+                                        <!-- Filled by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="col-md-5">
+                            <h5 id="formTitle">Create / Update Archetype</h5>
+                            <form id="archetypeForm">
+                                <input type="hidden" id="archetypeId" />
+                                <div class="mb-3">
+                                    <label for="archetypeName" class="form-label">Name *</label>
+                                    <input type="text" id="archetypeName" class="form-control" required />
+                                </div>
+                                <div class="mb-3">
+                                    <label for="archetypeDescription" class="form-label">Description</label>
+                                    <textarea id="archetypeDescription" class="form-control" rows="3"></textarea>
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <button type="submit" id="saveArchetypeBtn" class="btn btn-primary">Save</button>
+                                    <button type="button" id="resetArchetypeBtn" class="btn btn-secondary">Reset</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+ </div>
+
+@{ var cspNonce = Context.Items["CspNonce"] as string; }
+<script nonce="@cspNonce">
+    const apiBase = '/api/admin/archetypes';
+
+    async function loadArchetypes() {
+        try {
+            const res = await fetch(apiBase, { credentials: 'include' });
+            if (!res.ok) throw new Error('Failed to load archetypes');
+            const data = await res.json();
+            const tbody = document.getElementById('archetypesTableBody');
+            tbody.innerHTML = '';
+            data.forEach(archetype => {
+                const tr = document.createElement('tr');
+
+                const tdName = document.createElement('td');
+                tdName.textContent = archetype.name;
+                tr.appendChild(tdName);
+
+                const tdDesc = document.createElement('td');
+                tdDesc.textContent = archetype.description || '';
+                tr.appendChild(tdDesc);
+
+                const tdActions = document.createElement('td');
+                const editBtn = document.createElement('button');
+                editBtn.type = 'button';
+                editBtn.className = 'btn btn-sm btn-outline-primary me-2';
+                editBtn.textContent = 'Edit';
+                editBtn.setAttribute('data-action', 'edit');
+                editBtn.setAttribute('data-id', archetype.id);
+                editBtn.setAttribute('data-name', archetype.name ?? '');
+                editBtn.setAttribute('data-description', archetype.description ?? '');
+
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.className = 'btn btn-sm btn-outline-danger';
+                delBtn.textContent = 'Delete';
+                delBtn.setAttribute('data-action', 'delete');
+                delBtn.setAttribute('data-id', archetype.id);
+
+                tdActions.appendChild(editBtn);
+                tdActions.appendChild(delBtn);
+                tr.appendChild(tdActions);
+
+                tbody.appendChild(tr);
+            });
+        } catch (e) {
+            showError(e.message);
+        }
+    }
+
+    function editArchetype(archetype) {
+        document.getElementById('archetypeId').value = archetype.id;
+        document.getElementById('archetypeName').value = archetype.name;
+        document.getElementById('archetypeDescription').value = archetype.description || '';
+        document.getElementById('formTitle').textContent = 'Update Archetype';
+    }
+
+    async function saveArchetype() {
+        const id = document.getElementById('archetypeId').value;
+        const name = document.getElementById('archetypeName').value;
+        const description = document.getElementById('archetypeDescription').value;
+
+        if (!name) {
+            showError('Name is required');
+            return;
+        }
+
+        const payload = { name, description };
+
+        try {
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `${apiBase}/${id}` : apiBase;
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                credentials: 'include'
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.message || 'Failed to save archetype');
+            }
+
+            showSuccess(id ? 'Archetype updated successfully' : 'Archetype created successfully');
+            resetForm();
+            loadArchetypes();
+        } catch (e) {
+            showError(e.message);
+        }
+    }
+
+    async function deleteArchetype(id) {
+        if (!confirm('Are you sure you want to delete this archetype?')) return;
+
+        try {
+            const res = await fetch(`${apiBase}/${id}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+
+            if (!res.ok) throw new Error('Failed to delete archetype');
+
+            showSuccess('Archetype deleted successfully');
+            loadArchetypes();
+        } catch (e) {
+            showError(e.message);
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('archetypeForm').reset();
+        document.getElementById('archetypeId').value = '';
+        document.getElementById('formTitle').textContent = 'Create / Update Archetype';
+    }
+
+    function showError(message) {
+        const alert = document.getElementById('errorAlert');
+        alert.textContent = message;
+        alert.classList.remove('d-none');
+        setTimeout(() => alert.classList.add('d-none'), 5000);
+    }
+
+    function showSuccess(message) {
+        const alert = document.getElementById('successAlert');
+        alert.textContent = message;
+        alert.classList.remove('d-none');
+        setTimeout(() => alert.classList.add('d-none'), 5000);
+    }
+
+    // Wire up events without inline handlers and initial load
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('archetypeForm');
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveArchetype();
+        });
+
+        const resetBtn = document.getElementById('resetArchetypeBtn');
+        resetBtn.addEventListener('click', () => resetForm());
+
+        const tbody = document.getElementById('archetypesTableBody');
+        tbody.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const action = btn.getAttribute('data-action');
+            if (action === 'edit') {
+                const archetype = {
+                    id: btn.getAttribute('data-id'),
+                    name: btn.getAttribute('data-name') || '',
+                    description: btn.getAttribute('data-description') || ''
+                };
+                editArchetype(archetype);
+            } else if (action === 'delete') {
+                const id = btn.getAttribute('data-id');
+                if (id) deleteArchetype(id);
+            }
+        });
+
+        loadArchetypes();
+    });
+</script>
