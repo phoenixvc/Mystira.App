@@ -57,9 +57,9 @@ public class AxisScoringServiceTests : IDisposable
             ScenarioId = "scenario1",
             ChoiceHistory = new List<SessionChoice>
             {
-                new() { CompassAxis = "honesty", CompassDelta = 5.0 },
-                new() { CompassAxis = "honesty", CompassDelta = 3.0 },
-                new() { CompassAxis = "bravery", CompassDelta = -2.0 }
+                new() { CompassAxis = "honesty", CompassDelta = 5.0, PlayerId = "profile1" },
+                new() { CompassAxis = "honesty", CompassDelta = 3.0, PlayerId = "profile1" },
+                new() { CompassAxis = "bravery", CompassDelta = -2.0, PlayerId = "profile1" }
             }
         };
 
@@ -91,7 +91,7 @@ public class AxisScoringServiceTests : IDisposable
             ScenarioId = "scenario1",
             ChoiceHistory = new List<SessionChoice>
             {
-                new() { CompassAxis = "honesty", CompassDelta = 5.0 }
+                new() { CompassAxis = "honesty", CompassDelta = 5.0, PlayerId = "profile1" }
             }
         };
 
@@ -161,8 +161,8 @@ public class AxisScoringServiceTests : IDisposable
             ScenarioId = "scenario1",
             ChoiceHistory = new List<SessionChoice>
             {
-                new() { CompassAxis = "honesty", CompassDelta = 10.0 }
-            }
+                new() { CompassAxis = "honesty", CompassDelta = 10.0, PlayerId = "profile1"}
+            },
         };
 
         await _dbContext.UserProfiles.AddAsync(profile);
