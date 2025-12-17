@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.MediaAssets.Queries;
+using Mystira.App.Domain.Models;
 using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
 
 namespace Mystira.App.Api.Controllers;
@@ -25,7 +26,7 @@ public class MediaController : ControllerBase
     /// </summary>
     [HttpGet("{mediaId}/info")]
     [AllowAnonymous]
-    public async Task<ActionResult<Domain.Models.MediaAsset>> GetMediaById(string mediaId)
+    public async Task<ActionResult<MediaAsset>> GetMediaById(string mediaId)
     {
         try
         {

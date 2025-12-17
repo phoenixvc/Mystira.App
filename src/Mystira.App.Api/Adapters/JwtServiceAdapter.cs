@@ -1,15 +1,15 @@
-using Mystira.App.Shared.Services;
+using Mystira.App.Application.Ports.Auth;
 
 namespace Mystira.App.Api.Adapters;
 
 /// <summary>
 /// Adapter that adapts API.Services.IJwtService to Application.Ports.Auth.IJwtService
 /// </summary>
-public class JwtServiceAdapter : Application.Ports.Auth.IJwtService
+public class JwtServiceAdapter : IJwtService
 {
-    private readonly IJwtService _jwtService;
+    private readonly Shared.Services.IJwtService _jwtService;
 
-    public JwtServiceAdapter(IJwtService jwtService)
+    public JwtServiceAdapter(Shared.Services.IJwtService jwtService)
     {
         _jwtService = jwtService;
     }

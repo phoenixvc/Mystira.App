@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -253,34 +254,34 @@ internal class TestAsyncQueryProvider<T> : IAsyncQueryProvider
         _inner = inner;
     }
 
-    public IQueryable CreateQuery(System.Linq.Expressions.Expression expression)
+    public IQueryable CreateQuery(Expression expression)
     {
         return new TestAsyncEnumerable<T>(expression);
     }
 
-    public IQueryable<TElement> CreateQuery<TElement>(System.Linq.Expressions.Expression expression)
+    public IQueryable<TElement> CreateQuery<TElement>(Expression expression)
     {
         return new TestAsyncEnumerable<TElement>(expression);
     }
 
-    public object? Execute(System.Linq.Expressions.Expression expression)
+    public object? Execute(Expression expression)
     {
         return _inner.Execute(expression);
     }
 
-    public TResult Execute<TResult>(System.Linq.Expressions.Expression expression)
+    public TResult Execute<TResult>(Expression expression)
     {
         return _inner.Execute<TResult>(expression);
     }
 
-    public TResult ExecuteAsync<TResult>(System.Linq.Expressions.Expression expression, CancellationToken cancellationToken = default)
+    public TResult ExecuteAsync<TResult>(Expression expression, CancellationToken cancellationToken = default)
     {
         var expectedResultType = typeof(TResult).GetGenericArguments()[0];
         var executionResult = typeof(IQueryProvider)
             .GetMethod(
                 name: nameof(IQueryProvider.Execute),
                 genericParameterCount: 1,
-                types: new[] { typeof(System.Linq.Expressions.Expression) })!
+                types: new[] { typeof(Expression) })!
             .MakeGenericMethod(expectedResultType)
             .Invoke(this, new[] { expression });
 
@@ -296,7 +297,7 @@ internal class TestAsyncEnumerable<T> : EnumerableQuery<T>, IAsyncEnumerable<T>,
         : base(enumerable)
     { }
 
-    public TestAsyncEnumerable(System.Linq.Expressions.Expression expression)
+    public TestAsyncEnumerable(Expression expression)
         : base(expression)
     { }
 
