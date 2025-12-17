@@ -68,6 +68,15 @@ else
                 <div class="col-lg-8">
                     <div class="scene-content">
 
+                        @* In-session notice: some assigned players are out of the scenario's age group *@
+                        @if (outOfAgeAssignedPlayers.Count > 0)
+                        {
+                            <div class="alert alert-warning small" role="alert">
+                                <div class="fw-semibold mb-1">Won't be scored for this adventure:</div>
+                                <div class="mb-0">@string.Join(", ", outOfAgeAssignedPlayers) — they aren’t in the right age group for this adventure, so it won’t be scored for them.</div>
+                            </div>
+                        }
+
                         <!-- Media Display -->
                         @if (!string.IsNullOrEmpty(gameSession.CurrentScene.ImageUrl) ||
                              !string.IsNullOrEmpty(gameSession.CurrentScene.VideoUrl) ||
@@ -364,6 +373,10 @@ else
     private List<string> otherNoBadges = new();
     private string? _noBadgeBucketsComputedForSessionId;
 
+    // In-session out-of-age warning state (computed once per session)
+    private List<string> outOfAgeAssignedPlayers = new();
+    private string? _outOfAgeAssignedComputedForSessionId;
+
     private List<PlayerOption> playerOptions = new();
     private string? selectedPlayerId;
 
@@ -372,6 +385,24 @@ else
         // Get current game session
         gameSession = GameSessionService.CurrentGameSession;
         BuildPlayerOptions(gameSession);
+
+        // Precompute out-of-age assigned players once per session
+        if (gameSession != null)
+        {
+            _outOfAgeAssignedComputedForSessionId = null; // force compute for this session id
+            _ = InvokeAsync(async () =>
+            {
+                try
+                {
+                    await PrecomputeOutOfAgeAssignedAsync();
+                    StateHasChanged();
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Failed to precompute out-of-age assigned players (OnInitialized)");
+                }
+            });
+        }
 
         // Subscribe to changes
         GameSessionService.GameSessionChanged += OnGameSessionChanged;
@@ -395,6 +426,21 @@ else
 
         // When the session is marked completed, allow the page to render the
         // Finish flow (button + modal). Do not auto-navigate away here.
+
+        // Recompute out-of-age assigned players for new session id
+        _outOfAgeAssignedComputedForSessionId = null;
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                await PrecomputeOutOfAgeAssignedAsync();
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to precompute out-of-age assigned players (OnGameSessionChanged)");
+            }
+        });
 
         InvokeAsync(StateHasChanged);
     }
@@ -474,6 +520,72 @@ else
         {
             selectedPlayerId = playerOptions.FirstOrDefault()?.Id;
         }
+    }
+
+    private async Task PrecomputeOutOfAgeAssignedAsync()
+    {
+        outOfAgeAssignedPlayers.Clear();
+
+        if (gameSession == null || string.IsNullOrWhiteSpace(gameSession.Id))
+            return;
+
+        // Avoid recomputing for the same session id
+        if (_outOfAgeAssignedComputedForSessionId == gameSession.Id)
+            return;
+
+        var scenarioAgeGroup = gameSession.Scenario?.AgeGroup;
+        if (string.IsNullOrWhiteSpace(scenarioAgeGroup))
+        {
+            _outOfAgeAssignedComputedForSessionId = gameSession.Id; // nothing to compute
+            return;
+        }
+
+        // Collect assigned profileIds and display fallbacks
+        var profileIdToDisplay = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(gameSession.ProfileId))
+        {
+            profileIdToDisplay[gameSession.ProfileId!] = "Session Owner";
+        }
+
+        foreach (var assignment in gameSession.CharacterAssignments)
+        {
+            var pa = assignment.PlayerAssignment;
+            if (pa == null || string.IsNullOrWhiteSpace(pa.ProfileId)) continue;
+            var display = !string.IsNullOrWhiteSpace(pa.ProfileName) ? pa.ProfileName! : assignment.CharacterName ?? "Player";
+            profileIdToDisplay[pa.ProfileId!] = display;
+        }
+
+        if (profileIdToDisplay.Count == 0)
+        {
+            _outOfAgeAssignedComputedForSessionId = gameSession.Id;
+            return;
+        }
+
+        // Fetch profiles and compare age groups
+        foreach (var kvp in profileIdToDisplay.ToList())
+        {
+            var pid = kvp.Key;
+            try
+            {
+                var p = await ApiClient.GetProfileByIdAsync(pid);
+                if (p == null) continue;
+
+                var matches = Mystira.App.PWA.Services.AgeGroupHelper.AgeGroupMatches(scenarioAgeGroup, p.AgeGroup);
+                if (!matches)
+                {
+                    var displayName = string.IsNullOrWhiteSpace(p.Name) ? kvp.Value : p.Name;
+                    outOfAgeAssignedPlayers.Add(displayName);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to fetch profile {ProfileId} for out-of-age computation", pid);
+            }
+        }
+
+        outOfAgeAssignedPlayers = outOfAgeAssignedPlayers.Distinct().ToList();
+        _outOfAgeAssignedComputedForSessionId = gameSession.Id;
     }
 
     private async Task HandleChoice(Choice choice)

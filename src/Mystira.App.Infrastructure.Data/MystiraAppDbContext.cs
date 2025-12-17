@@ -599,6 +599,18 @@ public partial class MystiraAppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
 
+            // Cosmos container mapping (only when not using in-memory provider)
+            if (!isInMemoryDatabase)
+            {
+                // Map Id property to lowercase 'id' as required by Cosmos
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                // Store PlayerScenarioScore items in their own container, partitioned by ProfileId
+                // This optimizes lookups like GetByProfileIdAsync and aligns with the API endpoint usage
+                entity.ToContainer("PlayerScenarioScores")
+                      .HasPartitionKey(e => e.ProfileId);
+            }
+
             // Store AxisScores as JSON string to work with both Cosmos and InMemory providers
             var dictComparer = new ValueComparer<Dictionary<string, float>>(
                 (d1, d2) =>
