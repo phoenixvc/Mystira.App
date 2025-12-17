@@ -43,7 +43,7 @@ public class FinalizeGameSessionCommandHandler : ICommandHandler<FinalizeGameSes
             return result;
         }
 
-        // Determine participating profiles (replicate logic from GameSession private method)
+        // Determine participating profiles
         var profileIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (!string.IsNullOrWhiteSpace(session.ProfileId))
         {
