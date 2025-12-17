@@ -36,7 +36,8 @@
     private void HandleToastShow(ToastMessage toast)
     {
         _toasts.Add(toast);
-        StateHasChanged();
+        // In tests and some service callbacks, this may be invoked off the renderer thread
+        InvokeAsync(StateHasChanged);
 
         // Auto-remove after duration
         var timer = new Timer(_ =>
@@ -55,7 +56,8 @@
         }
         _timers.Clear();
         _toasts.Clear();
-        StateHasChanged();
+        // Ensure render occurs on the dispatcher thread
+        InvokeAsync(StateHasChanged);
     }
 
     private void RemoveToast(Guid id)
@@ -71,7 +73,8 @@
                 _timers.Remove(id);
             }
 
-            StateHasChanged();
+            // RemoveToast can be invoked via UI click (on dispatcher) or via timer/test code
+            InvokeAsync(StateHasChanged);
         }
     }
 

@@ -1,8 +1,9 @@
+using System.Text.RegularExpressions;
 using Mystira.App.PWA.Models;
 
 namespace Mystira.App.PWA.Services;
 
-public class GameSessionService : IGameSessionService
+public partial class GameSessionService : IGameSessionService
 {
     private readonly ILogger<GameSessionService> _logger;
     private readonly IApiClient _apiClient;
@@ -232,6 +233,10 @@ public class GameSessionService : IGameSessionService
                 _logger.LogWarning("Failed to end game session via API");
                 // Still mark as completed locally for UI consistency
             }
+
+            // Do NOT finalize here. The UI layer (GameSessionPage) is responsible for
+            // calling FinalizeGameSession and rendering the awards modal, to avoid
+            // duplicate/early finalization calls that can lead to empty award payloads.
 
             // Mark scenario as completed for the account
             var account = await _authService.GetCurrentAccountAsync();
@@ -562,43 +567,101 @@ public class GameSessionService : IGameSessionService
     }
 
     /// <summary>
-    /// Replaces character placeholders [c:CharacterName] with player names in text
+    /// Replaces character placeholders in text.
+    /// Supported forms:
+    /// - [c:CharacterName] (case-insensitive): resolved using current character assignments
+    /// - [c:*]            : resolved to the active scene character's assigned player name
+    /// Falls back to "Player" only if a mapping cannot be resolved.
     /// </summary>
     public string ReplaceCharacterPlaceholders(string text)
     {
-        if (string.IsNullOrEmpty(text) || !_characterAssignments.Any())
+        if (string.IsNullOrEmpty(text))
         {
             return text;
         }
 
-        foreach (var assignment in _characterAssignments)
+        // Helper to compute the display name from a CharacterAssignment using existing rules
+        string ResolvePlayerName(CharacterAssignment ca)
         {
-            var characterName = assignment.CharacterName.ToLower();
-            if (assignment.PlayerAssignment != null)
-            {
-                string playerName = assignment.PlayerAssignment.Type switch
-                {
-                    "Player" => assignment.PlayerAssignment.ProfileName?.ToLower() == characterName
-                        ? "Player"
-                        : assignment.PlayerAssignment.ProfileName ?? "Player",
-                    "Guest" => assignment.PlayerAssignment.GuestName?.ToLower() == characterName
-                        ? "Guest"
-                        : assignment.PlayerAssignment.GuestName ?? "Guest",
-                    _ => "Player"
-                };
+            if (ca.PlayerAssignment == null)
+                return "Player";
 
-                string placeholder = $"[c:{assignment.CharacterName.ToLower()}]";
-                text = text.Replace(placeholder, playerName);
+            var characterNameLc = ca.CharacterName?.ToLower() ?? string.Empty;
+            var playerProfileName = ca.PlayerAssignment.ProfileName;
+            var guestProfileName = ca.PlayerAssignment.GuestName;
+            return ca.PlayerAssignment.Type switch
+            {
+                "Player" => playerProfileName?.ToLower() == characterNameLc
+                    ? "Player"
+                    : playerProfileName ?? "Player",
+                "Profile" => playerProfileName?.ToLower() == characterNameLc
+                    ? "Player"
+                    : playerProfileName ?? "Player",
+                "Guest" => guestProfileName?.ToLower() == characterNameLc
+                    ? "Guest"
+                    : guestProfileName ?? "Guest",
+                _ => "Player"
+            };
+        }
+
+        // Build quick lookup for assignments by character name (case-insensitive)
+        var assignmentsByName = new Dictionary<string, CharacterAssignment>(StringComparer.OrdinalIgnoreCase);
+        foreach (var ca in _characterAssignments)
+        {
+            if (!string.IsNullOrWhiteSpace(ca.CharacterName) && !assignmentsByName.ContainsKey(ca.CharacterName))
+            {
+                assignmentsByName[ca.CharacterName] = ca;
             }
         }
 
-        // Replace any remaining [c:...] patterns with "Player"
-        var remainingPattern = System.Text.RegularExpressions.Regex.Matches(text, @"\[c:([^\]]+)\]");
-        foreach (System.Text.RegularExpressions.Match match in remainingPattern)
+        // Determine active character assignment for fallback
+        CharacterAssignment? activeAssignment = null;
+        var activeId = CurrentGameSession?.CurrentScene?.ActiveCharacter;
+        if (!string.IsNullOrWhiteSpace(activeId))
         {
-            text = text.Replace(match.Value, "Player");
+            activeAssignment = _characterAssignments.FirstOrDefault(a =>
+                string.Equals(a.CharacterId, activeId, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(a.CharacterName, activeId, StringComparison.OrdinalIgnoreCase));
         }
+
+        // Replace all [c:...] tokens in one regex-driven pass, case-insensitive
+        text = ParseCharacterRegex().Replace(text, match =>
+            {
+                var key = match.Groups[1].Value;
+                if (string.IsNullOrWhiteSpace(key))
+                    return "Player";
+
+                // 1) Try explicit character name match first (existing logic)
+                if (assignmentsByName.TryGetValue(key, out var caByName))
+                {
+                    return ResolvePlayerName(caByName);
+                }
+
+                // 2) If [c:*], fall back to active character's assignment
+                if (key == "*")
+                {
+                    if (activeAssignment != null)
+                    {
+                        return ResolvePlayerName(activeAssignment);
+                    }
+                    return "Player";
+                }
+
+                // 3) Try matching by character id as a convenience (if content uses ids)
+                var caById = _characterAssignments.FirstOrDefault(a =>
+                    string.Equals(a.CharacterId, key, StringComparison.OrdinalIgnoreCase));
+                if (caById != null)
+                {
+                    return ResolvePlayerName(caById);
+                }
+
+                // 4) Finally, if nothing matched, only then fallback to "Player"
+                return "Player";
+            });
 
         return text;
     }
+
+    [GeneratedRegex(@"\[c:([^\]]+)\]", RegexOptions.IgnoreCase, "en-GB")]
+    private static partial Regex ParseCharacterRegex();
 }

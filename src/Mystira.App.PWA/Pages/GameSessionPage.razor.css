@@ -143,6 +143,30 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
+    /* Ensure option text is white */
+    color: #ffffff;
+}
+
+/* Ensure progression buttons in scene content are always white, regardless of theme */
+.scene-content .btn.btn-primary-custom {
+    color: #ffffff !important;
+}
+
+.scene-content .btn.btn-primary-custom:disabled,
+.scene-content .btn.btn-primary-custom:focus,
+.scene-content .btn.btn-primary-custom:hover {
+    color: #ffffff !important;
+}
+
+/* Awards modal / in-page cards primary action buttons */
+.card .btn.btn-primary-custom {
+    color: #ffffff !important;
+}
+
+.card .btn.btn-primary-custom:disabled,
+.card .btn.btn-primary-custom:focus,
+.card .btn.btn-primary-custom:hover {
+    color: #ffffff !important;
 }
 
 .choice-button::before {
@@ -186,15 +210,29 @@
     margin: 0;
     line-height: 1.5;
     font-weight: 500;
+    /* Inherit white color from button */
+    color: inherit;
 }
 
 .choice-button .markdown-content p {
     margin: 0;
+    color: inherit;
 }
 
 .choice-button .markdown-content strong,
 .choice-button .markdown-content b {
     color: white;
+}
+
+/* Make links in markdown white as well */
+.choice-button .markdown-content a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+.choice-button .markdown-content a:hover,
+.choice-button .markdown-content a:focus {
+    color: #f3f4f6; /* slightly lighter on hover for feedback */
 }
 
 .media-container {

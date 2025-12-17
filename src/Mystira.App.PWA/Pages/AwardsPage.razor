@@ -1,0 +1,213 @@
+﻿@page "/game/awards"
+@inject IAwardsState AwardsState
+@inject IApiClient ApiClient
+@inject IGameSessionService GameSessionService
+@inject NavigationManager Navigation
+@inject ILogger<AwardsPage> Logger
+
+@using Mystira.App.PWA.Models
+
+@code {
+    private FinalizeSessionResponse? finalize;
+    private List<string> outOfAgeGroupNoBadges = new();
+    private List<string> alreadyPlayedNoBadges = new();
+    private List<string> otherNoBadges = new();
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Ensure the active game session is cleared when we land here
+        try
+        {
+            GameSessionService.ClearGameSession();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to clear session on awards page");
+        }
+
+        finalize = AwardsState.Result;
+        if (finalize == null)
+        {
+            // No awards available (direct navigation or refresh) — go home
+            Navigation.NavigateTo("/", true);
+            return;
+        }
+
+        try
+        {
+            // Build lists for players with no badges, split by age-group mismatch vs already-played vs general (priority: out-of-age-group > already-played > other)
+            var scenarioAgeGroup = AwardsState.ScenarioAgeGroup;
+            var allNoBadgeEntries = finalize.Awards
+                .Where(a => a.NewBadges == null || a.NewBadges.Count == 0)
+                .ToList();
+
+            if (allNoBadgeEntries.Count > 0)
+            {
+                // Fetch profiles for the listed profile ids
+                var profileIdSet = allNoBadgeEntries
+                    .Select(a => a.ProfileId)
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                var profilesById = new Dictionary<string, UserProfile>(StringComparer.OrdinalIgnoreCase);
+                foreach (var pid in profileIdSet)
+                {
+                    try
+                    {
+                        var p = await ApiClient.GetProfileByIdAsync(pid);
+                        if (p != null)
+                        {
+                            profilesById[pid] = p;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "Failed to load profile {ProfileId} for awards page", pid);
+                    }
+                }
+
+                foreach (var entry in allNoBadgeEntries)
+                {
+                    var displayName = string.IsNullOrWhiteSpace(entry.ProfileName) ? "Player" : entry.ProfileName!;
+                    var isOutOfAge = false;
+                    if (!string.IsNullOrWhiteSpace(scenarioAgeGroup) && profilesById.TryGetValue(entry.ProfileId, out var prof))
+                    {
+                        // If profile age group doesn't match scenario age group, treat as out-of-age-group
+                        // Note: Age groups are represented as strings like "1-2", "3-5", "6-9" etc.
+                        isOutOfAge = !string.Equals(prof.AgeGroup ?? string.Empty, scenarioAgeGroup, StringComparison.OrdinalIgnoreCase);
+                    }
+
+                    if (isOutOfAge)
+                    {
+                        outOfAgeGroupNoBadges.Add(displayName);
+                    }
+                    else if (entry.AlreadyPlayed)
+                    {
+                        alreadyPlayedNoBadges.Add(displayName);
+                    }
+                    else
+                    {
+                        otherNoBadges.Add(displayName);
+                    }
+                }
+
+                // Deduplicate display names for cleanliness
+                outOfAgeGroupNoBadges = outOfAgeGroupNoBadges.Distinct().ToList();
+                alreadyPlayedNoBadges = alreadyPlayedNoBadges.Distinct().ToList();
+                otherNoBadges = otherNoBadges.Distinct().ToList();
+            }
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void GoHome()
+    {
+        AwardsState.Clear();
+        Navigation.NavigateTo("/");
+    }
+}
+
+@if (finalize is null || loading)
+{
+    <div class="container py-5">
+        <div class="text-center text-muted">Loading…</div>
+    </div>
+}
+else
+{
+    <div class="container py-4">
+        <div class="text-center mb-4">
+            <i class="fas fa-award fa-4x text-warning mb-3"></i>
+            <h2 class="mb-2">Congratulations!</h2>
+            <p class="text-muted mb-0">You've earned new badges for this adventure.</p>
+        </div>
+
+        @foreach (var award in finalize.Awards)
+        {
+            if (award.NewBadges == null || award.NewBadges.Count == 0) { continue; }
+            <div class="mb-4">
+                <div class="d-flex flex-row flex-wrap gap-4 justify-content-center">
+                    @foreach (var badge in award.NewBadges)
+                    {
+                        <div class="d-flex flex-column align-items-center gap-2 p-3 rounded award-card">
+                            @if (!string.IsNullOrWhiteSpace(badge.ImageId))
+                            {
+                                <img src="@ApiClient.GetBadgeImageUrl(badge.ImageId!)"
+                                     alt="@badge.BadgeName"
+                                     loading="lazy"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block'"
+                                     class="award-img" />
+                                <i class="fas fa-certificate text-warning placeholder-icon"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-certificate text-warning" style="font-size:64px;"></i>
+                            }
+                            <div class="text-center">
+                                <div class="fw-semibold small">@badge.BadgeName</div>
+                                @if (!string.IsNullOrWhiteSpace(award.ProfileName))
+                                {
+                                    <div class="text-muted" style="font-size: 0.8rem;">@award.ProfileName</div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (outOfAgeGroupNoBadges.Count > 0)
+        {
+            <div class="alert alert-warning mt-2" role="alert">
+                <div class="fw-semibold mb-1">No badges could be awarded for:</div>
+                <div class="mb-2">@string.Join(", ", outOfAgeGroupNoBadges)</div>
+                <div class="mb-0">They weren’t in the right age group for this adventure, so badges can’t be awarded.</div>
+            </div>
+        }
+        @if (alreadyPlayedNoBadges.Count > 0)
+        {
+            <div class="alert alert-info mt-2" role="alert">
+                <div class="fw-semibold mb-1">No badges this time:</div>
+                <div class="mb-2">@string.Join(", ", alreadyPlayedNoBadges)</div>
+                <div class="mb-0">They couldn’t get a badge as they have already played this story</div>
+            </div>
+        }
+        @if (otherNoBadges.Count > 0)
+        {
+            <div class="alert alert-info mt-2" role="alert">
+                <div class="fw-semibold mb-1">No badges this time:</div>
+                <div class="mb-2">@string.Join(", ", otherNoBadges)</div>
+                <div class="mb-0">They didn’t necessarily make a bad choice — and that’s okay! It’s often not possible for all players to get a badge in a single round. Don’t be discouraged; try another adventure.</div>
+            </div>
+        }
+
+        <div class="text-center mt-4">
+            <div class="text-muted mb-3">
+                Visit the <a href="/achievements">Achievements</a> page for more details.
+            </div>
+            <button class="btn btn-primary-custom btn-lg" @onclick="GoHome">
+                <i class="fas fa-home me-2"></i>
+                Go Home
+            </button>
+        </div>
+    </div>
+}
+
+<style>
+    .award-card {
+        background-color: #f8f9fa;
+        border-radius: 0.75rem;
+        flex: 0 1 auto;
+        max-width: 160px;
+    }
+    .award-img { width: 80px; height: 80px; object-fit: cover; border-radius: 12px; }
+    .placeholder-icon { display:none; font-size:64px; }
+    @@media (max-width: 576px) {
+        .award-card { max-width: 140px; }
+    }
+</style>

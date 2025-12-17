@@ -138,9 +138,9 @@ else
                             <div class="text-center">
                                 @if (!rollResult.HasValue)
                                 {
-                                    <h5 class="mb-4 text-muted">Time to test your luck!</h5>
                                     if (gameSession.Scenario.AgeGroup != "1-2")
                                     {
+                                        <h5 class="mb-4 text-muted">Time to test your luck!</h5>
                                         <p class="mb-4">You need to roll @gameSession.CurrentScene.RollTarget or higher.</p>
                                     }
                                     <div class="dice-roller-container">
@@ -192,7 +192,7 @@ else
                                 }
                             </div>
                         }
-                        else if (gameSession.CurrentScene.NextSceneId == null)
+                        else if (gameSession.IsCompleted || gameSession.CurrentScene.NextSceneId == null)
                         {
                             <!-- Final Scene (no more scenes to go to) -->
                             <div class="text-center">
@@ -240,12 +240,92 @@ else
             </div>
         </div>
     </div>
+
+    @if (showAwardsModal && finalizeResult != null)
+    {
+        <div class="awards-modal-overlay">
+            <div class="card shadow-lg awards-modal-card">
+                <div class="card-body p-4 awards-modal-body">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-award fa-4x text-warning mb-3"></i>
+                        <h3 class="mb-1">Congratulations!</h3>
+                        <p class="text-muted mb-0">You've earned new badges for this adventure.</p>
+                    </div>
+
+                    @foreach (var award in finalizeResult.Awards)
+                    {
+                        if (award.NewBadges == null || award.NewBadges.Count == 0) { continue; }
+                        <div class="mb-4">
+                            <div class="d-flex flex-row flex-wrap gap-4 justify-content-center">
+                                @foreach (var badge in award.NewBadges)
+                                {
+                                    <div class="d-flex flex-column align-items-center gap-2 p-3 rounded badge-award-item" style="background-color:#f8f9fa; flex: 0 1 auto; max-width: 150px;">
+                                        @if (!string.IsNullOrWhiteSpace(badge.ImageId))
+                                        {
+                                            <img src="@ApiClient.GetBadgeImageUrl(badge.ImageId!)"
+                                                 alt="@badge.BadgeName"
+                                                 loading="lazy"
+                                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block'"
+                                                 style="width:80px;height:80px;object-fit:cover;border-radius:12px;" />
+                                            <i class="fas fa-certificate text-warning" style="display:none; font-size:64px;"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="fas fa-certificate text-warning" style="font-size:64px;"></i>
+                                        }
+                                        <div class="text-center">
+                                            <div class="fw-semibold small">@badge.BadgeName</div>
+                                            @if (!string.IsNullOrWhiteSpace(award.ProfileName))
+                                            {
+                                                <div class="text-muted" style="font-size: 0.8rem;">@award.ProfileName</div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @{
+                        var playersWithNoBadges = finalizeResult.Awards
+                            .Where(a => a.NewBadges == null || a.NewBadges.Count == 0)
+                            .Select(a => string.IsNullOrWhiteSpace(a.ProfileName) ? "Player" : a.ProfileName!)
+                            .Distinct()
+                            .ToList();
+                    }
+                    @if (playersWithNoBadges.Count > 0)
+                    {
+                        <div class="alert alert-info mt-2" role="alert">
+                            <div class="fw-semibold mb-1">No badges this time:</div>
+                            <div class="mb-2">@string.Join(", ", playersWithNoBadges)</div>
+                            <div class="mb-0">They didn’t necessarily make a bad choice — and that’s okay! It’s often not possible for all players to get a badge in a single round. Don’t be discouraged; try another adventure.</div>
+                        </div>
+                    }
+
+                    <div class="text-center mt-2">
+                        <div class="text-muted">
+                            Visit the <a href="/achievements">Achievements</a> page for more details.
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <button class="btn btn-primary-custom btn-lg" @onclick="CloseAwardsAndExit">
+                            <i class="fas fa-check me-2"></i>
+                            Continue
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 }
 
 @code {
     [Inject] private IGameSessionService GameSessionService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ILogger<GameSessionPage> Logger { get; set; } = default!;
+    [Inject] private IApiClient ApiClient { get; set; } = default!;
+    [Inject] private IAwardsState AwardsState { get; set; } = default!;
 
     private sealed record PlayerOption(string Id, string DisplayName);
 
@@ -255,6 +335,10 @@ else
     private bool? lastRollSuccess = null;
     private string? lastRollMessage = null;
     private bool hasNavigatedHome = false;
+
+    // Awards modal state
+    private bool showAwardsModal = false;
+    private FinalizeSessionResponse? finalizeResult;
 
     private List<PlayerOption> playerOptions = new();
     private string? selectedPlayerId;
@@ -285,21 +369,8 @@ else
         lastRollSuccess = null;
         lastRollMessage = null;
 
-        // If the session has been completed elsewhere (e.g., via Continue when no next scene),
-        // automatically navigate back to Home once, to finish the adventure flow.
-        if (!hasNavigatedHome && session?.IsCompleted == true)
-        {
-            hasNavigatedHome = true; // guard against double navigation
-            // Ensure any local state is cleared
-            try
-            {
-                GameSessionService.ClearGameSession();
-            }
-            catch { /* ignore */ }
-
-            // Force-load home to reset any transient state
-            Navigation.NavigateTo("/", true);
-        }
+        // When the session is marked completed, allow the page to render the
+        // Finish flow (button + modal). Do not auto-navigate away here.
 
         InvokeAsync(StateHasChanged);
     }
@@ -374,12 +445,54 @@ else
 
             Logger.LogInformation("Player chose: {ChoiceText} -> {NextScene}", choice.Text, choice.NextSceneId);
 
+            var scene = gameSession.CurrentScene;
+            string? playerId = null;
+
+            // Map ActiveCharacter to the playerId of the assigned player
+            if (!string.IsNullOrWhiteSpace(scene.ActiveCharacter))
+            {
+                var ac = scene.ActiveCharacter!;
+
+                // Try to find matching character assignment by name or id (case-insensitive)
+                var matches = gameSession.CharacterAssignments
+                    .Where(ca =>
+                        (!string.IsNullOrWhiteSpace(ca.CharacterName) &&
+                         string.Equals(ca.CharacterName, ac, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrWhiteSpace(ca.CharacterId) &&
+                         string.Equals(ca.CharacterId, ac, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+
+                if (matches.Count == 1)
+                {
+                    var pa = matches[0].PlayerAssignment;
+                    if (pa != null)
+                    {
+                        // Prefer ProfileId when present, otherwise guest:{GuestName}
+                        if (!string.IsNullOrWhiteSpace(pa.ProfileId))
+                        {
+                            playerId = pa.ProfileId;
+                        }
+                        else if (!string.IsNullOrWhiteSpace(pa.GuestName))
+                        {
+                            playerId = $"guest:{pa.GuestName}";
+                        }
+                    }
+                }
+                else if (matches.Count == 0)
+                {
+                    Logger.LogWarning("ActiveCharacter '{ActiveCharacter}' did not match any character assignment.", ac);
+                }
+                else
+                {
+                    Logger.LogWarning("ActiveCharacter '{ActiveCharacter}' matched multiple character assignments ({Count}). Using blank playerId.", ac, matches.Count);
+                }
+            }
             await GameSessionService.MakeChoiceAsync(
                 gameSession.Id,
                 gameSession.CurrentScene.Id,
                 choice.Text,
                 choice.NextSceneId,
-                selectedPlayerId,
+                playerId,
                 choice.CompassAxis,
                 choice.CompassDirection,
                 choice.CompassDelta);
@@ -622,12 +735,91 @@ else
             // Complete the session
             await CompleteSession();
 
-            // Clear the current game session
-            GameSessionService.ClearGameSession();
+            // After completion, attempt to fetch awarded badges to display on a dedicated page
+            try
+            {
+                if (gameSession != null)
+                {
+                    var finalize = await ApiClient.FinalizeGameSessionAsync(gameSession.Id);
+                    if (finalize != null)
+                    {
+                        // Always show the Awards page if finalize succeeded, even when there are no new badges
+                        AwardsState.Set(finalize!, gameSession.ScenarioId, gameSession.Scenario?.AgeGroup);
+                        hasNavigatedHome = true; // prevent other flows
+                        // Navigate within the SPA so the scoped AwardsState is preserved
+                        Navigation.NavigateTo("/game/awards");
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Unable to retrieve finalize awards; proceeding to exit.");
+            }
 
-            // Navigate back to home
-            hasNavigatedHome = true;
-            Navigation.NavigateTo("/", true);
+            // If we couldn't retrieve finalize results (e.g., playing as guest so finalize is unauthorized),
+            // synthesize a minimal awards payload from the local game session so we can still show the Awards page
+            if (gameSession != null)
+            {
+                try
+                {
+                    var synthetic = new FinalizeSessionResponse
+                    {
+                        SessionId = gameSession.Id,
+                        Awards = new()
+                    };
+
+                    var added = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    // Include DM/owner profile if present
+                    if (!string.IsNullOrWhiteSpace(gameSession.ProfileId))
+                    {
+                        synthetic.Awards.Add(new ProfileBadgeAwardsResponse
+                        {
+                            ProfileId = gameSession.ProfileId,
+                            ProfileName = "Session Owner",
+                            NewBadges = new(),
+                            AlreadyPlayed = false
+                        });
+                        added.Add(gameSession.ProfileId);
+                    }
+
+                    // Include any assigned player profiles (exclude guests)
+                    foreach (var assignment in gameSession.CharacterAssignments)
+                    {
+                        var pa = assignment.PlayerAssignment;
+                        if (pa == null) continue;
+                        if (!string.Equals(pa.Type, "Profile", StringComparison.OrdinalIgnoreCase)) continue;
+                        if (string.IsNullOrWhiteSpace(pa.ProfileId)) continue;
+                        if (added.Contains(pa.ProfileId)) continue;
+
+                        synthetic.Awards.Add(new ProfileBadgeAwardsResponse
+                        {
+                            ProfileId = pa.ProfileId!,
+                            ProfileName = string.IsNullOrWhiteSpace(pa.ProfileName) ? "Player" : pa.ProfileName,
+                            NewBadges = new(),
+                            AlreadyPlayed = false
+                        });
+                        added.Add(pa.ProfileId);
+                    }
+
+                    // If we have any profiles, navigate to Awards using the synthetic payload
+                    if (synthetic.Awards.Count > 0)
+                    {
+                        AwardsState.Set(synthetic, gameSession.ScenarioId, gameSession.Scenario?.AgeGroup);
+                        hasNavigatedHome = true;
+                        Navigation.NavigateTo("/game/awards");
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Failed to build synthetic awards payload from local session");
+                }
+            }
+
+            // No awards to show (or failed to fetch and no identifiable profiles) — exit as before
+            ExitToHome();
         }
         catch (Exception ex)
         {
@@ -639,4 +831,59 @@ else
             StateHasChanged();
         }
     }
+
+    private void ExitToHome()
+    {
+        try
+        {
+            // Clear the current game session
+            GameSessionService.ClearGameSession();
+
+            // Navigate back to home
+            hasNavigatedHome = true;
+            Navigation.NavigateTo("/", true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error while exiting to home");
+        }
+    }
+
+    private void CloseAwardsAndExit()
+    {
+        showAwardsModal = false;
+        finalizeResult = null;
+        ExitToHome();
+    }
 }
+
+<style>
+    /* Small scoped CSS for awards modal */
+    .awards-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 1050;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+    .awards-modal-card {
+        width: 92%;
+        max-width: 720px;
+        max-height: 85vh; /* rely on Bootstrap body scroll behavior style but ensure cap */
+        display: flex;
+        flex-direction: column;
+    }
+    .awards-modal-body {
+        overflow: auto; /* scroll if content overflows */
+    }
+    .badge-award-item {
+        min-width: 130px;
+    }
+    @@media (max-width: 576px) {
+        .awards-modal-card { max-height: 90vh; }
+        .badge-award-item { min-width: 110px; }
+    }
+</style>

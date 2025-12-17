@@ -63,6 +63,12 @@ public partial class MystiraAppDbContext : DbContext
         var isInMemoryDatabase = Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory";
 
         // Configure UserProfile
+        // In in-memory provider used by tests, ensure EF doesn't try to map value objects like AgeGroup as entities
+        if (isInMemoryDatabase)
+        {
+            modelBuilder.Ignore<AgeGroup>();
+        }
+
         modelBuilder.Entity<UserProfile>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -92,36 +98,40 @@ public partial class MystiraAppDbContext : DbContext
                       c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                       c => c.ToList()));
 
-            // Configure UserBadge as owned by UserProfile
-            entity.OwnsMany(p => p.EarnedBadges, badges =>
+            // Configure UserBadge as owned by UserProfile only for Cosmos provider
+            if (!isInMemoryDatabase)
             {
-                badges.WithOwner().HasForeignKey(b => b.UserProfileId);
-                badges.HasKey(b => b.Id);
-
-                // Only apply Cosmos DB specific configurations when not using in-memory database
-                if (!isInMemoryDatabase)
+                entity.OwnsMany(p => p.EarnedBadges, badges =>
                 {
-                    // No need for ToContainer or HasPartitionKey for owned entities
-                    // They'll be embedded in the UserProfile document
-                }
+                    badges.WithOwner().HasForeignKey(b => b.UserProfileId);
+                    badges.HasKey(b => b.Id);
 
-                badges.Property(b => b.UserProfileId).IsRequired();
-                badges.Property(b => b.BadgeConfigurationId).IsRequired();
-                badges.Property(b => b.BadgeName).IsRequired();
-                badges.Property(b => b.BadgeMessage).IsRequired();
-                badges.Property(b => b.Axis).IsRequired();
-
-                // Indexes may not be applicable for owned entities in Cosmos DB
-                // If using SQL Server, you can still configure these:
-                if (isInMemoryDatabase)
-                {
-                    badges.HasIndex(b => b.UserProfileId);
-                    badges.HasIndex(b => new { b.UserProfileId, b.BadgeConfigurationId }).IsUnique();
-                }
-            });
+                    // No ToContainer for owned entities in Cosmos, they are embedded
+                    badges.Property(b => b.UserProfileId).IsRequired();
+                    badges.Property(b => b.BadgeConfigurationId).IsRequired();
+                    badges.Property(b => b.BadgeName).IsRequired();
+                    badges.Property(b => b.BadgeMessage).IsRequired();
+                    badges.Property(b => b.Axis).IsRequired();
+                });
+            }
         });
 
-        modelBuilder.Entity<UserProfile>().OwnsMany(p => p.EarnedBadges);
+        // When using InMemory provider for tests, configure UserBadge as a standalone entity
+        if (isInMemoryDatabase)
+        {
+            modelBuilder.Entity<UserBadge>(entity =>
+            {
+                entity.HasKey(b => b.Id);
+                entity.Property(b => b.UserProfileId).IsRequired();
+                entity.Property(b => b.BadgeConfigurationId).IsRequired();
+                entity.Property(b => b.BadgeName).IsRequired();
+                entity.Property(b => b.BadgeMessage).IsRequired();
+                entity.Property(b => b.Axis).IsRequired();
+
+                entity.HasIndex(b => b.UserProfileId);
+                entity.HasIndex(b => new { b.UserProfileId, b.BadgeConfigurationId }).IsUnique();
+            });
+        }
 
         // Configure Account
         modelBuilder.Entity<Account>(entity =>
@@ -197,6 +207,12 @@ public partial class MystiraAppDbContext : DbContext
                       (c1, c2) => c1 != null && c2 != null && c1.Count == c2.Count && c1.Zip(c2).All(x => x.First.Value == x.Second.Value && x.First.Currency == x.Second.Currency),
                       c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.Value.GetHashCode(), v.Currency.GetHashCode())),
                       c => c.Select(p => new BundlePrice { Value = p.Value, Currency = p.Currency }).ToList()));
+
+            // Own StoryProtocol metadata to avoid separate entity with PK requirement in tests
+            entity.OwnsOne(e => e.StoryProtocol, sp =>
+            {
+                sp.OwnsMany(s => s.Contributors);
+            });
         });
 
         // Configure CharacterMap
@@ -485,6 +501,12 @@ public partial class MystiraAppDbContext : DbContext
                               v => v.Value,
                               v => EchoType.Parse(v) ?? EchoType.Parse("honesty")!);
                 });
+            });
+
+            // Own StoryProtocol metadata to avoid separate entity with PK requirement in tests
+            entity.OwnsOne(e => e.StoryProtocol, sp =>
+            {
+                sp.OwnsMany(s => s.Contributors);
             });
         });
 

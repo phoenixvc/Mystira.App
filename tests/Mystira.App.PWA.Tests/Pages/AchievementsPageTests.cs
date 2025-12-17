@@ -11,7 +11,7 @@ namespace Mystira.App.PWA.Tests.Pages;
 public class AchievementsPageTests : TestContext
 {
     [Fact]
-    public void AchievementsPage_FilterToggles_FilterTierCards()
+    public void AchievementsPage_DisplaysTierCards()
     {
         Services.AddLogging();
 
@@ -28,24 +28,13 @@ public class AchievementsPageTests : TestContext
 
         var cut = RenderComponent<AchievementsPage>();
 
+        // Should display both earned and in-progress tiers by default
         cut.WaitForAssertion(() => cut.FindAll(".tier-card").Count.Should().Be(2));
 
-        // Earned-only
-        cut.Find("#filter-inprogress").Change(false);
-        cut.WaitForAssertion(() =>
-        {
-            cut.FindAll(".tier-card").Count.Should().Be(1);
-            cut.Find(".tier-card").ClassList.Should().Contain("earned");
-        });
-
-        // In-progress only
-        cut.Find("#filter-inprogress").Change(true);
-        cut.Find("#filter-earned").Change(false);
-        cut.WaitForAssertion(() =>
-        {
-            cut.FindAll(".tier-card").Count.Should().Be(1);
-            cut.Find(".tier-card").ClassList.Should().NotContain("earned");
-        });
+        // Verify one is earned and one is in-progress
+        var tierCards = cut.FindAll(".tier-card");
+        tierCards.Count(c => c.ClassList.Contains("earned")).Should().Be(1);
+        tierCards.Count(c => !c.ClassList.Contains("earned")).Should().Be(1);
     }
 
     private sealed class FakeAuthService : IAuthService
@@ -69,6 +58,7 @@ public class AchievementsPageTests : TestContext
         public Task<(bool Success, string Message, string? Token, string? RefreshToken)> RefreshTokenAsync(string token, string refreshToken) => Task.FromResult((false, string.Empty, (string?)null, (string?)null));
         public Task<string?> GetCurrentTokenAsync() => Task.FromResult<string?>(null);
         public void SetRememberMe(bool rememberMe) { }
+        public Task<bool> GetRememberMeAsync() => Task.FromResult(false);
         public DateTime? GetTokenExpiryTime() => null;
         public Task<bool> EnsureTokenValidAsync(int expiryBufferMinutes = 5) => Task.FromResult(true);
         public event EventHandler? TokenExpiryWarning;

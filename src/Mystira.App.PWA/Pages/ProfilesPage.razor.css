@@ -35,34 +35,40 @@
 .profile-avatar-section {
     position: relative;
     margin-bottom: 16px;
+    width: 100%;
 }
 
-.profile-avatar-image {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
+/* 16:9 container for avatar on profile cards */
+.profile-avatar-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(124, 58, 237, 0.12) 100%);
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.12);
+}
+
+.profile-avatar-wrapper ::deep .profile-avatar-image {
+    width: 100%;
+    height: 100%;
     object-fit: cover;
-    border: 3px solid rgba(124, 58, 237, 0.3);
-    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+    display: block;
 }
 
 .profile-avatar-placeholder {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: #ffffff;
     font-size: 2rem;
-    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
 }
 
 .guest-badge {
     position: absolute;
-    bottom: -4px;
-    right: -4px;
+    bottom: 8px;
+    right: 8px;
     width: 28px;
     height: 28px;
     border-radius: 50%;
@@ -205,34 +211,34 @@
         border: 1px solid #2d2a5e;
         color: #f1f5f9;
     }
-    
+
     .modal-header {
         border-bottom-color: #2d2a5e;
     }
-    
+
     .modal-footer {
         border-top-color: #2d2a5e;
     }
-    
+
     .modal-title {
         color: #f1f5f9;
     }
-    
+
     .btn-close {
         filter: invert(1) grayscale(100%) brightness(200%);
     }
-    
+
     .form-label {
         color: #a5b4fc;
     }
-    
+
     .form-control,
     .form-select {
         background-color: #14122b;
         border-color: #4f46e5;
         color: #f1f5f9;
     }
-    
+
     .form-control:focus,
     .form-select:focus {
         background-color: #1e1b4b;
@@ -240,43 +246,43 @@
         color: #f1f5f9;
         box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.25);
     }
-    
+
     .form-control::placeholder {
         color: #818cf8;
     }
-    
+
     .form-select option {
         background-color: #14122b;
         color: #f1f5f9;
     }
-    
+
     .alert-info {
         background-color: rgba(99, 102, 241, 0.15);
         border-color: #4f46e5;
         color: #c7d2fe;
     }
-    
+
     .alert-warning {
         background-color: rgba(234, 179, 8, 0.15);
         border-color: #eab308;
         color: #fef08a;
     }
-    
+
     .card {
         background: linear-gradient(135deg, #1e1b4b 0%, #2d2a5e 100%);
         border-color: #2d2a5e;
     }
-    
+
     .card-title {
         color: #f1f5f9;
     }
-    
+
     .btn-secondary {
         background-color: #2d2a5e;
         border-color: #3d3a6e;
         color: #f1f5f9;
     }
-    
+
     .btn-secondary:hover {
         background-color: #3d3a6e;
         border-color: #4f4c7e;

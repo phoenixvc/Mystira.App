@@ -4,7 +4,17 @@
     animation: fadeIn 0.5s ease-out;
 }
 
-.featured-bundle-image {
+/* Aspect-ratio wrapper to prevent stretching in responsive rows */
+.featured-image-wrapper {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+}
+
+/* Image lives inside child component (CachedMystiraImage) */
+.featured-image-wrapper ::deep .featured-bundle-image {
+    display: block;
+    width: 100%;
     height: 100%;
     object-fit: cover;
 }
@@ -109,11 +119,18 @@
     .featured-bundle-card .row {
         flex-direction: column;
     }
-    
+
     .featured-bundle-card .col-md-4,
     .featured-bundle-card .col-md-8 {
         width: 100%;
         max-width: 100%;
+    }
+
+    /* On small screens, let the image size itself to the card width */
+    .featured-bundle-image {
+        height: auto; /* override the desktop fill to avoid overflow */
+        border-top-left-radius: 0; /* rely on the card's radius */
+        border-top-right-radius: 0;
     }
 
     .featured-pill {

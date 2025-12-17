@@ -213,6 +213,32 @@ public class GameSessionsController : ControllerBase
     }
 
     /// <summary>
+    /// Finalize a game session: calculate scoring for eligible players and award badges
+    /// </summary>
+    [HttpPost("{id}/finalize")]
+    [Authorize]
+    public async Task<ActionResult<object>> FinalizeSession(string id)
+    {
+        try
+        {
+            var command = new FinalizeGameSessionCommand(id);
+            var result = await _mediator.Send(command);
+
+            // Always return 200 with the aggregation result; if session not found, Awards will be empty
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error finalizing session {SessionId}", id);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = "Internal server error while finalizing session",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+
+    /// <summary>
     /// Get all sessions for a specific account
     /// </summary>
     [HttpGet("account/{accountId}")]

@@ -1,74 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
-
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
-    <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <ServiceWorkerAssetsManifest Condition="'$(Configuration)' == 'Release'">service-worker-assets.js</ServiceWorkerAssetsManifest>
-    <UserSecretsId>bacfaeff-b9f0-4d46-af29-3755bbcc5dd2</UserSecretsId>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
-
-  <PropertyGroup>
-    <BlazorEnableCompression Condition="'$(Configuration)' == 'Release'">true</BlazorEnableCompression>
-    <BlazorEnableCompression Condition="'$(Configuration)' != 'Release'">false</BlazorEnableCompression>
-    <!-- Enable IL Linking for production builds to reduce bundle size by 30-50% -->
-    <BlazorWebAssemblyEnableLinking Condition="'$(Configuration)' == 'Release'">true</BlazorWebAssemblyEnableLinking>
-    <BlazorWebAssemblyEnableLinking Condition="'$(Configuration)' != 'Release'">false</BlazorWebAssemblyEnableLinking>
-    <!-- Enable AOT compilation for production builds for better runtime performance -->
-    <RunAOTCompilation>false</RunAOTCompilation>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
-    <BlazorCacheBootResources>false</BlazorCacheBootResources>
-    <ServiceWorkerForce>true</ServiceWorkerForce>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <DebugType>portable</DebugType>
-    <EmbedAllSources>true</EmbedAllSources>
-    <SourceLinkEnabled>true</SourceLinkEnabled>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.0" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="9.0.0" />
-    <PackageReference Include="System.Text.Json" Version="9.0.0" />
-    <PackageReference Include="Markdig" Version="0.37.0" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.0" />
   </ItemGroup>
-
   <ItemGroup>
-    <ProjectReference Include="../Mystira.App.Domain/Mystira.App.Domain.csproj" />
-    <ProjectReference Include="../Mystira.App.Contracts/Mystira.App.Contracts.csproj" />
+    <ProjectReference Include="..\Mystira.App.Shared\Mystira.App.Shared.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="wwwroot\js\" />
-    <Folder Include="wwwroot\sounds\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Update="wwwroot\appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="wwwroot\appsettings.Local.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="wwwroot\appsettings.Development.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="wwwroot\appsettings.Staging.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="wwwroot\appsettings.Production.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
 </Project>

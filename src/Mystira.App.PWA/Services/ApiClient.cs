@@ -53,6 +53,7 @@ public class ApiClient : IApiClient
     }
 
     public Task<GameSession?> EndGameSessionAsync(string sessionId) => _gameSessionClient.EndGameSessionAsync(sessionId);
+    public Task<FinalizeSessionResponse?> FinalizeGameSessionAsync(string sessionId) => _gameSessionClient.FinalizeGameSessionAsync(sessionId);
     public Task<GameSession?> PauseGameSessionAsync(string sessionId) => _gameSessionClient.PauseGameSessionAsync(sessionId);
     public Task<GameSession?> ResumeGameSessionAsync(string sessionId) => _gameSessionClient.ResumeGameSessionAsync(sessionId);
     public Task<GameSession?> ProgressSessionSceneAsync(string sessionId, string sceneId) => _gameSessionClient.ProgressSessionSceneAsync(sessionId, sceneId);
@@ -115,5 +116,22 @@ public class ApiClient : IApiClient
         // Get base address from media client (all clients share the same HttpClient base address)
         var mediaUrl = _mediaClient.GetMediaResourceEndpointUrl("test");
         return mediaUrl.Replace("api/media/test", "");
+    }
+
+    public string GetBadgeImageUrl(string imageId)
+    {
+        if (string.IsNullOrWhiteSpace(imageId))
+        {
+            return string.Empty;
+        }
+
+        var baseUrl = GetApiBaseAddress();
+        // Ensure single slash joining
+        if (!baseUrl.EndsWith("/"))
+        {
+            baseUrl += "/";
+        }
+
+        return $"{baseUrl}api/badges/images/{Uri.EscapeDataString(imageId)}";
     }
 }

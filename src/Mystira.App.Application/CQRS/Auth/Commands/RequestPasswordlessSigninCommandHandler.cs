@@ -50,14 +50,6 @@ public class RequestPasswordlessSigninCommandHandler
                 return (false, "No account found with this email. Please sign up first.", null, null);
             }
 
-            // Check if there's already a pending signin
-            var existingPending = await _pendingSignupRepository.GetActiveByEmailAsync(email);
-            if (existingPending != null && existingPending.IsSignin)
-            {
-                _logger.LogInformation("Signin already pending for email: {Email}, reusing existing code", email);
-                return (true, "Check your email for the sign-in code", existingPending.Code, null);
-            }
-
             // Generate secure verification code
             var code = GenerateSecureCode();
             var pendingSignin = new PendingSignup

@@ -403,6 +403,13 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                         }
 
                         var type = GetString(s, "type");
+                        // activeCharacter can be provided as camelCase or snake_case depending on the source
+                        var activeChar = GetString(s, "activeCharacter");
+                        if (string.IsNullOrWhiteSpace(activeChar) && s.TryGetProperty("active_character", out var acProp) && acProp.ValueKind == JsonValueKind.String)
+                        {
+                            activeChar = acProp.GetString() ?? string.Empty;
+                        }
+
                         var scene = new Scene
                         {
                             Id = GetString(s, "id"),
@@ -414,7 +421,8 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                             Branches = ReadBranches(s),
                             Difficulty = s.TryGetProperty("difficulty", out var diff) && diff.ValueKind == JsonValueKind.Number && diff.TryGetInt32(out var d)
                                 ? d
-                                : (int?)null
+                                : (int?)null,
+                            ActiveCharacter = string.IsNullOrWhiteSpace(activeChar) ? null : activeChar
                         };
                         scenes.Add(scene);
                     }

@@ -87,6 +87,8 @@ public class Scene
     public string? FailureBranch { get; set; }
     public string? SuccessSceneTitle { get; set; }
     public string? FailureSceneTitle { get; set; }
+    // For choice scenes, must correspond to one of the Scenario.Characters (by id). May be empty otherwise.
+    public string? ActiveCharacter { get; set; }
 }
 
 public class SceneMedia

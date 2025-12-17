@@ -58,9 +58,30 @@ public class MakeChoiceUseCase
             throw new ArgumentException("Choice not found in scene");
         }
 
-        var playerId = !string.IsNullOrWhiteSpace(request.PlayerId)
-            ? request.PlayerId
-            : session.ProfileId;
+        // Resolve the player who made the decision for choice scenes using ActiveCharacter assignment
+        string? playerId = null;
+        if (currentScene.Type == SceneType.Choice && !string.IsNullOrWhiteSpace(currentScene.ActiveCharacter))
+        {
+            var assignment = session.CharacterAssignments.FirstOrDefault(a =>
+                string.Equals(a.CharacterId, currentScene.ActiveCharacter, StringComparison.OrdinalIgnoreCase));
+
+            var assignedProfileId = assignment?.PlayerAssignment?.ProfileId;
+            if (!string.IsNullOrWhiteSpace(assignedProfileId))
+            {
+                playerId = assignedProfileId;
+            }
+            else
+            {
+                _logger.LogError(
+                    "ActiveCharacter '{ActiveCharacter}' for scene '{SceneId}' could not resolve a player assignment in session {SessionId}.",
+                    currentScene.ActiveCharacter, currentScene.Id, session.Id);
+            }
+        }
+
+        // Fallbacks: explicit request PlayerId, then session owner ProfileId
+        playerId = !string.IsNullOrWhiteSpace(playerId)
+            ? playerId
+            : (!string.IsNullOrWhiteSpace(request.PlayerId) ? request.PlayerId : session.ProfileId);
 
         var compassAxis = request.CompassAxis ?? branch.CompassChange?.Axis;
         var compassDelta = request.CompassDelta ?? branch.CompassChange?.Delta;

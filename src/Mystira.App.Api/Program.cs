@@ -387,6 +387,7 @@ builder.Services.AddScoped<IScenarioRepository, ScenarioRepository>();
 builder.Services.AddScoped<ICharacterMapRepository, CharacterMapRepository>();
 builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
 builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
+builder.Services.AddScoped<IPlayerScenarioScoreRepository, PlayerScenarioScoreRepository>();
 builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
 builder.Services.AddScoped<IBadgeImageRepository, BadgeImageRepository>();
 builder.Services.AddScoped<IAxisAchievementRepository, AxisAchievementRepository>();
@@ -458,7 +459,10 @@ builder.Services.AddScoped<DownloadMediaUseCase>();
 
 // Register application services
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
-builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<Mystira.App.Shared.Services.IJwtService, Mystira.App.Shared.Services.JwtService>();
+// Domain services for scoring and awards
+builder.Services.AddScoped<IAxisScoringService, AxisScoringService>();
+builder.Services.AddScoped<IBadgeAwardingService, BadgeAwardingService>();
 
 // Register Application.Ports adapters for CQRS handlers
 builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, JwtServiceAdapter>();
