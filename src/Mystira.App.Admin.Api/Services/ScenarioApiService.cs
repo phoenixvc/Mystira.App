@@ -425,7 +425,7 @@ public class ScenarioApiService : IScenarioApiService
                         EchoLog = branch.EchoLog == null ? null : new
                         {
                             // Schema expects a string for echo_type
-                            EchoType = branch.EchoLog.EchoType?.Value,
+                            EchoType = branch.EchoLog.EchoType,
                             branch.EchoLog.Description,
                             branch.EchoLog.Strength
                         },
@@ -439,7 +439,7 @@ public class ScenarioApiService : IScenarioApiService
                     EchoReveals = echoReveals.Select(reveal => new
                     {
                         // Schema expects a string for echo_type
-                        EchoType = reveal.EchoType?.Value,
+                        EchoType = reveal.EchoType,
                         reveal.MinStrength,
                         reveal.TriggerSceneId,
                         reveal.MaxAgeScenes,
@@ -508,18 +508,13 @@ public class ScenarioApiService : IScenarioApiService
                     throw new ScenarioValidationException($"Only choice scenes can have echo logs (Scene ID: {scene.Id})");
                 }
 
-                // Validate echo log values
+                // Validate echo log values (no EchoType validation required)
                 foreach (var branch in scene.Branches.Where(b => b.EchoLog != null))
                 {
                     var echo = branch.EchoLog!;
                     if (echo.Strength < 0.1 || echo.Strength > 1.0)
                     {
                         throw new ScenarioValidationException($"Echo log strength must be between 0.1 and 1.0 (Scene ID: {scene.Id}, Choice: {branch.Choice})");
-                    }
-
-                    if (EchoType.Parse(echo.EchoType.Value) == null)
-                    {
-                        throw new ScenarioValidationException($"Invalid echo type '{echo.EchoType}' (Scene ID: {scene.Id}, Choice: {branch.Choice})");
                     }
 
                     if (string.IsNullOrWhiteSpace(echo.Description))

@@ -126,7 +126,7 @@ public class MediaReferences
 
 public class EchoLog
 {
-    public EchoType EchoType { get; set; } = EchoType.Parse("honesty")!;
+    public string EchoType { get; set; } = "honesty";
     public string Description { get; set; } = string.Empty;
     public double Strength { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
@@ -141,7 +141,7 @@ public class CompassChange
 
 public class EchoReveal
 {
-    public EchoType EchoType { get; set; } = EchoType.Parse("honesty")!;
+    public string EchoType { get; set; } = "honesty";
     public double MinStrength { get; set; }
     public string TriggerSceneId { get; set; } = string.Empty;
     public int? MaxAgeScenes { get; set; }
