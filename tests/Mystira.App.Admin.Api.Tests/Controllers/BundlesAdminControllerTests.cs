@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -51,7 +52,7 @@ public class BundlesAdminControllerTests
     public async Task GetAll_WhenServiceThrows_Returns500_WithTraceId()
     {
         var service = new Mock<IContentBundleAdminService>();
-        service.Setup(s => s.GetAllAsync()).ThrowsAsync(new System.Exception("boom"));
+        service.Setup(s => s.GetAllAsync()).ThrowsAsync(new Exception("boom"));
         var controller = CreateController(service);
 
         var result = await controller.GetAll();
@@ -93,7 +94,7 @@ public class BundlesAdminControllerTests
     public async Task GetById_WhenServiceThrows_Returns500_WithTraceId()
     {
         var service = new Mock<IContentBundleAdminService>();
-        service.Setup(s => s.GetByIdAsync("b1")).ThrowsAsync(new System.Exception("err"));
+        service.Setup(s => s.GetByIdAsync("b1")).ThrowsAsync(new Exception("err"));
         var controller = CreateController(service);
 
         var result = await controller.GetById("b1");
@@ -127,7 +128,7 @@ public class BundlesAdminControllerTests
     {
         var input = new ContentBundle { Title = "New" };
         var service = new Mock<IContentBundleAdminService>();
-        service.Setup(s => s.CreateAsync(It.IsAny<ContentBundle>())).ThrowsAsync(new System.Exception("err"));
+        service.Setup(s => s.CreateAsync(It.IsAny<ContentBundle>())).ThrowsAsync(new Exception("err"));
         var controller = CreateController(service);
 
         var result = await controller.Create(input);
@@ -172,7 +173,7 @@ public class BundlesAdminControllerTests
     {
         var input = new ContentBundle { Title = "Updated" };
         var service = new Mock<IContentBundleAdminService>();
-        service.Setup(s => s.UpdateAsync("b1", It.IsAny<ContentBundle>())).ThrowsAsync(new System.Exception("err"));
+        service.Setup(s => s.UpdateAsync("b1", It.IsAny<ContentBundle>())).ThrowsAsync(new Exception("err"));
         var controller = CreateController(service);
 
         var result = await controller.Update("b1", input);

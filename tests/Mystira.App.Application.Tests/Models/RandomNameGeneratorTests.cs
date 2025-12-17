@@ -1,7 +1,5 @@
-using System.Threading.Tasks;
-using Mystira.App.Domain.Models;
 using FluentAssertions;
-using Xunit;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.Tests.Models;
 
@@ -31,7 +29,7 @@ public class RandomNameGeneratorTests
     public void GenerateGuestName_CanReturnBothTypes()
     {
         // Act
-        var fantasyName = RandomNameGenerator.GenerateGuestName(false);
+        var fantasyName = RandomNameGenerator.GenerateGuestName();
         var adjectiveName = RandomNameGenerator.GenerateGuestName(true);
 
         // Assert

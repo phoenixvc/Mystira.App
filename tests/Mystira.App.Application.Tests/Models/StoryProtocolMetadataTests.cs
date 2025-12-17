@@ -1,6 +1,5 @@
 using FluentAssertions;
 using Mystira.App.Domain.Models;
-using Xunit;
 
 namespace Mystira.App.Application.Tests.Models;
 

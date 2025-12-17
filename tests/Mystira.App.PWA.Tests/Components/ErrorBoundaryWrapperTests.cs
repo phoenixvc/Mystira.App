@@ -1,7 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.Rendering;
 using Mystira.App.PWA.Components;
 using Xunit;
 
@@ -135,7 +135,7 @@ public class ErrorBoundaryWrapperTests : TestContext
 /// </summary>
 internal class ThrowingComponent : ComponentBase
 {
-    protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)
+    protected override void BuildRenderTree(RenderTreeBuilder builder)
     {
         throw new InvalidOperationException("Test exception from component");
     }

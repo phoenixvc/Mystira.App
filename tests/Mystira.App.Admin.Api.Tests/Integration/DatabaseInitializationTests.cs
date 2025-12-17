@@ -52,8 +52,8 @@ public class DatabaseInitializationTests
             .Build();
 
         // Act
-        var initDbOnStartup = configuration.GetValue<bool>("InitializeDatabaseOnStartup", defaultValue: false);
-        var seedOnStartup = configuration.GetValue<bool>("SeedMasterDataOnStartup", defaultValue: false);
+        var initDbOnStartup = configuration.GetValue("InitializeDatabaseOnStartup", defaultValue: false);
+        var seedOnStartup = configuration.GetValue("SeedMasterDataOnStartup", defaultValue: false);
 
         // Assert
         Assert.False(initDbOnStartup, "InitializeDatabaseOnStartup should default to false for production safety");
@@ -74,8 +74,8 @@ public class DatabaseInitializationTests
             .Build();
 
         // Act
-        var initDbOnStartup = configuration.GetValue<bool>("InitializeDatabaseOnStartup", defaultValue: false);
-        var seedOnStartup = configuration.GetValue<bool>("SeedMasterDataOnStartup", defaultValue: false);
+        var initDbOnStartup = configuration.GetValue("InitializeDatabaseOnStartup", defaultValue: false);
+        var seedOnStartup = configuration.GetValue("SeedMasterDataOnStartup", defaultValue: false);
 
         // Assert
         Assert.True(initDbOnStartup, "Explicit configuration should override defaults");
@@ -92,7 +92,7 @@ public class DatabaseInitializationTests
             await Task.Delay(100);
             return "fast";
         });
-        
+
         var slowTask = Task.Run(async () =>
         {
             await Task.Delay(5000);
@@ -122,7 +122,7 @@ public class DatabaseInitializationTests
         var successfulInit = SimulateDatabaseInit(true, TimeSpan.FromMilliseconds(100));
         var timeout1 = Task.Delay(TimeSpan.FromSeconds(5));
         var completed1 = await Task.WhenAny(successfulInit, timeout1);
-        
+
         Assert.Equal(successfulInit, completed1);
         Assert.True(await successfulInit);
         _output.WriteLine("✅ Successful init completes before timeout");
@@ -131,7 +131,7 @@ public class DatabaseInitializationTests
         var slowInit = SimulateDatabaseInit(true, TimeSpan.FromSeconds(10));
         var timeout2 = Task.Delay(TimeSpan.FromSeconds(2));
         var completed2 = await Task.WhenAny(slowInit, timeout2);
-        
+
         Assert.Equal(timeout2, completed2);
         _output.WriteLine("✅ Slow init is detected by timeout");
     }

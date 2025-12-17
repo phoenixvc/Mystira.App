@@ -4,11 +4,13 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Behaviors;
+using Mystira.App.Application.CQRS;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Services;
 using Mystira.App.Infrastructure.Data;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
+using IUnitOfWork = Mystira.App.Application.Ports.Data.IUnitOfWork;
 
 namespace Mystira.App.Application.Tests.CQRS;
 
@@ -48,7 +50,7 @@ public abstract class CqrsIntegrationTestBase : IDisposable
         services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
 
         // Add Unit of Work (explicitly use Application port as service type)
-        services.AddScoped<Mystira.App.Application.Ports.Data.IUnitOfWork, Mystira.App.Infrastructure.Data.UnitOfWork.UnitOfWork>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         // Add Memory Cache
         services.AddMemoryCache(options =>
@@ -64,7 +66,7 @@ public abstract class CqrsIntegrationTestBase : IDisposable
         services.AddMediatR(cfg =>
         {
             // Register handlers from Application assembly; using IQuery<> marker type
-            cfg.RegisterServicesFromAssembly(typeof(Mystira.App.Application.CQRS.IQuery<>).Assembly);
+            cfg.RegisterServicesFromAssembly(typeof(IQuery<>).Assembly);
             cfg.AddOpenBehavior(typeof(QueryCachingBehavior<,>));
         });
 

@@ -1,7 +1,6 @@
-using Mystira.App.Domain.Models;
-using FluentAssertions;
-using Xunit;
 using AutoFixture.Xunit2;
+using FluentAssertions;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.Tests.Models;
 
@@ -32,9 +31,9 @@ public class GameSessionTests
     [Theory]
     [AutoData]
     public void GameSession_SetProperties_SetsValuesCorrectly(
-        string scenarioId, 
-        string accountId, 
-        List<string> playerNames, 
+        string scenarioId,
+        string accountId,
+        List<string> playerNames,
         string currentSceneId)
     {
         // Act
