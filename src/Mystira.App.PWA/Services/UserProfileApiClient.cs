@@ -24,34 +24,7 @@ public class UserProfileApiClient : BaseApiClient, IUserProfileApiClient
 
     public async Task<UserProfile?> GetProfileByIdAsync(string id)
     {
-        try
-        {
-            Logger.LogInformation("Fetching profile by ID {Id} from API...", id);
-
-            var response = await HttpClient.GetAsync($"api/userprofiles/id/{id}");
-
-            if (response.IsSuccessStatusCode)
-            {
-                var profile = await response.Content.ReadFromJsonAsync<UserProfile>(JsonOptions);
-                Logger.LogInformation("Successfully fetched profile by ID {Id}", id);
-                return profile;
-            }
-            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                Logger.LogWarning("Profile not found by ID: {Id}", id);
-                return null;
-            }
-            else
-            {
-                Logger.LogWarning("API request failed with status: {StatusCode} for profile ID: {Id}", response.StatusCode, id);
-                return null;
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error fetching profile by ID {Id} from API.", id);
-            return null;
-        }
+        return await GetProfileAsync(id);
     }
 
     public async Task<List<UserProfile>?> GetProfilesByAccountAsync(string accountId)

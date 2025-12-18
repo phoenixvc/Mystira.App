@@ -21,9 +21,6 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
             Logger.LogInformation("Starting game session for scenario: {ScenarioId}, Account: {AccountId}, Profile: {ProfileId}",
                 scenarioId, accountId, profileId);
 
-            // Set authorization header - required for the [Authorize] attribute on the API endpoint
-            await SetAuthorizationHeaderAsync();
-
             var requestData = new
             {
                 scenarioId,
@@ -73,8 +70,6 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
             Logger.LogInformation("Starting game session with assignments for scenario: {ScenarioId}, Account: {AccountId}, Profile: {ProfileId}",
                 request.ScenarioId, request.AccountId, request.ProfileId);
 
-            await SetAuthorizationHeaderAsync();
-
             var response = await HttpClient.PostAsJsonAsync("api/gamesessions", request, JsonOptions);
 
             if (response.IsSuccessStatusCode)
@@ -114,9 +109,6 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         {
             Logger.LogInformation("Ending game session: {SessionId}", sessionId);
 
-            // Set authorization header - required for the [Authorize] attribute on the API endpoint
-            await SetAuthorizationHeaderAsync();
-
             var response = await HttpClient.PostAsync($"api/gamesessions/{sessionId}/end", null);
 
             if (response.IsSuccessStatusCode)
@@ -154,8 +146,6 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         try
         {
             Logger.LogInformation("Finalizing game session: {SessionId}", sessionId);
-
-            await SetAuthorizationHeaderAsync();
 
             var response = await HttpClient.PostAsync($"api/gamesessions/{sessionId}/finalize", null);
 
@@ -195,8 +185,6 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         {
             Logger.LogInformation("Pausing game session: {SessionId}", sessionId);
 
-            await SetAuthorizationHeaderAsync();
-
             var response = await HttpClient.PostAsync($"api/gamesessions/{sessionId}/pause", null);
 
             if (response.IsSuccessStatusCode)
@@ -235,8 +223,6 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         {
             Logger.LogInformation("Resuming game session: {SessionId}", sessionId);
 
-            await SetAuthorizationHeaderAsync();
-
             var response = await HttpClient.PostAsync($"api/gamesessions/{sessionId}/resume", null);
 
             if (response.IsSuccessStatusCode)
@@ -274,9 +260,6 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         try
         {
             Logger.LogInformation("Progressing session {SessionId} to scene {SceneId}", sessionId, sceneId);
-
-            // Set authorization header - required for the [Authorize] attribute on the API endpoint
-            await SetAuthorizationHeaderAsync();
 
             var requestData = new { sceneId };
             var response = await HttpClient.PostAsJsonAsync($"api/gamesessions/{sessionId}/progress-scene", requestData, JsonOptions);
@@ -324,9 +307,6 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         try
         {
             Logger.LogInformation("Making choice in session {SessionId}: {ChoiceText} -> {NextSceneId}", sessionId, choiceText, nextSceneId);
-
-            // Set authorization header - required for the [Authorize] attribute on the API endpoint
-            await SetAuthorizationHeaderAsync();
 
             var requestData = new
             {
@@ -376,8 +356,6 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         {
             Logger.LogInformation("Fetching sessions for account: {AccountId}", accountId);
 
-            // Set authorization header - required for the [Authorize] attribute on the API endpoint
-            await SetAuthorizationHeaderAsync();
             var response = await HttpClient.GetAsync($"api/gamesessions/account/{accountId}");
 
             if (response.IsSuccessStatusCode)
@@ -417,8 +395,6 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         {
             Logger.LogInformation("Fetching sessions for profile: {ProfileId}", profileId);
 
-            // Set authorization header - required for the [Authorize] attribute on the API endpoint
-            await SetAuthorizationHeaderAsync();
             var response = await HttpClient.GetAsync($"api/gamesessions/profile/{profileId}");
 
             if (response.IsSuccessStatusCode)
@@ -458,7 +434,6 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         {
             Logger.LogInformation("Fetching in-progress sessions for account: {AccountId}", accountId);
 
-            await SetAuthorizationHeaderAsync();
             var response = await HttpClient.GetAsync($"api/gamesessions/account/{accountId}/in-progress");
 
             if (response.IsSuccessStatusCode)
