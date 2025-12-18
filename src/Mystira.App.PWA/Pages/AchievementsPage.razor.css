@@ -403,12 +403,40 @@
     border-color: rgba(205, 127, 50, 0.45);
 }
 
+.tier-card.tier-bronze .progress-bar {
+    background-color: #0d6efd;
+}
+
 .tier-card.tier-silver {
     border-color: rgba(192, 192, 192, 0.65);
 }
 
+.tier-card.tier-silver .progress-bar {
+    background-color: #0d6efd;
+}
+
 .tier-card.tier-gold {
     border-color: rgba(255, 215, 0, 0.55);
+}
+
+.tier-card.tier-gold .progress-bar {
+    background-color: #0d6efd;
+}
+
+.tier-card.tier-platinum {
+    border-color: rgba(229, 228, 226, 0.65);
+}
+
+.tier-card.tier-platinum .progress-bar {
+    background-color: #0d6efd;
+}
+
+.tier-card.tier-diamond {
+    border-color: rgba(185, 242, 255, 0.65);
+}
+
+.tier-card.tier-diamond .progress-bar {
+    background-color: #0d6efd;
 }
 
 .achievements-page.age-group-1-2 h2,
