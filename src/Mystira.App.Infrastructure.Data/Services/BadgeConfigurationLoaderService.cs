@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Json.Schema;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -213,26 +214,49 @@ public class BadgeConfigurationLoaderService
 
     private class BadgeConfigurationJson
     {
+        [JsonPropertyName("Age_Group_Id")]
         public string AgeGroupId { get; set; } = string.Empty;
+
+        [JsonPropertyName("Axis_Achievements")]
         public List<AxisAchievementJson> AxisAchievements { get; set; } = new();
+
+        [JsonPropertyName("Badges")]
         public List<BadgeJson> Badges { get; set; } = new();
     }
 
     private class AxisAchievementJson
     {
+        [JsonPropertyName("Compass_Axis_Id")]
         public string CompassAxisId { get; set; } = string.Empty;
+
+        [JsonPropertyName("Axes_Direction")]
         public string AxesDirection { get; set; } = string.Empty;
+
+        [JsonPropertyName("Description")]
         public string Description { get; set; } = string.Empty;
     }
 
     private class BadgeJson
     {
+        [JsonPropertyName("Tier")]
         public string Tier { get; set; } = string.Empty;
+
+        [JsonPropertyName("Tier_Order")]
         public int TierOrder { get; set; }
+
+        [JsonPropertyName("Title")]
         public string Title { get; set; } = string.Empty;
+
+        [JsonPropertyName("Description")]
         public string Description { get; set; } = string.Empty;
+
+        [JsonPropertyName("Required_Score")]
         public float RequiredScore { get; set; }
+
+        [JsonPropertyName("Compass_Axis_Id")]
         public string CompassAxisId { get; set; } = string.Empty;
+
+        [JsonPropertyName("Image_Id")]
         public string ImageId { get; set; } = string.Empty;
     }
 }
