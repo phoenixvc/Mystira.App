@@ -6,6 +6,7 @@
 @inject IApiClient ApiClient
 @inject ILogger<CharacterAssignment> Logger
 @inject IJSRuntime JSRuntime
+@inject ISettingsService SettingsService
 @using System.Linq
 
 <PageTitle>Assign Players • Mystira</PageTitle>
@@ -1073,7 +1074,8 @@ else
         try
         {
             // Check for age group mismatches among assigned user profiles
-            if (HasAgeGroupMismatch() && !await ShouldSkipAgeGroupWarningAsync())
+            var showAgeGroupWarnings = await SettingsService.GetShowAgeGroupMismatchWarningAsync();
+            if (showAgeGroupWarnings && HasAgeGroupMismatch() && !await ShouldSkipAgeGroupWarningAsync())
             {
                 showAgeGroupWarningModal = true;
                 StateHasChanged();
@@ -1081,7 +1083,8 @@ else
             }
 
             // Check for replays
-            if (await HasReplayMismatchAsync() && !await ShouldSkipReplayWarningAsync())
+            var showReplayWarnings = await SettingsService.GetShowGameAlreadyPlayedWarningAsync();
+            if (showReplayWarnings && await HasReplayMismatchAsync() && !await ShouldSkipReplayWarningAsync())
             {
                 showReplayWarningModal = true;
                 StateHasChanged();
