@@ -86,7 +86,7 @@ public static class AchievementsMapper
                     ImageUrl = !string.IsNullOrWhiteSpace(imageId) ? imageUrlResolver(imageId) : null,
                     IsEarned = progressTier?.IsEarned ?? false,
                     EarnedAt = progressTier?.EarnedAt,
-                    CurrentScore = currentScore
+                    CurrentScore = progressTier?.ProgressToThreshold ?? currentScore
                 });
             }
 
@@ -104,7 +104,7 @@ public static class AchievementsMapper
                     ImageUrl = !string.IsNullOrWhiteSpace(t.ImageId) ? imageUrlResolver(t.ImageId) : null,
                     IsEarned = t.IsEarned,
                     EarnedAt = t.EarnedAt,
-                    CurrentScore = currentScore
+                    CurrentScore = t.ProgressToThreshold != 0 ? t.ProgressToThreshold : currentScore
                 }));
             }
 
