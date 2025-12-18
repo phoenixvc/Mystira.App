@@ -185,6 +185,8 @@ builder.Services.AddSingleton<IImageCacheService, ImageCacheService>();
 builder.Services.AddScoped<IPlayerContextService, PlayerContextService>();
 builder.Services.AddScoped<IAchievementsService, AchievementsService>();
 builder.Services.AddScoped<IAwardsState, AwardsState>();
+// Settings service (localStorage-backed)
+builder.Services.AddScoped<ISettingsService, SettingsService>();
 
 // UI Services
 builder.Services.AddScoped<ToastService>();
