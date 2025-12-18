@@ -35,7 +35,7 @@
 }
 
 /* Dark mode using prefers-color-scheme */
-@media (prefers-color-scheme: dark-disabled) {
+@media (prefers-color-scheme: dark) {
     :root {
         --bg: #0f172a;
         --fg: #f1f5f9;
@@ -244,36 +244,6 @@ html, body {
 
 .modal.fade.show {
     opacity: 1;
-}
-
-.modal-content {
-    background-color: var(--card, #fff);
-    color: var(--fg, #111827);
-    border-color: var(--border, rgba(0,0,0,.2));
-}
-
-.modal-header {
-    border-bottom-color: var(--border, rgba(0,0,0,.2));
-    background-color: transparent;
-}
-
-.modal-footer {
-    border-top-color: var(--border, rgba(0,0,0,.2));
-}
-
-.modal-title {
-    color: var(--fg, #111827);
-}
-
-/* Close button in dark mode */
-@media (prefers-color-scheme: dark-disabled) {
-    .modal-header .btn-close {
-        filter: invert(1) grayscale(100%) brightness(200%);
-    }
-}
-
-html[data-theme="dark"] .modal-header .btn-close {
-    filter: invert(1) grayscale(100%) brightness(200%);
 }
 
 /* Global Form Validation */
@@ -663,7 +633,7 @@ hr, .border-top {
 }
 
 /* Outline Button Styles for Dark Mode */
-@media (prefers-color-scheme: dark-disabled) {
+@media (prefers-color-scheme: dark) {
     .btn-outline-danger {
         color: #fca5a5;
         border-color: #fca5a5;
@@ -710,18 +680,6 @@ hr, .border-top {
         background-color: rgba(245, 158, 11, 0.15);
         border-color: #fbbf24;
         color: #fbbf24;
-    }
-
-    .btn-outline-secondary {
-        color: #94a3b8;
-        border-color: #94a3b8;
-    }
-
-    .btn-outline-secondary:hover,
-    .btn-outline-secondary:focus {
-        background-color: rgba(148, 163, 184, 0.15);
-        border-color: #cbd5e1;
-        color: #cbd5e1;
     }
 }
 
@@ -773,18 +731,6 @@ html[data-theme="dark"] .btn-outline-warning:focus {
     color: #fbbf24;
 }
 
-html[data-theme="dark"] .btn-outline-secondary {
-    color: #94a3b8;
-    border-color: #94a3b8;
-}
-
-html[data-theme="dark"] .btn-outline-secondary:hover,
-html[data-theme="dark"] .btn-outline-secondary:focus {
-    background-color: rgba(148, 163, 184, 0.15);
-    border-color: #cbd5e1;
-    color: #cbd5e1;
-}
-
 /* Version indicator - subtle, you need to know to look for it */
 .version-indicator {
     font-size: 0.65rem;
@@ -832,7 +778,7 @@ input[type="checkbox"]#rememberMe:hover {
 #rememberMe { accent-color: #000; }
 
 /* Dark mode: make the checkbox border and checkmark white for visibility */
-@media (prefers-color-scheme: dark-disabled) {
+@media (prefers-color-scheme: dark) {
     #rememberMe.form-check-input,
     input[type="checkbox"]#rememberMe {
         appearance: auto !important;
@@ -960,7 +906,7 @@ html[data-theme="dark"] #rememberMe { accent-color: #fff; }
 }
 
 /* Dark theme variants */
-@media (prefers-color-scheme: dark-disabled) {
+@media (prefers-color-scheme: dark) {
     .form-check label.form-check-label[for="rememberMe"]::before {
         border-color: #fff;
         background: transparent;
@@ -1001,4 +947,3 @@ html[data-theme="dark"] .form-check #rememberMe:focus + label.form-check-label::
         border-color: CanvasText;
     }
 }
-
