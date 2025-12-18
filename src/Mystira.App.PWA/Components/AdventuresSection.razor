@@ -40,17 +40,20 @@
     @if (isAuthenticated && !isLoading)
     {
         <FilterSection
-            AgeGroups="@availableAgeGroups"
+            AgeGroups="@(string.IsNullOrEmpty(selectedBundleId) ? availableAgeGroups.Take(3).ToArray() : availableAgeGroups)"
             SelectedAgeGroups="@selectedAgeGroups"
             AgeGroupCounts="@GetAgeGroupCounts()"
             SearchQuery="@searchQuery"
             SearchQueryChanged="@((value) => { searchQuery = value; })"
+            ShowSearch="false"
+            ShowAgeGroups="@string.IsNullOrEmpty(selectedBundleId)"
             ShowCompleted="@showCompletedStories"
             ShowCompletedChanged="@OnShowCompletedChanged"
+            ShowCompletedToggle="@(!string.IsNullOrEmpty(selectedBundleId))"
             HiddenCount="@GetHiddenCount()"
             ResultCount="@GetResultCount()"
             ResultCountLabel="@GetResultCountLabel()"
-            ShowSortOptions="@(!string.IsNullOrEmpty(selectedBundleId))"
+            ShowSortOptions="false"
             CurrentSort="@currentSort"
             OnSortChanged="@OnSortChanged"
             OnAgeGroupToggled="@ToggleAgeGroupFilter"
