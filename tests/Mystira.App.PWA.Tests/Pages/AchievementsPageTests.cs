@@ -28,13 +28,16 @@ public class AchievementsPageTests : TestContext
 
         var cut = RenderComponent<AchievementsPage>();
 
-        // Should display both earned and in-progress tiers by default
+        // Switch to Advanced view where tier cards are rendered
+        cut.WaitForAssertion(() => cut.Find(".view-toggle .btn-outline-secondary").Click());
+
+        // Should display both earned and in-progress tiers
         cut.WaitForAssertion(() => cut.FindAll(".tier-card").Count.Should().Be(2));
 
-        // Verify one is earned and one is in-progress
+        // Verify one is earned and one is locked (in-progress)
         var tierCards = cut.FindAll(".tier-card");
         tierCards.Count(c => c.ClassList.Contains("earned")).Should().Be(1);
-        tierCards.Count(c => !c.ClassList.Contains("earned")).Should().Be(1);
+        tierCards.Count(c => c.ClassList.Contains("locked")).Should().Be(1);
     }
 
     private sealed class FakeAuthService : IAuthService
