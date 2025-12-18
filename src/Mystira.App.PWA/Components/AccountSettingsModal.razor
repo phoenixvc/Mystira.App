@@ -20,9 +20,9 @@
                             <i class="fas fa-bell me-2"></i>
                             Warning Notifications
                         </h6>
-                        
+
                         <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="show_age_group_warning" 
+                            <input class="form-check-input" type="checkbox" id="show_age_group_warning"
                                    @bind="showAgeGroupWarning" />
                             <label class="form-check-label" for="show_age_group_warning">
                                 Show age group mismatch warning
@@ -32,14 +32,25 @@
                             </small>
                         </div>
 
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="show_replay_warning" 
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="show_replay_warning"
                                    @bind="showReplayWarning" />
                             <label class="form-check-label" for="show_replay_warning">
                                 Show already played warning
                             </label>
                             <small class="text-muted d-block mt-1">
                                 Notify me when a player has already played the selected adventure
+                            </small>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="show_guest_warning"
+                                   @bind="showGuestWarning" />
+                            <label class="form-check-label" for="show_guest_warning">
+                                Show guest session warning
+                            </label>
+                            <small class="text-muted d-block mt-1">
+                                Notify me when starting an adventure with only guest players
                             </small>
                         </div>
                     </div>
@@ -63,6 +74,7 @@
 
     private bool showAgeGroupWarning = true;
     private bool showReplayWarning = true;
+    private bool showGuestWarning = true;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -76,12 +88,14 @@
     {
         showAgeGroupWarning = await SettingsService.GetShowAgeGroupMismatchWarningAsync();
         showReplayWarning = await SettingsService.GetShowGameAlreadyPlayedWarningAsync();
+        showGuestWarning = await SettingsService.GetShowGuestWarningAsync();
     }
 
     private async Task SaveSettingsAsync()
     {
         await SettingsService.SetShowAgeGroupMismatchWarningAsync(showAgeGroupWarning);
         await SettingsService.SetShowGameAlreadyPlayedWarningAsync(showReplayWarning);
+        await SettingsService.SetShowGuestWarningAsync(showGuestWarning);
         await OnClose.InvokeAsync();
     }
 }
