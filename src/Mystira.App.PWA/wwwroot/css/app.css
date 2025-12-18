@@ -246,6 +246,36 @@ html, body {
     opacity: 1;
 }
 
+.modal-content {
+    background-color: var(--card, #fff);
+    color: var(--fg, #111827);
+    border-color: var(--border, rgba(0,0,0,.2));
+}
+
+.modal-header {
+    border-bottom-color: var(--border, rgba(0,0,0,.2));
+    background-color: transparent;
+}
+
+.modal-footer {
+    border-top-color: var(--border, rgba(0,0,0,.2));
+}
+
+.modal-title {
+    color: var(--fg, #111827);
+}
+
+/* Close button in dark mode */
+@media (prefers-color-scheme: dark) {
+    .modal-header .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+}
+
+html[data-theme="dark"] .modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
 /* Global Form Validation */
 .form-control.is-invalid {
     border-color: var(--danger-color);
@@ -681,6 +711,18 @@ hr, .border-top {
         border-color: #fbbf24;
         color: #fbbf24;
     }
+
+    .btn-outline-secondary {
+        color: #94a3b8;
+        border-color: #94a3b8;
+    }
+
+    .btn-outline-secondary:hover,
+    .btn-outline-secondary:focus {
+        background-color: rgba(148, 163, 184, 0.15);
+        border-color: #cbd5e1;
+        color: #cbd5e1;
+    }
 }
 
 html[data-theme="dark"] .btn-outline-danger {
@@ -729,6 +771,18 @@ html[data-theme="dark"] .btn-outline-warning:focus {
     background-color: rgba(245, 158, 11, 0.15);
     border-color: #fbbf24;
     color: #fbbf24;
+}
+
+html[data-theme="dark"] .btn-outline-secondary {
+    color: #94a3b8;
+    border-color: #94a3b8;
+}
+
+html[data-theme="dark"] .btn-outline-secondary:hover,
+html[data-theme="dark"] .btn-outline-secondary:focus {
+    background-color: rgba(148, 163, 184, 0.15);
+    border-color: #cbd5e1;
+    color: #cbd5e1;
 }
 
 /* Version indicator - subtle, you need to know to look for it */

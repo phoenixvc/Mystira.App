@@ -131,15 +131,15 @@
     font-size: 0.95rem;
     font-weight: 600;
     border-radius: 12px;
-    background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
+    background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
     border: none;
-    color: white;
+    color: white !important;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+    box-shadow: 0 4px 15px rgba(8, 145, 178, 0.3);
     position: relative;
     overflow: hidden;
 }
@@ -157,9 +157,9 @@
 
 .btn-continue-adventure:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
-    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-    color: white;
+    box-shadow: 0 6px 20px rgba(8, 145, 178, 0.4);
+    background: linear-gradient(135deg, #0e7490 0%, #155e75 100%);
+    color: white !important;
 }
 
 .btn-continue-adventure:hover::before {
@@ -178,6 +178,7 @@
 
 .btn-continue-adventure i {
     font-size: 1rem;
+    color: white !important;
 }
 
 /* Toggle Switch for Active Adventures */
@@ -288,21 +289,26 @@
         color: #f1f5f9;
     }
 
+    .active-adventure-status {
+        background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+    }
+
     .active-adventure-meta {
-        color: #94a3b8;
+        color: #e2e8f0;
     }
 
     .active-adventure-meta i {
-        color: #818cf8;
+        color: #c084fc;
     }
 
     .btn-continue-adventure {
-        background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
-        box-shadow: 0 4px 15px rgba(6, 182, 212, 0.25);
+        background: linear-gradient(135deg, #0891b2 0%, #155e75 100%);
+        box-shadow: 0 4px 15px rgba(8, 145, 178, 0.25);
     }
 
     .btn-continue-adventure:hover {
-        box-shadow: 0 6px 20px rgba(6, 182, 212, 0.35);
+        background: linear-gradient(135deg, #0e7490 0%, #164e63 100%);
+        box-shadow: 0 6px 20px rgba(8, 145, 178, 0.35);
     }
 
     .active-adventures-toggle .form-check-input {
@@ -311,7 +317,7 @@
     }
 
     .active-adventures-toggle .form-check-label {
-        color: #94a3b8;
+        color: #e2e8f0;
     }
 
     .section-title {
@@ -362,21 +368,26 @@ html[data-theme="dark"] .active-adventure-card .card-title {
     color: #f1f5f9;
 }
 
+html[data-theme="dark"] .active-adventure-status {
+    background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+}
+
 html[data-theme="dark"] .active-adventure-meta {
-    color: #94a3b8;
+    color: #e2e8f0;
 }
 
 html[data-theme="dark"] .active-adventure-meta i {
-    color: #818cf8;
+    color: #c084fc;
 }
 
 html[data-theme="dark"] .btn-continue-adventure {
-    background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
-    box-shadow: 0 4px 15px rgba(6, 182, 212, 0.25);
+    background: linear-gradient(135deg, #0891b2 0%, #155e75 100%);
+    box-shadow: 0 4px 15px rgba(8, 145, 178, 0.25);
 }
 
 html[data-theme="dark"] .btn-continue-adventure:hover {
-    box-shadow: 0 6px 20px rgba(6, 182, 212, 0.35);
+    background: linear-gradient(135deg, #0e7490 0%, #164e63 100%);
+    box-shadow: 0 6px 20px rgba(8, 145, 178, 0.35);
 }
 
 html[data-theme="dark"] .active-adventures-toggle .form-check-input {
@@ -385,7 +396,7 @@ html[data-theme="dark"] .active-adventures-toggle .form-check-input {
 }
 
 html[data-theme="dark"] .active-adventures-toggle .form-check-label {
-    color: #94a3b8;
+    color: #e2e8f0;
 }
 
 html[data-theme="dark"] .section-title {

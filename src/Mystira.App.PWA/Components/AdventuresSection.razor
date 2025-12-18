@@ -10,32 +10,6 @@
 @implements IDisposable
 
 <div class="container-fluid pb-4" id="adventures">
-    @* Game Session Content (shown when user has profiles and active game) *@
-    @if (isAuthenticated && hasProfiles && gameSession != null)
-    {
-        <div class="container-fluid py-4">
-            <div class="row">
-                <div class="col-12">
-                    <div class="d-flex align-items-center mb-4">
-                        <div class="me-4 flex-grow-1">
-                            <h2 class="text-primary-custom mb-1">
-                                Welcome "@(gameSession.PlayerNames.FirstOrDefault() ?? "Player")"! What adventures await us today?
-                            </h2>
-                        </div>
-                        <div class="avatar-placeholder">
-                            <CachedMystiraImage
-                                MediaId="placeholder-avatar-default"
-                                Alt="Player avatar"
-                                Width="60"
-                                Height="60"
-                                ImageClass="thumbnail-image" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-
     @* Filter & Bundles (hidden when not logged in) *@
     @if (isAuthenticated && !isLoading)
     {
@@ -231,8 +205,8 @@
                         <p>Would you like to continue your in-progress game now?</p>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-outline-secondary" @onclick="CancelInProgressSessionModal">Cancel</button>
-                        <button class="btn btn-primary" @onclick="ConfirmContinueInProgressSession">
+                        <button class="btn btn-secondary-custom" @onclick="CancelInProgressSessionModal">Cancel</button>
+                        <button class="btn btn-primary-custom" @onclick="ConfirmContinueInProgressSession">
                             <i class="fas fa-play me-2"></i>Continue
                         </button>
                     </div>
