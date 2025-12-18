@@ -291,7 +291,7 @@ else
                             <div class="d-flex flex-row flex-wrap gap-4 justify-content-center">
                                 @foreach (var badge in award.NewBadges)
                                 {
-                                    <div class="d-flex flex-column align-items-center gap-2 p-3 rounded badge-award-item" style="background-color:var(--secondary-bg); flex: 0 1 auto; max-width: 150px;">
+                                    <div class="d-flex flex-column align-items-center gap-2 p-3 rounded badge-award-item" style="background-color:#f8f9fa; flex: 0 1 auto; max-width: 150px;">
                                         @if (!string.IsNullOrWhiteSpace(badge.ImageId))
                                         {
                                             <img src="@ApiClient.GetBadgeImageUrl(badge.ImageId!)"

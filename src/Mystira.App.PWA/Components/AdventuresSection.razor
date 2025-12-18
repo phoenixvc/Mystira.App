@@ -205,8 +205,8 @@
                         <p>Would you like to continue your in-progress game now?</p>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn btn-secondary-custom" @onclick="CancelInProgressSessionModal">Cancel</button>
-                        <button class="btn btn-primary-custom" @onclick="ConfirmContinueInProgressSession">
+                        <button class="btn btn-outline-secondary" @onclick="CancelInProgressSessionModal">Cancel</button>
+                        <button class="btn btn-primary" @onclick="ConfirmContinueInProgressSession">
                             <i class="fas fa-play me-2"></i>Continue
                         </button>
                     </div>
@@ -254,7 +254,7 @@
 
     // Age group filter state
     private readonly HashSet<string> selectedAgeGroups = new();
-    private readonly string[] availableAgeGroups = { "1-2", "3-5", "6-9", "10-12", "13-18", "19-150" };
+    private readonly string[] availableAgeGroups = { "1-2", "3-5", "6-9", "10-12", "13-18", "19+" };
 
     // Computed property for catalog visibility logic
     private bool ShouldShowCatalog => !isAuthenticated || (isAuthenticated && hasProfiles);
