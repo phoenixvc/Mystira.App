@@ -1,4 +1,5 @@
 @page "/game"
+@using Mystira.App.PWA.Components
 
 <PageTitle>@GetPageTitle()</PageTitle>
 
@@ -85,28 +86,34 @@ else
                             <div class="media-container mb-4">
                                 @if (!string.IsNullOrEmpty(gameSession.CurrentScene.ImageUrl))
                                 {
-                                    <img src="@gameSession.CurrentScene.ImageUrl"
-                                         alt="Scene media"
-                                         @key="gameSession.CurrentScene.ImageUrl"
-                                         class="img-fluid rounded" />
+                                    <FantasyMediaFrame MediaKind="image" Color="#165668" Rounded="true" Pulse="true">
+                                        <img src="@gameSession.CurrentScene.ImageUrl"
+                                             alt="Scene media"
+                                             @key="gameSession.CurrentScene.ImageUrl"
+                                             class="img-fluid" />
+                                    </FantasyMediaFrame>
                                 }
                                 else if (!string.IsNullOrEmpty(gameSession.CurrentScene.VideoUrl))
                                 {
-                                    <video controls class="w-100 rounded" @key="gameSession.CurrentScene.VideoUrl">
-                                        <source src="@gameSession.CurrentScene.VideoUrl" type="video/mp4">
-                                        Your browser does not support the video tag.
-                                    </video>
+                                    <FantasyMediaFrame MediaKind="video" Color="#165668" Rounded="true" Pulse="true">
+                                        <video controls class="w-100" @key="gameSession.CurrentScene.VideoUrl">
+                                            <source src="@gameSession.CurrentScene.VideoUrl" type="video/mp4">
+                                            Your browser does not support the video tag.
+                                        </video>
+                                    </FantasyMediaFrame>
                                 }
 
                                 @if (!string.IsNullOrEmpty(gameSession.CurrentScene.AudioUrl))
                                 {
-                                    <div class="p-4 bg-dark rounded text-center">
-                                        <i class="fas fa-music fa-2x text-white mb-3"></i>
-                                        <audio controls class="w-100" @key="gameSession.CurrentScene.AudioUrl">
-                                            <source src="@gameSession.CurrentScene.AudioUrl" type="audio/mpeg">
-                                            Your browser does not support the audio element.
-                                        </audio>
-                                    </div>
+                                    <FantasyMediaFrame MediaKind="audio" Color="#165668" Rounded="true" Pulse="true">
+                                        <div class="p-4 bg-dark text-center">
+                                            <i class="fas fa-music fa-2x text-white mb-3"></i>
+                                            <audio controls class="w-100" @key="gameSession.CurrentScene.AudioUrl">
+                                                <source src="@gameSession.CurrentScene.AudioUrl" type="audio/mpeg">
+                                                Your browser does not support the audio element.
+                                            </audio>
+                                        </div>
+                                    </FantasyMediaFrame>
                                 }
                             </div>
                         }

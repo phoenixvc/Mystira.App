@@ -1,0 +1,55 @@
+﻿@namespace Mystira.App.PWA.Components
+
+<div class="fantasy-frame @(Rounded ? "rounded" : string.Empty) @(Pulse ? "pulse" : string.Empty) kind-@MediaKind"
+     style="--frame-color: @Color">
+    <div class="fantasy-frame-inner">
+        @ChildContent
+    </div>
+
+    <!-- Decorative SVG overlay (filigree/vines) -->
+    <svg class="fantasy-frame-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <!-- Corner ornaments -->
+        <g stroke="var(--frame-color)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <!-- TL vine -->
+            <path d="M5,25 C10,8 22,6 35,5 M8,18 C13,22 18,24 24,24" />
+            <!-- TR vine -->
+            <path d="M95,25 C90,8 78,6 65,5 M92,18 C87,22 82,24 76,24" />
+            <!-- BL vine -->
+            <path d="M5,75 C10,92 22,94 35,95 M8,82 C13,78 18,76 24,76" />
+            <!-- BR vine -->
+            <path d="M95,75 C90,92 78,94 65,95 M92,82 C87,78 82,76 76,76" />
+            <!-- Subtle side filigree -->
+            <path d="M50,2 C52,8 52,92 50,98" opacity="0.5" />
+        </g>
+
+        <!-- Soft glow -->
+        <defs>
+            <filter id="glow">
+                <feGaussianBlur stdDeviation="1.5" result="coloredBlur" />
+                <feMerge>
+                    <feMergeNode in="coloredBlur" />
+                    <feMergeNode in="SourceGraphic" />
+                </feMerge>
+            </filter>
+        </defs>
+        <rect x="2" y="2" width="96" height="96" rx="@(Rounded ? 8 : 0)" ry="@(Rounded ? 8 : 0)"
+              stroke="var(--frame-color)" stroke-width="1.5" fill="none" filter="url(#glow)" />
+    </svg>
+</div>
+
+@code {
+    [Parameter]
+    public string MediaKind { get; set; } = "image"; // image | video | audio
+
+    [Parameter]
+    public string Color { get; set; } = "#165668";
+
+    [Parameter]
+    public bool Rounded { get; set; } = true;
+
+    [Parameter]
+    public bool Pulse { get; set; } = true;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}
