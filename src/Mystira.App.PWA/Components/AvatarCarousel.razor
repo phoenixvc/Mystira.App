@@ -86,20 +86,20 @@
                     }
 
                     <!-- Action Buttons -->
-                    <div class="d-flex w-100 gap-2">
-                        <button class="btn btn-outline-secondary w-50"
+                    <div class="d-flex w-100 gap-2 flex-nowrap">
+                        <button class="btn btn-outline-secondary flex-grow-1"
                                 type="button"
                                 @onclick="CancelSelection">
-                            <i class="fas fa-times me-2"></i>
+                            <i class="fas fa-times me-2 d-none d-sm-inline"></i>
                             Cancel
                         </button>
 
-                        <button class="btn btn-primary-custom w-50"
+                        <button class="btn btn-primary-custom flex-grow-1"
                                 type="button"
                                 @onclick="ConfirmSelection"
                                 disabled="@(string.IsNullOrEmpty(currentAvatarMediaId))">
-                            <i class="fas fa-check me-2"></i>
-                            Select This Avatar
+                            <i class="fas fa-check me-2 d-none d-sm-inline"></i>
+                            Select Avatar
                         </button>
                     </div>
                 </div>

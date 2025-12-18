@@ -94,6 +94,22 @@ jobs:
       - name: Build Blazor WASM
         run: dotnet publish src/Mystira.App.PWA/Mystira.App.PWA.csproj -c Release -o publish
 
+      - name: Update version.json
+        run: |
+          VERSION="1.0.${{ github.run_number }}"
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          COMMIT_SHA="${{ github.sha }}"
+          cat > publish/wwwroot/version.json << EOF
+          {
+            "version": "${VERSION}",
+            "buildDate": "${BUILD_DATE}",
+            "commitSha": "${COMMIT_SHA:0:7}",
+            "releaseNotes": "Build #${{ github.run_number }} (Staging) from ${COMMIT_SHA:0:7}"
+          }
+          EOF
+          echo "✓ Updated version.json to version ${VERSION}"
+          cat publish/wwwroot/version.json
+
       - name: Configure Environment Header for Staging
         run: |
           echo "Setting Blazor-Environment header to Staging..."

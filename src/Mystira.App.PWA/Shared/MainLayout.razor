@@ -333,21 +333,28 @@
 
     // Version display - subtle, you need to know to look for it
     async function loadAppVersion() {
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         try {
             const response = await fetch('./version.json?t=' + Date.now(), { cache: 'no-store' });
             if (response.ok) {
                 const data = await response.json();
                 const versionEl = document.getElementById('app-version');
                 if (versionEl) {
-                    versionEl.textContent = 'v' + data.version;
-                    versionEl.title = `Build: ${data.version}\nDate: ${new Date(data.buildDate).toLocaleDateString()}\nCommit: ${data.commitSha || 'dev'}`;
+                    // For local development, if version is 1.0.0, show it as 1.0.0-dev
+                    let displayVersion = data.version;
+                    if (isLocal && displayVersion === '1.0.0') {
+                        displayVersion = '1.0.0-dev';
+                    }
+
+                    versionEl.textContent = 'v' + displayVersion;
+                    versionEl.title = `Build: ${data.version}\nDate: ${new Date(data.buildDate).toLocaleString()}\nCommit: ${data.commitSha || 'dev'}`;
                     versionEl.style.cursor = 'help';
                 }
             }
         } catch (e) {
             // Silently fail - version display is non-critical
             const versionEl = document.getElementById('app-version');
-            if (versionEl) versionEl.textContent = 'v1.0.0';
+            if (versionEl) versionEl.textContent = isLocal ? 'v1.0.0-dev' : 'v1.0.0';
         }
     }
 
