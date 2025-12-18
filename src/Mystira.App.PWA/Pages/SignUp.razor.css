@@ -33,7 +33,7 @@
 }
 
 /* Dark mode styles via media query */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     ::deep .card.shadow-lg {
         background: linear-gradient(135deg, #1e1b4b 0%, #14122b 100%);
         border-color: rgba(99, 102, 241, 0.2);
@@ -169,4 +169,5 @@ html[data-theme="light"] .verification-code-input {
     color: #111827;
     border-color: rgba(17, 24, 39, 0.08);
 }
+
 

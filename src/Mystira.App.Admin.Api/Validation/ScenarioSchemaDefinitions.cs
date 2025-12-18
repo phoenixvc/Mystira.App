@@ -33,7 +33,7 @@ public static class ScenarioSchemaDefinitions
     },
     "difficulty": { "type": "string", "enum": ["Easy", "Medium", "Hard"], "description": "Story difficulty level" },
     "session_length": { "type": "string", "enum": ["Short", "Medium", "Long"], "description": "Expected session duration" },
-    "age_group": { "type": "string", "enum": ["1-2", "3-5", "6-9", "10-12", "13-18", "19+"], "description": "Target age group" },
+    "age_group": { "type": "string", "enum": ["1-2", "3-5", "6-9", "10-12", "13-18", "19-150"], "description": "Target age group" },
     "minimum_age": { "type": "integer", "enum": [1, 3, 6, 10, 13], "description": "Minimum recommended age (controls allowed age_group bands)" },
     "core_axes": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Core story themes/axes" },
     "archetypes": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Character archetypes present in the story" },
@@ -197,24 +197,24 @@ public static class ScenarioSchemaDefinitions
   "allOf": [
     {
       "if": { "properties": { "minimum_age": { "const": 1 } } },
-      "then": { "properties": { "age_group": { "enum": ["1-2", "3-5", "6-9", "10-12", "13-18", "19+"] } } }
-    },
-    {
+      "then": { "properties": { "age_group": { "enum": ["1-2", "3-5", "6-9", "10-12", "13-18", "19-150"] } } }
+  },
+  {
       "if": { "properties": { "minimum_age": { "const": 3 } } },
-      "then": { "properties": { "age_group": { "enum": ["3-5", "6-9", "10-12", "13-18", "19+"] } } }
-    },
-    {
+      "then": { "properties": { "age_group": { "enum": ["3-5", "6-9", "10-12", "13-18", "19-150"] } } }
+  },
+  {
       "if": { "properties": { "minimum_age": { "const": 6 } } },
-      "then": { "properties": { "age_group": { "enum": ["6-9", "10-12", "13-18", "19+"] } } }
-    },
-    {
+      "then": { "properties": { "age_group": { "enum": ["6-9", "10-12", "13-18", "19-150"] } } }
+  },
+  {
       "if": { "properties": { "minimum_age": { "const": 10 } } },
-      "then": { "properties": { "age_group": { "enum": ["10-12", "13-18", "19+"] } } }
-    },
-    {
+      "then": { "properties": { "age_group": { "enum": ["10-12", "13-18", "19-150"] } } }
+  },
+  {
       "if": { "properties": { "minimum_age": { "const": 13 } } },
-      "then": { "properties": { "age_group": { "enum": ["13-18", "19+"] } } }
-    }
+      "then": { "properties": { "age_group": { "enum": ["13-18", "19-150"] } } }
+  }
   ]
 }
 """;

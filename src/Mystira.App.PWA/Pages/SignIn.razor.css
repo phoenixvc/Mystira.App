@@ -19,7 +19,7 @@
 }
 
 /* Dark mode via media query or data attribute */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     :root {
         --auth-card-bg: linear-gradient(135deg, #1e1b4b 0%, #14122b 100%);
         --auth-card-border: rgba(99, 102, 241, 0.2);
@@ -228,3 +228,4 @@ html[data-theme="dark"] {
     user-select: none;
     margin-bottom: 0;
 }
+

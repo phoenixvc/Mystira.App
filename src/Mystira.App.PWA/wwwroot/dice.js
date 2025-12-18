@@ -16,6 +16,7 @@ window.diceHaptics = {
 
 window.diceTheme = {
     set: function (isDark) {
-        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        // Always force light mode
+        document.documentElement.setAttribute('data-theme', 'light');
     }
 };

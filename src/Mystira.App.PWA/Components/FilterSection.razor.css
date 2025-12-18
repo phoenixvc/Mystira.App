@@ -499,7 +499,7 @@ button:focus-visible {
 }
 
 /* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     .filter-card {
         background: linear-gradient(135deg, #14122b 0%, #1e1b4b 100%);
         border-color: rgba(99, 102, 241, 0.2);
@@ -865,3 +865,4 @@ html[data-theme="light"] .btn-sm:not(.btn-primary-custom):hover {
     border-color: #8B5CF6;
     color: #8B5CF6;
 }
+

@@ -250,7 +250,7 @@
 }
 
 /* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     .adventure-card {
         background: linear-gradient(135deg, #1e1b4b 0%, #14122b 100%);
         border-color: rgba(99, 102, 241, 0.2);
@@ -438,3 +438,4 @@ html[data-theme="light"] .adventure-card-description {
 html[data-theme="light"] .adventure-card-footer {
     border-top-color: var(--border, rgba(17,24,39,0.08));
 }
+
