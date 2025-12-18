@@ -27,7 +27,7 @@
 }
 else
 {
-    <div class="container-fluid py-4">
+    <div class="container-fluid py-4 game-session-page-container">
         <div class="row">
             <div class="col-12">
                 <div class="game-session-header">
@@ -68,15 +68,6 @@ else
             <div class="row justify-content-center">
                 <div class="col-lg-8">
                     <div class="scene-content">
-
-                        @* In-session notice: some assigned players are out of the scenario's age group *@
-                        @if (outOfAgeAssignedPlayers.Count > 0)
-                        {
-                            <div class="alert alert-warning small" role="alert">
-                                <div class="fw-semibold mb-1">Won't be scored for this adventure:</div>
-                                <div class="mb-0">@string.Join(", ", outOfAgeAssignedPlayers) — they aren’t in the right age group for this adventure, so it won’t be scored for them.</div>
-                            </div>
-                        }
 
                         <!-- Media Display -->
                         @if (!string.IsNullOrEmpty(gameSession.CurrentScene.ImageUrl) ||

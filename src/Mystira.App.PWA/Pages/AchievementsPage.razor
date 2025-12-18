@@ -57,24 +57,65 @@
     {
         @if (isSelectingProfile && profiles.Count > 1)
         {
-            <div class="row g-3 profile-grid mb-4">
+            <div class="row g-4 profile-grid mb-4">
                 @foreach (var p in profiles)
                 {
-                    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                        <div class="card profile-card h-100" @onclick="(() => OnProfileCardClicked(p))">
-                            <div class="card-body d-flex flex-column align-items-center text-center">
-                                <div class="profile-icon mb-3">
-                                    @if (!string.IsNullOrEmpty(p.SelectedAvatarMediaId))
-                                    {
-                                        <CachedMystiraImage MediaId="@p.SelectedAvatarMediaId" Alt="@($"{p.Name} avatar")" ImageClass="profile-avatar-image" />
-                                    }
-                                    else
-                                    {
-                                        <i class="fas fa-user-circle"></i>
-                                    }
-                                </div>
-                                <div class="profile-title">@p.Name</div>
-                                <div class="text-muted small">@AgeRanges.GetDisplayName(p.AgeGroup ?? model?.AgeGroupId ?? "")</div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="profile-card h-100" @onclick="(() => OnProfileCardClicked(p))">
+                            <!-- Avatar Section -->
+                            <div class="profile-avatar-section">
+                                @if (!string.IsNullOrEmpty(p.SelectedAvatarMediaId))
+                                {
+                                    <div class="profile-avatar-wrapper">
+                                        <CachedMystiraImage
+                                            MediaId="@p.SelectedAvatarMediaId"
+                                            Alt="@($"{p.Name} avatar")"
+                                            ImageClass="profile-avatar-image" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="profile-avatar-wrapper profile-avatar-placeholder">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                }
+                                @if (p.IsGuest)
+                                {
+                                    <span class="guest-badge" title="Guest Profile">
+                                        <i class="fas fa-user-clock"></i>
+                                    </span>
+                                }
+
+                                <!-- Latest Badges Overlay/Below Avatar -->
+                                @{
+                                    var latestBadges = GetLatestBadges(p.Id);
+                                }
+                                @if (latestBadges.Any())
+                                {
+                                    <div class="profile-latest-badges">
+                                        @foreach (var badge in latestBadges)
+                                        {
+                                            <div class="mini-badge" title="@badge.Title">
+                                                @if (!string.IsNullOrEmpty(badge.ImageUrl))
+                                                {
+                                                    <img src="@badge.ImageUrl" alt="@badge.Title" />
+                                                }
+                                                else
+                                                {
+                                                    <i class="fas fa-medal"></i>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Profile Info -->
+                            <div class="profile-info">
+                                <h5 class="profile-name">@p.Name</h5>
+                                <span class="profile-age-badge" title="Age Range">
+                                    <i class="fas fa-birthday-cake me-1"></i>@GetAgeRangeDisplay(p.AgeGroup)
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -328,6 +369,8 @@
     private ViewMode viewMode = ViewMode.Simplified;
     private BadgeTierViewModel? modalTier;
 
+    private Dictionary<string, AchievementsViewModel> profileAchievements = new();
+
     private readonly AchievementsFilterOptions filterOptions = new() { ShowEarned = true, ShowInProgress = true };
 
     protected override async Task OnInitializedAsync()
@@ -340,6 +383,7 @@
         isLoading = true;
         errorMessage = null;
         model = null;
+        profileAchievements.Clear();
 
         try
         {
@@ -373,6 +417,15 @@
             else
             {
                 isSelectingProfile = true;
+                // Pre-load achievements for all profiles to show latest badges on the selection screen
+                foreach (var p in profiles)
+                {
+                    var res = await AchievementsService.GetAchievementsAsync(p);
+                    if (res.IsSuccess && res.Data != null)
+                    {
+                        profileAchievements[p.Id] = res.Data;
+                    }
+                }
             }
         }
         catch (Exception ex)
@@ -442,6 +495,39 @@
     private void ResetFilters() { }
 
     private void SetViewMode(ViewMode mode) => viewMode = mode;
+
+    private List<BadgeTierViewModel> GetLatestBadges(string profileId, int count = 3)
+    {
+        if (!profileAchievements.TryGetValue(profileId, out var achModel))
+        {
+            return new List<BadgeTierViewModel>();
+        }
+
+        return achModel.Axes
+            .SelectMany(a => a.Tiers)
+            .Where(t => t.IsEarned)
+            .OrderByDescending(t => t.EarnedAt ?? DateTime.MinValue)
+            .Take(count)
+            .ToList();
+    }
+
+    private string GetAgeRangeDisplay(string? ageGroup)
+    {
+        return ageGroup switch
+        {
+            "1-2" => "Ages 1-2",
+            "3-5" => "Ages 3-5",
+            "6-9" => "Ages 6-9",
+            "10-12" => "Ages 10-12",
+            "13-18" => "Ages 13-18",
+            _ => "Age group not specified"
+        };
+    }
+
+    private string FormatDate(DateTime? date)
+    {
+        return date?.ToString("MMM d, yyyy") ?? "Unknown";
+    }
 
     private void OpenTierModal(BadgeTierViewModel tier)
     {
