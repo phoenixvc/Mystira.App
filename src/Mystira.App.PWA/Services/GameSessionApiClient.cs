@@ -411,6 +411,47 @@ public class GameSessionApiClient : BaseApiClient, IGameSessionApiClient
         }
     }
 
+    public async Task<List<GameSession>?> GetSessionsByProfileAsync(string profileId)
+    {
+        try
+        {
+            Logger.LogInformation("Fetching sessions for profile: {ProfileId}", profileId);
+
+            // Set authorization header - required for the [Authorize] attribute on the API endpoint
+            await SetAuthorizationHeaderAsync();
+            var response = await HttpClient.GetAsync($"api/gamesessions/profile/{profileId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var sessions = await response.Content.ReadFromJsonAsync<List<GameSession>>(JsonOptions);
+                Logger.LogInformation("Successfully fetched {Count} sessions for profile: {ProfileId}",
+                    sessions?.Count ?? 0, profileId);
+                return sessions;
+            }
+            else
+            {
+                Logger.LogWarning("Failed to fetch sessions with status: {StatusCode} for profile: {ProfileId}",
+                    response.StatusCode, profileId);
+                return null;
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Network error fetching sessions for profile: {ProfileId}", profileId);
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Logger.LogError(ex, "Request timed out fetching sessions for profile: {ProfileId}", profileId);
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            Logger.LogError(ex, "Error parsing API response when fetching sessions for profile: {ProfileId}", profileId);
+            return null;
+        }
+    }
+
     public async Task<List<GameSession>?> GetInProgressSessionsAsync(string accountId)
     {
         try
