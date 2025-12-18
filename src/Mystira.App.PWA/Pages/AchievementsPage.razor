@@ -589,7 +589,7 @@
 
         return ageGroupId switch
         {
-            "19+" => "age-group-19plus",
+            "19-150" => "age-group-19plus",
             _ => $"age-group-{ageGroupId.Replace("+", "plus")}".Replace(" ", "")
         };
     }

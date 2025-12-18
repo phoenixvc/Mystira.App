@@ -8,7 +8,7 @@ public static class AgeGroupConstants
     /// <summary>
     /// Array of all valid age group strings
     /// </summary>
-    public static readonly string[] AllAgeGroups = ["1-2", "3-5", "6-9", "10-12", "13-18", "19+"];
+    public static readonly string[] AllAgeGroups = ["1-2", "3-5", "6-9", "10-12", "13-18", "19-150"];
 
     /// <summary>
     /// Mapping of minimum ages to their corresponding age group strings
@@ -20,7 +20,7 @@ public static class AgeGroupConstants
         { 6, "6-9" },
         { 10, "10-12" },
         { 13, "13-18" },
-        { 19, "19+" }
+        { 19, "19-150" }
     };
 
     /// <summary>
@@ -46,12 +46,12 @@ public static class AgeGroupConstants
     {
         return ageGroup switch
         {
-            "1-2" => "Ages 1-2 (Toddlers)",
-            "3-5" => "Ages 3-5 (Preschoolers)",
-            "6-9" => "Ages 6-9 (School Age)",
-            "10-12" => "Ages 10-12 (Preteens)",
-            "13-18" => "Ages 13-18 (Teens)",
-            "19+" => "Ages 19+ (Adults)",
+            "1-2" => "Ages 1-2",
+            "3-5" => "Ages 3-5",
+            "6-9" => "Ages 6-9",
+            "10-12" => "Ages 10-12",
+            "13-18" => "Ages 13-18",
+            "19-150" => "Ages 19+",
             _ => ageGroup
         };
     }

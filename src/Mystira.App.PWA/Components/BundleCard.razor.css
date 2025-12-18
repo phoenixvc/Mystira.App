@@ -252,7 +252,7 @@
 }
 
 /* System dark mode support */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     .bundle-card {
         background: #14122b;
         border-color: #2d2a5e;
@@ -530,3 +530,4 @@ html[data-theme="dark"] .pill-free:hover {
     background: linear-gradient(135deg, rgba(16, 185, 129, 1) 0%, rgba(5, 150, 105, 1) 100%);
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
+

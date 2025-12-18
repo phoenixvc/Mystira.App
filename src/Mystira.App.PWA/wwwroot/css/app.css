@@ -35,7 +35,7 @@
 }
 
 /* Dark mode using prefers-color-scheme */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     :root {
         --bg: #0f172a;
         --fg: #f1f5f9;
@@ -266,7 +266,7 @@ html, body {
 }
 
 /* Close button in dark mode */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     .modal-header .btn-close {
         filter: invert(1) grayscale(100%) brightness(200%);
     }
@@ -663,7 +663,7 @@ hr, .border-top {
 }
 
 /* Outline Button Styles for Dark Mode */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     .btn-outline-danger {
         color: #fca5a5;
         border-color: #fca5a5;
@@ -832,7 +832,7 @@ input[type="checkbox"]#rememberMe:hover {
 #rememberMe { accent-color: #000; }
 
 /* Dark mode: make the checkbox border and checkmark white for visibility */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     #rememberMe.form-check-input,
     input[type="checkbox"]#rememberMe {
         appearance: auto !important;
@@ -960,7 +960,7 @@ html[data-theme="dark"] #rememberMe { accent-color: #fff; }
 }
 
 /* Dark theme variants */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     .form-check label.form-check-label[for="rememberMe"]::before {
         border-color: #fff;
         background: transparent;
@@ -1001,3 +1001,4 @@ html[data-theme="dark"] .form-check #rememberMe:focus + label.form-check-label::
         border-color: CanvasText;
     }
 }
+

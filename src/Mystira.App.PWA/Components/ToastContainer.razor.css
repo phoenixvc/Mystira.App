@@ -155,7 +155,7 @@
 }
 
 /* Dark mode adjustments */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     .toast {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     }
@@ -164,3 +164,4 @@
 html[data-theme="dark"] .toast {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
+
