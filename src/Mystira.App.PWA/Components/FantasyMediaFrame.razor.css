@@ -15,13 +15,17 @@
 }
 
 /* SVG overlay positioned above content (non-interactive) */
-.fantasy-frame .fantasy-frame-svg {
+/* Use external SVG as the frame border overlay */
+.fantasy-frame::after {
+  content: "";
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
   pointer-events: none;
-  overflow: visible; /* allow border to render slightly outside without covering media */
+  background-image: url('/images/gamesession-media-border.svg');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: center center;
+  z-index: 1;
 }
 
 /* Remove previous glow/border effects to keep a thin, simple border solely from the SVG */
