@@ -1,0 +1,30 @@
+.settings-section {
+    padding: 0.5rem 0;
+}
+
+.settings-title {
+    font-weight: 600;
+    color: var(--bs-body-color);
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+
+.form-check {
+    margin-bottom: 1rem;
+    padding: 0.5rem 0;
+}
+
+.form-check-label {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    color: var(--bs-body-color);
+}
+
+.form-check-input {
+    margin-top: 0.3rem;
+}
+
+.form-check-input:checked {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+}

@@ -101,6 +101,10 @@
                                     </h6>
                                     <div class="dropdown-divider"></div>
                                     <AccountInstallOption />
+                                    <button class="dropdown-item" @onclick="OpenSettingsAsync">
+                                        <i class="fas fa-cog me-2"></i>
+                                        Settings
+                                    </button>
                                     <div class="dropdown-divider"></div>
                                     <button class="dropdown-item" @onclick="SignOutAsync">
                                         <i class="fas fa-sign-out-alt me-2"></i>
@@ -162,17 +166,22 @@
 
     <!-- Environment Indicator (shows for non-production environments) -->
     <EnvironmentIndicator />
+
+    <!-- Account Settings Modal -->
+    <AccountSettingsModal ShowModal="isSettingsModalOpen" OnClose="CloseSettingsAsync" />
 </div>
 
 @code {
     [Inject] private IGameSessionService GameSessionService { get; set; } = default!;
     [Inject] private IAuthService AuthService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ISettingsService SettingsService { get; set; } = default!;
 
     private GameSession? CurrentGameSession { get; set; }
     private Account? CurrentAccount { get; set; }
     private bool isAuthenticated;
     private bool isProfileMenuOpen;
+    private bool isSettingsModalOpen;
     private ElementReference profileMenuElement;
     private IJSObjectReference? outsideClickHandler;
 
@@ -251,6 +260,19 @@
         }
 
         isProfileMenuOpen = !isProfileMenuOpen;
+    }
+
+    private async Task OpenSettingsAsync()
+    {
+        isSettingsModalOpen = true;
+        isProfileMenuOpen = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CloseSettingsAsync()
+    {
+        isSettingsModalOpen = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task SignOutAsync()
