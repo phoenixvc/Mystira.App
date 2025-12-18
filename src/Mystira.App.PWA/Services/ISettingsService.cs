@@ -6,4 +6,6 @@ public interface ISettingsService
     Task SetShowAgeGroupMismatchWarningAsync(bool value);
     Task<bool> GetShowGameAlreadyPlayedWarningAsync();
     Task SetShowGameAlreadyPlayedWarningAsync(bool value);
+    Task<bool> GetShowGuestWarningAsync();
+    Task SetShowGuestWarningAsync(bool value);
 }

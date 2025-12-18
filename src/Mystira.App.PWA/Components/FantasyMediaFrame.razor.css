@@ -3,8 +3,7 @@
   --frame-color: #165668;
 }
 
-.fantasy-frame.rounded .fantasy-frame-inner,
-.fantasy-frame.rounded::after {
+.fantasy-frame.rounded .fantasy-frame-inner {
   border-radius: 12px;
 }
 
@@ -15,20 +14,15 @@
 }
 
 /* SVG overlay positioned above content (non-interactive) */
-/* Use external SVG as the frame border overlay */
-.fantasy-frame::after {
-  content: "";
+.fantasy-frame-svg {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  background-image: url('/images/gamesession-media-border.svg');
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  background-position: center center;
-  z-index: 1;
+  overflow: visible; /* Allow border to sit outside the container */
+  z-index: 2;
 }
-
-/* Remove previous glow/border effects to keep a thin, simple border solely from the SVG */
 
 /* Kind-specific paddings (audio gets more padding for controls) */
 .fantasy-frame.kind-audio .fantasy-frame-inner {
