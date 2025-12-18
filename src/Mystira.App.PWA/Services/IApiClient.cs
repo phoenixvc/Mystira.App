@@ -32,6 +32,7 @@ public interface IApiClient
         double? compassDelta = null);
 
     Task<List<GameSession>?> GetSessionsByAccountAsync(string accountId);
+    Task<List<GameSession>?> GetSessionsByProfileAsync(string profileId);
     Task<Account?> GetAccountByEmailAsync(string email);
 
     // Character endpoints

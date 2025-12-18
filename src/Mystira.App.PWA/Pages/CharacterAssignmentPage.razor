@@ -557,6 +557,10 @@ else
                     }
                 </div>
                 <div class="modal-footer">
+                    @* Cancel is specifically requested for toddler (1-2) assignment flow *@
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CancelToddlerAssignment">
+                        Cancel
+                    </button>
                     <button type="button" class="btn btn-primary" @onclick="ConfirmInitialAssignment" disabled="@(!CanConfirmInitialAssignment())">
                         Assign to All
                     </button>
@@ -599,6 +603,9 @@ else
     private bool ageGroupDontShowAgain = false;
     private bool dontShowGuestWarning = false;
     private List<string> mismatchedProfileNames = new();
+    private bool showReplayWarningModal = false;
+    private bool replayDontShowAgain = false;
+    private List<string> replayingProfileNames = new();
 
     // Mode helpers
     private bool IsToddlerScenario => assignmentData?.Scenario?.AgeGroup == "1-2";
@@ -644,6 +651,34 @@ else
         {
             characterAssignments = assignmentData.CharacterAssignments;
             availableProfiles = assignmentData.AvailableProfiles;
+        }
+    }
+
+    private async Task CancelToddlerAssignment()
+    {
+        try
+        {
+            // Stop any playing audio preview
+            if (!string.IsNullOrEmpty(isPlayingAudio) && audioModule is not null)
+            {
+                try
+                {
+                    await audioModule.InvokeVoidAsync("stopAudio");
+                    isPlayingAudio = null;
+                }
+                catch { /* best-effort */ }
+            }
+
+            // Close the initial prompt and navigate back to the previous hub/home
+            showInitialAssignmentPrompt = false;
+            StateHasChanged();
+            GoBack();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during CancelToddlerAssignment");
+            // Fallback navigation to ensure user isn't stuck
+            GoBack();
         }
     }
 
@@ -1041,6 +1076,14 @@ else
             if (HasAgeGroupMismatch() && !await ShouldSkipAgeGroupWarningAsync())
             {
                 showAgeGroupWarningModal = true;
+                StateHasChanged();
+                return;
+            }
+
+            // Check for replays
+            if (await HasReplayMismatchAsync() && !await ShouldSkipReplayWarningAsync())
+            {
+                showReplayWarningModal = true;
                 StateHasChanged();
                 return;
             }
@@ -1540,5 +1583,80 @@ else
         }
         StateHasChanged();
         Logger.LogInformation("Filled {Count} unassigned characters with AI players", UnassignedCount);
+    }
+
+    private async Task<bool> HasReplayMismatchAsync()
+    {
+        replayingProfileNames.Clear();
+
+        var assignedProfileIds = characterAssignments
+            .Where(ca => !ca.IsUnused && ca.PlayerAssignment?.Type == "Profile" && !string.IsNullOrEmpty(ca.PlayerAssignment.ProfileId))
+            .Select(ca => ca.PlayerAssignment!.ProfileId!)
+            .Distinct()
+            .ToList();
+
+        if (!assignedProfileIds.Any()) return false;
+
+        foreach (var profileId in assignedProfileIds)
+        {
+            var sessions = await ApiClient.GetSessionsByProfileAsync(profileId);
+            // Check if any completed session exists for this scenario
+            if (sessions != null && sessions.Any(s => s.ScenarioId == ScenarioId && s.IsCompleted))
+            {
+                var profile = availableProfiles.FirstOrDefault(p => p.Id == profileId);
+                if (profile != null)
+                {
+                    replayingProfileNames.Add(profile.Name);
+                }
+            }
+        }
+
+        return replayingProfileNames.Any();
+    }
+
+    private string GetReplayWarningSkipStorageKey()
+    {
+        return $"mystira_skip_replay_warning_{ScenarioId}";
+    }
+
+    private async Task<bool> ShouldSkipReplayWarningAsync()
+    {
+        try
+        {
+            var val = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", GetReplayWarningSkipStorageKey());
+            return string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Failed to read replay warning flag from localStorage");
+            return false;
+        }
+    }
+
+    private async Task PersistSkipReplayWarningIfNeededAsync()
+    {
+        if (!replayDontShowAgain) return;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", GetReplayWarningSkipStorageKey(), "true");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Failed to persist replay warning flag to localStorage");
+        }
+    }
+
+    private async Task ContinueAfterReplayWarning()
+    {
+        showReplayWarningModal = false;
+        await PersistSkipReplayWarningIfNeededAsync();
+        await ContinueWithGameSession();
+    }
+
+    private void CancelReplayWarning()
+    {
+        showReplayWarningModal = false;
+        replayDontShowAgain = false; // reset checkbox
+        StateHasChanged();
     }
 }
