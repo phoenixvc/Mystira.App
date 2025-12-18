@@ -70,21 +70,33 @@ else
                     <div class="scene-content">
 
                         <!-- Media Display -->
-                        @if (!string.IsNullOrEmpty(gameSession.CurrentScene.ImageUrl) ||
-                             !string.IsNullOrEmpty(gameSession.CurrentScene.VideoUrl) ||
-                             !string.IsNullOrEmpty(gameSession.CurrentScene.AudioUrl))
+                        @if (!string.IsNullOrWhiteSpace(gameSession.CurrentScene.ImageUrl) ||
+                             !string.IsNullOrWhiteSpace(gameSession.CurrentScene.VideoUrl) ||
+                             !string.IsNullOrWhiteSpace(gameSession.CurrentScene.AudioUrl))
                         {
                             <div class="media-container mb-4">
-                                @if (!string.IsNullOrEmpty(gameSession.CurrentScene.ImageUrl))
+                                @if (!string.IsNullOrWhiteSpace(gameSession.CurrentScene.ImageUrl))
                                 {
                                     <FantasyMediaFrame MediaKind="image" Color="#165668" Rounded="true" Pulse="true">
-                                        <img src="@gameSession.CurrentScene.ImageUrl"
-                                             alt="Scene media"
-                                             @key="gameSession.CurrentScene.ImageUrl"
-                                             class="img-fluid" />
+                                        <div class="image-overlay-container">
+                                            <img src="@gameSession.CurrentScene.ImageUrl"
+                                                 alt="Scene media"
+                                                 @key="gameSession.CurrentScene.ImageUrl"
+                                                 class="img-fluid" />
+
+                                            @if (!string.IsNullOrWhiteSpace(gameSession.CurrentScene.AudioUrl))
+                                            {
+                                                <button type="button"
+                                                        class="btn-audio-overlay @(isPlayingAudio == gameSession.CurrentScene.AudioUrl ? "playing" : "")"
+                                                        @onclick="() => PlayAudio(gameSession.CurrentScene.AudioUrl)"
+                                                        title="@(isPlayingAudio == gameSession.CurrentScene.AudioUrl ? "Stop audio" : "Play audio")">
+                                                    <i class="fa-solid @(isPlayingAudio == gameSession.CurrentScene.AudioUrl ? "fa-pause" : "fa-volume-high")"></i>
+                                                </button>
+                                            }
+                                        </div>
                                     </FantasyMediaFrame>
                                 }
-                                else if (!string.IsNullOrEmpty(gameSession.CurrentScene.VideoUrl))
+                                else if (!string.IsNullOrWhiteSpace(gameSession.CurrentScene.VideoUrl))
                                 {
                                     <FantasyMediaFrame MediaKind="video" Color="#165668" Rounded="true" Pulse="true">
                                         <video controls class="w-100" @key="gameSession.CurrentScene.VideoUrl">
@@ -94,7 +106,9 @@ else
                                     </FantasyMediaFrame>
                                 }
 
-                                @if (!string.IsNullOrEmpty(gameSession.CurrentScene.AudioUrl))
+                                @if (!string.IsNullOrWhiteSpace(gameSession.CurrentScene.AudioUrl) &&
+                                     string.IsNullOrWhiteSpace(gameSession.CurrentScene.ImageUrl) &&
+                                     string.IsNullOrWhiteSpace(gameSession.CurrentScene.VideoUrl))
                                 {
                                     <FantasyMediaFrame MediaKind="audio" Color="#165668" Rounded="true" Pulse="true">
                                         <div class="p-4 bg-dark text-center">
@@ -347,12 +361,14 @@ else
     }
 }
 
+@implements IAsyncDisposable
 @code {
     [Inject] private IGameSessionService GameSessionService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ILogger<GameSessionPage> Logger { get; set; } = default!;
     [Inject] private IApiClient ApiClient { get; set; } = default!;
     [Inject] private IAwardsState AwardsState { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
     private sealed record PlayerOption(string Id, string DisplayName);
 
@@ -362,6 +378,10 @@ else
     private bool? lastRollSuccess = null;
     private string? lastRollMessage = null;
     private bool hasNavigatedHome = false;
+
+    // Audio
+    private string? isPlayingAudio = null;
+    private IJSObjectReference? audioModule;
 
     // Awards modal state
     private bool showAwardsModal = false;
@@ -447,6 +467,18 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            try
+            {
+                audioModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/audioPlayer.js");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error loading audio module");
+            }
+        }
+
         // When the awards modal is visible and we have a finalize payload,
         // precompute triage buckets once per session id (no await in render blocks)
         if (showAwardsModal && finalizeResult != null && _noBadgeBucketsComputedForSessionId != finalizeResult.SessionId)
@@ -462,6 +494,58 @@ else
                 Logger.LogWarning(ex, "Failed to precompute no-badge buckets for awards modal");
             }
         }
+    }
+
+    private async Task PlayAudio(string audioUrl)
+    {
+        try
+        {
+            if (audioModule == null)
+                return;
+
+            if (isPlayingAudio == audioUrl)
+            {
+                await audioModule.InvokeVoidAsync("stopAudio");
+                isPlayingAudio = null;
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(isPlayingAudio))
+                {
+                    await audioModule.InvokeVoidAsync("stopAudio");
+                }
+
+                await audioModule.InvokeVoidAsync("playAudio", audioUrl);
+                isPlayingAudio = audioUrl;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error playing audio");
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (audioModule != null)
+            {
+                await audioModule.InvokeVoidAsync("stopAudio");
+                await audioModule.DisposeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Error disposing audio module in GameSessionPage");
+        }
+
+        // Unsubscribe from events
+        GameSessionService.GameSessionChanged -= OnGameSessionChanged;
     }
 
     private string GetPageTitle()

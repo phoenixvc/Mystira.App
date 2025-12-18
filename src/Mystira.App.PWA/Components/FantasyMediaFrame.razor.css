@@ -9,6 +9,7 @@
 
 .fantasy-frame .fantasy-frame-inner {
   position: relative;
+  z-index: 5;
   overflow: hidden; /* Clip media to rounded corners */
   background: rgba(0,0,0,0.03);
 }
