@@ -1,0 +1,66 @@
+﻿.fantasy-frame {
+  position: relative;
+  --frame-color: #165668;
+  --glow-color: color-mix(in srgb, var(--frame-color) 60%, white 40%);
+}
+
+.fantasy-frame.rounded .fantasy-frame-inner,
+.fantasy-frame.rounded::after {
+  border-radius: 12px;
+}
+
+.fantasy-frame .fantasy-frame-inner {
+  position: relative;
+  overflow: hidden; /* Clip media to rounded corners */
+  background: rgba(0,0,0,0.03);
+}
+
+/* SVG overlay positioned above content (non-interactive) */
+.fantasy-frame .fantasy-frame-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Subtle outer glow ring */
+.fantasy-frame::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border: 2px solid var(--frame-color);
+  opacity: 0.75;
+  box-shadow: 0 0 12px 0 var(--glow-color), 0 0 24px 2px color-mix(in srgb, var(--frame-color) 30%, transparent);
+}
+
+/* Kind-specific paddings (audio gets more padding for controls) */
+.fantasy-frame.kind-audio .fantasy-frame-inner {
+  padding: 12px;
+  background: linear-gradient(180deg, rgba(22,86,104,0.08), rgba(22,86,104,0.03));
+}
+
+/* Gentle pulse animation */
+@keyframes framePulse {
+  0%, 100% { opacity: 0.8; filter: drop-shadow(0 0 6px var(--glow-color)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 12px var(--glow-color)); }
+}
+
+.fantasy-frame.pulse::after {
+  animation: framePulse 3s ease-in-out infinite;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .fantasy-frame.pulse::after { animation: none; }
+}
+
+/* Ensure media elements fill container nicely */
+.fantasy-frame img,
+.fantasy-frame video {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.fantasy-frame audio { width: 100%; }
