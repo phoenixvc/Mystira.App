@@ -48,6 +48,9 @@ public abstract class CqrsIntegrationTestBase : IDisposable
         services.AddScoped<IAxisAchievementRepository, AxisAchievementRepository>();
         services.AddScoped<IBadgeImageRepository, BadgeImageRepository>();
         services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
+        services.AddScoped<IAgeGroupRepository, AgeGroupRepository>();
+        services.AddScoped<ICompassAxisRepository, CompassAxisRepository>();
+        services.AddScoped<IArchetypeRepository, ArchetypeRepository>();
 
         // Add Unit of Work (explicitly use Application port as service type)
         services.AddScoped<IUnitOfWork, UnitOfWork>();
