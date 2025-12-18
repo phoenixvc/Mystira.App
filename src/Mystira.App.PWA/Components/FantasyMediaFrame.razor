@@ -6,34 +6,41 @@
         @ChildContent
     </div>
 
-    <!-- Decorative SVG overlay (filigree/vines) -->
+    <!-- Simple, thin SVG border with subtle grain and corner triangles -->
     <svg class="fantasy-frame-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-        <!-- Corner ornaments -->
-        <g stroke="var(--frame-color)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <!-- TL vine -->
-            <path d="M5,25 C10,8 22,6 35,5 M8,18 C13,22 18,24 24,24" />
-            <!-- TR vine -->
-            <path d="M95,25 C90,8 78,6 65,5 M92,18 C87,22 82,24 76,24" />
-            <!-- BL vine -->
-            <path d="M5,75 C10,92 22,94 35,95 M8,82 C13,78 18,76 24,76" />
-            <!-- BR vine -->
-            <path d="M95,75 C90,92 78,94 65,95 M92,82 C87,78 82,76 76,76" />
-            <!-- Subtle side filigree -->
-            <path d="M50,2 C52,8 52,92 50,98" opacity="0.5" />
-        </g>
-
-        <!-- Soft glow -->
         <defs>
-            <filter id="glow">
-                <feGaussianBlur stdDeviation="1.5" result="coloredBlur" />
-                <feMerge>
-                    <feMergeNode in="coloredBlur" />
-                    <feMergeNode in="SourceGraphic" />
-                </feMerge>
+            <!-- Grainy effect: low-contrast fractal noise masked to the border stroke -->
+            <filter id="frame-grain" x="-10%" y="-10%" width="120%" height="120%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="noise" />
+                <feColorMatrix in="noise" type="saturate" values="0" result="mono" />
+                <feComponentTransfer in="mono" result="softNoise">
+                    <feFuncA type="table" tableValues="0 0.25 0.5 0.25 0" />
+                </feComponentTransfer>
+                <feBlend in="SourceGraphic" in2="softNoise" mode="multiply" />
             </filter>
         </defs>
-        <rect x="2" y="2" width="96" height="96" rx="@(Rounded ? 8 : 0)" ry="@(Rounded ? 8 : 0)"
-              stroke="var(--frame-color)" stroke-width="1.5" fill="none" filter="url(#glow)" />
+
+        <!-- Outer stroke: positioned to sit mostly outside the media area -->
+        <!-- Slightly negative x/y and slightly larger width/height push most of the stroke outward -->
+        <rect x="-0.5" y="-0.5" width="101" height="101" rx="@(Rounded ? 9 : 0)" ry="@(Rounded ? 9 : 0)"
+              fill="none" stroke="var(--frame-color)" stroke-width="1" vector-effect="non-scaling-stroke"/>
+
+        <!-- Grain layer: duplicate stroke with low opacity and grain filter for subtle texture -->
+        <rect x="-0.5" y="-0.5" width="101" height="101" rx="@(Rounded ? 9 : 0)" ry="@(Rounded ? 9 : 0)"
+              fill="none" stroke="var(--frame-color)" stroke-width="1.5" opacity="0.25" filter="url(#frame-grain)"
+              vector-effect="non-scaling-stroke" />
+
+        <!-- Corner triangles: small, simple fills that may overlap the media slightly -->
+        <g fill="var(--frame-color)" opacity="0.85">
+            <!-- top-left -->
+            <polygon points="0,0 0,3 3,0" />
+            <!-- top-right -->
+            <polygon points="100,0 97,0 100,3" />
+            <!-- bottom-left -->
+            <polygon points="0,100 0,97 3,100" />
+            <!-- bottom-right -->
+            <polygon points="100,100 97,100 100,97" />
+        </g>
     </svg>
 </div>
 

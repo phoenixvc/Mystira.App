@@ -1,7 +1,6 @@
 ﻿.fantasy-frame {
   position: relative;
   --frame-color: #165668;
-  --glow-color: color-mix(in srgb, var(--frame-color) 60%, white 40%);
 }
 
 .fantasy-frame.rounded .fantasy-frame-inner,
@@ -22,38 +21,18 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
+  overflow: visible; /* allow border to render slightly outside without covering media */
 }
 
-/* Subtle outer glow ring */
-.fantasy-frame::after {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  border: 2px solid var(--frame-color);
-  opacity: 0.75;
-  box-shadow: 0 0 12px 0 var(--glow-color), 0 0 24px 2px color-mix(in srgb, var(--frame-color) 30%, transparent);
-}
+/* Remove previous glow/border effects to keep a thin, simple border solely from the SVG */
 
 /* Kind-specific paddings (audio gets more padding for controls) */
 .fantasy-frame.kind-audio .fantasy-frame-inner {
   padding: 12px;
-  background: linear-gradient(180deg, rgba(22,86,104,0.08), rgba(22,86,104,0.03));
+  background: linear-gradient(180deg, rgba(22,86,104,0.06), rgba(22,86,104,0.02));
 }
 
-/* Gentle pulse animation */
-@keyframes framePulse {
-  0%, 100% { opacity: 0.8; filter: drop-shadow(0 0 6px var(--glow-color)); }
-  50% { opacity: 1; filter: drop-shadow(0 0 12px var(--glow-color)); }
-}
-
-.fantasy-frame.pulse::after {
-  animation: framePulse 3s ease-in-out infinite;
-}
-
-/* Respect reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .fantasy-frame.pulse::after { animation: none; }
-}
+/* Pulse effect disabled for simplified border */
 
 /* Ensure media elements fill container nicely */
 .fantasy-frame img,
