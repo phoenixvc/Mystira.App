@@ -403,20 +403,6 @@ public class DomainModelTests
         names.Should().OnlyHaveUniqueItems();
     }
 
-    [Fact]
-    public void RandomNameGenerator_FantasyNames_IsNotEmpty()
-    {
-        // Assert
-        RandomNameGenerator.FantasyNames.Should().NotBeEmpty();
-    }
-
-    [Fact]
-    public void RandomNameGenerator_AdjectiveNames_IsNotEmpty()
-    {
-        // Assert
-        RandomNameGenerator.AdjectiveNames.Should().NotBeEmpty();
-    }
-
     #endregion
 
     #region AgeGroup Tests

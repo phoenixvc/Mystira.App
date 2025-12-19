@@ -6,10 +6,7 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.1.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
     <!-- Serilog for structured logging -->
     <PackageReference Include="Serilog" Version="4.0.2" />
@@ -29,9 +26,9 @@
 
     <!-- For Health Checks -->
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Mystira.App.Application\Mystira.App.Application.csproj" />
     <ProjectReference Include="..\Mystira.App.Domain\Mystira.App.Domain.csproj" />
     <ProjectReference Include="..\Mystira.App.Contracts\Mystira.App.Contracts.csproj" />
   </ItemGroup>

@@ -50,21 +50,33 @@ public class RequestPasswordlessSigninCommandHandler
                 return (false, "No account found with this email. Please sign up first.", null, null);
             }
 
-            // Generate secure verification code
-            var code = GenerateSecureCode();
-            var pendingSignin = new PendingSignup
-            {
-                Email = email,
-                DisplayName = existingAccount.DisplayName,
-                Code = code,
-                CreatedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(CodeExpiryMinutes),
-                IsUsed = false,
-                IsSignin = true
-            };
+            // Check if there is already an active signin code
+            var activeSignin = await _pendingSignupRepository.GetActiveByEmailAsync(email);
+            string code;
 
-            await _pendingSignupRepository.AddAsync(pendingSignin);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            if (activeSignin != null)
+            {
+                _logger.LogInformation("Reusing existing active signin code for {Email}", email);
+                code = activeSignin.Code;
+            }
+            else
+            {
+                // Generate secure verification code
+                code = GenerateSecureCode();
+                var pendingSignin = new PendingSignup
+                {
+                    Email = email,
+                    DisplayName = existingAccount.DisplayName,
+                    Code = code,
+                    CreatedAt = DateTime.UtcNow,
+                    ExpiresAt = DateTime.UtcNow.AddMinutes(CodeExpiryMinutes),
+                    IsUsed = false,
+                    IsSignin = true
+                };
+
+                await _pendingSignupRepository.AddAsync(pendingSignin);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
 
             _logger.LogInformation("Signin requested for email: {Email} with display name: {DisplayName}",
                 email, existingAccount.DisplayName);

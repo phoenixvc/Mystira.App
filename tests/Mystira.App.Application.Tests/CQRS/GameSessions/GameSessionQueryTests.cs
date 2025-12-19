@@ -241,7 +241,7 @@ public class GameSessionQueryTests : CqrsIntegrationTestBase
     #region GetInProgressSessionsQuery Tests
 
     [Fact]
-    public async Task GetInProgressSessionsQuery_ReturnsOnlyInProgressSessions()
+    public async Task GetInProgressSessionsQuery_ReturnsInProgressAndPausedSessions()
     {
         // Arrange
         await SeedTestDataAsync();
@@ -252,8 +252,9 @@ public class GameSessionQueryTests : CqrsIntegrationTestBase
 
         // Assert
         result.Should().NotBeNull();
-        // Should return session-2 (InProgress) but not session-1 (Completed) or session-3 (Paused)
-        result.Should().OnlyContain(s => s.Status == SessionStatus.InProgress);
+        // Should return session-2 (InProgress) and session-3 (Paused) but not session-1 (Completed)
+        result.Should().HaveCount(2);
+        result.Should().OnlyContain(s => s.Status == SessionStatus.InProgress || s.Status == SessionStatus.Paused);
     }
 
     #endregion

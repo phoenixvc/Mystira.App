@@ -25,7 +25,7 @@ public class ScenarioQueryTests : CqrsIntegrationTestBase
                 Tags = new List<string> { "adventure", "fantasy" },
                 Scenes = new List<Scene>
                 {
-                    new() { Id = "scene-1", Title = "The Beginning", Type = SceneType.Introduction }
+                    new() { Id = "scene-1", Title = "The Beginning", Type = SceneType.Narrative }
                 }
             },
             new()
@@ -42,7 +42,7 @@ public class ScenarioQueryTests : CqrsIntegrationTestBase
                 Tags = new List<string> { "exploration", "ocean" },
                 Scenes = new List<Scene>
                 {
-                    new() { Id = "scene-1", Title = "The Dive", Type = SceneType.Introduction }
+                    new() { Id = "scene-1", Title = "The Dive", Type = SceneType.Narrative }
                 }
             },
             new()
@@ -59,7 +59,7 @@ public class ScenarioQueryTests : CqrsIntegrationTestBase
                 Tags = new List<string> { "science", "space" },
                 Scenes = new List<Scene>
                 {
-                    new() { Id = "scene-1", Title = "Launch", Type = SceneType.Introduction }
+                    new() { Id = "scene-1", Title = "Launch", Type = SceneType.Narrative }
                 }
             },
             new()
@@ -75,7 +75,7 @@ public class ScenarioQueryTests : CqrsIntegrationTestBase
                 SessionLength = SessionLength.Short,
                 Scenes = new List<Scene>
                 {
-                    new() { Id = "scene-1", Title = "Hidden", Type = SceneType.Introduction }
+                    new() { Id = "scene-1", Title = "Hidden", Type = SceneType.Narrative }
                 }
             }
         };
@@ -236,7 +236,7 @@ public class ScenarioQueryTests : CqrsIntegrationTestBase
             Title = "Valid Story",
             Scenes = new List<Scene>
             {
-                new() { Id = "scene-1", Title = "Scene 1", Type = SceneType.Introduction }
+                new() { Id = "scene-1", Title = "Scene 1", Type = SceneType.Narrative }
             }
         };
 

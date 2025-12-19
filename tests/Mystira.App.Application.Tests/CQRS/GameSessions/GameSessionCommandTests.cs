@@ -214,8 +214,8 @@ public class GameSessionCommandTests : CqrsIntegrationTestBase
 
         // Assert
         result.TargetAgeGroup.Should().NotBeNull();
-        result.TargetAgeGroup.MinAge.Should().Be(10);
-        result.TargetAgeGroup.MaxAge.Should().Be(12);
+        result.TargetAgeGroup.MinimumAge.Should().Be(10);
+        result.TargetAgeGroup.MaximumAge.Should().Be(12);
     }
 
     [Fact]
