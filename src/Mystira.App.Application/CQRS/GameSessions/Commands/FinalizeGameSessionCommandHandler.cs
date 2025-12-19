@@ -9,6 +9,7 @@ public class FinalizeGameSessionCommandHandler : ICommandHandler<FinalizeGameSes
 {
     private readonly IGameSessionRepository _sessionRepository;
     private readonly IUserProfileRepository _profileRepository;
+    private readonly IPlayerScenarioScoreRepository _scoreRepository;
     private readonly IAxisScoringService _scoringService;
     private readonly IBadgeAwardingService _badgeService;
     private readonly ILogger<FinalizeGameSessionCommandHandler> _logger;
@@ -16,12 +17,14 @@ public class FinalizeGameSessionCommandHandler : ICommandHandler<FinalizeGameSes
     public FinalizeGameSessionCommandHandler(
         IGameSessionRepository sessionRepository,
         IUserProfileRepository profileRepository,
+        IPlayerScenarioScoreRepository scoreRepository,
         IAxisScoringService scoringService,
         IBadgeAwardingService badgeService,
         ILogger<FinalizeGameSessionCommandHandler> logger)
     {
         _sessionRepository = sessionRepository;
         _profileRepository = profileRepository;
+        _scoreRepository = scoreRepository;
         _scoringService = scoringService;
         _badgeService = badgeService;
         _logger = logger;
@@ -40,7 +43,7 @@ public class FinalizeGameSessionCommandHandler : ICommandHandler<FinalizeGameSes
             return result;
         }
 
-        // Determine participating profiles (replicate logic from GameSession private method)
+        // Determine participating profiles
         var profileIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (!string.IsNullOrWhiteSpace(session.ProfileId))
         {
@@ -66,29 +69,30 @@ public class FinalizeGameSessionCommandHandler : ICommandHandler<FinalizeGameSes
 
             // Score first-time plays only (service skips if already scored)
             PlayerScenarioScore? score = await _scoringService.ScoreSessionAsync(session, profile);
+            var alreadyPlayed = score == null;
 
-            if (score == null)
+            // Compute cumulative axis totals across all scored scenarios for this profile
+            var allScores = await _scoreRepository.GetByProfileIdAsync(profile.Id);
+            var cumulative = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+            foreach (var s in allScores)
             {
-                // Replay for this profile+scenario: include entry with AlreadyPlayed marker and no new badges
-                result.Awards.Add(new ProfileBadgeAwards
+                foreach (var kv in s.AxisScores)
                 {
-                    ProfileId = profile.Id,
-                    ProfileName = profile.Name,
-                    NewBadges = new List<UserBadge>(),
-                    AlreadyPlayed = true
-                });
-                continue;
+                    if (!cumulative.ContainsKey(kv.Key)) cumulative[kv.Key] = 0f;
+                    cumulative[kv.Key] += kv.Value;
+                }
             }
 
-            // Award badges based on aggregated axis scores from this session
-            var newBadges = await _badgeService.AwardBadgesAsync(profile, score.AxisScores);
-            // Always include an entry so the client can show players who did not receive a badge
+            // Award badges based on cumulative totals (will no-op for already-earned badges)
+            var newBadges = await _badgeService.AwardBadgesAsync(profile, cumulative);
+
+            // Always include an entry so the client can show players who did/didn't receive a badge
             result.Awards.Add(new ProfileBadgeAwards
             {
                 ProfileId = profile.Id,
                 ProfileName = profile.Name,
                 NewBadges = newBadges,
-                AlreadyPlayed = false
+                AlreadyPlayed = alreadyPlayed
             });
         }
 

@@ -1,7 +1,9 @@
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -49,7 +51,7 @@ public class MediaControllerTests
             Url = "https://example.com/logo.png"
         };
         var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<GetMediaAssetQuery>(), It.IsAny<System.Threading.CancellationToken>()))
+        mediator.Setup(m => m.Send(It.IsAny<GetMediaAssetQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(mediaAsset);
         var controller = CreateController(mediator);
 
@@ -60,7 +62,7 @@ public class MediaControllerTests
         result.Result.Should().BeOfType<OkObjectResult>();
         var ok = result.Result as OkObjectResult;
         ok!.Value.Should().BeEquivalentTo(mediaAsset);
-        mediator.Verify(m => m.Send(It.IsAny<GetMediaAssetQuery>(), It.IsAny<System.Threading.CancellationToken>()), Times.Once);
+        mediator.Verify(m => m.Send(It.IsAny<GetMediaAssetQuery>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -69,7 +71,7 @@ public class MediaControllerTests
         // Arrange
         var mediaId = "non-existent-media";
         var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<GetMediaAssetQuery>(), It.IsAny<System.Threading.CancellationToken>()))
+        mediator.Setup(m => m.Send(It.IsAny<GetMediaAssetQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((MediaAsset?)null);
         var controller = CreateController(mediator);
 
@@ -93,7 +95,7 @@ public class MediaControllerTests
         var contentType = "image/png";
         var fileName = "logo.png";
         var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<GetMediaFileQuery>(), It.IsAny<System.Threading.CancellationToken>()))
+        mediator.Setup(m => m.Send(It.IsAny<GetMediaFileQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((stream, contentType, fileName));
         var controller = CreateController(mediator);
 
@@ -105,7 +107,7 @@ public class MediaControllerTests
         var file = (FileStreamResult)result;
         file.ContentType.Should().Be(contentType);
         file.FileDownloadName.Should().Be(fileName);
-        mediator.Verify(m => m.Send(It.IsAny<GetMediaFileQuery>(), It.IsAny<System.Threading.CancellationToken>()), Times.Once);
+        mediator.Verify(m => m.Send(It.IsAny<GetMediaFileQuery>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -114,7 +116,7 @@ public class MediaControllerTests
         // Arrange
         var mediaId = "non-existent-media";
         var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<GetMediaFileQuery>(), It.IsAny<System.Threading.CancellationToken>()))
+        mediator.Setup(m => m.Send(It.IsAny<GetMediaFileQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(((Stream, string, string)?)null);
         var controller = CreateController(mediator);
 
@@ -136,7 +138,7 @@ public class MediaControllerTests
         var method = typeof(MediaController).GetMethod("GetMediaById");
 
         // Act
-        var attributes = method!.GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute), false);
+        var attributes = method!.GetCustomAttributes(typeof(AllowAnonymousAttribute), false);
 
         // Assert
         attributes.Should().NotBeEmpty("GetMediaById should have [AllowAnonymous] attribute for landing page access");
@@ -149,7 +151,7 @@ public class MediaControllerTests
         var method = typeof(MediaController).GetMethod("GetMediaFile");
 
         // Act
-        var attributes = method!.GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute), false);
+        var attributes = method!.GetCustomAttributes(typeof(AllowAnonymousAttribute), false);
 
         // Assert
         attributes.Should().NotBeEmpty("GetMediaFile should have [AllowAnonymous] attribute for landing page access");

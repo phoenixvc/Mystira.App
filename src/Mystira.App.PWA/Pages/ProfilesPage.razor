@@ -3,7 +3,9 @@
 @inject IAuthService AuthService
 @inject IApiClient ApiClient
 @inject ILogger<ProfilesPage> Logger
-@using System.Linq
+@using Account = Mystira.App.PWA.Models.Account
+@using Mystira.App.Domain.Models
+@using UserProfile = Mystira.App.PWA.Models.UserProfile
 
 <PageTitle>Manage Profiles • Mystira</PageTitle>
 
@@ -570,15 +572,7 @@ else
 
     private string GetAgeRangeDisplay(string? ageGroup)
     {
-        return ageGroup switch
-        {
-            "1-2" => "Ages 1-2",
-            "3-5" => "Ages 3-5",
-            "6-9" => "Ages 6-9",
-            "10-12" => "Ages 10-12",
-            "13-18" => "Ages 13-18",
-            _ => "Age group not specified"
-        };
+        return ageGroup == null ? "Age group not specified" : AgeGroupConstants.GetDisplayName(ageGroup);
     }
 
     private string FormatDate(DateTime? date)

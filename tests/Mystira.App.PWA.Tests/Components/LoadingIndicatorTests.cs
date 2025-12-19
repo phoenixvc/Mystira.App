@@ -2,7 +2,6 @@ using Bunit;
 using FluentAssertions;
 using Mystira.App.PWA.Components;
 using Xunit;
-using AngleSharp.Dom;
 
 namespace Mystira.App.PWA.Tests.Components;
 

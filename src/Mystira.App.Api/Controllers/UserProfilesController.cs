@@ -371,7 +371,7 @@ public class UserProfilesController : ControllerBase
             {
                 return NotFound(new ErrorResponse
                 {
-                    Message = $"Profile or character not found",
+                    Message = "Profile or character not found",
                     TraceId = HttpContext.TraceIdentifier
                 });
             }

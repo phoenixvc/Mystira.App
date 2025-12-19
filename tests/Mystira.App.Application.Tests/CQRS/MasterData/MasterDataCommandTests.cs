@@ -178,7 +178,7 @@ public class MasterDataCommandTests : CqrsIntegrationTestBase
     public async Task CreateEchoTypeCommand_WithValidData_CreatesEchoType()
     {
         // Arrange
-        var command = new CreateEchoTypeCommand("Trust", "Building trust", "social");
+        var command = new CreateEchoTypeCommand("Trust", "Building trust");
 
         // Act
         var result = await Mediator.Send(command);
@@ -187,14 +187,13 @@ public class MasterDataCommandTests : CqrsIntegrationTestBase
         result.Should().NotBeNull();
         result.Id.Should().NotBeNullOrEmpty();
         result.Name.Should().Be("Trust");
-        result.Category.Should().Be("social");
     }
 
     [Fact]
     public async Task CreateEchoTypeCommand_WithEmptyName_ThrowsArgumentException()
     {
         // Arrange
-        var command = new CreateEchoTypeCommand("", "Description", "moral");
+        var command = new CreateEchoTypeCommand("", "Description");
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(async () =>
@@ -208,7 +207,7 @@ public class MasterDataCommandTests : CqrsIntegrationTestBase
     {
         // Arrange
         await SeedTestDataAsync();
-        var command = new UpdateEchoTypeCommand("echo-honesty", "Truthfulness", "Speaking truth", "moral");
+        var command = new UpdateEchoTypeCommand("echo-honesty", "Truthfulness", "Speaking truth");
 
         // Act
         var result = await Mediator.Send(command);

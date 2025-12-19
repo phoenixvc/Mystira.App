@@ -1,0 +1,41 @@
+﻿@namespace Mystira.App.PWA.Components
+
+<div class="fantasy-frame @(Rounded ? "rounded" : string.Empty) @(Pulse ? "pulse" : string.Empty) kind-@MediaKind"
+     style="--frame-color: @Color">
+    <div class="fantasy-frame-inner">
+        @ChildContent
+    </div>
+
+    <!-- Simple, thin SVG border with subtle grain and corner triangles -->
+    <svg class="fantasy-frame-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+            <!-- Grainy effect: low-contrast fractal noise masked to the border stroke -->
+            <filter id="frame-grain" x="-10%" y="-10%" width="120%" height="120%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="noise" />
+                <feColorMatrix in="noise" type="saturate" values="0" result="mono" />
+                <feComponentTransfer in="mono" result="softNoise">
+                    <feFuncA type="table" tableValues="0 0.25 0.5 0.25 0" />
+                </feComponentTransfer>
+                <feBlend in="SourceGraphic" in2="softNoise" mode="multiply" />
+            </filter>
+        </defs>
+
+    </svg>
+</div>
+
+@code {
+    [Parameter]
+    public string MediaKind { get; set; } = "image"; // image | video | audio
+
+    [Parameter]
+    public string Color { get; set; } = "#165668";
+
+    [Parameter]
+    public bool Rounded { get; set; } = true;
+
+    [Parameter]
+    public bool Pulse { get; set; } = true;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

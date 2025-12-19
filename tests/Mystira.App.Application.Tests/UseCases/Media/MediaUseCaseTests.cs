@@ -91,7 +91,7 @@ public class MediaUseCaseTests
             Url = "https://storage.example.com/container/file.mp3"
         };
         mockRepo.Setup(r => r.GetByMediaIdAsync("media-123")).ReturnsAsync(mediaAsset);
-        mockBlob.Setup(b => b.DeleteMediaAsync("file.mp3")).Returns(Task.CompletedTask);
+        mockBlob.Setup(b => b.DeleteMediaAsync("file.mp3")).ReturnsAsync(true);
         mockRepo.Setup(r => r.DeleteAsync("db-id")).Returns(Task.CompletedTask);
         mockUow.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 

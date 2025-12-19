@@ -147,7 +147,8 @@ public class ArchetypeCommandTests : CqrsIntegrationTestBase
         // Assert
         result.Should().BeTrue();
         var deleted = await DbContext.ArchetypeDefinitions.FindAsync("archetype-courage");
-        deleted.Should().BeNull();
+        deleted.Should().NotBeNull();
+        deleted!.IsDeleted.Should().BeTrue();
     }
 
     [Fact]

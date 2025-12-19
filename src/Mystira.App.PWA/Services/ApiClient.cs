@@ -70,6 +70,7 @@ public class ApiClient : IApiClient
         _gameSessionClient.MakeChoiceAsync(sessionId, sceneId, choiceText, nextSceneId, playerId, compassAxis, compassDirection, compassDelta);
 
     public Task<List<GameSession>?> GetSessionsByAccountAsync(string accountId) => _gameSessionClient.GetSessionsByAccountAsync(accountId);
+    public Task<List<GameSession>?> GetSessionsByProfileAsync(string profileId) => _gameSessionClient.GetSessionsByProfileAsync(profileId);
     public Task<List<GameSession>?> GetInProgressSessionsAsync(string accountId) => _gameSessionClient.GetInProgressSessionsAsync(accountId);
 
     // UserProfile methods

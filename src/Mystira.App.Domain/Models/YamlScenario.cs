@@ -200,7 +200,7 @@ public class YamlEchoLog
     {
         return new EchoLog
         {
-            EchoType = Mystira.App.Domain.Models.EchoType.Parse(EchoType)!,
+            EchoType = EchoType,
             Description = Description,
             Strength = Strength,
             Timestamp = DateTime.UtcNow
@@ -254,7 +254,7 @@ public class YamlEchoRevealReference
     {
         return new EchoReveal
         {
-            EchoType = Mystira.App.Domain.Models.EchoType.Parse(EchoType)!,
+            EchoType = EchoType,
             MinStrength = MinStrength,
             TriggerSceneId = TriggerSceneId,
             RevealMechanic = RevealMechanic,

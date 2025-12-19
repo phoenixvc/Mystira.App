@@ -108,7 +108,35 @@
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
+.game-session-page-container {
+    position: relative;
+    min-height: calc(100vh - 56px); /* Adjust based on navbar height if any */
+    overflow-x: hidden;
+}
+
+.game-session-page-container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('images/gamesession-background.webp');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed; /* Keep background fixed while scrolling */
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.game-session-page-container > * {
+    position: relative;
+    z-index: 1;
+}
+
 .scene-content {
+    position: relative;
     background: var(--card, rgba(255, 255, 255, 0.85));
     border-radius: 1rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08),
@@ -118,6 +146,30 @@
     border: 1px solid var(--border, rgba(17, 24, 39, 0.08));
     color: var(--fg, #111827);
     transition: box-shadow 0.3s ease, transform 0.2s ease;
+    overflow: hidden;
+}
+
+/* Ensure blocks that shouldn't have background overlap have their own solid-ish background */
+.scene-content .media-container,
+.scene-content .lead,
+.scene-content .markdown-content {
+    background: var(--card, rgba(255, 255, 255, 0.9));
+    padding: 10px;
+    border-radius: 8px;
+}
+
+@media (prefers-color-scheme: dark-disabled) {
+    .scene-content .media-container,
+    .scene-content .lead,
+    .scene-content .markdown-content {
+        background: var(--card, rgba(30, 27, 75, 0.9));
+    }
+}
+
+html[data-theme="dark"] .scene-content .media-container,
+html[data-theme="dark"] .scene-content .lead,
+html[data-theme="dark"] .scene-content .markdown-content {
+    background: var(--card, rgba(30, 27, 75, 0.9));
 }
 
 .scene-content:hover {
@@ -148,13 +200,22 @@
 }
 
 /* Ensure progression buttons in scene content are always white, regardless of theme */
-.scene-content .btn.btn-primary-custom {
+.scene-content .btn.btn-primary-custom,
+.scene-content .choice-button {
+    color: #ffffff !important;
+}
+
+.scene-content .btn.btn-primary-custom *,
+.scene-content .choice-button * {
     color: #ffffff !important;
 }
 
 .scene-content .btn.btn-primary-custom:disabled,
 .scene-content .btn.btn-primary-custom:focus,
-.scene-content .btn.btn-primary-custom:hover {
+.scene-content .btn.btn-primary-custom:hover,
+.scene-content .choice-button:disabled,
+.scene-content .choice-button:focus,
+.scene-content .choice-button:hover {
     color: #ffffff !important;
 }
 
@@ -163,6 +224,7 @@
     color: #ffffff !important;
 }
 
+.card .btn.btn-primary-custom *,
 .card .btn.btn-primary-custom:disabled,
 .card .btn.btn-primary-custom:focus,
 .card .btn.btn-primary-custom:hover {
@@ -240,7 +302,6 @@
     overflow: hidden;
     margin: 1rem 0;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    border: 1px solid var(--border, rgba(17, 24, 39, 0.08));
     transition: box-shadow 0.3s ease;
 }
 
@@ -259,6 +320,62 @@
     width: 100%;
     background: var(--secondary-color);
     border-radius: 0.5rem;
+}
+
+/* Audio Overlay Styles */
+.image-overlay-container {
+    position: relative;
+    width: 100%;
+    display: block;
+}
+
+.btn-audio-overlay {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #7c3aed; /* Fallback solid color */
+    background: rgba(124, 58, 237, 0.9);
+    border: 2px solid #ffffff;
+    color: #ffffff !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 999; /* Very high z-index */
+}
+
+.btn-audio-overlay i {
+    color: #ffffff !important;
+}
+
+.btn-audio-overlay:hover {
+    background: #6d28d9;
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+}
+
+.btn-audio-overlay.playing {
+    background: #ef4444;
+    border-color: #ffffff;
+    animation: pulse-audio 2s infinite;
+}
+
+@keyframes pulse-audio {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
 }
 
 .dice-roller-container {
@@ -311,7 +428,7 @@
 }
 
 /* Dark mode enhancements */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     .scene-content {
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4),
                     0 0 40px rgba(147, 51, 234, 0.08);
@@ -324,7 +441,6 @@
 
     .media-container {
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-        border: 1px solid var(--border, rgba(148, 163, 184, 0.1));
     }
 
     .media-container:hover {
@@ -348,7 +464,6 @@ html[data-theme="dark"] .scene-content:hover {
 
 html[data-theme="dark"] .media-container {
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-    border: 1px solid var(--border, rgba(148, 163, 184, 0.1));
 }
 
 html[data-theme="dark"] .media-container:hover {
@@ -365,7 +480,7 @@ html[data-theme="dark"] .dice-roller-container {
     font-weight: 600;
 }
 
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     ::deep .btn-outline-danger {
         color: #fca5a5;
         border-color: #fca5a5;
@@ -390,7 +505,7 @@ html[data-theme="dark"] ::deep .btn-outline-danger:hover {
 }
 
 /* Dark mode for game session header */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     .game-session-header {
         background: linear-gradient(135deg, #14122b 0%, #1e1b4b 100%);
         border-color: rgba(99, 102, 241, 0.2);
@@ -525,3 +640,4 @@ html[data-theme="light"] .btn-exit {
         padding: 0.5rem 0.625rem;
     }
 }
+

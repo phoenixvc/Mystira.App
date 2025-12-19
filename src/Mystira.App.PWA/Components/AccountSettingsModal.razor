@@ -1,0 +1,100 @@
+@inject ISettingsService SettingsService
+
+@if (ShowModal)
+{
+    <div class="modal-backdrop fade show" style="display: block;"></div>
+    <div class="modal fade show" style="display: block;" role="dialog" aria-modal="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title">
+                        <i class="fas fa-cog me-2"></i>
+                        Settings
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="OnClose" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-section mb-4">
+                        <h6 class="settings-title mb-3">
+                            <i class="fas fa-bell me-2"></i>
+                            Warning Notifications
+                        </h6>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="show_age_group_warning"
+                                   @bind="showAgeGroupWarning" />
+                            <label class="form-check-label" for="show_age_group_warning">
+                                Show age group mismatch warning
+                            </label>
+                            <small class="text-muted d-block mt-1">
+                                Notify me when a player's age group doesn't match the adventure's target age group
+                            </small>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="show_replay_warning"
+                                   @bind="showReplayWarning" />
+                            <label class="form-check-label" for="show_replay_warning">
+                                Show already played warning
+                            </label>
+                            <small class="text-muted d-block mt-1">
+                                Notify me when a player has already played the selected adventure
+                            </small>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="show_guest_warning"
+                                   @bind="showGuestWarning" />
+                            <label class="form-check-label" for="show_guest_warning">
+                                Show guest session warning
+                            </label>
+                            <small class="text-muted d-block mt-1">
+                                Notify me when starting an adventure with only guest players
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-primary-custom" @onclick="SaveSettingsAsync">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool ShowModal { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    private bool showAgeGroupWarning = true;
+    private bool showReplayWarning = true;
+    private bool showGuestWarning = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ShowModal)
+        {
+            await LoadSettingsAsync();
+        }
+    }
+
+    private async Task LoadSettingsAsync()
+    {
+        showAgeGroupWarning = await SettingsService.GetShowAgeGroupMismatchWarningAsync();
+        showReplayWarning = await SettingsService.GetShowGameAlreadyPlayedWarningAsync();
+        showGuestWarning = await SettingsService.GetShowGuestWarningAsync();
+    }
+
+    private async Task SaveSettingsAsync()
+    {
+        await SettingsService.SetShowAgeGroupMismatchWarningAsync(showAgeGroupWarning);
+        await SettingsService.SetShowGameAlreadyPlayedWarningAsync(showReplayWarning);
+        await SettingsService.SetShowGuestWarningAsync(showGuestWarning);
+        await OnClose.InvokeAsync();
+    }
+}

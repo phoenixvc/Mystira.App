@@ -1,6 +1,5 @@
 using FluentAssertions;
 using Mystira.App.Contracts.Responses.Badges;
-using Mystira.App.PWA.Models;
 using Mystira.App.PWA.Services;
 using Xunit;
 
@@ -155,5 +154,44 @@ public class AchievementsMapperTests
         result.Should().ContainSingle();
         result[0].CurrentScore.Should().Be(3);
         result[0].Tiers[0].CurrentScore.Should().Be(3);
+    }
+
+    [Fact]
+    public void MapAxes_PlatinumAndDiamondTiers_ShowsProgressCorrectly()
+    {
+        var config = new List<BadgeResponse>
+        {
+            new() { Id = "p", CompassAxisId = "A", Tier = "Platinum", TierOrder = 4, RequiredScore = 100 },
+            new() { Id = "d", CompassAxisId = "A", Tier = "Diamond", TierOrder = 5, RequiredScore = 200 }
+        };
+
+        var progress = new BadgeProgressResponse
+        {
+            AxisProgresses =
+            {
+                new AxisProgressResponse
+                {
+                    AxisId = "A",
+                    CurrentScore = 50,
+                    Tiers =
+                    {
+                        // Simulate specific progress for Diamond but not Platinum
+                        new BadgeTierProgressResponse { BadgeId = "p", RequiredScore = 100, ProgressToThreshold = 0 },
+                        new BadgeTierProgressResponse { BadgeId = "d", RequiredScore = 200, ProgressToThreshold = 50 }
+                    }
+                }
+            }
+        };
+
+        var result = AchievementsMapper.MapAxes(config, progress, null, id => id);
+
+        var tiers = result[0].Tiers;
+        var platinum = tiers.First(t => t.Tier == "Platinum");
+        var diamond = tiers.First(t => t.Tier == "Diamond");
+
+        // Platinum should use its specific ProgressToThreshold (0)
+        platinum.ProgressPercent.Should().Be(0);
+        // Diamond should use its specific ProgressToThreshold (50)
+        diamond.ProgressPercent.Should().Be(25);
     }
 }

@@ -18,7 +18,7 @@ public class AgeGroupConstantsTests
         AgeGroupConstants.AllAgeGroups.Should().Contain("6-9");
         AgeGroupConstants.AllAgeGroups.Should().Contain("10-12");
         AgeGroupConstants.AllAgeGroups.Should().Contain("13-18");
-        AgeGroupConstants.AllAgeGroups.Should().Contain("19+");
+        AgeGroupConstants.AllAgeGroups.Should().Contain("19-150");
     }
 
     #endregion
@@ -41,9 +41,9 @@ public class AgeGroupConstantsTests
     [InlineData(13, "13-18")]
     [InlineData(15, "13-18")]
     [InlineData(18, "13-18")]
-    [InlineData(19, "19+")]
-    [InlineData(25, "19+")]
-    [InlineData(50, "19+")]
+    [InlineData(19, "19-150")]
+    [InlineData(25, "19-150")]
+    [InlineData(50, "19-150")]
     public void GetAgeGroupForAge_ReturnsCorrectGroup(int age, string expectedGroup)
     {
         // Act
@@ -70,12 +70,12 @@ public class AgeGroupConstantsTests
     #region GetDisplayName Tests
 
     [Theory]
-    [InlineData("1-2", "Ages 1-2 (Toddlers)")]
-    [InlineData("3-5", "Ages 3-5 (Preschoolers)")]
-    [InlineData("6-9", "Ages 6-9 (School Age)")]
-    [InlineData("10-12", "Ages 10-12 (Preteens)")]
-    [InlineData("13-18", "Ages 13-18 (Teens)")]
-    [InlineData("19+", "Ages 19+ (Adults)")]
+    [InlineData("1-2", "Ages 1-2")]
+    [InlineData("3-5", "Ages 3-5")]
+    [InlineData("6-9", "Ages 6-9")]
+    [InlineData("10-12", "Ages 10-12")]
+    [InlineData("13-18", "Ages 13-18")]
+    [InlineData("19-150", "Ages 19+")]
     public void GetDisplayName_ReturnsCorrectDisplayName(string ageGroup, string expectedName)
     {
         // Act

@@ -49,11 +49,11 @@ public class AuthCommandTests
         _pendingSignupRepositoryMock.Setup(x => x.GetActiveByEmailAsync(email))
             .ReturnsAsync((PendingSignup?)null);
         _pendingSignupRepositoryMock.Setup(x => x.AddAsync(It.IsAny<PendingSignup>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(new PendingSignup());
         _emailServiceMock.Setup(x => x.SendSigninCodeAsync(email, account.DisplayName, It.IsAny<string>()))
             .ReturnsAsync((true, null));
         _unitOfWorkMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(1);
 
         var handler = new RequestPasswordlessSigninCommandHandler(
             _accountRepositoryMock.Object,
@@ -120,6 +120,8 @@ public class AuthCommandTests
             .ReturnsAsync(account);
         _pendingSignupRepositoryMock.Setup(x => x.GetActiveByEmailAsync(email))
             .ReturnsAsync(existingPending);
+        _emailServiceMock.Setup(x => x.SendSigninCodeAsync(email, account.DisplayName, existingCode))
+            .ReturnsAsync((true, null));
 
         var handler = new RequestPasswordlessSigninCommandHandler(
             _accountRepositoryMock.Object,
@@ -151,11 +153,11 @@ public class AuthCommandTests
         _pendingSignupRepositoryMock.Setup(x => x.GetActiveByEmailAsync(email))
             .ReturnsAsync((PendingSignup?)null);
         _pendingSignupRepositoryMock.Setup(x => x.AddAsync(It.IsAny<PendingSignup>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(new PendingSignup());
         _emailServiceMock.Setup(x => x.SendSigninCodeAsync(email, account.DisplayName, It.IsAny<string>()))
             .ReturnsAsync((false, "SMTP Error"));
         _unitOfWorkMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(1);
 
         var handler = new RequestPasswordlessSigninCommandHandler(
             _accountRepositoryMock.Object,
@@ -211,7 +213,7 @@ public class AuthCommandTests
         _pendingSignupRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<PendingSignup>()))
             .Returns(Task.CompletedTask);
         _unitOfWorkMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(1);
         _jwtServiceMock.Setup(x => x.GenerateAccessToken(account.Auth0UserId, email, account.DisplayName, account.Role))
             .Returns("access-token-123");
         _jwtServiceMock.Setup(x => x.GenerateRefreshToken())
@@ -261,7 +263,7 @@ public class AuthCommandTests
         _pendingSignupRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<PendingSignup>()))
             .Returns(Task.CompletedTask);
         _unitOfWorkMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(1);
 
         var handler = new VerifyPasswordlessSigninCommandHandler(
             _accountRepositoryMock.Object,
@@ -419,7 +421,7 @@ public class AuthCommandTests
         _pendingSignupRepositoryMock.Setup(x => x.UpdateAsync(It.IsAny<PendingSignup>()))
             .Returns(Task.CompletedTask);
         _unitOfWorkMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(1);
         _jwtServiceMock.Setup(x => x.GenerateAccessToken(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
             .Returns("token");
         _jwtServiceMock.Setup(x => x.GenerateRefreshToken())

@@ -42,7 +42,7 @@ public abstract class SoftDeletableEntity : AuditableEntity
     /// <summary>
     /// Indicates if this entity has been soft-deleted
     /// </summary>
-    public bool IsDeleted { get; set; } = false;
+    public bool IsDeleted { get; set; }
 
     /// <summary>
     /// When the entity was soft-deleted (UTC)

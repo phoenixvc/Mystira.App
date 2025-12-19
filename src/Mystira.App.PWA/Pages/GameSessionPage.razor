@@ -1,4 +1,5 @@
 @page "/game"
+@using Mystira.App.PWA.Components
 
 <PageTitle>@GetPageTitle()</PageTitle>
 
@@ -26,7 +27,7 @@
 }
 else
 {
-    <div class="container-fluid py-4">
+    <div class="container-fluid py-4 game-session-page-container">
         <div class="row">
             <div class="col-12">
                 <div class="game-session-header">
@@ -69,35 +70,55 @@ else
                     <div class="scene-content">
 
                         <!-- Media Display -->
-                        @if (!string.IsNullOrEmpty(gameSession.CurrentScene.ImageUrl) ||
-                             !string.IsNullOrEmpty(gameSession.CurrentScene.VideoUrl) ||
-                             !string.IsNullOrEmpty(gameSession.CurrentScene.AudioUrl))
+                        @if (!string.IsNullOrWhiteSpace(gameSession.CurrentScene.ImageUrl) ||
+                             !string.IsNullOrWhiteSpace(gameSession.CurrentScene.VideoUrl) ||
+                             !string.IsNullOrWhiteSpace(gameSession.CurrentScene.AudioUrl))
                         {
                             <div class="media-container mb-4">
-                                @if (!string.IsNullOrEmpty(gameSession.CurrentScene.ImageUrl))
+                                @if (!string.IsNullOrWhiteSpace(gameSession.CurrentScene.ImageUrl))
                                 {
-                                    <img src="@gameSession.CurrentScene.ImageUrl"
-                                         alt="Scene media"
-                                         @key="gameSession.CurrentScene.ImageUrl"
-                                         class="img-fluid rounded" />
+                                    <FantasyMediaFrame MediaKind="image" Color="#165668" Rounded="true" Pulse="true">
+                                        <div class="image-overlay-container">
+                                            <img src="@gameSession.CurrentScene.ImageUrl"
+                                                 alt="Scene media"
+                                                 @key="gameSession.CurrentScene.ImageUrl"
+                                                 class="img-fluid" />
+
+                                            @if (!string.IsNullOrWhiteSpace(gameSession.CurrentScene.AudioUrl))
+                                            {
+                                                <button type="button"
+                                                        class="btn-audio-overlay @(isPlayingAudio == gameSession.CurrentScene.AudioUrl ? "playing" : "")"
+                                                        @onclick="() => PlayAudio(gameSession.CurrentScene.AudioUrl)"
+                                                        title="@(isPlayingAudio == gameSession.CurrentScene.AudioUrl ? "Stop audio" : "Play audio")">
+                                                    <i class="fa-solid @(isPlayingAudio == gameSession.CurrentScene.AudioUrl ? "fa-pause" : "fa-volume-high")"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </FantasyMediaFrame>
                                 }
-                                else if (!string.IsNullOrEmpty(gameSession.CurrentScene.VideoUrl))
+                                else if (!string.IsNullOrWhiteSpace(gameSession.CurrentScene.VideoUrl))
                                 {
-                                    <video controls class="w-100 rounded" @key="gameSession.CurrentScene.VideoUrl">
-                                        <source src="@gameSession.CurrentScene.VideoUrl" type="video/mp4">
-                                        Your browser does not support the video tag.
-                                    </video>
+                                    <FantasyMediaFrame MediaKind="video" Color="#165668" Rounded="true" Pulse="true">
+                                        <video controls class="w-100" @key="gameSession.CurrentScene.VideoUrl">
+                                            <source src="@gameSession.CurrentScene.VideoUrl" type="video/mp4">
+                                            Your browser does not support the video tag.
+                                        </video>
+                                    </FantasyMediaFrame>
                                 }
 
-                                @if (!string.IsNullOrEmpty(gameSession.CurrentScene.AudioUrl))
+                                @if (!string.IsNullOrWhiteSpace(gameSession.CurrentScene.AudioUrl) &&
+                                     string.IsNullOrWhiteSpace(gameSession.CurrentScene.ImageUrl) &&
+                                     string.IsNullOrWhiteSpace(gameSession.CurrentScene.VideoUrl))
                                 {
-                                    <div class="p-4 bg-dark rounded text-center">
-                                        <i class="fas fa-music fa-2x text-white mb-3"></i>
-                                        <audio controls class="w-100" @key="gameSession.CurrentScene.AudioUrl">
-                                            <source src="@gameSession.CurrentScene.AudioUrl" type="audio/mpeg">
-                                            Your browser does not support the audio element.
-                                        </audio>
-                                    </div>
+                                    <FantasyMediaFrame MediaKind="audio" Color="#165668" Rounded="true" Pulse="true">
+                                        <div class="p-4 bg-dark text-center">
+                                            <i class="fas fa-music fa-2x text-white mb-3"></i>
+                                            <audio controls class="w-100" @key="gameSession.CurrentScene.AudioUrl">
+                                                <source src="@gameSession.CurrentScene.AudioUrl" type="audio/mpeg">
+                                                Your browser does not support the audio element.
+                                            </audio>
+                                        </div>
+                                    </FantasyMediaFrame>
                                 }
                             </div>
                         }
@@ -248,8 +269,19 @@ else
                 <div class="card-body p-4 awards-modal-body">
                     <div class="text-center mb-4">
                         <i class="fas fa-award fa-4x text-warning mb-3"></i>
-                        <h3 class="mb-1">Congratulations!</h3>
-                        <p class="text-muted mb-0">You've earned new badges for this adventure.</p>
+                        @{
+                            var anyBadgesEarned = finalizeResult.Awards.Any(a => a.NewBadges != null && a.NewBadges.Count > 0);
+                        }
+                        @if (anyBadgesEarned)
+                        {
+                            <h3 class="mb-1">Congratulations!</h3>
+                            <p class="text-muted mb-0">You've earned new badges for this adventure.</p>
+                        }
+                        else
+                        {
+                            <h3 class="mb-1">No badges earned this time</h3>
+                            <p class="text-muted mb-0">Not every adventure grants a badge. Check the notes below to see why, and try another adventure!</p>
+                        }
                     </div>
 
                     @foreach (var award in finalizeResult.Awards)
@@ -286,18 +318,27 @@ else
                         </div>
                     }
 
-                    @{
-                        var playersWithNoBadges = finalizeResult.Awards
-                            .Where(a => a.NewBadges == null || a.NewBadges.Count == 0)
-                            .Select(a => string.IsNullOrWhiteSpace(a.ProfileName) ? "Player" : a.ProfileName!)
-                            .Distinct()
-                            .ToList();
+                    @if (outOfAgeGroupNoBadges.Count > 0)
+                    {
+                        <div class="alert alert-warning mt-2" role="alert">
+                            <div class="fw-semibold mb-1">No badges could be awarded for:</div>
+                            <div class="mb-2">@string.Join(", ", outOfAgeGroupNoBadges)</div>
+                            <div class="mb-0">They weren’t in the right age group for this adventure, so badges can’t be awarded.</div>
+                        </div>
                     }
-                    @if (playersWithNoBadges.Count > 0)
+                    @if (alreadyPlayedNoBadges.Count > 0)
                     {
                         <div class="alert alert-info mt-2" role="alert">
                             <div class="fw-semibold mb-1">No badges this time:</div>
-                            <div class="mb-2">@string.Join(", ", playersWithNoBadges)</div>
+                            <div class="mb-2">@string.Join(", ", alreadyPlayedNoBadges)</div>
+                            <div class="mb-0">They couldn’t get a badge as they have already played this story</div>
+                        </div>
+                    }
+                    @if (otherNoBadges.Count > 0)
+                    {
+                        <div class="alert alert-info mt-2" role="alert">
+                            <div class="fw-semibold mb-1">No badges this time:</div>
+                            <div class="mb-2">@string.Join(", ", otherNoBadges)</div>
                             <div class="mb-0">They didn’t necessarily make a bad choice — and that’s okay! It’s often not possible for all players to get a badge in a single round. Don’t be discouraged; try another adventure.</div>
                         </div>
                     }
@@ -320,12 +361,14 @@ else
     }
 }
 
+@implements IAsyncDisposable
 @code {
     [Inject] private IGameSessionService GameSessionService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ILogger<GameSessionPage> Logger { get; set; } = default!;
     [Inject] private IApiClient ApiClient { get; set; } = default!;
     [Inject] private IAwardsState AwardsState { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
     private sealed record PlayerOption(string Id, string DisplayName);
 
@@ -336,9 +379,21 @@ else
     private string? lastRollMessage = null;
     private bool hasNavigatedHome = false;
 
+    // Audio
+    private string? isPlayingAudio = null;
+    private IJSObjectReference? audioModule;
+
     // Awards modal state
     private bool showAwardsModal = false;
     private FinalizeSessionResponse? finalizeResult;
+    private List<string> outOfAgeGroupNoBadges = new();
+    private List<string> alreadyPlayedNoBadges = new();
+    private List<string> otherNoBadges = new();
+    private string? _noBadgeBucketsComputedForSessionId;
+
+    // In-session out-of-age warning state (computed once per session)
+    private List<string> outOfAgeAssignedPlayers = new();
+    private string? _outOfAgeAssignedComputedForSessionId;
 
     private List<PlayerOption> playerOptions = new();
     private string? selectedPlayerId;
@@ -348,6 +403,23 @@ else
         // Get current game session
         gameSession = GameSessionService.CurrentGameSession;
         BuildPlayerOptions(gameSession);
+
+        // Precompute out-of-age assigned players once per session
+        if (gameSession != null && _outOfAgeAssignedComputedForSessionId != gameSession.Id)
+        {
+            _ = InvokeAsync(async () =>
+            {
+                try
+                {
+                    await PrecomputeOutOfAgeAssignedAsync();
+                    StateHasChanged();
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Failed to precompute out-of-age assigned players (OnInitialized)");
+                }
+            });
+        }
 
         // Subscribe to changes
         GameSessionService.GameSessionChanged += OnGameSessionChanged;
@@ -372,7 +444,108 @@ else
         // When the session is marked completed, allow the page to render the
         // Finish flow (button + modal). Do not auto-navigate away here.
 
+        // Recompute out-of-age assigned players if session id changed
+        if (session != null && _outOfAgeAssignedComputedForSessionId != session.Id)
+        {
+            _outOfAgeAssignedComputedForSessionId = null;
+            _ = InvokeAsync(async () =>
+            {
+                try
+                {
+                    await PrecomputeOutOfAgeAssignedAsync();
+                    StateHasChanged();
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Failed to precompute out-of-age assigned players (OnGameSessionChanged)");
+                }
+            });
+        }
+
         InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                audioModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/audioPlayer.js");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error loading audio module");
+            }
+        }
+
+        // When the awards modal is visible and we have a finalize payload,
+        // precompute triage buckets once per session id (no await in render blocks)
+        if (showAwardsModal && finalizeResult != null && _noBadgeBucketsComputedForSessionId != finalizeResult.SessionId)
+        {
+            try
+            {
+                await PrecomputeNoBadgeBucketsAsync();
+                _noBadgeBucketsComputedForSessionId = finalizeResult.SessionId;
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to precompute no-badge buckets for awards modal");
+            }
+        }
+    }
+
+    private async Task PlayAudio(string audioUrl)
+    {
+        try
+        {
+            if (audioModule == null)
+                return;
+
+            if (isPlayingAudio == audioUrl)
+            {
+                await audioModule.InvokeVoidAsync("stopAudio");
+                isPlayingAudio = null;
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(isPlayingAudio))
+                {
+                    await audioModule.InvokeVoidAsync("stopAudio");
+                }
+
+                await audioModule.InvokeVoidAsync("playAudio", audioUrl);
+                isPlayingAudio = audioUrl;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error playing audio");
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (audioModule != null)
+            {
+                await audioModule.InvokeVoidAsync("stopAudio");
+                await audioModule.DisposeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Error disposing audio module in GameSessionPage");
+        }
+
+        // Unsubscribe from events
+        GameSessionService.GameSessionChanged -= OnGameSessionChanged;
     }
 
     private string GetPageTitle()
@@ -431,6 +604,72 @@ else
         {
             selectedPlayerId = playerOptions.FirstOrDefault()?.Id;
         }
+    }
+
+    private async Task PrecomputeOutOfAgeAssignedAsync()
+    {
+        outOfAgeAssignedPlayers.Clear();
+
+        if (gameSession == null || string.IsNullOrWhiteSpace(gameSession.Id))
+            return;
+
+        // Avoid recomputing for the same session id
+        if (_outOfAgeAssignedComputedForSessionId == gameSession.Id)
+            return;
+
+        var scenarioAgeGroup = gameSession.Scenario?.AgeGroup;
+        if (string.IsNullOrWhiteSpace(scenarioAgeGroup))
+        {
+            _outOfAgeAssignedComputedForSessionId = gameSession.Id; // nothing to compute
+            return;
+        }
+
+        // Collect assigned profileIds and display fallbacks
+        var profileIdToDisplay = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        if (!string.IsNullOrWhiteSpace(gameSession.ProfileId))
+        {
+            profileIdToDisplay[gameSession.ProfileId!] = "Session Owner";
+        }
+
+        foreach (var assignment in gameSession.CharacterAssignments)
+        {
+            var pa = assignment.PlayerAssignment;
+            if (pa == null || string.IsNullOrWhiteSpace(pa.ProfileId)) continue;
+            var display = !string.IsNullOrWhiteSpace(pa.ProfileName) ? pa.ProfileName! : assignment.CharacterName ?? "Player";
+            profileIdToDisplay[pa.ProfileId!] = display;
+        }
+
+        if (profileIdToDisplay.Count == 0)
+        {
+            _outOfAgeAssignedComputedForSessionId = gameSession.Id;
+            return;
+        }
+
+        // Fetch profiles and compare age groups
+        foreach (var kvp in profileIdToDisplay.ToList())
+        {
+            var pid = kvp.Key;
+            try
+            {
+                var p = await ApiClient.GetProfileByIdAsync(pid);
+                if (p == null) continue;
+
+                var matches = Mystira.App.PWA.Services.AgeGroupHelper.AgeGroupMatches(scenarioAgeGroup, p.AgeGroup);
+                if (!matches)
+                {
+                    var displayName = string.IsNullOrWhiteSpace(p.Name) ? kvp.Value : p.Name;
+                    outOfAgeAssignedPlayers.Add(displayName);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to fetch profile {ProfileId} for out-of-age computation", pid);
+            }
+        }
+
+        outOfAgeAssignedPlayers = outOfAgeAssignedPlayers.Distinct().ToList();
+        _outOfAgeAssignedComputedForSessionId = gameSession.Id;
     }
 
     private async Task HandleChoice(Choice choice)
@@ -854,6 +1093,76 @@ else
         showAwardsModal = false;
         finalizeResult = null;
         ExitToHome();
+    }
+
+    private async Task PrecomputeNoBadgeBucketsAsync()
+    {
+        outOfAgeGroupNoBadges.Clear();
+        alreadyPlayedNoBadges.Clear();
+        otherNoBadges.Clear();
+
+        if (finalizeResult == null)
+            return;
+
+        var allNoBadge = finalizeResult.Awards
+            .Where(a => a.NewBadges == null || a.NewBadges.Count == 0)
+            .ToList();
+
+        if (allNoBadge.Count == 0)
+            return;
+
+        var scenarioAgeGroup = gameSession?.Scenario?.AgeGroup ?? AwardsState.ScenarioAgeGroup;
+
+        var profileIds = allNoBadge
+            .Select(a => a.ProfileId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var profilesById = new Dictionary<string, UserProfile>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pid in profileIds)
+        {
+            try
+            {
+                var p = await ApiClient.GetProfileByIdAsync(pid);
+                if (p != null)
+                {
+                    profilesById[pid] = p;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to load profile {ProfileId} for in-session awards modal", pid);
+            }
+        }
+
+        foreach (var entry in allNoBadge)
+        {
+            var displayName = string.IsNullOrWhiteSpace(entry.ProfileName) ? "Player" : entry.ProfileName!;
+            var isOutOfAge = false;
+            if (!string.IsNullOrWhiteSpace(scenarioAgeGroup) && profilesById.TryGetValue(entry.ProfileId, out var prof))
+            {
+                isOutOfAge = !Mystira.App.PWA.Services.AgeGroupHelper.AgeGroupMatches(scenarioAgeGroup, prof.AgeGroup);
+            }
+
+            if (isOutOfAge)
+            {
+                outOfAgeGroupNoBadges.Add(displayName);
+            }
+            else if (entry.AlreadyPlayed)
+            {
+                alreadyPlayedNoBadges.Add(displayName);
+            }
+            else
+            {
+                otherNoBadges.Add(displayName);
+            }
+        }
+
+        // Deduplicate names for display cleanliness
+        outOfAgeGroupNoBadges = outOfAgeGroupNoBadges.Distinct().ToList();
+        alreadyPlayedNoBadges = alreadyPlayedNoBadges.Distinct().ToList();
+        otherNoBadges = otherNoBadges.Distinct().ToList();
     }
 }
 

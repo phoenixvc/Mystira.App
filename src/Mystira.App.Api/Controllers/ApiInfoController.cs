@@ -19,7 +19,14 @@ public class ApiInfoController : ControllerBase
     public ActionResult<ApiVersionInfo> GetApiInfo()
     {
         var assembly = Assembly.GetExecutingAssembly();
-        var version = assembly.GetName().Version?.ToString() ?? "1.0.0";
+        var assemblyVersion = assembly.GetName().Version;
+        var version = assemblyVersion?.ToString() ?? "1.0.0";
+
+        // If it's a dev build (often 1.0.0.0), try to provide more context
+        if (version == "1.0.0.0" || version == "1.0.0")
+        {
+            version = "1.0.0-dev";
+        }
 
         return Ok(new ApiVersionInfo
         {

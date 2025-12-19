@@ -95,6 +95,7 @@ public class AccountCommandTests : CqrsIntegrationTestBase
             StartDate = DateTime.UtcNow,
             EndDate = DateTime.UtcNow.AddYears(1)
         };
+
         var command = new CreateAccountCommand(
             Auth0UserId: "auth0|sub",
             Email: "premium@example.com",
@@ -337,6 +338,11 @@ public class AccountCommandTests : CqrsIntegrationTestBase
             UserProfileIds = new List<string>()
         };
         DbContext.Accounts.Add(account);
+
+        var profile1 = new UserProfile { Id = "profile-1", AccountId = "other" };
+        var profile2 = new UserProfile { Id = "profile-2", AccountId = "other" };
+        DbContext.UserProfiles.AddRange(profile1, profile2);
+
         await DbContext.SaveChangesAsync();
 
         var command = new LinkProfilesToAccountCommand("account-link", new List<string> { "profile-1", "profile-2" });
@@ -345,10 +351,13 @@ public class AccountCommandTests : CqrsIntegrationTestBase
         var result = await Mediator.Send(command);
 
         // Assert
-        result.Should().NotBeNull();
-        result!.UserProfileIds.Should().HaveCount(2);
-        result.UserProfileIds.Should().Contain("profile-1");
-        result.UserProfileIds.Should().Contain("profile-2");
+        result.Should().BeTrue();
+
+        var updatedAccount = await DbContext.Accounts.FindAsync("account-link");
+        updatedAccount.Should().NotBeNull();
+        updatedAccount!.UserProfileIds.Should().HaveCount(2);
+        updatedAccount.UserProfileIds.Should().Contain("profile-1");
+        updatedAccount.UserProfileIds.Should().Contain("profile-2");
     }
 
     #endregion

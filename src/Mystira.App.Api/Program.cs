@@ -9,7 +9,7 @@ using Mystira.App.Api.Services;
 using Mystira.App.Application.Behaviors;
 using Mystira.App.Application.Ports;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Application.Ports.Health;
+using Mystira.App.Contracts.Ports.Health;
 using Mystira.App.Application.Ports.Media;
 using Mystira.App.Application.Ports.Messaging;
 using Mystira.App.Application.Services;
@@ -594,7 +594,9 @@ builder.Services.AddCors(options =>
 
 // Configure logging
 builder.Logging.AddConsole();
+#if !DEBUG
 builder.Logging.AddAzureWebAppDiagnostics();
+#endif
 
 // Configure Rate Limiting (BUG-5: Prevent brute-force attacks)
 builder.Services.AddRateLimiter(options =>
