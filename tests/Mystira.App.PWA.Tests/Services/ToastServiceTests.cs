@@ -15,7 +15,7 @@ public class ToastServiceTests
         // Arrange
         var service = new ToastService();
         ToastMessage? capturedMessage = null;
-        service.OnShow += (message) => capturedMessage = message;
+        service.OnShow += message => capturedMessage = message;
 
         // Act
         service.ShowSuccess("Operation successful!");
@@ -33,7 +33,7 @@ public class ToastServiceTests
         // Arrange
         var service = new ToastService();
         ToastMessage? capturedMessage = null;
-        service.OnShow += (message) => capturedMessage = message;
+        service.OnShow += message => capturedMessage = message;
 
         // Act
         service.ShowError("An error occurred");
@@ -51,7 +51,7 @@ public class ToastServiceTests
         // Arrange
         var service = new ToastService();
         ToastMessage? capturedMessage = null;
-        service.OnShow += (message) => capturedMessage = message;
+        service.OnShow += message => capturedMessage = message;
 
         // Act
         service.ShowWarning("Warning: Check your input");
@@ -68,7 +68,7 @@ public class ToastServiceTests
         // Arrange
         var service = new ToastService();
         ToastMessage? capturedMessage = null;
-        service.OnShow += (message) => capturedMessage = message;
+        service.OnShow += message => capturedMessage = message;
 
         // Act
         service.ShowInfo("Here's some information");
@@ -85,7 +85,7 @@ public class ToastServiceTests
         // Arrange
         var service = new ToastService();
         ToastMessage? capturedMessage = null;
-        service.OnShow += (message) => capturedMessage = message;
+        service.OnShow += message => capturedMessage = message;
 
         // Act
         service.ShowSuccess("Custom duration message", durationMs: 10000);
@@ -101,7 +101,7 @@ public class ToastServiceTests
         // Arrange
         var service = new ToastService();
         var messages = new List<ToastMessage>();
-        service.OnShow += (message) => messages.Add(message);
+        service.OnShow += message => messages.Add(message);
 
         // Act
         service.ShowSuccess("Message 1");
@@ -119,7 +119,7 @@ public class ToastServiceTests
         // Arrange
         var service = new ToastService();
         ToastMessage? capturedMessage = null;
-        service.OnShow += (message) => capturedMessage = message;
+        service.OnShow += message => capturedMessage = message;
         var beforeShow = DateTime.UtcNow;
 
         // Act
@@ -154,8 +154,8 @@ public class ToastServiceTests
         var subscriber1Called = false;
         var subscriber2Called = false;
 
-        service.OnShow += (_) => subscriber1Called = true;
-        service.OnShow += (_) => subscriber2Called = true;
+        service.OnShow += _ => subscriber1Called = true;
+        service.OnShow += _ => subscriber2Called = true;
 
         // Act
         service.ShowSuccess("Test");
@@ -175,7 +175,7 @@ public class ToastServiceTests
         // Arrange
         var service = new ToastService();
         ToastMessage? capturedMessage = null;
-        service.OnShow += (message) => capturedMessage = message;
+        service.OnShow += message => capturedMessage = message;
 
         // Act
         switch (type)

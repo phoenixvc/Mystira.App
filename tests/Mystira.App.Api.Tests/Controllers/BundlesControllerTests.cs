@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -59,7 +60,7 @@ public class BundlesControllerTests
         // Arrange
         var mediator = new Mock<IMediator>();
         mediator.Setup(m => m.Send(It.IsAny<GetAllContentBundlesQuery>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new System.Exception("boom"));
+            .ThrowsAsync(new Exception("boom"));
         var controller = CreateController(mediator);
 
         // Act
@@ -105,7 +106,7 @@ public class BundlesControllerTests
         var ageGroup = "3-5";
         var mediator = new Mock<IMediator>();
         mediator.Setup(m => m.Send(It.Is<GetContentBundlesByAgeGroupQuery>(q => q.AgeGroup == ageGroup), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new System.Exception("boom"));
+            .ThrowsAsync(new Exception("boom"));
         var controller = CreateController(mediator);
 
         // Act

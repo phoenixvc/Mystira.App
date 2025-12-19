@@ -338,7 +338,7 @@
 }
 
 /* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     .modal-content {
         background: linear-gradient(135deg, #1e1b4b 0%, #14122b 100%);
         border-color: rgba(99, 102, 241, 0.3);
@@ -540,7 +540,7 @@ html[data-theme="dark"] .character-card .text-muted {
 }
 
 /* Dark mode for media and assign buttons */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     .btn-media {
         background: rgba(99, 102, 241, 0.15);
         border-color: rgba(99, 102, 241, 0.4);
@@ -635,4 +635,5 @@ html[data-theme="dark"] .btn-assign-player:hover {
     border-color: #6366f1;
     color: white;
 }
+
 

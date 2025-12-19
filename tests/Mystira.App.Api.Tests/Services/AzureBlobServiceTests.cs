@@ -1,10 +1,3 @@
-using Azure;
-using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
-using Mystira.App.Infrastructure.Azure.Services;
-using FluentAssertions;
-using Microsoft.Extensions.Logging;
-using Moq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,7 +5,14 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure;
 using Azure.Core;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Moq;
+using Mystira.App.Infrastructure.Azure.Services;
 using Xunit;
 
 namespace Mystira.App.Api.Tests.Services;
@@ -51,14 +51,14 @@ public class AzureBlobServiceTests
         var contentType = "image/jpeg";
         var content = "test content";
         var fileStream = new MemoryStream(Encoding.UTF8.GetBytes(content));
-    
+
         var mockResponse = Mock.Of<Response<BlobContentInfo>>();
         var expectedUrl = $"https://test.blob.core.windows.net/test-container/{fileName}";
 
         // Setup the container client
         _mockContainerClient
             .Setup(x => x.CreateIfNotExistsAsync(
-                It.IsAny<PublicAccessType>(), 
+                It.IsAny<PublicAccessType>(),
                 It.IsAny<Dictionary<string, string>>(), CancellationToken.None))
             .ReturnsAsync(Mock.Of<Response<BlobContainerInfo>>());
 
@@ -73,7 +73,7 @@ public class AzureBlobServiceTests
         // Setup the blob client with BlobUploadOptions parameter
         _mockBlobClient
             .Setup(x => x.UploadAsync(
-                It.IsAny<Stream>(), 
+                It.IsAny<Stream>(),
                 It.IsAny<BlobUploadOptions>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(mockResponse);
@@ -90,7 +90,7 @@ public class AzureBlobServiceTests
 
         // Verify with the correct parameter types
         _mockBlobClient.Verify(x => x.UploadAsync(
-            It.IsAny<Stream>(), 
+            It.IsAny<Stream>(),
             It.Is<BlobUploadOptions>(o => o.HttpHeaders != null && o.HttpHeaders.ContentType == contentType),
             It.IsAny<CancellationToken>()));
     }
@@ -181,12 +181,12 @@ public class AzureBlobServiceTests
 
         // Setup mock container client
         var mockContainerClient = new Mock<BlobContainerClient>();
-    
+
         // Setup the blob service client to return our mock container
         _mockBlobServiceClient
             .Setup(x => x.GetBlobContainerClient(It.IsAny<string>()))
             .Returns(mockContainerClient.Object);
-    
+
         // Setup GetBlobsAsync to return only items matching the prefix
         mockContainerClient
             .Setup(x => x.GetBlobsAsync(
@@ -199,7 +199,7 @@ public class AzureBlobServiceTests
                 var filteredItems = blobNames
                     .Where(name => name.StartsWith(prefix))
                     .Select(name => BlobsModelFactory.BlobItem(name: name));
-            
+
                 return GetAsyncBlobItems(filteredItems.ToList());
             });
 
@@ -216,11 +216,11 @@ public class AzureBlobServiceTests
     private static AsyncPageable<BlobItem> GetAsyncBlobItems(List<BlobItem> blobItems)
     {
         var asyncPageableMock = new Mock<AsyncPageable<BlobItem>>();
-    
+
         asyncPageableMock
             .Setup(ap => ap.GetAsyncEnumerator(It.IsAny<CancellationToken>()))
             .Returns(GetAsyncEnumerator(blobItems));
-    
+
         return asyncPageableMock.Object;
     }
 
@@ -229,24 +229,24 @@ public class AzureBlobServiceTests
     private static IAsyncEnumerator<BlobItem> GetAsyncEnumerator(List<BlobItem> blobItems)
     {
         var enumeratorMock = new Mock<IAsyncEnumerator<BlobItem>>();
-    
+
         var index = -1;
         enumeratorMock
             .Setup(e => e.Current)
             .Returns(() => index >= 0 && index < blobItems.Count ? blobItems[index] : null);
-    
+
         enumeratorMock
             .Setup(e => e.MoveNextAsync())
             .Returns(() => {
                 index++;
                 return new ValueTask<bool>(index < blobItems.Count);
             });
-    
+
         return enumeratorMock.Object;
     }
 
 
-    
+
     [Fact]
     public async Task DownloadMediaAsync_WithExistingBlob_ReturnsStream()
     {
@@ -254,17 +254,17 @@ public class AzureBlobServiceTests
         var blobName = "test-file.jpg";
         var content = "test file content";
         var contentStream = new MemoryStream(Encoding.UTF8.GetBytes(content));
-    
+
         // Setup ExistsAsync to return true
         _mockBlobClient
             .Setup(x => x.ExistsAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(Response.FromValue(true, new MockHttpResponse(200)));
-    
+
         // Setup DownloadStreamingAsync correctly
         var mockStreamingResponse = Mock.Of<Response<BlobDownloadStreamingResult>>(
             r => r.Value == BlobsModelFactory.BlobDownloadStreamingResult(
                 contentStream, null));
-    
+
         _mockBlobClient
             .Setup(x => x.DownloadStreamingAsync(
                 It.IsAny<BlobDownloadOptions>(), CancellationToken.None))
@@ -275,7 +275,7 @@ public class AzureBlobServiceTests
 
         // Assert
         result.Should().NotBeNull();
-    
+
         // Verify content
         using var reader = new StreamReader(result!, Encoding.UTF8);
         var resultContent = await reader.ReadToEndAsync();
@@ -315,7 +315,7 @@ public class AzureBlobServiceTests
         // Setup container client
         _mockContainerClient
             .Setup(x => x.CreateIfNotExistsAsync(
-                It.IsAny<PublicAccessType>(), 
+                It.IsAny<PublicAccessType>(),
                 It.IsAny<Dictionary<string, string>>(), CancellationToken.None))
             .ReturnsAsync(Mock.Of<Response<BlobContainerInfo>>());
 
@@ -351,12 +351,12 @@ public class AzureBlobServiceTests
 
     private static AsyncPageable<BlobItem> CreateMockPageable(BlobItem[] items)
     {
-        var mockPage = Mock.Of<Page<BlobItem>>(p => 
+        var mockPage = Mock.Of<Page<BlobItem>>(p =>
             p.Values == items &&
             p.ContinuationToken == null);
-        
+
         var pages = new[] { mockPage };
-        
+
         var mockPageable = Mock.Of<AsyncPageable<BlobItem>>();
         Mock.Get(mockPageable)
             .Setup(x => x.AsPages(It.IsAny<string>(), It.IsAny<int?>()))
@@ -364,7 +364,7 @@ public class AzureBlobServiceTests
 
         return mockPageable;
     }
-    
+
     // Add this inside your test class
     private class MockHttpResponse : Response
     {

@@ -487,19 +487,15 @@ public partial class MystiraAppDbContext : DbContext
                 {
                     branch.OwnsOne(b => b.EchoLog, echoLog =>
                     {
-                        echoLog.Property(e => e.EchoType)
-                               .HasConversion(
-                                   v => v.Value,
-                                   v => EchoType.Parse(v) ?? EchoType.Parse("honesty")!);
+                        // EchoType is now a plain string
+                        echoLog.Property(e => e.EchoType);
                     });
                     branch.OwnsOne(b => b.CompassChange);
                 });
                 scene.OwnsMany(s => s.EchoReveals, reveal =>
                 {
-                    reveal.Property(r => r.EchoType)
-                          .HasConversion(
-                              v => v.Value,
-                              v => EchoType.Parse(v) ?? EchoType.Parse("honesty")!);
+                    // EchoType is now a plain string
+                    reveal.Property(r => r.EchoType);
                 });
             });
 
@@ -540,20 +536,16 @@ public partial class MystiraAppDbContext : DbContext
             {
                 choice.OwnsOne(c => c.EchoGenerated, echo =>
                 {
-                    echo.Property(e => e.EchoType)
-                        .HasConversion(
-                            v => v.Value,
-                            v => EchoType.Parse(v) ?? EchoType.Parse("honesty")!);
+                    // EchoType is now a plain string
+                    echo.Property(e => e.EchoType);
                 });
                 choice.OwnsOne(c => c.CompassChange);
             });
 
             entity.OwnsMany(e => e.EchoHistory, echo =>
             {
-                echo.Property(e => e.EchoType)
-                    .HasConversion(
-                        v => v.Value,
-                        v => EchoType.Parse(v) ?? EchoType.Parse("honesty")!);
+                // EchoType is now a plain string
+                echo.Property(e => e.EchoType);
             });
             entity.OwnsMany(e => e.Achievements);
 
@@ -600,6 +592,41 @@ public partial class MystiraAppDbContext : DbContext
                       (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
                       c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.Key.GetHashCode(), v.Value.GetHashCode())),
                       c => new Dictionary<string, CompassTracking>(c)));
+        });
+
+        // Configure PlayerScenarioScore
+        modelBuilder.Entity<PlayerScenarioScore>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            // Cosmos container mapping (only when not using in-memory provider)
+            if (!isInMemoryDatabase)
+            {
+                // Map Id property to lowercase 'id' as required by Cosmos
+                entity.Property(e => e.Id).ToJsonProperty("id");
+
+                // Store PlayerScenarioScore items in their own container, partitioned by ProfileId
+                // This optimizes lookups like GetByProfileIdAsync and aligns with the API endpoint usage
+                entity.ToContainer("PlayerScenarioScores")
+                      .HasPartitionKey(e => e.ProfileId);
+            }
+
+            // Store AxisScores as JSON string to work with both Cosmos and InMemory providers
+            var dictComparer = new ValueComparer<Dictionary<string, float>>(
+                (d1, d2) =>
+                    d1 != null && d2 != null && d1.Count == d2.Count &&
+                    d1.OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
+                      .SequenceEqual(d2.OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)),
+                d => d == null ? 0 : d.Aggregate(0, (a, kv) => HashCode.Combine(a,
+                    StringComparer.OrdinalIgnoreCase.GetHashCode(kv.Key), kv.Value.GetHashCode())),
+                d => d == null ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+                                : new Dictionary<string, float>(d, StringComparer.OrdinalIgnoreCase));
+
+            entity.Property(e => e.AxisScores)
+                  .HasConversion(new ValueConverter<Dictionary<string, float>, string>(
+                      v => AxisScoresSerializer.Serialize(v),
+                      v => AxisScoresSerializer.Deserialize(v)))
+                  .Metadata.SetValueComparer(dictComparer);
         });
 
         // Configure MediaAsset
@@ -850,6 +877,26 @@ public partial class MystiraAppDbContext : DbContext
 
             entity.OwnsMany(e => e.History);
         });
+    }
+
+    // Helper for serializing AxisScores dictionaries with case-insensitive keys
+    private static class AxisScoresSerializer
+    {
+        private static readonly System.Text.Json.JsonSerializerOptions Options = new();
+
+        public static string Serialize(Dictionary<string, float> value)
+            => System.Text.Json.JsonSerializer.Serialize(value, Options);
+
+        public static Dictionary<string, float> Deserialize(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+
+            var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, float>>(json, Options);
+            return dict == null
+                ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, float>(dict, StringComparer.OrdinalIgnoreCase);
+        }
     }
 }
 

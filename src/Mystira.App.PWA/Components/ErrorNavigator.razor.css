@@ -339,7 +339,7 @@
 }
 
 /* Dark mode support */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     .error-navigator {
         --surface-color: #1e1e1e;
         --error-bg-light: #2d1f1f;
@@ -391,3 +391,4 @@
         justify-content: center;
     }
 }
+

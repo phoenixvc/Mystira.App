@@ -1,7 +1,6 @@
 using FluentAssertions;
 using Mystira.App.Application.CQRS.UserBadges.Queries;
 using Mystira.App.Domain.Models;
-using Xunit;
 
 namespace Mystira.App.Application.Tests.CQRS.UserBadges;
 

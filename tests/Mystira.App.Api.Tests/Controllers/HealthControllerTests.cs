@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -6,10 +10,6 @@ using Moq;
 using Mystira.App.Api.Controllers;
 using Mystira.App.Application.CQRS.Health.Queries;
 using Mystira.App.Contracts.Responses.Common;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Mystira.App.Api.Tests.Controllers;
@@ -48,7 +48,7 @@ public class HealthControllerTests
         result.Should().NotBeNull();
         var objResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
         objResult.StatusCode.Should().Be(200);
-        
+
         var response = objResult.Value.Should().BeOfType<HealthCheckResponse>().Subject;
         response.Status.Should().Be("Healthy");
     }
@@ -77,7 +77,7 @@ public class HealthControllerTests
         result.Should().NotBeNull();
         var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
         objectResult.StatusCode.Should().Be(503); // Service Unavailable
-        
+
         var response = objectResult.Value.Should().BeOfType<HealthCheckResponse>().Subject;
         response.Status.Should().Be("Unhealthy");
     }
@@ -106,7 +106,7 @@ public class HealthControllerTests
         result.Should().NotBeNull();
         var objResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
         objResult.StatusCode.Should().Be(200);
-        
+
         var response = objResult.Value.Should().BeOfType<HealthCheckResponse>().Subject;
         response.Status.Should().Be("Degraded");
     }
@@ -131,7 +131,7 @@ public class HealthControllerTests
         // Assert
         var objResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
         var response = objResult.Value.Should().BeOfType<HealthCheckResponse>().Subject;
-        
+
         response.Duration.Should().Be(TimeSpan.FromMilliseconds(150));
         response.Status.Should().Be("Healthy");
     }
@@ -164,7 +164,7 @@ public class HealthControllerTests
         response.Results.Should().HaveCount(2);
         response.Results.Should().ContainKey("database");
         response.Results.Should().ContainKey("storage");
-        
+
         response.Status.Should().Be("Healthy");
         response.Duration.Should().BeGreaterThan(TimeSpan.Zero);
     }

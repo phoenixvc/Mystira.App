@@ -1,6 +1,8 @@
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Mystira.App.Application.Ports.Messaging;
 using Mystira.App.Infrastructure.Discord.Configuration;
@@ -88,7 +90,7 @@ public class ServiceCollectionExtensionsTests
 
         // Assert
         var serviceProvider = services.BuildServiceProvider();
-        var hostedServices = serviceProvider.GetServices<Microsoft.Extensions.Hosting.IHostedService>();
+        var hostedServices = serviceProvider.GetServices<IHostedService>();
 
         hostedServices.Should().Contain(s => s.GetType() == typeof(DiscordBotHostedService));
     }
@@ -115,7 +117,7 @@ public class ServiceCollectionExtensionsTests
 
         // Assert
         var serviceProvider = services.BuildServiceProvider();
-        var healthCheckService = serviceProvider.GetService<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckService>();
+        var healthCheckService = serviceProvider.GetService<HealthCheckService>();
 
         healthCheckService.Should().NotBeNull();
     }
@@ -160,7 +162,7 @@ public class ServiceCollectionExtensionsTests
         services.AddLogging();
 
         // Act
-        services.AddDiscordBotKeyed(configuration, "discord");
+        services.AddDiscordBotKeyed(configuration);
 
         // Assert
         var serviceProvider = services.BuildServiceProvider();

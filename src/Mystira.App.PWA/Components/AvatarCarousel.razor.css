@@ -12,6 +12,8 @@
     border-radius: 0.5rem;
     margin-bottom: 1rem;
     padding: 1rem;
+    width: 100%;
+    flex-shrink: 0;
 }
 
 /* 16:9 aspect ratio wrapper for the main avatar preview */
@@ -19,18 +21,60 @@
     position: relative;
     width: 100%;
     max-width: 520px; /* prevent overgrowing on large screens */
-    aspect-ratio: 16 / 9;
+    flex-shrink: 0;
+    /* Aspect ratio fallback using padding-bottom hack */
+    height: 0;
+    padding-bottom: 56.25%; /* 9 / 16 * 100% */
     overflow: hidden;
     background: #e5e7eb; /* subtle backdrop for letterboxing */
     border-radius: 0.5rem;
+    display: block; /* Ensure it's not flex and doesn't behave weirdly */
+}
+
+/* Ensure the CachedMystiraImage container fills the wrapper */
+.avatar-image-wrapper ::deep div {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Use modern aspect-ratio where supported to override the padding hack */
+@supports (aspect-ratio: 16 / 9) {
+    .avatar-image-wrapper {
+        aspect-ratio: 16 / 9;
+        height: auto;
+        padding-bottom: 0;
+    }
+
+    .avatar-image-wrapper ::deep div {
+        position: relative;
+        width: 100%;
+        height: 100%;
+    }
 }
 
 /* Image lives inside child component (CachedMystiraImage) */
 .avatar-image-wrapper ::deep .avatar-image {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
     object-fit: cover; /* fill the 16:9 frame while preserving aspect ratio */
     display: block;
+}
+
+/* If aspect-ratio is supported, we can let the image be relatively positioned if we want,
+   but absolute works fine in both cases if the container has aspect-ratio.
+   Actually, with aspect-ratio, we need to ensure the image fills it. */
+@supports (aspect-ratio: 16 / 9) {
+    .avatar-image-wrapper ::deep .avatar-image {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+    }
 }
 
 .avatar-controls {
@@ -82,7 +126,7 @@
 }
 
 /* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark-disabled) {
     .avatar-display {
         background: #1e1b4b;
     }
@@ -159,3 +203,4 @@ html[data-theme="dark"] .avatar-carousel-container .alert-warning {
     border-color: #eab308;
     color: #fef08a;
 }
+

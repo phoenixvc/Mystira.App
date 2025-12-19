@@ -59,7 +59,7 @@ public class BundlesController : ControllerBase
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Invalid age group parameter: {AgeGroup}", ageGroup);
-            return BadRequest(new { Message = ex.Message });
+            return BadRequest(new { ex.Message });
         }
         catch (Exception ex)
         {

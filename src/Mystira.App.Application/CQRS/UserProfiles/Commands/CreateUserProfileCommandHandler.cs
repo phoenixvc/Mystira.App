@@ -36,6 +36,13 @@ public class CreateUserProfileCommandHandler : ICommandHandler<CreateUserProfile
             throw new ArgumentException("Profile name is required");
         }
 
+        // Enforce minimum length for name to provide a clear error from the API layer
+        // This mirrors DataAnnotations on CreateUserProfileRequest (MinimumLength = 2)
+        if (request.Name.Trim().Length < 2)
+        {
+            throw new ArgumentException("Profile name must be at least 2 characters long");
+        }
+
         if (string.IsNullOrWhiteSpace(request.AgeGroup))
         {
             throw new ArgumentException("Age group is required");

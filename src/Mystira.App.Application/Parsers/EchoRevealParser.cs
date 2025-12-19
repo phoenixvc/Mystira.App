@@ -21,9 +21,7 @@ public static class EchoRevealParser
             throw new ArgumentException("Required field 'echoType'/'type' is missing or null in echo reveal reference");
         }
 
-        var parsed = EchoType.Parse(echoTypeObj.ToString())
-            ?? throw new ArgumentException($"Invalid EchoType: {echoTypeObj}");
-        reveal.EchoType = parsed;
+        reveal.EchoType = echoTypeObj.ToString() ?? string.Empty;
 
         // Parse MinStrength (optional, default 0.5)
         var minStrengthFound = revealDict.TryGetValue("minStrength", out var minStrengthObj) ||

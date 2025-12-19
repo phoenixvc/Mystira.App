@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Models;
 
@@ -21,7 +22,7 @@ public class MediaQueryRequest
 /// </summary>
 public class MediaQueryResponse
 {
-    public List<Domain.Models.MediaAsset> Media { get; set; } = new();
+    public List<MediaAsset> Media { get; set; } = new();
     public int TotalCount { get; set; }
     public int Page { get; set; }
     public int PageSize { get; set; }

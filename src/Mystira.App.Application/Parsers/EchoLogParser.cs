@@ -24,9 +24,7 @@ public static class EchoLogParser
             throw new ArgumentException("Required field 'echoType'/'type' is missing or null in echo log data");
         }
 
-        var parsed = EchoType.Parse(echoTypeObj.ToString())
-            ?? throw new ArgumentException($"Invalid EchoType: {echoTypeObj}");
-        echoLog.EchoType = parsed;
+        echoLog.EchoType = echoTypeObj.ToString() ?? string.Empty;
 
         // Parse Description (required)
         var descFound = echoLogDict.TryGetValue("description", out var descObj) ||

@@ -6,6 +6,7 @@
 @inject IApiClient ApiClient
 @inject ILogger<CharacterAssignment> Logger
 @inject IJSRuntime JSRuntime
+@inject ISettingsService SettingsService
 @using System.Linq
 
 <PageTitle>Assign Players • Mystira</PageTitle>
@@ -557,6 +558,10 @@ else
                     }
                 </div>
                 <div class="modal-footer">
+                    @* Cancel is specifically requested for toddler (1-2) assignment flow *@
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CancelToddlerAssignment">
+                        Cancel
+                    </button>
                     <button type="button" class="btn btn-primary" @onclick="ConfirmInitialAssignment" disabled="@(!CanConfirmInitialAssignment())">
                         Assign to All
                     </button>
@@ -599,6 +604,9 @@ else
     private bool ageGroupDontShowAgain = false;
     private bool dontShowGuestWarning = false;
     private List<string> mismatchedProfileNames = new();
+    private bool showReplayWarningModal = false;
+    private bool replayDontShowAgain = false;
+    private List<string> replayingProfileNames = new();
 
     // Mode helpers
     private bool IsToddlerScenario => assignmentData?.Scenario?.AgeGroup == "1-2";
@@ -616,9 +624,6 @@ else
 
             // Show the initial bulk assignment prompt only for toddler scenarios (age group 1-2)
             showInitialAssignmentPrompt = IsToddlerScenario;
-
-            // Preload persisted flags
-            dontShowGuestWarning = await ShouldSkipGuestWarningAsync();
 
             // Load the audio module when component initializes
             audioModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
@@ -644,6 +649,34 @@ else
         {
             characterAssignments = assignmentData.CharacterAssignments;
             availableProfiles = assignmentData.AvailableProfiles;
+        }
+    }
+
+    private async Task CancelToddlerAssignment()
+    {
+        try
+        {
+            // Stop any playing audio preview
+            if (!string.IsNullOrEmpty(isPlayingAudio) && audioModule is not null)
+            {
+                try
+                {
+                    await audioModule.InvokeVoidAsync("stopAudio");
+                    isPlayingAudio = null;
+                }
+                catch { /* best-effort */ }
+            }
+
+            // Close the initial prompt and navigate back to the previous hub/home
+            showInitialAssignmentPrompt = false;
+            StateHasChanged();
+            GoBack();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during CancelToddlerAssignment");
+            // Fallback navigation to ensure user isn't stuck
+            GoBack();
         }
     }
 
@@ -694,7 +727,7 @@ else
             // For 1-2 age group, start immediately after a single selection
             if (IsToddlerScenario)
             {
-                await ContinueWithGameSession();
+                await CheckForWarningsAndContinue();
                 return;
             }
 
@@ -753,7 +786,7 @@ else
             isAvatarSelected = false;
             if (IsToddlerScenario)
             {
-                await ContinueWithGameSession();
+                await CheckForWarningsAndContinue();
                 return;
             }
 
@@ -1035,12 +1068,27 @@ else
         // Do not allow starting the session until the initial assignment prompt is resolved
         if (showInitialAssignmentPrompt || !CanBeginSession) return;
 
+        await CheckForWarningsAndContinue();
+    }
+
+    private async Task CheckForWarningsAndContinue()
+    {
         try
         {
             // Check for age group mismatches among assigned user profiles
-            if (HasAgeGroupMismatch() && !await ShouldSkipAgeGroupWarningAsync())
+            var showAgeGroupWarnings = await SettingsService.GetShowAgeGroupMismatchWarningAsync();
+            if (showAgeGroupWarnings && HasAgeGroupMismatch())
             {
                 showAgeGroupWarningModal = true;
+                StateHasChanged();
+                return;
+            }
+
+            // Check for replays
+            var showReplayWarnings = await SettingsService.GetShowGameAlreadyPlayedWarningAsync();
+            if (showReplayWarnings && await HasReplayMismatchAsync())
+            {
+                showReplayWarningModal = true;
                 StateHasChanged();
                 return;
             }
@@ -1056,8 +1104,9 @@ else
 
             if (hasOnlyGuests)
             {
-                // Show guest warning modal unless the user opted out
-                if (dontShowGuestWarning)
+                // Show guest warning modal unless the user opted out via global settings
+                var showGuestWarning = await SettingsService.GetShowGuestWarningAsync();
+                if (!showGuestWarning)
                 {
                     await ContinueWithGameSession();
                     return;
@@ -1107,44 +1156,13 @@ else
         return false;
     }
 
-    private string GetAgeGroupSkipStorageKey()
-    {
-        // Keyed by scenario age group; additionally include scenario id to be safe
-        var age = assignmentData?.Scenario?.AgeGroup ?? "unknown";
-        return $"mystira_skip_age_group_warning_{age}_{ScenarioId}";
-    }
-
-    private async Task<bool> ShouldSkipAgeGroupWarningAsync()
-    {
-        try
-        {
-            var val = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", GetAgeGroupSkipStorageKey());
-            return string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogDebug(ex, "Failed to read age group warning flag from localStorage");
-            return false;
-        }
-    }
-
-    private async Task PersistSkipAgeGroupWarningIfNeededAsync()
-    {
-        if (!ageGroupDontShowAgain) return;
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("localStorage.setItem", GetAgeGroupSkipStorageKey(), "true");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogDebug(ex, "Failed to persist age group warning flag to localStorage");
-        }
-    }
-
     private async Task ContinueAfterAgeGroupWarning()
     {
         showAgeGroupWarningModal = false;
-        await PersistSkipAgeGroupWarningIfNeededAsync();
+        if (ageGroupDontShowAgain)
+        {
+            await SettingsService.SetShowAgeGroupMismatchWarningAsync(false);
+        }
         await ContinueWithGameSession();
     }
 
@@ -1243,7 +1261,10 @@ else
         showGuestWarningModal = false;
 
         // Persist preference if user checked the box in the modal
-        await PersistSkipGuestWarningIfNeededAsync();
+        if (dontShowGuestWarning)
+        {
+            await SettingsService.SetShowGuestWarningAsync(false);
+        }
 
         if (pendingInitialGuestApplyAll)
         {
@@ -1266,7 +1287,7 @@ else
             // For toddler scenarios, auto-start immediately after choosing guest
             if (IsToddlerScenario)
             {
-                await ContinueWithGameSession();
+                await CheckForWarningsAndContinue();
                 return;
             }
 
@@ -1288,35 +1309,6 @@ else
             pendingInitialGuestApplyAll = false;
         }
         StateHasChanged();
-    }
-
-    private string GetGuestWarningSkipStorageKey() => "mystira_skip_guest_warning";
-
-    private async Task<bool> ShouldSkipGuestWarningAsync()
-    {
-        try
-        {
-            var val = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", GetGuestWarningSkipStorageKey());
-            return string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogDebug(ex, "Failed to read guest warning flag from localStorage");
-            return false;
-        }
-    }
-
-    private async Task PersistSkipGuestWarningIfNeededAsync()
-    {
-        if (!dontShowGuestWarning) return;
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("localStorage.setItem", GetGuestWarningSkipStorageKey(), "true");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogDebug(ex, "Failed to persist guest warning flag to localStorage");
-        }
     }
 
     private void ManageProfiles()
@@ -1540,5 +1532,51 @@ else
         }
         StateHasChanged();
         Logger.LogInformation("Filled {Count} unassigned characters with AI players", UnassignedCount);
+    }
+
+    private async Task<bool> HasReplayMismatchAsync()
+    {
+        replayingProfileNames.Clear();
+
+        var assignedProfileIds = characterAssignments
+            .Where(ca => !ca.IsUnused && ca.PlayerAssignment?.Type == "Profile" && !string.IsNullOrEmpty(ca.PlayerAssignment.ProfileId))
+            .Select(ca => ca.PlayerAssignment!.ProfileId!)
+            .Distinct()
+            .ToList();
+
+        if (!assignedProfileIds.Any()) return false;
+
+        foreach (var profileId in assignedProfileIds)
+        {
+            var sessions = await ApiClient.GetSessionsByProfileAsync(profileId);
+            // Check if any completed session exists for this scenario
+            if (sessions != null && sessions.Any(s => s.ScenarioId == ScenarioId && s.IsCompleted))
+            {
+                var profile = availableProfiles.FirstOrDefault(p => p.Id == profileId);
+                if (profile != null)
+                {
+                    replayingProfileNames.Add(profile.Name);
+                }
+            }
+        }
+
+        return replayingProfileNames.Any();
+    }
+
+    private async Task ContinueAfterReplayWarning()
+    {
+        showReplayWarningModal = false;
+        if (replayDontShowAgain)
+        {
+            await SettingsService.SetShowGameAlreadyPlayedWarningAsync(false);
+        }
+        await ContinueWithGameSession();
+    }
+
+    private void CancelReplayWarning()
+    {
+        showReplayWarningModal = false;
+        replayDontShowAgain = false; // reset checkbox
+        StateHasChanged();
     }
 }

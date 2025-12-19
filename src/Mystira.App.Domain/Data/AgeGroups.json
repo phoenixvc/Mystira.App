@@ -28,5 +28,11 @@
     "MinimumAge": 13,
     "MaximumAge": 18,
     "Value": "13-18"
+  },
+  {
+    "Name": "adults",
+    "MinimumAge": 19,
+    "MaximumAge": 150,
+    "Value": "19-150"
   }
 ]

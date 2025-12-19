@@ -147,6 +147,10 @@ html, body {
     text-decoration: none !important;
 }
 
+.btn-primary-custom * {
+    color: #ffffff !important;
+}
+
 .btn-primary-custom:hover {
     background-color: var(--primary-hover);
     border-color: var(--primary-hover);
@@ -173,6 +177,10 @@ html, body {
     --bs-btn-disabled-color: #ffffff;
     color: #ffffff !important;
     text-decoration: none !important;
+}
+
+.btn-secondary-custom * {
+    color: #ffffff !important;
 }
 
 .btn-secondary-custom:hover {

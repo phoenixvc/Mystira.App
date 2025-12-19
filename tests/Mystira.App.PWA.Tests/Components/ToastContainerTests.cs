@@ -1,6 +1,6 @@
 using Bunit;
-using Microsoft.Extensions.DependencyInjection;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Mystira.App.PWA.Components;
 using Mystira.App.PWA.Services;
 using Xunit;

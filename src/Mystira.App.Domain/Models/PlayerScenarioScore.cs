@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations.Schema;
 namespace Mystira.App.Domain.Models;
 
 /// <summary>
@@ -26,10 +25,8 @@ public class PlayerScenarioScore
 
     /// <summary>
     /// Aggregated axis scores (e.g., {"honesty": 15.5, "bravery": -3.2})
-    /// Not mapped in tests' in-memory EF model.
     /// </summary>
-    [NotMapped]
-    public Dictionary<string, float> AxisScores { get; set; } = new();
+    public Dictionary<string, float> AxisScores { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// When the score was recorded

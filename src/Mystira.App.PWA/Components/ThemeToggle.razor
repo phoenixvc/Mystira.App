@@ -18,21 +18,9 @@
     {
         if (firstRender)
         {
-            // Check current theme from localStorage or system preference
-            var currentTheme = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "theme");
-            
-            if (string.IsNullOrEmpty(currentTheme))
-            {
-                // Check system preference
-                var prefersDark = await JSRuntime.InvokeAsync<bool>("eval", "window.matchMedia('(prefers-color-scheme: dark)').matches");
-                IsDarkMode = prefersDark;
-                // Removed useless assignment to currentTheme
-            }
-            else
-            {
-                IsDarkMode = currentTheme == "dark";
-            }
-            
+            // Force light theme
+            IsDarkMode = false;
+
             // Apply theme
             await ApplyTheme(IsDarkMode);
             StateHasChanged();

@@ -59,7 +59,6 @@ void ConfigureApiHttpClient(HttpClient client)
     // Set a placeholder base address - the ApiBaseAddressHandler will override this
     // with the persisted URL from localStorage (if available) at request time
     client.BaseAddress = new Uri(defaultApiUrl);
-    client.DefaultRequestHeaders.Add("User-Agent", "Mystira/1.0");
 }
 
 // Factory function to create resilience policies for each client
@@ -185,6 +184,8 @@ builder.Services.AddSingleton<IImageCacheService, ImageCacheService>();
 builder.Services.AddScoped<IPlayerContextService, PlayerContextService>();
 builder.Services.AddScoped<IAchievementsService, AchievementsService>();
 builder.Services.AddScoped<IAwardsState, AwardsState>();
+// Settings service (localStorage-backed)
+builder.Services.AddScoped<ISettingsService, SettingsService>();
 
 // UI Services
 builder.Services.AddScoped<ToastService>();

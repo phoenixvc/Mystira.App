@@ -56,35 +56,38 @@
                     }
 
                     @* Age Group Filters *@
-                    <div class="filter-age-groups">
-                        <div class="age-filter-container d-flex flex-wrap gap-2" role="group" aria-label="Age group filters">
-                            @foreach (var ageGroup in AgeGroups)
-                            {
-                                var isSelected = SelectedAgeGroups.Contains(ageGroup);
-                                var count = AgeGroupCounts.TryGetValue(ageGroup, out var c) ? c : 0;
-                                <button class="btn btn-age-filter @(isSelected ? "btn-primary-custom" : "btn-outline-secondary")"
-                                        @onclick="() => OnAgeGroupToggle(ageGroup)"
-                                        aria-pressed="@isSelected.ToString().ToLower()"
-                                        aria-label="Filter by age group @ageGroup, @count bundle@(count != 1 ? "s" : "") available"
-                                        title="@count bundle@(count != 1 ? "s" : "") available">
-                                    Ages @ageGroup
-                                    <span class="badge badge-count ms-1">@count</span>
-                                    @if (isSelected)
-                                    {
-                                        <i class="fas fa-check ms-1"></i>
-                                    }
-                                </button>
-                            }
-                            @if (SelectedAgeGroups.Any())
-                            {
-                                <button class="btn btn-outline-danger btn-sm"
-                                        @onclick="OnClearAll"
-                                        aria-label="Clear all age group filters">
-                                    <i class="fas fa-times me-1"></i>Clear
-                                </button>
-                            }
+                    @if (ShowAgeGroups)
+                    {
+                        <div class="filter-age-groups">
+                            <div class="age-filter-container d-flex flex-wrap gap-2" role="group" aria-label="Age group filters">
+                                @foreach (var ageGroup in AgeGroups)
+                                {
+                                    var isSelected = SelectedAgeGroups.Contains(ageGroup);
+                                    var count = AgeGroupCounts.TryGetValue(ageGroup, out var c) ? c : 0;
+                                    <button class="btn btn-age-filter @(isSelected ? "btn-primary-custom" : "btn-outline-secondary")"
+                                            @onclick="() => OnAgeGroupToggle(ageGroup)"
+                                            aria-pressed="@isSelected.ToString().ToLower()"
+                                            aria-label="Filter by age group @ageGroup, @count bundle@(count != 1 ? "s" : "") available"
+                                            title="@count bundle@(count != 1 ? "s" : "") available">
+                                        Ages @ageGroup
+                                        <span class="badge badge-count ms-1">@count</span>
+                                        @if (isSelected)
+                                        {
+                                            <i class="fas fa-check ms-1"></i>
+                                        }
+                                    </button>
+                                }
+                                @if (SelectedAgeGroups.Any())
+                                {
+                                    <button class="btn btn-outline-danger btn-sm"
+                                            @onclick="OnClearAll"
+                                            aria-label="Clear all age group filters">
+                                        <i class="fas fa-times me-1"></i>Clear
+                                    </button>
+                                }
+                            </div>
                         </div>
-                    </div>
+                    }
 
                     @* Show Completed Toggle - Compact *@
                     @if (ShowCompletedToggle)
@@ -173,6 +176,9 @@
 
     [Parameter]
     public bool ShowSearch { get; set; } = true;
+
+    [Parameter]
+    public bool ShowAgeGroups { get; set; } = true;
 
     [Parameter]
     public bool ShowCompletedToggle { get; set; } = true;

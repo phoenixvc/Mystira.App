@@ -10,47 +10,24 @@
 @implements IDisposable
 
 <div class="container-fluid pb-4" id="adventures">
-    @* Game Session Content (shown when user has profiles and active game) *@
-    @if (isAuthenticated && hasProfiles && gameSession != null)
-    {
-        <div class="container-fluid py-4">
-            <div class="row">
-                <div class="col-12">
-                    <div class="d-flex align-items-center mb-4">
-                        <div class="me-4 flex-grow-1">
-                            <h2 class="text-primary-custom mb-1">
-                                Welcome "@(gameSession.PlayerNames.FirstOrDefault() ?? "Player")"! What adventures await us today?
-                            </h2>
-                        </div>
-                        <div class="avatar-placeholder">
-                            <CachedMystiraImage
-                                MediaId="placeholder-avatar-default"
-                                Alt="Player avatar"
-                                Width="60"
-                                Height="60"
-                                ImageClass="thumbnail-image" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-
     @* Filter & Bundles (hidden when not logged in) *@
     @if (isAuthenticated && !isLoading)
     {
         <FilterSection
-            AgeGroups="@availableAgeGroups"
+            AgeGroups="@(string.IsNullOrEmpty(selectedBundleId) ? availableAgeGroups.Take(3).ToArray() : availableAgeGroups)"
             SelectedAgeGroups="@selectedAgeGroups"
             AgeGroupCounts="@GetAgeGroupCounts()"
             SearchQuery="@searchQuery"
             SearchQueryChanged="@((value) => { searchQuery = value; })"
+            ShowSearch="false"
+            ShowAgeGroups="@string.IsNullOrEmpty(selectedBundleId)"
             ShowCompleted="@showCompletedStories"
             ShowCompletedChanged="@OnShowCompletedChanged"
+            ShowCompletedToggle="@(!string.IsNullOrEmpty(selectedBundleId))"
             HiddenCount="@GetHiddenCount()"
             ResultCount="@GetResultCount()"
             ResultCountLabel="@GetResultCountLabel()"
-            ShowSortOptions="@(!string.IsNullOrEmpty(selectedBundleId))"
+            ShowSortOptions="false"
             CurrentSort="@currentSort"
             OnSortChanged="@OnSortChanged"
             OnAgeGroupToggled="@ToggleAgeGroupFilter"
