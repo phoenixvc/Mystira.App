@@ -26,6 +26,8 @@ public class AuthControllerIntegrationTests : IClassFixture<WebApplicationFactor
     {
         _factory = factory.WithWebHostBuilder(builder =>
         {
+            builder.UseEnvironment("Testing");
+
             builder.ConfigureAppConfiguration((context, configBuilder) =>
             {
                 configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
