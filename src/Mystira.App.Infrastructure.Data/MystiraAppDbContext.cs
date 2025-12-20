@@ -457,8 +457,11 @@ public partial class MystiraAppDbContext : DbContext
                 palette.Property(p => p.TracksByProfile)
                        .ToJsonProperty("TracksByProfile")
                        .HasConversion(
-                           v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
-                           v => JsonSerializer.Deserialize<Dictionary<string, List<string>>>(v, (JsonSerializerOptions)null)
+                           v => Newtonsoft.Json.JsonConvert.SerializeObject(v),
+                           v => (v.Trim().StartsWith("{")
+                               ? Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(v)
+                               : Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(
+                                   Newtonsoft.Json.JsonConvert.DeserializeObject<string>(v) ?? "{}"))
                                 ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase))
                        .Metadata.SetValueComparer(new ValueComparer<Dictionary<string, List<string>>>(
                            (d1, d2) => d1 != null && d2 != null && d1.Count == d2.Count && !d1.Except(d2).Any(),

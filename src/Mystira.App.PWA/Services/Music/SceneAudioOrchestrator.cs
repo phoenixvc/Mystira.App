@@ -33,35 +33,39 @@ public class SceneAudioOrchestrator
                 _context.CurrentEnergy = 0;
             }
         }
-        else if (result.TrackId != null && result.TrackId != _context.CurrentTrackId)
+        else if (result.TrackId != null)
         {
-            // Update energy from intent
-            var intent = _resolver.GetEffectiveIntent(scene);
-            var energy = intent.Energy ?? 0.5; // Default middle energy if not specified
-            _context.CurrentEnergy = energy;
-
-            await _audioBus.PlayMusicAsync(result.TrackId, result.Transition, (float)energy);
-            _context.CurrentTrackId = result.TrackId;
-            _context.CurrentProfile = result.Profile;
-
-            // Maintain history
-            _context.RecentTrackIds.Add(result.TrackId);
-            if (_context.RecentTrackIds.Count > 5)
-                _context.RecentTrackIds.RemoveAt(0);
-        }
-        else if (result.TrackId != null && result.TrackId == _context.CurrentTrackId)
-        {
-            // Even if same track, energy might have changed significantly but not enough to trigger track change,
-            // or we might want to update the context energy anyway.
-            var intent = _resolver.GetEffectiveIntent(scene);
-            var energy = intent.Energy ?? _context.CurrentEnergy;
-
-            if (Math.Abs(energy - _context.CurrentEnergy) > 0.05)
+            // If it's a new track OR we are currently in silence (CurrentTrackId is null)
+            // but the resolver found a track, we MUST play it.
+            if (result.TrackId != _context.CurrentTrackId || _context.CurrentTrackId == null)
             {
-                await _audioBus.SetMusicVolumeAsync((float)energy);
-            }
+                // Update energy from intent
+                var intent = _resolver.GetEffectiveIntent(scene);
+                var energy = intent.Energy ?? 0.4; // Default middle energy if not specified
+                _context.CurrentEnergy = energy;
 
-            _context.CurrentEnergy = energy;
+                await _audioBus.PlayMusicAsync(result.TrackId, result.Transition, (float)energy);
+                _context.CurrentTrackId = result.TrackId;
+                _context.CurrentProfile = result.Profile;
+
+                // Maintain history
+                _context.RecentTrackIds.Add(result.TrackId);
+                if (_context.RecentTrackIds.Count > 5)
+                    _context.RecentTrackIds.RemoveAt(0);
+            }
+            else
+            {
+                // Same track, update energy if needed
+                var intent = _resolver.GetEffectiveIntent(scene);
+                var energy = intent.Energy ?? _context.CurrentEnergy;
+
+                if (Math.Abs(energy - _context.CurrentEnergy) > 0.05)
+                {
+                    await _audioBus.SetMusicVolumeAsync((float)energy);
+                }
+
+                _context.CurrentEnergy = energy;
+            }
         }
 
         // 2. Sound Effects
