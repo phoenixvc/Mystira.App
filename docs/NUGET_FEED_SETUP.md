@@ -1,76 +1,57 @@
 # NuGet Feed Setup Guide
 
-This guide explains how to configure the internal NuGet feed for Mystira shared packages.
+This guide explains how to configure the GitHub Packages NuGet feed for Mystira shared packages.
 
-## Azure DevOps Artifacts Feed
+## GitHub Packages Feed
 
-The Mystira shared libraries are published to an Azure DevOps Artifacts feed: `Mystira-Internal`
+The Mystira shared libraries are published to GitHub Packages: `https://nuget.pkg.github.com/phoenixvc/index.json`
 
 ## Local Development Setup
 
 ### 1. Get Feed URL
 
-The feed URL will be provided by your team lead or can be found in Azure DevOps:
-- Go to Azure DevOps → Artifacts
-- Select the `Mystira-Internal` feed
-- Click "Connect to feed"
-- Copy the NuGet package source URL
+The feed URL is: `https://nuget.pkg.github.com/phoenixvc/index.json`
 
-### 2. Configure NuGet Source
+This is automatically available to anyone with access to the phoenixvc organization on GitHub.
+
+### 2. Create Personal Access Token (PAT)
+
+1. Go to GitHub → **Settings** → **Developer settings** → **Personal access tokens** → **Tokens (classic)**
+2. Click **Generate new token (classic)**
+3. Name: `Mystira NuGet Packages`
+4. Select scopes:
+   - `read:packages` - Download packages from GitHub Packages
+   - `write:packages` - Publish packages (if needed)
+5. Click **Generate token**
+6. **Copy the token immediately** (you won't see it again!)
+
+### 3. Configure NuGet Source
 
 **Option A: Command Line** (Recommended)
 
 ```bash
-dotnet nuget add source <FEED_URL> \
-  --name "Mystira-Internal" \
-  --username <AZURE_DEVOPS_USERNAME> \
-  --password <AZURE_DEVOPS_PAT>
+dotnet nuget add source https://nuget.pkg.github.com/phoenixvc/index.json \
+  --name github \
+  --username YOUR_GITHUB_USERNAME \
+  --password YOUR_GITHUB_PAT \
+  --store-password-in-clear-text
 ```
 
 Replace:
-- `<FEED_URL>`: The feed URL from Azure DevOps
-- `<AZURE_DEVOPS_USERNAME>`: Your Azure DevOps username or email
-- `<AZURE_DEVOPS_PAT>`: Personal Access Token with "Packaging (Read & write)" scope
+- `YOUR_GITHUB_USERNAME`: Your GitHub username
+- `YOUR_GITHUB_PAT`: Personal Access Token created above
 
 **Option B: Edit NuGet.config**
 
-Edit `NuGet.config` in the repository root:
+Copy `NuGet.config.template` to `NuGet.config` in the repository root and add your credentials.
 
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-  <packageSources>
-    <clear />
-    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
-    <add key="Mystira-Internal" 
-         value="<FEED_URL>" />
-  </packageSources>
-  <packageSourceCredentials>
-    <Mystira-Internal>
-      <add key="Username" value="<USERNAME>" />
-      <add key="ClearTextPassword" value="<PAT>" />
-    </Mystira-Internal>
-  </packageSourceCredentials>
-</configuration>
-```
-
-**⚠️ Security Note**: Do NOT commit credentials to git. Use user-level NuGet config instead:
+**⚠️ Security Note**: Do NOT commit `NuGet.config` with credentials to git. Use user-level NuGet config instead:
 
 ```bash
 # User-level config location:
 # Windows: %APPDATA%\NuGet\NuGet.Config
 # Linux/Mac: ~/.nuget/NuGet/NuGet.Config
 ```
-
-### 3. Create Personal Access Token (PAT)
-
-1. Go to Azure DevOps → User Settings → Personal Access Tokens
-2. Click "New Token"
-3. Name: `Mystira NuGet Feed`
-4. Scope: `Packaging (Read & write)`
-5. Organization: Select your organization
-6. Click "Create"
-7. Copy the token (you won't see it again!)
 
 ### 4. Verify Configuration
 
@@ -83,22 +64,21 @@ You should see `Mystira-Internal` in the list.
 ### 5. Restore Packages
 
 ```bash
-cd packages/app
 dotnet restore
 ```
 
-Packages should restore from both nuget.org and Mystira-Internal feed.
+Packages should restore from both nuget.org and GitHub Packages.
 
 ## CI/CD Setup
 
-GitHub Actions workflows automatically configure the NuGet feed using secrets:
+GitHub Actions workflows automatically authenticate with GitHub Packages using `GITHUB_TOKEN`.
 
-**Required Secrets** (configured in GitHub repository settings):
-- `AZURE_DEVOPS_NUGET_FEED_URL`: The feed URL
-- `AZURE_DEVOPS_USER`: Azure DevOps username
-- `AZURE_DEVOPS_PAT`: Personal Access Token with Packaging permissions
+**No secrets configuration required!**
 
-The workflow automatically configures the feed before restoring/publishing packages.
+The workflow automatically:
+1. Uses `GITHUB_TOKEN` (provided by GitHub Actions)
+2. Configures the feed before restoring/publishing packages
+3. Publishes packages on push to `main` branch
 
 ## Using Shared Packages
 
@@ -140,15 +120,20 @@ dotnet add package Mystira.App.Domain --version 1.1.0
 
 ### Authentication Failed
 
-**Error**: `Unable to load the service index for source`
+**Error**: `Unable to load the service index for source` or `401 Unauthorized`
 
 **Solution**:
-1. Verify PAT has correct permissions
-2. Check feed URL is correct
-3. Try removing and re-adding the source:
+1. Verify PAT has correct permissions (`read:packages`, `write:packages` for publishing)
+2. Check PAT hasn't expired
+3. Verify GitHub username is correct
+4. Try removing and re-adding the source:
    ```bash
-   dotnet nuget remove source "Mystira-Internal"
-   dotnet nuget add source <FEED_URL> --name "Mystira-Internal" --username <USER> --password <PAT>
+   dotnet nuget remove source github
+   dotnet nuget add source https://nuget.pkg.github.com/phoenixvc/index.json \
+     --name github \
+     --username YOUR_GITHUB_USERNAME \
+     --password YOUR_GITHUB_PAT \
+     --store-password-in-clear-text
    ```
 
 ### Package Not Found
@@ -157,8 +142,8 @@ dotnet add package Mystira.App.Domain --version 1.1.0
 
 **Solution**:
 1. Verify package name is correct
-2. Check package version exists in feed
-3. Verify feed is configured correctly
+2. Check package version exists in GitHub Packages
+3. Ensure you have access to phoenixvc organization
 4. Try clearing NuGet cache:
    ```bash
    dotnet nuget locals all --clear
@@ -174,7 +159,7 @@ dotnet add package Mystira.App.Domain --version 1.1.0
 
 ## Related Documentation
 
-- [ADR-0007: NuGet Feed Strategy](../../../docs/architecture/adr/0007-nuget-feed-strategy-for-shared-libraries.md)
-- [Migration Plan: Admin API Extraction](../../../docs/migration/ADMIN_API_EXTRACTION_PLAN.md)
-- [Azure DevOps Artifacts Documentation](https://docs.microsoft.com/en-us/azure/devops/artifacts/)
+- [NuGet Setup Guide (Detailed)](./nuget/NUGET_SETUP.md)
+- [Implementation Status](./nuget/IMPLEMENTATION_STATUS.md)
+- [GitHub Packages Documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-nuget-registry)
 

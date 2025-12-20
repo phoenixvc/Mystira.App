@@ -1,7 +1,20 @@
 # NuGet Package Implementation Status
 
-**Date**: 2025-12-14  
-**Phase**: Phase 1 - Setup Shared Packages
+**Date**: 2025-12-20  
+**Phase**: Phase 2 - GitHub Packages Migration Complete
+
+## Current Status
+
+**Feed**: GitHub Packages - `https://nuget.pkg.github.com/phoenixvc/index.json`
+
+**Packages Published**: None yet. Shared libraries will be published when extracted from Mystira.App.
+
+### Phase 1: Setup Feed ✅ Complete
+
+1. ✅ GitHub Packages feed is automatically available at: `https://nuget.pkg.github.com/phoenixvc/index.json`
+2. ✅ Permissions are inherited from GitHub repository access
+3. ✅ CI/CD uses automatic `GITHUB_TOKEN` authentication
+4. ✅ Local development uses Personal Access Tokens (PATs)
 
 ## Completed
 
@@ -32,18 +45,20 @@ All 8 shared libraries have been updated with NuGet package metadata:
 
 ### ✅ GitHub Actions Workflow
 
-Created `.github/workflows/publish-shared-packages.yml`:
+Updated `.github/workflows/publish-shared-packages.yml`:
 
+- ✅ Migrated from Azure DevOps to GitHub Packages
+- ✅ Uses `GITHUB_TOKEN` for authentication (no secrets required)
 - ✅ Change detection for all 8 packages
 - ✅ Separate jobs for each package (conditional publishing)
-- ✅ NuGet feed configuration
 - ✅ Build, pack, and publish steps
 - ✅ Publishing summary
 
 ### ✅ Documentation
 
-- ✅ NuGet setup guide (`docs/nuget/NUGET_SETUP.md`)
-- ✅ NuGet.config template (`NuGet.config.template`)
+- ✅ NuGet setup guide (`docs/nuget/NUGET_SETUP.md`) - Updated for GitHub Packages
+- ✅ NuGet.config template (`NuGet.config.template`) - Updated for GitHub Packages
+- ✅ Implementation status (`docs/nuget/IMPLEMENTATION_STATUS.md`) - This file
 
 ### ✅ Local Testing
 
@@ -53,25 +68,13 @@ Created `.github/workflows/publish-shared-packages.yml`:
 
 ## Pending
 
-### ⏳ Azure DevOps Feed Setup
-
-**Required Actions**:
-1. Create Azure DevOps Artifacts feed named `Mystira-Internal`
-2. Configure feed permissions (Readers, Contributors)
-3. Get feed URL
-4. Add GitHub secrets:
-   - `MYSTIRA_DEVOPS_AZURE_ORG` - Azure DevOps organization name
-   - `MYSTIRA_DEVOPS_AZURE_PROJECT` - Azure DevOps project name
-   - `MYSTIRA_DEVOPS_AZURE_PAT` - Personal Access Token with Packaging (Read & Write)
-   - `MYSTIRA_DEVOPS_NUGET_FEED` - Feed name (`Mystira-Internal`)
-
 ### ⏳ Initial Package Publishing
 
-Once feed is configured:
+Once ready to publish:
 
 1. Test package creation locally (already done ✅)
-2. Publish initial versions (1.0.0) of all 8 packages
-3. Verify packages appear in feed
+2. Push to `main` branch to trigger workflow
+3. Verify packages appear in GitHub Packages
 4. Test package consumption
 
 ### ⏳ Workflow Testing
@@ -83,19 +86,13 @@ Once feed is configured:
 
 ## Next Steps
 
-1. **Setup Azure DevOps Feed** (manual step - see NUGET_SETUP.md)
-   - Go to Azure DevOps → Artifacts → Create Feed
-   - Name: `Mystira-Internal`
-   - Configure permissions
+1. **Test Package Publishing** - Create test PR or push to test workflow
 
-2. **Add GitHub Secrets** (manual step)
-   - Add required secrets to repository settings
+2. **Publish Initial Packages** - Publish all 8 packages version 1.0.0
 
-3. **Test Package Publishing** - Create test PR or push to test workflow
+3. **Verify Consumption** - Test package restore from GitHub Packages
 
-4. **Publish Initial Packages** - Publish all 8 packages version 1.0.0
-
-5. **Verify Consumption** - Test package restore from feed
+4. **Update Consumers** - Update Admin API to use NuGet packages (during extraction)
 
 ## Verification Commands
 
@@ -112,22 +109,23 @@ dotnet pack src/Mystira.App.Domain/Mystira.App.Domain.csproj --configuration Rel
 dotnet nuget locals all --list
 ```
 
-### After Feed Setup
+### Publishing to GitHub Packages
 
 ```bash
-# Configure feed (replace placeholders)
-dotnet nuget add source https://pkgs.dev.azure.com/{org}/{project}/_packaging/{feed}/nuget/v3/index.json \
-  --name "Mystira-Internal" \
-  --username "{email}" \
-  --password "{pat}"
+# Configure feed (replace YOUR_GITHUB_USERNAME and YOUR_GITHUB_PAT)
+dotnet nuget add source https://nuget.pkg.github.com/phoenixvc/index.json \
+  --name github \
+  --username YOUR_GITHUB_USERNAME \
+  --password YOUR_GITHUB_PAT \
+  --store-password-in-clear-text
 
 # Test restore (will fail until packages are published)
-dotnet restore --source "Mystira-Internal"
+dotnet restore --source github
 ```
 
 ## Related Documentation
 
 - [NuGet Setup Guide](./NUGET_SETUP.md)
-- [ADR-0007: NuGet Feed Strategy](../../../../docs/architecture/adr/0007-nuget-feed-strategy-for-shared-libraries.md)
-- [Migration Plan](../../../../docs/migration/ADMIN_API_EXTRACTION_PLAN.md)
+- [Package Publishing Checklist](./PACKAGE_PUBLISHING_CHECKLIST.md)
+- [GitHub Packages Documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-nuget-registry)
 

@@ -3,14 +3,35 @@
   <packageSources>
     <clear />
     <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
-    <add key="Mystira-Internal"
-         value="https://pkgs.dev.azure.com/{YOUR_ORG}/{YOUR_PROJECT}/_packaging/{FEED_NAME}/nuget/v3/index.json" />
+    <add key="github" value="https://nuget.pkg.github.com/phoenixvc/index.json" />
   </packageSources>
-  <packageSourceCredentials>
-    <Mystira-Internal>
-      <add key="Username" value="{YOUR_EMAIL}" />
-      <add key="ClearTextPassword" value="{YOUR_PAT_TOKEN}" />
-    </Mystira-Internal>
-  </packageSourceCredentials>
+  <!-- 
+    Authentication for GitHub Packages:
+    
+    For CI/CD: 
+      - Use GITHUB_TOKEN automatically (no config needed)
+    
+    For Local Development:
+      Option 1: Use dotnet CLI to add credentials (recommended):
+        dotnet nuget add source https://nuget.pkg.github.com/phoenixvc/index.json \
+          -name github \
+          -username YOUR_GITHUB_USERNAME \
+          -password YOUR_GITHUB_PAT \
+          -store-password-in-clear-text
+      
+      Option 2: Store credentials in user-level NuGet.Config:
+        Windows: %APPDATA%\NuGet\NuGet.Config
+        Linux/Mac: ~/.nuget/NuGet/NuGet.Config
+      
+      Option 3: Uncomment and add credentials below (NOT recommended - security risk):
+        <packageSourceCredentials>
+          <github>
+            <add key="Username" value="YOUR_GITHUB_USERNAME" />
+            <add key="ClearTextPassword" value="YOUR_GITHUB_PAT" />
+          </github>
+        </packageSourceCredentials>
+    
+    Required PAT scopes: read:packages, write:packages (for publishing)
+  -->
 </configuration>
 
