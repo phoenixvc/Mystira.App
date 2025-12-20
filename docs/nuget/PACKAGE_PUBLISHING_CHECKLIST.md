@@ -2,7 +2,7 @@
 
 ## Pre-Publishing Checklist
 
-Before publishing packages to the internal NuGet feed, ensure:
+Before publishing packages to GitHub Packages, ensure:
 
 - [ ] All 8 shared library `.csproj` files have package metadata
 - [ ] Package IDs match convention: `Mystira.App.{Library}`
@@ -11,8 +11,8 @@ Before publishing packages to the internal NuGet feed, ensure:
 - [ ] Repository URL points to correct GitHub repository
 - [ ] All projects build successfully
 - [ ] All tests pass
-- [ ] Azure DevOps Artifacts feed is created
-- [ ] GitHub Secrets are configured (MYSTIRA_DEVOPS_AZURE_ORG, MYSTIRA_DEVOPS_AZURE_PROJECT, MYSTIRA_DEVOPS_AZURE_PAT, MYSTIRA_DEVOPS_NUGET_FEED)
+- [ ] GitHub Packages feed is accessible: `https://nuget.pkg.github.com/phoenixvc/index.json`
+- [ ] Personal Access Token (PAT) is created with `read:packages` and `write:packages` scopes (for local testing)
 
 ## Package Metadata Checklist
 
@@ -70,19 +70,23 @@ For each shared library, verify:
 
 4. **Configure NuGet source** (if not already done):
    ```bash
-   dotnet nuget add source https://pkgs.dev.azure.com/{org}/{project}/_packaging/{feed}/nuget/v3/index.json \
-     --name "Mystira-Internal" \
-     --username "{email}" \
-     --password "{pat-token}"
+   dotnet nuget add source https://nuget.pkg.github.com/phoenixvc/index.json \
+     --name github \
+     --username YOUR_GITHUB_USERNAME \
+     --password YOUR_GITHUB_PAT \
+     --store-password-in-clear-text
    ```
 
 5. **Publish packages**:
    ```bash
-   dotnet nuget push ./nupkg/*.nupkg --source "Mystira-Internal" --api-key "{pat-token}"
+   dotnet nuget push ./nupkg/*.nupkg \
+     --source https://nuget.pkg.github.com/phoenixvc/index.json \
+     --api-key YOUR_GITHUB_PAT \
+     --skip-duplicate
    ```
 
-6. **Verify in Azure DevOps**:
-   - Go to Artifacts → Mystira-Internal feed
+6. **Verify in GitHub Packages**:
+   - Go to GitHub → phoenixvc organization → Packages
    - Verify all 8 packages appear with version `1.0.0`
 
 ### Automated Publishing (After Setup)
@@ -97,7 +101,7 @@ Once CI/CD workflow is configured:
 
 ## Post-Publishing Verification
 
-- [ ] All packages visible in Azure DevOps Artifacts feed
+- [ ] All packages visible in GitHub Packages
 - [ ] Package versions are `1.0.0`
 - [ ] Package metadata (description, authors, etc.) is correct
 - [ ] Symbols packages (.snupkg) are available
@@ -114,7 +118,7 @@ dotnet new classlib -n TestPackageConsumption
 cd TestPackageConsumption
 
 # Add package reference
-dotnet add package Mystira.App.Domain --version 1.0.0 --source "Mystira-Internal"
+dotnet add package Mystira.App.Domain --version 1.0.0
 
 # Restore and build
 dotnet restore
@@ -149,9 +153,10 @@ If successful, packages are correctly configured and accessible.
 
 **Check**:
 - NuGet source is correctly configured
-- PAT token has correct permissions (Packaging Read & Write)
+- GitHub PAT token has correct permissions (`read:packages`, `write:packages`)
 - PAT token hasn't expired
-- Feed URL is correct
+- Feed URL is correct: `https://nuget.pkg.github.com/phoenixvc/index.json`
+- You have access to phoenixvc organization
 
 **Issue**: Package already exists error
 

@@ -59,7 +59,7 @@ Copy `NuGet.config.template` to `NuGet.config` in the repository root and add yo
 dotnet nuget list source
 ```
 
-You should see `Mystira-Internal` in the list.
+You should see `github` in the list.
 
 ### 5. Restore Packages
 
