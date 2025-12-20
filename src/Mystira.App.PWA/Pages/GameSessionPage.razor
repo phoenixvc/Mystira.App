@@ -849,6 +849,9 @@ else
     {
         try
         {
+            // Sync with actual state before toggling
+            isMusicPaused = await AudioBus.IsMusicPausedAsync();
+
             if (isMusicPaused)
             {
                 await AudioBus.ResumeMusicAsync();
@@ -857,7 +860,10 @@ else
             {
                 await AudioBus.PauseMusicAsync();
             }
-            isMusicPaused = !isMusicPaused;
+
+            // Update local state and trigger UI refresh
+            isMusicPaused = await AudioBus.IsMusicPausedAsync();
+            StateHasChanged();
         }
         catch (Exception ex)
         {

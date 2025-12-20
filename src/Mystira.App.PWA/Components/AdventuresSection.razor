@@ -657,14 +657,14 @@
 
             GameSessionService.SetCurrentGameSession(localGameSession);
 
+            NavigationManager.NavigateTo("/game");
+
             // Ensure server-side resume is called so assignments and state are restored
             var resumed = await GameSessionService.ResumeGameSessionAsync();
             if (!resumed)
             {
                 Logger.LogWarning("Failed to resume session via API for session: {SessionId}. Continuing locally.", activeSession.Id);
             }
-
-            NavigationManager.NavigateTo("/game");
         }
         catch (AuthenticationException authEx)
         {
@@ -738,14 +738,14 @@
 
             GameSessionService.SetCurrentGameSession(localSession);
 
+            NavigationManager.NavigateTo("/game");
+
             // Ensure server-side resume is called so assignments and state are restored
             var resumed = await GameSessionService.ResumeGameSessionAsync();
             if (!resumed)
             {
                 Logger.LogWarning("Failed to resume session via API for session: {SessionId}. Continuing locally.", session.Id);
             }
-
-            NavigationManager.NavigateTo("/game");
         }
         catch (Exception ex)
         {

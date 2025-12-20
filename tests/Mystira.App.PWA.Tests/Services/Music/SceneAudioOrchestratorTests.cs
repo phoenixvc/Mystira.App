@@ -132,6 +132,33 @@ public class SceneAudioOrchestratorTests
     }
 
     [Fact]
+    public async Task EnterSceneAsync_ShouldForcePlay_WhenCurrentTrackIdIsNull()
+    {
+        // Arrange
+        var scene = new Scene();
+        var scenario = new Scenario();
+        var resolution = new MusicResolutionResult
+        {
+            TrackId = "track1",
+            Profile = MusicProfile.Neutral,
+            Transition = MusicTransitionHint.CrossfadeNormal
+        };
+
+        _resolverMock.Setup(x => x.ResolveMusic(It.IsAny<Scene>(), It.IsAny<Scenario>(), It.IsAny<MusicContext>()))
+            .Returns(resolution);
+
+        _resolverMock.Setup(x => x.GetEffectiveIntent(It.IsAny<Scene>()))
+            .Returns(new SceneMusicSettings { Energy = 0.5 });
+
+        // Act
+        // _context.CurrentTrackId is null by default in a new orchestrator
+        await _sut.EnterSceneAsync(scene, scenario);
+
+        // Assert
+        _audioBusMock.Verify(x => x.PlayMusicAsync("track1", MusicTransitionHint.CrossfadeNormal, 0.5f), Times.Once);
+    }
+
+    [Fact]
     public async Task OnSceneActionAsync_ShouldPauseAll_WhenActionIsActive()
     {
         // Act
