@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +14,7 @@ using FluentAssertions;
 using Xunit;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 
 namespace Mystira.App.Api.Tests.Controllers;
 
@@ -24,6 +26,17 @@ public class AuthControllerIntegrationTests : IClassFixture<WebApplicationFactor
     {
         _factory = factory.WithWebHostBuilder(builder =>
         {
+            builder.ConfigureAppConfiguration((context, configBuilder) =>
+            {
+                configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    { "JwtSettings:Issuer", "TestIssuer" },
+                    { "JwtSettings:Audience", "TestAudience" },
+                    { "JwtSettings:SecretKey", "SuperSecretKeyForTestingPurposes123!" },
+                    { "InitializeDatabaseOnStartup", "false" }
+                });
+            });
+
             builder.ConfigureServices(services =>
             {
                 // We can mock MediatR if we want to isolate the Controller's IL generation issue
