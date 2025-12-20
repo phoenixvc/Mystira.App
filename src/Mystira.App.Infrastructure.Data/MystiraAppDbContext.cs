@@ -133,6 +133,25 @@ public partial class MystiraAppDbContext : DbContext
             });
         }
 
+        // Configure Scenario
+        modelBuilder.Entity<Scenario>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            if (!isInMemoryDatabase)
+            {
+                entity.ToContainer("Scenarios")
+                      .HasPartitionKey(e => e.Id);
+                entity.Property(e => e.Id).ToJsonProperty("id");
+            }
+
+            entity.Ignore(e => e.MusicPalette);
+            entity.OwnsMany(e => e.Scenes, scene =>
+            {
+                scene.Ignore(s => s.SoundEffects);
+                scene.Ignore(s => s.Music);
+            });
+        });
+
         // Configure Account
         modelBuilder.Entity<Account>(entity =>
         {

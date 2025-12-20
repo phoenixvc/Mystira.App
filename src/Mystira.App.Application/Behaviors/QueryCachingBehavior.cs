@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Interfaces;
+using Mystira.App.Application.Services;
 
 namespace Mystira.App.Application.Behaviors;
 
@@ -62,7 +63,7 @@ public class QueryCachingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequ
         _cache.Set(cacheKey, response, cacheOptions);
 
         // Track cache key for prefix-based invalidation
-        Services.QueryCacheInvalidationService.TrackCacheKey(cacheKey);
+        QueryCacheInvalidationService.TrackCacheKey(cacheKey);
 
         _logger.LogDebug("Cached query {QueryType} with key {CacheKey} for {Duration} seconds",
             typeof(TRequest).Name, cacheKey, cacheableQuery.CacheDurationSeconds);

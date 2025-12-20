@@ -1,3 +1,4 @@
+using Mystira.App.Application.CQRS.Auth.Responses;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;

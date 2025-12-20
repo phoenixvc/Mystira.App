@@ -1,3 +1,5 @@
+using Mystira.App.Application.CQRS.Auth.Responses;
+
 namespace Mystira.App.Application.CQRS.Auth.Commands;
 
 /// <summary>
@@ -6,4 +8,4 @@ namespace Mystira.App.Application.CQRS.Auth.Commands;
 public record RequestPasswordlessSignupCommand(
     string Email,
     string DisplayName
-) : ICommand<(bool Success, string Message, string? Code, string? ErrorDetails)>;
+) : ICommand<AuthResponse>;

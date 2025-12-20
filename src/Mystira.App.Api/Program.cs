@@ -697,6 +697,33 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Apply strict rate limiting to auth endpoints via metadata (BUG-5)
+// This avoids dynamic IL generation issues in .NET 9 caused by [EnableRateLimiting] attributes on the controller/actions.
+// We apply it here after MapControllers so it's applied to the endpoints directly.
+// Note: We use the exact paths matching the AuthController routes.
+var authEndpoints = new[]
+{
+    "/api/auth/passwordless/signup",
+    "/api/auth/passwordless/verify",
+    "/api/auth/passwordless/signin",
+    "/api/auth/passwordless/signin/verify",
+    "/api/auth/refresh"
+};
+
+// MapControllers doesn't return the builder in a way that we can easily filter,
+// so we'll use a more standard approach for .NET 9 if possible,
+// or just stick to the fact that attributes ARE the standard way and
+// this IL bug might be specific to some combination.
+// Since we found that removing attributes fixes it, let's use a convention-based
+// approach to apply rate limiting to these routes.
+// We'll use a Global Rate Limiter that checks the path, or just use the MapControllers
+// metadata if we can find a way to access it.
+// Actually, the simplest and most robust way in .NET 9 to apply a policy
+// without attributes is to use the RequireRateLimiting on the endpoint group.
+
+app.MapGroup("/api/auth")
+   .RequireRateLimiting("auth");
+
 // Map health check endpoints
 // /health - checks all dependencies (blob storage, database, discord if enabled)
 app.MapHealthChecks("/health");

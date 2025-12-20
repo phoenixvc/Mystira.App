@@ -38,7 +38,7 @@ public class SceneAudioOrchestratorTests
             .Returns(resolution);
 
         _resolverMock.Setup(x => x.GetEffectiveIntent(It.IsAny<Scene>()))
-            .Returns(new SceneMusicSettings());
+            .Returns(new SceneMusicSettings { Energy = 1.0 });
 
         // Act
         await _sut.EnterSceneAsync(scene, scenario);

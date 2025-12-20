@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Mystira.App.Application.CQRS.Auth.Responses;
 using Mystira.App.Application.Ports.Auth;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
@@ -10,7 +11,7 @@ namespace Mystira.App.Application.CQRS.Auth.Commands;
 /// Validates code with rate limiting, updates last login, and generates JWT tokens.
 /// </summary>
 public class VerifyPasswordlessSigninCommandHandler
-    : ICommandHandler<VerifyPasswordlessSigninCommand, (bool Success, string Message, Account? Account, string? AccessToken, string? RefreshToken, string? ErrorDetails)>
+    : ICommandHandler<VerifyPasswordlessSigninCommand, AuthResponse>
 {
     private readonly IAccountRepository _accountRepository;
     private readonly IPendingSignupRepository _pendingSignupRepository;
@@ -33,7 +34,7 @@ public class VerifyPasswordlessSigninCommandHandler
         _logger = logger;
     }
 
-    public async Task<(bool Success, string Message, Account? Account, string? AccessToken, string? RefreshToken, string? ErrorDetails)> Handle(
+    public async Task<AuthResponse> Handle(
         VerifyPasswordlessSigninCommand command,
         CancellationToken cancellationToken)
     {
@@ -53,13 +54,13 @@ public class VerifyPasswordlessSigninCommandHandler
                     if (pendingByEmail.FailedAttempts >= MaxFailedAttempts)
                     {
                         _logger.LogWarning("Too many failed attempts for email: {Email}", email);
-                        return (false, "Too many failed attempts. Please request a new code.", null, null, null, null);
+                        return new AuthResponse(false, "Too many failed attempts. Please request a new code.");
                     }
 
                     if (pendingByEmail.ExpiresAt < DateTime.UtcNow)
                     {
                         _logger.LogWarning("Expired signin code for email: {Email}", email);
-                        return (false, "Your sign-in code has expired. Please request a new one", null, null, null, null);
+                        return new AuthResponse(false, "Your sign-in code has expired. Please request a new one");
                     }
 
                     // Increment failed attempts
@@ -67,25 +68,25 @@ public class VerifyPasswordlessSigninCommandHandler
                     await _pendingSignupRepository.UpdateAsync(pendingByEmail);
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
                     _logger.LogWarning("Invalid code for email: {Email}", email);
-                    return (false, "Invalid sign-in code", null, null, null, null);
+                    return new AuthResponse(false, "Invalid sign-in code");
                 }
 
                 _logger.LogWarning("Invalid or expired signin code for email: {Email}", email);
-                return (false, "Invalid or expired sign-in code", null, null, null, null);
+                return new AuthResponse(false, "Invalid or expired sign-in code");
             }
 
             // Validate rate limiting
             if (pendingSignin.FailedAttempts >= MaxFailedAttempts)
             {
                 _logger.LogWarning("Too many failed attempts for email: {Email}", email);
-                return (false, "Too many failed attempts. Please request a new code.", null, null, null, null);
+                return new AuthResponse(false, "Too many failed attempts. Please request a new code.");
             }
 
             // Validate expiration
             if (pendingSignin.ExpiresAt < DateTime.UtcNow)
             {
                 _logger.LogWarning("Expired signin code for email: {Email}", email);
-                return (false, "Your sign-in code has expired. Please request a new one", null, null, null, null);
+                return new AuthResponse(false, "Your sign-in code has expired. Please request a new one");
             }
 
             // Get account
@@ -93,7 +94,7 @@ public class VerifyPasswordlessSigninCommandHandler
             if (account == null)
             {
                 _logger.LogError("Account not found for email: {Email}", email);
-                return (false, "Account not found", null, null, null, null);
+                return new AuthResponse(false, "Account not found");
             }
 
             // Update last login timestamp
@@ -116,13 +117,13 @@ public class VerifyPasswordlessSigninCommandHandler
                 account.Role);
             var refreshToken = _jwtService.GenerateRefreshToken();
 
-            return (true, "Sign-in successful", account, accessToken, refreshToken, null);
+            return new AuthResponse(true, "Sign-in successful", null, null, account, accessToken, refreshToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error verifying signin for email: {Email}", command.Email);
             var errorDetails = ExceptionDetailsHelper.FormatExceptionDetails(ex);
-            return (false, "An error occurred while verifying your sign-in", null, null, null, errorDetails);
+            return new AuthResponse(false, "An error occurred while verifying your sign-in", null, errorDetails);
         }
     }
 }
