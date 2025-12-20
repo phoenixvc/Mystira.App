@@ -104,6 +104,7 @@ public abstract class CqrsIntegrationTestBase : IDisposable
         {
             memoryCache.Compact(1.0); // Remove 100% of entries
         }
+        QueryCacheInvalidationService.ClearTrackedKeys();
     }
 
     public void Dispose()
