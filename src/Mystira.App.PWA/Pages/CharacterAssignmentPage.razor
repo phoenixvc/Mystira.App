@@ -7,6 +7,7 @@
 @inject ILogger<CharacterAssignment> Logger
 @inject IJSRuntime JSRuntime
 @inject ISettingsService SettingsService
+@inject Mystira.App.PWA.Services.Music.IAudioBus AudioBus
 @inject Mystira.App.PWA.Services.Music.SceneAudioOrchestrator AudioOrchestrator
 @using System.Linq
 @implements IAsyncDisposable
@@ -615,23 +616,17 @@ else
 
     // Audio
     private string? isPlayingAudio = null;
-    private IJSObjectReference? audioModule;
 
     public async ValueTask DisposeAsync()
     {
         try
         {
-            if (audioModule != null)
-            {
-                // Note: 'stopAudio' is a legacy export in audioPlayer.js
-                // We mainly rely on SceneAudioOrchestrator to stop music/sfx
-                await AudioOrchestrator.StopAllAsync();
-                await audioModule.DisposeAsync();
-            }
+            // We mainly rely on SceneAudioOrchestrator to stop music/sfx
+            await AudioOrchestrator.StopAllAsync();
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Error disposing audio module in CharacterAssignment");
+            Logger.LogWarning(ex, "Error disposing audio in CharacterAssignment");
         }
     }
 
@@ -644,11 +639,6 @@ else
 
             // Show the initial bulk assignment prompt only for toddler scenarios (age group 1-2)
             showInitialAssignmentPrompt = IsToddlerScenario;
-
-            // Load the audio module when component initializes
-            audioModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-            "import", "./js/audioPlayer.js");
-
         }
         catch (Exception ex)
         {
@@ -677,11 +667,11 @@ else
         try
         {
             // Stop any playing audio preview
-            if (!string.IsNullOrEmpty(isPlayingAudio) && audioModule is not null)
+            if (!string.IsNullOrEmpty(isPlayingAudio))
             {
                 try
                 {
-                    await audioModule.InvokeVoidAsync("stopAudio");
+                    await AudioOrchestrator.StopAllAsync();
                     isPlayingAudio = null;
                 }
                 catch { /* best-effort */ }
@@ -1353,15 +1343,10 @@ else
     {
         try
         {
-            if (audioModule == null)
-            {
-                return;
-            }
-
             if (isPlayingAudio == audioUrl)
             {
                 // Stop the currently playing audio
-                await audioModule.InvokeVoidAsync("stopAudio");
+                await AudioBus.StopSoundEffectAsync(audioUrl);
                 isPlayingAudio = null;
             }
             else
@@ -1369,11 +1354,11 @@ else
                 // Stop any currently playing audio first
                 if (!string.IsNullOrEmpty(isPlayingAudio))
                 {
-                    await audioModule.InvokeVoidAsync("stopAudio");
+                    await AudioBus.StopSoundEffectAsync(isPlayingAudio);
                 }
 
                 // Start playing the new audio
-                await audioModule.InvokeVoidAsync("playAudio", audioUrl);
+                await AudioBus.PlaySoundEffectAsync(audioUrl, false, 1.0f);
                 isPlayingAudio = audioUrl;
             }
         }
