@@ -7,6 +7,8 @@ using Mystira.App.PWA.Services;
 using Polly;
 using Polly.Extensions.Http;
 
+using Mystira.App.PWA.Services.Music;
+
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");

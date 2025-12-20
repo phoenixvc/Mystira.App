@@ -1,8 +1,8 @@
 using Mystira.App.Domain.Models;
 
-namespace Mystira.App.Application.Services;
+namespace Mystira.App.PWA.Services.Music;
 
-public class MusicEngine : IMusicEngine
+public class MusicResolver : IMusicResolver
 {
     private const double EnergyChangeThreshold = 0.35;
     private readonly Random _rng = new();

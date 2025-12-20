@@ -1,8 +1,8 @@
 using Mystira.App.Domain.Models;
 
-namespace Mystira.App.Application.Services;
+namespace Mystira.App.PWA.Services.Music;
 
-public interface IMusicEngine
+public interface IMusicResolver
 {
     MusicResolutionResult ResolveMusic(Scene nextScene, Scenario scenario, MusicContext currentContext);
     SceneMusicSettings GetEffectiveIntent(Scene scene);
