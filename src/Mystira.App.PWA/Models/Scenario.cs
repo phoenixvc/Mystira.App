@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.PWA.Models;
 
@@ -31,6 +32,8 @@ public class Scenario
     public DateTime CreatedAt { get; set; }
     public List<string> CoreAxes { get; set; } = new();
     public List<ScenarioCharacter> Characters { get; set; } = new();
+
+    public MusicPalette? MusicPalette { get; set; }
 
     // Backward compatibility properties
     public string Name => Title;
@@ -89,6 +92,9 @@ public class Scene
     public string? FailureSceneTitle { get; set; }
     // For choice scenes, must correspond to one of the Scenario.Characters (by id). May be empty otherwise.
     public string? ActiveCharacter { get; set; }
+
+    public SceneMusicSettings? Music { get; set; }
+    public List<SceneSoundEffect> SoundEffects { get; set; } = new();
 }
 
 public class SceneMedia

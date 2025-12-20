@@ -99,7 +99,10 @@ else
                                 else if (!string.IsNullOrWhiteSpace(gameSession.CurrentScene.VideoUrl))
                                 {
                                     <FantasyMediaFrame MediaKind="video" Color="#165668" Rounded="true" Pulse="true">
-                                        <video controls class="w-100" @key="gameSession.CurrentScene.VideoUrl">
+                                        <video controls class="w-100" @key="gameSession.CurrentScene.VideoUrl"
+                                               @onplay="() => HandleMediaAction(true)"
+                                               @onpause="() => HandleMediaAction(false)"
+                                               @onended="() => HandleMediaAction(false)">
                                             <source src="@gameSession.CurrentScene.VideoUrl" type="video/mp4">
                                             Your browser does not support the video tag.
                                         </video>
@@ -113,7 +116,10 @@ else
                                     <FantasyMediaFrame MediaKind="audio" Color="#165668" Rounded="true" Pulse="true">
                                         <div class="p-4 bg-dark text-center">
                                             <i class="fas fa-music fa-2x text-white mb-3"></i>
-                                            <audio controls class="w-100" @key="gameSession.CurrentScene.AudioUrl">
+                                            <audio controls class="w-100" @key="gameSession.CurrentScene.AudioUrl"
+                                                   @onplay="() => HandleMediaAction(true)"
+                                                   @onpause="() => HandleMediaAction(false)"
+                                                   @onended="() => HandleMediaAction(false)">
                                                 <source src="@gameSession.CurrentScene.AudioUrl" type="audio/mpeg">
                                                 Your browser does not support the audio element.
                                             </audio>
@@ -369,6 +375,8 @@ else
     [Inject] private IApiClient ApiClient { get; set; } = default!;
     [Inject] private IAwardsState AwardsState { get; set; } = default!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+    [Inject] private Mystira.App.PWA.Services.Music.SceneAudioOrchestrator AudioOrchestrator { get; set; } = default!;
+    [Inject] private Mystira.App.PWA.Services.Music.IAudioBus AudioBus { get; set; } = default!;
 
     private sealed record PlayerOption(string Id, string DisplayName);
 
@@ -500,28 +508,27 @@ else
     {
         try
         {
-            if (audioModule == null)
-                return;
-
             if (isPlayingAudio == audioUrl)
             {
-                await audioModule.InvokeVoidAsync("stopAudio");
+                await AudioBus.StopSoundEffectAsync(audioUrl);
+                await AudioBus.DuckMusicAsync(false);
                 isPlayingAudio = null;
             }
             else
             {
                 if (!string.IsNullOrEmpty(isPlayingAudio))
                 {
-                    await audioModule.InvokeVoidAsync("stopAudio");
+                    await AudioBus.StopSoundEffectAsync(isPlayingAudio);
                 }
 
-                await audioModule.InvokeVoidAsync("playAudio", audioUrl);
+                await AudioBus.DuckMusicAsync(true);
+                await AudioBus.PlaySoundEffectAsync(audioUrl);
                 isPlayingAudio = audioUrl;
             }
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error playing audio");
+            Logger.LogError(ex, "Error playing audio: {AudioUrl}", audioUrl);
         }
         finally
         {
@@ -791,6 +798,11 @@ else
             isProcessing = false;
             StateHasChanged();
         }
+    }
+
+    private async Task HandleMediaAction(bool active)
+    {
+        await AudioOrchestrator.OnSceneActionAsync(active);
     }
 
     private async Task ResumeGame()

@@ -109,6 +109,11 @@ builder.Services.AddHttpClient<IGameSessionApiClient, GameSessionApiClient>(Conf
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
+// Music and Audio Services
+builder.Services.AddSingleton<IMusicResolver, MusicResolver>();
+builder.Services.AddScoped<IAudioBus, AudioBus>();
+builder.Services.AddScoped<SceneAudioOrchestrator>();
+
 builder.Services.AddHttpClient<IUserProfileApiClient, UserProfileApiClient>(ConfigureApiHttpClient)
     .AddPolicyHandler(CreateResiliencePolicy("UserProfileApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()

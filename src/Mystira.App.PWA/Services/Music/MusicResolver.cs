@@ -1,4 +1,7 @@
 using Mystira.App.Domain.Models;
+using Scene = Mystira.App.PWA.Models.Scene;
+using Scenario = Mystira.App.PWA.Models.Scenario;
+using SceneType = Mystira.App.PWA.Models.SceneType;
 
 namespace Mystira.App.PWA.Services.Music;
 
@@ -15,34 +18,34 @@ public class MusicResolver : IMusicResolver
         }
 
         // Defaults by scene type as per requirements
-        return scene.Type switch
+        return scene.SceneType switch
         {
-            SceneType.Narrative => new SceneMusicSettings 
-            { 
-                Continuity = MusicContinuity.PreferContinue, 
-                Ducking = MusicDucking.Narration, 
+            SceneType.Narrative => new SceneMusicSettings
+            {
+                Continuity = MusicContinuity.PreferContinue,
+                Ducking = MusicDucking.Narration,
                 TransitionHint = MusicTransitionHint.Auto,
-                Profile = MusicProfile.Neutral 
+                Profile = MusicProfile.Neutral
             },
-            SceneType.Choice => new SceneMusicSettings 
-            { 
-                Continuity = MusicContinuity.PreferContinue, 
-                Ducking = MusicDucking.Dialogue, 
+            SceneType.Choice => new SceneMusicSettings
+            {
+                Continuity = MusicContinuity.PreferContinue,
+                Ducking = MusicDucking.Dialogue,
                 TransitionHint = MusicTransitionHint.CrossfadeShort,
                 Profile = MusicProfile.Neutral
             },
-            SceneType.Roll => new SceneMusicSettings 
-            { 
-                Continuity = MusicContinuity.AllowChange, 
-                Energy = 0.7, 
+            SceneType.Roll => new SceneMusicSettings
+            {
+                Continuity = MusicContinuity.AllowChange,
+                Energy = 0.7,
                 TransitionHint = MusicTransitionHint.CrossfadeShort,
                 Profile = MusicProfile.Tense
             },
-            SceneType.Special => new SceneMusicSettings 
-            { 
-                Continuity = MusicContinuity.ForceChange, 
+            SceneType.Special => new SceneMusicSettings
+            {
+                Continuity = MusicContinuity.ForceChange,
                 TransitionHint = MusicTransitionHint.CrossfadeLong,
-                Profile = MusicProfile.Victory 
+                Profile = MusicProfile.Victory
             },
             _ => new SceneMusicSettings { Profile = MusicProfile.Neutral }
         };
@@ -56,9 +59,9 @@ public class MusicResolver : IMusicResolver
         // 1. Check for silence
         if (intent.Continuity == MusicContinuity.ForceSilence || intent.Profile == MusicProfile.None)
         {
-             return new MusicResolutionResult 
-             { 
-                 IsSilence = true, 
+             return new MusicResolutionResult
+             {
+                 IsSilence = true,
                  Transition = intent.TransitionHint,
                  Profile = MusicProfile.None
              };
@@ -66,7 +69,7 @@ public class MusicResolver : IMusicResolver
 
         // 2. Determine if we MUST or SHOULD change track
         bool shouldChange = false;
-        
+
         if (intent.Continuity == MusicContinuity.ForceChange)
         {
             shouldChange = true;
@@ -98,6 +101,16 @@ public class MusicResolver : IMusicResolver
         }
 
         // 3. Resolution
+        var transition = intent.TransitionHint;
+        if (transition == MusicTransitionHint.Auto)
+        {
+            // Simple rule: if we are starting music from silence, HardCut or Short Crossfade.
+            // If changing track, Normal Crossfade.
+            transition = currentContext.CurrentTrackId == null
+                ? MusicTransitionHint.CrossfadeShort
+                : MusicTransitionHint.CrossfadeNormal;
+        }
+
         if (!shouldChange)
         {
             return new MusicResolutionResult
@@ -115,9 +128,9 @@ public class MusicResolver : IMusicResolver
         // So here intent.Profile is a real profile (e.g. Cozy, Neutral).
 
         var candidates = GetTracksForProfile(palette, intent.Profile);
-        
+
         // If no tracks for requested profile, try default profile
-        if (candidates.Count == 0 && palette != null)
+        if (candidates.Count == 0 && palette != null && intent.Profile != palette.DefaultProfile)
         {
             candidates = GetTracksForProfile(palette, palette.DefaultProfile);
         }
@@ -125,7 +138,7 @@ public class MusicResolver : IMusicResolver
         if (candidates.Count == 0)
         {
              // No tracks found at all -> Silence
-             return new MusicResolutionResult { IsSilence = true, Profile = MusicProfile.None };
+             return new MusicResolutionResult { IsSilence = true, Profile = MusicProfile.None, Transition = transition };
         }
 
         var selectedTrack = PickTrack(candidates, currentContext.RecentTrackIds);
@@ -134,7 +147,7 @@ public class MusicResolver : IMusicResolver
         {
             TrackId = selectedTrack,
             Profile = intent.Profile,
-            Transition = intent.TransitionHint,
+            Transition = transition,
             IsSilence = false
         };
     }
@@ -142,12 +155,12 @@ public class MusicResolver : IMusicResolver
     private List<string> GetTracksForProfile(MusicPalette? palette, MusicProfile profile)
     {
         if (palette == null) return new List<string>();
-        
+
         if (palette.TracksByProfile.TryGetValue(profile.ToString(), out var tracks))
         {
             return tracks;
         }
-        
+
         return new List<string>();
     }
 
@@ -157,9 +170,9 @@ public class MusicResolver : IMusicResolver
 
         // Filter out recent if possible
         var available = candidates.Except(recentTracks).ToList();
-        
+
         // If all candidates were recently played, just pick any candidate
-        if (!available.Any()) 
+        if (!available.Any())
         {
             available = candidates;
         }

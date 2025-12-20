@@ -1,4 +1,6 @@
 using Mystira.App.Domain.Models;
+using Scene = Mystira.App.PWA.Models.Scene;
+using Scenario = Mystira.App.PWA.Models.Scenario;
 
 namespace Mystira.App.PWA.Services.Music;
 

@@ -37,6 +37,11 @@ public class AudioBus : IAudioBus
         await _jsRuntime.InvokeVoidAsync("AudioEngine.setMusicVolume", volume, durationSeconds);
     }
 
+    public async Task DuckMusicAsync(bool duck, float duckVolume = 0.2f)
+    {
+        await _jsRuntime.InvokeVoidAsync("AudioEngine.duckMusic", duck, duckVolume);
+    }
+
     public async Task PauseAllAsync()
     {
         await _jsRuntime.InvokeVoidAsync("AudioEngine.pauseAll");
