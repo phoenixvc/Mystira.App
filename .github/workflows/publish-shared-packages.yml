@@ -20,8 +20,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NUGET_FEED_URL: "https://pkgs.dev.azure.com/${{ secrets.MYSTIRA_DEVOPS_AZURE_ORG }}/${{ secrets.MYSTIRA_DEVOPS_AZURE_PROJECT }}/_packaging/${{ secrets.MYSTIRA_DEVOPS_NUGET_FEED }}/nuget/v3/index.json"
-  NUGET_FEED_NAME: "Mystira-Internal"
+  NUGET_FEED_URL: "https://nuget.pkg.github.com/phoenixvc/index.json"
+  NUGET_FEED_NAME: "github"
 
 jobs:
   detect-changes:
@@ -80,8 +80,8 @@ jobs:
         run: |
           dotnet nuget add source ${{ env.NUGET_FEED_URL }} \
             --name "${{ env.NUGET_FEED_NAME }}" \
-            --username "${{ secrets.MYSTIRA_DEVOPS_AZURE_ORG }}" \
-            --password "${{ secrets.MYSTIRA_DEVOPS_AZURE_PAT }}" \
+            --username "${{ github.actor }}" \
+            --password "${{ secrets.GITHUB_TOKEN }}" \
             --store-password-in-clear-text
       - name: Restore Dependencies
         run: dotnet restore src/Mystira.App.Domain/Mystira.App.Domain.csproj
@@ -92,8 +92,8 @@ jobs:
       - name: Publish to NuGet Feed
         run: |
           dotnet nuget push ./nupkg/*.nupkg \
-            --source "${{ env.NUGET_FEED_NAME }}" \
-            --api-key "${{ secrets.MYSTIRA_DEVOPS_AZURE_PAT }}" \
+            --source "${{ env.NUGET_FEED_URL }}" \
+            --api-key "${{ secrets.GITHUB_TOKEN }}" \
             --skip-duplicate
 
   publish-application:
@@ -114,8 +114,8 @@ jobs:
         run: |
           dotnet nuget add source ${{ env.NUGET_FEED_URL }} \
             --name "${{ env.NUGET_FEED_NAME }}" \
-            --username "${{ secrets.MYSTIRA_DEVOPS_AZURE_ORG }}" \
-            --password "${{ secrets.MYSTIRA_DEVOPS_AZURE_PAT }}" \
+            --username "${{ github.actor }}" \
+            --password "${{ secrets.GITHUB_TOKEN }}" \
             --store-password-in-clear-text
       - name: Restore Dependencies
         run: dotnet restore src/Mystira.App.Application/Mystira.App.Application.csproj
@@ -126,8 +126,8 @@ jobs:
       - name: Publish to NuGet Feed
         run: |
           dotnet nuget push ./nupkg/*.nupkg \
-            --source "${{ env.NUGET_FEED_NAME }}" \
-            --api-key "${{ secrets.MYSTIRA_DEVOPS_AZURE_PAT }}" \
+            --source "${{ env.NUGET_FEED_URL }}" \
+            --api-key "${{ secrets.GITHUB_TOKEN }}" \
             --skip-duplicate
 
   publish-contracts:
@@ -148,8 +148,8 @@ jobs:
         run: |
           dotnet nuget add source ${{ env.NUGET_FEED_URL }} \
             --name "${{ env.NUGET_FEED_NAME }}" \
-            --username "${{ secrets.MYSTIRA_DEVOPS_AZURE_ORG }}" \
-            --password "${{ secrets.MYSTIRA_DEVOPS_AZURE_PAT }}" \
+            --username "${{ github.actor }}" \
+            --password "${{ secrets.GITHUB_TOKEN }}" \
             --store-password-in-clear-text
       - name: Restore Dependencies
         run: dotnet restore src/Mystira.App.Contracts/Mystira.App.Contracts.csproj
@@ -160,8 +160,8 @@ jobs:
       - name: Publish to NuGet Feed
         run: |
           dotnet nuget push ./nupkg/*.nupkg \
-            --source "${{ env.NUGET_FEED_NAME }}" \
-            --api-key "${{ secrets.MYSTIRA_DEVOPS_AZURE_PAT }}" \
+            --source "${{ env.NUGET_FEED_URL }}" \
+            --api-key "${{ secrets.GITHUB_TOKEN }}" \
             --skip-duplicate
 
   publish-infrastructure-azure:
@@ -182,8 +182,8 @@ jobs:
         run: |
           dotnet nuget add source ${{ env.NUGET_FEED_URL }} \
             --name "${{ env.NUGET_FEED_NAME }}" \
-            --username "${{ secrets.MYSTIRA_DEVOPS_AZURE_ORG }}" \
-            --password "${{ secrets.MYSTIRA_DEVOPS_AZURE_PAT }}" \
+            --username "${{ github.actor }}" \
+            --password "${{ secrets.GITHUB_TOKEN }}" \
             --store-password-in-clear-text
       - name: Restore Dependencies
         run: dotnet restore src/Mystira.App.Infrastructure.Azure/Mystira.App.Infrastructure.Azure.csproj
@@ -194,8 +194,8 @@ jobs:
       - name: Publish to NuGet Feed
         run: |
           dotnet nuget push ./nupkg/*.nupkg \
-            --source "${{ env.NUGET_FEED_NAME }}" \
-            --api-key "${{ secrets.MYSTIRA_DEVOPS_AZURE_PAT }}" \
+            --source "${{ env.NUGET_FEED_URL }}" \
+            --api-key "${{ secrets.GITHUB_TOKEN }}" \
             --skip-duplicate
 
   publish-infrastructure-data:
@@ -216,8 +216,8 @@ jobs:
         run: |
           dotnet nuget add source ${{ env.NUGET_FEED_URL }} \
             --name "${{ env.NUGET_FEED_NAME }}" \
-            --username "${{ secrets.MYSTIRA_DEVOPS_AZURE_ORG }}" \
-            --password "${{ secrets.MYSTIRA_DEVOPS_AZURE_PAT }}" \
+            --username "${{ github.actor }}" \
+            --password "${{ secrets.GITHUB_TOKEN }}" \
             --store-password-in-clear-text
       - name: Restore Dependencies
         run: dotnet restore src/Mystira.App.Infrastructure.Data/Mystira.App.Infrastructure.Data.csproj
@@ -228,8 +228,8 @@ jobs:
       - name: Publish to NuGet Feed
         run: |
           dotnet nuget push ./nupkg/*.nupkg \
-            --source "${{ env.NUGET_FEED_NAME }}" \
-            --api-key "${{ secrets.MYSTIRA_DEVOPS_AZURE_PAT }}" \
+            --source "${{ env.NUGET_FEED_URL }}" \
+            --api-key "${{ secrets.GITHUB_TOKEN }}" \
             --skip-duplicate
 
   publish-infrastructure-discord:
@@ -250,8 +250,8 @@ jobs:
         run: |
           dotnet nuget add source ${{ env.NUGET_FEED_URL }} \
             --name "${{ env.NUGET_FEED_NAME }}" \
-            --username "${{ secrets.MYSTIRA_DEVOPS_AZURE_ORG }}" \
-            --password "${{ secrets.MYSTIRA_DEVOPS_AZURE_PAT }}" \
+            --username "${{ github.actor }}" \
+            --password "${{ secrets.GITHUB_TOKEN }}" \
             --store-password-in-clear-text
       - name: Restore Dependencies
         run: dotnet restore src/Mystira.App.Infrastructure.Discord/Mystira.App.Infrastructure.Discord.csproj
@@ -262,8 +262,8 @@ jobs:
       - name: Publish to NuGet Feed
         run: |
           dotnet nuget push ./nupkg/*.nupkg \
-            --source "${{ env.NUGET_FEED_NAME }}" \
-            --api-key "${{ secrets.MYSTIRA_DEVOPS_AZURE_PAT }}" \
+            --source "${{ env.NUGET_FEED_URL }}" \
+            --api-key "${{ secrets.GITHUB_TOKEN }}" \
             --skip-duplicate
 
   publish-infrastructure-storyprotocol:
@@ -284,8 +284,8 @@ jobs:
         run: |
           dotnet nuget add source ${{ env.NUGET_FEED_URL }} \
             --name "${{ env.NUGET_FEED_NAME }}" \
-            --username "${{ secrets.MYSTIRA_DEVOPS_AZURE_ORG }}" \
-            --password "${{ secrets.MYSTIRA_DEVOPS_AZURE_PAT }}" \
+            --username "${{ github.actor }}" \
+            --password "${{ secrets.GITHUB_TOKEN }}" \
             --store-password-in-clear-text
       - name: Restore Dependencies
         run: dotnet restore src/Mystira.App.Infrastructure.StoryProtocol/Mystira.App.Infrastructure.StoryProtocol.csproj
@@ -296,8 +296,8 @@ jobs:
       - name: Publish to NuGet Feed
         run: |
           dotnet nuget push ./nupkg/*.nupkg \
-            --source "${{ env.NUGET_FEED_NAME }}" \
-            --api-key "${{ secrets.MYSTIRA_DEVOPS_AZURE_PAT }}" \
+            --source "${{ env.NUGET_FEED_URL }}" \
+            --api-key "${{ secrets.GITHUB_TOKEN }}" \
             --skip-duplicate
 
   publish-shared:
@@ -320,8 +320,8 @@ jobs:
         run: |
           dotnet nuget add source ${{ env.NUGET_FEED_URL }} \
             --name "${{ env.NUGET_FEED_NAME }}" \
-            --username "${{ secrets.MYSTIRA_DEVOPS_AZURE_ORG }}" \
-            --password "${{ secrets.MYSTIRA_DEVOPS_AZURE_PAT }}" \
+            --username "${{ github.actor }}" \
+            --password "${{ secrets.GITHUB_TOKEN }}" \
             --store-password-in-clear-text
 
       - name: Restore Dependencies
@@ -336,8 +336,8 @@ jobs:
       - name: Publish to NuGet Feed
         run: |
           dotnet nuget push ./nupkg/*.nupkg \
-            --source "${{ env.NUGET_FEED_NAME }}" \
-            --api-key "${{ secrets.MYSTIRA_DEVOPS_AZURE_PAT }}" \
+            --source "${{ env.NUGET_FEED_URL }}" \
+            --api-key "${{ secrets.GITHUB_TOKEN }}" \
             --skip-duplicate
         continue-on-error: true
 
