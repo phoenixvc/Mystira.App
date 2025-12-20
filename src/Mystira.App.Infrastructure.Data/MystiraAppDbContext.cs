@@ -133,24 +133,6 @@ public partial class MystiraAppDbContext : DbContext
             });
         }
 
-        // Configure Scenario
-        modelBuilder.Entity<Scenario>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            if (!isInMemoryDatabase)
-            {
-                entity.ToContainer("Scenarios")
-                      .HasPartitionKey(e => e.Id);
-                entity.Property(e => e.Id).ToJsonProperty("id");
-            }
-
-            entity.Ignore(e => e.MusicPalette);
-            entity.OwnsMany(e => e.Scenes, scene =>
-            {
-                scene.Ignore(s => s.SoundEffects);
-                scene.Ignore(s => s.Music);
-            });
-        });
 
         // Configure Account
         modelBuilder.Entity<Account>(entity =>
@@ -463,6 +445,27 @@ public partial class MystiraAppDbContext : DbContext
                         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                         c => c.ToList()));
 
+            entity.OwnsOne(e => e.MusicPalette, palette =>
+            {
+                palette.ToJsonProperty("MusicPalette");
+                palette.Property(p => p.DefaultProfile)
+                       .ToJsonProperty("DefaultProfile")
+                       .HasConversion(
+                           v => v.ToString(),
+                           v => Enum.Parse<MusicProfile>(v, true));
+
+                palette.Property(p => p.TracksByProfile)
+                       .ToJsonProperty("TracksByProfile")
+                       .HasConversion(
+                           v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
+                           v => JsonSerializer.Deserialize<Dictionary<string, List<string>>>(v, (JsonSerializerOptions)null)
+                                ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase))
+                       .Metadata.SetValueComparer(new ValueComparer<Dictionary<string, List<string>>>(
+                           (d1, d2) => d1 != null && d2 != null && d1.Count == d2.Count && !d1.Except(d2).Any(),
+                           d => d.Aggregate(0, (a, v) => HashCode.Combine(a, v.Key.GetHashCode(), v.Value.Aggregate(0, (a2, v2) => HashCode.Combine(a2, v2.GetHashCode())))),
+                           d => new Dictionary<string, List<string>>(d, StringComparer.OrdinalIgnoreCase)));
+            });
+
             entity.OwnsMany(e => e.Characters, character =>
             {
                 character.OwnsOne(c => c.Metadata, metadata =>
@@ -502,6 +505,28 @@ public partial class MystiraAppDbContext : DbContext
             entity.OwnsMany(e => e.Scenes, scene =>
             {
                 scene.OwnsOne(s => s.Media);
+                scene.OwnsOne(s => s.Music, music =>
+                {
+                    music.ToJsonProperty("Music");
+                    music.Property(m => m.Profile).ToJsonProperty("Profile")
+                         .HasConversion(v => v.ToString(), v => Enum.Parse<MusicProfile>(v, true));
+                    music.Property(m => m.Energy).ToJsonProperty("Energy");
+                    music.Property(m => m.Continuity).ToJsonProperty("Continuity")
+                         .HasConversion(v => v.ToString(), v => Enum.Parse<MusicContinuity>(v, true));
+                    music.Property(m => m.TransitionHint).ToJsonProperty("TransitionHint")
+                         .HasConversion(v => v.ToString(), v => Enum.Parse<MusicTransitionHint>(v, true));
+                    music.Property(m => m.Priority).ToJsonProperty("Priority")
+                         .HasConversion(v => v.ToString(), v => Enum.Parse<MusicPriority>(v, true));
+                    music.Property(m => m.Ducking).ToJsonProperty("Ducking")
+                         .HasConversion(v => v.ToString(), v => Enum.Parse<MusicDucking>(v, true));
+                });
+                scene.OwnsMany(s => s.SoundEffects, sfx =>
+                {
+                    sfx.ToJsonProperty("SoundEffects");
+                    sfx.Property(s => s.Track).ToJsonProperty("Track");
+                    sfx.Property(s => s.Loopable).ToJsonProperty("Loopable");
+                    sfx.Property(s => s.Energy).ToJsonProperty("Energy");
+                });
                 scene.OwnsMany(s => s.Branches, branch =>
                 {
                     branch.OwnsOne(b => b.EchoLog, echoLog =>

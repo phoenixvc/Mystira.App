@@ -158,6 +158,21 @@ public class MediaControllerTests
     }
 
     [Fact]
+    public void MediaController_GetMediaFile_HasResponseCacheAttribute()
+    {
+        // Arrange
+        var method = typeof(MediaController).GetMethod("GetMediaFile");
+
+        // Act
+        var attribute = (ResponseCacheAttribute?)method!.GetCustomAttributes(typeof(ResponseCacheAttribute), false)[0];
+
+        // Assert
+        attribute.Should().NotBeNull();
+        attribute!.Duration.Should().Be(31536000);
+        attribute.Location.Should().Be(ResponseCacheLocation.Any);
+    }
+
+    [Fact]
     public void MediaController_OnlyDependsOnIMediator()
     {
         // Arrange & Act

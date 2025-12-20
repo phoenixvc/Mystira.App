@@ -158,7 +158,13 @@ public class MusicResolver : IMusicResolver
 
         if (palette.TracksByProfile.TryGetValue(profile.ToString(), out var tracks))
         {
-            return tracks;
+            return tracks ?? new List<string>();
+        }
+
+        if (palette.DefaultProfile != MusicProfile.None)
+        {
+            palette.TracksByProfile.TryGetValue(palette.DefaultProfile.ToString(), out tracks);
+            return tracks ?? new List<string>();
         }
 
         return new List<string>();

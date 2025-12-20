@@ -28,7 +28,6 @@ public class Scenario
     public string[] Archetypes { get; set; } = [];
     public int MinimumAge { get; set; } = 1;
     public string AgeGroup { get; set; } = string.Empty;
-    public string Summary { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public List<string> CoreAxes { get; set; } = new();
     public List<ScenarioCharacter> Characters { get; set; } = new();
@@ -37,8 +36,6 @@ public class Scenario
 
     // Backward compatibility properties
     public string Name => Title;
-    public bool IsActive => true;
-    public DateTime UpdatedAt => CreatedAt;
 }
 
 public class Scene

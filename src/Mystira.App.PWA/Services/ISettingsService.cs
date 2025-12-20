@@ -8,4 +8,6 @@ public interface ISettingsService
     Task SetShowGameAlreadyPlayedWarningAsync(bool value);
     Task<bool> GetShowGuestWarningAsync();
     Task SetShowGuestWarningAsync(bool value);
+    Task<bool> GetAudioEnabledAsync();
+    Task SetAudioEnabledAsync(bool value);
 }

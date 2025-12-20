@@ -7,7 +7,9 @@
 @inject ILogger<CharacterAssignment> Logger
 @inject IJSRuntime JSRuntime
 @inject ISettingsService SettingsService
+@inject Mystira.App.PWA.Services.Music.SceneAudioOrchestrator AudioOrchestrator
 @using System.Linq
+@implements IAsyncDisposable
 
 <PageTitle>Assign Players • Mystira</PageTitle>
 
@@ -614,6 +616,24 @@ else
     // Audio
     private string? isPlayingAudio = null;
     private IJSObjectReference? audioModule;
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (audioModule != null)
+            {
+                // Note: 'stopAudio' is a legacy export in audioPlayer.js
+                // We mainly rely on SceneAudioOrchestrator to stop music/sfx
+                await AudioOrchestrator.StopAllAsync();
+                await audioModule.DisposeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Error disposing audio module in CharacterAssignment");
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {

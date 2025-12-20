@@ -120,9 +120,6 @@ public partial class GameSessionService : IGameSessionService
                     : new List<CharacterAssignment>()
             };
 
-            // Orchestrate initial scene audio
-            await _audioOrchestrator.EnterSceneAsync(startingScene, scenario);
-
             // Set empty character assignments for scenarios that skip character assignment
             // This ensures text replacement functionality works (even though no replacements will occur)
             if (_characterAssignments?.Any() != true)
@@ -267,6 +264,9 @@ public partial class GameSessionService : IGameSessionService
             {
                 CurrentGameSession.IsCompleted = true;
 
+                // Stop all audio when session is completed
+                await _audioOrchestrator.StopAllAsync();
+
                 // Trigger the event to notify subscribers
                 GameSessionChanged?.Invoke(this, CurrentGameSession);
             }
@@ -308,6 +308,9 @@ public partial class GameSessionService : IGameSessionService
 
             _isPaused = true;
 
+            // Pause all audio when session is paused
+            await _audioOrchestrator.OnSceneActionAsync(true);
+
             // Trigger the event to notify subscribers
             GameSessionChanged?.Invoke(this, CurrentGameSession);
 
@@ -347,6 +350,15 @@ public partial class GameSessionService : IGameSessionService
             }
 
             _isPaused = false;
+
+            // Orchestrate audio for current scene on resume
+            if (CurrentGameSession?.CurrentScene != null)
+            {
+                await _audioOrchestrator.EnterSceneAsync(CurrentGameSession.CurrentScene, CurrentGameSession.Scenario);
+            }
+
+            // Resume all audio when session is resumed
+            await _audioOrchestrator.OnSceneActionAsync(false);
 
             // If API returned session data, merge essential fields and hydrate assignments
             if (apiSession != null)
