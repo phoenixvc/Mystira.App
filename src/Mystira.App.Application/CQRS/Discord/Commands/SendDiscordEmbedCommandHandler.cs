@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Mystira.App.Application.CQRS.Common.Responses;
 using Mystira.App.Application.Ports.Messaging;
 
 namespace Mystira.App.Application.CQRS.Discord.Commands;
@@ -8,7 +9,7 @@ namespace Mystira.App.Application.CQRS.Discord.Commands;
 /// Builds embed from command parameters and sends via the platform-agnostic IChatBotService.
 /// </summary>
 public class SendDiscordEmbedCommandHandler
-    : ICommandHandler<SendDiscordEmbedCommand, (bool Success, string Message)>
+    : ICommandHandler<SendDiscordEmbedCommand, CommandResponse>
 {
     // FIX: Remove optional dependency anti-pattern - require the service
     private readonly IChatBotService _chatBotService;
@@ -22,14 +23,14 @@ public class SendDiscordEmbedCommandHandler
         _chatBotService = chatBotService ?? throw new ArgumentNullException(nameof(chatBotService));
     }
 
-    public async Task<(bool Success, string Message)> Handle(
+    public async Task<CommandResponse> Handle(
         SendDiscordEmbedCommand command,
         CancellationToken cancellationToken)
     {
         if (!_chatBotService.IsConnected)
         {
             _logger.LogWarning("Attempted to send embed but chat bot is not connected");
-            return (false, "Chat bot is not connected");
+            return new CommandResponse(false, "Chat bot is not connected");
         }
 
         try
@@ -54,12 +55,12 @@ public class SendDiscordEmbedCommandHandler
             await _chatBotService.SendEmbedAsync(command.ChannelId, embedData, cancellationToken);
 
             _logger.LogInformation("Successfully sent Discord embed to channel {ChannelId}", command.ChannelId);
-            return (true, "Embed sent successfully");
+            return new CommandResponse(true, "Embed sent successfully");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error sending Discord embed to channel {ChannelId}", command.ChannelId);
-            return (false, $"Error sending embed: {ex.Message}");
+            return new CommandResponse(false, $"Error sending embed: {ex.Message}");
         }
     }
 }

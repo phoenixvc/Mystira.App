@@ -26,8 +26,8 @@ public class SubscriptionDetails
     public DateTime? LastVerified { get; set; } // Last time subscription was verified with app store
     public List<string> PurchasedScenarios { get; set; } = new(); // Individual scenario purchases
     public string Tier { get; set; } = "Free";
-    public DateTime StartDate { get; set; } = DateTime.UtcNow;
-    public DateTime EndDate { get; set; } = DateTime.MaxValue;
+    public DateTime? StartDate { get; set; } = DateTime.UtcNow;
+    public DateTime? EndDate { get; set; } = DateTime.MaxValue;
 
     public bool IsSubscriptionActive()
     {
@@ -52,7 +52,7 @@ public class AccountSettings
     public bool RequireAuthOnStartup { get; set; } = false;
     public string PreferredLanguage { get; set; } = "en";
     public bool NotificationsEnabled { get; set; } = true;
-    public string Theme { get; set; } = "Light";
+    public string? Theme { get; set; } = "Light";
 }
 
 public enum SubscriptionType

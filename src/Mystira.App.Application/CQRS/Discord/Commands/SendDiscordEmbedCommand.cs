@@ -1,3 +1,5 @@
+using Mystira.App.Application.CQRS.Common.Responses;
+
 namespace Mystira.App.Application.CQRS.Discord.Commands;
 
 /// <summary>
@@ -13,7 +15,7 @@ public record SendDiscordEmbedCommand(
     byte ColorBlue,
     string? Footer,
     List<DiscordEmbedField>? Fields
-) : ICommand<(bool Success, string Message)>;
+) : ICommand<CommandResponse>;
 
 /// <summary>
 /// Represents a field in a Discord embed.

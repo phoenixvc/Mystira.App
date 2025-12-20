@@ -10,7 +10,6 @@ namespace Mystira.App.Api.Controllers
 {
     [Route("api/auth")]
     [ApiController]
-    [EnableRateLimiting("auth")] // Apply strict rate limiting to all auth endpoints (BUG-5)
     public class AuthController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -37,21 +36,21 @@ namespace Mystira.App.Api.Controllers
             }
 
             var command = new RequestPasswordlessSignupCommand(request.Email, request.DisplayName);
-            var (success, message, code, errorDetails) = await _mediator.Send(command);
+            var response = await _mediator.Send(command);
 
             // Use PII redaction for COPPA/GDPR compliance
             _logger.LogInformation("Passwordless signup request: user={UserHash}, domain={EmailDomain}, success={Success}",
                 PiiRedactor.HashEmail(request.Email),
                 PiiRedactor.RedactEmail(request.Email),
-                success);
+                response.Success);
 
             return Ok(new PasswordlessSignupResponse
             {
-                Success = success,
-                Message = message,
-                Email = success ? request.Email : null,
+                Success = response.Success,
+                Message = response.Message,
+                Email = response.Success ? request.Email : null,
                 // Only include error details in development mode for debugging
-                ErrorDetails = _environment.IsDevelopment() ? errorDetails : null
+                ErrorDetails = _environment.IsDevelopment() ? response.ErrorDetails : null
             });
         }
 
@@ -68,16 +67,16 @@ namespace Mystira.App.Api.Controllers
             }
 
             var command = new VerifyPasswordlessSignupCommand(request.Email, request.Code);
-            var (success, message, account, accessToken, refreshToken, errorDetails) = await _mediator.Send(command);
+            var response = await _mediator.Send(command);
 
-            if (!success || account == null)
+            if (!response.Success || response.Account == null)
             {
                 return Ok(new PasswordlessVerifyResponse
                 {
                     Success = false,
-                    Message = message,
+                    Message = response.Message,
                     // Only include error details in development mode for debugging
-                    ErrorDetails = _environment.IsDevelopment() ? errorDetails : null
+                    ErrorDetails = _environment.IsDevelopment() ? response.ErrorDetails : null
                 });
             }
 
@@ -88,10 +87,10 @@ namespace Mystira.App.Api.Controllers
             return Ok(new PasswordlessVerifyResponse
             {
                 Success = true,
-                Message = message,
-                Account = account,
-                Token = accessToken,
-                RefreshToken = refreshToken,
+                Message = response.Message,
+                Account = response.Account,
+                Token = response.AccessToken,
+                RefreshToken = response.RefreshToken,
                 TokenExpiresAt = DateTime.UtcNow.AddHours(6),
                 RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(30) // Refresh token valid for 30 days
             });
@@ -110,21 +109,21 @@ namespace Mystira.App.Api.Controllers
             }
 
             var command = new RequestPasswordlessSigninCommand(request.Email);
-            var (success, message, _, errorDetails) = await _mediator.Send(command);
+            var response = await _mediator.Send(command);
 
             // Use PII redaction for COPPA/GDPR compliance
             _logger.LogInformation("Passwordless signin request: user={UserHash}, domain={EmailDomain}, success={Success}",
                 PiiRedactor.HashEmail(request.Email),
                 PiiRedactor.RedactEmail(request.Email),
-                success);
+                response.Success);
 
             return Ok(new PasswordlessSigninResponse
             {
-                Success = success,
-                Message = message,
-                Email = success ? request.Email : null,
+                Success = response.Success,
+                Message = response.Message,
+                Email = response.Success ? request.Email : null,
                 // Only include error details in development mode for debugging
-                ErrorDetails = _environment.IsDevelopment() ? errorDetails : null
+                ErrorDetails = _environment.IsDevelopment() ? response.ErrorDetails : null
             });
         }
 
@@ -141,16 +140,16 @@ namespace Mystira.App.Api.Controllers
             }
 
             var command = new VerifyPasswordlessSigninCommand(request.Email, request.Code);
-            var (success, message, account, accessToken, refreshToken, errorDetails) = await _mediator.Send(command);
+            var response = await _mediator.Send(command);
 
-            if (!success || account == null)
+            if (!response.Success || response.Account == null)
             {
                 return Ok(new PasswordlessVerifyResponse
                 {
                     Success = false,
-                    Message = message,
+                    Message = response.Message,
                     // Only include error details in development mode for debugging
-                    ErrorDetails = _environment.IsDevelopment() ? errorDetails : null
+                    ErrorDetails = _environment.IsDevelopment() ? response.ErrorDetails : null
                 });
             }
 
@@ -161,10 +160,10 @@ namespace Mystira.App.Api.Controllers
             return Ok(new PasswordlessVerifyResponse
             {
                 Success = true,
-                Message = message,
-                Account = account,
-                Token = accessToken,
-                RefreshToken = refreshToken,
+                Message = response.Message,
+                Account = response.Account,
+                Token = response.AccessToken,
+                RefreshToken = response.RefreshToken,
                 TokenExpiresAt = DateTime.UtcNow.AddHours(6),
                 RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(30) // Refresh token valid for 30 days
             });
@@ -183,23 +182,23 @@ namespace Mystira.App.Api.Controllers
             }
 
             var command = new RefreshTokenCommand(request.Token, request.RefreshToken);
-            var (success, message, newAccessToken, newRefreshToken) = await _mediator.Send(command);
+            var response = await _mediator.Send(command);
 
-            if (!success)
+            if (!response.Success)
             {
                 return Unauthorized(new RefreshTokenResponse
                 {
                     Success = false,
-                    Message = message
+                    Message = response.Message
                 });
             }
 
             return Ok(new RefreshTokenResponse
             {
                 Success = true,
-                Message = message,
-                Token = newAccessToken,
-                RefreshToken = newRefreshToken,
+                Message = response.Message,
+                Token = response.AccessToken,
+                RefreshToken = response.RefreshToken,
                 TokenExpiresAt = DateTime.UtcNow.AddHours(6),
                 RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(30)
             });

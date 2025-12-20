@@ -7,6 +7,8 @@ using Mystira.App.PWA.Services;
 using Polly;
 using Polly.Extensions.Http;
 
+using Mystira.App.PWA.Services.Music;
+
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
@@ -106,6 +108,11 @@ builder.Services.AddHttpClient<IGameSessionApiClient, GameSessionApiClient>(Conf
     .AddPolicyHandler(CreateResiliencePolicy("GameSessionApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
+
+// Music and Audio Services
+builder.Services.AddSingleton<IMusicResolver, MusicResolver>();
+builder.Services.AddScoped<IAudioBus, AudioBus>();
+builder.Services.AddScoped<SceneAudioOrchestrator>();
 
 builder.Services.AddHttpClient<IUserProfileApiClient, UserProfileApiClient>(ConfigureApiHttpClient)
     .AddPolicyHandler(CreateResiliencePolicy("UserProfileApi"))
