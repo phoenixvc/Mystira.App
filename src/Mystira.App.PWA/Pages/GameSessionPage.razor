@@ -393,7 +393,6 @@ else
 
     // Audio
     private string? isPlayingAudio = null;
-    private IJSObjectReference? audioModule;
 
     // Awards modal state
     private bool showAwardsModal = false;
@@ -483,12 +482,11 @@ else
         {
             try
             {
-                audioModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/audioPlayer.js");
                 isMusicPaused = await AudioBus.IsMusicPausedAsync();
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error loading audio module");
+                Logger.LogError(ex, "Error checking music pause status");
             }
         }
 
@@ -545,17 +543,11 @@ else
     {
         try
         {
-            if (audioModule != null)
-            {
-                await audioModule.InvokeVoidAsync("stopAudio");
-                await audioModule.DisposeAsync();
-            }
-
             await AudioOrchestrator.StopAllAsync();
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Error disposing audio module in GameSessionPage");
+            Logger.LogWarning(ex, "Error disposing audio in GameSessionPage");
         }
 
         // Unsubscribe from events
