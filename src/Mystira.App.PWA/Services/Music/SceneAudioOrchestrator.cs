@@ -115,4 +115,18 @@ public class SceneAudioOrchestrator
             await _audioBus.ResumeAllAsync();
         }
     }
+
+    public async Task StopAllAsync()
+    {
+        await _audioBus.StopMusicAsync(MusicTransitionHint.CrossfadeNormal);
+        _context.CurrentTrackId = null;
+        _context.CurrentProfile = MusicProfile.None;
+        _context.CurrentEnergy = 0;
+
+        foreach (var track in _activeLoopingSfx.ToList())
+        {
+            await _audioBus.StopSoundEffectAsync(track);
+            _activeLoopingSfx.Remove(track);
+        }
+    }
 }

@@ -8,17 +8,20 @@ public class CharacterAssignmentService : ICharacterAssignmentService
     private readonly IApiClient _apiClient;
     private readonly IAuthService _authService;
     private readonly IGameSessionService _gameSessionService;
+    private readonly Music.SceneAudioOrchestrator _audioOrchestrator;
 
     public CharacterAssignmentService(
         ILogger<CharacterAssignmentService> logger,
         IApiClient apiClient,
         IAuthService authService,
-        IGameSessionService gameSessionService)
+        IGameSessionService gameSessionService,
+        Music.SceneAudioOrchestrator audioOrchestrator)
     {
         _logger = logger;
         _apiClient = apiClient;
         _authService = authService;
         _gameSessionService = gameSessionService;
+        _audioOrchestrator = audioOrchestrator;
     }
 
     public async Task<CharacterAssignmentResponse> GetCharacterAssignmentDataAsync(string scenarioId,
@@ -154,6 +157,9 @@ public class CharacterAssignmentService : ICharacterAssignmentService
 
                     // Also store assignments in the session service for placeholder replacement
                     _gameSessionService.SetCharacterAssignments(localGameSession.CharacterAssignments);
+
+                    // Orchestrate initial scene audio
+                    await _audioOrchestrator.EnterSceneAsync(startingScene, scenario);
 
                     _logger.LogInformation("Local game session populated with starting scene: {SceneTitle}", startingScene.Title);
                 }

@@ -55,6 +55,9 @@ else
                             <i class="fas fa-door-open"></i>
                             <span>Exit Adventure</span>
                         </button>
+                        <button class="btn-game-control btn-music-toggle" @onclick="ToggleMusic" disabled="@isProcessing" title="@(isMusicPaused ? "Resume Music" : "Pause Music")">
+                            <i class="fas @(isMusicPaused ? "fa-volume-mute" : "fa-music")"></i>
+                        </button>
                         <img src="images/mystira-logo.webp"
                             alt="Mystira Logo"
                             width="80"
@@ -386,6 +389,7 @@ else
     private bool? lastRollSuccess = null;
     private string? lastRollMessage = null;
     private bool hasNavigatedHome = false;
+    private bool isMusicPaused = false;
 
     // Audio
     private string? isPlayingAudio = null;
@@ -480,6 +484,7 @@ else
             try
             {
                 audioModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/audioPlayer.js");
+                isMusicPaused = await AudioBus.IsMusicPausedAsync();
             }
             catch (Exception ex)
             {
@@ -545,6 +550,8 @@ else
                 await audioModule.InvokeVoidAsync("stopAudio");
                 await audioModule.DisposeAsync();
             }
+
+            await AudioOrchestrator.StopAllAsync();
         }
         catch (Exception ex)
         {
@@ -823,6 +830,8 @@ else
             else
             {
                 Logger.LogInformation("Game session resumed");
+                // Sync music paused state
+                isMusicPaused = await AudioBus.IsMusicPausedAsync();
             }
         }
         catch (Exception ex)
@@ -833,6 +842,26 @@ else
         {
             isProcessing = false;
             StateHasChanged();
+        }
+    }
+
+    private async Task ToggleMusic()
+    {
+        try
+        {
+            if (isMusicPaused)
+            {
+                await AudioBus.ResumeMusicAsync();
+            }
+            else
+            {
+                await AudioBus.PauseMusicAsync();
+            }
+            isMusicPaused = !isMusicPaused;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error toggling music");
         }
     }
 

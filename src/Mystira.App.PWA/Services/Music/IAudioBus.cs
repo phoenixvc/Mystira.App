@@ -12,4 +12,7 @@ public interface IAudioBus
     Task DuckMusicAsync(bool duck, float duckVolume = 0.2f);
     Task PauseAllAsync();
     Task ResumeAllAsync();
+    Task PauseMusicAsync();
+    Task ResumeMusicAsync();
+    Task<bool> IsMusicPausedAsync();
 }

@@ -23,10 +23,14 @@
 
             this.sfxChannels = new Map(); // trackId -> Audio
             this.isPaused = false;
+            this.musicPaused = false;
         }
 
         async playMusic(trackUrl, transitionType, volume = 1.0) {
             if (this.currentMusicTrackId === trackUrl) {
+                if (this.musicPaused) {
+                    this.resumeMusic();
+                }
                 this.setMusicVolume(volume);
                 return;
             }
@@ -119,6 +123,7 @@
         pauseAll() {
             this.isPaused = true;
             this.activeMusic.pause();
+            this.fadingMusic.pause();
             for (let sfx of this.sfxChannels.values()) {
                 sfx.pause();
             }
@@ -126,12 +131,29 @@
 
         resumeAll() {
             this.isPaused = false;
-            this.activeMusic.play().catch(() => {});
+            if (this.activeMusic.src && !this.musicPaused) this.activeMusic.play().catch(() => {});
             for (let sfx of this.sfxChannels.values()) {
                 if (sfx.loop || !sfx.ended) {
                     sfx.play().catch(() => {});
                 }
             }
+        }
+
+        pauseMusic() {
+            this.musicPaused = true;
+            this.activeMusic.pause();
+            this.fadingMusic.pause();
+        }
+
+        resumeMusic() {
+            this.musicPaused = false;
+            if (this.activeMusic.src && !this.isPaused) {
+                this.activeMusic.play().catch(() => {});
+            }
+        }
+
+        isMusicPaused() {
+            return this.musicPaused || false;
         }
 
         _fade(audio, targetVolume, duration, onComplete) {

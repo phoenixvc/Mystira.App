@@ -67,7 +67,8 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                             AgeGroup = s.AgeGroup ?? string.Empty,
                             CoreAxes = s.CoreAxes ?? new List<string>(),
                             CreatedAt = s.CreatedAt,
-                            Scenes = new List<Scene>()
+                            Scenes = new List<Scene>(),
+                            MusicPalette = s.MusicPalette
                         }).ToList();
 
                         Logger.LogInformation("Fetched {Count} scenarios (paginated)", mapped.Count);
@@ -89,23 +90,32 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                             {
                                 string GetString(string name)
                                 {
-                                    return item.TryGetProperty(name, out var prop) && prop.ValueKind == JsonValueKind.String
-                                        ? prop.GetString() ?? string.Empty
-                                        : string.Empty;
+                                    if (item.TryGetProperty(name, out var prop) && prop.ValueKind == JsonValueKind.String)
+                                        return prop.GetString() ?? string.Empty;
+
+                                    var pascalName = char.ToUpper(name[0]) + name.Substring(1);
+                                    if (item.TryGetProperty(pascalName, out var prop2) && prop2.ValueKind == JsonValueKind.String)
+                                        return prop2.GetString() ?? string.Empty;
+
+                                    return string.Empty;
                                 }
 
                                 int GetInt(string name, int fallback = 0)
                                 {
-                                    if (item.TryGetProperty(name, out var prop))
+                                    var props = new[] { name, char.ToUpper(name[0]) + name.Substring(1) };
+                                    foreach (var p in props)
                                     {
-                                        if (prop.ValueKind == JsonValueKind.Number && prop.TryGetInt32(out var i))
+                                        if (item.TryGetProperty(p, out var prop))
                                         {
-                                            return i;
-                                        }
+                                            if (prop.ValueKind == JsonValueKind.Number && prop.TryGetInt32(out var i))
+                                            {
+                                                return i;
+                                            }
 
-                                        if (prop.ValueKind == JsonValueKind.String && int.TryParse(prop.GetString(), out var si))
-                                        {
-                                            return si;
+                                            if (prop.ValueKind == JsonValueKind.String && int.TryParse(prop.GetString(), out var si))
+                                            {
+                                                return si;
+                                            }
                                         }
                                     }
                                     return fallback;
@@ -113,11 +123,15 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
 
                                 DateTime GetDate(string name)
                                 {
-                                    if (item.TryGetProperty(name, out var prop) && prop.ValueKind == JsonValueKind.String)
+                                    var props = new[] { name, char.ToUpper(name[0]) + name.Substring(1) };
+                                    foreach (var p in props)
                                     {
-                                        if (DateTime.TryParse(prop.GetString(), out var dt))
+                                        if (item.TryGetProperty(p, out var prop) && prop.ValueKind == JsonValueKind.String)
                                         {
-                                            return dt;
+                                            if (DateTime.TryParse(prop.GetString(), out var dt))
+                                            {
+                                                return dt;
+                                            }
                                         }
                                     }
                                     return DateTime.UtcNow;
@@ -125,7 +139,19 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
 
                                 string[] GetStringArray(string name)
                                 {
-                                    if (!item.TryGetProperty(name, out var prop) || prop.ValueKind != JsonValueKind.Array)
+                                    var props = new[] { name, char.ToUpper(name[0]) + name.Substring(1) };
+                                    JsonElement prop = default;
+                                    bool found = false;
+                                    foreach (var p in props)
+                                    {
+                                        if (item.TryGetProperty(p, out prop) && prop.ValueKind == JsonValueKind.Array)
+                                        {
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+
+                                    if (!found)
                                     {
                                         return Array.Empty<string>();
                                     }
@@ -170,7 +196,12 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                                     AgeGroup = GetString("ageGroup"),
                                     CoreAxes = GetStringArray("coreAxes").ToList(),
                                     CreatedAt = GetDate("createdAt"),
-                                    Scenes = new List<Scene>()
+                                    Scenes = new List<Scene>(),
+                                    MusicPalette = item.TryGetProperty("musicPalette", out var musicPaletteProp) && musicPaletteProp.ValueKind == JsonValueKind.Object
+                                        ? JsonSerializer.Deserialize<Mystira.App.Domain.Models.MusicPalette>(musicPaletteProp.GetRawText(), JsonOptions)
+                                        : (item.TryGetProperty("MusicPalette", out var musicPaletteProp2) && musicPaletteProp2.ValueKind == JsonValueKind.Object
+                                            ? JsonSerializer.Deserialize<Mystira.App.Domain.Models.MusicPalette>(musicPaletteProp2.GetRawText(), JsonOptions)
+                                            : null)
                                 };
 
                                 // Only add items with an Id and Title to avoid empty shells
@@ -257,16 +288,27 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
 
                 var root = doc.RootElement;
 
+                bool TryGetProp(JsonElement obj, string name, out JsonElement prop)
+                {
+                    if (obj.TryGetProperty(name, out prop)) return true;
+                    if (name.Length > 0)
+                    {
+                        var pascalName = char.ToUpper(name[0]) + name.Substring(1);
+                        if (obj.TryGetProperty(pascalName, out prop)) return true;
+                    }
+                    return false;
+                }
+
                 string GetString(JsonElement obj, string name)
                 {
-                    return obj.TryGetProperty(name, out var prop) && prop.ValueKind == JsonValueKind.String
+                    return TryGetProp(obj, name, out var prop) && prop.ValueKind == JsonValueKind.String
                         ? (prop.GetString() ?? string.Empty)
                         : string.Empty;
                 }
 
                 int GetInt(JsonElement obj, string name, int fallback = 0)
                 {
-                    if (obj.TryGetProperty(name, out var prop))
+                    if (TryGetProp(obj, name, out var prop))
                     {
                         if (prop.ValueKind == JsonValueKind.Number && prop.TryGetInt32(out var i))
                         {
@@ -283,7 +325,7 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
 
                 DateTime GetDate(JsonElement obj, string name)
                 {
-                    if (obj.TryGetProperty(name, out var prop) && prop.ValueKind == JsonValueKind.String)
+                    if (TryGetProp(obj, name, out var prop) && prop.ValueKind == JsonValueKind.String)
                     {
                         if (DateTime.TryParse(prop.GetString(), out var dt))
                         {
@@ -295,7 +337,7 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
 
                 string[] GetStringArray(JsonElement obj, string name)
                 {
-                    if (!obj.TryGetProperty(name, out var prop) || prop.ValueKind != JsonValueKind.Array)
+                    if (!TryGetProp(obj, name, out var prop) || prop.ValueKind != JsonValueKind.Array)
                     {
                         return Array.Empty<string>();
                     }
@@ -328,7 +370,7 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
 
                 SceneMedia? ReadMedia(JsonElement obj)
                 {
-                    if (!obj.TryGetProperty("media", out var media) || media.ValueKind != JsonValueKind.Object)
+                    if (!TryGetProp(obj, "media", out var media) || media.ValueKind != JsonValueKind.Object)
                     {
                         return null;
                     }
@@ -345,7 +387,7 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                 List<SceneBranch> ReadBranches(JsonElement obj)
                 {
                     var branches = new List<SceneBranch>();
-                    if (!obj.TryGetProperty("branches", out var arr) || arr.ValueKind != JsonValueKind.Array)
+                    if (!TryGetProp(obj, "branches", out var arr) || arr.ValueKind != JsonValueKind.Array)
                     {
                         return branches;
                     }
@@ -356,7 +398,7 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                         string? compassDirection = null;
                         double? compassDelta = null;
 
-                        if (br.TryGetProperty("compassChange", out var compassChange) && compassChange.ValueKind == JsonValueKind.Object)
+                        if (TryGetProp(br, "compassChange", out var compassChange) && compassChange.ValueKind == JsonValueKind.Object)
                         {
                             compassAxis = GetString(compassChange, "axis");
                             if (compassChange.TryGetProperty("delta", out var deltaProp))
@@ -383,14 +425,13 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                             CompassDelta = compassDelta
                         });
                     }
-
                     return branches;
                 }
 
                 List<Scene> ReadScenes(JsonElement obj)
                 {
                     var scenes = new List<Scene>();
-                    if (!obj.TryGetProperty("scenes", out var arr) || arr.ValueKind != JsonValueKind.Array)
+                    if (!TryGetProp(obj, "scenes", out var arr) || arr.ValueKind != JsonValueKind.Array)
                     {
                         return scenes;
                     }
@@ -405,7 +446,7 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                         var type = GetString(s, "type");
                         // activeCharacter can be provided as camelCase or snake_case depending on the source
                         var activeChar = GetString(s, "activeCharacter");
-                        if (string.IsNullOrWhiteSpace(activeChar) && s.TryGetProperty("active_character", out var acProp) && acProp.ValueKind == JsonValueKind.String)
+                        if (string.IsNullOrWhiteSpace(activeChar) && TryGetProp(s, "active_character", out var acProp) && acProp.ValueKind == JsonValueKind.String)
                         {
                             activeChar = acProp.GetString() ?? string.Empty;
                         }
@@ -419,10 +460,16 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                             NextSceneId = GetString(s, "nextSceneId"),
                             Media = ReadMedia(s),
                             Branches = ReadBranches(s),
-                            Difficulty = s.TryGetProperty("difficulty", out var diff) && diff.ValueKind == JsonValueKind.Number && diff.TryGetInt32(out var d)
+                            Difficulty = TryGetProp(s, "difficulty", out var diff) && diff.ValueKind == JsonValueKind.Number && diff.TryGetInt32(out var d)
                                 ? d
                                 : (int?)null,
-                            ActiveCharacter = string.IsNullOrWhiteSpace(activeChar) ? null : activeChar
+                            ActiveCharacter = string.IsNullOrWhiteSpace(activeChar) ? null : activeChar,
+                            Music = TryGetProp(s, "music", out var musicProp) && musicProp.ValueKind == JsonValueKind.Object
+                                ? JsonSerializer.Deserialize<Mystira.App.Domain.Models.SceneMusicSettings>(musicProp.GetRawText(), JsonOptions)
+                                : null,
+                            SoundEffects = TryGetProp(s, "soundEffects", out var sfxProp) && sfxProp.ValueKind == JsonValueKind.Array
+                                ? JsonSerializer.Deserialize<List<Mystira.App.Domain.Models.SceneSoundEffect>>(sfxProp.GetRawText(), JsonOptions) ?? new List<Mystira.App.Domain.Models.SceneSoundEffect>()
+                                : new List<Mystira.App.Domain.Models.SceneSoundEffect>()
                         };
                         scenes.Add(scene);
                     }
@@ -432,7 +479,7 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                 List<ScenarioCharacter> ReadCharacters(JsonElement obj)
                 {
                     var chars = new List<ScenarioCharacter>();
-                    if (!obj.TryGetProperty("characters", out var arr) || arr.ValueKind != JsonValueKind.Array)
+                    if (!TryGetProp(obj, "characters", out var arr) || arr.ValueKind != JsonValueKind.Array)
                     {
                         return chars;
                     }
@@ -453,7 +500,7 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                             Metadata = new ScenarioCharacterMetadata()
                         };
 
-                        if (c.TryGetProperty("metadata", out var meta) && meta.ValueKind == JsonValueKind.Object)
+                        if (TryGetProp(c, "metadata", out var meta) && meta.ValueKind == JsonValueKind.Object)
                         {
                             ch.Metadata.Role = GetStringArray(meta, "role").ToList();
                             ch.Metadata.Archetype = GetStringArray(meta, "archetype").ToList();
@@ -484,7 +531,10 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                     CoreAxes = GetStringArray(root, "coreAxes").ToList(),
                     CreatedAt = GetDate(root, "createdAt"),
                     Scenes = ReadScenes(root),
-                    Characters = ReadCharacters(root)
+                    Characters = ReadCharacters(root),
+                    MusicPalette = TryGetProp(root, "musicPalette", out var paletteProp) && paletteProp.ValueKind == JsonValueKind.Object
+                        ? JsonSerializer.Deserialize<Mystira.App.Domain.Models.MusicPalette>(paletteProp.GetRawText(), JsonOptions)
+                        : null
                 };
 
                 if (string.IsNullOrWhiteSpace(scenario.Id))
