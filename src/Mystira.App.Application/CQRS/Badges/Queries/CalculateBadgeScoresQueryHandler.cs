@@ -155,9 +155,6 @@ public class CalculateBadgeScoresQueryHandler : IQueryHandler<CalculateBadgeScor
     /// with their cumulative compass axis scores.
     /// </summary>
     /// <param name="scenario">The scenario to traverse</param>
-    /// <summary>
-    /// Collects all possible traversal paths through the given scenario and produces cumulative compass axis scores for each path.
-    /// </summary>
     /// <param name="scenario">The scenario whose scenes will be traversed to generate paths.</param>
     /// <returns>A list where each item is a dictionary mapping axis names to their cumulative scores for a single path; returns an empty list if the scenario contains no scenes or produces no scored paths.</returns>
     private List<Dictionary<string, double>> TraverseScenario(Scenario scenario)
@@ -188,8 +185,6 @@ public class CalculateBadgeScoresQueryHandler : IQueryHandler<CalculateBadgeScor
         return allPaths;
     }
 
-    /// <summary>
-    /// Recursive depth-first search through the scenario graph.
     /// <summary>
     /// Recursively traverses a scenario graph depth-first, accumulating compass-axis score totals for each explored path and adding complete path score maps to the collector.
     /// </summary>
@@ -305,8 +300,6 @@ public class CalculateBadgeScoresQueryHandler : IQueryHandler<CalculateBadgeScor
         return result;
     }
 
-    /// <summary>
-    /// Calculates a specific percentile value using linear interpolation.
     /// <summary>
     /// Computes the value at the specified percentile from a list of ascending-sorted scores using linear interpolation.
     /// </summary>
