@@ -111,7 +111,7 @@ public class VerifyPasswordlessSignupCommandHandler
 
             // Generate JWT tokens
             var accessToken = _jwtService.GenerateAccessToken(
-                account.Auth0UserId,
+                account.Id,
                 account.Email,
                 account.DisplayName,
                 account.Role);
