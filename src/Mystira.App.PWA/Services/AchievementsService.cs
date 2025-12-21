@@ -8,8 +8,8 @@ public class AchievementsService : IAchievementsService
 {
     private readonly IBadgesApiClient _badgesApiClient;
     private readonly ILogger<AchievementsService> _logger;
-    private readonly ConcurrentDictionary<string, List<BadgeResponse>> _badgeConfigCache = new();
-    private readonly ConcurrentDictionary<string, List<AxisAchievementResponse>> _axisAchievementCache = new();
+    private readonly ConcurrentDictionary<string, Task<List<BadgeResponse>?>> _badgeConfigTasks = new();
+    private readonly ConcurrentDictionary<string, Task<List<AxisAchievementResponse>?>> _axisAchievementTasks = new();
 
     public AchievementsService(IBadgesApiClient badgesApiClient, ILogger<AchievementsService> logger)
     {
@@ -36,19 +36,13 @@ public class AchievementsService : IAchievementsService
                 ? progress.AgeGroupId
                 : (!string.IsNullOrWhiteSpace(profile.AgeGroup) ? profile.AgeGroup : "6-9");
 
-            // Cache badge configuration and axis achievements by ageGroupId to avoid redundant calls
-            // when multiple profiles share the same age group (e.g. on the Achievements landing page).
-            if (!_badgeConfigCache.TryGetValue(ageGroupId, out var badgeConfiguration))
-            {
-                badgeConfiguration = await _badgesApiClient.GetBadgesByAgeGroupAsync(ageGroupId) ?? new List<BadgeResponse>();
-                _badgeConfigCache[ageGroupId] = badgeConfiguration;
-            }
+            // Use Task-based caching to ensure multiple concurrent requests for the same age group
+            // only trigger a single API call.
+            var badgeConfiguration = await _badgeConfigTasks.GetOrAdd(ageGroupId,
+                id => _badgesApiClient.GetBadgesByAgeGroupAsync(id)) ?? new List<BadgeResponse>();
 
-            if (!_axisAchievementCache.TryGetValue(ageGroupId, out var axisAchievements))
-            {
-                axisAchievements = await _badgesApiClient.GetAxisAchievementsAsync(ageGroupId) ?? new List<AxisAchievementResponse>();
-                _axisAchievementCache[ageGroupId] = axisAchievements;
-            }
+            var axisAchievements = await _axisAchievementTasks.GetOrAdd(ageGroupId,
+                id => _badgesApiClient.GetAxisAchievementsAsync(id)) ?? new List<AxisAchievementResponse>();
 
             var axes = AchievementsMapper.MapAxes(
                 badgeConfiguration,
