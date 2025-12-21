@@ -48,7 +48,7 @@ public class RefreshTokenCommandHandler
             // In production, you should store refresh tokens in a database and validate them
 
             // Get user account info
-            var account = await _accountRepository.GetByAuth0UserIdAsync(userId);
+            var account = await _accountRepository.GetByIdAsync(userId);
             if (account == null)
             {
                 _logger.LogWarning("User not found during token refresh: {UserId}", userId);
@@ -57,7 +57,7 @@ public class RefreshTokenCommandHandler
 
             // Generate new tokens
             var newAccessToken = _jwtService.GenerateAccessToken(
-                account.Auth0UserId,
+                account.Id,
                 account.Email,
                 account.DisplayName,
                 account.Role);

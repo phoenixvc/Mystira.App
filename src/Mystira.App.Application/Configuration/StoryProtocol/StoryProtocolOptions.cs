@@ -1,4 +1,4 @@
-namespace Mystira.App.Infrastructure.StoryProtocol.Configuration;
+namespace Mystira.App.Application.Configuration.StoryProtocol;
 
 /// <summary>
 /// Configuration options for Story Protocol integration

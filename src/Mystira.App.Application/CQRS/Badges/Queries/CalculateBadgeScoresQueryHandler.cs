@@ -203,11 +203,8 @@ public class CalculateBadgeScoresQueryHandler : IQueryHandler<CalculateBadgeScor
         // Avoid infinite loops in circular graphs
         if (visited.Contains(currentScene.Id))
         {
-            // Save current path when we hit a cycle or revisit
-            if (currentPath.Any())
-            {
-                allPaths.Add(new Dictionary<string, double>(currentPath, StringComparer.OrdinalIgnoreCase));
-            }
+            // Do NOT add to paths when a cycle is detected, as it's an incomplete path
+            // from the perspective of badge scoring unless it hits a leaf.
             return;
         }
 

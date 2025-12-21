@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Mystira.App.Application.Configuration.StoryProtocol;
 using Mystira.App.Application.Ports;
-using Mystira.App.Infrastructure.StoryProtocol.Configuration;
 using Mystira.App.Infrastructure.StoryProtocol.Services;
 
 namespace Mystira.App.Infrastructure.StoryProtocol;
@@ -25,7 +25,7 @@ public static class ServiceCollectionExtensions
         {
             section.Bind(options);
         }
-        
+
         // Register configuration for DI injection
         services.Configure<StoryProtocolOptions>(config =>
         {

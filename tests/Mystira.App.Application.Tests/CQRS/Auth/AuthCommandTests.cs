@@ -215,7 +215,7 @@ public class AuthCommandTests
             .Returns(Task.CompletedTask);
         _unitOfWorkMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
-        _jwtServiceMock.Setup(x => x.GenerateAccessToken(account.Auth0UserId, email, account.DisplayName, account.Role))
+        _jwtServiceMock.Setup(x => x.GenerateAccessToken(account.Id, email, account.DisplayName, account.Role))
             .Returns("access-token-123");
         _jwtServiceMock.Setup(x => x.GenerateRefreshToken())
             .Returns("refresh-token-456");

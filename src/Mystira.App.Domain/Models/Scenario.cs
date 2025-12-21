@@ -77,6 +77,15 @@ public class Scenario
 
         return !errors.Any();
     }
+
+    /// <summary>
+    /// Performs a deep structural audit of the scenario graph.
+    /// </summary>
+    public bool ValidateGraphIntegrity(out List<string> errors)
+    {
+        var validator = new ScenarioGraphValidator();
+        return validator.ValidateGraph(this, out errors);
+    }
 }
 
 public class ScenarioCharacter

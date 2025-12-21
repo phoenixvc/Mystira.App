@@ -50,24 +50,8 @@ public class BadgesApiClient : BaseApiClient, IBadgesApiClient
             return new List<AxisAchievementResponse>();
         }
 
-        try
-        {
-            var encoded = Uri.EscapeDataString(ageGroupId);
-            var response = await HttpClient.GetAsync($"api/admin/badges/axis-achievements?ageGroupId={encoded}");
-
-            if (!response.IsSuccessStatusCode)
-            {
-                Logger.LogWarning("Failed to fetch axis achievements for ageGroup {AgeGroup} with status {Status}", ageGroupId, response.StatusCode);
-                return null;
-            }
-
-            return await response.Content.ReadFromJsonAsync<List<AxisAchievementResponse>>(JsonOptions);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Error fetching axis achievements for ageGroup {AgeGroup}", ageGroupId);
-            return null;
-        }
+        var encoded = Uri.EscapeDataString(ageGroupId);
+        return await SendGetAsync<List<AxisAchievementResponse>>($"api/badges/axis-achievements?ageGroupId={encoded}", "axis achievements");
     }
 
     public string GetBadgeImageResourceEndpointUrl(string imageId)

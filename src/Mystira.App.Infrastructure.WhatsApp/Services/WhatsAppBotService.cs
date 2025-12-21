@@ -362,19 +362,23 @@ public class WhatsAppBotService : IMessagingService, IChatBotService, IBotComman
                 throw new InvalidOperationException($"Invalid channel registration ID format: {_options.ChannelRegistrationId}");
             }
 
-            // In version 1.1.0+, template API has changed - using simplified approach
-            var template = new MessageTemplate(templateName, "en_US");  // Language is required
+            // In version 1.1.0+, template API has changed
+            var template = new MessageTemplate(templateName, templateLanguage == "en" ? "en_US" : templateLanguage);
+
+            // Update: Template parameters handling for Azure SDK 1.1.0+
+            if (parameters != null && parameters.Any())
+            {
+                foreach (var param in parameters)
+                {
+                    // Azure SDK 1.1.0+ uses MessageTemplateText for text parameters
+                    template.Values.Add(new MessageTemplateText("body", param));
+                }
+            }
+
             var templateContent = new TemplateNotificationContent(
                 channelGuid,
                 new[] { phoneNumber },
                 template);
-
-            // TODO: Template parameters handling needs to be updated for Azure SDK 1.1.0+
-            // The API has changed significantly - bindings and values are no longer supported this way
-            if (parameters != null && parameters.Any())
-            {
-                _logger.LogWarning("Template parameters are not yet supported in Azure.Communication.Messages 1.1.0+ migration");
-            }
 
             await _client.SendAsync(templateContent, cancellationToken);
 

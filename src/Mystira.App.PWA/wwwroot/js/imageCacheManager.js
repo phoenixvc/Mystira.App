@@ -6,6 +6,8 @@ window.imageCacheManager = (function () {
     const DB_NAME = 'mystira-image-db';
     const DB_VERSION = 1;
     const STORE_NAME = 'images';
+    const MAX_ITEMS = 100; // LRU threshold
+    const TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 
     /**
      * Open (or create) the IndexedDB database.
@@ -27,6 +29,49 @@ window.imageCacheManager = (function () {
             };
             request.onsuccess = () => resolve(request.result);
             request.onerror = () => reject(request.error || new Error('Failed to open IndexedDB'));
+        });
+    }
+
+    /**
+     * Remove old records or exceed max count
+     * @param {IDBDatabase} db
+     */
+    async function pruneCache(db) {
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            const index = store.index('timestamp');
+
+            // 1. Delete expired records
+            const expireThreshold = Date.now() - TTL_MS;
+            const expireRange = IDBKeyRange.upperBound(expireThreshold);
+            index.openCursor(expireRange).onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    cursor.delete();
+                    cursor.continue();
+                }
+            };
+
+            // 2. Enforce MAX_ITEMS (LRU approx)
+            store.count().onsuccess = (event) => {
+                const count = event.target.result;
+                if (count > MAX_ITEMS) {
+                    const deleteCount = count - MAX_ITEMS;
+                    let deleted = 0;
+                    index.openCursor().onsuccess = (e) => {
+                        const cursor = e.target.result;
+                        if (cursor && deleted < deleteCount) {
+                            cursor.delete();
+                            deleted++;
+                            cursor.continue();
+                        }
+                    };
+                }
+            };
+
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
         });
     }
 
@@ -122,6 +167,8 @@ window.imageCacheManager = (function () {
                         contentType,
                         timestamp: Date.now()
                     });
+                    // Prune cache after adding new item
+                    await pruneCache(db);
                 } catch (e) {
                     // Non-fatal: still return URL
                     console.warn('Failed to store image in IndexedDB', e);

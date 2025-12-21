@@ -418,12 +418,14 @@
             {
                 isSelectingProfile = true;
                 // Pre-load achievements for all profiles to show latest badges on the selection screen
-                foreach (var p in profiles)
+                var tasks = profiles.Select(p => AchievementsService.GetAchievementsAsync(p)).ToList();
+                var results = await Task.WhenAll(tasks);
+                for (int i = 0; i < profiles.Count; i++)
                 {
-                    var res = await AchievementsService.GetAchievementsAsync(p);
+                    var res = results[i];
                     if (res.IsSuccess && res.Data != null)
                     {
-                        profileAchievements[p.Id] = res.Data;
+                        profileAchievements[profiles[i].Id] = res.Data;
                     }
                 }
             }
