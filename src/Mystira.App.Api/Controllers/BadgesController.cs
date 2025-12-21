@@ -118,8 +118,6 @@ public class BadgesController : ControllerBase
     }
 
     /// <summary>
-    /// Get badge progress and earned badges for a profile
-    /// <summary>
     /// Retrieves badge progress for the specified profile.
     /// </summary>
     /// <param name="profileId">The identifier of the profile whose badge progress to retrieve.</param>
