@@ -9,13 +9,16 @@ public class SceneAudioOrchestrator
 {
     private readonly IMusicResolver _resolver;
     private readonly IAudioBus _audioBus;
-    private readonly MusicContext _context = new();
-    private readonly HashSet<string> _activeLoopingSfx = new();
+    private readonly IAudioStateStore _stateStore;
 
-    public SceneAudioOrchestrator(IMusicResolver resolver, IAudioBus audioBus)
+    private MusicContext _context => _stateStore.Context;
+    private HashSet<string> _activeLoopingSfx => _stateStore.ActiveLoopingSfx;
+
+    public SceneAudioOrchestrator(IMusicResolver resolver, IAudioBus audioBus, IAudioStateStore stateStore)
     {
         _resolver = resolver;
         _audioBus = audioBus;
+        _stateStore = stateStore;
     }
 
     public async Task EnterSceneAsync(Scene scene, Scenario scenario)
@@ -41,7 +44,7 @@ public class SceneAudioOrchestrator
             {
                 // Update energy from intent
                 var intent = _resolver.GetEffectiveIntent(scene);
-                var energy = intent.Energy ?? 0.4; // Default middle energy if not specified
+                var energy = intent.Energy ?? 0.45; // Default middle energy if not specified
                 _context.CurrentEnergy = energy;
 
                 await _audioBus.PlayMusicAsync(result.TrackId, result.Transition, (float)energy);
@@ -123,14 +126,11 @@ public class SceneAudioOrchestrator
     public async Task StopAllAsync()
     {
         await _audioBus.StopMusicAsync(MusicTransitionHint.CrossfadeNormal);
-        _context.CurrentTrackId = null;
-        _context.CurrentProfile = MusicProfile.None;
-        _context.CurrentEnergy = 0;
+        _stateStore.Reset();
 
         foreach (var track in _activeLoopingSfx.ToList())
         {
             await _audioBus.StopSoundEffectAsync(track);
-            _activeLoopingSfx.Remove(track);
         }
     }
 }

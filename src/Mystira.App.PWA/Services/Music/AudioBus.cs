@@ -6,16 +6,23 @@ namespace Mystira.App.PWA.Services.Music;
 public class AudioBus : IAudioBus, IAsyncDisposable
 {
     private readonly IJSRuntime _jsRuntime;
-    private readonly IMediaApiClient _mediaApiClient;
+    private readonly IApiEndpointCache _endpointCache;
     private readonly ISettingsService _settingsService;
     private IJSObjectReference? _module;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
-    public AudioBus(IJSRuntime jsRuntime, IMediaApiClient mediaApiClient, ISettingsService settingsService)
+    public AudioBus(IJSRuntime jsRuntime, IApiEndpointCache endpointCache, ISettingsService settingsService)
     {
         _jsRuntime = jsRuntime;
-        _mediaApiClient = mediaApiClient;
+        _endpointCache = endpointCache;
         _settingsService = settingsService;
+    }
+
+    private string GetMediaResourceEndpointUrl(string mediaId)
+    {
+        var baseUrl = _endpointCache.ApiBaseUrl ?? "";
+        if (!baseUrl.EndsWith('/')) baseUrl += "/";
+        return $"{baseUrl}api/media/{mediaId}";
     }
 
     private async Task EnsureModuleLoadedAsync()
@@ -26,9 +33,8 @@ public class AudioBus : IAudioBus, IAsyncDisposable
         try
         {
             if (_module != null) return;
-            // Append a version/timestamp to bypass browser caching of the JS module
-            var version = DateTime.UtcNow.Ticks;
-            _module = await _jsRuntime.InvokeAsync<IJSObjectReference>("import", $"./js/audioPlayer.js?v={version}");
+            // Use a stable version string to break cache once but avoid multiple module instances
+            _module = await _jsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/audioPlayer.js?v=1.0.1");
         }
         finally
         {
@@ -41,7 +47,7 @@ public class AudioBus : IAudioBus, IAsyncDisposable
         if (!await _settingsService.GetAudioEnabledAsync()) return;
 
         await EnsureModuleLoadedAsync();
-        var trackUrl = _mediaApiClient.GetMediaResourceEndpointUrl(trackId);
+        var trackUrl = GetMediaResourceEndpointUrl(trackId);
         await _module!.InvokeVoidAsync("playMusic", trackUrl, transition.ToString(), volume);
     }
 
@@ -58,7 +64,7 @@ public class AudioBus : IAudioBus, IAsyncDisposable
         if (!await _settingsService.GetAudioEnabledAsync()) return;
 
         await EnsureModuleLoadedAsync();
-        var trackUrl = _mediaApiClient.GetMediaResourceEndpointUrl(trackId);
+        var trackUrl = GetMediaResourceEndpointUrl(trackId);
         await _module!.InvokeVoidAsync("playSfx", trackUrl, loop, volume);
     }
 
@@ -67,7 +73,7 @@ public class AudioBus : IAudioBus, IAsyncDisposable
         if (!await _settingsService.GetAudioEnabledAsync()) return;
 
         await EnsureModuleLoadedAsync();
-        var trackUrl = _mediaApiClient.GetMediaResourceEndpointUrl(trackId);
+        var trackUrl = GetMediaResourceEndpointUrl(trackId);
         await _module!.InvokeVoidAsync("stopSfx", trackUrl);
     }
 

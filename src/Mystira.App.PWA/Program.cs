@@ -111,8 +111,10 @@ builder.Services.AddHttpClient<IGameSessionApiClient, GameSessionApiClient>(Conf
 
 // Music and Audio Services
 builder.Services.AddSingleton<IMusicResolver, MusicResolver>();
-builder.Services.AddScoped<IAudioBus, AudioBus>();
-builder.Services.AddScoped<SceneAudioOrchestrator>();
+builder.Services.AddSingleton<IAudioStateStore, AudioStateStore>();
+builder.Services.AddSingleton<IAudioBus, AudioBus>();
+builder.Services.AddSingleton<SceneAudioOrchestrator>();
+builder.Services.AddScoped<IAudioCacheService, AudioCacheService>();
 
 builder.Services.AddHttpClient<IUserProfileApiClient, UserProfileApiClient>(ConfigureApiHttpClient)
     .AddPolicyHandler(CreateResiliencePolicy("UserProfileApi"))
@@ -192,7 +194,7 @@ builder.Services.AddScoped<IPlayerContextService, PlayerContextService>();
 builder.Services.AddScoped<IAchievementsService, AchievementsService>();
 builder.Services.AddScoped<IAwardsState, AwardsState>();
 // Settings service (localStorage-backed)
-builder.Services.AddScoped<ISettingsService, SettingsService>();
+builder.Services.AddSingleton<ISettingsService, SettingsService>();
 
 // UI Services
 builder.Services.AddScoped<ToastService>();
