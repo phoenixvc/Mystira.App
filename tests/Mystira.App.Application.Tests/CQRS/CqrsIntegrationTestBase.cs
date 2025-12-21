@@ -109,6 +109,7 @@ public abstract class CqrsIntegrationTestBase : IDisposable
 
     public void Dispose()
     {
+        QueryCacheInvalidationService.ClearTrackedKeys();
         DbContext?.Dispose();
         ServiceProvider?.Dispose();
         GC.SuppressFinalize(this);
