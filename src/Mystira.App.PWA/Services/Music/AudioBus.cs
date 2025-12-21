@@ -6,16 +6,23 @@ namespace Mystira.App.PWA.Services.Music;
 public class AudioBus : IAudioBus, IAsyncDisposable
 {
     private readonly IJSRuntime _jsRuntime;
-    private readonly IMediaApiClient _mediaApiClient;
+    private readonly IApiEndpointCache _endpointCache;
     private readonly ISettingsService _settingsService;
     private IJSObjectReference? _module;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
-    public AudioBus(IJSRuntime jsRuntime, IMediaApiClient mediaApiClient, ISettingsService settingsService)
+    public AudioBus(IJSRuntime jsRuntime, IApiEndpointCache endpointCache, ISettingsService settingsService)
     {
         _jsRuntime = jsRuntime;
-        _mediaApiClient = mediaApiClient;
+        _endpointCache = endpointCache;
         _settingsService = settingsService;
+    }
+
+    private string GetMediaResourceEndpointUrl(string mediaId)
+    {
+        var baseUrl = _endpointCache.ApiBaseUrl ?? "";
+        if (!baseUrl.EndsWith('/')) baseUrl += "/";
+        return $"{baseUrl}api/media/{mediaId}";
     }
 
     private async Task EnsureModuleLoadedAsync()
@@ -40,7 +47,7 @@ public class AudioBus : IAudioBus, IAsyncDisposable
         if (!await _settingsService.GetAudioEnabledAsync()) return;
 
         await EnsureModuleLoadedAsync();
-        var trackUrl = _mediaApiClient.GetMediaResourceEndpointUrl(trackId);
+        var trackUrl = GetMediaResourceEndpointUrl(trackId);
         await _module!.InvokeVoidAsync("playMusic", trackUrl, transition.ToString(), volume);
     }
 
@@ -57,7 +64,7 @@ public class AudioBus : IAudioBus, IAsyncDisposable
         if (!await _settingsService.GetAudioEnabledAsync()) return;
 
         await EnsureModuleLoadedAsync();
-        var trackUrl = _mediaApiClient.GetMediaResourceEndpointUrl(trackId);
+        var trackUrl = GetMediaResourceEndpointUrl(trackId);
         await _module!.InvokeVoidAsync("playSfx", trackUrl, loop, volume);
     }
 
@@ -66,7 +73,7 @@ public class AudioBus : IAudioBus, IAsyncDisposable
         if (!await _settingsService.GetAudioEnabledAsync()) return;
 
         await EnsureModuleLoadedAsync();
-        var trackUrl = _mediaApiClient.GetMediaResourceEndpointUrl(trackId);
+        var trackUrl = GetMediaResourceEndpointUrl(trackId);
         await _module!.InvokeVoidAsync("stopSfx", trackUrl);
     }
 

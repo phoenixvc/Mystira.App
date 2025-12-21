@@ -7,6 +7,7 @@
 @inject ILogger<CharacterAssignment> Logger
 @inject IJSRuntime JSRuntime
 @inject ISettingsService SettingsService
+@inject Mystira.App.PWA.Services.Music.IAudioCacheService AudioCacheService
 @inject Mystira.App.PWA.Services.Music.IAudioBus AudioBus
 @inject Mystira.App.PWA.Services.Music.SceneAudioOrchestrator AudioOrchestrator
 @using System.Linq
@@ -674,6 +675,12 @@ else
         {
             characterAssignments = assignmentData.CharacterAssignments;
             availableProfiles = assignmentData.AvailableProfiles;
+
+            if (assignmentData.Scenario != null)
+            {
+                // Pre-cache all audio for this scenario
+                _ = AudioCacheService.CacheScenarioAudioAsync(assignmentData.Scenario);
+            }
         }
     }
 
@@ -1284,21 +1291,29 @@ else
             {
                 Logger.LogInformation("Session started successfully, navigating to {NavigationManagerBaseUri}game",
                 NavigationManager.BaseUri);
+                // Keep isStartingSession = true during navigation to prevent StopAllAsync in DisposeAsync
                 NavigationManager.NavigateTo("/game");
+                return; // skip setting isStartingSession = false in finally
             }
             else
             {
                 Logger.LogError("Failed to start game session");
+                isStartingSession = false;
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error starting game session");
+            isStartingSession = false;
         }
         finally
         {
-            isStartingSession = false;
-            StateHasChanged();
+            // Only reset if we are not navigating away for a success
+            // If success was true, we returned early above.
+            if (!isStartingSession)
+            {
+                StateHasChanged();
+            }
         }
     }
 

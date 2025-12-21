@@ -10,32 +10,30 @@ namespace Mystira.App.PWA.Tests.Services.Music;
 public class AudioBusTests
 {
     private readonly Mock<IJSRuntime> _jsRuntimeMock;
-    private readonly Mock<IMediaApiClient> _mediaApiClientMock;
+    private readonly Mock<IApiEndpointCache> _endpointCacheMock;
     private readonly Mock<ISettingsService> _settingsServiceMock;
     private readonly AudioBus _sut;
 
     public AudioBusTests()
     {
         _jsRuntimeMock = new Mock<IJSRuntime>();
-        _mediaApiClientMock = new Mock<IMediaApiClient>();
+        _endpointCacheMock = new Mock<IApiEndpointCache>();
         _settingsServiceMock = new Mock<ISettingsService>();
-        _sut = new AudioBus(_jsRuntimeMock.Object, _mediaApiClientMock.Object, _settingsServiceMock.Object);
+        _sut = new AudioBus(_jsRuntimeMock.Object, _endpointCacheMock.Object, _settingsServiceMock.Object);
 
         // Default to audio enabled
         _settingsServiceMock.Setup(x => x.GetAudioEnabledAsync()).ReturnsAsync(true);
+        _endpointCacheMock.Setup(x => x.ApiBaseUrl).Returns("https://api.example.com/");
     }
 
     [Fact]
-    public async Task PlayMusicAsync_ShouldRouteToMediaApi()
+    public async Task PlayMusicAsync_ShouldUseEndpointCache()
     {
         // Arrange
         var trackId = "test-track";
         var transition = MusicTransitionHint.CrossfadeNormal;
         var volume = 0.5f;
-        var expectedUrl = $"/api/Media/{trackId}";
-
-        _mediaApiClientMock.Setup(x => x.GetMediaResourceEndpointUrl(trackId))
-            .Returns(expectedUrl);
+        var expectedUrl = "https://api.example.com/api/media/test-track";
 
         // Setup import
         var moduleMock = new Mock<IJSObjectReference>();
@@ -56,16 +54,13 @@ public class AudioBusTests
     }
 
     [Fact]
-    public async Task PlaySoundEffectAsync_ShouldRouteToMediaApi()
+    public async Task PlaySoundEffectAsync_ShouldUseEndpointCache()
     {
         // Arrange
         var trackId = "sfx-track";
         var loop = true;
         var volume = 0.8f;
-        var expectedUrl = $"/api/Media/{trackId}";
-
-        _mediaApiClientMock.Setup(x => x.GetMediaResourceEndpointUrl(trackId))
-            .Returns(expectedUrl);
+        var expectedUrl = "https://api.example.com/api/media/sfx-track";
 
         // Setup import
         var moduleMock = new Mock<IJSObjectReference>();
@@ -86,14 +81,11 @@ public class AudioBusTests
     }
 
     [Fact]
-    public async Task StopSoundEffectAsync_ShouldRouteToMediaApi()
+    public async Task StopSoundEffectAsync_ShouldUseEndpointCache()
     {
         // Arrange
         var trackId = "sfx-track";
-        var expectedUrl = $"/api/Media/{trackId}";
-
-        _mediaApiClientMock.Setup(x => x.GetMediaResourceEndpointUrl(trackId))
-            .Returns(expectedUrl);
+        var expectedUrl = "https://api.example.com/api/media/sfx-track";
 
         // Setup import
         var moduleMock = new Mock<IJSObjectReference>();
