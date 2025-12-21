@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using Mystira.App.Contracts.Responses.Badges;
 using Mystira.App.PWA.Models;
 
 namespace Mystira.App.PWA.Services;
@@ -6,6 +8,8 @@ public class AchievementsService : IAchievementsService
 {
     private readonly IBadgesApiClient _badgesApiClient;
     private readonly ILogger<AchievementsService> _logger;
+    private readonly ConcurrentDictionary<string, List<BadgeResponse>> _badgeConfigCache = new();
+    private readonly ConcurrentDictionary<string, List<AxisAchievementResponse>> _axisAchievementCache = new();
 
     public AchievementsService(IBadgesApiClient badgesApiClient, ILogger<AchievementsService> logger)
     {
@@ -32,8 +36,19 @@ public class AchievementsService : IAchievementsService
                 ? progress.AgeGroupId
                 : (!string.IsNullOrWhiteSpace(profile.AgeGroup) ? profile.AgeGroup : "6-9");
 
-            var badgeConfiguration = await _badgesApiClient.GetBadgesByAgeGroupAsync(ageGroupId);
-            var axisAchievements = await _badgesApiClient.GetAxisAchievementsAsync(ageGroupId);
+            // Cache badge configuration and axis achievements by ageGroupId to avoid redundant calls
+            // when multiple profiles share the same age group (e.g. on the Achievements landing page).
+            if (!_badgeConfigCache.TryGetValue(ageGroupId, out var badgeConfiguration))
+            {
+                badgeConfiguration = await _badgesApiClient.GetBadgesByAgeGroupAsync(ageGroupId) ?? new List<BadgeResponse>();
+                _badgeConfigCache[ageGroupId] = badgeConfiguration;
+            }
+
+            if (!_axisAchievementCache.TryGetValue(ageGroupId, out var axisAchievements))
+            {
+                axisAchievements = await _badgesApiClient.GetAxisAchievementsAsync(ageGroupId) ?? new List<AxisAchievementResponse>();
+                _axisAchievementCache[ageGroupId] = axisAchievements;
+            }
 
             var axes = AchievementsMapper.MapAxes(
                 badgeConfiguration,
