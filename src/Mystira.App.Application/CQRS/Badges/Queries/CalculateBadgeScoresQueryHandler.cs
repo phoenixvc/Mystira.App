@@ -14,6 +14,9 @@ public class CalculateBadgeScoresQueryHandler : IQueryHandler<CalculateBadgeScor
     private readonly IScenarioRepository _scenarioRepository;
     private readonly ILogger<CalculateBadgeScoresQueryHandler> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of CalculateBadgeScoresQueryHandler with the required content bundle and scenario repositories and a logger.
+    /// </summary>
     public CalculateBadgeScoresQueryHandler(
         IContentBundleRepository bundleRepository,
         IScenarioRepository scenarioRepository,
@@ -24,6 +27,13 @@ public class CalculateBadgeScoresQueryHandler : IQueryHandler<CalculateBadgeScor
         _logger = logger;
     }
 
+    /// <summary>
+    /// Calculates per-axis percentile badge scores for all scenarios in a content bundle.
+    /// </summary>
+    /// <param name="request">Query containing the ContentBundleId and the list of percentiles to compute.</param>
+    /// <returns>A list of CompassAxisScoreResult, each containing an axis name and a mapping of requested percentile to computed score.</returns>
+    /// <exception cref="ArgumentException">Thrown when ContentBundleId is null/empty or when Percentiles is null, empty, or contains values outside 0–100.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the content bundle identified by ContentBundleId cannot be found.</exception>
     public async Task<List<CompassAxisScoreResult>> Handle(
         CalculateBadgeScoresQuery request,
         CancellationToken cancellationToken)
@@ -145,7 +155,8 @@ public class CalculateBadgeScoresQueryHandler : IQueryHandler<CalculateBadgeScor
     /// with their cumulative compass axis scores.
     /// </summary>
     /// <param name="scenario">The scenario to traverse</param>
-    /// <returns>List of paths, where each path is a dictionary of axis names to cumulative scores</returns>
+    /// <param name="scenario">The scenario whose scenes will be traversed to generate paths.</param>
+    /// <returns>A list where each item is a dictionary mapping axis names to their cumulative scores for a single path; returns an empty list if the scenario contains no scenes or produces no scored paths.</returns>
     private List<Dictionary<string, double>> TraverseScenario(Scenario scenario)
     {
         var allPaths = new List<Dictionary<string, double>>();
@@ -175,8 +186,13 @@ public class CalculateBadgeScoresQueryHandler : IQueryHandler<CalculateBadgeScor
     }
 
     /// <summary>
-    /// Recursive depth-first search through the scenario graph.
+    /// Recursively traverses a scenario graph depth-first, accumulating compass-axis score totals for each explored path and adding complete path score maps to the collector.
     /// </summary>
+    /// <param name="currentScene">The scene node currently being visited.</param>
+    /// <param name="sceneDict">Lookup dictionary of scene ID to Scene used to follow NextSceneId and branch targets.</param>
+    /// <param name="visited">Set of scene IDs already visited on the current traversal to detect cycles and avoid infinite recursion.</param>
+    /// <param name="currentPath">Current cumulative axis-to-score map for the path being explored; branch explorations receive copies so sibling branches do not interfere.</param>
+    /// <param name="allPaths">Collector that receives a copy of each completed path's axis score map.</param>
     private void DepthFirstSearch(
         Scene currentScene,
         Dictionary<string, Scene> sceneDict,
@@ -257,7 +273,12 @@ public class CalculateBadgeScoresQueryHandler : IQueryHandler<CalculateBadgeScor
     /// </summary>
     /// <param name="scores">List of scores to analyze</param>
     /// <param name="percentiles">List of percentile values to calculate (0-100)</param>
-    /// <returns>Dictionary mapping percentile to score value</returns>
+    /// <summary>
+    /// Computes the requested percentile values from a collection of numeric scores.
+    /// </summary>
+    /// <param name="scores">The list of scores to compute percentiles from; order is irrelevant. If empty, an empty dictionary is returned.</param>
+    /// <param name="percentiles">The percentiles to compute, expressed as numbers between 0 and 100 (inclusive).</param>
+    /// <returns>Mapping from each requested percentile to its corresponding score value.</returns>
     private Dictionary<double, double> CalculatePercentiles(List<double> scores, List<double> percentiles)
     {
         var result = new Dictionary<double, double>();
@@ -280,8 +301,11 @@ public class CalculateBadgeScoresQueryHandler : IQueryHandler<CalculateBadgeScor
     }
 
     /// <summary>
-    /// Calculates a specific percentile value using linear interpolation.
+    /// Computes the value at the specified percentile from a list of ascending-sorted scores using linear interpolation.
     /// </summary>
+    /// <param name="sortedScores">A list of scores sorted in ascending order.</param>
+    /// <param name="percentile">The percentile to compute, expressed from 0 to 100.</param>
+    /// <returns>The interpolated score at the requested percentile; returns 0 if the list is empty, or the single element if the list contains one value.</returns>
     private double CalculatePercentile(List<double> sortedScores, double percentile)
     {
         if (!sortedScores.Any())

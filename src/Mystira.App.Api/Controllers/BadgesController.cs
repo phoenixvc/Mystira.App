@@ -118,8 +118,10 @@ public class BadgesController : ControllerBase
     }
 
     /// <summary>
-    /// Get badge progress and earned badges for a profile
+    /// Retrieves badge progress for the specified profile.
     /// </summary>
+    /// <param name="profileId">The identifier of the profile whose badge progress to retrieve.</param>
+    /// <returns>The badge progress for the profile as a <see cref="BadgeProgressResponse"/>.</returns>
     [HttpGet("profile/{profileId}")]
     public async Task<ActionResult<BadgeProgressResponse>> GetProfileBadgeProgress(string profileId)
     {
@@ -153,7 +155,11 @@ public class BadgesController : ControllerBase
     /// percentile-based score thresholds for each compass axis.
     /// </summary>
     /// <param name="request">Request containing bundle ID and percentiles</param>
-    /// <returns>List of compass axes with their percentile-to-score mappings</returns>
+    /// <summary>
+    /// Calculate score thresholds for compass axes across a content bundle based on the provided percentiles.
+    /// </summary>
+    /// <param name="request">Request payload containing a non-empty ContentBundleId and a non-empty list of Percentiles used to compute per-tier scores.</param>
+    /// <returns>A list of CompassAxisScoreResult where each item maps the requested percentiles to score thresholds for a compass axis.</returns>
     [HttpPost("calculate-scores")]
     [ProducesResponseType(typeof(List<CompassAxisScoreResult>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
