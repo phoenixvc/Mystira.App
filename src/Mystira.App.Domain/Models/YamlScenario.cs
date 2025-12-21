@@ -59,25 +59,42 @@ public class YamlScenario
     // Convert to domain model
     public Scenario ToDomainModel()
     {
-        var axes = CoreAxes?.Any() == true ? CoreAxes : LegacyCompassAxes ?? new List<string>();
-
         return new Scenario
         {
             Id = Id,
             Title = Title,
             Description = Description,
             Tags = Tags,
-            Difficulty = Enum.Parse<DifficultyLevel>(Difficulty),
-            SessionLength = Enum.Parse<SessionLength>(SessionLength),
-            Archetypes = Archetypes.Where(a => Archetype.Parse(a) != null).Select(Archetype.Parse).ToList()!,
+            Difficulty = Enum.TryParse<DifficultyLevel>(Difficulty, out var diff) ? diff : Mystira.App.Domain.Models.DifficultyLevel.Medium,
+            SessionLength = Enum.TryParse<SessionLength>(SessionLength, out var len) ? len : Mystira.App.Domain.Models.SessionLength.Medium,
+            Archetypes = MapArchetypes(),
             AgeGroup = AgeGroup,
             MinimumAge = MinimumAge,
-            CoreAxes = axes.Where(a => CoreAxis.Parse(a) != null).Select(CoreAxis.Parse).ToList()!,
+            CoreAxes = MapCoreAxes(),
             CreatedAt = DateTime.TryParse(CreatedAt, out var createdAt) ? createdAt : DateTime.UtcNow,
             Image = Image,
             MusicPalette = MusicPalette?.ToDomainModel(),
             Scenes = Scenes.Select(s => s.ToDomainModel()).ToList()
         };
+    }
+
+    private List<Archetype> MapArchetypes()
+    {
+        return Archetypes
+            .Select(Archetype.Parse)
+            .Where(a => a != null)
+            .Cast<Archetype>()
+            .ToList();
+    }
+
+    private List<CoreAxis> MapCoreAxes()
+    {
+        var source = CoreAxes?.Any() == true ? CoreAxes : LegacyCompassAxes ?? new List<string>();
+        return source
+            .Select(CoreAxis.Parse)
+            .Where(a => a != null)
+            .Cast<CoreAxis>()
+            .ToList();
     }
 }
 
@@ -294,8 +311,8 @@ public class YamlMusicPalette
         return new MusicPalette
         {
             DefaultProfile = profile,
-            TracksByProfile = TracksByProfile != null 
-                ? new Dictionary<string, List<string>>(TracksByProfile, StringComparer.OrdinalIgnoreCase) 
+            TracksByProfile = TracksByProfile != null
+                ? new Dictionary<string, List<string>>(TracksByProfile, StringComparer.OrdinalIgnoreCase)
                 : new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
         };
     }
@@ -324,7 +341,7 @@ public class YamlSceneMusicSettings
     public SceneMusicSettings ToDomainModel()
     {
         Enum.TryParse<MusicProfile>(Profile, true, out var profile);
-        
+
         return new SceneMusicSettings
         {
             Profile = profile,

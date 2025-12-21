@@ -2,7 +2,7 @@ using System;
 using System.Numerics;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Mystira.App.Infrastructure.StoryProtocol.Configuration;
+using Mystira.App.Application.Configuration.StoryProtocol;
 using Nethereum.Hex.HexTypes;
 using Nethereum.Web3;
 
