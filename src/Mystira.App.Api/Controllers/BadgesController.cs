@@ -154,10 +154,6 @@ public class BadgesController : ControllerBase
     /// Performs depth-first traversal of all scenarios in the bundle and calculates
     /// percentile-based score thresholds for each compass axis.
     /// </summary>
-    /// <param name="request">Request containing bundle ID and percentiles</param>
-    /// <summary>
-    /// Calculate score thresholds for compass axes across a content bundle based on the provided percentiles.
-    /// </summary>
     /// <param name="request">Request payload containing a non-empty ContentBundleId and a non-empty list of Percentiles used to compute per-tier scores.</param>
     /// <returns>A list of CompassAxisScoreResult where each item maps the requested percentiles to score thresholds for a compass axis.</returns>
     [HttpPost("calculate-scores")]
