@@ -64,7 +64,7 @@ public class CalculateBadgeScoresQueryHandlerTests : CqrsIntegrationTestBase
                 {
                     Id = "scene-3",
                     Title = "End",
-                    Type = SceneType.Narrative,
+                    Type = SceneType.Special,
                     Branches = new List<Branch>()
                 }
             }
@@ -111,14 +111,14 @@ public class CalculateBadgeScoresQueryHandlerTests : CqrsIntegrationTestBase
                 {
                     Id = "branch-a",
                     Title = "Path A End",
-                    Type = SceneType.Narrative,
+                    Type = SceneType.Special,
                     Branches = new List<Branch>()
                 },
                 new Scene
                 {
                     Id = "branch-b",
                     Title = "Path B End",
-                    Type = SceneType.Narrative,
+                    Type = SceneType.Special,
                     Branches = new List<Branch>()
                 }
             }
@@ -315,7 +315,7 @@ public class CalculateBadgeScoresQueryHandlerTests : CqrsIntegrationTestBase
         // Assert
         results.Should().NotBeNull();
         results.Should().NotBeEmpty();
-        
+
         // Should have Courage, Wisdom, and Empathy axes
         var axisNames = results.Select(r => r.AxisName).ToList();
         axisNames.Should().Contain("Courage");
@@ -356,7 +356,7 @@ public class CalculateBadgeScoresQueryHandlerTests : CqrsIntegrationTestBase
         // Assert
         results.Should().ContainSingle();
         var courageResult = results.First(r => r.AxisName == "Courage");
-        
+
         // Linear scenario: 10 + 5 = 15
         courageResult.PercentileScores[50].Should().Be(15.0);
     }
@@ -366,7 +366,7 @@ public class CalculateBadgeScoresQueryHandlerTests : CqrsIntegrationTestBase
     {
         // Arrange
         await SeedTestDataAsync();
-        var query = new CalculateBadgeScoresQuery("bundle-test", new List<double> { 0, 50, 100 });
+        var query = new CalculateBadgeScoresQuery("bundle-test", new List<double> { 50, 75, 90 });
 
         // Act
         var results = await Mediator.Send(query);
@@ -374,10 +374,18 @@ public class CalculateBadgeScoresQueryHandlerTests : CqrsIntegrationTestBase
         // Assert
         var wisdomResult = results.FirstOrDefault(r => r.AxisName == "Wisdom");
         wisdomResult.Should().NotBeNull();
-        
-        // Should have scores from branching paths (10 and 20)
-        wisdomResult!.PercentileScores[0].Should().BeLessOrEqualTo(wisdomResult.PercentileScores[50]);
-        wisdomResult.PercentileScores[50].Should().BeLessOrEqualTo(wisdomResult.PercentileScores[100]);
+
+        var courageResult = results.FirstOrDefault(r => r.AxisName == "Courage");
+        courageResult.Should().NotBeNull();
+
+        // Should have scores from branching paths
+        wisdomResult!.PercentileScores[50].Should().Be(12.0);
+        wisdomResult!.PercentileScores[75].Should().Be(16.0);
+        wisdomResult!.PercentileScores[90].Should().Be(18.4);
+
+        courageResult!.PercentileScores[50].Should().Be(15.0);
+        courageResult!.PercentileScores[75].Should().Be(17.0);
+        courageResult!.PercentileScores[90].Should().Be(23.0);
     }
 
     [Fact]
@@ -393,7 +401,7 @@ public class CalculateBadgeScoresQueryHandlerTests : CqrsIntegrationTestBase
         // Assert
         var courageResult = results.FirstOrDefault(r => r.AxisName == "Courage");
         courageResult.Should().NotBeNull();
-        
+
         // Complex scenario has paths: 5+3=8, 10+7=17, 15+12=27
         // Plus linear scenario: 10+5=15
         // Should have multiple distinct scores
@@ -534,7 +542,7 @@ public class CalculateBadgeScoresQueryHandlerTests : CqrsIntegrationTestBase
 
         // Assert
         results.Should().HaveCountGreaterOrEqualTo(3); // Courage, Wisdom, Empathy
-        
+
         var axisNames = results.Select(r => r.AxisName).ToList();
         axisNames.Should().OnlyHaveUniqueItems();
     }
@@ -553,7 +561,7 @@ public class CalculateBadgeScoresQueryHandlerTests : CqrsIntegrationTestBase
         foreach (var result in results)
         {
             var sortedScores = result.PercentileScores.OrderBy(kvp => kvp.Key).ToList();
-            
+
             for (int i = 1; i < sortedScores.Count; i++)
             {
                 // Each percentile score should be >= previous
@@ -574,7 +582,7 @@ public class CalculateBadgeScoresQueryHandlerTests : CqrsIntegrationTestBase
 
         // Assert
         var courageResult = results.First(r => r.AxisName == "Courage");
-        
+
         // With only one path, all percentiles should be the same
         var uniqueScores = courageResult.PercentileScores.Values.Distinct().ToList();
         uniqueScores.Should().ContainSingle();
@@ -620,7 +628,7 @@ public class CalculateBadgeScoresQueryHandlerTests : CqrsIntegrationTestBase
     {
         // Arrange
         await SeedTestDataAsync();
-        
+
         // Add a scenario with no compass changes
         var noCompassScenario = new Scenario
         {
