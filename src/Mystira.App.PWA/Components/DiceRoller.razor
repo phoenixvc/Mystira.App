@@ -133,7 +133,7 @@
 
         try
         {
-            await PlayClickAsync();
+            await PlayDiceRollAsync();
             await HapticAsync(2);
 
             if (Results.Count != DiceCount)
@@ -141,6 +141,9 @@
 
             // Animate “spinning” faces
             await AnimateRollAsync(RollDurationMs, token);
+
+            // Stop the dice roll sound as soon as dice land
+            await StopDiceRollAsync();
 
             HistoryEntries.Insert(0, new RollHistory(DiceCount, Faces, Results.ToArray(), DateTime.UtcNow));
 
@@ -207,6 +210,20 @@
     {
         if (!SoundOn || string.IsNullOrEmpty(audioRef.Id)) return;
         try { await JS.InvokeVoidAsync("diceAudio.play", audioRef); } catch { }
+    }
+
+    private async Task PlayDiceRollAsync()
+    {
+        if (!SoundOn) return;
+        // TODO: Replace with actual dice roll audio file path (e.g., "/audio/dice-roll.mp3")
+        // For now, using the embedded click sound as placeholder
+        try { await JS.InvokeVoidAsync("diceAudio.playRoll", "data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAA..."); } catch { }
+    }
+
+    private async Task StopDiceRollAsync()
+    {
+        if (!SoundOn) return;
+        try { await JS.InvokeVoidAsync("diceAudio.stopRoll"); } catch { }
     }
 
     private async Task HapticAsync(int ms)
