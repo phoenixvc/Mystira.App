@@ -49,6 +49,37 @@ The MCP configuration provides these development tools:
 - **run-admin-api**: Start the admin API
 - **run-pwa**: Start the Blazor PWA
 
+## MCP Servers
+
+The configuration includes these MCP servers for enhanced development capabilities:
+
+### Core Development Servers
+
+- **filesystem**: Access repository files and directories securely
+- **github**: GitHub repository operations and issue tracking
+- **git**: Git operations for version control
+
+### Testing & Automation Servers
+
+- **playwright**: Microsoft's official browser automation MCP server for testing the Blazor PWA
+  - Fast, lightweight browser automation using accessibility tree
+  - Designed specifically for AI-driven test automation
+  - Eliminates need for screenshot-based testing
+  - **Usage**: "Test the login flow in the PWA" or "Verify the adventure selection page loads correctly"
+
+### AI Enhancement Servers
+
+- **memory**: Knowledge graph-based persistent memory
+  - Stores entities, relations, and observations across sessions
+  - Enables contextually aware interactions
+  - **Usage**: "Remember that the admin API uses JWT authentication" or "Recall the architecture pattern we discussed"
+
+- **sequential-thinking**: Structured problem-solving with stepwise reasoning
+  - Breaks complex problems into manageable steps
+  - Supports branching and revision of thought processes
+  - Maintains history for reflective adjustments
+  - **Usage**: "Plan how to implement a new feature" or "Debug this test failure systematically"
+
 ## Key Resources
 
 The configuration exposes these important resources:
