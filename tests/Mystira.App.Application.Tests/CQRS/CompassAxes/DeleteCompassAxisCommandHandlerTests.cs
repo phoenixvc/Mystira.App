@@ -77,11 +77,13 @@ public class DeleteCompassAxisCommandHandlerTests : CqrsIntegrationTestBase
     {
         await SeedTestDataAsync();
         var initialAxes = await Mediator.Send(new GetAllCompassAxesQuery());
+        initialAxes.Should().HaveCount(2, "Initial count should be 2");
 
         await Mediator.Send(new DeleteCompassAxisCommand("axis-1"));
 
         var updatedAxes = await Mediator.Send(new GetAllCompassAxesQuery());
-        updatedAxes.Should().HaveCount(initialAxes.Count - 1);
+        updatedAxes.Should().HaveCount(1, "Count should be 1 after deletion");
+        updatedAxes.First().Id.Should().Be("axis-2");
     }
 
     [Fact]
