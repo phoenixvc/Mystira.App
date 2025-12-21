@@ -432,6 +432,22 @@ else
             });
         }
 
+        // Orchestrate audio for the initial scene if it's already set
+        if (gameSession is { CurrentScene: not null, Scenario: not null })
+        {
+            _ = InvokeAsync(async () =>
+            {
+                try
+                {
+                    await AudioOrchestrator.EnterSceneAsync(gameSession.CurrentScene, gameSession.Scenario);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Error orchestrating initial scene audio");
+                }
+            });
+        }
+
         // Subscribe to changes
         GameSessionService.GameSessionChanged += OnGameSessionChanged;
 

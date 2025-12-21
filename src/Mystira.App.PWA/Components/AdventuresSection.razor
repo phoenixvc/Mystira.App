@@ -622,11 +622,24 @@
                 return;
             }
 
-            var currentScene = fullScenario.Scenes.FirstOrDefault(s => s.Id == activeSession.CurrentSceneId);
+            var currentScene = fullScenario.Scenes.FirstOrDefault(s => string.Equals(s.Id?.Trim(), activeSession.CurrentSceneId?.Trim(), StringComparison.OrdinalIgnoreCase));
             if (currentScene == null)
             {
-                Logger.LogError("Could not find current scene {SceneId} in scenario {ScenarioId}",
+                Logger.LogWarning("Could not find current scene {SceneId} in scenario {ScenarioId}. Falling back to first scene.",
                     activeSession.CurrentSceneId, scenario.Id);
+
+                if (fullScenario.Scenes.Any())
+                {
+                    Logger.LogInformation("Available scene IDs in scenario {ScenarioId}: {SceneIds}",
+                        scenario.Id, string.Join(", ", fullScenario.Scenes.Select(s => s.Id)));
+                }
+
+                currentScene = fullScenario.Scenes.FirstOrDefault();
+            }
+
+            if (currentScene == null)
+            {
+                Logger.LogError("Scenario {ScenarioId} has no scenes.", scenario.Id);
                 return;
             }
 
@@ -701,10 +714,18 @@
                 return;
             }
 
-            var currentScene = fullScenario.Scenes.FirstOrDefault(s => s.Id == session.CurrentSceneId);
+            var currentScene = fullScenario.Scenes.FirstOrDefault(s => string.Equals(s.Id?.Trim(), session.CurrentSceneId?.Trim(), StringComparison.OrdinalIgnoreCase));
             if (currentScene == null)
             {
-                Logger.LogWarning("Current scene not found in scenario, using first scene");
+                Logger.LogWarning("Current scene {SceneId} not found in scenario {ScenarioId}, falling back to first scene",
+                    session.CurrentSceneId, fullScenario.Id);
+
+                if (fullScenario.Scenes.Any())
+                {
+                    Logger.LogInformation("Available scene IDs in scenario {ScenarioId}: {SceneIds}",
+                        fullScenario.Id, string.Join(", ", fullScenario.Scenes.Select(s => s.Id)));
+                }
+
                 currentScene = fullScenario.Scenes.FirstOrDefault();
             }
 

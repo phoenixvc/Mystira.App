@@ -111,6 +111,7 @@ builder.Services.AddHttpClient<IGameSessionApiClient, GameSessionApiClient>(Conf
 
 // Music and Audio Services
 builder.Services.AddSingleton<IMusicResolver, MusicResolver>();
+builder.Services.AddSingleton<IAudioStateStore, AudioStateStore>();
 builder.Services.AddScoped<IAudioBus, AudioBus>();
 builder.Services.AddScoped<SceneAudioOrchestrator>();
 

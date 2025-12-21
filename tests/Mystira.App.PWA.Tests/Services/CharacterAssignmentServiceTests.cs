@@ -20,6 +20,7 @@ public class CharacterAssignmentServiceTests
     private readonly Mock<IGameSessionService> _gameSessionServiceMock;
     private readonly Mock<IMusicResolver> _musicResolverMock;
     private readonly Mock<IAudioBus> _audioBusMock;
+    private readonly IAudioStateStore _stateStore;
     private readonly SceneAudioOrchestrator _audioOrchestrator;
     private readonly CharacterAssignmentService _sut;
 
@@ -31,7 +32,8 @@ public class CharacterAssignmentServiceTests
         _gameSessionServiceMock = new Mock<IGameSessionService>();
         _musicResolverMock = new Mock<IMusicResolver>();
         _audioBusMock = new Mock<IAudioBus>();
-        _audioOrchestrator = new SceneAudioOrchestrator(_musicResolverMock.Object, _audioBusMock.Object);
+        _stateStore = new AudioStateStore();
+        _audioOrchestrator = new SceneAudioOrchestrator(_musicResolverMock.Object, _audioBusMock.Object, _stateStore);
 
         _sut = new CharacterAssignmentService(
             _loggerMock.Object,

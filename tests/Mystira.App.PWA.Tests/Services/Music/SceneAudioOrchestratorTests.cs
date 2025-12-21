@@ -12,13 +12,15 @@ public class SceneAudioOrchestratorTests
 {
     private readonly Mock<IMusicResolver> _resolverMock;
     private readonly Mock<IAudioBus> _audioBusMock;
+    private readonly IAudioStateStore _stateStore;
     private readonly SceneAudioOrchestrator _sut;
 
     public SceneAudioOrchestratorTests()
     {
         _resolverMock = new Mock<IMusicResolver>();
         _audioBusMock = new Mock<IAudioBus>();
-        _sut = new SceneAudioOrchestrator(_resolverMock.Object, _audioBusMock.Object);
+        _stateStore = new AudioStateStore();
+        _sut = new SceneAudioOrchestrator(_resolverMock.Object, _audioBusMock.Object, _stateStore);
     }
 
     [Fact]

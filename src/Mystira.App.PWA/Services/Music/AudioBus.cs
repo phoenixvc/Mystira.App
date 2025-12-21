@@ -26,9 +26,8 @@ public class AudioBus : IAudioBus, IAsyncDisposable
         try
         {
             if (_module != null) return;
-            // Append a version/timestamp to bypass browser caching of the JS module
-            var version = DateTime.UtcNow.Ticks;
-            _module = await _jsRuntime.InvokeAsync<IJSObjectReference>("import", $"./js/audioPlayer.js?v={version}");
+            // Use a stable version string to break cache once but avoid multiple module instances
+            _module = await _jsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/audioPlayer.js?v=1.0.1");
         }
         finally
         {

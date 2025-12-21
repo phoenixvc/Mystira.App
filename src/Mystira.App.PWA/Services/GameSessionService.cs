@@ -127,6 +127,12 @@ public partial class GameSessionService : IGameSessionService
                 _characterAssignments = new List<CharacterAssignment>();
             }
 
+            // Orchestrate Audio
+            if (startingScene != null)
+            {
+                await _audioOrchestrator.EnterSceneAsync(startingScene, scenario);
+            }
+
             _logger.LogInformation("Game session started successfully with ID: {SessionId}", apiGameSession.Id);
             return true;
         }
