@@ -217,9 +217,8 @@ public class CalculateBadgeScoresQueryHandler : IQueryHandler<CalculateBadgeScor
                 }
 
                 // If branch leads to another scene, continue traversal
-                if (!string.IsNullOrWhiteSpace(branch.NextSceneId) && sceneDict.ContainsKey(branch.NextSceneId))
+                if (!string.IsNullOrWhiteSpace(branch.NextSceneId) && sceneDict.TryGetValue(branch.NextSceneId, out var nextScene))
                 {
-                    var nextScene = sceneDict[branch.NextSceneId];
                     var branchVisited = new HashSet<string>(visited);
                     DepthFirstSearch(nextScene, sceneDict, branchVisited, branchPath, allPaths);
                 }
