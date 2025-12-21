@@ -38,7 +38,9 @@ const performanceAssets = [
     // Logo and key images (cached separately for instant rendering)
     './icons/icon-512.png',
     './icons/icon-192.png',
-    './icons/favicon.png'
+    './icons/favicon.png',
+    './images/mystira-logo.webp',
+    './images/gamesession-background.webp'
 ];
 
 // Helper to normalize and de-duplicate request URLs
