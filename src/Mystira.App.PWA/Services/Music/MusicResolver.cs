@@ -37,7 +37,6 @@ public class MusicResolver : IMusicResolver
             SceneType.Roll => new SceneMusicSettings
             {
                 Continuity = MusicContinuity.AllowChange,
-                Energy = 0.7,
                 TransitionHint = MusicTransitionHint.CrossfadeShort,
                 Profile = MusicProfile.Tense
             },
