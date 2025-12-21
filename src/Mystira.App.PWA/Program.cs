@@ -187,7 +187,7 @@ builder.Services.AddScoped<ITokenProvider, LocalStorageTokenProvider>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<IGameSessionService, GameSessionService>();
-builder.Services.AddScoped<IIndexedDbService, IndexedDbService>();
+builder.Services.AddScoped<IInMemoryStoreService, InMemoryStoreService>();
 builder.Services.AddScoped<ICharacterAssignmentService, CharacterAssignmentService>();
 builder.Services.AddSingleton<IImageCacheService, ImageCacheService>();
 builder.Services.AddScoped<IPlayerContextService, PlayerContextService>();
@@ -227,14 +227,14 @@ try
     var profileService = host.Services.GetService<IProfileService>();
     var apiClient = host.Services.GetService<IApiClient>();
     var gameSessionService = host.Services.GetService<IGameSessionService>();
-    var indexedDbService = host.Services.GetService<IIndexedDbService>();
+    var inMemoryStoreService = host.Services.GetService<IInMemoryStoreService>();
 
     logger.LogInformation("Services registered:");
     logger.LogInformation("- AuthService: {AuthService}", authService?.GetType().Name ?? "Not registered");
     logger.LogInformation("- ProfileService: {ProfileService}", profileService?.GetType().Name ?? "Not registered");
     logger.LogInformation("- ApiClient: {ApiClient}", apiClient?.GetType().Name ?? "Not registered");
     logger.LogInformation("- GameSessionService: {GameSessionService}", gameSessionService?.GetType().Name ?? "Not registered");
-    logger.LogInformation("- IndexedDbService: {IndexedDbService}", indexedDbService?.GetType().Name ?? "Not registered");
+    logger.LogInformation("- InMemoryStoreService: {InMemoryStoreService}", inMemoryStoreService?.GetType().Name ?? "Not registered");
 
     await host.RunAsync();
 }

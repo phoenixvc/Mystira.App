@@ -230,23 +230,48 @@ public class StoryProtocolClient
 
     private string GetIPAssetRegistryABI()
     {
-        // TODO: Get actual ABI from Story Protocol deployment
-        // Example: https://github.com/storyprotocol/protocol-core/blob/main/contracts/IPAssetRegistry.sol
-        return @"[]"; // Placeholder
+        // TODO: POC - Replace with actual ABI from Story Protocol deployment
+        // Production hardening: Load ABI from JSON resource file instead of hardcoded string
+        return @"[
+            {
+                ""anonymous"": false,
+                ""inputs"": [
+                    {""indexed"": false, ""internalType"": ""address"", ""name"": ""ipAssetId"", ""type"": ""address""},
+                    {""indexed"": false, ""internalType"": ""address"", ""name"": ""nftContract"", ""type"": ""address""},
+                    {""indexed"": false, ""internalType"": ""uint256"", ""name"": ""tokenId"", ""type"": ""uint256""}
+                ],
+                ""name"": ""IPAssetRegistered"",
+                ""type"": ""event""
+            },
+            {
+                ""inputs"": [
+                    {""internalType"": ""address"", ""name"": ""nftContract"", ""type"": ""address""},
+                    {""internalType"": ""uint256"", ""name"": ""tokenId"", ""type"": ""uint256""},
+                    {""internalType"": ""string"", ""name"": ""metadataURI"", ""type"": ""string""}
+                ],
+                ""name"": ""register"",
+                ""outputs"": [{""internalType"": ""address"", ""name"": ""ipAssetId"", ""type"": ""address""}],
+                ""stateMutability"": ""nonpayable"",
+                ""type"": ""function""
+            }
+        ]";
     }
 
     private string GetRoyaltyModuleABI()
     {
-        // TODO: Get actual ABI from Story Protocol deployment
-        // Example: https://github.com/storyprotocol/protocol-core/blob/main/contracts/modules/royalty/RoyaltyModule.sol
-        return @"[]"; // Placeholder
+        // TODO: POC - Get actual ABI from Story Protocol deployment
+        // Production hardening: Use standard ERC20 and RoyaltyModule ABIs
+        return @"[]";
     }
 
     private string ExtractIpAssetIdFromLogs(Nethereum.RPC.Eth.DTOs.FilterLog[] logs)
     {
-        // TODO: Parse event logs to extract IP Asset ID
-        // Story Protocol emits IPAssetRegistered event with the ID
-        // For now, generate a placeholder ID
-        return $"ipa_{Guid.NewGuid():N}";
+        // TODO: POC - Parse event logs to extract IP Asset ID
+        // Production hardening: Use Nethereum Event DTOs for type-safe parsing
+
+        if (logs == null || logs.Length == 0) return "0x0000000000000000000000000000000000000000";
+
+        // Heuristic: IPAssetRegistered is often the first event
+        return logs[0].Address;
     }
 }
