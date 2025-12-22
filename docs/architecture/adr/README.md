@@ -69,6 +69,7 @@ Each ADR follows this structure:
 | [ADR-0011](ADR-0011-unified-workspace-orchestration.md) | Unified Workspace Orchestration | 💭 Proposed | 2025-12-10 | infrastructure, workspace, orchestration |
 | [ADR-0012](ADR-0012-infrastructure-as-code.md) | Infrastructure as Code | 💭 Proposed | 2025-12-10 | infrastructure, iac, bicep, azure |
 | [ADR-0013](ADR-0013-grpc-for-csharp-python-integration.md) | Adopt gRPC for C# to Python Integration | 💭 Proposed | 2025-12-11 | architecture, grpc, python, microservices, performance |
+| [ADR-0014](ADR-0014-implementation-roadmap.md) | Mystira.App Implementation Roadmap | ✅ Accepted | 2025-12-22 | planning, roadmap, implementation, strategy, polyglot |
 
 ---
 
