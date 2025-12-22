@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.Extensions.DependencyInjection;
@@ -97,7 +98,7 @@ public interface ICustomMetrics
 /// <summary>
 /// Implementation of ICustomMetrics that sends telemetry to Application Insights.
 /// </summary>
-public class CustomMetrics : ICustomMetrics
+public partial class CustomMetrics : ICustomMetrics
 {
     private readonly TelemetryClient? _telemetryClient;
     private readonly ILogger<CustomMetrics> _logger;
@@ -474,18 +475,14 @@ public class CustomMetrics : ICustomMetrics
         var sanitized = PiiRedactor.RedactEmailsInString(errorMessage);
 
         // Remove connection strings (common patterns)
-        sanitized = System.Text.RegularExpressions.Regex.Replace(
+        sanitized = ConnectionStringRegex().Replace(
             sanitized,
-            @"(Server|Data Source|Database|User Id|Password|Uid|Pwd|ConnectionString|AccountKey|AccountName|SharedAccessKey|SAS)=([^;]+)",
-            "$1=[REDACTED]",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            "$1=[REDACTED]");
 
         // Remove API keys and tokens
-        sanitized = System.Text.RegularExpressions.Regex.Replace(
+        sanitized = ApiKeyRegex().Replace(
             sanitized,
-            @"(api[_-]?key|token|bearer|authorization|secret)[\s:=]+[\w-]+",
-            "$1=[REDACTED]",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            "$1=[REDACTED]");
 
         // Remove newlines and carriage returns (log injection prevention)
         sanitized = sanitized.Replace("\r", "").Replace("\n", " ");
@@ -493,11 +490,17 @@ public class CustomMetrics : ICustomMetrics
         // Truncate long error messages
         if (sanitized.Length > 200)
         {
-            sanitized = sanitized.Substring(0, 200) + "...[truncated]";
+            sanitized = sanitized[..200] + "...[truncated]";
         }
 
         return sanitized;
     }
+
+    [GeneratedRegex(@"(Server|Data Source|Database|User Id|Password|Uid|Pwd|ConnectionString|AccountKey|AccountName|SharedAccessKey|SAS)=([^;]+)", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    private static partial Regex ConnectionStringRegex();
+
+    [GeneratedRegex(@"(api[_-]?key|token|bearer|authorization|secret)[\s:=]+[\w-]+", RegexOptions.IgnoreCase | RegexOptions.Compiled)]
+    private static partial Regex ApiKeyRegex();
 }
 
 /// <summary>
