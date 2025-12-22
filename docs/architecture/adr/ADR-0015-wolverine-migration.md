@@ -54,9 +54,9 @@ We will **migrate from MediatR to Wolverine** as the unified messaging framework
 1. Add Wolverine packages:
    ```xml
    <ItemGroup>
-     <PackageReference Include="WolverineFx" Version="2.0.0" />
-     <PackageReference Include="WolverineFx.AzureServiceBus" Version="2.0.0" />
-     <PackageReference Include="WolverineFx.EntityFrameworkCore" Version="2.0.0" />
+     <PackageReference Include="WolverineFx" Version="5.9.1" />
+     <PackageReference Include="WolverineFx.AzureServiceBus" Version="3.9.1" />
+     <PackageReference Include="WolverineFx.EntityFrameworkCore" Version="5.2.0" />
    </ItemGroup>
    ```
 

@@ -35,6 +35,15 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
         _logger = logger;
         _options = options.Value;
 
+        // Validate GrpcEndpoint is configured
+        if (string.IsNullOrWhiteSpace(_options.GrpcEndpoint))
+        {
+            throw new InvalidOperationException(
+                "GrpcEndpoint is not configured. Ensure ChainService:GrpcEndpoint is set in configuration " +
+                "(typically loaded from Azure Key Vault as ChainService--GrpcEndpoint). " +
+                "See ADR-0013 for gRPC endpoint configuration requirements.");
+        }
+
         _logger.LogInformation(
             "Initializing gRPC Chain Service adapter for endpoint: {Endpoint}",
             _options.GrpcEndpoint);
