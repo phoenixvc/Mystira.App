@@ -402,6 +402,9 @@ public class EntraExternalIdAuthService : IAuthService
             var postLogoutRedirectUri = _configuration["MicrosoftEntraExternalId:PostLogoutRedirectUri"]
                 ?? await GetCurrentOriginAsync();
 
+            // Get id_token before clearing storage to use as hint for logout
+            var idTokenHint = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", IdTokenStorageKey);
+
             await ClearLocalStorageAsync();
             ClearAuthenticationState();
 
@@ -411,7 +414,7 @@ public class EntraExternalIdAuthService : IAuthService
             // Redirect to Entra logout endpoint
             if (!string.IsNullOrEmpty(authority))
             {
-                var logoutUrl = BuildLogoutUrl(authority, postLogoutRedirectUri);
+                var logoutUrl = BuildLogoutUrl(authority, postLogoutRedirectUri, idTokenHint);
                 _navigationManager.NavigateTo(logoutUrl);
             }
         }
@@ -484,7 +487,7 @@ public class EntraExternalIdAuthService : IAuthService
         return url;
     }
 
-    private static string BuildLogoutUrl(string authority, string postLogoutRedirectUri)
+    private static string BuildLogoutUrl(string authority, string postLogoutRedirectUri, string? idTokenHint = null)
     {
         // Authority format: https://mystira.ciamlogin.com/{tenant_id}/v2.0
         // Logout endpoint: https://mystira.ciamlogin.com/{tenant_id}/oauth2/v2.0/logout
@@ -496,8 +499,15 @@ public class EntraExternalIdAuthService : IAuthService
             baseAuthority = baseAuthority.Substring(0, baseAuthority.Length - 5);
         }
 
-        return $"{baseAuthority}/oauth2/v2.0/logout?" +
+        var url = $"{baseAuthority}/oauth2/v2.0/logout?" +
             $"post_logout_redirect_uri={Uri.EscapeDataString(postLogoutRedirectUri)}";
+
+        if (!string.IsNullOrEmpty(idTokenHint))
+        {
+            url += $"&id_token_hint={Uri.EscapeDataString(idTokenHint)}";
+        }
+
+        return url;
     }
 
     #endregion

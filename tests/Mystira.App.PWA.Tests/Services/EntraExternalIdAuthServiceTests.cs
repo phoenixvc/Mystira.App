@@ -630,9 +630,13 @@ public class EntraExternalIdAuthServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task LogoutAsync_RedirectsToLogoutEndpoint()
+    public async Task LogoutAsync_RedirectsToLogoutEndpointWithIdTokenHint()
     {
         // Arrange
+        var testIdToken = "test-id-token";
+        _mockJsRuntime.Setup(js => js.InvokeAsync<string?>("localStorage.getItem", It.Is<object[]>(args => args.Length == 1 && args[0].ToString() == "mystira_entra_id_token")))
+            .ReturnsAsync(testIdToken);
+
         _mockJsRuntime.Setup(js => js.InvokeAsync<IJSVoidResult>(It.IsAny<string>(), It.IsAny<object[]>()))
             .ReturnsAsync(Mock.Of<IJSVoidResult>());
 
@@ -642,10 +646,30 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         // Assert
         var capturedUrl = _navigationManager.NavigatedUrl;
         capturedUrl.Should().NotBeNull();
-        // The authority in tests is "https://test.ciamlogin.com/tenant-id/v2.0"
-        // Our service should strip "/v2.0" and append "/oauth2/v2.0/logout"
         capturedUrl.Should().StartWith("https://test.ciamlogin.com/tenant-id/oauth2/v2.0/logout?");
         capturedUrl.Should().Contain("post_logout_redirect_uri=");
+        capturedUrl.Should().Contain($"id_token_hint={testIdToken}");
+    }
+
+    [Fact]
+    public async Task LogoutAsync_RedirectsToLogoutEndpointWithoutIdTokenHintWhenMissing()
+    {
+        // Arrange
+        _mockJsRuntime.Setup(js => js.InvokeAsync<string?>("localStorage.getItem", It.Is<object[]>(args => args.Length == 1 && args[0].ToString() == "mystira_entra_id_token")))
+            .ReturnsAsync((string?)null);
+
+        _mockJsRuntime.Setup(js => js.InvokeAsync<IJSVoidResult>(It.IsAny<string>(), It.IsAny<object[]>()))
+            .ReturnsAsync(Mock.Of<IJSVoidResult>());
+
+        // Act
+        await _service.LogoutAsync();
+
+        // Assert
+        var capturedUrl = _navigationManager.NavigatedUrl;
+        capturedUrl.Should().NotBeNull();
+        capturedUrl.Should().StartWith("https://test.ciamlogin.com/tenant-id/oauth2/v2.0/logout?");
+        capturedUrl.Should().Contain("post_logout_redirect_uri=");
+        capturedUrl.Should().NotContain("id_token_hint=");
     }
 
     #endregion
