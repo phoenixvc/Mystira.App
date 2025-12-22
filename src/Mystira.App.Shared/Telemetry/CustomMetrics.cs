@@ -3,6 +3,7 @@ using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Mystira.App.Shared.Logging;
 
 namespace Mystira.App.Shared.Telemetry;
 
@@ -440,11 +441,14 @@ public class CustomMetrics : ICustomMetrics
 
     public void TrackDualWriteFailure(string entityType, string operation, string errorMessage, bool compensationEnabled)
     {
+        // Sanitize error message to prevent sensitive data leakage
+        var sanitizedError = SanitizeErrorMessage(errorMessage);
+
         var properties = new Dictionary<string, string>
         {
             ["EntityType"] = entityType,
             ["Operation"] = operation,
-            ["ErrorMessage"] = errorMessage,
+            ["ErrorMessage"] = sanitizedError,
             ["CompensationEnabled"] = compensationEnabled.ToString(),
             ["Environment"] = _environment,
             ["Severity"] = "High" // This should trigger alerting
@@ -454,7 +458,45 @@ public class CustomMetrics : ICustomMetrics
         TrackMetric("Polyglot.DualWriteFailures", 1, properties);
 
         _logger.LogError("Dual-write failure for {EntityType} during {Operation}. Compensation: {Compensation}. Error: {Error}",
-            entityType, operation, compensationEnabled, errorMessage);
+            entityType, operation, compensationEnabled, sanitizedError);
+    }
+
+    /// <summary>
+    /// Sanitizes error messages to prevent sensitive data leakage.
+    /// Removes connection strings, credentials, emails, and truncates long messages.
+    /// </summary>
+    private static string SanitizeErrorMessage(string errorMessage)
+    {
+        if (string.IsNullOrEmpty(errorMessage))
+            return "[empty]";
+
+        // Redact any email addresses that might be in the error message
+        var sanitized = PiiRedactor.RedactEmailsInString(errorMessage);
+
+        // Remove connection strings (common patterns)
+        sanitized = System.Text.RegularExpressions.Regex.Replace(
+            sanitized,
+            @"(Server|Data Source|Database|User Id|Password|Uid|Pwd|ConnectionString|AccountKey|AccountName|SharedAccessKey|SAS)=([^;]+)",
+            "$1=[REDACTED]",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        // Remove API keys and tokens
+        sanitized = System.Text.RegularExpressions.Regex.Replace(
+            sanitized,
+            @"(api[_-]?key|token|bearer|authorization|secret)[\s:=]+[\w-]+",
+            "$1=[REDACTED]",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        // Remove newlines and carriage returns (log injection prevention)
+        sanitized = sanitized.Replace("\r", "").Replace("\n", " ");
+
+        // Truncate long error messages
+        if (sanitized.Length > 200)
+        {
+            sanitized = sanitized.Substring(0, 200) + "...[truncated]";
+        }
+
+        return sanitized;
     }
 }
 
