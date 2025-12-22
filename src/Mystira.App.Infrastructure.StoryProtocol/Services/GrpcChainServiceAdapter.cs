@@ -41,25 +41,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
 
         var channelOptions = new GrpcChannelOptions
         {
-            // Configure retry policy
-            ServiceConfig = new ServiceConfig
-            {
-                MethodConfigs =
-                {
-                    new MethodConfig
-                    {
-                        Names = { MethodName.Default },
-                        RetryPolicy = new RetryPolicy
-                        {
-                            MaxAttempts = _options.MaxRetryAttempts,
-                            InitialBackoff = TimeSpan.FromMilliseconds(_options.RetryBaseDelayMs),
-                            MaxBackoff = TimeSpan.FromSeconds(30),
-                            BackoffMultiplier = 2,
-                            RetryableStatusCodes = { StatusCode.Unavailable, StatusCode.DeadlineExceeded }
-                        }
-                    }
-                }
-            }
+            // Basic channel options without retry policy (use default retries)
         };
 
         _channel = GrpcChannel.ForAddress(_options.GrpcEndpoint, channelOptions);
@@ -94,7 +76,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
     public async Task<StoryProtocolMetadata> RegisterIpAssetAsync(
         string contentId,
         string contentTitle,
-        List<Contributor> contributors,
+        List<Domain.Models.Contributor> contributors,
         string? metadataUri = null,
         string? licenseTermsId = null)
     {
@@ -199,7 +181,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
             {
                 IpAssetId = ipAssetId,
                 RoyaltyModuleId = response.RoyaltyModuleId,
-                Contributors = response.Recipients.Select(r => new Contributor
+                Contributors = response.Recipients.Select(r => new Domain.Models.Contributor
                 {
                     WalletAddress = r.WalletAddress,
                     ContributionPercentage = r.ShareBasisPoints / 100m,
@@ -226,7 +208,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
     /// <inheritdoc />
     public async Task<StoryProtocolMetadata> UpdateRoyaltySplitAsync(
         string ipAssetId,
-        List<Contributor> contributors)
+        List<Domain.Models.Contributor> contributors)
     {
         _logger.LogInformation(
             "Updating royalty split for IP Asset {IpAssetId} with {ContributorCount} contributors via gRPC",

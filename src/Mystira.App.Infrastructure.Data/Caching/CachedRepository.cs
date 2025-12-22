@@ -79,6 +79,24 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
     }
 
     /// <inheritdoc />
+    public async Task<T?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default)
+    {
+        return await GetByIdAsync(id?.ToString() ?? string.Empty, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<T?> GetBySpecAsync(ISpecification<T> specification, CancellationToken cancellationToken = default)
+    {
+        return await _inner.FirstOrDefaultAsync(specification, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<TResult?> GetBySpecAsync<TResult>(ISpecification<T, TResult> specification, CancellationToken cancellationToken = default)
+    {
+        return await _inner.FirstOrDefaultAsync(specification, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<bool> ExistsAsync(string id, CancellationToken cancellationToken = default)
     {
         if (!_options.Enabled)
