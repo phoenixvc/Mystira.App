@@ -7,6 +7,8 @@ This folder contains strategic planning documents and roadmaps for the Mystira.A
 | Document | Description | Status |
 |----------|-------------|--------|
 | [Implementation Roadmap](implementation-roadmap.md) | Strategic implementation plan across 8 phases | Active |
+| [Hybrid Data Strategy](hybrid-data-strategy-roadmap.md) | Cosmos DB to PostgreSQL/Redis migration | Planned |
+| [Wolverine Migration](wolverine-migration-roadmap.md) | MediatR to Wolverine framework migration | Planned |
 
 ## Related Documentation
 
