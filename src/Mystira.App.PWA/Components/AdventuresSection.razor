@@ -1,4 +1,4 @@
-﻿@* Encapsulated Adventures/Bundles/Filters area extracted from Home *@
+@* Encapsulated Adventures/Bundles/Filters area extracted from Home *@
 @inject NavigationManager NavigationManager
 @inject IAuthService AuthService
 @inject IProfileService ProfileService
@@ -36,7 +36,7 @@
             FilterTitle="@GetFilterTitle()" />
 
         @* Active Adventures (below Filter, above Bundles) *@
-        @if (inProgressSessions.Any())
+        @if (VisibleInProgressSessions.Any())
         {
             <div class="row mb-3 active-adventures-section">
                 <div class="col-12">
@@ -44,7 +44,7 @@
                         <h6 class="active-adventures-title">
                             <i class="fas fa-play-circle"></i>
                             Active Adventures
-                            <span class="active-adventures-badge">@inProgressSessions.Count</span>
+                            <span class="active-adventures-badge">@VisibleInProgressSessions.Count</span>
                         </h6>
                         <div class="form-check form-switch active-adventures-toggle">
                             <input class="form-check-input" type="checkbox" role="switch" id="toggleActiveAdventures"
@@ -58,7 +58,7 @@
                     @if (showActiveAdventures)
                     {
                         <div class="row">
-                            @foreach (var session in inProgressSessions)
+                            @foreach (var session in VisibleInProgressSessions)
                             {
                                 var scenario = scenarios.FirstOrDefault(s => s.Id == session.ScenarioId);
                                 if (scenario != null)
@@ -222,6 +222,11 @@
     private List<ContentBundle> bundles = new();
     private List<ContentBundle> filteredBundles = new();
     private List<GameSession> inProgressSessions = new();
+
+    private IReadOnlyList<GameSession> VisibleInProgressSessions => inProgressSessions
+        .Where(s => scenarios.Any(sc => sc.Id == s.ScenarioId))
+        .ToList();
+
     private bool isLoadingBundles = false;
     private string? selectedBundleId;
     private string selectedBundleTitle => bundles.FirstOrDefault(b => b.Id == selectedBundleId)?.Title ?? string.Empty;
