@@ -55,7 +55,18 @@ public class ChainServiceOptions
     public bool UseTls { get; set; } = true;
 
     /// <summary>
-    /// API key for service-to-service authentication (if required)
+    /// API key for service-to-service authentication (if required).
+    /// Load from Key Vault in production.
     /// </summary>
     public string? ApiKey { get; set; }
+
+    /// <summary>
+    /// Whether to enable health checks for the Chain service
+    /// </summary>
+    public bool EnableHealthChecks { get; set; } = true;
+
+    /// <summary>
+    /// API key header name for authentication
+    /// </summary>
+    public string ApiKeyHeaderName { get; set; } = "x-api-key";
 }

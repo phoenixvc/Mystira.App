@@ -105,8 +105,8 @@ See [ADR-0013](../architecture/adr/ADR-0013-grpc-for-csharp-python-integration.m
 2. **gRPC Client Implementation (.NET)**
    - [x] Add `Mystira.App.Infrastructure.StoryProtocol` project
    - [x] Implement `GrpcChainServiceAdapter`
-   - [ ] Configure gRPC channel with authentication
-   - [ ] Add health check integration
+   - [x] Configure gRPC channel with authentication
+   - [x] Add health check integration
    - [x] Implement retry policies with exponential backoff
 
 3. **gRPC Server Implementation (Python/Chain)**

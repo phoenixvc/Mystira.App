@@ -18,6 +18,9 @@
     <PackageReference Include="Grpc.Net.Client" Version="2.65.0" />
     <PackageReference Include="Google.Protobuf" Version="3.27.0" />
     <PackageReference Include="Grpc.Tools" Version="2.65.0" PrivateAssets="All" />
+
+    <!-- Health checks -->
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.0" />
   </ItemGroup>
 
   <!-- Protocol Buffer definitions for ChainService -->

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Mystira.App.Application.Configuration.StoryProtocol;
 using Mystira.App.Application.Ports;
+using Mystira.App.Infrastructure.StoryProtocol.HealthChecks;
 using Mystira.App.Infrastructure.StoryProtocol.Services;
 
 namespace Mystira.App.Infrastructure.StoryProtocol;
@@ -69,7 +70,9 @@ public static class ServiceCollectionExtensions
         {
             // gRPC implementation - communicates with Mystira.Chain (Python)
             // Recommended for production (see ADR-0013)
-            services.AddSingleton<IStoryProtocolService, GrpcChainServiceAdapter>();
+            // Register as both interface and concrete type (for health checks)
+            services.AddSingleton<GrpcChainServiceAdapter>();
+            services.AddSingleton<IStoryProtocolService>(sp => sp.GetRequiredService<GrpcChainServiceAdapter>());
         }
         else
         {
@@ -103,9 +106,28 @@ public static class ServiceCollectionExtensions
             options.UseMockImplementation = false;
         });
 
-        // Register the gRPC adapter
-        services.AddSingleton<IStoryProtocolService, GrpcChainServiceAdapter>();
+        // Register the gRPC adapter (as both interface and concrete type for health checks)
+        services.AddSingleton<GrpcChainServiceAdapter>();
+        services.AddSingleton<IStoryProtocolService>(sp => sp.GetRequiredService<GrpcChainServiceAdapter>());
 
         return services;
+    }
+
+    /// <summary>
+    /// Adds Chain service (gRPC) health checks.
+    /// </summary>
+    /// <param name="builder">The health checks builder</param>
+    /// <param name="name">Optional name for the health check (default: "chain_service")</param>
+    /// <param name="tags">Optional tags for the health check</param>
+    /// <returns>The health checks builder for chaining</returns>
+    public static IHealthChecksBuilder AddChainServiceHealthCheck(
+        this IHealthChecksBuilder builder,
+        string? name = null,
+        string[]? tags = null)
+    {
+        name ??= "chain_service";
+        tags ??= ["grpc", "chain", "blockchain", "ready"];
+
+        return builder.AddCheck<ChainServiceHealthCheck>(name, tags: tags);
     }
 }

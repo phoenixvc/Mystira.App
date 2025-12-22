@@ -25,6 +25,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
     private readonly ChainService.ChainServiceClient _client;
     private readonly ILogger<GrpcChainServiceAdapter> _logger;
     private readonly ChainServiceOptions _options;
+    private readonly Metadata? _authMetadata;
 
     public GrpcChainServiceAdapter(
         IOptions<ChainServiceOptions> options,
@@ -62,6 +63,30 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
 
         _channel = GrpcChannel.ForAddress(_options.GrpcEndpoint, channelOptions);
         _client = new ChainService.ChainServiceClient(_channel);
+
+        // Set up authentication metadata if API key is configured
+        if (!string.IsNullOrEmpty(_options.ApiKey))
+        {
+            _authMetadata = new Metadata
+            {
+                { _options.ApiKeyHeaderName, _options.ApiKey }
+            };
+            _logger.LogDebug("API key authentication configured for Chain service");
+        }
+        else
+        {
+            _authMetadata = null;
+            _logger.LogDebug("No API key configured for Chain service");
+        }
+    }
+
+    /// <summary>
+    /// Creates call options with authentication and deadline
+    /// </summary>
+    private CallOptions CreateCallOptions(int? timeoutSeconds = null)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds ?? _options.TimeoutSeconds);
+        return new CallOptions(headers: _authMetadata, deadline: deadline);
     }
 
     /// <inheritdoc />
@@ -101,7 +126,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
         {
             var response = await _client.RegisterIpAssetAsync(
                 request,
-                deadline: DateTime.UtcNow.AddSeconds(_options.TimeoutSeconds));
+                CreateCallOptions());
 
             if (response.Status == IpAssetStatus.Failed)
             {
@@ -145,7 +170,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
         {
             var response = await _client.IsRegisteredAsync(
                 new IsRegisteredRequest { ContentId = contentId },
-                deadline: DateTime.UtcNow.AddSeconds(_options.TimeoutSeconds));
+                CreateCallOptions());
 
             return response.IsRegistered;
         }
@@ -167,7 +192,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
         {
             var response = await _client.GetRoyaltyConfigurationAsync(
                 new GetRoyaltyConfigurationRequest { IpAssetId = ipAssetId },
-                deadline: DateTime.UtcNow.AddSeconds(_options.TimeoutSeconds));
+                CreateCallOptions());
 
             var metadata = new StoryProtocolMetadata
             {
@@ -226,7 +251,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
         {
             var response = await _client.UpdateRoyaltySplitAsync(
                 request,
-                deadline: DateTime.UtcNow.AddSeconds(_options.TimeoutSeconds));
+                CreateCallOptions());
 
             if (!response.Success)
             {
@@ -276,7 +301,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
         {
             var response = await _client.PayRoyaltiesAsync(
                 request,
-                deadline: DateTime.UtcNow.AddSeconds(_options.TimeoutSeconds));
+                CreateCallOptions());
 
             return new RoyaltyPaymentResult
             {
@@ -320,7 +345,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
         {
             var response = await _client.GetClaimableRoyaltiesAsync(
                 new GetClaimableRoyaltiesRequest { IpAssetId = ipAssetId },
-                deadline: DateTime.UtcNow.AddSeconds(_options.TimeoutSeconds));
+                CreateCallOptions());
 
             // Sum up all claimable balances for this IP Asset
             var totalClaimable = response.Balances
@@ -363,7 +388,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
         {
             var response = await _client.ClaimRoyaltiesAsync(
                 request,
-                deadline: DateTime.UtcNow.AddSeconds(_options.TimeoutSeconds));
+                CreateCallOptions());
 
             if (response.Status == PaymentStatus.Failed)
             {
@@ -423,7 +448,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
         {
             var response = await _client.HealthCheckAsync(
                 new Google.Protobuf.WellKnownTypes.Empty(),
-                deadline: DateTime.UtcNow.AddSeconds(5));
+                CreateCallOptions(timeoutSeconds: 5));
 
             return response.Status == HealthCheckResponse.Types.ServingStatus.Serving;
         }
