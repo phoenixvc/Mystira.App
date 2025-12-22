@@ -16,13 +16,16 @@ public class QueryCachingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequ
     where TRequest : IRequest<TResponse>
 {
     private readonly IMemoryCache _cache;
+    private readonly IQueryCacheInvalidationService _cacheInvalidation;
     private readonly ILogger<QueryCachingBehavior<TRequest, TResponse>> _logger;
 
     public QueryCachingBehavior(
         IMemoryCache cache,
+        IQueryCacheInvalidationService cacheInvalidation,
         ILogger<QueryCachingBehavior<TRequest, TResponse>> logger)
     {
         _cache = cache;
+        _cacheInvalidation = cacheInvalidation;
         _logger = logger;
     }
 
@@ -63,7 +66,7 @@ public class QueryCachingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequ
         _cache.Set(cacheKey, response, cacheOptions);
 
         // Track cache key for prefix-based invalidation
-        QueryCacheInvalidationService.TrackCacheKey(cacheKey);
+        _cacheInvalidation.TrackCacheKey(cacheKey);
 
         _logger.LogDebug("Cached query {QueryType} with key {CacheKey} for {Duration} seconds",
             typeof(TRequest).Name, cacheKey, cacheableQuery.CacheDurationSeconds);

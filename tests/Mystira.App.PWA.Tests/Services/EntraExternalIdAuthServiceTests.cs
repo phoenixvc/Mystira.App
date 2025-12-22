@@ -433,14 +433,19 @@ public class EntraExternalIdAuthServiceTests : IDisposable
     {
         // Arrange
         var testAccessToken = "test-access-token";
-        var testIdToken = CreateTestIdToken("test@example.com", "Test User", "sub-123");
+        var testNonce = "test-nonce";
+        var testIdToken = CreateTestIdToken("test@example.com", "Test User", "sub-123", nonce: testNonce);
         var fragment = $"#access_token={testAccessToken}&id_token={testIdToken}&state=test-state";
 
         _mockJsRuntime.Setup(js => js.InvokeAsync<string>(It.IsAny<string>(), It.IsAny<object[]>()))
             .ReturnsAsync((string identifier, object[] args) =>
             {
                 if (identifier == "eval") return fragment;
-                if (identifier == "sessionStorage.getItem") return "test-state";
+                if (identifier == "sessionStorage.getItem")
+                {
+                    if (args.Length > 0 && (string)args[0] == "entra_auth_state") return "test-state";
+                    if (args.Length > 0 && (string)args[0] == "entra_auth_nonce") return testNonce;
+                }
                 return null!;
             });
 
@@ -509,7 +514,8 @@ public class EntraExternalIdAuthServiceTests : IDisposable
     {
         // Arrange
         var testAccessToken = "test-access-token";
-        var testIdToken = CreateTestIdToken("test@example.com", "Test User", "sub-123");
+        var testNonce = "test-nonce";
+        var testIdToken = CreateTestIdToken("test@example.com", "Test User", "sub-123", nonce: testNonce);
         var fragment = $"#access_token={testAccessToken}&id_token={testIdToken}&state=test-state";
         var storedValues = new Dictionary<string, string>();
 
@@ -517,7 +523,11 @@ public class EntraExternalIdAuthServiceTests : IDisposable
             .ReturnsAsync((string identifier, object[] args) =>
             {
                 if (identifier == "eval") return fragment;
-                if (identifier == "sessionStorage.getItem") return "test-state";
+                if (identifier == "sessionStorage.getItem")
+                {
+                    if (args.Length > 0 && (string)args[0] == "entra_auth_state") return "test-state";
+                    if (args.Length > 0 && (string)args[0] == "entra_auth_nonce") return testNonce;
+                }
                 return null!;
             });
 
@@ -547,7 +557,8 @@ public class EntraExternalIdAuthServiceTests : IDisposable
     {
         // Arrange
         var testAccessToken = "test-access-token";
-        var testIdToken = CreateTestIdToken("test@example.com", "Test User", "sub-123");
+        var testNonce = "test-nonce";
+        var testIdToken = CreateTestIdToken("test@example.com", "Test User", "sub-123", nonce: testNonce);
         var fragment = $"#access_token={testAccessToken}&id_token={testIdToken}&state=test-state";
         var eventRaised = false;
         var authenticatedState = false;
@@ -562,7 +573,11 @@ public class EntraExternalIdAuthServiceTests : IDisposable
             .ReturnsAsync((string identifier, object[] args) =>
             {
                 if (identifier == "eval") return fragment;
-                if (identifier == "sessionStorage.getItem") return "test-state";
+                if (identifier == "sessionStorage.getItem")
+                {
+                    if (args.Length > 0 && (string)args[0] == "entra_auth_state") return "test-state";
+                    if (args.Length > 0 && (string)args[0] == "entra_auth_nonce") return testNonce;
+                }
                 return null!;
             });
 
@@ -788,7 +803,7 @@ public class EntraExternalIdAuthServiceTests : IDisposable
 
     #region Helper Methods
 
-    private static string CreateTestIdToken(string email, string name, string sub, long? exp = null)
+    private static string CreateTestIdToken(string email, string name, string sub, long? exp = null, string? nonce = null)
     {
         var header = new { alg = "RS256", typ = "JWT" };
         var payload = new
@@ -796,6 +811,7 @@ public class EntraExternalIdAuthServiceTests : IDisposable
             email,
             name,
             sub,
+            nonce,
             exp = exp ?? DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds(),
             iat = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             aud = TestClientId,
