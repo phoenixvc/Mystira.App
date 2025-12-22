@@ -49,6 +49,36 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
     #region Read Operations (Cache-Aside)
 
     /// <inheritdoc />
+    public async Task<T?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default) where TId : notnull
+    {
+        if (!_options.Enabled)
+        {
+            return await _inner.GetByIdAsync(id, cancellationToken);
+        }
+
+        var cacheKey = GetCacheKey(id.ToString()!);
+
+        // Try to get from cache
+        var cachedValue = await _cache.GetStringAsync(cacheKey, cancellationToken);
+        if (cachedValue != null)
+        {
+            _logger.LogDebug("Cache hit for {EntityType} with key {CacheKey}", _entityTypeName, cacheKey);
+            return JsonSerializer.Deserialize<T>(cachedValue, _jsonOptions);
+        }
+
+        // Cache miss - get from database
+        _logger.LogDebug("Cache miss for {EntityType} with key {CacheKey}", _entityTypeName, cacheKey);
+        var entity = await _inner.GetByIdAsync(id, cancellationToken);
+
+        if (entity != null)
+        {
+            await SetCacheAsync(cacheKey, entity, cancellationToken);
+        }
+
+        return entity;
+    }
+
+    /// <inheritdoc />
     public async Task<T?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         if (!_options.Enabled)
@@ -79,10 +109,22 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
     }
 
     /// <inheritdoc />
+
     public async Task<T?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default) where TId : notnull
     {
-        // For generic TId, we convert to string for caching
-        return await GetByIdAsync(id.ToString()!, cancellationToken);
+        return await GetByIdAsync(id?.ToString() ?? string.Empty, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<T?> GetBySpecAsync(ISpecification<T> specification, CancellationToken cancellationToken = default)
+    {
+        return await _inner.FirstOrDefaultAsync(specification, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<TResult?> GetBySpecAsync<TResult>(ISpecification<T, TResult> specification, CancellationToken cancellationToken = default)
+    {
+        return await _inner.FirstOrDefaultAsync(specification, cancellationToken);
     }
 
     /// <inheritdoc />
