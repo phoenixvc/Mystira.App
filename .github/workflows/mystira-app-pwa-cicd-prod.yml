@@ -197,7 +197,7 @@ jobs:
 
             HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
               --connect-timeout 15 \
-              --max-time 45 \
+              --max-time 30 \
               "${SWA_URL}" || echo "000")
 
             echo "    Status: ${HTTP_STATUS}"
