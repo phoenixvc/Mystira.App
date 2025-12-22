@@ -41,6 +41,10 @@
     <!-- For Health Checks -->
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
+
+    <!-- Azure Key Vault Configuration -->
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.3.2" />
+    <PackageReference Include="Azure.Identity" Version="1.13.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Mystira.App.Domain\Mystira.App.Domain.csproj" />

@@ -273,13 +273,13 @@ See [ADR-0013](../architecture/adr/ADR-0013-grpc-for-csharp-python-integration.m
 ### Key Deliverables
 
 1. **Secret Management**
-   - [ ] Migrate all secrets to Key Vault
-   - [ ] Implement secret rotation
+   - [x] Migrate all secrets to Key Vault (configuration added)
+   - [x] Implement secret rotation (documented in docs/operations/secret-rotation.md)
    - [x] Add secret scanning in CI (Gitleaks)
 
 2. **Access Control**
    - [ ] Implement RBAC for all resources
-   - [ ] Enable managed identities
+   - [x] Enable managed identities (DefaultAzureCredential)
    - [ ] Establish least privilege
 
 3. **Security Scanning**
