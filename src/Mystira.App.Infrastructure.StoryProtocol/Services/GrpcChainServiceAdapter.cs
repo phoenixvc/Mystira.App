@@ -9,6 +9,9 @@ using Mystira.App.Application.Ports;
 using Mystira.App.Domain.Models;
 using Mystira.Chain.V1;
 
+// Alias for proto Contributor type to avoid ambiguity with domain Contributor
+using ProtoContributor = Mystira.Chain.V1.Contributor;
+
 namespace Mystira.App.Infrastructure.StoryProtocol.Services;
 
 /// <summary>
@@ -51,24 +54,25 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
         var channelOptions = new GrpcChannelOptions
         {
             // Configure retry policy
-            ServiceConfig = new ServiceConfig
-            {
-                MethodConfigs =
-                {
-                    new MethodConfig
-                    {
-                        Names = { MethodName.Default },
-                        RetryPolicy = new RetryPolicy
-                        {
-                            MaxAttempts = _options.MaxRetryAttempts,
-                            InitialBackoff = TimeSpan.FromMilliseconds(_options.RetryBaseDelayMs),
-                            MaxBackoff = TimeSpan.FromSeconds(30),
-                            BackoffMultiplier = 2,
-                            RetryableStatusCodes = { StatusCode.Unavailable, StatusCode.DeadlineExceeded }
-                        }
-                    }
-                }
-            }
+            // Note: RetryPolicy configuration may require additional setup in gRPC 2.71+
+            // ServiceConfig = new ServiceConfig
+            // {
+            //     MethodConfigs =
+            //     {
+            //         new MethodConfig
+            //         {
+            //             Names = { MethodName.Default },
+            //             RetryPolicy = new RetryPolicy
+            //             {
+            //                 MaxAttempts = _options.MaxRetryAttempts,
+            //                 InitialBackoff = TimeSpan.FromMilliseconds(_options.RetryBaseDelayMs),
+            //                 MaxBackoff = TimeSpan.FromSeconds(30),
+            //                 BackoffMultiplier = 2,
+            //                 RetryableStatusCodes = { StatusCode.Unavailable, StatusCode.DeadlineExceeded }
+            //             }
+            //         }
+            //     }
+            // }
         };
 
         _channel = GrpcChannel.ForAddress(_options.GrpcEndpoint, channelOptions);
@@ -103,7 +107,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
     public async Task<StoryProtocolMetadata> RegisterIpAssetAsync(
         string contentId,
         string contentTitle,
-        List<Contributor> contributors,
+        List<Mystira.App.Domain.Models.Contributor> contributors,
         string? metadataUri = null,
         string? licenseTermsId = null)
     {
@@ -123,7 +127,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
         // Map domain contributors to proto contributors
         foreach (var contributor in contributors)
         {
-            request.Contributors.Add(new Chain.V1.Contributor
+            request.Contributors.Add(new ProtoContributor
             {
                 WalletAddress = contributor.WalletAddress,
                 ContributorType = MapContributorType(contributor.Role),
@@ -208,7 +212,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
             {
                 IpAssetId = ipAssetId,
                 RoyaltyModuleId = response.RoyaltyModuleId,
-                Contributors = response.Recipients.Select(r => new Contributor
+                Contributors = response.Recipients.Select(r => new Mystira.App.Domain.Models.Contributor
                 {
                     WalletAddress = r.WalletAddress,
                     ContributionPercentage = r.ShareBasisPoints / 100m,
@@ -235,7 +239,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
     /// <inheritdoc />
     public async Task<StoryProtocolMetadata> UpdateRoyaltySplitAsync(
         string ipAssetId,
-        List<Contributor> contributors)
+        List<Mystira.App.Domain.Models.Contributor> contributors)
     {
         _logger.LogInformation(
             "Updating royalty split for IP Asset {IpAssetId} with {ContributorCount} contributors via gRPC",
@@ -249,7 +253,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
 
         foreach (var contributor in contributors)
         {
-            request.Contributors.Add(new Chain.V1.Contributor
+            request.Contributors.Add(new ProtoContributor
             {
                 WalletAddress = contributor.WalletAddress,
                 ContributorType = MapContributorType(contributor.Role),

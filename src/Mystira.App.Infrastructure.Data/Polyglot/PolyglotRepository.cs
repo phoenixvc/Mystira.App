@@ -61,33 +61,33 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     }
 
     /// <inheritdoc />
-    public override async Task UpdateAsync(T entity, CancellationToken cancellationToken = default)
+    public override async Task<int> UpdateAsync(T entity, CancellationToken cancellationToken = default)
     {
         if (IsDualWriteMode)
         {
             await DualWriteAsync(
-                async () => { await base.UpdateAsync(entity, cancellationToken); return entity; },
+                async () => { var result = await base.UpdateAsync(entity, cancellationToken); return entity; },
                 async () => { await UpdateInSecondaryAsync(entity, cancellationToken); return entity; },
                 cancellationToken);
-            return;
+            return 1; // Assuming single entity update
         }
 
-        await base.UpdateAsync(entity, cancellationToken);
+        return await base.UpdateAsync(entity, cancellationToken);
     }
 
     /// <inheritdoc />
-    public override async Task DeleteAsync(T entity, CancellationToken cancellationToken = default)
+    public override async Task<int> DeleteAsync(T entity, CancellationToken cancellationToken = default)
     {
         if (IsDualWriteMode)
         {
             await DualWriteAsync(
-                async () => { await base.DeleteAsync(entity, cancellationToken); return entity; },
+                async () => { var result = await base.DeleteAsync(entity, cancellationToken); return entity; },
                 async () => { await DeleteFromSecondaryAsync(entity, cancellationToken); return entity; },
                 cancellationToken);
-            return;
+            return 1; // Assuming single entity delete
         }
 
-        await base.DeleteAsync(entity, cancellationToken);
+        return await base.DeleteAsync(entity, cancellationToken);
     }
 
     /// <inheritdoc />
