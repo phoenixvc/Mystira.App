@@ -8,6 +8,7 @@ using Mystira.App.Application.Configuration.StoryProtocol;
 using Mystira.App.Application.Ports;
 using Mystira.App.Domain.Models;
 using Mystira.Chain.V1;
+using ProtoContributor = Mystira.Chain.V1.Contributor;
 
 namespace Mystira.App.Infrastructure.StoryProtocol.Services;
 
@@ -94,7 +95,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
     public async Task<StoryProtocolMetadata> RegisterIpAssetAsync(
         string contentId,
         string contentTitle,
-        List<Contributor> contributors,
+        List<Mystira.App.Domain.Models.Contributor> contributors,
         string? metadataUri = null,
         string? licenseTermsId = null)
     {
@@ -114,7 +115,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
         // Map domain contributors to proto contributors
         foreach (var contributor in contributors)
         {
-            request.Contributors.Add(new Chain.V1.Contributor
+            request.Contributors.Add(new ProtoContributor
             {
                 WalletAddress = contributor.WalletAddress,
                 ContributorType = MapContributorType(contributor.Role),
@@ -199,7 +200,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
             {
                 IpAssetId = ipAssetId,
                 RoyaltyModuleId = response.RoyaltyModuleId,
-                Contributors = response.Recipients.Select(r => new Contributor
+                Contributors = response.Recipients.Select(r => new Mystira.App.Domain.Models.Contributor
                 {
                     WalletAddress = r.WalletAddress,
                     ContributionPercentage = r.ShareBasisPoints / 100m,
@@ -226,7 +227,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
     /// <inheritdoc />
     public async Task<StoryProtocolMetadata> UpdateRoyaltySplitAsync(
         string ipAssetId,
-        List<Contributor> contributors)
+        List<Mystira.App.Domain.Models.Contributor> contributors)
     {
         _logger.LogInformation(
             "Updating royalty split for IP Asset {IpAssetId} with {ContributorCount} contributors via gRPC",
@@ -240,7 +241,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
 
         foreach (var contributor in contributors)
         {
-            request.Contributors.Add(new Chain.V1.Contributor
+            request.Contributors.Add(new ProtoContributor
             {
                 WalletAddress = contributor.WalletAddress,
                 ContributorType = MapContributorType(contributor.Role),
