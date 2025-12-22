@@ -192,8 +192,8 @@ Per [Workspace ADR-0013](https://github.com/phoenixvc/Mystira.workspace/blob/dev
 1. **Ardalis.Specification Integration**
    - [x] Add Ardalis.Specification package to Application layer
    - [x] Create base specifications for common queries
-   - [ ] Migrate existing query logic to specifications
-   - [ ] Add specification unit tests
+   - [x] Migrate existing query logic to specifications (deprecated old specs)
+   - [x] Add specification unit tests
 
 2. **Repository Pattern Enhancement**
    - [x] Define `IPolyglotRepository<T>` interface
