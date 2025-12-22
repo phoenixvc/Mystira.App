@@ -1,4 +1,4 @@
-namespace Mystira.App.Admin.Api.Validation;
+namespace Mystira.App.Api.Validation;
 
 public static class ScenarioSchemaDefinitions
 {

@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package mystira.chain.v1;
+
+option csharp_namespace = "Mystira.Chain.V1";
+
+import "google/protobuf/timestamp.proto";
+
+// Request to pay royalties
+message PayRoyaltiesRequest {
+  string ip_asset_id = 1;
+  // Amount in wei (as string to handle uint256)
+  string amount_wei = 2;
+  // Token address (0x0 for native currency, or WIP token address)
+  string currency_token = 3;
+  // Reference for tracking (e.g., order ID)
+  optional string payer_reference = 4;
+  string idempotency_key = 5;
+}
+
+// Response after royalty payment
+message PayRoyaltiesResponse {
+  string ip_asset_id = 1;
+  optional string transaction_hash = 2;
+  string amount_wei = 3;
+  string currency_token = 4;
+  PaymentStatus status = 5;
+  optional string error_message = 6;
+  optional string payment_id = 7;
+  optional google.protobuf.Timestamp paid_at = 8;
+}
+
+enum PaymentStatus {
+  PAYMENT_STATUS_UNSPECIFIED = 0;
+  PAYMENT_STATUS_PENDING = 1;
+  PAYMENT_STATUS_CONFIRMED = 2;
+  PAYMENT_STATUS_FAILED = 3;
+}
+
+// Request to get claimable royalties
+message GetClaimableRoyaltiesRequest {
+  string wallet_address = 1;
+  optional string ip_asset_id = 2;
+}
+
+// Response with claimable royalties
+message ClaimableRoyaltiesResponse {
+  string wallet_address = 1;
+  repeated ClaimableBalance balances = 2;
+  google.protobuf.Timestamp last_updated = 3;
+}
+
+message ClaimableBalance {
+  string ip_asset_id = 1;
+  string currency_token = 2;
+  // Amount in wei (as string to handle uint256)
+  string amount_wei = 3;
+  // Human-readable amount (with decimals applied)
+  string amount_formatted = 4;
+}
+
+// Request to claim royalties
+message ClaimRoyaltiesRequest {
+  string ip_asset_id = 1;
+  string contributor_wallet = 2;
+  string currency_token = 3;
+  string idempotency_key = 4;
+}
+
+// Response after claiming royalties
+message ClaimRoyaltiesResponse {
+  string ip_asset_id = 1;
+  string contributor_wallet = 2;
+  optional string transaction_hash = 3;
+  string amount_claimed_wei = 4;
+  PaymentStatus status = 5;
+  optional string error_message = 6;
+  optional google.protobuf.Timestamp claimed_at = 7;
+}
+
+// Request to get royalty configuration
+message GetRoyaltyConfigurationRequest {
+  string ip_asset_id = 1;
+}
+
+// Response with royalty configuration
+message RoyaltyConfigurationResponse {
+  string ip_asset_id = 1;
+  string royalty_module_id = 2;
+  repeated RoyaltyRecipient recipients = 3;
+  google.protobuf.Timestamp last_updated = 4;
+}
+
+message RoyaltyRecipient {
+  string wallet_address = 1;
+  // Share as basis points (100 = 1%)
+  uint32 share_basis_points = 2;
+  // Role/type of recipient
+  string role = 3;
+}

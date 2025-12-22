@@ -29,6 +29,7 @@ using Mystira.App.Infrastructure.Discord;
 using Mystira.App.Infrastructure.Discord.Services;
 using Mystira.App.Infrastructure.StoryProtocol;
 using Mystira.App.Shared.Adapters;
+using Mystira.App.Shared.Configuration;
 using Mystira.App.Shared.Middleware;
 using Mystira.App.Shared.Services;
 using Mystira.App.Shared.Telemetry;
@@ -49,6 +50,14 @@ try
     Log.Information("Starting Mystira.App.Api");
 
     var builder = WebApplication.CreateBuilder(args);
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // AZURE KEY VAULT CONFIGURATION (for secure secret management)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Add Key Vault as configuration source - uses Managed Identity in Azure
+    // Secrets are loaded and accessible via IConfiguration like any other setting
+    // Example: configuration["JwtSettings:RsaPrivateKey"] loads from Key Vault
+    builder.Configuration.AddKeyVaultConfiguration(builder.Environment);
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // SERILOG CONFIGURATION (reads from appsettings.json)

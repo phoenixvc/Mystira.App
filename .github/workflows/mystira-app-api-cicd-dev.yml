@@ -68,6 +68,13 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
       - name: Install wasm-tools workload
         run: dotnet workload install wasm-tools
 
@@ -77,8 +84,8 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      - name: Test
-        run: dotnet test --no-build --configuration Release --verbosity normal
+      - name: Test with parallel execution
+        run: dotnet test --no-build --configuration Release --verbosity normal -- RunConfiguration.MaxCpuCount=0
 
       - name: Publish
         run: dotnet publish src/Mystira.App.Api/Mystira.App.Api.csproj --configuration Release --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}

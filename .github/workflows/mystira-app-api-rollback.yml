@@ -1,0 +1,173 @@
+name: API Rollback - Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      rollback_type:
+        description: 'Rollback type'
+        required: true
+        type: choice
+        options:
+          - swap-slots
+          - previous-deployment
+        default: 'swap-slots'
+      confirm_rollback:
+        description: 'Type "ROLLBACK" to confirm'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  AZURE_WEBAPP_NAME: "mys-prod-mystira-api-san"
+  RESOURCE_GROUP: "mys-prod-mystira-rg-san"
+  STAGING_SLOT_NAME: "staging"
+  APP_INSIGHTS_NAME: "mys-prod-mystira-appins-san"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      confirmed: ${{ steps.check.outputs.confirmed }}
+    steps:
+      - name: Validate confirmation
+        id: check
+        run: |
+          if [ "${{ github.event.inputs.confirm_rollback }}" = "ROLLBACK" ]; then
+            echo "confirmed=true" >> $GITHUB_OUTPUT
+            echo "✅ Rollback confirmed"
+          else
+            echo "confirmed=false" >> $GITHUB_OUTPUT
+            echo "❌ Rollback not confirmed. Please type 'ROLLBACK' to confirm."
+            exit 1
+          fi
+
+  rollback:
+    runs-on: ubuntu-latest
+    needs: validate
+    if: needs.validate.outputs.confirmed == 'true'
+    environment: production
+
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get current deployment info
+        id: current-info
+        run: |
+          echo "📋 Current deployment information:"
+
+          # Get production slot info
+          PROD_INFO=$(az webapp show \
+            --name "${{ env.AZURE_WEBAPP_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --query "{state:state,lastModified:lastModifiedTimeUtc}" -o json)
+          echo "Production: ${PROD_INFO}"
+
+          # Get staging slot info
+          STAGING_INFO=$(az webapp show \
+            --name "${{ env.AZURE_WEBAPP_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --slot "${{ env.STAGING_SLOT_NAME }}" \
+            --query "{state:state,lastModified:lastModifiedTimeUtc}" -o json 2>/dev/null || echo "Staging slot not found")
+          echo "Staging: ${STAGING_INFO}"
+
+      - name: Rollback via slot swap
+        if: github.event.inputs.rollback_type == 'swap-slots'
+        run: |
+          echo "🔄 Performing rollback by swapping slots..."
+          echo "This will swap the staging slot (previous version) with production."
+
+          az webapp deployment slot swap \
+            --name "${{ env.AZURE_WEBAPP_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --slot "${{ env.STAGING_SLOT_NAME }}" \
+            --target-slot production
+
+          if [ $? -eq 0 ]; then
+            echo "✅ Slot swap completed successfully!"
+          else
+            echo "❌ Slot swap failed!"
+            exit 1
+          fi
+
+      - name: Rollback to previous deployment
+        if: github.event.inputs.rollback_type == 'previous-deployment'
+        run: |
+          echo "📜 Getting deployment history..."
+
+          # List recent deployments
+          az webapp deployment list \
+            --name "${{ env.AZURE_WEBAPP_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --query "[].{id:id,status:status,message:message,author:author,deployer:deployer,receivedTime:receivedTime}" \
+            --output table
+
+          echo ""
+          echo "⚠️ Manual action required:"
+          echo "To rollback to a previous deployment, use the Azure Portal or CLI:"
+          echo "  az webapp deployment source sync --name ${{ env.AZURE_WEBAPP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }}"
+          echo ""
+          echo "Or redeploy a specific version via the CI/CD pipeline."
+
+      - name: Verify rollback health
+        id: health-check
+        run: |
+          echo "🔍 Verifying rollback health..."
+          sleep 30
+
+          APP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+
+          for i in 1 2 3 4 5; do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 10 \
+              --max-time 30 \
+              "${APP_URL}/health" || echo "000")
+
+            echo "  Attempt $i: /health status ${HTTP_STATUS}"
+
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "✅ Rollback verified - application is healthy!"
+              echo "health_status=healthy" >> $GITHUB_OUTPUT
+              break
+            fi
+
+            if [ $i -eq 5 ]; then
+              echo "⚠️ Health check not passing after rollback"
+              echo "health_status=degraded" >> $GITHUB_OUTPUT
+            fi
+
+            sleep 10
+          done
+
+      - name: Create rollback annotation
+        if: always()
+        run: |
+          ROLLBACK_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          az monitor app-insights component create-annotation \
+            --app "${{ env.APP_INSIGHTS_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --annotation-name "Rollback" \
+            --category "Deployment" \
+            --properties "{\"Application\":\"Mystira.App.Api\",\"Environment\":\"Production\",\"Action\":\"Rollback\",\"Type\":\"${{ github.event.inputs.rollback_type }}\",\"TriggeredBy\":\"${{ github.actor }}\",\"Timestamp\":\"${ROLLBACK_TIME}\",\"WorkflowRun\":\"${{ github.run_id }}\"}" \
+            || echo "Failed to create annotation"
+
+      - name: Rollback summary
+        if: always()
+        run: |
+          echo "## 🔄 Rollback Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Type | ${{ github.event.inputs.rollback_type }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered By | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Health Status | ${{ steps.health-check.outputs.health_status || 'unknown' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Timestamp | $(date -u +"%Y-%m-%dT%H:%M:%SZ") |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Azure Logout
+        if: always()
+        run: az logout

@@ -1,0 +1,141 @@
+syntax = "proto3";
+
+package mystira.chain.v1;
+
+option csharp_namespace = "Mystira.Chain.V1";
+
+import "google/protobuf/timestamp.proto";
+
+// Type of contributor to a story
+enum ContributorType {
+  CONTRIBUTOR_TYPE_UNSPECIFIED = 0;
+  CONTRIBUTOR_TYPE_PUBLISHER = 1;
+  CONTRIBUTOR_TYPE_CURATOR = 2;
+  CONTRIBUTOR_TYPE_AUTHOR = 3;
+  CONTRIBUTOR_TYPE_ARTIST = 4;
+  CONTRIBUTOR_TYPE_OTHER = 5;
+}
+
+// A contributor to a story with royalty share
+message Contributor {
+  string wallet_address = 1;
+  ContributorType contributor_type = 2;
+  // Share percentage as basis points (100 = 1%, 10000 = 100%)
+  uint32 share_basis_points = 3;
+  // Optional display name
+  optional string display_name = 4;
+}
+
+// Request to register a story as an IP Asset
+message RegisterIpAssetRequest {
+  string content_id = 1;
+  string content_title = 2;
+  repeated Contributor contributors = 3;
+  optional string metadata_uri = 4;
+  optional string license_terms_id = 5;
+  // Idempotency key to prevent duplicate registrations
+  string idempotency_key = 6;
+}
+
+// Response after IP Asset registration
+message RegisterIpAssetResponse {
+  string content_id = 1;
+  optional string ip_asset_id = 2;
+  optional string nft_token_id = 3;
+  optional string registration_tx_hash = 4;
+  IpAssetStatus status = 5;
+  optional google.protobuf.Timestamp registered_at = 6;
+  optional string error_message = 7;
+}
+
+// Status of IP Asset registration
+enum IpAssetStatus {
+  IP_ASSET_STATUS_UNSPECIFIED = 0;
+  IP_ASSET_STATUS_PENDING = 1;
+  IP_ASSET_STATUS_PROCESSING = 2;
+  IP_ASSET_STATUS_REGISTERED = 3;
+  IP_ASSET_STATUS_FAILED = 4;
+}
+
+// Request to get IP Asset status
+message GetIpAssetStatusRequest {
+  string content_id = 1;
+}
+
+// Response with IP Asset status
+message IpAssetStatusResponse {
+  string content_id = 1;
+  IpAssetStatus status = 2;
+  optional string ip_asset_id = 3;
+  optional string nft_token_id = 4;
+  optional string transaction_hash = 5;
+  optional google.protobuf.Timestamp last_updated = 6;
+  repeated Contributor contributors = 7;
+}
+
+// Request to check if content is registered
+message IsRegisteredRequest {
+  string content_id = 1;
+}
+
+// Response for registration check
+message IsRegisteredResponse {
+  string content_id = 1;
+  bool is_registered = 2;
+  optional string ip_asset_id = 3;
+}
+
+// Request to update royalty splits
+message UpdateRoyaltySplitRequest {
+  string ip_asset_id = 1;
+  repeated Contributor contributors = 2;
+  string idempotency_key = 3;
+}
+
+// Response after updating royalty splits
+message UpdateRoyaltySplitResponse {
+  string ip_asset_id = 1;
+  optional string transaction_hash = 2;
+  bool success = 3;
+  optional string error_message = 4;
+  repeated Contributor contributors = 5;
+}
+
+// Request to watch transaction updates
+message WatchTransactionsRequest {
+  repeated string transaction_hashes = 1;
+}
+
+// Transaction status update (for streaming)
+message TransactionUpdate {
+  string transaction_hash = 1;
+  TransactionStatus status = 2;
+  uint64 confirmations = 3;
+  optional string error_message = 4;
+  google.protobuf.Timestamp timestamp = 5;
+  optional string block_hash = 6;
+  optional uint64 block_number = 7;
+}
+
+enum TransactionStatus {
+  TRANSACTION_STATUS_UNSPECIFIED = 0;
+  TRANSACTION_STATUS_PENDING = 1;
+  TRANSACTION_STATUS_CONFIRMED = 2;
+  TRANSACTION_STATUS_FAILED = 3;
+}
+
+// Response for batch registration
+message BatchRegisterResponse {
+  uint32 total_submitted = 1;
+  uint32 successful = 2;
+  uint32 failed = 3;
+  repeated BatchRegisterResult results = 4;
+}
+
+message BatchRegisterResult {
+  string content_id = 1;
+  bool success = 2;
+  optional string ip_asset_id = 3;
+  optional string transaction_hash = 4;
+  optional string error_message = 5;
+}

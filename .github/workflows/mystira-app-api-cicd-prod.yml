@@ -10,6 +10,19 @@ on:
         required: false
         type: boolean
         default: false
+      deployment_strategy:
+        description: 'Deployment strategy'
+        required: false
+        type: choice
+        options:
+          - blue-green
+          - direct
+        default: 'blue-green'
+      auto_rollback:
+        description: 'Auto-rollback on health check failure'
+        required: false
+        type: boolean
+        default: true
   # Also trigger after infrastructure deployment
   workflow_run:
     workflows: ["Infrastructure Deploy - Production"]
@@ -37,6 +50,10 @@ env:
   # Application Insights for deployment annotations
   APP_INSIGHTS_NAME: "mys-prod-mystira-appins-san"
   RESOURCE_GROUP: "mys-prod-mystira-rg-san"
+  # Blue-green deployment settings
+  STAGING_SLOT_NAME: "staging"
+  # Default deployment strategy (can be overridden by workflow_dispatch input)
+  DEFAULT_DEPLOYMENT_STRATEGY: "blue-green"
 
 jobs:
   check-secrets:
@@ -94,6 +111,13 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
       - name: Install wasm-tools workload
         run: dotnet workload install wasm-tools
 
@@ -118,6 +142,9 @@ jobs:
   deploy-prod:
     runs-on: ubuntu-latest
     needs: [check-secrets, build-and-test]
+    outputs:
+      deployment_status: ${{ steps.final-status.outputs.status }}
+      deployed_slot: ${{ steps.determine-strategy.outputs.target_slot }}
 
     # Deploy on:
     # - Manual workflow dispatch
@@ -134,6 +161,23 @@ jobs:
     environment: production
 
     steps:
+      - name: Determine deployment strategy
+        id: determine-strategy
+        run: |
+          STRATEGY="${{ github.event.inputs.deployment_strategy || env.DEFAULT_DEPLOYMENT_STRATEGY }}"
+          AUTO_ROLLBACK="${{ github.event.inputs.auto_rollback || 'true' }}"
+
+          echo "strategy=${STRATEGY}" >> $GITHUB_OUTPUT
+          echo "auto_rollback=${AUTO_ROLLBACK}" >> $GITHUB_OUTPUT
+
+          if [ "$STRATEGY" = "blue-green" ]; then
+            echo "target_slot=${{ env.STAGING_SLOT_NAME }}" >> $GITHUB_OUTPUT
+            echo "🔵🟢 Using blue-green deployment strategy"
+          else
+            echo "target_slot=production" >> $GITHUB_OUTPUT
+            echo "🚀 Using direct deployment strategy"
+          fi
+
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
@@ -146,7 +190,19 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to Azure Web App (Production)
+      # Blue-green: Deploy to staging slot first
+      - name: Deploy to staging slot (Blue-Green)
+        if: steps.determine-strategy.outputs.strategy == 'blue-green'
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          slot-name: ${{ env.STAGING_SLOT_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD_STAGING }}
+          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+      # Direct: Deploy to production directly
+      - name: Deploy to production (Direct)
+        if: steps.determine-strategy.outputs.strategy != 'blue-green'
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
@@ -225,8 +281,15 @@ jobs:
         env:
           # Configurable startup wait time (default 45s for App Service cold start)
           POST_DEPLOY_WAIT_SECONDS: ${{ vars.POST_DEPLOY_WAIT_SECONDS || '45' }}
+          DEPLOYMENT_STRATEGY: ${{ steps.determine-strategy.outputs.strategy }}
         run: |
-          APP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+          # Determine URL based on deployment strategy
+          if [ "$DEPLOYMENT_STRATEGY" = "blue-green" ]; then
+            APP_URL="https://${{ env.AZURE_WEBAPP_NAME }}-${{ env.STAGING_SLOT_NAME }}.azurewebsites.net"
+            echo "🔵🟢 Testing staging slot before swap..."
+          else
+            APP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+          fi
           echo "🔍 Running post-deployment smoke tests for ${APP_URL}"
 
           # Wait for deployment to stabilize (configurable via repository variable)
@@ -304,11 +367,77 @@ jobs:
             sleep $DELAY
           done
 
+      - name: Swap slots (Blue-Green)
+        id: slot-swap
+        if: steps.determine-strategy.outputs.strategy == 'blue-green' && steps.smoke-test.outputs.health_status == 'healthy'
+        run: |
+          echo "🔄 Swapping staging slot to production..."
+          if az webapp deployment slot swap \
+            --name "${{ env.AZURE_WEBAPP_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --slot "${{ env.STAGING_SLOT_NAME }}" \
+            --target-slot production; then
+            echo "✅ Slot swap completed successfully!"
+            echo "swap_status=success" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Slot swap failed!"
+            echo "swap_status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Skip swap - Health check failed (Blue-Green)
+        if: steps.determine-strategy.outputs.strategy == 'blue-green' && steps.smoke-test.outputs.health_status != 'healthy'
+        run: |
+          AUTO_ROLLBACK="${{ steps.determine-strategy.outputs.auto_rollback }}"
+          echo "⚠️ Health check did not pass - staging slot NOT swapped to production"
+          echo "Auto-rollback enabled: ${AUTO_ROLLBACK}"
+
+          if [ "$AUTO_ROLLBACK" = "true" ]; then
+            echo "🛑 Auto-rollback: Production remains unchanged. Staging slot contains failed deployment."
+            echo "   To retry, trigger a new deployment or manually swap after fixing issues."
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ⚠️ Blue-Green Deployment Halted" >> $GITHUB_STEP_SUMMARY
+          echo "Staging slot health check did not pass. Production remains unchanged." >> $GITHUB_STEP_SUMMARY
+          echo "- Health Status: ${{ steps.smoke-test.outputs.health_status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Staging URL: https://${{ env.AZURE_WEBAPP_NAME }}-${{ env.STAGING_SLOT_NAME }}.azurewebsites.net" >> $GITHUB_STEP_SUMMARY
+
       - name: Update deployment annotation with result
         if: always()
         run: |
           HEALTH_STATUS="${{ steps.smoke-test.outputs.health_status || 'unknown' }}"
-          echo "Deployment completed. Health status: ${HEALTH_STATUS}"
+          SWAP_STATUS="${{ steps.slot-swap.outputs.swap_status || 'not-applicable' }}"
+          STRATEGY="${{ steps.determine-strategy.outputs.strategy }}"
+
+          echo "Deployment completed."
+          echo "  Strategy: ${STRATEGY}"
+          echo "  Health status: ${HEALTH_STATUS}"
+          echo "  Swap status: ${SWAP_STATUS}"
+
+      - name: Set final deployment status
+        id: final-status
+        if: always()
+        run: |
+          HEALTH="${{ steps.smoke-test.outputs.health_status || 'unknown' }}"
+          STRATEGY="${{ steps.determine-strategy.outputs.strategy }}"
+          SWAP="${{ steps.slot-swap.outputs.swap_status || 'not-applicable' }}"
+
+          if [ "$STRATEGY" = "blue-green" ]; then
+            if [ "$SWAP" = "success" ]; then
+              echo "status=success" >> $GITHUB_OUTPUT
+            elif [ "$HEALTH" != "healthy" ]; then
+              echo "status=rolled-back" >> $GITHUB_OUTPUT
+            else
+              echo "status=failed" >> $GITHUB_OUTPUT
+            fi
+          else
+            if [ "$HEALTH" = "healthy" ] || [ "$HEALTH" = "degraded" ]; then
+              echo "status=success" >> $GITHUB_OUTPUT
+            else
+              echo "status=failed" >> $GITHUB_OUTPUT
+            fi
+          fi
 
       - name: Azure Logout
         if: always()

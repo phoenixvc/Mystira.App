@@ -7,6 +7,15 @@ namespace Mystira.App.Domain.Specifications;
 /// Provides a fluent API for building query specifications
 /// </summary>
 /// <typeparam name="T">The entity type</typeparam>
+/// <remarks>
+/// DEPRECATED: Use Ardalis.Specification-based specifications instead.
+/// New specifications should inherit from:
+/// - Mystira.App.Application.Specifications.BaseEntitySpecification{T} for list queries
+/// - Mystira.App.Application.Specifications.SingleEntitySpecification{T} for single result queries
+///
+/// Migration guide available in Application/Specifications/BaseEntitySpecification.cs
+/// </remarks>
+[Obsolete("Use Ardalis.Specification-based specs in Application.Specifications namespace instead")]
 public abstract class BaseSpecification<T> : ISpecification<T>
 {
     protected BaseSpecification()
