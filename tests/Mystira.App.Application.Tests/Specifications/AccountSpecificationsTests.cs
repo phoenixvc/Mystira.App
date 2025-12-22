@@ -159,11 +159,8 @@ public class AccountSpecificationsTests
             Id = id,
             Email = email,
             Auth0UserId = auth0UserId,
-            Subscription = new SubscriptionDetails
-            {
-                IsActive = isActive
-            },
-            CreatedAt = DateTime.UtcNow
+            Subscription = new SubscriptionDetails { IsActive = isActive },
+            LastLoginAt = DateTime.UtcNow
         };
     }
 }

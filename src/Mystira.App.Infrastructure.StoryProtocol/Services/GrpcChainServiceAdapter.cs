@@ -10,6 +10,9 @@ using Mystira.App.Domain.Models;
 using Mystira.Chain.V1;
 using ProtoContributor = Mystira.Chain.V1.Contributor;
 
+// Alias for proto Contributor type to avoid ambiguity with domain Contributor
+using ProtoContributor = Mystira.Chain.V1.Contributor;
+
 namespace Mystira.App.Infrastructure.StoryProtocol.Services;
 
 /// <summary>
@@ -36,13 +39,41 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
         _logger = logger;
         _options = options.Value;
 
+        // Validate GrpcEndpoint is configured
+        if (string.IsNullOrWhiteSpace(_options.GrpcEndpoint))
+        {
+            throw new InvalidOperationException(
+                "GrpcEndpoint is not configured. Ensure ChainService:GrpcEndpoint is set in configuration " +
+                "(typically loaded from Azure Key Vault as ChainService--GrpcEndpoint). " +
+                "See ADR-0013 for gRPC endpoint configuration requirements.");
+        }
+
         _logger.LogInformation(
             "Initializing gRPC Chain Service adapter for endpoint: {Endpoint}",
             _options.GrpcEndpoint);
 
         var channelOptions = new GrpcChannelOptions
         {
-            // Basic channel options without retry policy (use default retries)
+            // Configure retry policy
+            // Note: RetryPolicy configuration may require additional setup in gRPC 2.71+
+            // ServiceConfig = new ServiceConfig
+            // {
+            //     MethodConfigs =
+            //     {
+            //         new MethodConfig
+            //         {
+            //             Names = { MethodName.Default },
+            //             RetryPolicy = new RetryPolicy
+            //             {
+            //                 MaxAttempts = _options.MaxRetryAttempts,
+            //                 InitialBackoff = TimeSpan.FromMilliseconds(_options.RetryBaseDelayMs),
+            //                 MaxBackoff = TimeSpan.FromSeconds(30),
+            //                 BackoffMultiplier = 2,
+            //                 RetryableStatusCodes = { StatusCode.Unavailable, StatusCode.DeadlineExceeded }
+            //             }
+            //         }
+            //     }
+            // }
         };
 
         _channel = GrpcChannel.ForAddress(_options.GrpcEndpoint, channelOptions);

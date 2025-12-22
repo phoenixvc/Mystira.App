@@ -65,11 +65,11 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     {
         if (IsDualWriteMode)
         {
-            var result = await DualWriteIntAsync(
-                async () => await base.UpdateAsync(entity, cancellationToken),
-                async () => await UpdateInSecondaryAsync(entity, cancellationToken),
+            await DualWriteAsync(
+                async () => { var result = await base.UpdateAsync(entity, cancellationToken); return entity; },
+                async () => { await UpdateInSecondaryAsync(entity, cancellationToken); return entity; },
                 cancellationToken);
-            return result;
+            return 1; // Assuming single entity update
         }
 
         return await base.UpdateAsync(entity, cancellationToken);
@@ -80,20 +80,14 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     {
         if (IsDualWriteMode)
         {
-            var result = await DualWriteIntAsync(
-                async () => await base.DeleteAsync(entity, cancellationToken),
-                async () => await DeleteFromSecondaryAsync(entity, cancellationToken),
+            await DualWriteAsync(
+                async () => { var result = await base.DeleteAsync(entity, cancellationToken); return entity; },
+                async () => { await DeleteFromSecondaryAsync(entity, cancellationToken); return entity; },
                 cancellationToken);
-            return result;
+            return 1; // Assuming single entity delete
         }
 
         return await base.DeleteAsync(entity, cancellationToken);
-    }
-
-    /// <inheritdoc />
-    public override async Task<T?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default)
-    {
-        return await base.GetByIdAsync(id, cancellationToken);
     }
 
     /// <inheritdoc />

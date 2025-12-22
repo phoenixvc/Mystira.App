@@ -36,7 +36,8 @@ public static class CachingServiceCollectionExtensions
             options.InstanceName = cacheOptions.InstanceName;
         });
 
-        // TODO: Add health check - requires AspNetCore.HealthChecks.Redis package
+        // Add health check (requires AspNetCore.HealthChecks.Redis package)
+        // TODO: Add package reference: AspNetCore.HealthChecks.Redis
         // services.AddHealthChecks()
         //     .AddRedis(
         //         cacheOptions.ConnectionString,

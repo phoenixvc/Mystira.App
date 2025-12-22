@@ -109,7 +109,8 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
     }
 
     /// <inheritdoc />
-    public async Task<T?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default)
+
+    public async Task<T?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default) where TId : notnull
     {
         return await GetByIdAsync(id?.ToString() ?? string.Empty, cancellationToken);
     }
