@@ -1,6 +1,6 @@
 # Admin API Extraction Migration Plan
 
-**Status**: Proposed
+**Status**: In Progress (Repositories Created)
 **Date**: 2025-12-22
 **Owner**: Development Team
 **Related ADRs**: [ADR-0005](../architecture/adr/ADR-0005-separate-api-and-admin-api.md)
@@ -11,16 +11,20 @@
 
 This plan outlines the migration strategy for extracting the Admin API from `Mystira.App` into separate repositories. The extraction creates cleaner separation of concerns, enables independent release cycles, and improves security isolation.
 
+**Update**: The target repositories have been created and are available:
+- https://github.com/phoenixvc/Mystira.Admin.Api
+- https://github.com/phoenixvc/Mystira.Admin.UI
+
 ---
 
-## Target State
+## Current State
 
-### New Repositories
+### Repositories Created
 
-| Repository | Description | Tech Stack |
-|------------|-------------|------------|
-| `Mystira.Admin.Api` | Admin backend API (REST/gRPC) | .NET 9 |
-| `Mystira.Admin.UI` | Admin frontend (modern SPA) | React/Blazor |
+| Repository | Description | Tech Stack | Status |
+|------------|-------------|------------|--------|
+| [`Mystira.Admin.Api`](https://github.com/phoenixvc/Mystira.Admin.Api) | Admin backend API (REST/gRPC) | .NET 9 | Created |
+| [`Mystira.Admin.UI`](https://github.com/phoenixvc/Mystira.Admin.UI) | Admin frontend (modern SPA) | React/Blazor | Created |
 
 ### Shared Packages (NuGet)
 

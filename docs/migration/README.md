@@ -6,8 +6,17 @@ This folder contains detailed migration plans for repository extractions, archit
 
 | Document | Description | Status |
 |----------|-------------|--------|
-| [Admin API Extraction Plan](admin-api-extraction-plan.md) | Plan for extracting Admin API to separate repository | Proposed |
+| [Admin API Extraction Plan](admin-api-extraction-plan.md) | Plan for extracting Admin API to separate repository | In Progress |
 | [Infrastructure Migration](../architecture/adr/migration-mystira-infra.md) | Migration to Mystira.Infra repository | In Progress |
+
+### Extracted Repositories
+
+The following repositories have been created as part of the Admin API extraction:
+
+| Repository | Description | URL |
+|------------|-------------|-----|
+| Mystira.Admin.Api | Admin backend API (REST/gRPC) | https://github.com/phoenixvc/Mystira.Admin.Api |
+| Mystira.Admin.UI | Admin frontend (modern SPA) | https://github.com/phoenixvc/Mystira.Admin.UI |
 
 ## Related ADRs
 

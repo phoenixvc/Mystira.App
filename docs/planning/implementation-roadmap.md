@@ -14,16 +14,19 @@ This roadmap outlines the strategic implementation plan for Mystira.App, coverin
 
 ## Phase Summary
 
-| Phase | Focus Area | Status |
-|-------|------------|--------|
-| Phase 1 | Infrastructure Foundation | In Progress |
-| Phase 2 | Pipeline Enhancement | Planned |
-| Phase 3 | Monitoring & Observability | Planned |
-| Phase 4 | Documentation & Knowledge Management | Planned |
-| Phase 5 | Security & Compliance | Planned |
-| Phase 6 | Performance & Scalability | Planned |
-| Phase 7 | Developer Experience | Planned |
-| Phase 8 | Advanced Features | Planned |
+| Phase | Focus Area | Status | Priority |
+|-------|------------|--------|----------|
+| Phase 1 | Infrastructure Foundation | In Progress | High |
+| **Phase 1.5** | **Polyglot Integration (gRPC)** | **Planned** | **High** |
+| Phase 2 | Pipeline Enhancement | Planned | High |
+| Phase 3 | Monitoring & Observability | Planned | Medium |
+| Phase 4 | Documentation & Knowledge Management | Planned | Medium |
+| Phase 5 | Security & Compliance | Planned | High |
+| Phase 6 | Performance & Scalability | Planned | Medium |
+| Phase 7 | Developer Experience | Planned | Medium |
+| Phase 8 | Advanced Features | Planned | Low |
+
+> **Note**: Phase 1.5 (Polyglot Integration) is prioritized early due to cross-service communication requirements with Mystira.Chain and other Python/TypeScript services.
 
 ---
 
@@ -63,6 +66,100 @@ This roadmap outlines the strategic implementation plan for Mystira.App, coverin
 - Azure subscription access
 - Service principal configuration
 - Key Vault access policies
+
+---
+
+## Phase 1.5: Polyglot Integration (gRPC)
+
+> **Priority**: HIGH - Enables cross-service communication with Mystira.Chain and future Python/TypeScript services
+
+### Objectives
+
+- Implement gRPC for .NET to Python service communication
+- Establish Protocol Buffer contracts as single source of truth
+- Enable real-time streaming for blockchain transaction monitoring
+- Achieve 4-5x performance improvement over REST
+
+### Context
+
+Mystira uses a **polyglot architecture** with multiple tech stacks:
+
+| Service | Tech Stack | Communication |
+|---------|------------|---------------|
+| Mystira.App | .NET 9 | REST (public), gRPC (internal) |
+| Mystira.Chain | Python/FastAPI | gRPC server |
+| Mystira.Publisher | TypeScript/React | gRPC-Web to Chain |
+| Mystira.Admin.Api | .NET 9 | REST (public) |
+
+See [ADR-0013](../architecture/adr/ADR-0013-grpc-for-csharp-python-integration.md) for full technical details.
+
+### Key Deliverables
+
+1. **Protocol Buffer Definitions**
+   - [ ] Create shared `protos/` directory structure
+   - [ ] Define `chain_service.proto` for blockchain operations
+   - [ ] Define `ip_assets.proto` for IP asset management
+   - [ ] Define `royalties.proto` for royalty operations
+   - [ ] Set up proto compilation in build pipeline
+
+2. **gRPC Client Implementation (.NET)**
+   - [ ] Add `Mystira.App.Infrastructure.StoryProtocol` project
+   - [ ] Implement `GrpcChainServiceAdapter`
+   - [ ] Configure gRPC channel with authentication
+   - [ ] Add health check integration
+   - [ ] Implement retry policies with exponential backoff
+
+3. **gRPC Server Implementation (Python/Chain)**
+   - [ ] Add grpcio dependencies to Mystira.Chain
+   - [ ] Implement `ChainServiceServicer`
+   - [ ] Enable gRPC reflection for debugging
+   - [ ] Add health checking protocol
+   - [ ] Configure async server with thread pool
+
+4. **Streaming Operations**
+   - [ ] Implement `WatchTransactions` server streaming
+   - [ ] Implement `BatchRegisterIpAssets` client streaming
+   - [ ] Add transaction monitoring dashboard integration
+
+5. **Migration from REST**
+   - [ ] Add feature flag for gRPC vs REST switching
+   - [ ] Validate performance in staging
+   - [ ] Gradual rollout to production
+   - [ ] Deprecate REST endpoints after validation
+
+### Success Metrics
+
+| Metric | REST Baseline | gRPC Target | Improvement |
+|--------|---------------|-------------|-------------|
+| Latency (p50) | 45ms | <15ms | 3x faster |
+| Latency (p99) | 180ms | <40ms | 4.5x faster |
+| Throughput | 1,200 req/s | 5,000+ req/s | 4x higher |
+| Payload Size | 2.4 KB | <500 bytes | 5x smaller |
+
+### Dependencies
+
+- Mystira.Chain repository access
+- Proto file synchronization strategy
+- Azure Container Apps or App Service HTTP/2 support
+- Service-to-service authentication (API keys or managed identities)
+
+### Architecture
+
+```
+┌─────────────────────┐       ┌──────────────────────┐       ┌─────────────────┐
+│  Mystira.App.Api    │──────▶│   Mystira.Chain      │──────▶│  Story Protocol │
+│  (.NET)             │ gRPC  │   (Python/gRPC)      │  SDK  │  Blockchain     │
+└─────────────────────┘       └──────────────────────┘       └─────────────────┘
+        │                              │
+        └──────── Shared .proto ───────┘
+                    files
+```
+
+### Related Documents
+
+- [ADR-0013: gRPC for C#/Python Integration](../architecture/adr/ADR-0013-grpc-for-csharp-python-integration.md)
+- [ADR-0010: Story Protocol SDK Integration](../architecture/adr/ADR-0010-story-protocol-sdk-integration-strategy.md)
+- [Workspace ADR-0005: Service Networking](https://github.com/phoenixvc/Mystira.workspace) (external)
 
 ---
 
