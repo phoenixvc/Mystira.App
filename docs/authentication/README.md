@@ -77,17 +77,26 @@ The original custom passwordless authentication using email verification codes.
 
 ### For API Development
 
-1. **Configure JWT validation**:
-   ```csharp
-   builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-       .AddJwtBearer(options =>
-       {
-           options.Authority = "https://mystira.ciamlogin.com/<TENANT_ID>/v2.0";
-           options.Audience = "<API_CLIENT_ID>";
-       });
+1. **Configure JWT validation** (already done in `appsettings.json`):
+   ```json
+   {
+     "JwtSettings": {
+       "JwksEndpoint": "https://mystira.ciamlogin.com/<TENANT_ID>/discovery/v2.0/keys",
+       "Issuer": "https://mystira.ciamlogin.com/<TENANT_ID>/v2.0",
+       "Audience": "<PUBLIC_API_CLIENT_ID>"
+     }
+   }
    ```
 
-2. **Protect endpoints**:
+2. **Update configuration**:
+   ```bash
+   # Get Public API Client ID from Terraform
+   terraform output public_api_client_id
+   
+   # Update appsettings.json with the Client ID
+   ```
+
+3. **Protect endpoints**:
    ```csharp
    [Authorize]
    [HttpGet("profile")]
@@ -97,6 +106,8 @@ The original custom passwordless authentication using email verification codes.
        // ...
    }
    ```
+
+See [API Setup Guide](./ENTRA_EXTERNAL_ID_API_SETUP.md) for detailed instructions.
 
 ## Architecture
 
