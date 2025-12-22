@@ -52,14 +52,20 @@ public class GetScenariosWithGameStateQueryHandler
                 .ToList();
 
             var lastSession = sessions.FirstOrDefault();
-            var completedCount = sessions.Count(gs => gs.Status == Domain.Models.SessionStatus.Completed);
-            var hasPlayed = sessions.Any();
-            var isCompleted = completedCount > 0;
 
-            // Determine game state enum
-            var gameState = !hasPlayed ? ScenarioGameState.NotStarted
-                : isCompleted ? ScenarioGameState.Completed
-                : ScenarioGameState.InProgress;
+            // Only treat sessions that are currently active as "InProgress".
+            // This avoids showing scenarios as in-progress when all sessions are Completed/Abandoned.
+            var hasActiveSession = sessions.Any(gs =>
+                gs.Status == Domain.Models.SessionStatus.InProgress
+                || gs.Status == Domain.Models.SessionStatus.Paused);
+
+            var hasCompletedSession = sessions.Any(gs => gs.Status == Domain.Models.SessionStatus.Completed);
+
+            var gameState = hasActiveSession
+                ? ScenarioGameState.InProgress
+                : hasCompletedSession
+                    ? ScenarioGameState.Completed
+                    : ScenarioGameState.NotStarted;
 
             return new ScenarioWithGameState
             {
