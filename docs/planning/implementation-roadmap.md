@@ -17,11 +17,11 @@ This roadmap outlines the strategic implementation plan for Mystira.App, coverin
 | Phase | Focus Area | Status | Priority |
 |-------|------------|--------|----------|
 | Phase 1 | Infrastructure Foundation | In Progress | High |
-| **Phase 1.5** | **Polyglot Integration (gRPC)** | **In Progress** | **High** |
-| Phase 2 | Pipeline Enhancement | Planned | High |
+| **Phase 1.5** | **Polyglot Integration (gRPC)** | **Complete (Client)** | **High** |
+| Phase 2 | Pipeline Enhancement | In Progress | High |
 | Phase 3 | Monitoring & Observability | Planned | Medium |
 | Phase 4 | Documentation & Knowledge Management | Planned | Medium |
-| Phase 5 | Security & Compliance | Planned | High |
+| Phase 5 | Security & Compliance | In Progress | High |
 | Phase 6 | Performance & Scalability | Planned | Medium |
 | Phase 7 | Developer Experience | Planned | Medium |
 | Phase 8 | Advanced Features | Planned | Low |
@@ -175,8 +175,8 @@ See [ADR-0013](../architecture/adr/ADR-0013-grpc-for-csharp-python-integration.m
 
 1. **CI Pipeline Optimization**
    - [ ] Reduce build time to < 15 minutes
-   - [ ] Implement parallel test execution
-   - [ ] Add build caching for NuGet packages
+   - [x] Implement parallel test execution
+   - [x] Add build caching for NuGet packages
 
 2. **CD Pipeline Enhancement**
    - [ ] Implement blue-green deployments
@@ -186,7 +186,7 @@ See [ADR-0013](../architecture/adr/ADR-0013-grpc-for-csharp-python-integration.m
 3. **Staging Environment** (see [ADR-0008](../architecture/adr/ADR-0008-separate-staging-environment.md))
    - [x] Separate staging from production
    - [ ] Implement staging slot management
-   - [ ] Add smoke test automation
+   - [x] Add smoke test automation
 
 ### Success Metrics
 
@@ -275,7 +275,7 @@ See [ADR-0013](../architecture/adr/ADR-0013-grpc-for-csharp-python-integration.m
 1. **Secret Management**
    - [ ] Migrate all secrets to Key Vault
    - [ ] Implement secret rotation
-   - [ ] Add secret scanning in CI
+   - [x] Add secret scanning in CI (Gitleaks)
 
 2. **Access Control**
    - [ ] Implement RBAC for all resources
@@ -283,8 +283,8 @@ See [ADR-0013](../architecture/adr/ADR-0013-grpc-for-csharp-python-integration.m
    - [ ] Establish least privilege
 
 3. **Security Scanning**
-   - [ ] Add dependency vulnerability scanning
-   - [ ] Implement SAST in CI pipeline
+   - [x] Add dependency vulnerability scanning
+   - [x] Implement SAST in CI pipeline (CodeQL)
    - [ ] Configure security alerts
 
 ### Success Metrics
