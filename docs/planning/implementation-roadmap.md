@@ -274,19 +274,19 @@ Per [Workspace ADR-0013](https://github.com/phoenixvc/Mystira.workspace/blob/dev
 ### Key Deliverables
 
 1. **Application Insights Integration**
-   - [ ] Configure distributed tracing
-   - [ ] Implement custom metrics
-   - [ ] Set up availability tests
+   - [x] Configure distributed tracing (DistributedTracingExtensions.cs)
+   - [x] Implement custom metrics (CustomMetrics.cs - existing)
+   - [ ] Set up availability tests (via Terraform/Bicep)
 
 2. **Alerting Strategy**
-   - [ ] Define SLOs/SLIs
-   - [ ] Configure alert thresholds
-   - [ ] Establish escalation paths
+   - [x] Define SLOs/SLIs (docs/operations/slo-definitions.md)
+   - [x] Configure alert thresholds (defined in SLO doc)
+   - [x] Establish escalation paths (defined in SLO doc)
 
 3. **Dashboard & Reporting**
-   - [ ] Create operational dashboards
+   - [ ] Create operational dashboards (via Terraform/Bicep)
    - [ ] Implement cost monitoring
-   - [ ] Add performance baselines
+   - [x] Add performance baselines (P50/P95/P99 in SLO doc)
 
 ### Success Metrics
 
