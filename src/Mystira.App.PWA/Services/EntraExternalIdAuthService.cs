@@ -256,17 +256,18 @@ public class EntraExternalIdAuthService : IAuthService
     /// Initiates login flow with Microsoft Entra External ID
     /// Redirects to Entra login page which supports Google social login
     /// </summary>
-    public async Task LoginWithEntraAsync()
+    /// <param name="domainHint">Optional domain hint to skip the Entra signin page (e.g., "google.com" for Google)</param>
+    public async Task LoginWithEntraAsync(string? domainHint = null)
     {
         try
         {
-            _logger.LogInformation("Initiating Entra External ID login");
+            _logger.LogInformation("Initiating Entra External ID login with domain hint: {DomainHint}", domainHint ?? "none");
 
             var (authority, clientId, redirectUri) = GetEntraConfiguration();
             ValidateEntraConfiguration(authority, clientId);
 
             var (state, nonce) = await GenerateAndStoreSecurityTokensAsync();
-            var authUrl = BuildAuthorizationUrl(authority, clientId, redirectUri, state, nonce);
+            var authUrl = BuildAuthorizationUrl(authority, clientId, redirectUri, state, nonce, domainHint);
 
             _logger.LogInformation("Redirecting to Entra External ID: {AuthUrl}", authUrl);
             _navigationManager.NavigateTo(authUrl);
@@ -421,13 +422,13 @@ public class EntraExternalIdAuthService : IAuthService
 
     #region Private Helper Methods - URL Building
 
-    private static string BuildAuthorizationUrl(string authority, string clientId, string redirectUri, string state, string nonce)
+    private static string BuildAuthorizationUrl(string authority, string clientId, string redirectUri, string state, string nonce, string? domainHint = null)
     {
         // Authority format: https://mystira.ciamlogin.com/{tenant_id}
         // OAuth endpoint: https://mystira.ciamlogin.com/{tenant_id}/oauth2/v2.0/authorize
         var scopes = string.Join(" ", DefaultScopes);
 
-        return $"{authority}/oauth2/v2.0/authorize?" +
+        var url = $"{authority}/oauth2/v2.0/authorize?" +
             $"client_id={Uri.EscapeDataString(clientId)}&" +
             $"response_type=id_token token&" +
             $"redirect_uri={Uri.EscapeDataString(redirectUri)}&" +
@@ -435,6 +436,14 @@ public class EntraExternalIdAuthService : IAuthService
             $"scope={Uri.EscapeDataString(scopes)}&" +
             $"state={state}&" +
             $"nonce={nonce}";
+
+        // Add domain_hint to skip the Entra signin page and go directly to the identity provider
+        if (!string.IsNullOrEmpty(domainHint))
+        {
+            url += $"&domain_hint={Uri.EscapeDataString(domainHint)}";
+        }
+
+        return url;
     }
 
     private static string BuildLogoutUrl(string authority, string postLogoutRedirectUri)

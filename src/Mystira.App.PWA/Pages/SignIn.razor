@@ -459,7 +459,8 @@
             // Check if using Entra External ID auth service
             if (AuthService is EntraExternalIdAuthService entraService)
             {
-                await entraService.LoginWithEntraAsync();
+                // Use domain_hint to skip the Entra signin page and go directly to Google
+                await entraService.LoginWithEntraAsync("google.com");
             }
             else
             {
