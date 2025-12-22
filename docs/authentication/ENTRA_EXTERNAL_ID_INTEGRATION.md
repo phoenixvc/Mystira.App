@@ -51,7 +51,7 @@ Add External ID configuration to `wwwroot/appsettings.json`:
 ```json
 {
   "MicrosoftEntraExternalId": {
-    "Authority": "https://mystira.ciamlogin.com/<YOUR_TENANT_ID>",
+    "Authority": "https://mystira.ciamlogin.com/<YOUR_TENANT_ID>/v2.0",
     "ClientId": "<PWA_CLIENT_ID_FROM_TERRAFORM>",
     "ValidateAuthority": true
   },
