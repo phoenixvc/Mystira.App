@@ -9,10 +9,13 @@ using Mystira.App.Application.Configuration.StoryProtocol;
 using Mystira.App.Application.Ports;
 using Mystira.App.Domain.Models;
 using Mystira.Chain.V1;
+using Mystira.App.Application.Configuration.StoryProtocol;
+using Mystira.App.Application.Ports;
+using Mystira.App.Domain.Models;
+using Mystira.Chain.V1;
 using ProtoContributor = Mystira.Chain.V1.Contributor;
 
-// Alias for proto Contributor type to avoid ambiguity with domain Contributor
-using ProtoContributor = Mystira.Chain.V1.Contributor;
+namespace Mystira.App.Infrastructure.StoryProtocol.Services;
 
 namespace Mystira.App.Infrastructure.StoryProtocol.Services;
 
