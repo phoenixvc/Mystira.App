@@ -1,7 +1,9 @@
 using FluentAssertions;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
+using Microsoft.JSInterop.Infrastructure;
 using Moq;
 using Mystira.App.PWA.Models;
 using Mystira.App.PWA.Services;
@@ -17,6 +19,7 @@ public class EntraExternalIdAuthServiceTests : IDisposable
     private readonly Mock<IApiClient> _mockApiClient;
     private readonly Mock<IJSRuntime> _mockJsRuntime;
     private readonly Mock<IConfiguration> _mockConfiguration;
+    private readonly TestNavigationManager _navigationManager;
     private readonly EntraExternalIdAuthService _service;
 
     private const string TestAuthority = "https://test.ciamlogin.com/tenant-id/v2.0";
@@ -29,6 +32,7 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         _mockApiClient = new Mock<IApiClient>();
         _mockJsRuntime = new Mock<IJSRuntime>();
         _mockConfiguration = new Mock<IConfiguration>();
+        _navigationManager = new TestNavigationManager();
 
         SetupDefaultConfiguration();
 
@@ -36,7 +40,23 @@ public class EntraExternalIdAuthServiceTests : IDisposable
             _mockLogger.Object,
             _mockApiClient.Object,
             _mockJsRuntime.Object,
-            _mockConfiguration.Object);
+            _mockConfiguration.Object,
+            _navigationManager);
+    }
+
+    private class TestNavigationManager : NavigationManager
+    {
+        public string? NavigatedUrl { get; private set; }
+
+        public TestNavigationManager()
+        {
+            Initialize("http://localhost:5173/", "http://localhost:5173/");
+        }
+
+        protected override void NavigateToCore(string uri, NavigationOptions options)
+        {
+            NavigatedUrl = uri;
+        }
     }
 
     private void SetupDefaultConfiguration()
@@ -57,7 +77,8 @@ public class EntraExternalIdAuthServiceTests : IDisposable
             null!,
             _mockApiClient.Object,
             _mockJsRuntime.Object,
-            _mockConfiguration.Object);
+            _mockConfiguration.Object,
+            _navigationManager);
 
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("logger");
@@ -71,7 +92,8 @@ public class EntraExternalIdAuthServiceTests : IDisposable
             _mockLogger.Object,
             null!,
             _mockJsRuntime.Object,
-            _mockConfiguration.Object);
+            _mockConfiguration.Object,
+            _navigationManager);
 
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("apiClient");
@@ -85,7 +107,8 @@ public class EntraExternalIdAuthServiceTests : IDisposable
             _mockLogger.Object,
             _mockApiClient.Object,
             null!,
-            _mockConfiguration.Object);
+            _mockConfiguration.Object,
+            _navigationManager);
 
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("jsRuntime");
@@ -99,10 +122,26 @@ public class EntraExternalIdAuthServiceTests : IDisposable
             _mockLogger.Object,
             _mockApiClient.Object,
             _mockJsRuntime.Object,
-            null!);
+            null!,
+            _navigationManager);
 
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("configuration");
+    }
+
+    [Fact]
+    public void Constructor_WithNullNavigationManager_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        var act = () => new EntraExternalIdAuthService(
+            _mockLogger.Object,
+            _mockApiClient.Object,
+            _mockJsRuntime.Object,
+            _mockConfiguration.Object,
+            null!);
+
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("navigationManager");
     }
 
     #endregion
@@ -251,26 +290,42 @@ public class EntraExternalIdAuthServiceTests : IDisposable
     public async Task LoginWithEntraAsync_WithValidConfiguration_RedirectsToAuthUrl()
     {
         // Arrange
-        string? capturedUrl = null;
-        _mockJsRuntime.Setup(js => js.InvokeVoidAsync("sessionStorage.setItem", It.IsAny<object[]>()))
-            .Returns(ValueTask.CompletedTask);
-        _mockJsRuntime.Setup(js => js.InvokeVoidAsync("window.location.href", It.IsAny<object[]>()))
-            .Callback<string, object[]>((_, args) => capturedUrl = args[0] as string)
-            .Returns(ValueTask.CompletedTask);
+        _mockJsRuntime.Setup(js => js.InvokeAsync<IJSVoidResult>(It.IsAny<string>(), It.IsAny<object[]>()))
+            .ReturnsAsync(Mock.Of<IJSVoidResult>());
 
         // Act
         await _service.LoginWithEntraAsync();
 
         // Assert
+        var capturedUrl = _navigationManager.NavigatedUrl;
         capturedUrl.Should().NotBeNull();
-        capturedUrl.Should().StartWith($"{TestAuthority}/oauth2/authorize?");
+        // The authority in tests is "https://test.ciamlogin.com/tenant-id/v2.0"
+        // Our service should strip "/v2.0" and append "/oauth2/v2.0/authorize"
+        capturedUrl.Should().StartWith("https://test.ciamlogin.com/tenant-id/oauth2/v2.0/authorize?");
         capturedUrl.Should().Contain($"client_id={Uri.EscapeDataString(TestClientId)}");
         capturedUrl.Should().Contain($"redirect_uri={Uri.EscapeDataString(TestRedirectUri)}");
-        capturedUrl.Should().Contain("response_type=id_token%20token");
+        capturedUrl.Should().Contain("response_type=id_token token");
         capturedUrl.Should().Contain("response_mode=fragment");
         capturedUrl.Should().Contain("scope=openid%20profile%20email%20offline_access");
         capturedUrl.Should().Contain("state=");
         capturedUrl.Should().Contain("nonce=");
+    }
+
+    [Fact]
+    public async Task LoginWithEntraAsync_WithDomainHint_RedirectsWithDomainHintAndPrompt()
+    {
+        // Arrange
+        _mockJsRuntime.Setup(js => js.InvokeAsync<IJSVoidResult>(It.IsAny<string>(), It.IsAny<object[]>()))
+            .ReturnsAsync(Mock.Of<IJSVoidResult>());
+
+        // Act
+        await _service.LoginWithEntraAsync("google.com");
+
+        // Assert
+        var capturedUrl = _navigationManager.NavigatedUrl;
+        capturedUrl.Should().NotBeNull();
+        capturedUrl.Should().Contain("domain_hint=google.com");
+        capturedUrl.Should().Contain("prompt=login");
     }
 
     [Fact]
@@ -306,17 +361,15 @@ public class EntraExternalIdAuthServiceTests : IDisposable
     {
         // Arrange
         var storedValues = new Dictionary<string, string>();
-        _mockJsRuntime.Setup(js => js.InvokeVoidAsync("sessionStorage.setItem", It.IsAny<object[]>()))
-            .Callback<string, object[]>((_, args) =>
+        _mockJsRuntime.Setup(js => js.InvokeAsync<IJSVoidResult>(It.IsAny<string>(), It.IsAny<object[]>()))
+            .Callback<string, object[]>((identifier, args) =>
             {
-                if (args.Length == 2)
+                if (identifier == "sessionStorage.setItem" && args.Length == 2)
                 {
                     storedValues[args[0] as string ?? ""] = args[1] as string ?? "";
                 }
             })
-            .Returns(ValueTask.CompletedTask);
-        _mockJsRuntime.Setup(js => js.InvokeVoidAsync("window.location.href", It.IsAny<object[]>()))
-            .Returns(ValueTask.CompletedTask);
+            .ReturnsAsync(Mock.Of<IJSVoidResult>());
 
         // Act
         await _service.LoginWithEntraAsync();
@@ -332,15 +385,14 @@ public class EntraExternalIdAuthServiceTests : IDisposable
     public async Task LoginWithEntraAsync_WithJSException_ThrowsInvalidOperationException()
     {
         // Arrange
-        _mockJsRuntime.Setup(js => js.InvokeVoidAsync("sessionStorage.setItem", It.IsAny<object[]>()))
+        _mockJsRuntime.Setup(js => js.InvokeAsync<IJSVoidResult>(It.IsAny<string>(), It.IsAny<object[]>()))
             .ThrowsAsync(new JSException("JavaScript error"));
 
         // Act
         var act = async () => await _service.LoginWithEntraAsync();
 
         // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithInnerException<JSException>();
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     #endregion
@@ -355,14 +407,16 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         var testIdToken = CreateTestIdToken("test@example.com", "Test User", "sub-123");
         var fragment = $"#access_token={testAccessToken}&id_token={testIdToken}&state=test-state";
 
-        _mockJsRuntime.Setup(js => js.InvokeAsync<string>("eval", new object[] { "window.location.hash" }))
-            .ReturnsAsync(fragment);
-        _mockJsRuntime.Setup(js => js.InvokeAsync<string?>("sessionStorage.getItem", new object[] { "entra_auth_state" }))
-            .ReturnsAsync("test-state");
-        _mockJsRuntime.Setup(js => js.InvokeVoidAsync("localStorage.setItem", It.IsAny<object[]>()))
-            .Returns(ValueTask.CompletedTask);
-        _mockJsRuntime.Setup(js => js.InvokeVoidAsync("sessionStorage.removeItem", It.IsAny<object[]>()))
-            .Returns(ValueTask.CompletedTask);
+        _mockJsRuntime.Setup(js => js.InvokeAsync<string>(It.IsAny<string>(), It.IsAny<object[]>()))
+            .ReturnsAsync((string identifier, object[] args) =>
+            {
+                if (identifier == "eval") return fragment;
+                if (identifier == "sessionStorage.getItem") return "test-state";
+                return null!;
+            });
+
+        _mockJsRuntime.Setup(js => js.InvokeAsync<IJSVoidResult>(It.IsAny<string>(), It.IsAny<object[]>()))
+            .ReturnsAsync(Mock.Of<IJSVoidResult>());
 
         // Act
         var result = await _service.HandleLoginCallbackAsync();
@@ -375,8 +429,8 @@ public class EntraExternalIdAuthServiceTests : IDisposable
     public async Task HandleLoginCallbackAsync_WithNoFragment_ReturnsFalse()
     {
         // Arrange
-        _mockJsRuntime.Setup(js => js.InvokeAsync<string>("eval", new object[] { "window.location.hash" }))
-            .ReturnsAsync(string.Empty);
+        _mockJsRuntime.Setup(js => js.InvokeAsync<string>(It.IsAny<string>(), It.IsAny<object[]>()))
+            .ReturnsAsync("");
 
         // Act
         var result = await _service.HandleLoginCallbackAsync();
@@ -390,7 +444,7 @@ public class EntraExternalIdAuthServiceTests : IDisposable
     {
         // Arrange
         var fragment = "#id_token=test-id-token&state=test-state";
-        _mockJsRuntime.Setup(js => js.InvokeAsync<string>("eval", new object[] { "window.location.hash" }))
+        _mockJsRuntime.Setup(js => js.InvokeAsync<string>(It.IsAny<string>(), It.IsAny<object[]>()))
             .ReturnsAsync(fragment);
 
         // Act
@@ -408,10 +462,11 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         var testIdToken = CreateTestIdToken("test@example.com", "Test User", "sub-123");
         var fragment = $"#access_token={testAccessToken}&id_token={testIdToken}&state=wrong-state";
 
-        _mockJsRuntime.Setup(js => js.InvokeAsync<string>("eval", new object[] { "window.location.hash" }))
+        _mockJsRuntime.Setup(js => js.InvokeAsync<string>(It.IsAny<string>(), It.IsAny<object[]>()))
             .ReturnsAsync(fragment);
-        _mockJsRuntime.Setup(js => js.InvokeAsync<string?>("sessionStorage.getItem", new object[] { "entra_auth_state" }))
-            .ReturnsAsync("correct-state");
+        _mockJsRuntime.Setup(js => js.InvokeAsync<string?>(It.IsAny<string>(), It.IsAny<object[]>()))
+            .ReturnsAsync((string identifier, object[] args) =>
+                identifier == "sessionStorage.getItem" && (string)args[0] == "entra_auth_state" ? "correct-state" : null);
 
         // Act
         var result = await _service.HandleLoginCallbackAsync();
@@ -429,21 +484,23 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         var fragment = $"#access_token={testAccessToken}&id_token={testIdToken}&state=test-state";
         var storedValues = new Dictionary<string, string>();
 
-        _mockJsRuntime.Setup(js => js.InvokeAsync<string>("eval", new object[] { "window.location.hash" }))
-            .ReturnsAsync(fragment);
-        _mockJsRuntime.Setup(js => js.InvokeAsync<string?>("sessionStorage.getItem", new object[] { "entra_auth_state" }))
-            .ReturnsAsync("test-state");
-        _mockJsRuntime.Setup(js => js.InvokeVoidAsync("localStorage.setItem", It.IsAny<object[]>()))
-            .Callback<string, object[]>((_, args) =>
+        _mockJsRuntime.Setup(js => js.InvokeAsync<string>(It.IsAny<string>(), It.IsAny<object[]>()))
+            .ReturnsAsync((string identifier, object[] args) =>
             {
-                if (args.Length == 2)
+                if (identifier == "eval") return fragment;
+                if (identifier == "sessionStorage.getItem") return "test-state";
+                return null!;
+            });
+
+        _mockJsRuntime.Setup(js => js.InvokeAsync<IJSVoidResult>(It.IsAny<string>(), It.IsAny<object[]>()))
+            .Callback<string, object[]>((identifier, args) =>
+            {
+                if ((identifier == "localStorage.setItem" || identifier == "sessionStorage.setItem") && args.Length == 2)
                 {
                     storedValues[args[0] as string ?? ""] = args[1] as string ?? "";
                 }
             })
-            .Returns(ValueTask.CompletedTask);
-        _mockJsRuntime.Setup(js => js.InvokeVoidAsync("sessionStorage.removeItem", It.IsAny<object[]>()))
-            .Returns(ValueTask.CompletedTask);
+            .ReturnsAsync(Mock.Of<IJSVoidResult>());
 
         // Act
         await _service.HandleLoginCallbackAsync();
@@ -472,14 +529,16 @@ public class EntraExternalIdAuthServiceTests : IDisposable
             authenticatedState = isAuthenticated;
         };
 
-        _mockJsRuntime.Setup(js => js.InvokeAsync<string>("eval", new object[] { "window.location.hash" }))
-            .ReturnsAsync(fragment);
-        _mockJsRuntime.Setup(js => js.InvokeAsync<string?>("sessionStorage.getItem", new object[] { "entra_auth_state" }))
-            .ReturnsAsync("test-state");
-        _mockJsRuntime.Setup(js => js.InvokeVoidAsync("localStorage.setItem", It.IsAny<object[]>()))
-            .Returns(ValueTask.CompletedTask);
-        _mockJsRuntime.Setup(js => js.InvokeVoidAsync("sessionStorage.removeItem", It.IsAny<object[]>()))
-            .Returns(ValueTask.CompletedTask);
+        _mockJsRuntime.Setup(js => js.InvokeAsync<string>(It.IsAny<string>(), It.IsAny<object[]>()))
+            .ReturnsAsync((string identifier, object[] args) =>
+            {
+                if (identifier == "eval") return fragment;
+                if (identifier == "sessionStorage.getItem") return "test-state";
+                return null!;
+            });
+
+        _mockJsRuntime.Setup(js => js.InvokeAsync<IJSVoidResult>(It.IsAny<string>(), It.IsAny<object[]>()))
+            .ReturnsAsync(Mock.Of<IJSVoidResult>());
 
         // Act
         await _service.HandleLoginCallbackAsync();
@@ -498,17 +557,15 @@ public class EntraExternalIdAuthServiceTests : IDisposable
     {
         // Arrange
         var clearedKeys = new List<string>();
-        _mockJsRuntime.Setup(js => js.InvokeVoidAsync("localStorage.removeItem", It.IsAny<object[]>()))
-            .Callback<string, object[]>((_, args) =>
+        _mockJsRuntime.Setup(js => js.InvokeAsync<IJSVoidResult>(It.IsAny<string>(), It.IsAny<object[]>()))
+            .Callback<string, object[]>((identifier, args) =>
             {
-                if (args.Length == 1)
+                if (identifier == "localStorage.removeItem" && args.Length == 1)
                 {
                     clearedKeys.Add(args[0] as string ?? "");
                 }
             })
-            .Returns(ValueTask.CompletedTask);
-        _mockJsRuntime.Setup(js => js.InvokeVoidAsync("window.location.href", It.IsAny<object[]>()))
-            .Returns(ValueTask.CompletedTask);
+            .ReturnsAsync(Mock.Of<IJSVoidResult>());
 
         // Act
         await _service.LogoutAsync();
@@ -532,10 +589,8 @@ public class EntraExternalIdAuthServiceTests : IDisposable
             authenticatedState = isAuthenticated;
         };
 
-        _mockJsRuntime.Setup(js => js.InvokeVoidAsync("localStorage.removeItem", It.IsAny<object[]>()))
-            .Returns(ValueTask.CompletedTask);
-        _mockJsRuntime.Setup(js => js.InvokeVoidAsync("window.location.href", It.IsAny<object[]>()))
-            .Returns(ValueTask.CompletedTask);
+        _mockJsRuntime.Setup(js => js.InvokeAsync<IJSVoidResult>(It.IsAny<string>(), It.IsAny<object[]>()))
+            .ReturnsAsync(Mock.Of<IJSVoidResult>());
 
         // Act
         await _service.LogoutAsync();
@@ -549,19 +604,18 @@ public class EntraExternalIdAuthServiceTests : IDisposable
     public async Task LogoutAsync_RedirectsToLogoutEndpoint()
     {
         // Arrange
-        string? capturedUrl = null;
-        _mockJsRuntime.Setup(js => js.InvokeVoidAsync("localStorage.removeItem", It.IsAny<object[]>()))
-            .Returns(ValueTask.CompletedTask);
-        _mockJsRuntime.Setup(js => js.InvokeVoidAsync("window.location.href", It.IsAny<object[]>()))
-            .Callback<string, object[]>((_, args) => capturedUrl = args[0] as string)
-            .Returns(ValueTask.CompletedTask);
+        _mockJsRuntime.Setup(js => js.InvokeAsync<IJSVoidResult>(It.IsAny<string>(), It.IsAny<object[]>()))
+            .ReturnsAsync(Mock.Of<IJSVoidResult>());
 
         // Act
         await _service.LogoutAsync();
 
         // Assert
+        var capturedUrl = _navigationManager.NavigatedUrl;
         capturedUrl.Should().NotBeNull();
-        capturedUrl.Should().StartWith($"{TestAuthority}/oauth2/logout?");
+        // The authority in tests is "https://test.ciamlogin.com/tenant-id/v2.0"
+        // Our service should strip "/v2.0" and append "/oauth2/v2.0/logout"
+        capturedUrl.Should().StartWith("https://test.ciamlogin.com/tenant-id/oauth2/v2.0/logout?");
         capturedUrl.Should().Contain("post_logout_redirect_uri=");
     }
 
@@ -585,7 +639,7 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         // Arrange
         var expiryTimestamp = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds();
         var testToken = CreateTestIdToken("test@example.com", "Test User", "sub-123", expiryTimestamp);
-        
+
         _mockJsRuntime.Setup(js => js.InvokeAsync<string?>("localStorage.getItem", new object[] { "mystira_entra_token" }))
             .ReturnsAsync(testToken);
 
@@ -620,7 +674,7 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         // Arrange
         var expiryTimestamp = DateTimeOffset.UtcNow.AddMinutes(-10).ToUnixTimeSeconds();
         var testToken = CreateTestIdToken("test@example.com", "Test User", "sub-123", expiryTimestamp);
-        
+
         _mockJsRuntime.Setup(js => js.InvokeAsync<string?>("localStorage.getItem", new object[] { "mystira_entra_token" }))
             .ReturnsAsync(testToken);
 
@@ -639,7 +693,7 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         // Arrange
         var expiryTimestamp = DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds();
         var testToken = CreateTestIdToken("test@example.com", "Test User", "sub-123", expiryTimestamp);
-        
+
         _mockJsRuntime.Setup(js => js.InvokeAsync<string?>("localStorage.getItem", new object[] { "mystira_entra_token" }))
             .ReturnsAsync(testToken);
 

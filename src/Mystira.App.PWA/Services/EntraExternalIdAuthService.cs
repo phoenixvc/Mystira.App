@@ -424,11 +424,19 @@ public class EntraExternalIdAuthService : IAuthService
 
     private static string BuildAuthorizationUrl(string authority, string clientId, string redirectUri, string state, string nonce, string? domainHint = null)
     {
-        // Authority format: https://mystira.ciamlogin.com/{tenant_id}
+        // Authority format: https://mystira.ciamlogin.com/{tenant_id}/v2.0
         // OAuth endpoint: https://mystira.ciamlogin.com/{tenant_id}/oauth2/v2.0/authorize
+
+        // Remove trailing slash and /v2.0 from authority to build the correct base for endpoints
+        var baseAuthority = authority.TrimEnd('/');
+        if (baseAuthority.EndsWith("/v2.0"))
+        {
+            baseAuthority = baseAuthority.Substring(0, baseAuthority.Length - 5);
+        }
+
         var scopes = string.Join(" ", DefaultScopes);
 
-        var url = $"{authority}/oauth2/v2.0/authorize?" +
+        var url = $"{baseAuthority}/oauth2/v2.0/authorize?" +
             $"client_id={Uri.EscapeDataString(clientId)}&" +
             $"response_type=id_token token&" +
             $"redirect_uri={Uri.EscapeDataString(redirectUri)}&" +
@@ -441,6 +449,10 @@ public class EntraExternalIdAuthService : IAuthService
         if (!string.IsNullOrEmpty(domainHint))
         {
             url += $"&domain_hint={Uri.EscapeDataString(domainHint)}";
+
+            // Add prompt=login to ensure the user is prompted to sign in with the specified IDP
+            // This often helps skip the Entra home realm discovery page
+            url += "&prompt=login";
         }
 
         return url;
@@ -448,9 +460,17 @@ public class EntraExternalIdAuthService : IAuthService
 
     private static string BuildLogoutUrl(string authority, string postLogoutRedirectUri)
     {
-        // Authority format: https://mystira.ciamlogin.com/{tenant_id}
+        // Authority format: https://mystira.ciamlogin.com/{tenant_id}/v2.0
         // Logout endpoint: https://mystira.ciamlogin.com/{tenant_id}/oauth2/v2.0/logout
-        return $"{authority}/oauth2/v2.0/logout?" +
+
+        // Remove trailing slash and /v2.0 from authority
+        var baseAuthority = authority.TrimEnd('/');
+        if (baseAuthority.EndsWith("/v2.0"))
+        {
+            baseAuthority = baseAuthority.Substring(0, baseAuthority.Length - 5);
+        }
+
+        return $"{baseAuthority}/oauth2/v2.0/logout?" +
             $"post_logout_redirect_uri={Uri.EscapeDataString(postLogoutRedirectUri)}";
     }
 
