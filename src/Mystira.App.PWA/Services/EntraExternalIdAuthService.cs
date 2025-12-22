@@ -438,21 +438,17 @@ public class EntraExternalIdAuthService : IAuthService
 
         var url = $"{baseAuthority}/oauth2/v2.0/authorize?" +
             $"client_id={Uri.EscapeDataString(clientId)}&" +
-            $"response_type=id_token token&" +
+            $"response_type={Uri.EscapeDataString("id_token token")}&" +
             $"redirect_uri={Uri.EscapeDataString(redirectUri)}&" +
             $"response_mode=fragment&" +
             $"scope={Uri.EscapeDataString(scopes)}&" +
             $"state={state}&" +
             $"nonce={nonce}";
 
-        // Add domain_hint to skip the Entra signin page and go directly to the identity provider
+        // Add domain_hint and direct_signin to skip the Entra signin page and go directly to the identity provider
         if (!string.IsNullOrEmpty(domainHint))
         {
             url += $"&domain_hint={Uri.EscapeDataString(domainHint)}";
-
-            // Add prompt=login to ensure the user is prompted to sign in with the specified IDP
-            // This often helps skip the Entra home realm discovery page
-            url += "&prompt=login";
         }
 
         return url;

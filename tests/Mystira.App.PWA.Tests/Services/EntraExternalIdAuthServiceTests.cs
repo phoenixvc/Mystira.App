@@ -304,7 +304,7 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         capturedUrl.Should().StartWith("https://test.ciamlogin.com/tenant-id/oauth2/v2.0/authorize?");
         capturedUrl.Should().Contain($"client_id={Uri.EscapeDataString(TestClientId)}");
         capturedUrl.Should().Contain($"redirect_uri={Uri.EscapeDataString(TestRedirectUri)}");
-        capturedUrl.Should().Contain("response_type=id_token token");
+        capturedUrl.Should().Contain("response_type=id_token%20token");
         capturedUrl.Should().Contain("response_mode=fragment");
         capturedUrl.Should().Contain("scope=openid%20profile%20email%20offline_access");
         capturedUrl.Should().Contain("state=");
@@ -319,13 +319,14 @@ public class EntraExternalIdAuthServiceTests : IDisposable
             .ReturnsAsync(Mock.Of<IJSVoidResult>());
 
         // Act
-        await _service.LoginWithEntraAsync("google.com");
+        await _service.LoginWithEntraAsync("Google");
 
         // Assert
         var capturedUrl = _navigationManager.NavigatedUrl;
         capturedUrl.Should().NotBeNull();
-        capturedUrl.Should().Contain("domain_hint=google.com");
-        capturedUrl.Should().Contain("prompt=login");
+        capturedUrl.Should().Contain("domain_hint=Google");
+        capturedUrl.Should().Contain("direct_signin=Google");
+        capturedUrl.Should().Contain("prompt=select_account");
     }
 
     [Fact]
