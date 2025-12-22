@@ -295,10 +295,15 @@ public class EntraExternalIdAuthService : IAuthService
             _logger.LogWarning(ex, "Login initiation was canceled");
             throw;
         }
-        catch (Exception ex)
+        catch (UriFormatException ex)
         {
-            _logger.LogError(ex, "Unexpected error initiating Entra External ID login");
-            throw new InvalidOperationException("Failed to initiate login due to unexpected error", ex);
+            _logger.LogError(ex, "Invalid URI format when building authorization URL");
+            throw new InvalidOperationException("Failed to initiate login due to invalid URI format", ex);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex, "Invalid argument when building authorization URL");
+            throw new InvalidOperationException("Failed to initiate login due to invalid argument", ex);
         }
     }
 
@@ -349,6 +354,13 @@ public class EntraExternalIdAuthService : IAuthService
             else
             {
                 _logger.LogWarning("Authorization code or tokens missing from callback");
+                return false;
+            }
+
+            // Validate nonce from ID token to prevent token replay attacks
+            if (!await ValidateNonceAsync(idToken))
+            {
+                _logger.LogWarning("Nonce validation failed in callback");
                 return false;
             }
 
@@ -601,9 +613,24 @@ public class EntraExternalIdAuthService : IAuthService
 
             return (tokenResponse.AccessToken, tokenResponse.IdToken);
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Unexpected error during token exchange");
+            _logger.LogError(ex, "HTTP error during token exchange");
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Token exchange request timed out");
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "JSON deserialization error during token exchange");
+            return null;
+        }
+        catch (JSException ex)
+        {
+            _logger.LogError(ex, "JavaScript error retrieving code verifier during token exchange");
             return null;
         }
     }
@@ -632,6 +659,56 @@ public class EntraExternalIdAuthService : IAuthService
 
         var storedState = await _jsRuntime.InvokeAsync<string?>("sessionStorage.getItem", AuthStateKey);
         return state == storedState;
+    }
+
+    private async Task<bool> ValidateNonceAsync(string idToken)
+    {
+        try
+        {
+            var storedNonce = await _jsRuntime.InvokeAsync<string?>("sessionStorage.getItem", AuthNonceKey);
+            if (string.IsNullOrEmpty(storedNonce))
+            {
+                _logger.LogWarning("No stored nonce found for validation");
+                return false;
+            }
+
+            var claims = DecodeJwtPayload(idToken);
+            if (claims == null)
+            {
+                _logger.LogWarning("Failed to decode ID token for nonce validation");
+                return false;
+            }
+
+            if (!claims.TryGetValue("nonce", out var nonceElement))
+            {
+                _logger.LogWarning("No nonce claim found in ID token");
+                return false;
+            }
+
+            var tokenNonce = nonceElement.GetString();
+            if (tokenNonce != storedNonce)
+            {
+                _logger.LogWarning("Nonce mismatch: expected {Expected}, got {Actual}", storedNonce, tokenNonce);
+                return false;
+            }
+
+            return true;
+        }
+        catch (JSException ex)
+        {
+            _logger.LogError(ex, "JavaScript error during nonce validation");
+            return false;
+        }
+        catch (FormatException ex)
+        {
+            _logger.LogError(ex, "Invalid JWT format during nonce validation");
+            return false;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "JSON error during nonce validation");
+            return false;
+        }
     }
 
     private async Task ClearAuthStateAsync()
