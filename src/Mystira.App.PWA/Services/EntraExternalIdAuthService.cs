@@ -1,4 +1,7 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Mystira.App.PWA.Models;
@@ -8,6 +11,7 @@ namespace Mystira.App.PWA.Services;
 /// <summary>
 /// Authentication service for Microsoft Entra External ID (CIAM)
 /// Supports Google social login and email+password authentication
+/// Uses Authorization Code Flow with PKCE (Proof Key for Code Exchange)
 /// </summary>
 public class EntraExternalIdAuthService : IAuthService
 {
@@ -16,12 +20,14 @@ public class EntraExternalIdAuthService : IAuthService
     private readonly IJSRuntime _jsRuntime;
     private readonly IConfiguration _configuration;
     private readonly NavigationManager _navigationManager;
+    private readonly HttpClient _httpClient;
 
     private const string TokenStorageKey = "mystira_entra_token";
     private const string AccountStorageKey = "mystira_entra_account";
     private const string IdTokenStorageKey = "mystira_entra_id_token";
     private const string AuthStateKey = "entra_auth_state";
     private const string AuthNonceKey = "entra_auth_nonce";
+    private const string AuthCodeVerifierKey = "entra_auth_code_verifier";
 
     private static readonly string[] DefaultScopes = { "openid", "profile", "email", "offline_access" };
 
@@ -38,13 +44,15 @@ public class EntraExternalIdAuthService : IAuthService
         IApiClient apiClient,
         IJSRuntime jsRuntime,
         IConfiguration configuration,
-        NavigationManager navigationManager)
+        NavigationManager navigationManager,
+        HttpClient httpClient)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _jsRuntime = jsRuntime ?? throw new ArgumentNullException(nameof(jsRuntime));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _navigationManager = navigationManager ?? throw new ArgumentNullException(nameof(navigationManager));
+        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
     }
 
     #region IAuthService Implementation
@@ -266,8 +274,9 @@ public class EntraExternalIdAuthService : IAuthService
             var (authority, clientId, redirectUri) = GetEntraConfiguration();
             ValidateEntraConfiguration(authority, clientId);
 
-            var (state, nonce) = await GenerateAndStoreSecurityTokensAsync();
-            var authUrl = BuildAuthorizationUrl(authority, clientId, redirectUri, state, nonce, domainHint);
+            var (state, nonce, codeVerifier) = await GenerateAndStoreSecurityTokensAsync();
+            var codeChallenge = GenerateCodeChallenge(codeVerifier);
+            var authUrl = BuildAuthorizationUrl(authority, clientId, redirectUri, state, nonce, codeChallenge, domainHint);
 
             _logger.LogInformation("Redirecting to Entra External ID: {AuthUrl}", authUrl);
             _navigationManager.NavigateTo(authUrl);
@@ -312,15 +321,34 @@ public class EntraExternalIdAuthService : IAuthService
 
             var parameters = ParseFragment(fragment);
 
-            if (!TryExtractTokens(parameters, out var accessToken, out var idToken))
-            {
-                _logger.LogWarning("Access token or ID token missing from callback");
-                return false;
-            }
-
             if (!await ValidateStateAsync(parameters))
             {
                 _logger.LogWarning("State validation failed in callback");
+                return false;
+            }
+
+            string accessToken;
+            string idToken;
+
+            if (parameters.TryGetValue("code", out var code))
+            {
+                _logger.LogInformation("Found authorization code, exchanging for tokens");
+                var tokens = await ExchangeCodeForTokensAsync(code);
+                if (tokens == null)
+                {
+                    _logger.LogWarning("Failed to exchange authorization code for tokens");
+                    return false;
+                }
+                accessToken = tokens.Value.AccessToken;
+                idToken = tokens.Value.IdToken;
+            }
+            else if (TryExtractTokens(parameters, out accessToken, out idToken))
+            {
+                _logger.LogInformation("Found tokens in fragment (Implicit Flow fallback)");
+            }
+            else
+            {
+                _logger.LogWarning("Authorization code or tokens missing from callback");
                 return false;
             }
 
@@ -422,7 +450,7 @@ public class EntraExternalIdAuthService : IAuthService
 
     #region Private Helper Methods - URL Building
 
-    private static string BuildAuthorizationUrl(string authority, string clientId, string redirectUri, string state, string nonce, string? domainHint = null)
+    private static string BuildAuthorizationUrl(string authority, string clientId, string redirectUri, string state, string nonce, string codeChallenge, string? domainHint = null)
     {
         // Authority format: https://mystira.ciamlogin.com/{tenant_id}/v2.0
         // OAuth endpoint: https://mystira.ciamlogin.com/{tenant_id}/oauth2/v2.0/authorize
@@ -438,14 +466,16 @@ public class EntraExternalIdAuthService : IAuthService
 
         var url = $"{baseAuthority}/oauth2/v2.0/authorize?" +
             $"client_id={Uri.EscapeDataString(clientId)}&" +
-            $"response_type={Uri.EscapeDataString("id_token token")}&" +
+            $"response_type=code&" +
             $"redirect_uri={Uri.EscapeDataString(redirectUri)}&" +
             $"response_mode=fragment&" +
             $"scope={Uri.EscapeDataString(scopes)}&" +
             $"state={state}&" +
-            $"nonce={nonce}";
+            $"nonce={nonce}&" +
+            $"code_challenge={codeChallenge}&" +
+            $"code_challenge_method=S256";
 
-        // Add domain_hint and direct_signin to skip the Entra signin page and go directly to the identity provider
+        // Add domain_hint to skip the Entra signin page and go directly to the identity provider
         if (!string.IsNullOrEmpty(domainHint))
         {
             url += $"&domain_hint={Uri.EscapeDataString(domainHint)}";
@@ -474,15 +504,113 @@ public class EntraExternalIdAuthService : IAuthService
 
     #region Private Helper Methods - Security Tokens
 
-    private async Task<(string state, string nonce)> GenerateAndStoreSecurityTokensAsync()
+    private async Task<(string state, string nonce, string codeVerifier)> GenerateAndStoreSecurityTokensAsync()
     {
         var state = Guid.NewGuid().ToString("N");
         var nonce = Guid.NewGuid().ToString("N");
+        var codeVerifier = GenerateRandomString(64);
 
         await _jsRuntime.InvokeVoidAsync("sessionStorage.setItem", AuthStateKey, state);
         await _jsRuntime.InvokeVoidAsync("sessionStorage.setItem", AuthNonceKey, nonce);
+        await _jsRuntime.InvokeVoidAsync("sessionStorage.setItem", AuthCodeVerifierKey, codeVerifier);
 
-        return (state, nonce);
+        return (state, nonce, codeVerifier);
+    }
+
+    private static string GenerateRandomString(int length)
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+        return new string(Enumerable.Repeat(chars, length)
+            .Select(s => s[RandomNumberGenerator.GetInt32(s.Length)]).ToArray());
+    }
+
+    private static string GenerateCodeChallenge(string codeVerifier)
+    {
+        using var sha256 = SHA256.Create();
+        var challengeBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(codeVerifier));
+        return Base64UrlEncode(challengeBytes);
+    }
+
+    private static string Base64UrlEncode(byte[] arg)
+    {
+        var s = Convert.ToBase64String(arg); // Standard base64
+        s = s.Split('=')[0]; // Remove any trailing '='s
+        s = s.Replace('+', '-'); // 62nd char of encoding
+        s = s.Replace('/', '_'); // 63rd char of encoding
+        return s;
+    }
+
+    private async Task<(string AccessToken, string IdToken)?> ExchangeCodeForTokensAsync(string code)
+    {
+        try
+        {
+            var (authority, clientId, redirectUri) = GetEntraConfiguration();
+            var codeVerifier = await _jsRuntime.InvokeAsync<string?>("sessionStorage.getItem", AuthCodeVerifierKey);
+
+            if (string.IsNullOrEmpty(codeVerifier))
+            {
+                _logger.LogWarning("Code verifier missing from session storage");
+                return null;
+            }
+
+            // Remove /v2.0 from authority
+            var baseAuthority = authority.TrimEnd('/');
+            if (baseAuthority.EndsWith("/v2.0"))
+            {
+                baseAuthority = baseAuthority.Substring(0, baseAuthority.Length - 5);
+            }
+
+            var tokenEndpoint = $"{baseAuthority}/oauth2/v2.0/token";
+
+            var content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                { "client_id", clientId },
+                { "grant_type", "authorization_code" },
+                { "code", code },
+                { "redirect_uri", redirectUri },
+                { "code_verifier", codeVerifier },
+                { "scope", string.Join(" ", DefaultScopes) }
+            });
+
+            _logger.LogInformation("Exchanging authorization code for tokens at: {TokenEndpoint}", tokenEndpoint);
+            var response = await _httpClient.PostAsync(tokenEndpoint, content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Token exchange failed: {StatusCode} - {Error}", response.StatusCode, errorContent);
+                return null;
+            }
+
+            var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>();
+            if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken) || string.IsNullOrEmpty(tokenResponse.IdToken))
+            {
+                _logger.LogError("Invalid token response from Entra");
+                return null;
+            }
+
+            return (tokenResponse.AccessToken, tokenResponse.IdToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error during token exchange");
+            return null;
+        }
+    }
+
+    private class TokenResponse
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("access_token")]
+        public string AccessToken { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("id_token")]
+        public string IdToken { get; set; } = string.Empty;
+
+        [System.Text.Json.Serialization.JsonPropertyName("refresh_token")]
+        public string? RefreshToken { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("expires_in")]
+        public int ExpiresIn { get; set; }
     }
 
     private async Task<bool> ValidateStateAsync(Dictionary<string, string> parameters)
@@ -500,6 +628,7 @@ public class EntraExternalIdAuthService : IAuthService
     {
         await _jsRuntime.InvokeVoidAsync("sessionStorage.removeItem", AuthStateKey);
         await _jsRuntime.InvokeVoidAsync("sessionStorage.removeItem", AuthNonceKey);
+        await _jsRuntime.InvokeVoidAsync("sessionStorage.removeItem", AuthCodeVerifierKey);
     }
 
     #endregion

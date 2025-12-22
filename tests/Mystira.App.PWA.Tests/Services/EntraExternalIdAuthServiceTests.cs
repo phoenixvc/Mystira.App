@@ -20,11 +20,12 @@ public class EntraExternalIdAuthServiceTests : IDisposable
     private readonly Mock<IJSRuntime> _mockJsRuntime;
     private readonly Mock<IConfiguration> _mockConfiguration;
     private readonly TestNavigationManager _navigationManager;
+    private readonly HttpClient _httpClient;
     private readonly EntraExternalIdAuthService _service;
 
     private const string TestAuthority = "https://test.ciamlogin.com/tenant-id/v2.0";
     private const string TestClientId = "test-client-id";
-    private const string TestRedirectUri = "http://localhost:5173/authentication/login-callback";
+    private const string TestRedirectUri = "http://localhost:7000/authentication/login-callback";
 
     public EntraExternalIdAuthServiceTests()
     {
@@ -33,6 +34,7 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         _mockJsRuntime = new Mock<IJSRuntime>();
         _mockConfiguration = new Mock<IConfiguration>();
         _navigationManager = new TestNavigationManager();
+        _httpClient = new HttpClient();
 
         SetupDefaultConfiguration();
 
@@ -41,7 +43,8 @@ public class EntraExternalIdAuthServiceTests : IDisposable
             _mockApiClient.Object,
             _mockJsRuntime.Object,
             _mockConfiguration.Object,
-            _navigationManager);
+            _navigationManager,
+            _httpClient);
     }
 
     private class TestNavigationManager : NavigationManager
@@ -50,7 +53,7 @@ public class EntraExternalIdAuthServiceTests : IDisposable
 
         public TestNavigationManager()
         {
-            Initialize("http://localhost:5173/", "http://localhost:5173/");
+            Initialize("http://localhost:7000/", "http://localhost:7000/");
         }
 
         protected override void NavigateToCore(string uri, NavigationOptions options)
@@ -64,7 +67,7 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         _mockConfiguration.Setup(c => c["MicrosoftEntraExternalId:Authority"]).Returns(TestAuthority);
         _mockConfiguration.Setup(c => c["MicrosoftEntraExternalId:ClientId"]).Returns(TestClientId);
         _mockConfiguration.Setup(c => c["MicrosoftEntraExternalId:RedirectUri"]).Returns(TestRedirectUri);
-        _mockConfiguration.Setup(c => c["MicrosoftEntraExternalId:PostLogoutRedirectUri"]).Returns("http://localhost:5173");
+        _mockConfiguration.Setup(c => c["MicrosoftEntraExternalId:PostLogoutRedirectUri"]).Returns("http://localhost:7000");
     }
 
     #region Constructor Tests
@@ -78,7 +81,8 @@ public class EntraExternalIdAuthServiceTests : IDisposable
             _mockApiClient.Object,
             _mockJsRuntime.Object,
             _mockConfiguration.Object,
-            _navigationManager);
+            _navigationManager,
+            _httpClient);
 
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("logger");
@@ -93,7 +97,8 @@ public class EntraExternalIdAuthServiceTests : IDisposable
             null!,
             _mockJsRuntime.Object,
             _mockConfiguration.Object,
-            _navigationManager);
+            _navigationManager,
+            _httpClient);
 
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("apiClient");
@@ -108,7 +113,8 @@ public class EntraExternalIdAuthServiceTests : IDisposable
             _mockApiClient.Object,
             null!,
             _mockConfiguration.Object,
-            _navigationManager);
+            _navigationManager,
+            _httpClient);
 
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("jsRuntime");
@@ -123,7 +129,8 @@ public class EntraExternalIdAuthServiceTests : IDisposable
             _mockApiClient.Object,
             _mockJsRuntime.Object,
             null!,
-            _navigationManager);
+            _navigationManager,
+            _httpClient);
 
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("configuration");
@@ -138,10 +145,27 @@ public class EntraExternalIdAuthServiceTests : IDisposable
             _mockApiClient.Object,
             _mockJsRuntime.Object,
             _mockConfiguration.Object,
-            null!);
+            null!,
+            _httpClient);
 
         act.Should().Throw<ArgumentNullException>()
             .WithParameterName("navigationManager");
+    }
+
+    [Fact]
+    public void Constructor_WithNullHttpClient_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        var act = () => new EntraExternalIdAuthService(
+            _mockLogger.Object,
+            _mockApiClient.Object,
+            _mockJsRuntime.Object,
+            _mockConfiguration.Object,
+            _navigationManager,
+            null!);
+
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("httpClient");
     }
 
     #endregion
@@ -304,15 +328,17 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         capturedUrl.Should().StartWith("https://test.ciamlogin.com/tenant-id/oauth2/v2.0/authorize?");
         capturedUrl.Should().Contain($"client_id={Uri.EscapeDataString(TestClientId)}");
         capturedUrl.Should().Contain($"redirect_uri={Uri.EscapeDataString(TestRedirectUri)}");
-        capturedUrl.Should().Contain("response_type=id_token%20token");
+        capturedUrl.Should().Contain("response_type=code");
         capturedUrl.Should().Contain("response_mode=fragment");
         capturedUrl.Should().Contain("scope=openid%20profile%20email%20offline_access");
         capturedUrl.Should().Contain("state=");
         capturedUrl.Should().Contain("nonce=");
+        capturedUrl.Should().Contain("code_challenge=");
+        capturedUrl.Should().Contain("code_challenge_method=S256");
     }
 
     [Fact]
-    public async Task LoginWithEntraAsync_WithDomainHint_RedirectsWithDomainHintAndPrompt()
+    public async Task LoginWithEntraAsync_WithDomainHint_RedirectsWithDomainHintOnly()
     {
         // Arrange
         _mockJsRuntime.Setup(js => js.InvokeAsync<IJSVoidResult>(It.IsAny<string>(), It.IsAny<object[]>()))
@@ -325,8 +351,8 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         var capturedUrl = _navigationManager.NavigatedUrl;
         capturedUrl.Should().NotBeNull();
         capturedUrl.Should().Contain("domain_hint=Google");
-        capturedUrl.Should().Contain("direct_signin=Google");
-        capturedUrl.Should().Contain("prompt=select_account");
+        capturedUrl.Should().NotContain("direct_signin=");
+        capturedUrl.Should().NotContain("prompt=");
     }
 
     [Fact]
@@ -378,8 +404,10 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         // Assert
         storedValues.Should().ContainKey("entra_auth_state");
         storedValues.Should().ContainKey("entra_auth_nonce");
+        storedValues.Should().ContainKey("entra_auth_code_verifier");
         storedValues["entra_auth_state"].Should().NotBeNullOrEmpty();
         storedValues["entra_auth_nonce"].Should().NotBeNullOrEmpty();
+        storedValues["entra_auth_code_verifier"].Should().NotBeNullOrEmpty();
     }
 
     [Fact]
