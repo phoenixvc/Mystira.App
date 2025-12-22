@@ -17,7 +17,7 @@ This roadmap outlines the strategic implementation plan for Mystira.App, coverin
 | Phase | Focus Area | Status | Priority |
 |-------|------------|--------|----------|
 | Phase 1 | Infrastructure Foundation | In Progress | High |
-| **Phase 1.5** | **Polyglot Integration (gRPC)** | **Planned** | **High** |
+| **Phase 1.5** | **Polyglot Integration (gRPC)** | **In Progress** | **High** |
 | Phase 2 | Pipeline Enhancement | Planned | High |
 | Phase 3 | Monitoring & Observability | Planned | Medium |
 | Phase 4 | Documentation & Knowledge Management | Planned | Medium |
@@ -96,18 +96,18 @@ See [ADR-0013](../architecture/adr/ADR-0013-grpc-for-csharp-python-integration.m
 ### Key Deliverables
 
 1. **Protocol Buffer Definitions**
-   - [ ] Create shared `protos/` directory structure
-   - [ ] Define `chain_service.proto` for blockchain operations
-   - [ ] Define `ip_assets.proto` for IP asset management
-   - [ ] Define `royalties.proto` for royalty operations
-   - [ ] Set up proto compilation in build pipeline
+   - [x] Create shared `protos/` directory structure
+   - [x] Define `chain_service.proto` for blockchain operations
+   - [x] Define `ip_assets.proto` for IP asset management
+   - [x] Define `royalties.proto` for royalty operations
+   - [x] Set up proto compilation in build pipeline
 
 2. **gRPC Client Implementation (.NET)**
-   - [ ] Add `Mystira.App.Infrastructure.StoryProtocol` project
-   - [ ] Implement `GrpcChainServiceAdapter`
+   - [x] Add `Mystira.App.Infrastructure.StoryProtocol` project
+   - [x] Implement `GrpcChainServiceAdapter`
    - [ ] Configure gRPC channel with authentication
    - [ ] Add health check integration
-   - [ ] Implement retry policies with exponential backoff
+   - [x] Implement retry policies with exponential backoff
 
 3. **gRPC Server Implementation (Python/Chain)**
    - [ ] Add grpcio dependencies to Mystira.Chain
@@ -117,12 +117,12 @@ See [ADR-0013](../architecture/adr/ADR-0013-grpc-for-csharp-python-integration.m
    - [ ] Configure async server with thread pool
 
 4. **Streaming Operations**
-   - [ ] Implement `WatchTransactions` server streaming
-   - [ ] Implement `BatchRegisterIpAssets` client streaming
+   - [x] Implement `WatchTransactions` server streaming (proto defined)
+   - [x] Implement `BatchRegisterIpAssets` client streaming (proto defined)
    - [ ] Add transaction monitoring dashboard integration
 
 5. **Migration from REST**
-   - [ ] Add feature flag for gRPC vs REST switching
+   - [x] Add feature flag for gRPC vs REST switching
    - [ ] Validate performance in staging
    - [ ] Gradual rollout to production
    - [ ] Deprecate REST endpoints after validation
