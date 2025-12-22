@@ -233,3 +233,18 @@ See individual documentation files for detailed troubleshooting:
 - [ADR-0011: Entra ID Authentication Integration](../architecture/adr/0011-entra-id-authentication-integration.md)
 - [Terraform Module README](../../Mystira.workspace/infra/terraform/modules/azure-ad-b2c/README.md)
 - [Microsoft Entra External ID Overview](https://learn.microsoft.com/en-us/entra/external-id/external-identities-overview)
+
+
+## Technical Debt
+
+### MSAL Popup Authentication
+
+The current implementation uses a manual OAuth 2.0 redirect flow. A better user experience can be achieved by using MSAL.js with popup authentication, which would prevent users from leaving the page during sign-in.
+
+**Recommendation**: Refactor the `EntraExternalIdAuthService` to use the `Microsoft.Authentication.WebAssembly.Msal` package with popup mode. This would require:
+
+1. Configuring `AddMsalAuthentication` in `Program.cs` with `LoginMode = "popup"`.
+2. Creating a wrapper service that implements `IAuthService` and uses MSAL's built-in authentication methods.
+3. Removing the manual OAuth URL construction and redirect logic.
+
+This would provide a more seamless authentication experience and reduce the amount of custom code to maintain.

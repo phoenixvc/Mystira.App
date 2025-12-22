@@ -423,10 +423,11 @@ public class EntraExternalIdAuthService : IAuthService
 
     private static string BuildAuthorizationUrl(string authority, string clientId, string redirectUri, string state, string nonce)
     {
-        // Authority already includes /v2.0, so we only append /oauth2/authorize
+        // Authority format: https://mystira.ciamlogin.com/{tenant_id}
+        // OAuth endpoint: https://mystira.ciamlogin.com/{tenant_id}/oauth2/v2.0/authorize
         var scopes = string.Join(" ", DefaultScopes);
 
-        return $"{authority}/oauth2/authorize?" +
+        return $"{authority}/oauth2/v2.0/authorize?" +
             $"client_id={Uri.EscapeDataString(clientId)}&" +
             $"response_type=id_token token&" +
             $"redirect_uri={Uri.EscapeDataString(redirectUri)}&" +
@@ -438,8 +439,9 @@ public class EntraExternalIdAuthService : IAuthService
 
     private static string BuildLogoutUrl(string authority, string postLogoutRedirectUri)
     {
-        // Authority already includes /v2.0, so we only append /oauth2/logout
-        return $"{authority}/oauth2/logout?" +
+        // Authority format: https://mystira.ciamlogin.com/{tenant_id}
+        // Logout endpoint: https://mystira.ciamlogin.com/{tenant_id}/oauth2/v2.0/logout
+        return $"{authority}/oauth2/v2.0/logout?" +
             $"post_logout_redirect_uri={Uri.EscapeDataString(postLogoutRedirectUri)}";
     }
 
