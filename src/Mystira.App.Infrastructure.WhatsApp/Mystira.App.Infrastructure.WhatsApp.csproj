@@ -6,8 +6,8 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Twilio" Version="7.7.1" />
-    <PackageReference Include="Azure.Communication.Messages" Version="1.0.0-beta.2" />
+    <PackageReference Include="Twilio" Version="7.8.0" />
+    <PackageReference Include="Azure.Communication.Messages" Version="1.0.0" />
     <PackageReference Include="Azure.Core" Version="1.50.0" />
   </ItemGroup>
   <ItemGroup>

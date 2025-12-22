@@ -104,7 +104,7 @@ public class AccountSpecificationsTests
 
         // Assert
         result.Should().HaveCount(4);
-        result.Should().OnlyContain(a => a.IsActive);
+        result.Should().OnlyContain(a => a.Subscription.IsActive);
     }
 
     [Fact]
@@ -159,8 +159,8 @@ public class AccountSpecificationsTests
             Id = id,
             Email = email,
             Auth0UserId = auth0UserId,
-            IsActive = isActive,
-            UpdatedAt = DateTime.UtcNow
+            Subscription = new SubscriptionDetails { IsActive = isActive },
+            CreatedAt = DateTime.UtcNow
         };
     }
 }
