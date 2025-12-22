@@ -128,13 +128,13 @@ public sealed class ScenariosByTitlePatternSpec : BaseEntitySpecification<Scenar
 }
 
 /// <summary>
-/// Specification to get all published scenarios.
+/// Specification to get all active scenarios.
 /// </summary>
 public sealed class PublishedScenariosSpec : BaseEntitySpecification<Scenario>
 {
     public PublishedScenariosSpec()
     {
-        Query.Where(s => s.IsPublished)
-             .OrderByDescending(s => s.PublishedAt ?? s.CreatedAt);
+        Query.Where(s => s.IsActive)
+             .OrderByDescending(s => s.CreatedAt);
     }
 }

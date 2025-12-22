@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using Grpc.Core;
 using Grpc.Net.Client;
@@ -285,8 +286,10 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
             "Paying royalty to IP Asset {IpAssetId} - Amount: {Amount} via gRPC",
             ipAssetId, amount);
 
-        // Convert amount to wei (18 decimals)
-        var amountWei = ((long)(amount * 1_000_000_000_000_000_000m)).ToString();
+        // Convert amount to wei (18 decimals) using BigInteger to avoid overflow
+        // long.MaxValue is ~9.2 ETH, so we use BigInteger for amounts > 9.2 ETH
+        var amountDecimal = amount * 1_000_000_000_000_000_000m;
+        var amountWei = ((BigInteger)amountDecimal).ToString();
 
         var request = new PayRoyaltiesRequest
         {

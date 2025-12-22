@@ -42,12 +42,15 @@ public sealed class AccountByIdSpec : SingleEntitySpecification<Account>
 /// <summary>
 /// Specification to get all active accounts.
 /// </summary>
+/// <summary>
+/// Specification to get active accounts (with active subscriptions).
+/// </summary>
 public sealed class ActiveAccountsSpec : BaseEntitySpecification<Account>
 {
     public ActiveAccountsSpec()
     {
-        Query.Where(a => a.IsActive)
-             .OrderByDescending(a => a.UpdatedAt);
+        Query.Where(a => a.Subscription.IsActive)
+             .OrderByDescending(a => a.CreatedAt);
     }
 }
 

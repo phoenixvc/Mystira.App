@@ -86,6 +86,11 @@ public interface ICustomMetrics
     /// Tracks JWT token refresh attempt.
     /// </summary>
     void TrackTokenRefresh(string? userId, bool success, string? failureReason = null);
+
+    /// <summary>
+    /// Tracks dual-write operation failure in polyglot persistence.
+    /// </summary>
+    void TrackDualWriteFailure(string entityType, string operation, string errorMessage, bool compensationEnabled);
 }
 
 /// <summary>
@@ -431,6 +436,25 @@ public class CustomMetrics : ICustomMetrics
         {
             _logger.LogWarning("Token refresh failed for user {UserId}: {Reason}", userId ?? "unknown", failureReason ?? "unknown");
         }
+    }
+
+    public void TrackDualWriteFailure(string entityType, string operation, string errorMessage, bool compensationEnabled)
+    {
+        var properties = new Dictionary<string, string>
+        {
+            ["EntityType"] = entityType,
+            ["Operation"] = operation,
+            ["ErrorMessage"] = errorMessage,
+            ["CompensationEnabled"] = compensationEnabled.ToString(),
+            ["Environment"] = _environment,
+            ["Severity"] = "High" // This should trigger alerting
+        };
+
+        TrackEvent("Polyglot.DualWrite.Failed", properties);
+        TrackMetric("Polyglot.DualWriteFailures", 1, properties);
+
+        _logger.LogError("Dual-write failure for {EntityType} during {Operation}. Compensation: {Compensation}. Error: {Error}",
+            entityType, operation, compensationEnabled, errorMessage);
     }
 }
 

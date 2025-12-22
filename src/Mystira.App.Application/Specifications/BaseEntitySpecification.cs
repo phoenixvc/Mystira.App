@@ -39,8 +39,24 @@ public abstract class BaseEntitySpecification<T> : Specification<T> where T : cl
     /// <summary>
     /// Enable caching for this specification with the given key.
     /// Useful for frequently accessed, rarely changing data.
+    /// Note: slidingExpiration is not currently supported by Ardalis.Specification.
+    /// Cache expiration is controlled by the cache implementation (e.g., Redis, MemoryCache).
     /// </summary>
+    /// <param name="cacheKey">The cache key to use</param>
+    /// <param name="slidingExpiration">Reserved for future use - not currently implemented</param>
+    [Obsolete("The slidingExpiration parameter is not supported by Ardalis.Specification. Use EnableCaching(string cacheKey) instead.")]
     protected void EnableCaching(string cacheKey, TimeSpan? slidingExpiration = null)
+    {
+        Query.EnableCache(cacheKey);
+        // slidingExpiration parameter is ignored - cache expiration is controlled by the cache provider
+    }
+
+    /// <summary>
+    /// Enable caching for this specification with the given key.
+    /// Cache expiration is controlled by the cache implementation.
+    /// </summary>
+    /// <param name="cacheKey">The cache key to use</param>
+    protected void EnableCaching(string cacheKey)
     {
         Query.EnableCache(cacheKey);
     }

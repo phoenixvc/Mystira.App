@@ -287,7 +287,23 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
     {
         // Try to get Id property using reflection
         var idProperty = typeof(T).GetProperty("Id");
-        return idProperty?.GetValue(entity)?.ToString();
+        if (idProperty != null)
+        {
+            var value = idProperty.GetValue(entity);
+            if (value != null)
+            {
+                return value.ToString();
+            }
+        }
+
+        // Log warning if entity has no Id property
+        _logger.LogWarning(
+            "Entity type {EntityType} does not have an 'Id' property or it is null. " +
+            "Cache operations will be skipped for this entity. " +
+            "Consider implementing IEntity interface or using a different caching strategy for entities with composite keys.",
+            _entityTypeName);
+        
+        return null;
     }
 
     private async Task SetCacheAsync(string cacheKey, T entity, CancellationToken cancellationToken)
