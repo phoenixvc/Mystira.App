@@ -233,7 +233,7 @@ public class AzureBlobServiceTests
         var index = -1;
         enumeratorMock
             .Setup(e => e.Current)
-            .Returns(() => index >= 0 && index < blobItems.Count ? blobItems[index] : null);
+            .Returns(() => index >= 0 && index < blobItems.Count ? blobItems[index] : null!);
 
         enumeratorMock
             .Setup(e => e.MoveNextAsync())
@@ -384,12 +384,12 @@ public class AzureBlobServiceTests
         protected override IEnumerable<HttpHeader> EnumerateHeaders() => new List<HttpHeader>();
         protected override bool TryGetHeader(string name, out string value)
         {
-            value = null;
+            value = null!;
             return false;
         }
         protected override bool TryGetHeaderValues(string name, out IEnumerable<string> values)
         {
-            values = null;
+            values = null!;
             return false;
         }
     }

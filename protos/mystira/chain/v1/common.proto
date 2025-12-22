@@ -4,8 +4,6 @@ package mystira.chain.v1;
 
 option csharp_namespace = "Mystira.Chain.V1";
 
-import "google/protobuf/timestamp.proto";
-
 // Common error details for Chain service responses
 message ErrorDetails {
   string code = 1;

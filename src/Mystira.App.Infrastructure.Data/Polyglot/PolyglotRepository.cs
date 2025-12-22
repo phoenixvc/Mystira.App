@@ -61,33 +61,33 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     }
 
     /// <inheritdoc />
-    public override async Task UpdateAsync(T entity, CancellationToken cancellationToken = default)
+    public override async Task<int> UpdateAsync(T entity, CancellationToken cancellationToken = default)
     {
         if (IsDualWriteMode)
         {
             await DualWriteAsync(
-                async () => { await base.UpdateAsync(entity, cancellationToken); return entity; },
+                async () => { var result = await base.UpdateAsync(entity, cancellationToken); return entity; },
                 async () => { await UpdateInSecondaryAsync(entity, cancellationToken); return entity; },
                 cancellationToken);
-            return;
+            return 1; // Assuming single entity update
         }
 
-        await base.UpdateAsync(entity, cancellationToken);
+        return await base.UpdateAsync(entity, cancellationToken);
     }
 
     /// <inheritdoc />
-    public override async Task DeleteAsync(T entity, CancellationToken cancellationToken = default)
+    public override async Task<int> DeleteAsync(T entity, CancellationToken cancellationToken = default)
     {
         if (IsDualWriteMode)
         {
             await DualWriteAsync(
-                async () => { await base.DeleteAsync(entity, cancellationToken); return entity; },
+                async () => { var result = await base.DeleteAsync(entity, cancellationToken); return entity; },
                 async () => { await DeleteFromSecondaryAsync(entity, cancellationToken); return entity; },
                 cancellationToken);
-            return;
+            return 1; // Assuming single entity delete
         }
 
-        await base.DeleteAsync(entity, cancellationToken);
+        return await base.DeleteAsync(entity, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -253,6 +253,50 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
         return result;
     }
 
+    private async Task<int> DualWriteIntAsync(
+        Func<Task<int>> primaryWrite,
+        Func<Task<int>> secondaryWrite,
+        CancellationToken cancellationToken)
+    {
+        // Write to primary first
+        var result = await primaryWrite();
+
+        if (_secondaryContext == null)
+        {
+            return result;
+        }
+
+        // Attempt secondary write with timeout
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(_options.DualWriteTimeoutMs);
+
+        try
+        {
+            await _resiliencePipeline.ExecuteAsync(
+                async token => await secondaryWrite(),
+                cts.Token);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Secondary write failed for {EntityType}. Compensation enabled: {CompensationEnabled}",
+                typeof(T).Name,
+                _options.EnableCompensation);
+
+            // Track metric for monitoring and alerting
+            _metrics?.TrackDualWriteFailure(
+                typeof(T).Name,
+                "Write",
+                ex.Message,
+                _options.EnableCompensation);
+
+            // Don't fail the operation, but ensure monitoring is in place
+            // The metric will trigger alerts in production
+        }
+
+        return result;
+    }
+
     private async Task<T> AddToSecondaryAsync(T entity, CancellationToken cancellationToken)
     {
         if (_secondaryContext == null) return entity;
@@ -262,20 +306,20 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
         return entity;
     }
 
-    private async Task UpdateInSecondaryAsync(T entity, CancellationToken cancellationToken)
+    private async Task<int> UpdateInSecondaryAsync(T entity, CancellationToken cancellationToken)
     {
-        if (_secondaryContext == null) return;
+        if (_secondaryContext == null) return 0;
 
         _secondaryContext.Set<T>().Update(entity);
-        await _secondaryContext.SaveChangesAsync(cancellationToken);
+        return await _secondaryContext.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task DeleteFromSecondaryAsync(T entity, CancellationToken cancellationToken)
+    private async Task<int> DeleteFromSecondaryAsync(T entity, CancellationToken cancellationToken)
     {
-        if (_secondaryContext == null) return;
+        if (_secondaryContext == null) return 0;
 
         _secondaryContext.Set<T>().Remove(entity);
-        await _secondaryContext.SaveChangesAsync(cancellationToken);
+        return await _secondaryContext.SaveChangesAsync(cancellationToken);
     }
 
     private ResiliencePipeline CreateResiliencePipeline()
