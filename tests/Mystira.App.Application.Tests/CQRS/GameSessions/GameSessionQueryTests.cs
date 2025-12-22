@@ -32,6 +32,7 @@ public class GameSessionQueryTests : CqrsIntegrationTestBase
                 PlayerNames = new List<string> { "Player1", "Player2" },
                 Status = SessionStatus.InProgress,
                 StartTime = DateTime.UtcNow.AddMinutes(-30),
+                CurrentSceneId = "scene-2-1",
                 SceneCount = 3
             },
             new()
@@ -43,6 +44,7 @@ public class GameSessionQueryTests : CqrsIntegrationTestBase
                 PlayerNames = new List<string> { "Player3" },
                 Status = SessionStatus.Paused,
                 StartTime = DateTime.UtcNow.AddMinutes(-45),
+                CurrentSceneId = "scene-1-1",
                 IsPaused = true,
                 PausedAt = DateTime.UtcNow.AddMinutes(-15),
                 SceneCount = 2
@@ -56,6 +58,7 @@ public class GameSessionQueryTests : CqrsIntegrationTestBase
                 PlayerNames = new List<string> { "OtherPlayer" },
                 Status = SessionStatus.InProgress,
                 StartTime = DateTime.UtcNow.AddMinutes(-20),
+                CurrentSceneId = "scene-3-1",
                 SceneCount = 1
             }
         };
