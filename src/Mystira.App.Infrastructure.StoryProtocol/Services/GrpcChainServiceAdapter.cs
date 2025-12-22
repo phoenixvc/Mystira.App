@@ -42,25 +42,7 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
 
         var channelOptions = new GrpcChannelOptions
         {
-            // Configure retry policy
-            ServiceConfig = new ServiceConfig
-            {
-                MethodConfigs =
-                {
-                    new MethodConfig
-                    {
-                        Names = { MethodName.Default },
-                        RetryPolicy = new RetryPolicy
-                        {
-                            MaxAttempts = _options.MaxRetryAttempts,
-                            InitialBackoff = TimeSpan.FromMilliseconds(_options.RetryBaseDelayMs),
-                            MaxBackoff = TimeSpan.FromSeconds(30),
-                            BackoffMultiplier = 2,
-                            RetryableStatusCodes = { StatusCode.Unavailable, StatusCode.DeadlineExceeded }
-                        }
-                    }
-                }
-            }
+            // Basic channel options without retry policy (use default retries)
         };
 
         _channel = GrpcChannel.ForAddress(_options.GrpcEndpoint, channelOptions);
