@@ -294,6 +294,103 @@ public class EntraExternalIdAuthService : IAuthService
         return Task.FromResult<(bool, string, Account?)>((false, "Use Entra External ID login instead", null));
     }
 
+    public Task<(bool Success, string Message)> RequestPasswordlessSigninAsync(string email)
+    {
+        _logger.LogWarning("RequestPasswordlessSigninAsync not supported with Entra External ID");
+        return Task.FromResult((false, "Use Entra External ID login instead"));
+    }
+
+    public Task<(bool Success, string Message, Account? Account)> VerifyPasswordlessSigninAsync(string email, string code)
+    {
+        _logger.LogWarning("VerifyPasswordlessSigninAsync not supported with Entra External ID");
+        return Task.FromResult<(bool, string, Account?)>((false, "Use Entra External ID login instead", null));
+    }
+
+    public Task<(bool Success, string Message, string? Token, string? RefreshToken)> RefreshTokenAsync(string token, string refreshToken)
+    {
+        _logger.LogWarning("RefreshTokenAsync not implemented for Entra External ID - tokens are managed by the identity provider");
+        return Task.FromResult<(bool, string, string?, string?)>((false, "Token refresh handled by Entra External ID", null, null));
+    }
+
+    public async Task<string?> GetCurrentTokenAsync()
+    {
+        return await GetTokenAsync();
+    }
+
+    public DateTime? GetTokenExpiryTime()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(_currentToken))
+            {
+                return null;
+            }
+
+            // Decode JWT to get expiry
+            var parts = _currentToken.Split('.');
+            if (parts.Length != 3)
+            {
+                return null;
+            }
+
+            var payload = parts[1];
+            // Add padding if needed
+            switch (payload.Length % 4)
+            {
+                case 2: payload += "=="; break;
+                case 3: payload += "="; break;
+            }
+
+            var payloadBytes = Convert.FromBase64String(payload);
+            var payloadJson = System.Text.Encoding.UTF8.GetString(payloadBytes);
+            var claims = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(payloadJson);
+
+            if (claims != null && claims.TryGetValue("exp", out var expClaim))
+            {
+                var exp = expClaim.GetInt64();
+                return DateTimeOffset.FromUnixTimeSeconds(exp).UtcDateTime;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting token expiry time");
+        }
+
+        return null;
+    }
+
+    public async Task<bool> EnsureTokenValidAsync(int expiryBufferMinutes = 5)
+    {
+        try
+        {
+            var expiryTime = GetTokenExpiryTime();
+            if (expiryTime == null)
+            {
+                _logger.LogWarning("Cannot determine token expiry time");
+                return false;
+            }
+
+            var timeUntilExpiry = expiryTime.Value - DateTime.UtcNow;
+            
+            if (timeUntilExpiry.TotalMinutes <= expiryBufferMinutes)
+            {
+                _logger.LogWarning("Token will expire in {Minutes} minutes", timeUntilExpiry.TotalMinutes);
+                TokenExpiryWarning?.Invoke(this, EventArgs.Empty);
+                
+                // For Entra External ID, user needs to re-authenticate
+                // We can't silently refresh tokens in the implicit flow
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error ensuring token validity");
+            return false;
+        }
+    }
+
     private async Task LoadStoredAuthData()
     {
         try
