@@ -49,6 +49,36 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
     #region Read Operations (Cache-Aside)
 
     /// <inheritdoc />
+    public async Task<T?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default) where TId : notnull
+    {
+        if (!_options.Enabled)
+        {
+            return await _inner.GetByIdAsync(id, cancellationToken);
+        }
+
+        var cacheKey = GetCacheKey(id.ToString()!);
+
+        // Try to get from cache
+        var cachedValue = await _cache.GetStringAsync(cacheKey, cancellationToken);
+        if (cachedValue != null)
+        {
+            _logger.LogDebug("Cache hit for {EntityType} with key {CacheKey}", _entityTypeName, cacheKey);
+            return JsonSerializer.Deserialize<T>(cachedValue, _jsonOptions);
+        }
+
+        // Cache miss - get from database
+        _logger.LogDebug("Cache miss for {EntityType} with key {CacheKey}", _entityTypeName, cacheKey);
+        var entity = await _inner.GetByIdAsync(id, cancellationToken);
+
+        if (entity != null)
+        {
+            await SetCacheAsync(cacheKey, entity, cancellationToken);
+        }
+
+        return entity;
+    }
+
+    /// <inheritdoc />
     public async Task<T?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         if (!_options.Enabled)
@@ -223,20 +253,22 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
     }
 
     /// <inheritdoc />
-    public async Task UpdateAsync(T entity, CancellationToken cancellationToken = default)
+    public async Task<int> UpdateAsync(T entity, CancellationToken cancellationToken = default)
     {
-        await _inner.UpdateAsync(entity, cancellationToken);
+        var result = await _inner.UpdateAsync(entity, cancellationToken);
 
         if (_options.EnableInvalidationOnChange)
         {
             await InvalidateOrUpdateCacheAsync(entity, cancellationToken);
         }
+
+        return result;
     }
 
     /// <inheritdoc />
-    public async Task UpdateRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+    public async Task<int> UpdateRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
     {
-        await _inner.UpdateRangeAsync(entities, cancellationToken);
+        var result = await _inner.UpdateRangeAsync(entities, cancellationToken);
 
         if (_options.EnableInvalidationOnChange)
         {
@@ -245,23 +277,27 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
                 await InvalidateOrUpdateCacheAsync(entity, cancellationToken);
             }
         }
+
+        return result;
     }
 
     /// <inheritdoc />
-    public async Task DeleteAsync(T entity, CancellationToken cancellationToken = default)
+    public async Task<int> DeleteAsync(T entity, CancellationToken cancellationToken = default)
     {
-        await _inner.DeleteAsync(entity, cancellationToken);
+        var result = await _inner.DeleteAsync(entity, cancellationToken);
 
         if (_options.EnableInvalidationOnChange)
         {
             await InvalidateCacheAsync(entity, cancellationToken);
         }
+
+        return result;
     }
 
     /// <inheritdoc />
-    public async Task DeleteRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+    public async Task<int> DeleteRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
     {
-        await _inner.DeleteRangeAsync(entities, cancellationToken);
+        var result = await _inner.DeleteRangeAsync(entities, cancellationToken);
 
         if (_options.EnableInvalidationOnChange)
         {
@@ -270,15 +306,17 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
                 await InvalidateCacheAsync(entity, cancellationToken);
             }
         }
+
+        return result;
     }
 
     /// <inheritdoc />
-    public async Task DeleteRangeAsync(ISpecification<T> specification, CancellationToken cancellationToken = default)
+    public async Task<int> DeleteRangeAsync(ISpecification<T> specification, CancellationToken cancellationToken = default)
     {
         // Get entities to delete for cache invalidation
         var entities = await _inner.ListAsync(specification, cancellationToken);
 
-        await _inner.DeleteRangeAsync(specification, cancellationToken);
+        var result = await _inner.DeleteRangeAsync(specification, cancellationToken);
 
         if (_options.EnableInvalidationOnChange)
         {
@@ -287,6 +325,8 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
                 await InvalidateCacheAsync(entity, cancellationToken);
             }
         }
+
+        return result;
     }
 
     /// <inheritdoc />

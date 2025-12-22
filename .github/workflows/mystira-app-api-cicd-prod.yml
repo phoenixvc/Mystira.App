@@ -372,13 +372,11 @@ jobs:
         if: steps.determine-strategy.outputs.strategy == 'blue-green' && steps.smoke-test.outputs.health_status == 'healthy'
         run: |
           echo "🔄 Swapping staging slot to production..."
-          az webapp deployment slot swap \
+          if az webapp deployment slot swap \
             --name "${{ env.AZURE_WEBAPP_NAME }}" \
             --resource-group "${{ env.RESOURCE_GROUP }}" \
             --slot "${{ env.STAGING_SLOT_NAME }}" \
-            --target-slot production
-
-          if [ $? -eq 0 ]; then
+            --target-slot production; then
             echo "✅ Slot swap completed successfully!"
             echo "swap_status=success" >> $GITHUB_OUTPUT
           else
