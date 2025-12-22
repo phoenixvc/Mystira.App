@@ -246,13 +246,13 @@ Per [Workspace ADR-0013](https://github.com/phoenixvc/Mystira.workspace/blob/dev
    - [x] Add build caching for NuGet packages
 
 2. **CD Pipeline Enhancement**
-   - [ ] Implement blue-green deployments
-   - [ ] Add automated rollback capabilities
-   - [ ] Establish deployment gates
+   - [x] Implement blue-green deployments (staging slot + swap)
+   - [x] Add automated rollback capabilities (mystira-app-api-rollback.yml)
+   - [x] Establish deployment gates (health checks before swap)
 
 3. **Staging Environment** (see [ADR-0008](../architecture/adr/ADR-0008-separate-staging-environment.md))
    - [x] Separate staging from production
-   - [ ] Implement staging slot management
+   - [x] Implement staging slot management (blue-green flow)
    - [x] Add smoke test automation
 
 ### Success Metrics
