@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Shared.Telemetry;
 using Polly;
 using Polly.Retry;
 
@@ -26,17 +27,20 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     private readonly MigrationOptions _options;
     private readonly DbContext? _secondaryContext;
     private readonly ResiliencePipeline _resiliencePipeline;
+    private readonly ICustomMetrics? _metrics;
 
     public PolyglotRepository(
         DbContext primaryContext,
         IOptions<MigrationOptions> options,
         ILogger<PolyglotRepository<T>> logger,
-        DbContext? secondaryContext = null)
+        DbContext? secondaryContext = null,
+        ICustomMetrics? metrics = null)
         : base(primaryContext, logger)
     {
         _options = options?.Value ?? new MigrationOptions();
         _secondaryContext = secondaryContext;
         _resiliencePipeline = CreateResiliencePipeline();
+        _metrics = metrics;
     }
 
     /// <inheritdoc />
@@ -235,8 +239,15 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
                 typeof(T).Name,
                 _options.EnableCompensation);
 
-            // Don't fail the operation, but log for monitoring
-            // In production, this would trigger an alert
+            // Track metric for monitoring and alerting
+            _metrics?.TrackDualWriteFailure(
+                typeof(T).Name,
+                "Write",
+                ex.Message,
+                _options.EnableCompensation);
+
+            // Don't fail the operation, but ensure monitoring is in place
+            // The metric will trigger alerts in production
         }
 
         return result;

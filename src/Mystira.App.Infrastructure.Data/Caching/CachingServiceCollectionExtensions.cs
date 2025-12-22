@@ -88,6 +88,10 @@ public static class DecoratorExtensions
             typeof(TDecorator),
             new[] { typeof(TInterface) });
 
+        // Remove the original descriptor to avoid ambiguity
+        services.Remove(wrappedDescriptor);
+
+        // Add the decorated descriptor
         services.Add(ServiceDescriptor.Describe(
             typeof(TInterface),
             sp => (TInterface)objectFactory(sp, new[] { CreateInstance(sp, wrappedDescriptor) }),
