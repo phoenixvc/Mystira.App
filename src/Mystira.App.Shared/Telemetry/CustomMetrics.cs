@@ -496,10 +496,10 @@ public partial class CustomMetrics : ICustomMetrics
         return sanitized;
     }
 
-    [GeneratedRegex(@"(Server|Data Source|Database|User Id|Password|Uid|Pwd|ConnectionString|AccountKey|AccountName|SharedAccessKey|SAS)=[^;]+", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(Server|Data Source|Database|User Id|Password|Uid|Pwd|ConnectionString|AccountKey|AccountName|SharedAccessKey|SAS)=[^;]{1,256}", RegexOptions.IgnoreCase)]
     private static partial Regex ConnectionStringRegex();
 
-    [GeneratedRegex(@"(api[_-]?key|token|bearer|authorization|secret)[\s:=""']+([\w_/+=\-]{1,})", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(api[_-]?key|token|bearer|authorization|secret)[\s:=""']+([\w_/+=-]{1,128})", RegexOptions.IgnoreCase)]
     private static partial Regex ApiKeyRegex();
 }
 
