@@ -45,11 +45,8 @@ This document describes our continuous integration and continuous deployment (CI
 
 ### 3. Infrastructure Validation
 
-**Triggers**: Changes to `infrastructure/**` files
-
-- Validate Bicep templates (`az deployment group validate`)
-- Run what-if analysis (`az deployment group what-if`)
-- Comment results on PR
+> ⚠️ **Note**: Infrastructure is now managed via Terraform in [Mystira.workspace](https://github.com/phoenixvc/Mystira.workspace).
+> See the centralized infrastructure repository for deployment workflows.
 
 ### 4. Deployment Stage
 
@@ -72,7 +69,7 @@ This document describes our continuous integration and continuous deployment (CI
 
 **Configuration**:
 - Resource Group: `mys-dev-mystira-rg-san`
-- Parameters: `infrastructure/params.dev.json`
+- Infrastructure: [Mystira.workspace Terraform](https://github.com/phoenixvc/Mystira.workspace)
 - SKU: Free/Basic tiers
 
 ### Staging Environment
@@ -85,7 +82,7 @@ This document describes our continuous integration and continuous deployment (CI
 
 **Configuration**:
 - Resource Group: `mys-staging-mystira-rg-san`
-- Parameters: `infrastructure/params.staging.json`
+- Infrastructure: [Mystira.workspace Terraform](https://github.com/phoenixvc/Mystira.workspace)
 - SKU: Standard tiers
 
 ### Production Environment
@@ -97,7 +94,7 @@ This document describes our continuous integration and continuous deployment (CI
 
 **Configuration**:
 - Resource Group: `mys-prod-mystira-rg-san`
-- Parameters: `infrastructure/params.prod.json`
+- Infrastructure: [Mystira.workspace Terraform](https://github.com/phoenixvc/Mystira.workspace)
 - SKU: Premium tiers
 - Manual approval required
 
@@ -119,11 +116,8 @@ This document describes our continuous integration and continuous deployment (CI
 
 ### Infrastructure Workflows
 
-| Workflow | File | Purpose |
-|----------|------|---------|
-| Infra Dev | `.github/workflows/infrastructure-deploy-dev.yml` | Dev infrastructure |
-| Infra Staging | `.github/workflows/infrastructure-deploy-staging.yml` | Staging infrastructure |
-| Infra Prod | `.github/workflows/infrastructure-deploy-prod.yml` | Production infrastructure |
+> ⚠️ **DEPRECATED**: Infrastructure workflows have been removed from this repository.
+> Infrastructure is now managed via Terraform in [Mystira.workspace](https://github.com/phoenixvc/Mystira.workspace).
 
 ## Manual Deployment
 
@@ -175,19 +169,8 @@ All API and Admin API workflows support manual deployment invocation via GitHub'
 
 ### Infrastructure Deployment
 
-All infrastructure deployments use **Incremental mode** for safety:
-
-```yaml
-az deployment group create \
-  --mode Incremental \
-  --template-file './infrastructure/main.bicep' \
-  --parameters '@./infrastructure/params.dev.json'
-```
-
-**Incremental Mode Benefits**:
-- Only creates/updates resources defined in template
-- Never deletes existing resources not in template
-- Safer for production environments
+> ⚠️ **DEPRECATED**: Infrastructure is now managed via Terraform in [Mystira.workspace](https://github.com/phoenixvc/Mystira.workspace).
+> See the centralized repository for Terraform deployment procedures.
 
 ### Application Deployment
 
@@ -225,7 +208,6 @@ Secrets are configured per environment in GitHub:
 | `build` | .NET build succeeds |
 | `test` | All tests pass |
 | `lint` | Code style validation |
-| `infra-validate` | Bicep validation (if infra changes) |
 
 ## Monitoring & Notifications
 
@@ -255,11 +237,8 @@ az webapp deployment slot swap \
 
 ### Infrastructure Rollback
 
-For infrastructure issues:
-
-1. Identify the last known good deployment
-2. Re-run that deployment with same parameters
-3. Or restore from backup if data loss occurred
+> ⚠️ Infrastructure is now managed via Terraform in [Mystira.workspace](https://github.com/phoenixvc/Mystira.workspace).
+> For rollback procedures, see the centralized Terraform documentation.
 
 ## Pipeline Variables
 
