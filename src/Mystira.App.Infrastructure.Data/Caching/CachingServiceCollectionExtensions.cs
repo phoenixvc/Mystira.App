@@ -36,13 +36,13 @@ public static class CachingServiceCollectionExtensions
             options.InstanceName = cacheOptions.InstanceName;
         });
 
-        // Add health check
-        services.AddHealthChecks()
-            .AddRedis(
-                cacheOptions.ConnectionString,
-                name: "redis",
-                failureStatus: HealthStatus.Degraded,
-                tags: new[] { "cache", "redis" });
+        // TODO: Add health check - requires AspNetCore.HealthChecks.Redis package
+        // services.AddHealthChecks()
+        //     .AddRedis(
+        //         cacheOptions.ConnectionString,
+        //         name: "redis",
+        //         failureStatus: HealthStatus.Degraded,
+        //         tags: new[] { "cache", "redis" });
 
         return services;
     }
