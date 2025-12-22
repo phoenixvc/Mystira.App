@@ -52,7 +52,7 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
     public async Task<T?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default) where TId : notnull
     {
         // Convert TId to string for cache key
-        var idString = id?.ToString();
+        var idString = id.ToString();
         if (string.IsNullOrEmpty(idString))
         {
             return await _inner.GetByIdAsync(id, cancellationToken);
