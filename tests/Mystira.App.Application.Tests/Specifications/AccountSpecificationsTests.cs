@@ -160,6 +160,7 @@ public class AccountSpecificationsTests
             Email = email,
             Auth0UserId = auth0UserId,
             Subscription = new SubscriptionDetails { IsActive = isActive },
+            CreatedAt = DateTime.UtcNow
             LastLoginAt = DateTime.UtcNow
         };
     }

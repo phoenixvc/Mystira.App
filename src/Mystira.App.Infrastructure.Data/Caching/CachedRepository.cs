@@ -49,14 +49,21 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
     #region Read Operations (Cache-Aside)
 
     /// <inheritdoc />
-    public async Task<T?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default) where TId : notnull
+    public async Task<T?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default)
     {
+        // Convert TId to string for cache key
+        var idString = id?.ToString();
+        if (string.IsNullOrEmpty(idString))
+        {
+            return await _inner.GetByIdAsync(id, cancellationToken);
+        }
+
         if (!_options.Enabled)
         {
             return await _inner.GetByIdAsync(id, cancellationToken);
         }
 
-        var cacheKey = GetCacheKey(id.ToString()!);
+        var cacheKey = GetCacheKey(idString);
 
         // Try to get from cache
         var cachedValue = await _cache.GetStringAsync(cacheKey, cancellationToken);
@@ -144,6 +151,21 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
         }
 
         return await _inner.ExistsAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<T?> GetBySpecAsync(ISpecification<T> specification, CancellationToken cancellationToken = default)
+    {
+        // For specification queries, delegate to inner repository
+        // Specifications may have complex queries that are harder to cache
+        return await _inner.GetBySpecAsync(specification, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<TResult?> GetBySpecAsync<TResult>(ISpecification<T, TResult> specification, CancellationToken cancellationToken = default)
+    {
+        // For specification queries with projection, delegate to inner repository
+        return await _inner.GetBySpecAsync(specification, cancellationToken);
     }
 
     /// <inheritdoc />
