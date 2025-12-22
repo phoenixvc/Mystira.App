@@ -49,7 +49,7 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
     #region Read Operations (Cache-Aside)
 
     /// <inheritdoc />
-    public async Task<T?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default)
+    public async Task<T?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default) where TId : notnull
     {
         // Convert TId to string for cache key
         var idString = id?.ToString();
@@ -116,25 +116,6 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
     }
 
     /// <inheritdoc />
-
-    public async Task<T?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default) where TId : notnull
-    {
-        return await GetByIdAsync(id?.ToString() ?? string.Empty, cancellationToken);
-    }
-
-    /// <inheritdoc />
-    public async Task<T?> GetBySpecAsync(ISpecification<T> specification, CancellationToken cancellationToken = default)
-    {
-        return await _inner.FirstOrDefaultAsync(specification, cancellationToken);
-    }
-
-    /// <inheritdoc />
-    public async Task<TResult?> GetBySpecAsync<TResult>(ISpecification<T, TResult> specification, CancellationToken cancellationToken = default)
-    {
-        return await _inner.FirstOrDefaultAsync(specification, cancellationToken);
-    }
-
-    /// <inheritdoc />
     public async Task<bool> ExistsAsync(string id, CancellationToken cancellationToken = default)
     {
         if (!_options.Enabled)
@@ -158,14 +139,14 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
     {
         // For specification queries, delegate to inner repository
         // Specifications may have complex queries that are harder to cache
-        return await _inner.GetBySpecAsync(specification, cancellationToken);
+        return await _inner.FirstOrDefaultAsync(specification, cancellationToken);
     }
 
     /// <inheritdoc />
     public async Task<TResult?> GetBySpecAsync<TResult>(ISpecification<T, TResult> specification, CancellationToken cancellationToken = default)
     {
         // For specification queries with projection, delegate to inner repository
-        return await _inner.GetBySpecAsync(specification, cancellationToken);
+        return await _inner.FirstOrDefaultAsync(specification, cancellationToken);
     }
 
     /// <inheritdoc />
