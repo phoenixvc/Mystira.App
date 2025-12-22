@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Mystira.App.PWA.Models;
 
@@ -14,15 +15,16 @@ public class EntraExternalIdAuthService : IAuthService
     private readonly IApiClient _apiClient;
     private readonly IJSRuntime _jsRuntime;
     private readonly IConfiguration _configuration;
-    
+    private readonly NavigationManager _navigationManager;
+
     private const string TokenStorageKey = "mystira_entra_token";
     private const string AccountStorageKey = "mystira_entra_account";
     private const string IdTokenStorageKey = "mystira_entra_id_token";
     private const string AuthStateKey = "entra_auth_state";
     private const string AuthNonceKey = "entra_auth_nonce";
-    
+
     private static readonly string[] DefaultScopes = { "openid", "profile", "email", "offline_access" };
-    
+
     private bool _isAuthenticated;
     private string? _currentToken;
     private Account? _currentAccount;
@@ -35,12 +37,14 @@ public class EntraExternalIdAuthService : IAuthService
         ILogger<EntraExternalIdAuthService> logger,
         IApiClient apiClient,
         IJSRuntime jsRuntime,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        NavigationManager navigationManager)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
         _jsRuntime = jsRuntime ?? throw new ArgumentNullException(nameof(jsRuntime));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _navigationManager = navigationManager ?? throw new ArgumentNullException(nameof(navigationManager));
     }
 
     #region IAuthService Implementation
@@ -56,7 +60,7 @@ public class EntraExternalIdAuthService : IAuthService
 
             await LoadStoredAuthDataAsync();
             _isAuthenticated = !string.IsNullOrEmpty(_currentToken) && _currentAccount != null;
-            
+
             return _isAuthenticated;
         }
         catch (JSException ex)
@@ -224,12 +228,12 @@ public class EntraExternalIdAuthService : IAuthService
             }
 
             var timeUntilExpiry = expiryTime.Value - DateTime.UtcNow;
-            
+
             if (timeUntilExpiry.TotalMinutes <= expiryBufferMinutes)
             {
                 _logger.LogWarning("Token will expire in {Minutes} minutes", timeUntilExpiry.TotalMinutes);
                 TokenExpiryWarning?.Invoke(this, EventArgs.Empty);
-                
+
                 // For Entra External ID, user needs to re-authenticate
                 // We can't silently refresh tokens in the implicit flow
                 return false;
@@ -257,15 +261,15 @@ public class EntraExternalIdAuthService : IAuthService
         try
         {
             _logger.LogInformation("Initiating Entra External ID login");
-            
+
             var (authority, clientId, redirectUri) = GetEntraConfiguration();
             ValidateEntraConfiguration(authority, clientId);
 
             var (state, nonce) = await GenerateAndStoreSecurityTokensAsync();
             var authUrl = BuildAuthorizationUrl(authority, clientId, redirectUri, state, nonce);
-            
+
             _logger.LogInformation("Redirecting to Entra External ID: {AuthUrl}", authUrl);
-            await NavigateToUrlAsync(authUrl);
+            _navigationManager.NavigateTo(authUrl);
         }
         catch (InvalidOperationException)
         {
@@ -281,6 +285,11 @@ public class EntraExternalIdAuthService : IAuthService
             _logger.LogWarning(ex, "Login initiation was canceled");
             throw;
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error initiating Entra External ID login");
+            throw new InvalidOperationException("Failed to initiate login due to unexpected error", ex);
+        }
     }
 
     /// <summary>
@@ -292,7 +301,7 @@ public class EntraExternalIdAuthService : IAuthService
         try
         {
             _logger.LogInformation("Handling Entra External ID login callback");
-            
+
             var fragment = await GetUrlFragmentAsync();
             if (string.IsNullOrEmpty(fragment))
             {
@@ -301,7 +310,7 @@ public class EntraExternalIdAuthService : IAuthService
             }
 
             var parameters = ParseFragment(fragment);
-            
+
             if (!TryExtractTokens(parameters, out var accessToken, out var idToken))
             {
                 _logger.LogWarning("Access token or ID token missing from callback");
@@ -322,12 +331,12 @@ public class EntraExternalIdAuthService : IAuthService
             {
                 await SetStoredAccountAsync(account);
                 _isAuthenticated = true;
-                
+
                 _logger.LogInformation("Entra External ID login successful for: {Email}", account.Email);
                 AuthenticationStateChanged?.Invoke(this, true);
-                
+
                 await ClearAuthStateAsync();
-                
+
                 return true;
             }
 
@@ -366,7 +375,7 @@ public class EntraExternalIdAuthService : IAuthService
 
             await ClearLocalStorageAsync();
             ClearAuthenticationState();
-            
+
             _logger.LogInformation("Local logout successful");
             AuthenticationStateChanged?.Invoke(this, false);
 
@@ -374,7 +383,7 @@ public class EntraExternalIdAuthService : IAuthService
             if (!string.IsNullOrEmpty(authority))
             {
                 var logoutUrl = BuildLogoutUrl(authority, postLogoutRedirectUri);
-                await NavigateToUrlAsync(logoutUrl);
+                _navigationManager.NavigateTo(logoutUrl);
             }
         }
         catch (JSException ex)
@@ -396,7 +405,7 @@ public class EntraExternalIdAuthService : IAuthService
         var authority = _configuration["MicrosoftEntraExternalId:Authority"];
         var clientId = _configuration["MicrosoftEntraExternalId:ClientId"];
         var redirectUri = _configuration["MicrosoftEntraExternalId:RedirectUri"];
-        
+
         return (authority ?? string.Empty, clientId ?? string.Empty, redirectUri ?? string.Empty);
     }
 
@@ -416,7 +425,7 @@ public class EntraExternalIdAuthService : IAuthService
     {
         // Authority already includes /v2.0, so we only append /oauth2/authorize
         var scopes = string.Join(" ", DefaultScopes);
-        
+
         return $"{authority}/oauth2/authorize?" +
             $"client_id={Uri.EscapeDataString(clientId)}&" +
             $"response_type=id_token token&" +
@@ -442,10 +451,10 @@ public class EntraExternalIdAuthService : IAuthService
     {
         var state = Guid.NewGuid().ToString("N");
         var nonce = Guid.NewGuid().ToString("N");
-        
+
         await _jsRuntime.InvokeVoidAsync("sessionStorage.setItem", AuthStateKey, state);
         await _jsRuntime.InvokeVoidAsync("sessionStorage.setItem", AuthNonceKey, nonce);
-        
+
         return (state, nonce);
     }
 
@@ -516,7 +525,7 @@ public class EntraExternalIdAuthService : IAuthService
     {
         accessToken = string.Empty;
         idToken = string.Empty;
-        
+
         if (!parameters.TryGetValue("access_token", out accessToken!))
         {
             return false;
@@ -552,12 +561,10 @@ public class EntraExternalIdAuthService : IAuthService
 
             return new Account
             {
-                Id = Guid.NewGuid(), // Will be mapped to actual account ID by API
+                Id = Guid.NewGuid().ToString(), // Will be mapped to actual account ID by API
                 Email = email,
                 DisplayName = name ?? email,
-                ExternalId = sub,
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
             };
         }
         catch (FormatException ex)
@@ -587,13 +594,13 @@ public class EntraExternalIdAuthService : IAuthService
         }
 
         var payload = parts[1];
-        
+
         // Add padding if needed
         payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
 
         var payloadBytes = Convert.FromBase64String(payload);
         var payloadJson = System.Text.Encoding.UTF8.GetString(payloadBytes);
-        
+
         return JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(payloadJson);
     }
 
@@ -617,7 +624,7 @@ public class EntraExternalIdAuthService : IAuthService
     private async Task<string?> GetUrlFragmentAsync()
     {
         var fragment = await _jsRuntime.InvokeAsync<string>("eval", "window.location.hash");
-        
+
         if (string.IsNullOrEmpty(fragment) || !fragment.StartsWith("#"))
         {
             return null;
@@ -629,7 +636,7 @@ public class EntraExternalIdAuthService : IAuthService
     private static Dictionary<string, string> ParseFragment(string fragment)
     {
         var parameters = new Dictionary<string, string>();
-        
+
         foreach (var pair in fragment.Split('&'))
         {
             var keyValue = pair.Split('=', 2);
@@ -657,11 +664,6 @@ public class EntraExternalIdAuthService : IAuthService
             _logger.LogWarning(ex, "Failed to get current origin, using fallback");
             return "https://mystira.app"; // Fallback
         }
-    }
-
-    private async Task NavigateToUrlAsync(string url)
-    {
-        await _jsRuntime.InvokeVoidAsync("window.location.href", url);
     }
 
     #endregion
