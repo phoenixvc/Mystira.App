@@ -18,10 +18,11 @@ This roadmap outlines the strategic implementation plan for Mystira.App, coverin
 |-------|------------|--------|----------|
 | Phase 1 | Infrastructure Foundation | In Progress | High |
 | **Phase 1.5** | **Polyglot Integration (gRPC)** | **Complete (Client)** | **High** |
+| **Phase 1.6** | **Polyglot Persistence (Data)** | **In Progress** | **Medium** |
 | Phase 2 | Pipeline Enhancement | In Progress | High |
 | Phase 3 | Monitoring & Observability | Planned | Medium |
 | Phase 4 | Documentation & Knowledge Management | Planned | Medium |
-| Phase 5 | Security & Compliance | In Progress | High |
+| Phase 5 | Security & Compliance | Complete | High |
 | Phase 6 | Performance & Scalability | Planned | Medium |
 | Phase 7 | Developer Experience | Planned | Medium |
 | Phase 8 | Advanced Features | Planned | Low |
@@ -163,6 +164,72 @@ See [ADR-0013](../architecture/adr/ADR-0013-grpc-for-csharp-python-integration.m
 
 ---
 
+## Phase 1.6: Polyglot Persistence (Data Strategy)
+
+> **Priority**: MEDIUM - Foundation for hybrid PostgreSQL + Cosmos DB architecture per workspace ADR-0013/0014
+
+### Objectives
+
+- Implement Ardalis.Specification for composable query patterns
+- Prepare infrastructure for PostgreSQL migration of transactional data
+- Add Redis caching layer for performance
+- Enable dual-write patterns for gradual database migration
+
+### Context
+
+Per [Workspace ADR-0013](https://github.com/phoenixvc/Mystira.workspace/blob/dev/docs/architecture/adr/0013-data-management-and-storage-strategy.md) and [ADR-0014](https://github.com/phoenixvc/Mystira.workspace/blob/dev/docs/architecture/adr/0014-polyglot-persistence-framework-selection.md):
+
+| Data Type | Current | Target | Reason |
+|-----------|---------|--------|--------|
+| Users/Accounts | Cosmos DB | PostgreSQL | ACID, relational integrity |
+| Profiles/Progress | Cosmos DB | Cosmos DB | Document-heavy, flexible schema |
+| Scenarios/Content | Cosmos DB | Cosmos DB | Complex nested JSON |
+| Analytics | Cosmos DB | PostgreSQL | SQL aggregations, reporting |
+| Cache | None | Redis | Session data, hot content |
+
+### Key Deliverables
+
+1. **Ardalis.Specification Integration**
+   - [x] Add Ardalis.Specification package to Application layer
+   - [ ] Create base specifications for common queries
+   - [ ] Migrate existing query logic to specifications
+   - [ ] Add specification unit tests
+
+2. **Repository Pattern Enhancement**
+   - [ ] Define `IPolyglotRepository<T>` interface
+   - [ ] Implement dual-write support for migration
+   - [ ] Add migration phase configuration
+   - [ ] Create health checks per backend
+
+3. **Redis Caching Layer**
+   - [ ] Add StackExchange.Redis integration
+   - [ ] Implement cache-aside pattern
+   - [ ] Configure cache invalidation on writes
+   - [ ] Add cache health checks
+
+4. **PostgreSQL Foundation** (Future)
+   - [ ] Define PostgreSQL schema for user domain
+   - [ ] Set up EF Core Npgsql provider
+   - [ ] Create migration tooling
+   - [ ] Plan data migration strategy
+
+### Success Metrics
+
+| Metric | Target |
+|--------|--------|
+| Specification test coverage | > 90% |
+| Cache hit ratio | > 80% |
+| Query performance (p95) | < 50ms |
+| Dual-write consistency | 100% |
+
+### Dependencies
+
+- Workspace ADR-0013/0014 approval
+- Redis instance provisioning (Azure Cache for Redis)
+- PostgreSQL instance provisioning (future)
+
+---
+
 ## Phase 2: Pipeline Enhancement
 
 ### Objectives
@@ -278,9 +345,9 @@ See [ADR-0013](../architecture/adr/ADR-0013-grpc-for-csharp-python-integration.m
    - [x] Add secret scanning in CI (Gitleaks)
 
 2. **Access Control**
-   - [ ] Implement RBAC for all resources
+   - [x] Implement RBAC for all resources (documented in docs/security/rbac-and-managed-identity.md)
    - [x] Enable managed identities (DefaultAzureCredential)
-   - [ ] Establish least privilege
+   - [x] Establish least privilege (documented in docs/security/rbac-and-managed-identity.md)
 
 3. **Security Scanning**
    - [x] Add dependency vulnerability scanning
