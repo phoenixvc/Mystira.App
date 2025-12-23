@@ -177,9 +177,9 @@
                         <button type="button"
                                 class="btn btn-outline-secondary btn-lg w-100"
                                 @onclick="SignInWithGoogle"
-                                disabled="@isSubmitting"
+                                disabled="@isSubmittingGoogle"
                                 aria-label="Sign in with Google">
-                            @if (isSubmitting)
+                            @if (isSubmittingGoogle)
                             {
                                 <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                                 <span>Redirecting...</span>
@@ -219,6 +219,7 @@
     private string email = string.Empty;
     private string inputCode = string.Empty;
     private bool isSubmitting = false;
+    private bool isSubmittingGoogle = false;
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
     private int resendCountdown = 0;
@@ -451,7 +452,7 @@
     {
         try
         {
-            isSubmitting = true;
+            isSubmittingGoogle = true;
             errorMessage = string.Empty;
             StateHasChanged();
 
@@ -467,7 +468,7 @@
             {
                 errorMessage = "Google sign-in is not available with the current authentication provider.";
                 Logger.LogWarning("Attempted Google sign-in but EntraExternalIdAuthService is not configured");
-                isSubmitting = false;
+                isSubmittingGoogle = false;
                 StateHasChanged();
             }
         }
@@ -475,7 +476,7 @@
         {
             Logger.LogError(ex, "Error initiating Google sign-in");
             errorMessage = "An error occurred while signing in with Google. Please try again.";
-            isSubmitting = false;
+            isSubmittingGoogle = false;
             StateHasChanged();
         }
     }

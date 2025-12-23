@@ -416,6 +416,15 @@ public class EntraExternalIdAuthService : IAuthService
 
             // Get id_token before clearing storage to use as hint for logout
             var idTokenHint = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", IdTokenStorageKey);
+            
+            // Get logout_hint (email or sub claim) from current account
+            string? logoutHint = null;
+            if (_currentAccount != null)
+            {
+                // Use email as logout_hint (preferred by Entra External ID)
+                logoutHint = _currentAccount.Email;
+                _logger.LogInformation("Using logout_hint: {LogoutHint}", logoutHint);
+            }
 
             await ClearLocalStorageAsync();
             ClearAuthenticationState();
@@ -423,10 +432,10 @@ public class EntraExternalIdAuthService : IAuthService
             _logger.LogInformation("Local logout successful");
             AuthenticationStateChanged?.Invoke(this, false);
 
-            // Redirect to Entra logout endpoint
+            // Redirect to Entra logout endpoint with logout_hint for silent logout
             if (!string.IsNullOrEmpty(authority))
             {
-                var logoutUrl = BuildLogoutUrl(authority, postLogoutRedirectUri, idTokenHint);
+                var logoutUrl = BuildLogoutUrl(authority, postLogoutRedirectUri, idTokenHint, logoutHint);
                 _navigationManager.NavigateTo(logoutUrl);
             }
         }
@@ -513,7 +522,7 @@ public class EntraExternalIdAuthService : IAuthService
         return url;
     }
 
-    private static string BuildLogoutUrl(string authority, string postLogoutRedirectUri, string? idTokenHint = null)
+    private static string BuildLogoutUrl(string authority, string postLogoutRedirectUri, string? idTokenHint = null, string? logoutHint = null)
     {
         // Authority format: https://mystira.ciamlogin.com/{tenant_id}/v2.0
         // Logout endpoint: https://mystira.ciamlogin.com/{tenant_id}/oauth2/v2.0/logout
@@ -531,6 +540,11 @@ public class EntraExternalIdAuthService : IAuthService
         if (!string.IsNullOrEmpty(idTokenHint))
         {
             url += $"&id_token_hint={Uri.EscapeDataString(idTokenHint)}";
+        }
+
+        if (!string.IsNullOrEmpty(logoutHint))
+        {
+            url += $"&logout_hint={Uri.EscapeDataString(logoutHint)}";
         }
 
         return url;
