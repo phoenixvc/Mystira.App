@@ -57,13 +57,13 @@ public class ListMediaUseCase
             _ => request.SortDescending ? query.OrderByDescending(m => m.CreatedAt) : query.OrderBy(m => m.CreatedAt)
         };
 
-        var totalCount = query.Count();
+        var totalCount = await query.CountAsync();
         var totalPages = (int)Math.Ceiling((double)totalCount / request.PageSize);
 
-        var media = query
+        var media = await query
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
-            .ToList();
+            .ToListAsync();
 
         return new MediaQueryResponse
         {

@@ -49,7 +49,7 @@ public class DistributedTracingExtensionsTests : IDisposable
     }
 
     [Fact]
-    public void StartTracedOperation_ShouldCreateActivityWithCorrectName()
+    public void StartOperation_ShouldCreateActivityWithCorrectName()
     {
         // Arrange & Act
         using var activity = DistributedTracingExtensions.StartOperation("TestOperation", "Database");
@@ -128,7 +128,7 @@ public class DistributedTracingExtensionsTests : IDisposable
     }
 
     [Fact]
-    public void StartTracedOperation_ShouldPropagateTraceContext()
+    public void StartOperation_ShouldPropagateTraceContext()
     {
         // Arrange
         using var parentActivity = new Activity("ParentOperation").Start();
@@ -144,17 +144,12 @@ public class DistributedTracingExtensionsTests : IDisposable
     }
 
     [Fact]
-    public void StartTracedOperation_WithTags_ShouldIncludeAllTags()
+    public void StartOperation_WithTags_ShouldIncludeAllTags()
     {
         // Arrange
-        var tags = new Dictionary<string, object?>
-        {
-            ["custom.tag1"] = "value1",
-            ["custom.tag2"] = 42
-        };
-
-        // Act
         using var activity = DistributedTracingExtensions.StartOperation("TaggedOperation", "Test");
+
+        // Act - Add tags to activity after creation
         activity?.SetTag("custom.tag1", "value1");
         activity?.SetTag("custom.tag2", 42);
 

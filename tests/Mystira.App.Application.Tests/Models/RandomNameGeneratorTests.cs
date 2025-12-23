@@ -64,7 +64,7 @@ public class RandomNameGeneratorTests
     }
 
     [Fact]
-    public void GenerateUniqueGuestNames_ThreadSafetyTest()
+    public async Task GenerateUniqueGuestNames_ThreadSafetyTest()
     {
         // Arrange
         const int numThreads = 10;
@@ -77,13 +77,13 @@ public class RandomNameGeneratorTests
             tasks[i] = Task.Run(() => RandomNameGenerator.GenerateUniqueGuestNames(namesPerThread, true));
         }
 
-        Task.WhenAll(tasks).Wait();
+        await Task.WhenAll(tasks);
 
         // Assert
         var allNames = new List<string>();
         foreach (var task in tasks)
         {
-            allNames.AddRange(task.Result);
+            allNames.AddRange(await task);
         }
 
         allNames.Should().HaveCount(numThreads * namesPerThread);

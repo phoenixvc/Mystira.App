@@ -138,7 +138,7 @@ public class ScenarioQueryTests : CqrsIntegrationTestBase
     }
 
     [Fact]
-    public async Task GetScenarioQuery_HasCorrectCacheKey()
+    public Task GetScenarioQuery_HasCorrectCacheKey()
     {
         // Arrange
         var query = new GetScenarioQuery("scenario-123");
@@ -146,6 +146,7 @@ public class ScenarioQueryTests : CqrsIntegrationTestBase
         // Assert
         query.CacheKey.Should().Be("Scenario:scenario-123");
         query.CacheDurationSeconds.Should().Be(300);
+        return Task.CompletedTask;
     }
 
     #endregion

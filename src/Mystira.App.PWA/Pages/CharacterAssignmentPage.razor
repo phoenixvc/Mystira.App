@@ -616,7 +616,9 @@ else
     private bool ageGroupDontShowAgain = false;
     private bool dontShowGuestWarning = false;
     private List<string> mismatchedProfileNames = new();
+#pragma warning disable CS0414 // Field is assigned but its value is never used
     private bool showReplayWarningModal = false;
+#pragma warning restore CS0414
     private bool replayDontShowAgain = false;
     private List<string> replayingProfileNames = new();
 

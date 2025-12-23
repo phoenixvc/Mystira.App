@@ -83,7 +83,7 @@ public class CreateArchetypeCommandHandlerTests : CqrsIntegrationTestBase
 
         var retrieved = await DbContext.ArchetypeDefinitions.FindAsync(created.Id);
         retrieved.Should().NotBeNull();
-        retrieved.Name.Should().Be("The Shadow");
+        retrieved!.Name.Should().Be("The Shadow");
         retrieved.Description.Should().Be("The dark shadow archetype");
     }
 

@@ -57,7 +57,7 @@ public class DeleteCompassAxisCommandHandlerTests : CqrsIntegrationTestBase
 
         var deleted = await DbContext.CompassAxes.FindAsync("axis-1");
         deleted.Should().NotBeNull();
-        deleted.IsDeleted.Should().BeTrue();
+        deleted!.IsDeleted.Should().BeTrue();
     }
 
     [Fact]

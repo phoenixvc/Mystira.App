@@ -129,9 +129,9 @@ public class AudioCacheServiceTests
             x => x.Log(
                 LogLevel.Debug,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Pre-cache request for fail1 had an issue")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Pre-cache request for fail1 had an issue")),
                 It.IsAny<HttpRequestException>(),
-                It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
 }

@@ -85,7 +85,7 @@ public class GetAgeGroupsQueryHandlerTests : CqrsIntegrationTestBase
         var result = await Mediator.Send(new GetAgeGroupByIdQuery("ag-1"));
 
         result.Should().NotBeNull();
-        result.Name.Should().Be("Toddlers");
+        result!.Name.Should().Be("Toddlers");
         result.Value.Should().Be("2-4");
     }
 

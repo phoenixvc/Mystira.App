@@ -382,7 +382,7 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
         // Log warning if entity has no Id property
         _logger.LogWarning(
             "Unable to determine ID property for entity type {EntityType}. " +
-            "Consider implementing IHasId interface or using a standard naming convention (Id, {EntityType}Id, Key). " +
+            "Consider implementing IHasId interface or using a standard naming convention (Id, EntityTypeId, Key). " +
             "Cache operations will be skipped for this entity.",
             _entityTypeName);
 

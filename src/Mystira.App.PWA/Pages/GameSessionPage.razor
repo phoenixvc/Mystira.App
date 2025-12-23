@@ -388,7 +388,9 @@ else
     private int? rollResult = null;
     private bool? lastRollSuccess = null;
     private string? lastRollMessage = null;
+#pragma warning disable CS0414 // Field is assigned but its value is never used
     private bool hasNavigatedHome = false;
+#pragma warning restore CS0414
     private bool isMusicPaused = false;
 
     // Audio

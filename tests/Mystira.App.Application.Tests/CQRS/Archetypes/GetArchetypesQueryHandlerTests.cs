@@ -76,7 +76,7 @@ public class GetArchetypesQueryHandlerTests : CqrsIntegrationTestBase
         var result = await Mediator.Send(new GetArchetypeByIdQuery("arch-1"));
 
         result.Should().NotBeNull();
-        result.Name.Should().Be("The Hero");
+        result!.Name.Should().Be("The Hero");
         result.Description.Should().Be("The archetypal hero");
     }
 
