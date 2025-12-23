@@ -75,11 +75,21 @@ public class DeleteCompassAxisCommandHandlerTests : CqrsIntegrationTestBase
     [Fact]
     public async Task Handle_InvalidatesCachePrefix()
     {
+        ClearCache();
         await SeedTestDataAsync();
+
+        // First call to seed the cache
         var initialAxes = await Mediator.Send(new GetAllCompassAxesQuery());
         initialAxes.Should().HaveCount(2, "Initial count should be 2");
 
+        // Verify it's actually cached
+        var cacheKey = new GetAllCompassAxesQuery().CacheKey;
+        Cache.TryGetValue(cacheKey, out _).Should().BeTrue();
+
         await Mediator.Send(new DeleteCompassAxisCommand("axis-1"));
+
+        // Verify cache entry is gone
+        Cache.TryGetValue(cacheKey, out _).Should().BeFalse();
 
         var updatedAxes = await Mediator.Send(new GetAllCompassAxesQuery());
         updatedAxes.Should().HaveCount(1, "Count should be 1 after deletion");
