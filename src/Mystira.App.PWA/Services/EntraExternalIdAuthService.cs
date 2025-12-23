@@ -414,21 +414,18 @@ public class EntraExternalIdAuthService : IAuthService
             var postLogoutRedirectUri = _configuration["MicrosoftEntraExternalId:PostLogoutRedirectUri"]
                 ?? await GetCurrentOriginAsync();
 
-            // Get id_token before clearing storage to use as hint for logout
-            var idTokenHint = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", IdTokenStorageKey);
+            // Perform local-only logout without redirecting to Entra
+            // This provides instant logout without any Entra UI or redirects
+            // The Entra session remains active, enabling SSO on next login
 
             await ClearLocalStorageAsync();
             ClearAuthenticationState();
 
-            _logger.LogInformation("Local logout successful");
+            _logger.LogInformation("Local logout successful - user logged out of application");
             AuthenticationStateChanged?.Invoke(this, false);
 
-            // Redirect to Entra logout endpoint
-            if (!string.IsNullOrEmpty(authority))
-            {
-                var logoutUrl = BuildLogoutUrl(authority, postLogoutRedirectUri, idTokenHint);
-                _navigationManager.NavigateTo(logoutUrl);
-            }
+            // Redirect to home page after logout
+            _navigationManager.NavigateTo("/", forceLoad: true);
         }
         catch (JSException ex)
         {
@@ -448,9 +445,23 @@ public class EntraExternalIdAuthService : IAuthService
     {
         var authority = _configuration["MicrosoftEntraExternalId:Authority"];
         var clientId = _configuration["MicrosoftEntraExternalId:ClientId"];
-        var redirectUri = _configuration["MicrosoftEntraExternalId:RedirectUri"];
+        var configuredRedirectUri = _configuration["MicrosoftEntraExternalId:RedirectUri"];
 
-        return (authority ?? string.Empty, clientId ?? string.Empty, redirectUri ?? string.Empty);
+        // Use configured redirect URI if available, otherwise build from current URL
+        string redirectUri;
+        if (!string.IsNullOrEmpty(configuredRedirectUri))
+        {
+            redirectUri = configuredRedirectUri;
+        }
+        else
+        {
+            // Build redirect URI dynamically from current base URL
+            var baseUri = _navigationManager.BaseUri.TrimEnd('/');
+            redirectUri = $"{baseUri}/authentication/login-callback";
+            _logger.LogInformation("Using dynamic redirect URI: {RedirectUri}", redirectUri);
+        }
+
+        return (authority ?? string.Empty, clientId ?? string.Empty, redirectUri);
     }
 
     private static void ValidateEntraConfiguration(string? authority, string? clientId)
@@ -496,10 +507,15 @@ public class EntraExternalIdAuthService : IAuthService
             url += $"&domain_hint={Uri.EscapeDataString(domainHint)}";
         }
 
+        // Add prompt=login to force re-authentication and suppress KMSI prompt
+        // This prevents the "Stay signed in?" prompt from appearing
+        // Note: This disables SSO - users must authenticate every time
+        url += "&prompt=login";
+
         return url;
     }
 
-    private static string BuildLogoutUrl(string authority, string postLogoutRedirectUri, string? idTokenHint = null)
+    private static string BuildLogoutUrl(string authority, string postLogoutRedirectUri, string? idTokenHint = null, string? logoutHint = null)
     {
         // Authority format: https://mystira.ciamlogin.com/{tenant_id}/v2.0
         // Logout endpoint: https://mystira.ciamlogin.com/{tenant_id}/oauth2/v2.0/logout
@@ -517,6 +533,11 @@ public class EntraExternalIdAuthService : IAuthService
         if (!string.IsNullOrEmpty(idTokenHint))
         {
             url += $"&id_token_hint={Uri.EscapeDataString(idTokenHint)}";
+        }
+
+        if (!string.IsNullOrEmpty(logoutHint))
+        {
+            url += $"&logout_hint={Uri.EscapeDataString(logoutHint)}";
         }
 
         return url;
@@ -804,7 +825,7 @@ public class EntraExternalIdAuthService : IAuthService
 
             return new Account
             {
-                Id = Guid.NewGuid().ToString(), // Will be mapped to actual account ID by API
+                Id = sub, // Use subject claim as Account ID for proper correlation with identity provider
                 Email = email,
                 DisplayName = name ?? email,
                 CreatedAt = DateTime.UtcNow,
@@ -837,6 +858,9 @@ public class EntraExternalIdAuthService : IAuthService
         }
 
         var payload = parts[1];
+
+        // Convert Base64URL to standard Base64 (replace URL-safe characters)
+        payload = payload.Replace('-', '+').Replace('_', '/');
 
         // Add padding if needed
         payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');

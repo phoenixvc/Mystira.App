@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using System.Text.Json;
 using Ardalis.Specification;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Shared.Telemetry;
 using Polly;
+using Polly.CircuitBreaker;
 using Polly.Retry;
 
 namespace Mystira.App.Infrastructure.Data.Polyglot;
@@ -24,6 +26,14 @@ namespace Mystira.App.Infrastructure.Data.Polyglot;
 /// <typeparam name="T">The entity type</typeparam>
 public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepository<T> where T : class
 {
+    private static readonly Meter _meter = new("Mystira.App.Polyglot", "1.0.0");
+    private static readonly Counter<long> _secondaryWriteFailures = _meter.CreateCounter<long>(
+        "polyglot.secondary_write_failures",
+        description: "Count of failed secondary database writes during dual-write operations");
+    private static readonly Counter<long> _secondaryWriteSuccesses = _meter.CreateCounter<long>(
+        "polyglot.secondary_write_successes",
+        description: "Count of successful secondary database writes during dual-write operations");
+
     private readonly MigrationOptions _options;
     private readonly DbContext? _secondaryContext;
     private readonly ResiliencePipeline _resiliencePipeline;
@@ -231,67 +241,33 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
             await _resiliencePipeline.ExecuteAsync(
                 async token => await secondaryWrite(),
                 cts.Token);
+
+            // Track successful secondary writes via Meter
+            _secondaryWriteSuccesses.Add(1,
+                new KeyValuePair<string, object?>("entity_type", typeof(T).Name),
+                new KeyValuePair<string, object?>("phase", _options.Phase.ToString()));
         }
         catch (Exception ex)
         {
+            // Emit metric for monitoring/alerting via Meter
+            _secondaryWriteFailures.Add(1,
+                new KeyValuePair<string, object?>("entity_type", typeof(T).Name),
+                new KeyValuePair<string, object?>("phase", _options.Phase.ToString()),
+                new KeyValuePair<string, object?>("exception_type", ex.GetType().Name));
+
             _logger.LogError(ex,
-                "Secondary write failed for {EntityType}. Compensation enabled: {CompensationEnabled}",
+                "Secondary write failed for {EntityType}. Phase: {Phase}. Compensation enabled: {CompensationEnabled}. " +
+                "This failure is tracked via polyglot.secondary_write_failures metric.",
                 typeof(T).Name,
+                _options.Phase,
                 _options.EnableCompensation);
 
-            // Track metric for monitoring and alerting
+            // Also track via ICustomMetrics if available
             _metrics?.TrackDualWriteFailure(
                 typeof(T).Name,
                 "Write",
                 ex.Message,
                 _options.EnableCompensation);
-
-            // Don't fail the operation, but ensure monitoring is in place
-            // The metric will trigger alerts in production
-        }
-
-        return result;
-    }
-
-    private async Task<int> DualWriteIntAsync(
-        Func<Task<int>> primaryWrite,
-        Func<Task<int>> secondaryWrite,
-        CancellationToken cancellationToken)
-    {
-        // Write to primary first
-        var result = await primaryWrite();
-
-        if (_secondaryContext == null)
-        {
-            return result;
-        }
-
-        // Attempt secondary write with timeout
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        cts.CancelAfter(_options.DualWriteTimeoutMs);
-
-        try
-        {
-            await _resiliencePipeline.ExecuteAsync(
-                async token => await secondaryWrite(),
-                cts.Token);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex,
-                "Secondary write failed for {EntityType}. Compensation enabled: {CompensationEnabled}",
-                typeof(T).Name,
-                _options.EnableCompensation);
-
-            // Track metric for monitoring and alerting
-            _metrics?.TrackDualWriteFailure(
-                typeof(T).Name,
-                "Write",
-                ex.Message,
-                _options.EnableCompensation);
-
-            // Don't fail the operation, but ensure monitoring is in place
-            // The metric will trigger alerts in production
         }
 
         return result;
@@ -325,6 +301,39 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     private ResiliencePipeline CreateResiliencePipeline()
     {
         return new ResiliencePipelineBuilder()
+            // Circuit breaker: Opens after 5 consecutive failures, stays open for 30s
+            // This prevents cascading failures when secondary is down
+            .AddCircuitBreaker(new CircuitBreakerStrategyOptions
+            {
+                FailureRatio = 0.5,
+                SamplingDuration = TimeSpan.FromSeconds(30),
+                MinimumThroughput = 5,
+                BreakDuration = TimeSpan.FromSeconds(30),
+                ShouldHandle = new PredicateBuilder()
+                    .Handle<DbUpdateException>()
+                    .Handle<TimeoutException>()
+                    .Handle<OperationCanceledException>(),
+                OnOpened = args =>
+                {
+                    _logger.LogWarning(
+                        "Circuit breaker OPENED for secondary database writes. " +
+                        "Duration: {BreakDuration}s. Reason: {Exception}",
+                        args.BreakDuration.TotalSeconds,
+                        args.Outcome.Exception?.Message ?? "Unknown");
+                    return ValueTask.CompletedTask;
+                },
+                OnClosed = _ =>
+                {
+                    _logger.LogInformation("Circuit breaker CLOSED. Secondary database writes resumed.");
+                    return ValueTask.CompletedTask;
+                },
+                OnHalfOpened = _ =>
+                {
+                    _logger.LogInformation("Circuit breaker HALF-OPEN. Testing secondary database...");
+                    return ValueTask.CompletedTask;
+                }
+            })
+            // Retry: 3 attempts with exponential backoff
             .AddRetry(new RetryStrategyOptions
             {
                 MaxRetryAttempts = 3,
@@ -333,6 +342,7 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
                 UseJitter = true,
                 ShouldHandle = new PredicateBuilder().Handle<DbUpdateException>()
             })
+            // Timeout: Fail fast if secondary is too slow
             .AddTimeout(TimeSpan.FromMilliseconds(_options.DualWriteTimeoutMs))
             .Build();
     }

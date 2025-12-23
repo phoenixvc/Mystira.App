@@ -8,6 +8,18 @@ using Mystira.App.Application.Ports.Data;
 namespace Mystira.App.Infrastructure.Data.Caching;
 
 /// <summary>
+/// Interface for entities with a string ID.
+/// Implement this interface to enable reliable cache key generation.
+/// </summary>
+public interface IHasId
+{
+    /// <summary>
+    /// Gets the unique identifier for the entity.
+    /// </summary>
+    string Id { get; }
+}
+
+/// <summary>
 /// Repository decorator that adds caching using the cache-aside pattern.
 /// Wraps an existing ISpecRepository and adds Redis caching.
 ///
@@ -347,8 +359,17 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
 
     private string? GetEntityId(T entity)
     {
-        // Try to get Id property using reflection
-        var idProperty = typeof(T).GetProperty("Id");
+        // Strategy 1: Check if entity implements IHasId interface
+        if (entity is IHasId hasId)
+        {
+            return hasId.Id;
+        }
+
+        // Strategy 2: Try common ID property names via reflection
+        var idProperty = typeof(T).GetProperty("Id")
+            ?? typeof(T).GetProperty($"{typeof(T).Name}Id")
+            ?? typeof(T).GetProperty("Key");
+
         if (idProperty != null)
         {
             var value = idProperty.GetValue(entity);
@@ -360,11 +381,11 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
 
         // Log warning if entity has no Id property
         _logger.LogWarning(
-            "Entity type {EntityType} does not have an 'Id' property or it is null. " +
-            "Cache operations will be skipped for this entity. " +
-            "Consider implementing IEntity interface or using a different caching strategy for entities with composite keys.",
+            "Unable to determine ID property for entity type {EntityType}. " +
+            "Consider implementing IHasId interface or using a standard naming convention (Id, {EntityType}Id, Key). " +
+            "Cache operations will be skipped for this entity.",
             _entityTypeName);
-        
+
         return null;
     }
 

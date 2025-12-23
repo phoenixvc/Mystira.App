@@ -22,6 +22,7 @@ using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
 using Mystira.App.Infrastructure.Data;
+using Mystira.App.Infrastructure.Data.Caching;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.Services;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -486,6 +487,16 @@ builder.Services.AddMemoryCache(options =>
     options.SizeLimit = 1024; // Limit cache to 1024 entries
     options.CompactionPercentage = 0.25; // Compact 25% when size limit reached
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DISTRIBUTED CACHING (Redis or In-Memory fallback)
+// ═══════════════════════════════════════════════════════════════════════════════
+builder.Services.AddRedisCaching(builder.Configuration);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DISTRIBUTED TRACING (W3C Trace Context propagation)
+// ═══════════════════════════════════════════════════════════════════════════════
+builder.Services.AddDistributedTracing("Mystira.App.Api", builder.Environment.EnvironmentName);
 
 // Configure MediatR for CQRS pattern
 builder.Services.AddMediatR(cfg =>
