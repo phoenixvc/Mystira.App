@@ -6,6 +6,8 @@ using Moq;
 using Mystira.App.Application.Configuration.StoryProtocol;
 using Mystira.App.Infrastructure.StoryProtocol.HealthChecks;
 using Mystira.App.Infrastructure.StoryProtocol.Services;
+using System.Threading.Tasks;
+using Xunit;
 
 namespace Mystira.App.Api.Tests.HealthChecks;
 

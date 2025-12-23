@@ -85,6 +85,7 @@ public static class DistributedTracingExtensions
     {
         var activity = MystiraActivitySource.StartActivity($"Cache: {operationName}", ActivityKind.Client);
         activity?.SetTag("span.type", "Cache");
+        activity?.SetTag("cache.operation", operationName);
         activity?.SetTag("cache.key", cacheKey);
         return activity;
     }

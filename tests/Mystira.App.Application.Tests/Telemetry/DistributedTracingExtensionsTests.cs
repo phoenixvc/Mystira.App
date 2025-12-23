@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Mystira.App.Shared.Telemetry;
 using System.Diagnostics;
 
@@ -10,13 +11,33 @@ namespace Mystira.App.Application.Tests.Telemetry;
 /// Unit tests for DistributedTracingExtensions.
 /// Tests verify Activity creation and W3C trace context propagation.
 /// </summary>
-public class DistributedTracingExtensionsTests
+public class DistributedTracingExtensionsTests : IDisposable
 {
+    private readonly ActivityListener _listener;
+
+    public DistributedTracingExtensionsTests()
+    {
+        // Set up ActivityListener for tests to enable Activity creation
+        _listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name.StartsWith("Mystira"),
+            Sample = (ref ActivityCreationOptions<ActivityContext> options) =>
+                ActivitySamplingResult.AllDataAndRecorded
+        };
+        ActivitySource.AddActivityListener(_listener);
+    }
+
+    public void Dispose()
+    {
+        _listener?.Dispose();
+    }
+
     [Fact]
     public void AddDistributedTracing_ShouldRegisterActivityListenerHostedService()
     {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging(); // Required by ActivityListenerHostedService
 
         // Act
         services.AddDistributedTracing("TestService", "Development");
@@ -31,7 +52,7 @@ public class DistributedTracingExtensionsTests
     public void StartTracedOperation_ShouldCreateActivityWithCorrectName()
     {
         // Arrange & Act
-        using var activity = DistributedTracingExtensions.StartTracedOperation("TestOperation", "Database");
+        using var activity = DistributedTracingExtensions.StartOperation("TestOperation", "Database");
 
         // Assert
         activity.Should().NotBeNull();
@@ -114,7 +135,7 @@ public class DistributedTracingExtensionsTests
         var parentTraceId = parentActivity.TraceId;
 
         // Act
-        using var childActivity = DistributedTracingExtensions.StartTracedOperation("ChildOperation", "Test");
+        using var childActivity = DistributedTracingExtensions.StartOperation("ChildOperation", "Test");
 
         // Assert
         childActivity.Should().NotBeNull();
@@ -133,7 +154,9 @@ public class DistributedTracingExtensionsTests
         };
 
         // Act
-        using var activity = DistributedTracingExtensions.StartTracedOperation("TaggedOperation", "Test", tags);
+        using var activity = DistributedTracingExtensions.StartOperation("TaggedOperation", "Test");
+        activity?.SetTag("custom.tag1", "value1");
+        activity?.SetTag("custom.tag2", 42);
 
         // Assert
         activity.Should().NotBeNull();
