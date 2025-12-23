@@ -79,7 +79,8 @@
                             <button type="button"
                                     class="btn btn-outline-secondary btn-lg w-100"
                                     @onclick="SignUpWithGoogle"
-                                    disabled="@isSubmitting">
+                                    disabled="@isSubmitting"
+                                    aria-label="Sign up with Google">
                                 @if (isSubmitting)
                                 {
                                     <span class="spinner-border spinner-border-sm me-2" role="status"></span>

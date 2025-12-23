@@ -341,8 +341,9 @@ static string DetectEnvironmentFromHostname(string baseAddress)
         // Default to Production for mystira.app apex domain
         return "Production";
     }
-    catch
+    catch (Exception ex)
     {
+        Console.WriteLine($"Error detecting environment from hostname: {ex.Message}");
         return "Production"; // Safe default
     }
 }

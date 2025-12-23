@@ -838,6 +838,9 @@ public class EntraExternalIdAuthService : IAuthService
 
         var payload = parts[1];
 
+        // Convert Base64URL to standard Base64 (replace URL-safe characters)
+        payload = payload.Replace('-', '+').Replace('_', '/');
+
         // Add padding if needed
         payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
 
