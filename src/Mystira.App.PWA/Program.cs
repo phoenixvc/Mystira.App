@@ -184,7 +184,18 @@ builder.Services.Configure<JsonSerializerOptions>(options =>
 
 // Register services
 builder.Services.AddScoped<ITokenProvider, LocalStorageTokenProvider>();
-builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Configure authentication provider based on configuration
+var authProvider = builder.Configuration["Authentication:Provider"];
+if (authProvider == "EntraExternalId")
+{
+    builder.Services.AddScoped<IAuthService, EntraExternalIdAuthService>();
+}
+else
+{
+    // Default to custom passwordless authentication
+    builder.Services.AddScoped<IAuthService, AuthService>();
+}
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<IGameSessionService, GameSessionService>();
 builder.Services.AddScoped<IInMemoryStoreService, InMemoryStoreService>();
