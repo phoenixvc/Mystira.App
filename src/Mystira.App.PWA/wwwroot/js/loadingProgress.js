@@ -46,7 +46,7 @@ window.mystiraLoading = (function() {
         {
             id: 'almost-ready',
             message: 'Almost ready…',
-            icon: 'fas fa-sparkles',
+            icon: 'fas fa-magic',
             optional: false
         }
     ];
@@ -54,6 +54,7 @@ window.mystiraLoading = (function() {
     let currentStageIndex = 0;
     let startTime = Date.now();
     let timeoutTimer = null;
+    let timeoutWarningTimer = null;
     let isComplete = false;
     let progressData = {
         downloadProgress: null,      // { current: number, total: number }
@@ -99,7 +100,8 @@ window.mystiraLoading = (function() {
 
     // Start timeout warning timer (10 seconds)
     function startTimeoutWarningTimer() {
-        setTimeout(() => {
+        if (timeoutWarningTimer) clearTimeout(timeoutWarningTimer);
+        timeoutWarningTimer = setTimeout(() => {
             if (!isComplete) {
                 console.log(LOG_PREFIX, 'Showing timeout warning (10s)');
                 if (eventHandlers.onTimeoutWarning) {
@@ -238,6 +240,7 @@ window.mystiraLoading = (function() {
         console.log(LOG_PREFIX, 'Loading complete');
         isComplete = true;
         clearTimeout(timeoutTimer);
+        clearTimeout(timeoutWarningTimer);
 
         if (eventHandlers.onComplete) {
             eventHandlers.onComplete();
@@ -344,6 +347,14 @@ window.mystiraLoading = (function() {
 
     // Show diagnostic info in modal
     function showDiagnosticModal(text) {
+        // Escape HTML to prevent XSS
+        const escapedText = text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+
         const modalHtml = `
             <div class="modal fade" id="diagnosticModal" tabindex="-1">
                 <div class="modal-dialog modal-lg">
@@ -354,7 +365,7 @@ window.mystiraLoading = (function() {
                         </div>
                         <div class="modal-body">
                             <p>Please copy this information when reporting the problem:</p>
-                            <pre style="max-height: 300px; overflow-y: auto;">${text}</pre>
+                            <pre style="max-height: 300px; overflow-y: auto;">${escapedText}</pre>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>

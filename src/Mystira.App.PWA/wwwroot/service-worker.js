@@ -12,19 +12,8 @@ let progressData = {
     coreProgress: { current: 0, total: 0 }
 };
 
-// Progress callback for loading experience
-let progressCallback = null;
-
-function setProgressCallback(callback) {
-    progressCallback = callback;
-}
-
 function notifyProgress(type, current, total) {
-    if (progressCallback) {
-        progressCallback(type, current, total);
-    }
-    
-    // Also post message to clients
+    // Post message to clients
     self.clients.matchAll().then(clients => {
         clients.forEach(client => {
             client.postMessage({
@@ -110,7 +99,7 @@ self.addEventListener('install', event => {
                 // Cache icons with progress tracking
                 const iconCache = await caches.open(ICON_CACHE_NAME);
                 console.log('Service Worker: Caching Icon Files');
-                
+
                 let iconCompleted = 0;
                 for (const url of iconUrls) {
                     try {
@@ -130,7 +119,7 @@ self.addEventListener('install', event => {
                 // Cache core files with progress tracking
                 const coreCache = await caches.open(CORE_CACHE_NAME);
                 console.log('Service Worker: Caching Core Files');
-                
+
                 let coreCompleted = 0;
                 for (const url of coreUrls) {
                     try {
@@ -148,15 +137,15 @@ self.addEventListener('install', event => {
                 }
 
                 console.log('Service Worker: All Essential Files Cached');
-                
+
                 // Final progress update
                 notifyProgress('cache', iconUrls.length + coreUrls.length, iconUrls.length + coreUrls.length);
-                
+
             } catch (error) {
                 console.error('Failed to cache PWA assets:', error);
                 console.debug('Icon URLs attempted:', iconUrls);
                 console.debug('Core URLs attempted:', coreUrls);
-                
+
                 // Notify partial progress on error
                 const totalCompleted = progressData.iconProgress.current + progressData.coreProgress.current;
                 const totalExpected = iconUrls.length + coreUrls.length;
@@ -471,16 +460,6 @@ self.addEventListener('message', event => {
     if (event?.data?.type === 'SKIP_WAITING') {
         console.log(`${LOG_PREFIX} Received SKIP_WAITING message`);
         self.skipWaiting();
-    }
-    
-    if (event?.data?.type === 'REGISTER_PROGRESS_CALLBACK') {
-        console.log(`${LOG_PREFIX} Received progress callback registration`);
-        setProgressCallback(event.data.callback);
-    }
-    
-    // Also support direct callback registration for backward compatibility
-    if (event?.data?.callback) {
-        setProgressCallback(event.data.callback);
     }
 });
 
