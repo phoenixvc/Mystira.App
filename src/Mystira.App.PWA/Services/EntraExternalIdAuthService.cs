@@ -507,6 +507,11 @@ public class EntraExternalIdAuthService : IAuthService
             url += $"&domain_hint={Uri.EscapeDataString(domainHint)}";
         }
 
+        // Add prompt=login to force re-authentication and suppress KMSI prompt
+        // This prevents the "Stay signed in?" prompt from appearing
+        // Note: This disables SSO - users must authenticate every time
+        url += "&prompt=login";
+
         return url;
     }
 
