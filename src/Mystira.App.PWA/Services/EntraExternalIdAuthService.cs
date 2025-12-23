@@ -414,47 +414,18 @@ public class EntraExternalIdAuthService : IAuthService
             var postLogoutRedirectUri = _configuration["MicrosoftEntraExternalId:PostLogoutRedirectUri"]
                 ?? await GetCurrentOriginAsync();
 
-            // Get id_token before clearing storage to use as hint for logout
-            var idTokenHint = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", IdTokenStorageKey);
+            // Perform local-only logout without redirecting to Entra
+            // This provides instant logout without any Entra UI or redirects
+            // The Entra session remains active, enabling SSO on next login
             
-            // Extract login_hint from ID token to use as logout_hint
-            // This prevents the account picker from showing during logout
-            string? logoutHint = null;
-            if (!string.IsNullOrEmpty(idTokenHint))
-            {
-                try
-                {
-                    var claims = DecodeJwtPayload(idTokenHint);
-                    if (claims.TryGetValue("login_hint", out var loginHintElement))
-                    {
-                        logoutHint = loginHintElement.GetString();
-                        _logger.LogInformation("Extracted login_hint for logout: {LogoutHint}", logoutHint);
-                    }
-                    else if (claims.TryGetValue("email", out var emailElement))
-                    {
-                        // Fallback to email if login_hint is not present
-                        logoutHint = emailElement.GetString();
-                        _logger.LogInformation("Using email as logout_hint: {LogoutHint}", logoutHint);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to extract login_hint from ID token");
-                }
-            }
-
             await ClearLocalStorageAsync();
             ClearAuthenticationState();
 
-            _logger.LogInformation("Local logout successful");
+            _logger.LogInformation("Local logout successful - user logged out of application");
             AuthenticationStateChanged?.Invoke(this, false);
-
-            // Redirect to Entra logout endpoint with logout_hint for silent logout
-            if (!string.IsNullOrEmpty(authority))
-            {
-                var logoutUrl = BuildLogoutUrl(authority, postLogoutRedirectUri, idTokenHint, logoutHint);
-                _navigationManager.NavigateTo(logoutUrl);
-            }
+            
+            // Redirect to home page after logout
+            _navigationManager.NavigateTo("/", forceLoad: true);
         }
         catch (JSException ex)
         {
