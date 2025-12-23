@@ -338,7 +338,7 @@ public class EntraExternalIdAuthServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task LoginWithEntraAsync_WithDomainHint_RedirectsWithDomainHintOnly()
+    public async Task LoginWithEntraAsync_WithDomainHint_RedirectsWithDomainHintAndPromptLogin()
     {
         // Arrange
         _mockJsRuntime.Setup(js => js.InvokeAsync<IJSVoidResult>(It.IsAny<string>(), It.IsAny<object[]>()))
@@ -352,7 +352,8 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         capturedUrl.Should().NotBeNull();
         capturedUrl.Should().Contain("domain_hint=Google");
         capturedUrl.Should().NotContain("direct_signin=");
-        capturedUrl.Should().NotContain("prompt=");
+        // The implementation always adds prompt=login to suppress KMSI prompt
+        capturedUrl.Should().Contain("prompt=login");
     }
 
     [Fact]
@@ -662,11 +663,10 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         await _service.LogoutAsync();
 
         // Assert
+        // The implementation now performs local-only logout and redirects to home
         var capturedUrl = _navigationManager.NavigatedUrl;
         capturedUrl.Should().NotBeNull();
-        capturedUrl.Should().StartWith("https://test.ciamlogin.com/tenant-id/oauth2/v2.0/logout?");
-        capturedUrl.Should().Contain("post_logout_redirect_uri=");
-        capturedUrl.Should().Contain($"id_token_hint={testIdToken}");
+        capturedUrl.Should().Be("/");
     }
 
     [Fact]
@@ -686,11 +686,10 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         await _service.LogoutAsync();
 
         // Assert
+        // The implementation now performs local-only logout and redirects to home
         var capturedUrl = _navigationManager.NavigatedUrl;
         capturedUrl.Should().NotBeNull();
-        capturedUrl.Should().StartWith("https://test.ciamlogin.com/tenant-id/oauth2/v2.0/logout?");
-        capturedUrl.Should().Contain("post_logout_redirect_uri=");
-        capturedUrl.Should().NotContain("id_token_hint=");
+        capturedUrl.Should().Be("/");
     }
 
     #endregion
