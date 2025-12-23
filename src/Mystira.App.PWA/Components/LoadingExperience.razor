@@ -1,0 +1,465 @@
+@using System.Text.Json
+@inject IJSRuntime jsRuntime
+
+@* LoadingExperience.razor - Enhanced PWA loading experience with staged progress *@
+
+<div class="loading-experience @CssClass" style="@Style">
+    @if (!showFallbackActions)
+    {
+        <!-- Main Loading Experience -->
+        <div class="loading-container">
+            <!-- Mystira Logo -->
+            <div class="loading-logo-container">
+                <img src="images/mystira-logo.webp" alt="Mystira Logo" class="loading-logo" />
+                <h1 class="loading-title">Mystira</h1>
+            </div>
+
+            <!-- Progress Tracker -->
+            @if (visibleStages.Any())
+            {
+                <div class="progress-tracker">
+                    @foreach (var stage in visibleStages)
+                    {
+                        <div class="progress-stage @(GetStageStatus(stage.Id))">
+                            <div class="stage-icon">
+                                <i class="@stage.Icon"></i>
+                            </div>
+                            <div class="stage-content">
+                                <div class="stage-message">
+                                    @stage.Message
+                                    @if (HasProgress(stage.Id))
+                                    {
+                                        var progress = GetProgressData(stage.Id);
+                                        if (progress != null)
+                                        {
+                                            <span class="progress-detail">
+                                                (@progress.Current/@progress.Total)
+                                            </span>
+                                        }
+                                    }
+                                </div>
+                                @if (HasProgress(stage.Id))
+                                {
+                                    var progress = GetProgressData(stage.Id);
+                                    if (progress != null)
+                                    {
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: @(GetProgressPercentage(progress))%"></div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                            @if (GetStageStatus(stage.Id) == "completed")
+                            {
+                                <div class="stage-check">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
+            <!-- Loading Animation -->
+            @if (!currentStage?.Id.Equals("almost-ready") ?? true)
+            {
+                <div class="loading-animation">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-dots">
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </div>
+                </div>
+            }
+
+            <!-- Timeout Warning -->
+            @if (showTimeoutWarning)
+            {
+                <div class="timeout-warning">
+                    <div class="warning-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <p class="warning-message">
+                        This is taking longer than usual. We're working to get you connected...
+                    </p>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <!-- Fallback Actions (shown after 15 seconds) -->
+        <div class="fallback-container">
+            <div class="fallback-logo">
+                <img src="images/mystira-logo.webp" alt="Mystira Logo" class="fallback-logo-img" />
+                <h2 class="fallback-title">Having trouble connecting?</h2>
+                <p class="fallback-subtitle">We can help you get back to your adventures</p>
+            </div>
+
+            <div class="fallback-actions">
+                <button class="fallback-action-btn primary" @onclick="HandleRetry">
+                    <i class="fas fa-redo"></i>
+                    <span>Try Again</span>
+                    <small>Reload the app</small>
+                </button>
+
+                <button class="fallback-action-btn secondary" @onclick="HandleOffline">
+                    <i class="fas fa-wifi-slash"></i>
+                    <span>Work Offline</span>
+                    <small>Use saved content</small>
+                </button>
+
+                <button class="fallback-action-btn warning" @onclick="HandleClearCache">
+                    <i class="fas fa-trash-alt"></i>
+                    <span>Clear Cache</span>
+                    <small>Remove old data & reload</small>
+                </button>
+
+                <button class="fallback-action-btn info" @onclick="HandleReportProblem">
+                    <i class="fas fa-bug"></i>
+                    <span>Report Problem</span>
+                    <small>Copy diagnostic info</small>
+                </button>
+            </div>
+
+            <!-- Elapsed Time Display -->
+            <div class="elapsed-time">
+                <i class="fas fa-stopwatch"></i>
+                <span>Time elapsed: @FormatElapsedTime(elapsedTime)</span>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    // Public parameters
+    [Parameter] public string? CssClass { get; set; }
+    [Parameter] public string? Style { get; set; }
+    [Parameter] public bool AutoStart { get; set; } = true;
+    [Parameter] public EventCallback OnLoaded { get; set; }
+
+    // Internal state
+    private LoadingStage[] visibleStages = Array.Empty<LoadingStage>();
+    private LoadingStage? currentStage = null;
+    private LoadingStage[] completedStages = Array.Empty<LoadingStage>();
+    private bool showFallbackActions = false;
+    private bool showTimeoutWarning = false;
+    private int elapsedTime = 0;
+    private Timer? elapsedTimer;
+    private ProgressData? downloadProgress = null;
+    private ProgressData? cacheProgress = null;
+    private ProgressData? syncProgress = null;
+
+    protected override void OnInitialized()
+    {
+        if (AutoStart)
+        {
+            StartLoadingExperience();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && AutoStart)
+        {
+            // Set up JavaScript event handlers
+            await SetupJavaScriptIntegration();
+        }
+    }
+
+    public void StartLoadingExperience()
+    {
+        // Start elapsed time tracking
+        StartElapsedTimer();
+        
+        // Initialize JS loading tracker
+        if (jsRuntime != null)
+        {
+            _ = InvokeAsync(async () => {
+                await jsRuntime.InvokeVoidAsync("window.mystiraLoading.initialize");
+                await SetupJavaScriptIntegration();
+            });
+        }
+    }
+
+    private async Task SetupJavaScriptIntegration()
+    {
+        if (jsRuntime == null) return;
+
+        try
+        {
+            // Set up stage change handler
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setStageChangeHandler", DotNetObjectReference.Create(this));
+
+            // Set up progress update handler
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setProgressUpdateHandler", DotNetObjectReference.Create(this));
+
+            // Set up timeout warning handler
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setTimeoutWarningHandler", DotNetObjectReference.Create(this));
+
+            // Set up timeout handler
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setTimeoutHandler", DotNetObjectReference.Create(this));
+
+            // Set up complete handler
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setCompleteHandler", DotNetObjectReference.Create(this));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to setup JavaScript integration: {ex.Message}");
+        }
+    }
+
+    // JavaScript callback for stage changes
+    [JSInvokable]
+    public void OnStageChange(object stageData)
+    {
+        try
+        {
+            if (stageData is JsonElement jsonElement)
+            {
+                var stageJson = jsonElement.GetRawText();
+                var stageChangeData = JsonSerializer.Deserialize<StageChangeData>(stageJson);
+                if (stageChangeData != null)
+                {
+                    InvokeAsync(() => {
+                        visibleStages = stageChangeData.allStages;
+                        currentStage = stageChangeData.currentStage;
+                        completedStages = stageChangeData.completedStages;
+                        StateHasChanged();
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error parsing stage change data: {ex.Message}");
+        }
+    }
+
+    // JavaScript callback for progress updates
+    [JSInvokable]
+    public void OnProgressUpdate(object progressData)
+    {
+        try
+        {
+            if (progressData is JsonElement jsonElement)
+            {
+                var progressJson = jsonElement.GetRawText();
+                var progressUpdateData = JsonSerializer.Deserialize<ProgressUpdateData>(progressJson);
+                if (progressUpdateData != null)
+                {
+                    InvokeAsync(() => {
+                        var data = new ProgressData { Current = progressUpdateData.current, Total = progressUpdateData.total };
+                        
+                        switch (progressUpdateData.operation)
+                        {
+                            case "download":
+                                downloadProgress = data;
+                                break;
+                            case "cache":
+                                cacheProgress = data;
+                                break;
+                            case "sync":
+                                syncProgress = data;
+                                break;
+                        }
+                        StateHasChanged();
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error parsing progress update data: {ex.Message}");
+        }
+    }
+
+    // JavaScript callback for timeout warning
+    [JSInvokable]
+    public void OnTimeoutWarning()
+    {
+        InvokeAsync(() => {
+            showTimeoutWarning = true;
+            StateHasChanged();
+        });
+    }
+
+    // JavaScript callback for timeout
+    [JSInvokable]
+    public void OnTimeout()
+    {
+        InvokeAsync(() => {
+            showFallbackActions = true;
+            showTimeoutWarning = false;
+            StopElapsedTimer();
+            StateHasChanged();
+        });
+    }
+
+    // JavaScript callback for completion
+    [JSInvokable]
+    public void OnComplete()
+    {
+        InvokeAsync(async () => {
+            // Remove loading component - Blazor will handle rendering the app
+            // This is a controlled way to "unmount" the component
+            showFallbackActions = false;
+            showTimeoutWarning = false;
+            StopElapsedTimer();
+            
+            // Notify parent component
+            if (OnLoaded.HasDelegate)
+            {
+                await OnLoaded.InvokeAsync();
+            }
+            
+            StateHasChanged();
+        });
+    }
+
+    private void StartElapsedTimer()
+    {
+        elapsedTimer = new Timer(_ => {
+            elapsedTime++;
+            InvokeAsync(() => StateHasChanged());
+        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+    }
+
+    private void StopElapsedTimer()
+    {
+        elapsedTimer?.Dispose();
+        elapsedTimer = null;
+    }
+
+    private string GetStageStatus(string stageId)
+    {
+        if (currentStage?.Id == stageId) return "current";
+        if (completedStages.Any(s => s.Id == stageId)) return "completed";
+        return "pending";
+    }
+
+    private bool HasProgress(string stageId)
+    {
+        return stageId switch
+        {
+            "downloading-content" => downloadProgress != null,
+            "cache-progress" => cacheProgress != null,
+            "sync-progress" => syncProgress != null,
+            _ => false
+        };
+    }
+
+    private ProgressData? GetProgressData(string stageId)
+    {
+        return stageId switch
+        {
+            "downloading-content" => downloadProgress,
+            "cache-progress" => cacheProgress,
+            "sync-progress" => syncProgress,
+            _ => null
+        };
+    }
+
+    private double GetProgressPercentage(ProgressData progress)
+    {
+        if (progress.Total == 0) return 0;
+        return Math.Round((double)progress.Current / progress.Total * 100, 1);
+    }
+
+    private string FormatElapsedTime(int seconds)
+    {
+        var minutes = seconds / 60;
+        var remainingSeconds = seconds % 60;
+        return $"{minutes}:{remainingSeconds:D2}";
+    }
+
+    // Fallback action handlers
+    private async Task HandleRetry()
+    {
+        if (jsRuntime != null)
+        {
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.retry");
+        }
+    }
+
+    private async Task HandleOffline()
+    {
+        if (jsRuntime != null)
+        {
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.goOffline");
+        }
+    }
+
+    private async Task HandleClearCache()
+    {
+        if (jsRuntime != null)
+        {
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.clearCachesAndRetry");
+        }
+    }
+
+    private async Task HandleReportProblem()
+    {
+        if (jsRuntime != null)
+        {
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.reportProblem");
+        }
+    }
+
+    public void ShowTimeoutWarning()
+    {
+        showTimeoutWarning = true;
+        StateHasChanged();
+    }
+
+    public void ShowFallbackActions()
+    {
+        showFallbackActions = true;
+        StopElapsedTimer();
+        StateHasChanged();
+    }
+
+    public void Complete()
+    {
+        StopElapsedTimer();
+        showFallbackActions = false;
+        showTimeoutWarning = false;
+        StateHasChanged();
+    }
+
+    // Data classes for JSON deserialization
+    public class LoadingStage
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+        public bool IsOptional { get; set; }
+    }
+
+    public class StageChangeData
+    {
+        public LoadingStage currentStage { get; set; } = new();
+        public LoadingStage[] completedStages { get; set; } = Array.Empty<LoadingStage>();
+        public LoadingStage[] allStages { get; set; } = Array.Empty<LoadingStage>();
+    }
+
+    public class ProgressUpdateData
+    {
+        public string operation { get; set; } = string.Empty;
+        public int current { get; set; }
+        public int total { get; set; }
+    }
+
+    public class ProgressData
+    {
+        public int Current { get; set; }
+        public int Total { get; set; }
+    }
+
+    public void Dispose()
+    {
+        StopElapsedTimer();
+        // IJSRuntime is injected and managed by Blazor, don't dispose it
+    }
+}

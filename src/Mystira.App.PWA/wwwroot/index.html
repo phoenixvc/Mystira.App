@@ -66,6 +66,7 @@
 
     <!-- Scripts -->
     <script src="js/imageCacheManager.js"></script>
+    <script src="js/loadingProgress.js"></script>
 
     <!-- API Configuration Persistence (Read-only) -->
     <!-- All write operations are handled by C# ApiConfigurationService via JSInterop -->
@@ -138,12 +139,15 @@
 
 <body>
     <div id="app">
-        <div class="d-flex justify-content-center align-items-center vh-100">
-            <div class="text-center">
-                <div class="spinner-border text-primary mb-3" role="status">
-                    <span class="visually-hidden">Loading...</span>
+        <!-- Loading experience will be rendered here by Blazor -->
+        <div id="loading-placeholder" style="display: none;">
+            <div class="d-flex justify-content-center align-items-center vh-100">
+                <div class="text-center">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <div class="text-muted">Loading Mystira...</div>
                 </div>
-                <div class="text-muted">Loading Mystira...</div>
             </div>
         </div>
     </div>
@@ -302,6 +306,14 @@
                         // Store registration for later use
                         window.swRegistration = registration;
 
+                        // Set up progress tracking integration
+                        if (window.mystiraLoading) {
+                            registration.active?.postMessage({
+                                type: 'REGISTER_PROGRESS_CALLBACK',
+                                callback: window.mystiraLoading.updateProgress
+                            });
+                        }
+
                         // Check for service worker updates periodically
                         registration.addEventListener('updatefound', () => {
                             console.log('New service worker found, installing...');
@@ -315,6 +327,11 @@
                                     // Notify Blazor component if available
                                     if (updateNotificationHandler) {
                                         updateNotificationHandler.invokeMethodAsync('OnServiceWorkerUpdate');
+                                    }
+                                    
+                                    // Also notify loading system
+                                    if (window.mystiraLoading) {
+                                        window.mystiraLoading.updateStage('service-worker-update');
                                     }
                                 }
                             });
