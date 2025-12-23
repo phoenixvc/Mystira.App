@@ -104,12 +104,12 @@ public abstract class CqrsIntegrationTestBase : IDisposable
         {
             memoryCache.Compact(1.0); // Remove 100% of entries
         }
-        QueryCacheInvalidationService.ClearTrackedKeys();
+        CacheInvalidation.ClearTrackedKeys();
     }
 
     public void Dispose()
     {
-        QueryCacheInvalidationService.ClearTrackedKeys();
+        CacheInvalidation?.ClearTrackedKeys();
         DbContext?.Dispose();
         ServiceProvider?.Dispose();
         GC.SuppressFinalize(this);

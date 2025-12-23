@@ -26,6 +26,12 @@ public class EfSpecificationRepository<T> : RepositoryBase<T>, ISpecRepository<T
     }
 
     /// <inheritdoc />
+    public override async Task<T?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Set<T>().FindAsync(new object[] { id }, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public virtual async Task<T?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         return await _dbContext.Set<T>().FindAsync(new object[] { id }, cancellationToken);

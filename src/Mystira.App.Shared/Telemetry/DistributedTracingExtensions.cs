@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Mystira.App.Shared.Telemetry;
@@ -30,48 +32,8 @@ public static class DistributedTracingExtensions
         services.AddSingleton<ITelemetryInitializer>(sp =>
             new DistributedTracingInitializer(serviceName, environment));
 
-        // Add activity listener for custom spans
-        services.AddSingleton<ActivityListener>(sp =>
-        {
-            var listener = new ActivityListener
-            {
-                ShouldListenTo = source => source.Name.StartsWith("Mystira"),
-                Sample = (ref ActivityCreationOptions<ActivityContext> options) =>
-                    ActivitySamplingResult.AllDataAndRecorded,
-                ActivityStarted = activity =>
-                {
-                    var logger = sp.GetService<ILogger<ActivityListener>>();
-                    logger?.LogDebug("Activity started: {OperationName} ({TraceId})",
-                        activity.OperationName, activity.TraceId);
-                },
-                ActivityStopped = activity =>
-                {
-                    var telemetryClient = sp.GetService<TelemetryClient>();
-                    if (telemetryClient != null && activity.Duration.TotalMilliseconds > 0)
-                    {
-                        // Track as dependency for visibility in Application Map
-                        var dependency = new DependencyTelemetry
-                        {
-                            Name = activity.OperationName,
-                            Type = activity.GetTagItem("span.type")?.ToString() ?? "Internal",
-                            Duration = activity.Duration,
-                            Success = activity.Status != ActivityStatusCode.Error,
-                            Timestamp = activity.StartTimeUtc
-                        };
-
-                        foreach (var tag in activity.Tags)
-                        {
-                            dependency.Properties[tag.Key] = tag.Value ?? "";
-                        }
-
-                        telemetryClient.TrackDependency(dependency);
-                    }
-                }
-            };
-
-            ActivitySource.AddActivityListener(listener);
-            return listener;
-        });
+        // Register ActivityListener as a hosted service for proper lifecycle management
+        services.AddHostedService<ActivityListenerHostedService>();
 
         return services;
     }

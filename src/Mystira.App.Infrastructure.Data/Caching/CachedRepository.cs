@@ -61,6 +61,43 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
     #region Read Operations (Cache-Aside)
 
     /// <inheritdoc />
+    public async Task<T?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default) where TId : notnull
+    {
+        // Convert TId to string for cache key
+        var idString = id.ToString();
+        if (string.IsNullOrEmpty(idString))
+        {
+            return await _inner.GetByIdAsync(id, cancellationToken);
+        }
+
+        if (!_options.Enabled)
+        {
+            return await _inner.GetByIdAsync(id, cancellationToken);
+        }
+
+        var cacheKey = GetCacheKey(idString);
+
+        // Try to get from cache
+        var cachedValue = await _cache.GetStringAsync(cacheKey, cancellationToken);
+        if (cachedValue != null)
+        {
+            _logger.LogDebug("Cache hit for {EntityType} with key {CacheKey}", _entityTypeName, cacheKey);
+            return JsonSerializer.Deserialize<T>(cachedValue, _jsonOptions);
+        }
+
+        // Cache miss - get from database
+        _logger.LogDebug("Cache miss for {EntityType} with key {CacheKey}", _entityTypeName, cacheKey);
+        var entity = await _inner.GetByIdAsync(id, cancellationToken);
+
+        if (entity != null)
+        {
+            await SetCacheAsync(cacheKey, entity, cancellationToken);
+        }
+
+        return entity;
+    }
+
+    /// <inheritdoc />
     public async Task<T?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         if (!_options.Enabled)
@@ -107,6 +144,21 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
         }
 
         return await _inner.ExistsAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<T?> GetBySpecAsync(ISpecification<T> specification, CancellationToken cancellationToken = default)
+    {
+        // For specification queries, delegate to inner repository
+        // Specifications may have complex queries that are harder to cache
+        return await _inner.FirstOrDefaultAsync(specification, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<TResult?> GetBySpecAsync<TResult>(ISpecification<T, TResult> specification, CancellationToken cancellationToken = default)
+    {
+        // For specification queries with projection, delegate to inner repository
+        return await _inner.FirstOrDefaultAsync(specification, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -217,20 +269,22 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
     }
 
     /// <inheritdoc />
-    public async Task UpdateAsync(T entity, CancellationToken cancellationToken = default)
+    public async Task<int> UpdateAsync(T entity, CancellationToken cancellationToken = default)
     {
-        await _inner.UpdateAsync(entity, cancellationToken);
+        var result = await _inner.UpdateAsync(entity, cancellationToken);
 
         if (_options.EnableInvalidationOnChange)
         {
             await InvalidateOrUpdateCacheAsync(entity, cancellationToken);
         }
+
+        return result;
     }
 
     /// <inheritdoc />
-    public async Task UpdateRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+    public async Task<int> UpdateRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
     {
-        await _inner.UpdateRangeAsync(entities, cancellationToken);
+        var result = await _inner.UpdateRangeAsync(entities, cancellationToken);
 
         if (_options.EnableInvalidationOnChange)
         {
@@ -239,23 +293,27 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
                 await InvalidateOrUpdateCacheAsync(entity, cancellationToken);
             }
         }
+
+        return result;
     }
 
     /// <inheritdoc />
-    public async Task DeleteAsync(T entity, CancellationToken cancellationToken = default)
+    public async Task<int> DeleteAsync(T entity, CancellationToken cancellationToken = default)
     {
-        await _inner.DeleteAsync(entity, cancellationToken);
+        var result = await _inner.DeleteAsync(entity, cancellationToken);
 
         if (_options.EnableInvalidationOnChange)
         {
             await InvalidateCacheAsync(entity, cancellationToken);
         }
+
+        return result;
     }
 
     /// <inheritdoc />
-    public async Task DeleteRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+    public async Task<int> DeleteRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
     {
-        await _inner.DeleteRangeAsync(entities, cancellationToken);
+        var result = await _inner.DeleteRangeAsync(entities, cancellationToken);
 
         if (_options.EnableInvalidationOnChange)
         {
@@ -264,15 +322,17 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
                 await InvalidateCacheAsync(entity, cancellationToken);
             }
         }
+
+        return result;
     }
 
     /// <inheritdoc />
-    public async Task DeleteRangeAsync(ISpecification<T> specification, CancellationToken cancellationToken = default)
+    public async Task<int> DeleteRangeAsync(ISpecification<T> specification, CancellationToken cancellationToken = default)
     {
         // Get entities to delete for cache invalidation
         var entities = await _inner.ListAsync(specification, cancellationToken);
 
-        await _inner.DeleteRangeAsync(specification, cancellationToken);
+        var result = await _inner.DeleteRangeAsync(specification, cancellationToken);
 
         if (_options.EnableInvalidationOnChange)
         {
@@ -281,6 +341,8 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
                 await InvalidateCacheAsync(entity, cancellationToken);
             }
         }
+
+        return result;
     }
 
     /// <inheritdoc />
@@ -308,16 +370,23 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
             ?? typeof(T).GetProperty($"{typeof(T).Name}Id")
             ?? typeof(T).GetProperty("Key");
 
-        if (idProperty == null)
+        if (idProperty != null)
         {
-            _logger.LogWarning(
-                "Unable to determine ID property for entity type {EntityType}. " +
-                "Consider implementing IHasId interface or using a standard naming convention (Id, {EntityType}Id, Key).",
-                _entityTypeName);
-            return null;
+            var value = idProperty.GetValue(entity);
+            if (value != null)
+            {
+                return value.ToString();
+            }
         }
 
-        return idProperty.GetValue(entity)?.ToString();
+        // Log warning if entity has no Id property
+        _logger.LogWarning(
+            "Unable to determine ID property for entity type {EntityType}. " +
+            "Consider implementing IHasId interface or using a standard naming convention (Id, {EntityType}Id, Key). " +
+            "Cache operations will be skipped for this entity.",
+            _entityTypeName);
+
+        return null;
     }
 
     private async Task SetCacheAsync(string cacheKey, T entity, CancellationToken cancellationToken)

@@ -19,14 +19,24 @@ public interface IQueryCacheInvalidationService
     /// Example: InvalidateCacheByPrefix("Scenario") removes all scenario-related caches.
     /// </summary>
     void InvalidateCacheByPrefix(string prefix);
+
+    /// <summary>
+    /// Tracks a cache key for prefix-based invalidation.
+    /// </summary>
+    void TrackCacheKey(string cacheKey);
+
+    /// <summary>
+    /// Clears all tracked cache keys.
+    /// </summary>
+    void ClearTrackedKeys();
 }
 
 public class QueryCacheInvalidationService : IQueryCacheInvalidationService
 {
     private readonly IMemoryCache _cache;
     private readonly ILogger<QueryCacheInvalidationService> _logger;
-    private static readonly HashSet<string> _cacheKeys = new();
-    private static readonly object _lock = new();
+    private readonly HashSet<string> _cacheKeys = new();
+    private readonly object _lock = new();
 
     public QueryCacheInvalidationService(
         IMemoryCache cache,
@@ -72,7 +82,7 @@ public class QueryCacheInvalidationService : IQueryCacheInvalidationService
     /// Internal method to track cache keys for prefix-based invalidation.
     /// Called by QueryCachingBehavior when caching items.
     /// </summary>
-    internal static void TrackCacheKey(string cacheKey)
+    public void TrackCacheKey(string cacheKey)
     {
         lock (_lock)
         {
@@ -83,7 +93,7 @@ public class QueryCacheInvalidationService : IQueryCacheInvalidationService
     /// <summary>
     /// Clears all tracked cache keys. Should only be used for testing.
     /// </summary>
-    public static void ClearTrackedKeys()
+    public void ClearTrackedKeys()
     {
         lock (_lock)
         {

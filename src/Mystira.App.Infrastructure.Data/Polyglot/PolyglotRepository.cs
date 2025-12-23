@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Shared.Telemetry;
 using Polly;
 using Polly.Retry;
 
@@ -35,17 +36,20 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     private readonly MigrationOptions _options;
     private readonly DbContext? _secondaryContext;
     private readonly ResiliencePipeline _resiliencePipeline;
+    private readonly ICustomMetrics? _metrics;
 
     public PolyglotRepository(
         DbContext primaryContext,
         IOptions<MigrationOptions> options,
         ILogger<PolyglotRepository<T>> logger,
-        DbContext? secondaryContext = null)
+        DbContext? secondaryContext = null,
+        ICustomMetrics? metrics = null)
         : base(primaryContext, logger)
     {
         _options = options?.Value ?? new MigrationOptions();
         _secondaryContext = secondaryContext;
         _resiliencePipeline = CreateResiliencePipeline();
+        _metrics = metrics;
     }
 
     /// <inheritdoc />
@@ -66,33 +70,33 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     }
 
     /// <inheritdoc />
-    public override async Task UpdateAsync(T entity, CancellationToken cancellationToken = default)
+    public override async Task<int> UpdateAsync(T entity, CancellationToken cancellationToken = default)
     {
         if (IsDualWriteMode)
         {
             await DualWriteAsync(
-                async () => { await base.UpdateAsync(entity, cancellationToken); return entity; },
+                async () => { var result = await base.UpdateAsync(entity, cancellationToken); return entity; },
                 async () => { await UpdateInSecondaryAsync(entity, cancellationToken); return entity; },
                 cancellationToken);
-            return;
+            return 1; // Assuming single entity update
         }
 
-        await base.UpdateAsync(entity, cancellationToken);
+        return await base.UpdateAsync(entity, cancellationToken);
     }
 
     /// <inheritdoc />
-    public override async Task DeleteAsync(T entity, CancellationToken cancellationToken = default)
+    public override async Task<int> DeleteAsync(T entity, CancellationToken cancellationToken = default)
     {
         if (IsDualWriteMode)
         {
             await DualWriteAsync(
-                async () => { await base.DeleteAsync(entity, cancellationToken); return entity; },
+                async () => { var result = await base.DeleteAsync(entity, cancellationToken); return entity; },
                 async () => { await DeleteFromSecondaryAsync(entity, cancellationToken); return entity; },
                 cancellationToken);
-            return;
+            return 1; // Assuming single entity delete
         }
 
-        await base.DeleteAsync(entity, cancellationToken);
+        return await base.DeleteAsync(entity, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -237,14 +241,14 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
                 async token => await secondaryWrite(),
                 cts.Token);
 
-            // Track successful secondary writes
+            // Track successful secondary writes via Meter
             _secondaryWriteSuccesses.Add(1,
                 new KeyValuePair<string, object?>("entity_type", typeof(T).Name),
                 new KeyValuePair<string, object?>("phase", _options.Phase.ToString()));
         }
         catch (Exception ex)
         {
-            // Emit metric for monitoring/alerting
+            // Emit metric for monitoring/alerting via Meter
             _secondaryWriteFailures.Add(1,
                 new KeyValuePair<string, object?>("entity_type", typeof(T).Name),
                 new KeyValuePair<string, object?>("phase", _options.Phase.ToString()),
@@ -255,6 +259,13 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
                 "This failure is tracked via polyglot.secondary_write_failures metric.",
                 typeof(T).Name,
                 _options.Phase,
+                _options.EnableCompensation);
+
+            // Also track via ICustomMetrics if available
+            _metrics?.TrackDualWriteFailure(
+                typeof(T).Name,
+                "Write",
+                ex.Message,
                 _options.EnableCompensation);
         }
 
@@ -270,20 +281,20 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
         return entity;
     }
 
-    private async Task UpdateInSecondaryAsync(T entity, CancellationToken cancellationToken)
+    private async Task<int> UpdateInSecondaryAsync(T entity, CancellationToken cancellationToken)
     {
-        if (_secondaryContext == null) return;
+        if (_secondaryContext == null) return 0;
 
         _secondaryContext.Set<T>().Update(entity);
-        await _secondaryContext.SaveChangesAsync(cancellationToken);
+        return await _secondaryContext.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task DeleteFromSecondaryAsync(T entity, CancellationToken cancellationToken)
+    private async Task<int> DeleteFromSecondaryAsync(T entity, CancellationToken cancellationToken)
     {
-        if (_secondaryContext == null) return;
+        if (_secondaryContext == null) return 0;
 
         _secondaryContext.Set<T>().Remove(entity);
-        await _secondaryContext.SaveChangesAsync(cancellationToken);
+        return await _secondaryContext.SaveChangesAsync(cancellationToken);
     }
 
     private ResiliencePipeline CreateResiliencePipeline()
