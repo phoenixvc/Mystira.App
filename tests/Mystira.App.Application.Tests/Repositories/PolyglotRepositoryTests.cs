@@ -217,8 +217,10 @@ public class PolyglotRepositoryTests
 
     private TestDbContext CreateInMemoryContext(string? name = null)
     {
+        // Always append a unique GUID to ensure test isolation even when using named databases
+        var databaseName = name != null ? $"{name}_{Guid.NewGuid()}" : Guid.NewGuid().ToString();
         var options = new DbContextOptionsBuilder<TestDbContext>()
-            .UseInMemoryDatabase(databaseName: name ?? Guid.NewGuid().ToString())
+            .UseInMemoryDatabase(databaseName: databaseName)
             .Options;
 
         return new TestDbContext(options);
