@@ -14,6 +14,12 @@ on:
       - "src/Mystira.App.Shared/**"
       - ".github/workflows/publish-shared-packages.yml"
   workflow_dispatch:
+    inputs:
+      base_ref:
+        description: 'Base reference for change detection (commit SHA, branch, or tag)'
+        required: false
+        default: 'HEAD~1'
+        type: string
 
 concurrency:
   group: publish-shared-packages
@@ -44,6 +50,7 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: changes
         with:
+          base: ${{ github.event.inputs.base_ref || github.event.before || format('{0}~1', github.sha) }}
           filters: |
             domain:
               - "src/Mystira.App.Domain/**"
