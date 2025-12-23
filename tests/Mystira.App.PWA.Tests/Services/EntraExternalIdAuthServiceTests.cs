@@ -652,6 +652,9 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         _mockJsRuntime.Setup(js => js.InvokeAsync<string?>("localStorage.getItem", It.Is<object[]>(args => args.Length == 1 && args[0].ToString() == "mystira_entra_id_token")))
             .ReturnsAsync(testIdToken);
 
+        _mockJsRuntime.Setup(js => js.InvokeAsync<string>("eval", It.Is<object[]>(args => args.Length == 1 && args[0].ToString() == "window.location.origin")))
+            .ReturnsAsync("http://localhost:7000");
+
         _mockJsRuntime.Setup(js => js.InvokeAsync<IJSVoidResult>(It.IsAny<string>(), It.IsAny<object[]>()))
             .ReturnsAsync(Mock.Of<IJSVoidResult>());
 
@@ -672,6 +675,9 @@ public class EntraExternalIdAuthServiceTests : IDisposable
         // Arrange
         _mockJsRuntime.Setup(js => js.InvokeAsync<string?>("localStorage.getItem", It.Is<object[]>(args => args.Length == 1 && args[0].ToString() == "mystira_entra_id_token")))
             .ReturnsAsync((string?)null);
+
+        _mockJsRuntime.Setup(js => js.InvokeAsync<string>("eval", It.Is<object[]>(args => args.Length == 1 && args[0].ToString() == "window.location.origin")))
+            .ReturnsAsync("http://localhost:7000");
 
         _mockJsRuntime.Setup(js => js.InvokeAsync<IJSVoidResult>(It.IsAny<string>(), It.IsAny<object[]>()))
             .ReturnsAsync(Mock.Of<IJSVoidResult>());
