@@ -448,9 +448,23 @@ public class EntraExternalIdAuthService : IAuthService
     {
         var authority = _configuration["MicrosoftEntraExternalId:Authority"];
         var clientId = _configuration["MicrosoftEntraExternalId:ClientId"];
-        var redirectUri = _configuration["MicrosoftEntraExternalId:RedirectUri"];
+        var configuredRedirectUri = _configuration["MicrosoftEntraExternalId:RedirectUri"];
 
-        return (authority ?? string.Empty, clientId ?? string.Empty, redirectUri ?? string.Empty);
+        // Use configured redirect URI if available, otherwise build from current URL
+        string redirectUri;
+        if (!string.IsNullOrEmpty(configuredRedirectUri))
+        {
+            redirectUri = configuredRedirectUri;
+        }
+        else
+        {
+            // Build redirect URI dynamically from current base URL
+            var baseUri = _navigationManager.BaseUri.TrimEnd('/');
+            redirectUri = $"{baseUri}/authentication/login-callback";
+            _logger.LogInformation("Using dynamic redirect URI: {RedirectUri}", redirectUri);
+        }
+
+        return (authority ?? string.Empty, clientId ?? string.Empty, redirectUri);
     }
 
     private static void ValidateEntraConfiguration(string? authority, string? clientId)
