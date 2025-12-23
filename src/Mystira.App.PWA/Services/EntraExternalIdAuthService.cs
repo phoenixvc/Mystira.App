@@ -417,13 +417,30 @@ public class EntraExternalIdAuthService : IAuthService
             // Get id_token before clearing storage to use as hint for logout
             var idTokenHint = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", IdTokenStorageKey);
             
-            // Get logout_hint (email or sub claim) from current account
+            // Extract login_hint from ID token to use as logout_hint
+            // This prevents the account picker from showing during logout
             string? logoutHint = null;
-            if (_currentAccount != null)
+            if (!string.IsNullOrEmpty(idTokenHint))
             {
-                // Use email as logout_hint (preferred by Entra External ID)
-                logoutHint = _currentAccount.Email;
-                _logger.LogInformation("Using logout_hint: {LogoutHint}", logoutHint);
+                try
+                {
+                    var claims = DecodeJwtPayload(idTokenHint);
+                    if (claims.TryGetValue("login_hint", out var loginHintElement))
+                    {
+                        logoutHint = loginHintElement.GetString();
+                        _logger.LogInformation("Extracted login_hint for logout: {LogoutHint}", logoutHint);
+                    }
+                    else if (claims.TryGetValue("email", out var emailElement))
+                    {
+                        // Fallback to email if login_hint is not present
+                        logoutHint = emailElement.GetString();
+                        _logger.LogInformation("Using email as logout_hint: {LogoutHint}", logoutHint);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to extract login_hint from ID token");
+                }
             }
 
             await ClearLocalStorageAsync();
