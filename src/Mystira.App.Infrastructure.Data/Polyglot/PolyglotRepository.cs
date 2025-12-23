@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using System.Text.Json;
 using Ardalis.Specification;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,14 @@ namespace Mystira.App.Infrastructure.Data.Polyglot;
 /// <typeparam name="T">The entity type</typeparam>
 public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepository<T> where T : class
 {
+    private static readonly Meter _meter = new("Mystira.App.Polyglot", "1.0.0");
+    private static readonly Counter<long> _secondaryWriteFailures = _meter.CreateCounter<long>(
+        "polyglot.secondary_write_failures",
+        description: "Count of failed secondary database writes during dual-write operations");
+    private static readonly Counter<long> _secondaryWriteSuccesses = _meter.CreateCounter<long>(
+        "polyglot.secondary_write_successes",
+        description: "Count of successful secondary database writes during dual-write operations");
+
     private readonly MigrationOptions _options;
     private readonly DbContext? _secondaryContext;
     private readonly ResiliencePipeline _resiliencePipeline;
@@ -227,16 +236,26 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
             await _resiliencePipeline.ExecuteAsync(
                 async token => await secondaryWrite(),
                 cts.Token);
+
+            // Track successful secondary writes
+            _secondaryWriteSuccesses.Add(1,
+                new KeyValuePair<string, object?>("entity_type", typeof(T).Name),
+                new KeyValuePair<string, object?>("phase", _options.Phase.ToString()));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex,
-                "Secondary write failed for {EntityType}. Compensation enabled: {CompensationEnabled}",
-                typeof(T).Name,
-                _options.EnableCompensation);
+            // Emit metric for monitoring/alerting
+            _secondaryWriteFailures.Add(1,
+                new KeyValuePair<string, object?>("entity_type", typeof(T).Name),
+                new KeyValuePair<string, object?>("phase", _options.Phase.ToString()),
+                new KeyValuePair<string, object?>("exception_type", ex.GetType().Name));
 
-            // Don't fail the operation, but log for monitoring
-            // In production, this would trigger an alert
+            _logger.LogError(ex,
+                "Secondary write failed for {EntityType}. Phase: {Phase}. Compensation enabled: {CompensationEnabled}. " +
+                "This failure is tracked via polyglot.secondary_write_failures metric.",
+                typeof(T).Name,
+                _options.Phase,
+                _options.EnableCompensation);
         }
 
         return result;

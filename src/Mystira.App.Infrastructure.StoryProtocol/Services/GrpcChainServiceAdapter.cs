@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using Grpc.Core;
 using Grpc.Net.Client;
@@ -285,8 +286,9 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
             "Paying royalty to IP Asset {IpAssetId} - Amount: {Amount} via gRPC",
             ipAssetId, amount);
 
-        // Convert amount to wei (18 decimals)
-        var amountWei = ((long)(amount * 1_000_000_000_000_000_000m)).ToString();
+        // Convert amount to wei (18 decimals) using BigInteger to avoid overflow
+        // long.MaxValue is ~9.2 ETH, so we need BigInteger for larger amounts
+        var amountWei = DecimalToWei(amount);
 
         var request = new PayRoyaltiesRequest
         {
@@ -501,13 +503,44 @@ public class GrpcChainServiceAdapter : IStoryProtocolService, IAsyncDisposable
         };
     }
 
+    private const decimal WeiPerEther = 1_000_000_000_000_000_000m;
+
+    /// <summary>
+    /// Converts a decimal amount (in ether units) to wei string using BigInteger.
+    /// Handles amounts larger than long.MaxValue (~9.2 ETH).
+    /// </summary>
+    private static string DecimalToWei(decimal amount)
+    {
+        // Split into whole and fractional parts to maintain precision
+        var wholePart = (BigInteger)Math.Truncate(amount);
+        var fractionalPart = amount - Math.Truncate(amount);
+
+        // Convert whole part to wei
+        var wholeInWei = wholePart * new BigInteger(WeiPerEther);
+
+        // Convert fractional part (this is safe for long since it's < 1 ETH worth of wei)
+        var fractionalInWei = new BigInteger((long)(fractionalPart * WeiPerEther));
+
+        return (wholeInWei + fractionalInWei).ToString();
+    }
+
+    /// <summary>
+    /// Converts a wei string to decimal (in ether units) using BigInteger.
+    /// Handles amounts larger than decimal.MaxValue wei.
+    /// </summary>
     private static decimal ParseWeiToDecimal(string weiString)
     {
-        if (decimal.TryParse(weiString, out var wei))
+        if (!BigInteger.TryParse(weiString, out var wei))
         {
-            return wei / 1_000_000_000_000_000_000m;
+            return 0m;
         }
-        return 0m;
+
+        // For very large values, we need to be careful about precision
+        var wholePart = wei / new BigInteger(WeiPerEther);
+        var fractionalWei = wei % new BigInteger(WeiPerEther);
+
+        // Convert to decimal (may lose precision for extremely large values)
+        return (decimal)wholePart + (decimal)fractionalWei / WeiPerEther;
     }
 
     #endregion

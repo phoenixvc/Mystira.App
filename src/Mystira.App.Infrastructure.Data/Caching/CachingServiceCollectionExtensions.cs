@@ -72,6 +72,7 @@ public static class DecoratorExtensions
 {
     /// <summary>
     /// Decorate a service with a decorator implementation.
+    /// Removes the original registration and replaces it with the decorated version.
     /// </summary>
     public static IServiceCollection Decorate<TInterface, TDecorator>(this IServiceCollection services)
         where TInterface : class
@@ -84,10 +85,14 @@ public static class DecoratorExtensions
             throw new InvalidOperationException($"Service of type {typeof(TInterface).Name} not registered");
         }
 
+        // Remove the original descriptor to avoid DI resolution ambiguity
+        services.Remove(wrappedDescriptor);
+
         var objectFactory = ActivatorUtilities.CreateFactory(
             typeof(TDecorator),
             new[] { typeof(TInterface) });
 
+        // Add the decorated service with the same lifetime as the original
         services.Add(ServiceDescriptor.Describe(
             typeof(TInterface),
             sp => (TInterface)objectFactory(sp, new[] { CreateInstance(sp, wrappedDescriptor) }),
