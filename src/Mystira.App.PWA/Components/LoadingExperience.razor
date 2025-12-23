@@ -3,7 +3,7 @@
 
 @* LoadingExperience.razor - Enhanced PWA loading experience with staged progress *@
 
-<div class="loading-experience @CssClass" style="@Style">
+<div class="loading-experience @CssClass">
     @if (!showFallbackActions)
     {
         <!-- Main Loading Experience -->
@@ -43,7 +43,7 @@
                                 if (progress != null)
                                 {
                                     <div class="progress-bar">
-                                        <div class="progress-fill" style="width: @(GetProgressPercentage(progress))%"></div>
+                                        <div class="progress-fill" style="width: @(GetProgressPercentage(progress) + "%")"></div>
                                     </div>
                                 }
                             }
@@ -137,7 +137,7 @@
     [Parameter] public EventCallback OnLoaded { get; set; }
 
     // Internal state
-    private LoadingStage[] visibleStages = new LoadingStage[] 
+    private LoadingStage[] visibleStages = new LoadingStage[]
     {
         new LoadingStage { Id = "initializing", Message = "Starting Mystira…", Icon = "fas fa-rocket", IsOptional = false },
         new LoadingStage { Id = "checking-connection", Message = "Checking connection…", Icon = "fas fa-wifi", IsOptional = false },
@@ -147,6 +147,7 @@
     };
     private LoadingStage? currentStage = null;
     private LoadingStage[] completedStages = Array.Empty<LoadingStage>();
+    private bool isLoadedFromStatic = false;
     private bool showFallbackActions = false;
     private bool showTimeoutWarning = false;
     private int elapsedTime = 0;
@@ -155,12 +156,35 @@
     private ProgressData? cacheProgress = null;
     private ProgressData? syncProgress = null;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         if (AutoStart)
         {
             // Set initial stage immediately so something shows
             currentStage = visibleStages.FirstOrDefault();
+        }
+
+        if (jsRuntime != null)
+        {
+            try
+            {
+                // Check if JS already has a stage (transitioning from static)
+                // We use a helper function to get the current stage from JS safely
+                var stageJson = await jsRuntime.InvokeAsync<string>("JSON.stringify", await jsRuntime.InvokeAsync<object>("window.mystiraLoading.getCurrentStage"));
+                if (!string.IsNullOrEmpty(stageJson) && stageJson != "null" && stageJson != "undefined")
+                {
+                    var stage = JsonSerializer.Deserialize<LoadingStage>(stageJson);
+                    if (stage != null)
+                    {
+                        currentStage = visibleStages.FirstOrDefault(s => s.Id == stage.Id) ?? stage;
+                        isLoadedFromStatic = true;
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore JS errors during early initialization
+            }
         }
     }
 
@@ -170,24 +194,80 @@
         {
             // Set up JavaScript event handlers
             await SetupJavaScriptIntegration();
-            
+
             // Start the loading experience
             StartLoadingExperience();
+
+            if (isLoadedFromStatic)
+            {
+                // If we were already at a certain stage, make sure the UI reflects it
+                StateHasChanged();
+            }
         }
     }
 
     public void StartLoadingExperience()
     {
+        // Don't start multiple times
+        if (elapsedTimer != null) return;
+
         // Start elapsed time tracking
         StartElapsedTimer();
-        
+
         // Initialize JS loading tracker
         if (jsRuntime != null)
         {
             _ = InvokeAsync(async () => {
                 await jsRuntime.InvokeVoidAsync("window.mystiraLoading.start");
+
+                // Get the current stage from JS again to be sure where we are
+                var stageJson = await jsRuntime.InvokeAsync<string>("JSON.stringify", await jsRuntime.InvokeAsync<object>("window.mystiraLoading.getCurrentStage"));
+                string currentId = "initializing";
+                if (!string.IsNullOrEmpty(stageJson) && stageJson != "null" && stageJson != "undefined")
+                {
+                    var stage = JsonSerializer.Deserialize<LoadingStage>(stageJson);
+                    if (stage != null) currentId = stage.Id;
+                }
+
+                // Progress through initial stages linked to actual app startup events
+                // We skip stages that were already completed in static mode
+
+                if (IsBeforeOrEqual(currentId, "initializing")) {
+                    await Task.Delay(400); // Wait for JS init
+                    await jsRuntime.InvokeVoidAsync("window.mystiraLoading.updateStage", "checking-connection");
+                    currentId = "checking-connection";
+                }
+
+                if (IsBeforeOrEqual(currentId, "checking-connection")) {
+                    await Task.Delay(600); // Simulate connection check
+                    await jsRuntime.InvokeVoidAsync("window.mystiraLoading.updateStage", "loading-library");
+                    currentId = "loading-library";
+                }
+
+                if (IsBeforeOrEqual(currentId, "loading-library")) {
+                    await Task.Delay(1200); // Simulate library loading
+                    await jsRuntime.InvokeVoidAsync("window.mystiraLoading.updateStage", "preparing-engine");
+                    currentId = "preparing-engine";
+                }
+
+                if (IsBeforeOrEqual(currentId, "preparing-engine")) {
+                    await Task.Delay(800); // Simulate engine prep
+                    await jsRuntime.InvokeVoidAsync("window.mystiraLoading.updateStage", "almost-ready");
+                    currentId = "almost-ready";
+                }
+
+                await Task.Delay(300); // Final polish
+                await jsRuntime.InvokeVoidAsync("window.mystiraLoading.complete");
             });
         }
+    }
+
+    private bool IsBeforeOrEqual(string currentId, string stageId)
+    {
+        var stages = new[] { "initializing", "checking-connection", "loading-library", "preparing-engine", "almost-ready" };
+        var currentIndex = Array.IndexOf(stages, currentId);
+        var stageIndex = Array.IndexOf(stages, stageId);
+        return currentIndex <= stageIndex;
     }
 
     private async Task SetupJavaScriptIntegration()
@@ -196,20 +276,22 @@
 
         try
         {
+            var self = DotNetObjectReference.Create(this);
+
             // Set up stage change handler
-            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setStageChangeHandler", DotNetObjectReference.Create(this));
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setStageChangeHandler", self);
 
             // Set up progress update handler
-            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setProgressUpdateHandler", DotNetObjectReference.Create(this));
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setProgressUpdateHandler", self);
 
             // Set up timeout warning handler
-            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setTimeoutWarningHandler", DotNetObjectReference.Create(this));
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setTimeoutWarningHandler", self);
 
             // Set up timeout handler
-            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setTimeoutHandler", DotNetObjectReference.Create(this));
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setTimeoutHandler", self);
 
             // Set up complete handler
-            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setCompleteHandler", DotNetObjectReference.Create(this));
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setCompleteHandler", self);
         }
         catch (Exception ex)
         {
@@ -224,21 +306,21 @@
         try
         {
             Console.WriteLine($"[LoadingExperience] OnStageChange called with data: {stageData}");
-            
+
             if (stageData is JsonElement jsonElement)
             {
                 var stageJson = jsonElement.GetRawText();
                 Console.WriteLine($"[LoadingExperience] Stage JSON: {stageJson}");
-                
+
                 var stageChangeData = JsonSerializer.Deserialize<StageChangeData>(stageJson);
                 if (stageChangeData != null)
                 {
-                    Console.WriteLine($"[LoadingExperience] Deserialized stages - Current: {stageChangeData.currentStage?.Message}, All: {stageChangeData.allStages?.Length}");
-                    
+                    Console.WriteLine($"[LoadingExperience] Deserialized stages - Current: {stageChangeData.CurrentStage?.Message}, All: {stageChangeData.AllStages?.Length}");
+
                     InvokeAsync(() => {
-                        visibleStages = stageChangeData.allStages ?? Array.Empty<LoadingStage>();
-                        currentStage = stageChangeData.currentStage;
-                        completedStages = stageChangeData.completedStages ?? Array.Empty<LoadingStage>();
+                        visibleStages = stageChangeData.AllStages ?? Array.Empty<LoadingStage>();
+                        currentStage = stageChangeData.CurrentStage;
+                        completedStages = stageChangeData.CompletedStages ?? Array.Empty<LoadingStage>();
                         StateHasChanged();
                     });
                 }
@@ -263,9 +345,9 @@
                 if (progressUpdateData != null)
                 {
                     InvokeAsync(() => {
-                        var data = new ProgressData { Current = progressUpdateData.current, Total = progressUpdateData.total };
-                        
-                        switch (progressUpdateData.operation)
+                        var data = new ProgressData { Current = progressUpdateData.Current, Total = progressUpdateData.Total };
+
+                        switch (progressUpdateData.Operation)
                         {
                             case "download":
                                 downloadProgress = data;
@@ -320,13 +402,13 @@
             showFallbackActions = false;
             showTimeoutWarning = false;
             StopElapsedTimer();
-            
+
             // Notify parent component
             if (OnLoaded.HasDelegate)
             {
                 await OnLoaded.InvokeAsync();
             }
-            
+
             StateHasChanged();
         });
     }
@@ -444,24 +526,41 @@
     // Data classes for JSON deserialization
     public class LoadingStage
     {
+        [JsonPropertyName("id")]
         public string Id { get; set; } = string.Empty;
+
+        [JsonPropertyName("message")]
         public string Message { get; set; } = string.Empty;
+
+        [JsonPropertyName("icon")]
         public string Icon { get; set; } = string.Empty;
+
+        [JsonPropertyName("optional")]
         public bool IsOptional { get; set; }
     }
 
     public class StageChangeData
     {
-        public LoadingStage currentStage { get; set; } = new();
-        public LoadingStage[] completedStages { get; set; } = Array.Empty<LoadingStage>();
-        public LoadingStage[] allStages { get; set; } = Array.Empty<LoadingStage>();
+        [JsonPropertyName("currentStage")]
+        public LoadingStage? CurrentStage { get; set; }
+
+        [JsonPropertyName("completedStages")]
+        public LoadingStage[] CompletedStages { get; set; } = Array.Empty<LoadingStage>();
+
+        [JsonPropertyName("allStages")]
+        public LoadingStage[] AllStages { get; set; } = Array.Empty<LoadingStage>();
     }
 
     public class ProgressUpdateData
     {
-        public string operation { get; set; } = string.Empty;
-        public int current { get; set; }
-        public int total { get; set; }
+        [JsonPropertyName("operation")]
+        public string Operation { get; set; } = string.Empty;
+
+        [JsonPropertyName("current")]
+        public int Current { get; set; }
+
+        [JsonPropertyName("total")]
+        public int Total { get; set; }
     }
 
     public class ProgressData

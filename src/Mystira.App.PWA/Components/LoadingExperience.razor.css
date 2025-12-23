@@ -22,15 +22,13 @@
 /* Logo and Title */
 .loading-logo-container {
     margin-bottom: 3rem;
-    animation: logoBounce 1.2s ease-out;
 }
 
 .loading-logo {
-    width: 120px;
-    height: 120px;
+    width: 400px;
+    height: 400px;
     object-fit: contain;
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
-    animation: logoFloat 3s ease-in-out infinite;
 }
 
 .loading-title {
@@ -341,25 +339,6 @@
     to { opacity: 1; }
 }
 
-@keyframes logoBounce {
-    0% {
-        opacity: 0;
-        transform: scale(0.8);
-    }
-    50% {
-        opacity: 0.8;
-        transform: scale(1.05);
-    }
-    100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-@keyframes logoFloat {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
-}
 
 @keyframes pulse {
     0%, 100% {
@@ -403,42 +382,42 @@
     .loading-experience {
         padding: 1rem;
     }
-    
+
     .loading-logo {
-        width: 100px;
-        height: 100px;
+        width: 200px;
+        height: 200px;
     }
-    
+
     .loading-title {
         font-size: 2rem;
     }
-    
+
     .progress-stage {
         padding: 0.75rem;
     }
-    
+
     .stage-icon {
         width: 40px;
         height: 40px;
         font-size: 1rem;
     }
-    
+
     .stage-message {
         font-size: 1rem;
     }
-    
+
     .fallback-actions {
         grid-template-columns: 1fr;
     }
-    
+
     .fallback-title {
         font-size: 1.5rem;
     }
-    
+
     .fallback-action-btn {
         padding: 1.25rem 1rem;
     }
-    
+
     .fallback-action-btn i {
         font-size: 1.5rem;
     }
@@ -448,15 +427,15 @@
     .loading-title {
         font-size: 1.75rem;
     }
-    
+
     .fallback-title {
         font-size: 1.25rem;
     }
-    
+
     .stage-message {
         font-size: 0.9rem;
     }
-    
+
     .progress-detail {
         font-size: 0.8rem;
     }

@@ -2,9 +2,6 @@
 
 const LOG_PREFIX = '[MystiraLoading]';
 
-// Initialize loading tracker when DOM is ready, but don't auto-start
-let loadingInitialized = false;
-
 window.mystiraLoading = (function() {
     // Loading stages configuration
     const LOADING_STAGES = [
@@ -63,7 +60,7 @@ window.mystiraLoading = (function() {
         cacheProgress: null,         // { current: number, total: number }
         syncProgress: null           // { current: number, total: number }
     };
-    
+
     let eventHandlers = {
         onStageChange: null,
         onProgressUpdate: null,
@@ -78,24 +75,24 @@ window.mystiraLoading = (function() {
         startTime = Date.now();
         currentStageIndex = 0;
         isComplete = false;
-        
+
         // Start timeout timer (15 seconds)
         startTimeoutTimer();
-        
+
         // Add timeout warning timer (10 seconds)
         startTimeoutWarningTimer();
-        
+
         // Listen for service worker messages
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
         }
-        
+
         // Set up blazor update notifications
         setupBlazorIntegration();
-        
+
         // Check connectivity status
         checkConnectivity();
-        
+
         // Start with first stage
         updateStage('initializing');
     }
@@ -120,7 +117,7 @@ window.mystiraLoading = (function() {
             const connection = navigator.connection;
             const connectionType = connection.effectiveType;
             console.log(LOG_PREFIX, 'Connection type:', connectionType);
-            
+
             // If slow connection, adjust expectations
             if (connectionType === 'slow-2g' || connectionType === '2g') {
                 console.log(LOG_PREFIX, 'Slow connection detected, extending timeouts');
@@ -133,7 +130,7 @@ window.mystiraLoading = (function() {
                     }
                 }, 25000);
             }
-            
+
             // Listen for connection changes
             connection.addEventListener('change', () => {
                 console.log(LOG_PREFIX, 'Connection changed to:', connection.effectiveType);
@@ -144,13 +141,19 @@ window.mystiraLoading = (function() {
     // Handle messages from service worker
     function handleServiceWorkerMessage(event) {
         console.log(LOG_PREFIX, 'Service worker message:', event.data);
-        
+
         switch (event.data?.type) {
             case 'CACHE_PROGRESS':
                 updateProgress('cache', event.data.current, event.data.total);
+                if (currentStageIndex < LOADING_STAGES.findIndex(s => s.id === 'downloading-content')) {
+                    updateStage('downloading-content');
+                }
                 break;
             case 'DOWNLOAD_PROGRESS':
                 updateProgress('download', event.data.current, event.data.total);
+                if (currentStageIndex < LOADING_STAGES.findIndex(s => s.id === 'downloading-content')) {
+                    updateStage('downloading-content');
+                }
                 break;
             case 'SYNC_PROGRESS':
                 updateProgress('sync', event.data.current, event.data.total);
@@ -158,6 +161,7 @@ window.mystiraLoading = (function() {
             case 'SERVICE_WORKER_UPDATE':
                 window.swUpdateAvailable = true;
                 console.log(LOG_PREFIX, 'Service worker update available');
+                updateStage('service-worker-update');
                 break;
         }
     }
@@ -173,7 +177,7 @@ window.mystiraLoading = (function() {
     // Update current loading stage
     function updateStage(stageId) {
         console.log(LOG_PREFIX, 'Updating stage to:', stageId);
-        
+
         const stageIndex = LOADING_STAGES.findIndex(stage => stage.id === stageId);
         if (stageIndex === -1) {
             console.warn(LOG_PREFIX, 'Unknown stage:', stageId);
@@ -181,7 +185,18 @@ window.mystiraLoading = (function() {
         }
 
         currentStageIndex = stageIndex;
-        
+
+        // Update static DOM if it exists (pre-Blazor)
+        const staticMessage = document.getElementById('static-stage-message');
+        if (staticMessage) {
+            staticMessage.textContent = LOADING_STAGES[stageIndex].message;
+        }
+
+        const staticIcon = document.querySelector('#static-progress-tracker .stage-icon i');
+        if (staticIcon) {
+            staticIcon.className = LOADING_STAGES[stageIndex].icon;
+        }
+
         if (eventHandlers.onStageChange) {
             const visibleStages = getVisibleStages();
             const stageData = {
@@ -189,24 +204,9 @@ window.mystiraLoading = (function() {
                 completedStages: visibleStages.slice(0, stageIndex + 1),
                 allStages: visibleStages
             };
-            
+
             // Call the event handler with the data object
             eventHandlers.onStageChange(stageData);
-        }
-        
-        // Auto-progress to next stage after a delay (unless it's the last stage)
-        if (stageIndex < LOADING_STAGES.length - 1) {
-            setTimeout(() => {
-                const nextStageId = LOADING_STAGES[stageIndex + 1].id;
-                console.log(LOG_PREFIX, 'Auto-progressing to next stage:', nextStageId);
-                updateStage(nextStageId);
-            }, 2000); // 2 seconds per stage
-        } else {
-            // Last stage reached, complete after a moment
-            setTimeout(() => {
-                console.log(LOG_PREFIX, 'All stages complete, finishing...');
-                complete();
-            }, 1500);
         }
     }
 
@@ -215,17 +215,17 @@ window.mystiraLoading = (function() {
         if (!progressData[operation + 'Progress']) {
             progressData[operation + 'Progress'] = { current: 0, total: 0 };
         }
-        
+
         progressData[operation + 'Progress'].current = current;
         progressData[operation + 'Progress'].total = total;
-        
+
         if (eventHandlers.onProgressUpdate) {
             const progressUpdate = {
                 operation: operation,
                 current: current,
                 total: total
             };
-            
+
             // Call the event handler with the progress data
             eventHandlers.onProgressUpdate(progressUpdate);
         }
@@ -234,11 +234,11 @@ window.mystiraLoading = (function() {
     // Mark loading as complete
     function complete() {
         if (isComplete) return;
-        
+
         console.log(LOG_PREFIX, 'Loading complete');
         isComplete = true;
         clearTimeout(timeoutTimer);
-        
+
         if (eventHandlers.onComplete) {
             eventHandlers.onComplete();
         }
@@ -277,7 +277,7 @@ window.mystiraLoading = (function() {
     // Clear caches and retry
     function clearCachesAndRetry() {
         console.log(LOG_PREFIX, 'Clearing caches and retrying');
-        
+
         if ('caches' in window) {
             caches.keys().then(cacheNames => {
                 return Promise.all(cacheNames.map(key => caches.delete(key)));
@@ -298,10 +298,10 @@ window.mystiraLoading = (function() {
     // Go offline mode
     function goOffline() {
         console.log(LOG_PREFIX, 'Switching to offline mode');
-        
+
         // Store offline preference
         localStorage.setItem('mystira_offline_mode', 'true');
-        
+
         // Reload to trigger offline experience
         window.location.reload();
     }
@@ -309,7 +309,7 @@ window.mystiraLoading = (function() {
     // Report problem (copy diagnostic info)
     function reportProblem() {
         console.log(LOG_PREFIX, 'Reporting problem');
-        
+
         const diagnosticInfo = {
             timestamp: new Date().toISOString(),
             userAgent: navigator.userAgent,
@@ -326,10 +326,10 @@ window.mystiraLoading = (function() {
             swUpdateAvailable: !!window.swUpdateAvailable,
             connectionType: navigator.connection ? navigator.connection.effectiveType : 'unknown'
         };
-        
+
         // Copy to clipboard
         const diagnosticText = JSON.stringify(diagnosticInfo, null, 2);
-        
+
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(diagnosticText).then(() => {
                 alert('Diagnostic information has been copied to your clipboard. Please paste it when reporting the problem.');
@@ -364,16 +364,16 @@ window.mystiraLoading = (function() {
                 </div>
             </div>
         `;
-        
+
         // Remove existing modal if any
         const existingModal = document.getElementById('diagnosticModal');
         if (existingModal) {
             existingModal.remove();
         }
-        
+
         // Add modal to body
         document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
+
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('diagnosticModal'));
         modal.show();
@@ -384,6 +384,20 @@ window.mystiraLoading = (function() {
         initialize: initialize,
         start: () => {
             console.log(LOG_PREFIX, 'Manual start triggered');
+
+            // If already complete, don't restart
+            if (isComplete) {
+                console.log(LOG_PREFIX, 'Loading already complete, ignoring start');
+                return;
+            }
+
+            // If already at a later stage than 'initializing', don't reset unless specifically forced
+            // (We check against the array since currentStageIndex might have been set by updateStage)
+            if (currentStageIndex > 0) {
+                console.log(LOG_PREFIX, 'Loading already in progress (stage: ' + LOADING_STAGES[currentStageIndex].id + '), not resetting');
+                return;
+            }
+
             if (loadingInitialized) {
                 initialize();
             } else {
@@ -409,14 +423,55 @@ window.mystiraLoading = (function() {
         clearCachesAndRetry: clearCachesAndRetry,
         goOffline: goOffline,
         reportProblem: reportProblem,
-        
+
         // Event handlers
-        setStageChangeHandler: (handler) => eventHandlers.onStageChange = handler,
-        setProgressUpdateHandler: (handler) => eventHandlers.onProgressUpdate = handler,
-        setTimeoutWarningHandler: (handler) => eventHandlers.onTimeoutWarning = handler,
-        setTimeoutHandler: (handler) => eventHandlers.onTimeout = handler,
-        setCompleteHandler: (handler) => eventHandlers.onComplete = handler,
-        
+        setStageChangeHandler: (handler) => {
+            console.log(LOG_PREFIX, 'Setting stage change handler');
+            eventHandlers.onStageChange = (data) => {
+                try {
+                    handler.invokeMethodAsync('OnStageChange', data);
+                } catch (e) {
+                    console.error(LOG_PREFIX, 'Error invoking OnStageChange:', e);
+                }
+            };
+        },
+        setProgressUpdateHandler: (handler) => {
+            eventHandlers.onProgressUpdate = (data) => {
+                try {
+                    handler.invokeMethodAsync('OnProgressUpdate', data);
+                } catch (e) {
+                    console.error(LOG_PREFIX, 'Error invoking OnProgressUpdate:', e);
+                }
+            };
+        },
+        setTimeoutWarningHandler: (handler) => {
+            eventHandlers.onTimeoutWarning = () => {
+                try {
+                    handler.invokeMethodAsync('OnTimeoutWarning');
+                } catch (e) {
+                    console.error(LOG_PREFIX, 'Error invoking OnTimeoutWarning:', e);
+                }
+            };
+        },
+        setTimeoutHandler: (handler) => {
+            eventHandlers.onTimeout = () => {
+                try {
+                    handler.invokeMethodAsync('OnTimeout');
+                } catch (e) {
+                    console.error(LOG_PREFIX, 'Error invoking OnTimeout:', e);
+                }
+            };
+        },
+        setCompleteHandler: (handler) => {
+            eventHandlers.onComplete = () => {
+                try {
+                    handler.invokeMethodAsync('OnComplete');
+                } catch (e) {
+                    console.error(LOG_PREFIX, 'Error invoking OnComplete:', e);
+                }
+            };
+        },
+
         // Getters
         getCurrentStage: () => LOADING_STAGES[currentStageIndex],
         getElapsedTime: () => Date.now() - startTime,
