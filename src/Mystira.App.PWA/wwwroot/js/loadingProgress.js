@@ -1,8 +1,11 @@
 // Loading Progress Tracker - Manages staged loading experience with real progress indicators
 
+const LOG_PREFIX = '[MystiraLoading]';
+
+// Initialize loading tracker when DOM is ready, but don't auto-start
+let loadingInitialized = false;
+
 window.mystiraLoading = (function() {
-    const LOG_PREFIX = '[MystiraLoading]';
-    
     // Loading stages configuration
     const LOADING_STAGES = [
         {
@@ -190,6 +193,21 @@ window.mystiraLoading = (function() {
             // Call the event handler with the data object
             eventHandlers.onStageChange(stageData);
         }
+        
+        // Auto-progress to next stage after a delay (unless it's the last stage)
+        if (stageIndex < LOADING_STAGES.length - 1) {
+            setTimeout(() => {
+                const nextStageId = LOADING_STAGES[stageIndex + 1].id;
+                console.log(LOG_PREFIX, 'Auto-progressing to next stage:', nextStageId);
+                updateStage(nextStageId);
+            }, 2000); // 2 seconds per stage
+        } else {
+            // Last stage reached, complete after a moment
+            setTimeout(() => {
+                console.log(LOG_PREFIX, 'All stages complete, finishing...');
+                complete();
+            }, 1500);
+        }
     }
 
     // Update progress for specific operation
@@ -369,7 +387,19 @@ window.mystiraLoading = (function() {
             if (loadingInitialized) {
                 initialize();
             } else {
-                console.warn(LOG_PREFIX, 'Cannot start - not initialized yet');
+                console.warn(LOG_PREFIX, 'Cannot start - not initialized yet, waiting for DOM...');
+                // Wait for DOM to be ready then start
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => {
+                        loadingInitialized = true;
+                        console.log(LOG_PREFIX, 'DOM now ready, starting initialization');
+                        initialize();
+                    });
+                } else {
+                    loadingInitialized = true;
+                    console.log(LOG_PREFIX, 'DOM already ready, starting initialization');
+                    initialize();
+                }
             }
         },
         updateStage: updateStage,

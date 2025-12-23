@@ -15,48 +15,46 @@
             </div>
 
             <!-- Progress Tracker -->
-            @if (visibleStages.Any())
+            @if (visibleStages.Any() && currentStage != null)
             {
                 <div class="progress-tracker">
-                    @foreach (var stage in visibleStages)
-                    {
-                        <div class="progress-stage @(GetStageStatus(stage.Id))">
-                            <div class="stage-icon">
-                                <i class="@stage.Icon"></i>
-                            </div>
-                            <div class="stage-content">
-                                <div class="stage-message">
-                                    @stage.Message
-                                    @if (HasProgress(stage.Id))
-                                    {
-                                        var progress = GetProgressData(stage.Id);
-                                        if (progress != null)
-                                        {
-                                            <span class="progress-detail">
-                                                (@progress.Current/@progress.Total)
-                                            </span>
-                                        }
-                                    }
-                                </div>
-                                @if (HasProgress(stage.Id))
+                    <!-- Show only current stage card -->
+                    <div class="progress-stage @GetStageStatus(currentStage.Id)">
+                        <div class="stage-icon">
+                            <i class="@currentStage.Icon"></i>
+                        </div>
+                        <div class="stage-content">
+                            <div class="stage-message">
+                                @currentStage.Message
+                                @if (HasProgress(currentStage.Id))
                                 {
-                                    var progress = GetProgressData(stage.Id);
+                                    var progress = GetProgressData(currentStage.Id);
                                     if (progress != null)
                                     {
-                                        <div class="progress-bar">
-                                            <div class="progress-fill" style="width: @(GetProgressPercentage(progress))%"></div>
-                                        </div>
+                                        <span class="progress-detail">
+                                            (@progress.Current/@progress.Total)
+                                        </span>
                                     }
                                 }
                             </div>
-                            @if (GetStageStatus(stage.Id) == "completed")
+                            @if (HasProgress(currentStage.Id))
                             {
-                                <div class="stage-check">
-                                    <i class="fas fa-check"></i>
-                                </div>
+                                var progress = GetProgressData(currentStage.Id);
+                                if (progress != null)
+                                {
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: @(GetProgressPercentage(progress))%"></div>
+                                    </div>
+                                }
                             }
                         </div>
-                    }
+                        @if (GetStageStatus(currentStage.Id) == "completed")
+                        {
+                            <div class="stage-check">
+                                <i class="fas fa-check"></i>
+                            </div>
+                        }
+                    </div>
                 </div>
             }
 
