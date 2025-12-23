@@ -47,10 +47,23 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Resolve base reference
+        id: resolve-base
+        run: |
+          if [ -n "${{ github.event.inputs.base_ref }}" ]; then
+            BASE_REF="${{ github.event.inputs.base_ref }}"
+          elif [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            BASE_REF="${{ github.event.before }}"
+          else
+            BASE_REF=$(git rev-parse HEAD~1)
+          fi
+          echo "base_ref=${BASE_REF}" >> $GITHUB_OUTPUT
+          echo "Using base reference: ${BASE_REF}"
+
       - uses: dorny/paths-filter@v3
         id: changes
         with:
-          base: ${{ github.event.inputs.base_ref || github.event.before || format('{0}~1', github.sha) }}
+          base: ${{ steps.resolve-base.outputs.base_ref }}
           filters: |
             domain:
               - "src/Mystira.App.Domain/**"
