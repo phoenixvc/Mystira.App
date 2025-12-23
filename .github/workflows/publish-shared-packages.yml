@@ -47,10 +47,38 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Resolve base reference
+        id: resolve-base
+        run: |
+          # Priority order:
+          # 1. Manual dispatch input
+          # 2. Push event's before SHA (if not initial push)
+          # 3. Resolve HEAD~1 to actual SHA
+          # 4. Use empty tree hash for initial commit
+          
+          ZERO_SHA="0000000000000000000000000000000000000000"
+          
+          if [ -n "${{ github.event.inputs.base_ref }}" ]; then
+            BASE_REF="${{ github.event.inputs.base_ref }}"
+          elif [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "${ZERO_SHA}" ]; then
+            BASE_REF="${{ github.event.before }}"
+          else
+            # Resolve HEAD~1 to an actual commit SHA that can be fetched
+            if BASE_REF=$(git rev-parse HEAD~1 2>/dev/null); then
+              echo "Resolved HEAD~1 to: ${BASE_REF}"
+            else
+              # Initial commit case: compare against empty tree to detect all files
+              BASE_REF=$(git hash-object -t tree /dev/null)
+              echo "Initial commit detected, using empty tree: ${BASE_REF}"
+            fi
+          fi
+          echo "base_ref=${BASE_REF}" >> $GITHUB_OUTPUT
+          echo "Using base reference: ${BASE_REF}"
+
       - uses: dorny/paths-filter@v3
         id: changes
         with:
-          base: ${{ github.event.inputs.base_ref || github.event.before || format('{0}~1', github.sha) }}
+          base: ${{ steps.resolve-base.outputs.base_ref }}
           filters: |
             domain:
               - "src/Mystira.App.Domain/**"
