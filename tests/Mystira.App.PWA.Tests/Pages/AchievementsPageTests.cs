@@ -64,8 +64,10 @@ public class AchievementsPageTests : TestContext
         public Task<bool> GetRememberMeAsync() => Task.FromResult(false);
         public DateTime? GetTokenExpiryTime() => null;
         public Task<bool> EnsureTokenValidAsync(int expiryBufferMinutes = 5) => Task.FromResult(true);
+#pragma warning disable CS0067 // Event is never used
         public event EventHandler? TokenExpiryWarning;
         public event EventHandler<bool>? AuthenticationStateChanged;
+#pragma warning restore CS0067
     }
 
     private sealed class FakeProfileService : IProfileService

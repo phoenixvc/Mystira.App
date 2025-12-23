@@ -57,7 +57,7 @@ public class DeleteArchetypeCommandHandlerTests : CqrsIntegrationTestBase
 
         var deleted = await DbContext.ArchetypeDefinitions.FindAsync("arch-1");
         deleted.Should().NotBeNull();
-        deleted.IsDeleted.Should().BeTrue();
+        deleted!.IsDeleted.Should().BeTrue();
     }
 
     [Fact]

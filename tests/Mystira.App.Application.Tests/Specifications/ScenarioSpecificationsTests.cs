@@ -199,7 +199,7 @@ public class ScenarioSpecificationsTests
             Difficulty = DifficultyLevel.Easy,
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
-            Archetypes = archetypes.Select((a, i) => new KeyValuePair<int, string>(i, a)).ToDictionary(x => x.Key, x => x.Value)
+            Archetypes = archetypes.Select(a => new Archetype(a)).ToList()
         };
     }
 }

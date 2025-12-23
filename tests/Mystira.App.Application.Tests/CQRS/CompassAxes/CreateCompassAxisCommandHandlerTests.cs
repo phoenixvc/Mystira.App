@@ -30,7 +30,7 @@ public class CreateCompassAxisCommandHandlerTests : CqrsIntegrationTestBase
     [InlineData(" ")]
     [InlineData("\t")]
     [InlineData(null)]
-    public async Task Handle_WithMissingName_ThrowsArgumentException(string name)
+    public async Task Handle_WithMissingName_ThrowsArgumentException(string? name)
     {
         var command = new CreateCompassAxisCommand(
             Name: name,
@@ -84,7 +84,7 @@ public class CreateCompassAxisCommandHandlerTests : CqrsIntegrationTestBase
 
         var retrieved = await DbContext.CompassAxes.FindAsync(created.Id);
         retrieved.Should().NotBeNull();
-        retrieved.Name.Should().Be("Control-Freedom");
+        retrieved!.Name.Should().Be("Control-Freedom");
         retrieved.Description.Should().Be("Control vs Freedom axis");
     }
 

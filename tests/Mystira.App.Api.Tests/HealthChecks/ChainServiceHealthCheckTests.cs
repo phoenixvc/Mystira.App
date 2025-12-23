@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
@@ -6,6 +7,7 @@ using Moq;
 using Mystira.App.Application.Configuration.StoryProtocol;
 using Mystira.App.Infrastructure.StoryProtocol.HealthChecks;
 using Mystira.App.Infrastructure.StoryProtocol.Services;
+using Xunit;
 
 namespace Mystira.App.Api.Tests.HealthChecks;
 

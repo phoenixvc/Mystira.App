@@ -28,10 +28,10 @@ public class DistributedTracingExtensionsTests
     }
 
     [Fact]
-    public void StartTracedOperation_ShouldCreateActivityWithCorrectName()
+    public void StartOperation_ShouldCreateActivityWithCorrectName()
     {
         // Arrange & Act
-        using var activity = DistributedTracingExtensions.StartTracedOperation("TestOperation", "Database");
+        using var activity = DistributedTracingExtensions.StartOperation("TestOperation", "Database");
 
         // Assert
         activity.Should().NotBeNull();
@@ -107,14 +107,14 @@ public class DistributedTracingExtensionsTests
     }
 
     [Fact]
-    public void StartTracedOperation_ShouldPropagateTraceContext()
+    public void StartOperation_ShouldPropagateTraceContext()
     {
         // Arrange
         using var parentActivity = new Activity("ParentOperation").Start();
         var parentTraceId = parentActivity.TraceId;
 
         // Act
-        using var childActivity = DistributedTracingExtensions.StartTracedOperation("ChildOperation", "Test");
+        using var childActivity = DistributedTracingExtensions.StartOperation("ChildOperation", "Test");
 
         // Assert
         childActivity.Should().NotBeNull();
@@ -123,17 +123,14 @@ public class DistributedTracingExtensionsTests
     }
 
     [Fact]
-    public void StartTracedOperation_WithTags_ShouldIncludeAllTags()
+    public void StartOperation_WithTags_ShouldIncludeAllTags()
     {
         // Arrange
-        var tags = new Dictionary<string, object?>
-        {
-            ["custom.tag1"] = "value1",
-            ["custom.tag2"] = 42
-        };
+        using var activity = DistributedTracingExtensions.StartOperation("TaggedOperation", "Test");
 
-        // Act
-        using var activity = DistributedTracingExtensions.StartTracedOperation("TaggedOperation", "Test", tags);
+        // Act - Add tags to activity after creation
+        activity?.SetTag("custom.tag1", "value1");
+        activity?.SetTag("custom.tag2", 42);
 
         // Assert
         activity.Should().NotBeNull();

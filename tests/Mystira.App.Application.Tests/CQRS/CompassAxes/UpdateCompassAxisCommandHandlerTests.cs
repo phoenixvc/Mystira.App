@@ -37,7 +37,7 @@ public class UpdateCompassAxisCommandHandlerTests : CqrsIntegrationTestBase
         var result = await Mediator.Send(command);
 
         result.Should().NotBeNull();
-        result.Id.Should().Be("axis-1");
+        result!.Id.Should().Be("axis-1");
         result.Name.Should().Be("Organized-Chaotic");
         result.Description.Should().Be("Updated description");
     }
@@ -71,7 +71,7 @@ public class UpdateCompassAxisCommandHandlerTests : CqrsIntegrationTestBase
 
         var updated = await DbContext.CompassAxes.FindAsync("axis-1");
         updated.Should().NotBeNull();
-        updated.Name.Should().Be("New-Name");
+        updated!.Name.Should().Be("New-Name");
         updated.Description.Should().Be("New description");
     }
 
@@ -80,7 +80,7 @@ public class UpdateCompassAxisCommandHandlerTests : CqrsIntegrationTestBase
     {
         await SeedTestDataAsync();
         var originalAxis = await DbContext.CompassAxes.FindAsync("axis-1");
-        var originalUpdateTime = originalAxis.UpdatedAt;
+        var originalUpdateTime = originalAxis!.UpdatedAt;
 
         await Task.Delay(100);
 
@@ -92,7 +92,7 @@ public class UpdateCompassAxisCommandHandlerTests : CqrsIntegrationTestBase
 
         var result = await Mediator.Send(command);
 
-        result.UpdatedAt.Should().BeAfter(originalUpdateTime);
+        result!.UpdatedAt.Should().BeAfter(originalUpdateTime);
     }
 
     [Fact]
@@ -127,6 +127,6 @@ public class UpdateCompassAxisCommandHandlerTests : CqrsIntegrationTestBase
 
         var result = await Mediator.Send(command);
 
-        result.Description.Should().Be(string.Empty);
+        result!.Description.Should().Be(string.Empty);
     }
 }

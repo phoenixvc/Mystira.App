@@ -39,7 +39,7 @@ public class GetScenarioQueryHandlerTests : CqrsIntegrationTestBase
         var result = await Mediator.Send(new GetScenarioQuery("scenario-1"));
 
         result.Should().NotBeNull();
-        result.Title.Should().Be("The Forest Quest");
+        result!.Title.Should().Be("The Forest Quest");
         result.Description.Should().Be("Adventure in the forest");
         result.AgeGroup.Should().Be("6-9");
     }
@@ -89,7 +89,7 @@ public class GetScenarioQueryHandlerTests : CqrsIntegrationTestBase
         var result = await Mediator.Send(new GetScenarioQuery("scenario-2"));
 
         result.Should().NotBeNull();
-        result.Title.Should().Be("Mountain Mystery");
+        result!.Title.Should().Be("Mountain Mystery");
         result.Id.Should().Be("scenario-2");
     }
 }

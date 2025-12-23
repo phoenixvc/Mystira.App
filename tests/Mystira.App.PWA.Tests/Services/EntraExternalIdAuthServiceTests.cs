@@ -725,7 +725,7 @@ public class EntraExternalIdAuthServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.Value.Should().BeCloseTo(DateTimeOffset.FromUnixTimeSeconds(expiryTimestamp).UtcDateTime, TimeSpan.FromSeconds(1));
+        result!.Value.Should().BeCloseTo(DateTimeOffset.FromUnixTimeSeconds(expiryTimestamp).UtcDateTime, TimeSpan.FromSeconds(1));
     }
 
     #endregion

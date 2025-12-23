@@ -63,7 +63,7 @@ public class DeleteAgeGroupCommandHandlerTests : CqrsIntegrationTestBase
 
         var deleted = await DbContext.AgeGroupDefinitions.FindAsync("ag-1");
         deleted.Should().NotBeNull();
-        deleted.IsDeleted.Should().BeTrue();
+        deleted!.IsDeleted.Should().BeTrue();
     }
 
     [Fact]

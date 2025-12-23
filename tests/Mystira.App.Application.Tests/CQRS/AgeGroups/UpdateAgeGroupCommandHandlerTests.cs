@@ -43,7 +43,7 @@ public class UpdateAgeGroupCommandHandlerTests : CqrsIntegrationTestBase
         var result = await Mediator.Send(command);
 
         result.Should().NotBeNull();
-        result.Id.Should().Be("ag-1");
+        result!.Id.Should().Be("ag-1");
         result.Name.Should().Be("Older Children");
         result.Value.Should().Be("8-12");
         result.MinimumAge.Should().Be(8);
@@ -86,7 +86,7 @@ public class UpdateAgeGroupCommandHandlerTests : CqrsIntegrationTestBase
 
         var updated = await DbContext.AgeGroupDefinitions.FindAsync("ag-1");
         updated.Should().NotBeNull();
-        updated.Name.Should().Be("Toddlers");
+        updated!.Name.Should().Be("Toddlers");
         updated.Value.Should().Be("2-4");
     }
 
@@ -95,7 +95,7 @@ public class UpdateAgeGroupCommandHandlerTests : CqrsIntegrationTestBase
     {
         await SeedTestDataAsync();
         var originalAgeGroup = await DbContext.AgeGroupDefinitions.FindAsync("ag-1");
-        var originalUpdateTime = originalAgeGroup.UpdatedAt;
+        var originalUpdateTime = originalAgeGroup!.UpdatedAt;
 
         await Task.Delay(100);
 
@@ -110,7 +110,7 @@ public class UpdateAgeGroupCommandHandlerTests : CqrsIntegrationTestBase
 
         var result = await Mediator.Send(command);
 
-        result.UpdatedAt.Should().BeAfter(originalUpdateTime);
+        result!.UpdatedAt.Should().BeAfter(originalUpdateTime);
     }
 
     [Fact]

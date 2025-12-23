@@ -38,7 +38,7 @@ public static class BranchParser
         {
             if (echoLogDict.TryGetValue("echotype", out var echoTypeObj) &&
                 echoTypeObj != null &&
-                !echoTypeObj.ToString().Equals(""))
+                !string.IsNullOrEmpty(echoTypeObj.ToString()))
             {
                 branch.EchoLog = EchoLogParser.Parse(echoLogDict);
 

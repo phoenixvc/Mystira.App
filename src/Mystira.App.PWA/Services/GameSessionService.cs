@@ -367,7 +367,7 @@ public partial class GameSessionService : IGameSessionService
             await _audioOrchestrator.OnSceneActionAsync(false);
 
             // If API returned session data, merge essential fields and hydrate assignments
-            if (apiSession != null)
+            if (apiSession != null && CurrentGameSession != null)
             {
                 // Preserve local scenario/scenes, but update metadata
                 CurrentGameSession.IsCompleted = apiSession.IsCompleted;

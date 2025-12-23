@@ -224,7 +224,7 @@ public class EntraExternalIdAuthService : IAuthService
         return null;
     }
 
-    public async Task<bool> EnsureTokenValidAsync(int expiryBufferMinutes = 5)
+    public Task<bool> EnsureTokenValidAsync(int expiryBufferMinutes = 5)
     {
         try
         {
@@ -232,7 +232,7 @@ public class EntraExternalIdAuthService : IAuthService
             if (expiryTime == null)
             {
                 _logger.LogWarning("Cannot determine token expiry time");
-                return false;
+                return Task.FromResult(false);
             }
 
             var timeUntilExpiry = expiryTime.Value - DateTime.UtcNow;
@@ -244,15 +244,15 @@ public class EntraExternalIdAuthService : IAuthService
 
                 // For Entra External ID, user needs to re-authenticate
                 // We can't silently refresh tokens in the implicit flow
-                return false;
+                return Task.FromResult(false);
             }
 
-            return true;
+            return Task.FromResult(true);
         }
         catch (OperationCanceledException)
         {
             _logger.LogWarning("Token validation check was canceled");
-            return false;
+            return Task.FromResult(false);
         }
     }
 
