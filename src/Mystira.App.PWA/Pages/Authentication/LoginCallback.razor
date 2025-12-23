@@ -69,7 +69,7 @@
         {
             Logger.LogError(ex, "Error processing login callback");
             _hasError = true;
-            _errorMessage = $"An error occurred: {ex.Message}";
+            _errorMessage = "An unexpected error occurred during authentication. Please try again.";
         }
         finally
         {

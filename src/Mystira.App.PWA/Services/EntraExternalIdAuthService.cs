@@ -804,7 +804,7 @@ public class EntraExternalIdAuthService : IAuthService
 
             return new Account
             {
-                Id = Guid.NewGuid().ToString(), // Will be mapped to actual account ID by API
+                Id = sub, // Use subject claim as Account ID for proper correlation with identity provider
                 Email = email,
                 DisplayName = name ?? email,
                 CreatedAt = DateTime.UtcNow,
