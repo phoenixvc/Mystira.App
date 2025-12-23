@@ -100,9 +100,13 @@ window.mystiraLoading = (function() {
     // Start timeout warning timer (10 seconds)
     function startTimeoutWarningTimer() {
         setTimeout(() => {
-            if (!isComplete && eventHandlers.onTimeoutWarning) {
+            if (!isComplete) {
                 console.log(LOG_PREFIX, 'Showing timeout warning (10s)');
-                eventHandlers.onTimeoutWarning();
+                if (eventHandlers.onTimeoutWarning) {
+                    eventHandlers.onTimeoutWarning();
+                } else {
+                    console.warn(LOG_PREFIX, 'Timeout warning handler not set');
+                }
             }
         }, 10000);
     }
@@ -226,8 +230,12 @@ window.mystiraLoading = (function() {
     function startTimeoutTimer() {
         timeoutTimer = setTimeout(() => {
             console.warn(LOG_PREFIX, 'Loading timeout reached (15s)');
-            if (!isComplete && eventHandlers.onTimeout) {
-                eventHandlers.onTimeout();
+            if (!isComplete) {
+                if (eventHandlers.onTimeout) {
+                    eventHandlers.onTimeout();
+                } else {
+                    console.warn(LOG_PREFIX, 'Timeout handler not set');
+                }
             }
         }, 15000);
     }
@@ -356,6 +364,14 @@ window.mystiraLoading = (function() {
     // Public API
     return {
         initialize: initialize,
+        start: () => {
+            console.log(LOG_PREFIX, 'Manual start triggered');
+            if (loadingInitialized) {
+                initialize();
+            } else {
+                console.warn(LOG_PREFIX, 'Cannot start - not initialized yet');
+            }
+        },
         updateStage: updateStage,
         updateProgress: updateProgress,
         complete: complete,
@@ -379,11 +395,15 @@ window.mystiraLoading = (function() {
     };
 })();
 
-// Initialize loading tracker immediately
+// Initialize loading tracker when DOM is ready, but don't auto-start
+let loadingInitialized = false;
+
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        window.mystiraLoading.initialize();
+        console.log(LOG_PREFIX, 'DOM loaded, waiting for manual initialization');
+        loadingInitialized = true;
     });
 } else {
-    window.mystiraLoading.initialize();
+    console.log(LOG_PREFIX, 'DOM already loaded, waiting for manual initialization');
+    loadingInitialized = true;
 }

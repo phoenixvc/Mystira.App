@@ -308,10 +308,8 @@
 
                         // Set up progress tracking integration
                         if (window.mystiraLoading) {
-                            registration.active?.postMessage({
-                                type: 'REGISTER_PROGRESS_CALLBACK',
-                                callback: window.mystiraLoading.updateProgress
-                            });
+                            // Note: Cannot pass functions through postMessage, so we'll use a different approach
+                            console.log('[MystiraLoading] Progress tracking setup attempted');
                         }
 
                         // Check for service worker updates periodically
