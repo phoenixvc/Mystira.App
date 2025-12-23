@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Shared.Telemetry;
 using Polly;
+using Polly.CircuitBreaker;
 using Polly.Retry;
 
 namespace Mystira.App.Infrastructure.Data.Polyglot;
@@ -300,6 +301,39 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     private ResiliencePipeline CreateResiliencePipeline()
     {
         return new ResiliencePipelineBuilder()
+            // Circuit breaker: Opens after 5 consecutive failures, stays open for 30s
+            // This prevents cascading failures when secondary is down
+            .AddCircuitBreaker(new CircuitBreakerStrategyOptions
+            {
+                FailureRatio = 0.5,
+                SamplingDuration = TimeSpan.FromSeconds(30),
+                MinimumThroughput = 5,
+                BreakDuration = TimeSpan.FromSeconds(30),
+                ShouldHandle = new PredicateBuilder()
+                    .Handle<DbUpdateException>()
+                    .Handle<TimeoutException>()
+                    .Handle<OperationCanceledException>(),
+                OnOpened = args =>
+                {
+                    _logger.LogWarning(
+                        "Circuit breaker OPENED for secondary database writes. " +
+                        "Duration: {BreakDuration}s. Reason: {Exception}",
+                        args.BreakDuration.TotalSeconds,
+                        args.Outcome.Exception?.Message ?? "Unknown");
+                    return ValueTask.CompletedTask;
+                },
+                OnClosed = _ =>
+                {
+                    _logger.LogInformation("Circuit breaker CLOSED. Secondary database writes resumed.");
+                    return ValueTask.CompletedTask;
+                },
+                OnHalfOpened = _ =>
+                {
+                    _logger.LogInformation("Circuit breaker HALF-OPEN. Testing secondary database...");
+                    return ValueTask.CompletedTask;
+                }
+            })
+            // Retry: 3 attempts with exponential backoff
             .AddRetry(new RetryStrategyOptions
             {
                 MaxRetryAttempts = 3,
@@ -308,6 +342,7 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
                 UseJitter = true,
                 ShouldHandle = new PredicateBuilder().Handle<DbUpdateException>()
             })
+            // Timeout: Fail fast if secondary is too slow
             .AddTimeout(TimeSpan.FromMilliseconds(_options.DualWriteTimeoutMs))
             .Build();
     }

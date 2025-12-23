@@ -168,6 +168,80 @@ jobs:
           echo "| Health Status | ${{ steps.health-check.outputs.health_status || 'unknown' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Timestamp | $(date -u +"%Y-%m-%dT%H:%M:%SZ") |" >> $GITHUB_STEP_SUMMARY
 
+      - name: Notify Slack
+        if: always() && vars.SLACK_WEBHOOK_URL != ''
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "🔄 Production Rollback Executed",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Type:*\n${{ github.event.inputs.rollback_type }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Health:*\n${{ steps.health-check.outputs.health_status || 'unknown' }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Triggered By:*\n${{ github.actor }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ vars.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+      - name: Notify Microsoft Teams
+        if: always() && vars.TEAMS_WEBHOOK_URL != ''
+        run: |
+          HEALTH_STATUS="${{ steps.health-check.outputs.health_status || 'unknown' }}"
+          if [ "$HEALTH_STATUS" = "healthy" ]; then
+            THEME_COLOR="00FF00"
+          else
+            THEME_COLOR="FF0000"
+          fi
+
+          curl -H "Content-Type: application/json" -d '{
+            "@type": "MessageCard",
+            "@context": "http://schema.org/extensions",
+            "themeColor": "'"$THEME_COLOR"'",
+            "summary": "Production Rollback Executed",
+            "sections": [{
+              "activityTitle": "🔄 Production Rollback Executed",
+              "facts": [
+                { "name": "Type", "value": "${{ github.event.inputs.rollback_type }}" },
+                { "name": "Health Status", "value": "'"$HEALTH_STATUS"'" },
+                { "name": "Triggered By", "value": "${{ github.actor }}" },
+                { "name": "Time", "value": "'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'" }
+              ],
+              "markdown": true
+            }],
+            "potentialAction": [{
+              "@type": "OpenUri",
+              "name": "View Workflow Run",
+              "targets": [{ "os": "default", "uri": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" }]
+            }]
+          }' "${{ vars.TEAMS_WEBHOOK_URL }}" || echo "Teams notification failed"
+
       - name: Azure Logout
         if: always()
         run: az logout
