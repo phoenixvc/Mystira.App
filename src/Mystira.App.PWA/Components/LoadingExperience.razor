@@ -1,3 +1,4 @@
+@implements IDisposable
 @using System.Text.Json
 @inject IJSRuntime jsRuntime
 
@@ -155,6 +156,7 @@
     private ProgressData? downloadProgress = null;
     private ProgressData? cacheProgress = null;
     private ProgressData? syncProgress = null;
+    private DotNetObjectReference<LoadingExperience>? selfReference;
 
     protected override async Task OnInitializedAsync()
     {
@@ -276,22 +278,22 @@
 
         try
         {
-            var self = DotNetObjectReference.Create(this);
+            selfReference = DotNetObjectReference.Create(this);
 
             // Set up stage change handler
-            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setStageChangeHandler", self);
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setStageChangeHandler", selfReference);
 
             // Set up progress update handler
-            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setProgressUpdateHandler", self);
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setProgressUpdateHandler", selfReference);
 
             // Set up timeout warning handler
-            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setTimeoutWarningHandler", self);
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setTimeoutWarningHandler", selfReference);
 
             // Set up timeout handler
-            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setTimeoutHandler", self);
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setTimeoutHandler", selfReference);
 
             // Set up complete handler
-            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setCompleteHandler", self);
+            await jsRuntime.InvokeVoidAsync("window.mystiraLoading.setCompleteHandler", selfReference);
         }
         catch (Exception ex)
         {
@@ -572,6 +574,7 @@
     public void Dispose()
     {
         StopElapsedTimer();
+        selfReference?.Dispose();
         // IJSRuntime is injected and managed by Blazor, don't dispose it
     }
 }
