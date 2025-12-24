@@ -1,5 +1,5 @@
 using System.Net.Http.Json;
-using Mystira.Contracts.App.Responses.Badges;
+using Mystira.App.Contracts.Responses.Badges;
 
 namespace Mystira.App.PWA.Services;
 
