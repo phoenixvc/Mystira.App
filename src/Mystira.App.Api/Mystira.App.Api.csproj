@@ -29,6 +29,8 @@
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.23.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.DependencyCollector" Version="2.23.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.AzureAppServices" Version="9.0.0" />
+    <!-- Mystira.Shared for Wolverine, caching, resilience, and exceptions -->
+    <PackageReference Include="Mystira.Shared" Version="0.1.0" />
   </ItemGroup>
 
   <ItemGroup>
