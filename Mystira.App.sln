@@ -42,6 +42,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.Infrastructure.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.PWA.Tests", "tests\Mystira.App.PWA.Tests\Mystira.App.PWA.Tests.csproj", "{D39AC7B0-46D0-4ADE-981A-C92FB48A8B56}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.Contracts", "src\Mystira.App.Contracts\Mystira.App.Contracts.csproj", "{AEAA67EC-33C7-489B-8E90-95F279DE465D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -280,6 +282,18 @@ Global
 		{D39AC7B0-46D0-4ADE-981A-C92FB48A8B56}.Release|x64.Build.0 = Release|Any CPU
 		{D39AC7B0-46D0-4ADE-981A-C92FB48A8B56}.Release|x86.ActiveCfg = Release|Any CPU
 		{D39AC7B0-46D0-4ADE-981A-C92FB48A8B56}.Release|x86.Build.0 = Release|Any CPU
+		{AEAA67EC-33C7-489B-8E90-95F279DE465D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AEAA67EC-33C7-489B-8E90-95F279DE465D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AEAA67EC-33C7-489B-8E90-95F279DE465D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{AEAA67EC-33C7-489B-8E90-95F279DE465D}.Debug|x64.Build.0 = Debug|Any CPU
+		{AEAA67EC-33C7-489B-8E90-95F279DE465D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AEAA67EC-33C7-489B-8E90-95F279DE465D}.Debug|x86.Build.0 = Debug|Any CPU
+		{AEAA67EC-33C7-489B-8E90-95F279DE465D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AEAA67EC-33C7-489B-8E90-95F279DE465D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AEAA67EC-33C7-489B-8E90-95F279DE465D}.Release|x64.ActiveCfg = Release|Any CPU
+		{AEAA67EC-33C7-489B-8E90-95F279DE465D}.Release|x64.Build.0 = Release|Any CPU
+		{AEAA67EC-33C7-489B-8E90-95F279DE465D}.Release|x86.ActiveCfg = Release|Any CPU
+		{AEAA67EC-33C7-489B-8E90-95F279DE465D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -304,5 +318,6 @@ Global
 		{28FEF7C5-A4BB-4B50-9D63-3A88B2C05FE1} = {07610817-4AC8-456C-AAE7-764888044CCD}
 		{7A98A916-F38D-4526-BB32-3C82DAEB0121} = {07610817-4AC8-456C-AAE7-764888044CCD}
 		{D39AC7B0-46D0-4ADE-981A-C92FB48A8B56} = {07610817-4AC8-456C-AAE7-764888044CCD}
+		{AEAA67EC-33C7-489B-8E90-95F279DE465D} = {636A8ADA-1901-4A23-88BB-A86586F1F765}
 	EndGlobalSection
 EndGlobal

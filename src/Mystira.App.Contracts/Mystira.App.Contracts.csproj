@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -6,30 +6,23 @@
     <LangVersion>latest</LangVersion>
 
     <!-- NuGet Package Metadata -->
-    <PackageId>Mystira.App.Application</PackageId>
+    <PackageId>Mystira.App.Contracts</PackageId>
     <Version>1.0.0</Version>
     <Authors>Mystira Team</Authors>
     <Company>Phoenix VC</Company>
-    <Description>Mystira platform application layer. CQRS commands/queries, handlers, validators, and application services.</Description>
+    <Description>Mystira platform contracts and interfaces. Shared DTOs, request/response models, and API contracts.</Description>
     <RepositoryUrl>https://github.com/phoenixvc/Mystira.App</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>UNLICENSED</PackageLicenseExpression>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <PackageTags>mystira;application;cqrs;internal</PackageTags>
+    <PackageTags>mystira;contracts;internal</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MediatR" Version="12.4.1" />
-    <PackageReference Include="FluentValidation" Version="11.11.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
-    <PackageReference Include="NJsonSchema" Version="11.1.0" />
-    <!-- Ardalis.Specification for composable query patterns (per workspace ADR-0014) -->
-    <PackageReference Include="Ardalis.Specification" Version="9.3.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Mystira.App.Domain\Mystira.App.Domain.csproj" />
-    <ProjectReference Include="..\Mystira.App.Contracts\Mystira.App.Contracts.csproj" />
-    <ProjectReference Include="..\Mystira.App.Shared\Mystira.App.Shared.csproj" />
   </ItemGroup>
 </Project>

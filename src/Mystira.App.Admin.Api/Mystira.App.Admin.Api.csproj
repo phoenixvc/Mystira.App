@@ -35,7 +35,7 @@
     <ProjectReference Include="..\Mystira.App.Infrastructure.Discord\Mystira.App.Infrastructure.Discord.csproj" />
     <ProjectReference Include="..\Mystira.App.Infrastructure.StoryProtocol\Mystira.App.Infrastructure.StoryProtocol.csproj" />
     <ProjectReference Include="..\Mystira.App.Shared\Mystira.App.Shared.csproj" />
-    <PackageReference Include="Mystira.Contracts.App" Version="1.0.0" />
+    <ProjectReference Include="..\Mystira.App.Contracts\Mystira.App.Contracts.csproj" />
     <ProjectReference Include="..\Mystira.App.Application\Mystira.App.Application.csproj" />
     <!-- Reuse JWT adapters and health port adapter from primary API -->
     <!--ProjectReference Include="..\Mystira.App.Api\Mystira.App.Api.csproj" /-->

@@ -38,13 +38,11 @@
     <PackageReference Include="Markdig" Version="0.37.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.0" />
     <PackageReference Include="Microsoft.Authentication.WebAssembly.Msal" Version="9.0.0" />
-    <!-- Mystira.Shared for resilience policies -->
-    <PackageReference Include="Mystira.Shared" Version="0.1.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../Mystira.App.Domain/Mystira.App.Domain.csproj" />
-    <PackageReference Include="Mystira.Contracts.App" Version="1.0.0" />
+    <ProjectReference Include="../Mystira.App.Contracts/Mystira.App.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
