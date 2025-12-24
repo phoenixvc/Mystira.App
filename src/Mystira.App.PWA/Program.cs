@@ -114,14 +114,14 @@ Action<ResiliencePipelineBuilder<HttpResponseMessage>> ConfigureStandardResilien
 // Each client uses ApiBaseAddressHandler to resolve URLs from localStorage
 // IMPORTANT: Each client gets its own circuit breaker via ConfigureStandardResilience()
 builder.Services.AddHttpClient<IScenarioApiClient, ScenarioApiClient>(ConfigureApiHttpClient)
-    .AddResilienceHandler("ScenarioApi", ConfigureStandardResilience("ScenarioApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("ScenarioApi", ConfigureStandardResilience("ScenarioApi"));
 
 builder.Services.AddHttpClient<IGameSessionApiClient, GameSessionApiClient>(ConfigureApiHttpClient)
-    .AddResilienceHandler("GameSessionApi", ConfigureStandardResilience("GameSessionApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("GameSessionApi", ConfigureStandardResilience("GameSessionApi"));
 
 // Music and Audio Services
 builder.Services.AddSingleton<IMusicResolver, MusicResolver>();
@@ -131,43 +131,43 @@ builder.Services.AddSingleton<SceneAudioOrchestrator>();
 builder.Services.AddScoped<IAudioCacheService, AudioCacheService>();
 
 builder.Services.AddHttpClient<IUserProfileApiClient, UserProfileApiClient>(ConfigureApiHttpClient)
-    .AddResilienceHandler("UserProfileApi", ConfigureStandardResilience("UserProfileApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("UserProfileApi", ConfigureStandardResilience("UserProfileApi"));
 
 builder.Services.AddHttpClient<IAuthApiClient, AuthApiClient>(ConfigureApiHttpClient)
-    .AddResilienceHandler("AuthApi", ConfigureStandardResilience("AuthApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("AuthApi", ConfigureStandardResilience("AuthApi"));
 
 builder.Services.AddHttpClient<IMediaApiClient, MediaApiClient>(ConfigureApiHttpClient)
-    .AddResilienceHandler("MediaApi", ConfigureStandardResilience("MediaApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("MediaApi", ConfigureStandardResilience("MediaApi"));
 
 builder.Services.AddHttpClient<IAvatarApiClient, AvatarApiClient>(ConfigureApiHttpClient)
-    .AddResilienceHandler("AvatarApi", ConfigureStandardResilience("AvatarApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("AvatarApi", ConfigureStandardResilience("AvatarApi"));
 
 builder.Services.AddHttpClient<IContentBundleApiClient, ContentBundleApiClient>(ConfigureApiHttpClient)
-    .AddResilienceHandler("ContentBundleApi", ConfigureStandardResilience("ContentBundleApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("ContentBundleApi", ConfigureStandardResilience("ContentBundleApi"));
 
 builder.Services.AddHttpClient<ICharacterApiClient, CharacterApiClient>(ConfigureApiHttpClient)
-    .AddResilienceHandler("CharacterApi", ConfigureStandardResilience("CharacterApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("CharacterApi", ConfigureStandardResilience("CharacterApi"));
 
 // Feature flag: Discord integration can be disabled via configuration
 var discordEnabled = builder.Configuration.GetValue<bool>("Features:Discord:Enabled");
 if (discordEnabled)
 {
     builder.Services.AddHttpClient<IDiscordApiClient, DiscordApiClient>(ConfigureApiHttpClient)
-        .AddResilienceHandler("DiscordApi", ConfigureStandardResilience("DiscordApi"))
         .AddHttpMessageHandler<ApiBaseAddressHandler>()
-        .AddHttpMessageHandler<AuthHeaderHandler>();
+        .AddHttpMessageHandler<AuthHeaderHandler>()
+        .AddResilienceHandler("DiscordApi", ConfigureStandardResilience("DiscordApi"));
 }
 else
 {
@@ -176,14 +176,14 @@ else
 }
 
 builder.Services.AddHttpClient<IAttributionApiClient, AttributionApiClient>(ConfigureApiHttpClient)
-    .AddResilienceHandler("AttributionApi", ConfigureStandardResilience("AttributionApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("AttributionApi", ConfigureStandardResilience("AttributionApi"));
 
 builder.Services.AddHttpClient<IBadgesApiClient, BadgesApiClient>(ConfigureApiHttpClient)
-    .AddResilienceHandler("BadgesApi", ConfigureStandardResilience("BadgesApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("BadgesApi", ConfigureStandardResilience("BadgesApi"));
 
 // Register main ApiClient that composes all domain clients
 builder.Services.AddScoped<IApiClient, ApiClient>();
