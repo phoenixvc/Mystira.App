@@ -1,7 +1,7 @@
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Mystira.App.Contracts.Requests.GameSessions;
+using Mystira.Contracts.App.Requests.GameSessions;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data;
 

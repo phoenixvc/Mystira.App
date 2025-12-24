@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Mystira.App.Api.Controllers;
 using Mystira.App.Application.CQRS.MediaAssets.Queries;
-using Mystira.App.Contracts.Responses.Common;
+using Mystira.Contracts.App.Responses.Common;
 using Mystira.App.Domain.Models;
 using Xunit;
 

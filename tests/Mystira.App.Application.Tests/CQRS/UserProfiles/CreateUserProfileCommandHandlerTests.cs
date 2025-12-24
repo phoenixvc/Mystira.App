@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Mystira.App.Application.CQRS.UserProfiles.Commands;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Contracts.Requests.UserProfiles;
+using Mystira.Contracts.App.Requests.UserProfiles;
 using Mystira.App.Domain.Models;
 using Xunit;
 

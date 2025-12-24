@@ -61,7 +61,7 @@ component_management:
     - component_id: contracts
       name: Contracts
       paths:
-        - src/Mystira.App.Contracts/**
+        - src/Mystira.Contracts.App/**
     - component_id: infrastructure-data
       name: Infrastructure Data
       paths:

@@ -1,8 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Avatars.Queries;
-using Mystira.App.Contracts.Responses.Common;
-using Mystira.App.Contracts.Responses.Media;
+using Mystira.Contracts.App.Responses.Common;
+using Mystira.Contracts.App.Responses.Media;
 
 namespace Mystira.App.Api.Controllers;
 

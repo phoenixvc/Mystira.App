@@ -184,7 +184,7 @@ public interface IQueryHandler<in TQuery, TResponse> : IRequestHandler<TQuery, T
 **Command Definition** (`CreateScenarioCommand.cs`):
 
 ```csharp
-using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.Contracts.App.Requests.Scenarios;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.Scenarios.Commands;
@@ -403,7 +403,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Scenarios.Commands;
 using Mystira.App.Application.CQRS.Scenarios.Queries;
-using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.Contracts.App.Requests.Scenarios;
 
 [ApiController]
 [Route("api/scenarios")]

@@ -31,7 +31,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Mystira.App.Application\Mystira.App.Application.csproj" />
-    <ProjectReference Include="..\..\src\Mystira.App.Contracts\Mystira.App.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Mystira.Contracts.App\Mystira.Contracts.App.csproj" />
     <ProjectReference Include="..\..\src\Mystira.App.Domain\Mystira.App.Domain.csproj" />
     <ProjectReference Include="..\..\src\Mystira.App.Infrastructure.Data\Mystira.App.Infrastructure.Data.csproj" />
   </ItemGroup>

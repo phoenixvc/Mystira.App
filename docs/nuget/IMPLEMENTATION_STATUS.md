@@ -24,7 +24,7 @@ All 8 shared libraries have been updated with NuGet package metadata:
 
 1. ✅ **Mystira.App.Domain** - Package metadata added
 2. ✅ **Mystira.App.Application** - Package metadata added
-3. ✅ **Mystira.App.Contracts** - Package metadata added
+3. ✅ **Mystira.Contracts.App** - Package metadata added
 4. ✅ **Mystira.App.Infrastructure.Azure** - Package metadata added
 5. ✅ **Mystira.App.Infrastructure.Data** - Package metadata added
 6. ✅ **Mystira.App.Infrastructure.Discord** - Package metadata added

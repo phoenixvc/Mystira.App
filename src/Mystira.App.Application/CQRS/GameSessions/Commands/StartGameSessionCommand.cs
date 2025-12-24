@@ -1,4 +1,4 @@
-using Mystira.App.Contracts.Requests.GameSessions;
+using Mystira.Contracts.App.Requests.GameSessions;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.GameSessions.Commands;

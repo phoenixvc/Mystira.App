@@ -1,6 +1,6 @@
 using System.Collections;
 using System.Data;
-using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.Contracts.App.Requests.Scenarios;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.Parsers;

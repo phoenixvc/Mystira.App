@@ -18,7 +18,7 @@ on:
       # API-related paths
       - "src/Mystira.App.Api/**"
       - "src/Mystira.App.Domain/**"
-      - "src/Mystira.App.Contracts/**"
+      - "src/Mystira.Contracts.App/**"
       - "src/Mystira.App.Application/**"
       - "src/Mystira.App.Infrastructure.Data/**"
       - "src/Mystira.App.Infrastructure.Azure/**"
@@ -75,8 +75,8 @@ jobs:
             fi
           else
             # Detect changes from git diff
-            API_PATHS="src/Mystira.App.Api src/Mystira.App.Domain src/Mystira.App.Contracts src/Mystira.App.Application src/Mystira.App.Infrastructure"
-            PWA_PATHS="src/Mystira.App.PWA src/Mystira.App.Contracts"
+            API_PATHS="src/Mystira.App.Api src/Mystira.App.Domain src/Mystira.Contracts.App src/Mystira.App.Application src/Mystira.App.Infrastructure"
+            PWA_PATHS="src/Mystira.App.PWA src/Mystira.Contracts.App"
 
             CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD)
 

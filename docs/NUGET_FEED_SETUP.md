@@ -109,7 +109,7 @@ dotnet add package Mystira.App.Domain --version 1.1.0
 
 - `Mystira.App.Domain` (v1.0.0)
 - `Mystira.App.Application` (v1.0.0)
-- `Mystira.App.Contracts` (v1.0.0)
+- `Mystira.Contracts.App` (v1.0.0)
 - `Mystira.App.Infrastructure.Azure` (v1.0.0)
 - `Mystira.App.Infrastructure.Data` (v1.0.0)
 - `Mystira.App.Infrastructure.Discord` (v1.0.0)

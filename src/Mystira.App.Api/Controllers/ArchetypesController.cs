@@ -1,7 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Archetypes.Queries;
-using Mystira.App.Contracts.Common;
+using Mystira.Contracts.App.Common;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;

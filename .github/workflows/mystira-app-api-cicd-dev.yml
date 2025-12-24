@@ -10,7 +10,7 @@ on:
     paths:
       - "src/Mystira.App.Api/**"
       - "src/Mystira.App.Domain/**"
-      - "src/Mystira.App.Contracts/**"
+      - "src/Mystira.Contracts.App/**"
       - "src/Mystira.App.Application/**"
       - "src/Mystira.App.Infrastructure.Data/**"
       - "src/Mystira.App.Infrastructure.Azure/**"
@@ -24,7 +24,7 @@ on:
     paths:
       - "src/Mystira.App.Api/**"
       - "src/Mystira.App.Domain/**"
-      - "src/Mystira.App.Contracts/**"
+      - "src/Mystira.Contracts.App/**"
       - "src/Mystira.App.Application/**"
       - "src/Mystira.App.Infrastructure.Data/**"
       - "src/Mystira.App.Infrastructure.Azure/**"

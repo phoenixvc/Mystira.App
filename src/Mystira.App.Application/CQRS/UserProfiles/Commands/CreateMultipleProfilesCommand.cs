@@ -1,4 +1,4 @@
-using Mystira.App.Contracts.Requests.UserProfiles;
+using Mystira.Contracts.App.Requests.UserProfiles;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.UserProfiles.Commands;

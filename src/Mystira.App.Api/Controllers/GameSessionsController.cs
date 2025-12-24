@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Accounts.Commands;
 using Mystira.App.Application.CQRS.GameSessions.Commands;
 using Mystira.App.Application.CQRS.GameSessions.Queries;
-using Mystira.App.Contracts.Requests.GameSessions;
-using Mystira.App.Contracts.Requests.Scenarios;
-using Mystira.App.Contracts.Responses.Common;
-using Mystira.App.Contracts.Responses.GameSessions;
+using Mystira.Contracts.App.Requests.GameSessions;
+using Mystira.Contracts.App.Requests.Scenarios;
+using Mystira.Contracts.App.Responses.Common;
+using Mystira.Contracts.App.Responses.GameSessions;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;

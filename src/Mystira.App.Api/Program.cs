@@ -9,7 +9,7 @@ using Mystira.App.Api.Services;
 using Mystira.App.Application.Behaviors;
 using Mystira.App.Application.Ports;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Contracts.Ports.Health;
+using Mystira.Contracts.App.Ports.Health;
 using Mystira.App.Application.Ports.Media;
 using Mystira.App.Application.Ports.Messaging;
 using Mystira.App.Application.Services;

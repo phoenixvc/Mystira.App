@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Contracts.Requests.Accounts;
+using Mystira.Contracts.App.Requests.Accounts;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.UseCases.Accounts;

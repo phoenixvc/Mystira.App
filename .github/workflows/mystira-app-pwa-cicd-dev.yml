@@ -9,14 +9,14 @@ on:
     branches: [dev]
     paths:
       - "src/Mystira.App.PWA/**"
-      - "src/Mystira.App.Contracts/**"
+      - "src/Mystira.Contracts.App/**"
       - ".github/workflows/mystira-app-pwa-cicd-dev.yml"
   pull_request:
     branches: [dev]
     types: [opened, synchronize, reopened]
     paths:
       - "src/Mystira.App.PWA/**"
-      - "src/Mystira.App.Contracts/**"
+      - "src/Mystira.Contracts.App/**"
       - ".github/workflows/mystira-app-pwa-cicd-dev.yml"
   workflow_dispatch:
 
