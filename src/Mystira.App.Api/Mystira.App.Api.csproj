@@ -36,7 +36,7 @@
     <ProjectReference Include="..\Mystira.App.Infrastructure.Azure\Mystira.App.Infrastructure.Azure.csproj" />
     <ProjectReference Include="..\Mystira.App.Infrastructure.Data\Mystira.App.Infrastructure.Data.csproj" />
     <ProjectReference Include="..\Mystira.App.Infrastructure.StoryProtocol\Mystira.App.Infrastructure.StoryProtocol.csproj" />
-    <PackageReference Include="Mystira.Contracts" Version="0.1.*" />
+    <PackageReference Include="Mystira.Contracts" Version="0.2.0-*" />
     <ProjectReference Include="..\Mystira.App.Application\Mystira.App.Application.csproj" />
     <ProjectReference Include="..\Mystira.App.Infrastructure.Discord\Mystira.App.Infrastructure.Discord.csproj" />
     <ProjectReference Include="..\Mystira.App.Shared\Mystira.App.Shared.csproj" />
