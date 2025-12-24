@@ -14,7 +14,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.PWA", "src\Myst
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.Api.Tests", "tests\Mystira.App.Api.Tests\Mystira.App.Api.Tests.csproj", "{9FC27625-C26C-4A1D-B726-2317862ADB48}"
 EndProject
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.Application", "src\Mystira.App.Application\Mystira.App.Application.csproj", "{85A464D1-825F-4F44-BBEB-5043E24E55F3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.Infrastructure.Data", "src\Mystira.App.Infrastructure.Data\Mystira.App.Infrastructure.Data.csproj", "{B36B82E4-8D71-42F0-997F-8E4976655622}"
