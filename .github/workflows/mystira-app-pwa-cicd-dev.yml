@@ -43,7 +43,7 @@ jobs:
           dotnet-version: "9.0.x"
           source-url: https://nuget.pkg.github.com/phoenixvc/index.json
         env:
-          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NUGET_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
       - name: Install wasm-tools workload
         run: dotnet workload install wasm-tools
