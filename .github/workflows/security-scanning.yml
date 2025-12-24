@@ -22,6 +22,7 @@ concurrency:
 
 env:
   DOTNET_VERSION: "9.0.x"
+  NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   # Secret scanning with gitleaks
@@ -59,14 +60,6 @@ jobs:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
           restore-keys: ${{ runner.os }}-nuget-
-
-      - name: Configure GitHub Packages NuGet source
-        run: |
-          dotnet nuget add source https://nuget.pkg.github.com/phoenixvc/index.json \
-            --name github \
-            --username ${{ github.actor }} \
-            --password ${{ secrets.GITHUB_TOKEN }} \
-            --store-password-in-clear-text
 
       - name: Restore dependencies
         run: dotnet restore
