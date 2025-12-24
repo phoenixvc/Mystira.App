@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Mystira.App.Api.Controllers;
 using Mystira.App.Application.CQRS.Health.Queries;
-using Mystira.App.Contracts.Responses.Common;
+using Mystira.Contracts.App.Responses.Common;
 using Xunit;
 
 namespace Mystira.App.Api.Tests.Controllers;

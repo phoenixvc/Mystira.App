@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using Mystira.App.Contracts.Ports.Health;
+using Mystira.Contracts.App.Ports.Health;
 
 namespace Mystira.App.Application.CQRS.Health.Queries;
 

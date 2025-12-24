@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Contracts.Requests.Media;
-using Mystira.App.Contracts.Responses.Media;
+using Mystira.Contracts.App.Requests.Media;
+using Mystira.Contracts.App.Responses.Media;
 
 namespace Mystira.App.Application.UseCases.Media;
 

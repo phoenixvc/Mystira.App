@@ -35,7 +35,7 @@ For each shared library, verify:
 
 1. ✅ `Mystira.App.Domain`
 2. ✅ `Mystira.App.Application`
-3. ✅ `Mystira.App.Contracts`
+3. ✅ `Mystira.Contracts.App`
 4. ✅ `Mystira.App.Infrastructure.Azure`
 5. ✅ `Mystira.App.Infrastructure.Data`
 6. ✅ `Mystira.App.Infrastructure.Discord`
@@ -56,7 +56,7 @@ For each shared library, verify:
    ```bash
    dotnet pack src/Mystira.App.Domain/Mystira.App.Domain.csproj --configuration Release --output ./nupkg
    dotnet pack src/Mystira.App.Application/Mystira.App.Application.csproj --configuration Release --output ./nupkg
-   dotnet pack src/Mystira.App.Contracts/Mystira.App.Contracts.csproj --configuration Release --output ./nupkg
+   dotnet pack src/Mystira.Contracts.App/Mystira.Contracts.App.csproj --configuration Release --output ./nupkg
    dotnet pack src/Mystira.App.Infrastructure.Azure/Mystira.App.Infrastructure.Azure.csproj --configuration Release --output ./nupkg
    dotnet pack src/Mystira.App.Infrastructure.Data/Mystira.App.Infrastructure.Data.csproj --configuration Release --output ./nupkg
    dotnet pack src/Mystira.App.Infrastructure.Discord/Mystira.App.Infrastructure.Discord.csproj --configuration Release --output ./nupkg

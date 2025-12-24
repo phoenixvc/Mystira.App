@@ -34,7 +34,7 @@ This plan outlines the migration strategy for extracting the Admin API from `Mys
 | `Mystira.App.Application` | Application services, CQRS handlers |
 | `Mystira.App.Infrastructure.Cosmos` | Cosmos DB infrastructure |
 | `Mystira.App.Infrastructure.Auth` | Authentication infrastructure |
-| `Mystira.App.Contracts` | Shared DTOs and contracts |
+| `Mystira.Contracts.App` | Shared DTOs and contracts |
 
 ---
 

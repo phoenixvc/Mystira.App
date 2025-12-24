@@ -1,7 +1,7 @@
 using FluentAssertions;
 using Mystira.App.Application.CQRS.GameSessions.Commands;
-using Mystira.App.Contracts.Models.GameSessions;
-using Mystira.App.Contracts.Requests.GameSessions;
+using Mystira.Contracts.App.Models.GameSessions;
+using Mystira.Contracts.App.Requests.GameSessions;
 using Mystira.App.Domain.Models;
 using Xunit;
 

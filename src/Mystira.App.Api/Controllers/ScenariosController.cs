@@ -2,10 +2,10 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Attribution.Queries;
 using Mystira.App.Application.CQRS.Scenarios.Queries;
-using Mystira.App.Contracts.Requests.Scenarios;
-using Mystira.App.Contracts.Responses.Attribution;
-using Mystira.App.Contracts.Responses.Common;
-using Mystira.App.Contracts.Responses.Scenarios;
+using Mystira.Contracts.App.Requests.Scenarios;
+using Mystira.Contracts.App.Responses.Attribution;
+using Mystira.Contracts.App.Responses.Common;
+using Mystira.Contracts.App.Responses.Scenarios;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;

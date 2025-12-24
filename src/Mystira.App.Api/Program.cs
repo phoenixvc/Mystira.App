@@ -9,7 +9,7 @@ using Mystira.App.Api.Services;
 using Mystira.App.Application.Behaviors;
 using Mystira.App.Application.Ports;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Contracts.Ports.Health;
+using Mystira.Contracts.App.Ports.Health;
 using Mystira.App.Application.Ports.Media;
 using Mystira.App.Application.Ports.Messaging;
 using Mystira.App.Application.Services;
@@ -36,6 +36,7 @@ using Mystira.App.Shared.Services;
 using Mystira.App.Shared.Telemetry;
 using Serilog;
 using Serilog.Events;
+using Wolverine;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SERILOG BOOTSTRAP LOGGING (before host is built)
@@ -76,6 +77,22 @@ try
         .WriteTo.ApplicationInsights(
             services.GetService<TelemetryConfiguration>(),
             TelemetryConverter.Traces));
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // WOLVERINE MESSAGING (alongside MediatR during migration)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Wolverine is configured to run alongside MediatR during the gradual migration.
+    // New handlers will use Wolverine convention-based patterns while existing
+    // MediatR handlers continue to work. See: ADR-0015 Wolverine Migration
+    builder.Host.UseWolverine(opts =>
+    {
+        // Discover handlers from Application assembly
+        opts.Discovery.IncludeAssembly(typeof(Mystira.App.Application.CQRS.ICommand<>).Assembly);
+
+        // Local in-process messaging only for now (no external transport)
+        // Azure Service Bus can be added later for distributed scenarios
+        opts.Policies.AutoApplyTransactions();
+    });
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // APPLICATION INSIGHTS TELEMETRY CONFIGURATION
@@ -511,6 +528,14 @@ builder.Services.AddMediatR(cfg =>
 // Register query cache invalidation service
 builder.Services.AddSingleton<IQueryCacheInvalidationService, QueryCacheInvalidationService>();
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// GLOBAL EXCEPTION HANDLING (Mystira.Shared.Exceptions)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Provides consistent error responses using RFC 7807 Problem Details format.
+// Catches domain exceptions (NotFoundException, ValidationException, etc.)
+// and converts them to appropriate HTTP status codes.
+builder.Services.AddProblemDetails();
+
 // Configure Health Checks
 var healthChecksBuilder = builder.Services.AddHealthChecks()
     .AddCheck<BlobStorageHealthCheck>("blob_storage");
@@ -680,6 +705,9 @@ if (app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
+// Add global exception handler (converts exceptions to ProblemDetails)
+app.UseExceptionHandler();
 
 // Add OWASP security headers (BUG-6)
 app.UseSecurityHeaders();

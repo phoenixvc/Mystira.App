@@ -361,7 +361,7 @@ Application/CQRS/Scenarios/Commands/
 
 **Example - CreateScenarioCommand:**
 ```csharp
-using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.Contracts.App.Requests.Scenarios;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.Scenarios.Commands;
@@ -731,7 +731,7 @@ public async Task<IActionResult> GetScenarios([FromQuery] int page = 1, [FromQue
 ```xml
 <ItemGroup>
   <ProjectReference Include="..\Mystira.App.Domain\Mystira.App.Domain.csproj" />
-  <ProjectReference Include="..\Mystira.App.Contracts\Mystira.App.Contracts.csproj" />
+  <ProjectReference Include="..\Mystira.Contracts.App\Mystira.Contracts.App.csproj" />
 </ItemGroup>
 ```
 
@@ -931,7 +931,7 @@ grep -r "using Mystira.App.Infrastructure" UseCases/
 - **[Infrastructure.Azure](../Mystira.App.Infrastructure.Azure/README.md)** - Azure service implementations
 - **[Infrastructure.Discord](../Mystira.App.Infrastructure.Discord/README.md)** - Discord bot implementation
 - **[API](../Mystira.App.Api/README.md)** - REST API controllers
-- **[Contracts](../Mystira.App.Contracts/README.md)** - DTOs and requests
+- **[Contracts](../Mystira.Contracts.App/README.md)** - DTOs and requests
 
 ---
 

@@ -276,12 +276,12 @@ DTOs belong in a separate contracts project.
 - Response DTOs
 - Message contracts
 
-**Location**: `src/Mystira.App.Contracts/`
+**Location**: `src/Mystira.Contracts.App/`
 
 **Structure:**
 
 ``` text
-Mystira.App.Contracts/
+Mystira.Contracts.App/
 ├── Requests/
 │   ├── GameSessions/
 │   │   ├── CreateGameSessionRequest.cs
@@ -312,7 +312,7 @@ Mystira.App.Contracts/
 **Example:**
 
 ```csharp
-namespace Mystira.App.Contracts.Requests.GameSessions;
+namespace Mystira.Contracts.App.Requests.GameSessions;
 
 public class CreateGameSessionRequest
 {

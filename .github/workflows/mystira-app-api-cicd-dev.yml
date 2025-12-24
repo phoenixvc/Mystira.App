@@ -10,7 +10,6 @@ on:
     paths:
       - "src/Mystira.App.Api/**"
       - "src/Mystira.App.Domain/**"
-      - "src/Mystira.App.Contracts/**"
       - "src/Mystira.App.Application/**"
       - "src/Mystira.App.Infrastructure.Data/**"
       - "src/Mystira.App.Infrastructure.Azure/**"
@@ -24,7 +23,6 @@ on:
     paths:
       - "src/Mystira.App.Api/**"
       - "src/Mystira.App.Domain/**"
-      - "src/Mystira.App.Contracts/**"
       - "src/Mystira.App.Application/**"
       - "src/Mystira.App.Infrastructure.Data/**"
       - "src/Mystira.App.Infrastructure.Azure/**"
@@ -36,6 +34,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: mystira-app-api-ci-${{ github.ref }}
@@ -67,6 +66,14 @@ jobs:
 
       - name: Install wasm-tools workload
         run: dotnet workload install wasm-tools
+
+      - name: Configure GitHub Packages NuGet source
+        run: |
+          dotnet nuget add source https://nuget.pkg.github.com/phoenixvc/index.json \
+            --name github \
+            --username ${{ github.actor }} \
+            --password ${{ secrets.GITHUB_TOKEN }} \
+            --store-password-in-clear-text
 
       - name: Restore dependencies
         run: dotnet restore

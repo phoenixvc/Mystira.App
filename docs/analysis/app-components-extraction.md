@@ -101,7 +101,7 @@ Mystira.App/
 - `Mystira.App.Domain`
 - `Mystira.App.Application`
 - `Mystira.App.Infrastructure.*`
-- `Mystira.App.Contracts`
+- `Mystira.Contracts.App`
 
 **Verdict**: Shared dependencies can be managed via packages - not a blocker for extraction.
 
@@ -220,7 +220,7 @@ Keep together if ALL of these apply:
 Mystira.App.Domain → NuGet package
 Mystira.App.Application → NuGet package
 Mystira.App.Infrastructure.* → NuGet packages
-Mystira.App.Contracts → NuGet package
+Mystira.Contracts.App → NuGet package
 ```
 
 ### Phase 2: Extract Admin API

@@ -1,6 +1,6 @@
 using FluentAssertions;
 using Mystira.App.Application.CQRS.UserBadges.Commands;
-using Mystira.App.Contracts.Requests.Badges;
+using Mystira.Contracts.App.Requests.Badges;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.Tests.CQRS.UserBadges;

@@ -321,7 +321,7 @@ public void CompassTracking_ApplyChange_ShouldClampValues()
 
 - **[Application Layer](../Mystira.App.Application/README.md)** - Use cases that orchestrate domain logic
 - **[Infrastructure.Data](../Mystira.App.Infrastructure.Data/README.md)** - Repository implementations
-- **[Contracts](../Mystira.App.Contracts/README.md)** - DTOs that expose domain to APIs
+- **[Contracts](../Mystira.Contracts.App/README.md)** - DTOs that expose domain to APIs
 
 ## 🔍 Architectural Analysis
 
