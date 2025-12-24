@@ -455,7 +455,7 @@ builder.Services.AddScoped<Mystira.App.Shared.Services.IJwtService, Mystira.App.
 builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, JwtServiceAdapter>();
 
 // Health port adapter for CQRS handlers
-builder.Services.AddScoped<Mystira.App.Application.Ports.Health.IHealthCheckPort, Mystira.App.Shared.Adapters.HealthCheckPortAdapter>();
+builder.Services.AddScoped<Mystira.Contracts.App.Ports.Health.IHealthCheckPort, Mystira.App.Shared.Adapters.HealthCheckPortAdapter>();
 
 // Discord/Messaging: keep as No-Op in this environment
 builder.Services.AddSingleton<NoOpChatBotService>();
