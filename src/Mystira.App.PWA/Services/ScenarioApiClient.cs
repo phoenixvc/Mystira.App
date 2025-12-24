@@ -49,7 +49,7 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
             {
                 if (first == '{')
                 {
-                    // Paginated response: Mystira.Contracts.App.Responses.Scenarios.ScenarioListResponse
+                    // Paginated response: Mystira.App.Contracts.Responses.Scenarios.ScenarioListResponse
                     var dto = JsonSerializer.Deserialize<ScenarioListResponseDto>(content, JsonOptions);
                     if (dto?.Scenarios != null)
                     {
