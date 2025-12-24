@@ -5,35 +5,30 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.UserProfiles.Queries;
 
 /// <summary>
-/// Handler for GetUserProfileQuery
-/// Retrieves a single user profile by ID
+/// Wolverine handler for GetUserProfileQuery.
+/// Retrieves a single user profile by ID.
 /// </summary>
-public class GetUserProfileQueryHandler : IQueryHandler<GetUserProfileQuery, UserProfile?>
+public static class GetUserProfileQueryHandler
 {
-    private readonly IUserProfileRepository _repository;
-    private readonly ILogger<GetUserProfileQueryHandler> _logger;
-
-    public GetUserProfileQueryHandler(
+    /// <summary>
+    /// Handles the GetUserProfileQuery by retrieving a profile from the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<UserProfile?> Handle(
+        GetUserProfileQuery query,
         IUserProfileRepository repository,
-        ILogger<GetUserProfileQueryHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<UserProfile?> Handle(
-        GetUserProfileQuery request,
-        CancellationToken cancellationToken)
-    {
-        var profile = await _repository.GetByIdAsync(request.ProfileId);
+        var profile = await repository.GetByIdAsync(query.ProfileId);
 
         if (profile == null)
         {
-            _logger.LogDebug("Profile not found: {ProfileId}", request.ProfileId);
+            logger.LogDebug("Profile not found: {ProfileId}", query.ProfileId);
         }
         else
         {
-            _logger.LogDebug("Retrieved profile {ProfileId}", request.ProfileId);
+            logger.LogDebug("Retrieved profile {ProfileId}", query.ProfileId);
         }
 
         return profile;

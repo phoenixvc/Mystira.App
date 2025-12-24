@@ -5,38 +5,35 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.Scenarios.Queries;
 
 /// <summary>
-/// Handler for GetScenarioQuery - retrieves a single scenario by ID
-/// This is a read-only operation that doesn't modify state
+/// Wolverine handler for GetScenarioQuery.
+/// Retrieves a single scenario by ID.
 /// </summary>
-public class GetScenarioQueryHandler : IQueryHandler<GetScenarioQuery, Scenario?>
+public static class GetScenarioQueryHandler
 {
-    private readonly IScenarioRepository _repository;
-    private readonly ILogger<GetScenarioQueryHandler> _logger;
-
-    public GetScenarioQueryHandler(
+    /// <summary>
+    /// Handles the GetScenarioQuery by retrieving a scenario from the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<Scenario?> Handle(
+        GetScenarioQuery query,
         IScenarioRepository repository,
-        ILogger<GetScenarioQueryHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<Scenario?> Handle(GetScenarioQuery request, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(request.ScenarioId))
+        if (string.IsNullOrWhiteSpace(query.ScenarioId))
         {
-            throw new ArgumentException("Scenario ID cannot be null or empty", nameof(request.ScenarioId));
+            throw new ArgumentException("Scenario ID cannot be null or empty", nameof(query.ScenarioId));
         }
 
-        var scenario = await _repository.GetByIdAsync(request.ScenarioId);
+        var scenario = await repository.GetByIdAsync(query.ScenarioId);
 
         if (scenario == null)
         {
-            _logger.LogWarning("Scenario not found: {ScenarioId}", request.ScenarioId);
+            logger.LogWarning("Scenario not found: {ScenarioId}", query.ScenarioId);
         }
         else
         {
-            _logger.LogDebug("Retrieved scenario: {ScenarioId}", request.ScenarioId);
+            logger.LogDebug("Retrieved scenario: {ScenarioId}", query.ScenarioId);
         }
 
         return scenario;

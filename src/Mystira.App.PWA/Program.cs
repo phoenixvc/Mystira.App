@@ -2,12 +2,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Extensions.Http.Resilience;
 using Mystira.App.PWA;
 using Mystira.App.PWA.Services;
-using Polly;
-using Polly.Extensions.Http;
-
 using Mystira.App.PWA.Services.Music;
+using Polly;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -63,49 +62,64 @@ void ConfigureApiHttpClient(HttpClient client)
     client.BaseAddress = new Uri(defaultApiUrl);
 }
 
-// Factory function to create resilience policies for each client
+// Polly v8 resilience configuration using Microsoft.Extensions.Http.Resilience
 // IMPORTANT: Each client gets its OWN circuit breaker instance to prevent cascade failures
 // (If ScenarioApi fails, it shouldn't block AuthApi, etc.)
-IAsyncPolicy<HttpResponseMessage> CreateResiliencePolicy(string clientName)
+Action<ResiliencePipelineBuilder<HttpResponseMessage>> ConfigureStandardResilience(string clientName) => builder =>
 {
-    // Retry policy: exponential backoff (2s, 4s, 8s) on transient errors
-    var retryPolicy = HttpPolicyExtensions
-        .HandleTransientHttpError()
-        .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-            onRetry: (outcome, timespan, retryAttempt, _) =>
-            {
-                Console.WriteLine($"[{clientName}:Retry] Attempt {retryAttempt} after {timespan.TotalSeconds}s - {outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString()}");
-            });
+    // Add retry with exponential backoff (2s, 4s, 8s) on transient errors
+    builder.AddRetry(new HttpRetryStrategyOptions
+    {
+        MaxRetryAttempts = 3,
+        BackoffType = DelayBackoffType.Exponential,
+        Delay = TimeSpan.FromSeconds(2),
+        ShouldHandle = static args => ValueTask.FromResult(HttpClientResiliencePredicates.IsTransient(args.Outcome)),
+        OnRetry = args =>
+        {
+            Console.WriteLine($"[{clientName}:Retry] Attempt {args.AttemptNumber} after {args.RetryDelay.TotalSeconds}s - {args.Outcome.Exception?.Message ?? args.Outcome.Result?.StatusCode.ToString()}");
+            return default;
+        }
+    });
 
-    // Circuit breaker: opens after 5 failures, stays open for 30s
-    // Each client has its own circuit breaker state
-    var circuitBreakerPolicy = HttpPolicyExtensions
-        .HandleTransientHttpError()
-        .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30),
-            onBreak: (outcome, breakDelay) =>
-            {
-                Console.WriteLine($"[{clientName}:CircuitBreaker] Opened for {breakDelay.TotalSeconds}s - {outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString()}");
-            },
-            onReset: () => Console.WriteLine($"[{clientName}:CircuitBreaker] Reset"),
-            onHalfOpen: () => Console.WriteLine($"[{clientName}:CircuitBreaker] Half-open, testing..."));
+    // Add circuit breaker: opens after 5 failures, stays open for 30s
+    builder.AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
+    {
+        FailureRatio = 0.5,
+        MinimumThroughput = 5,
+        SamplingDuration = TimeSpan.FromSeconds(30),
+        BreakDuration = TimeSpan.FromSeconds(30),
+        ShouldHandle = static args => ValueTask.FromResult(HttpClientResiliencePredicates.IsTransient(args.Outcome)),
+        OnOpened = args =>
+        {
+            Console.WriteLine($"[{clientName}:CircuitBreaker] Opened for {args.BreakDuration.TotalSeconds}s");
+            return default;
+        },
+        OnClosed = _ =>
+        {
+            Console.WriteLine($"[{clientName}:CircuitBreaker] Reset");
+            return default;
+        },
+        OnHalfOpened = _ =>
+        {
+            Console.WriteLine($"[{clientName}:CircuitBreaker] Half-open, testing...");
+            return default;
+        }
+    });
 
-    // Timeout policy: 30 second timeout per request
-    var timeoutPolicy = Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(30));
+    // Add timeout: 30 second timeout per request
+    builder.AddTimeout(TimeSpan.FromSeconds(30));
+};
 
-    // Combined policy: timeout wraps retry wraps circuit breaker
-    return Policy.WrapAsync(timeoutPolicy, retryPolicy, circuitBreakerPolicy);
-}
-
-// Register domain-specific API clients with dynamic base address resolution and resilience policies
+// Register domain-specific API clients with dynamic base address resolution and resilience policies (Polly v8)
 // Each client uses ApiBaseAddressHandler to resolve URLs from localStorage
-// IMPORTANT: Each client gets its own circuit breaker via CreateResiliencePolicy()
+// IMPORTANT: Each client gets its own circuit breaker via ConfigureStandardResilience()
 builder.Services.AddHttpClient<IScenarioApiClient, ScenarioApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("ScenarioApi"))
+    .AddResilienceHandler("ScenarioApi", ConfigureStandardResilience("ScenarioApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IGameSessionApiClient, GameSessionApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("GameSessionApi"))
+    .AddResilienceHandler("GameSessionApi", ConfigureStandardResilience("GameSessionApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
@@ -117,32 +131,32 @@ builder.Services.AddSingleton<SceneAudioOrchestrator>();
 builder.Services.AddScoped<IAudioCacheService, AudioCacheService>();
 
 builder.Services.AddHttpClient<IUserProfileApiClient, UserProfileApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("UserProfileApi"))
+    .AddResilienceHandler("UserProfileApi", ConfigureStandardResilience("UserProfileApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IAuthApiClient, AuthApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("AuthApi"))
+    .AddResilienceHandler("AuthApi", ConfigureStandardResilience("AuthApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IMediaApiClient, MediaApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("MediaApi"))
+    .AddResilienceHandler("MediaApi", ConfigureStandardResilience("MediaApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IAvatarApiClient, AvatarApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("AvatarApi"))
+    .AddResilienceHandler("AvatarApi", ConfigureStandardResilience("AvatarApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IContentBundleApiClient, ContentBundleApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("ContentBundleApi"))
+    .AddResilienceHandler("ContentBundleApi", ConfigureStandardResilience("ContentBundleApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<ICharacterApiClient, CharacterApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("CharacterApi"))
+    .AddResilienceHandler("CharacterApi", ConfigureStandardResilience("CharacterApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
@@ -151,7 +165,7 @@ var discordEnabled = builder.Configuration.GetValue<bool>("Features:Discord:Enab
 if (discordEnabled)
 {
     builder.Services.AddHttpClient<IDiscordApiClient, DiscordApiClient>(ConfigureApiHttpClient)
-        .AddPolicyHandler(CreateResiliencePolicy("DiscordApi"))
+        .AddResilienceHandler("DiscordApi", ConfigureStandardResilience("DiscordApi"))
         .AddHttpMessageHandler<ApiBaseAddressHandler>()
         .AddHttpMessageHandler<AuthHeaderHandler>();
 }
@@ -162,12 +176,12 @@ else
 }
 
 builder.Services.AddHttpClient<IAttributionApiClient, AttributionApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("AttributionApi"))
+    .AddResilienceHandler("AttributionApi", ConfigureStandardResilience("AttributionApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
 builder.Services.AddHttpClient<IBadgesApiClient, BadgesApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("BadgesApi"))
+    .AddResilienceHandler("BadgesApi", ConfigureStandardResilience("BadgesApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
