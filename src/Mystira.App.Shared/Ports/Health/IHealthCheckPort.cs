@@ -1,4 +1,4 @@
-﻿namespace Mystira.App.Contracts.Ports.Health;
+﻿namespace Mystira.Contracts.App.Ports.Health;
 
 /// <summary>
 /// Port interface for health check operations.

@@ -15,11 +15,11 @@ public class HealthCheckPortAdapter : IHealthCheckPort
         _healthCheckService = healthCheckService;
     }
 
-    public async Task<Mystira.App.Contracts.Ports.Health.HealthReport> CheckHealthAsync(CancellationToken cancellationToken = default)
+    public async Task<Mystira.Contracts.App.Ports.Health.HealthReport> CheckHealthAsync(CancellationToken cancellationToken = default)
     {
         var aspNetHealthReport = await _healthCheckService.CheckHealthAsync(cancellationToken);
 
-        return new Mystira.App.Contracts.Ports.Health.HealthReport
+        return new Mystira.Contracts.App.Ports.Health.HealthReport
         {
             Status = aspNetHealthReport.Status.ToString(),
             Duration = aspNetHealthReport.TotalDuration,
