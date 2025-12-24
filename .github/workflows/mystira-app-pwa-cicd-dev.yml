@@ -1,4 +1,8 @@
-name: PWA CI/CD - Dev Environment
+name: PWA CI - Dev Environment
+
+# This workflow handles CI (build/test) only.
+# Deployment is triggered via repository_dispatch to Mystira.workspace.
+# See: trigger-workspace-deploy.yml
 
 on:
   push:
@@ -9,64 +13,24 @@ on:
       - ".github/workflows/mystira-app-pwa-cicd-dev.yml"
   pull_request:
     branches: [dev]
-    types: [opened, synchronize, reopened, closed]
-    # Note: No path filter to ensure cleanup job always runs when PR is closed
-    # The build-and-deploy job has its own path filtering via job-level conditions
-  workflow_run:
-    workflows: ["Infrastructure Deploy - Dev"]
-    types: [completed]
-    branches: [dev]
+    types: [opened, synchronize, reopened]
+    paths:
+      - "src/Mystira.App.PWA/**"
+      - "src/Mystira.App.Contracts/**"
+      - ".github/workflows/mystira-app-pwa-cicd-dev.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: mystira-app-pwa-dev-${{ github.ref }}
+  group: mystira-app-pwa-ci-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  # SWA name follows convention: [org]-[env]-[project]-swa-[region]
-  AZURE_SWA_NAME: "mys-dev-mystira-swa-eus2"
-
 jobs:
-  check-secrets:
+  build:
     runs-on: ubuntu-latest
-    name: Check Required Secrets
-    outputs:
-      has-all-secrets: ${{ steps.check.outputs.has-all-secrets }}
-      missing-secrets: ${{ steps.check.outputs.missing-secrets }}
-    steps:
-      - name: Check secrets availability
-        id: check
-        run: |
-          MISSING=""
-          HAS_ALL="true"
-
-          if [ -z "${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DEV }}" ]; then
-            MISSING="${MISSING}AZURE_STATIC_WEB_APPS_API_TOKEN_DEV, "
-            HAS_ALL="false"
-          fi
-
-          # Remove trailing comma and space
-          MISSING="${MISSING%, }"
-
-          echo "has-all-secrets=${HAS_ALL}" >> $GITHUB_OUTPUT
-          echo "missing-secrets=${MISSING}" >> $GITHUB_OUTPUT
-
-          if [ "${HAS_ALL}" = "false" ]; then
-            echo "::warning::Missing secrets: ${MISSING}"
-          fi
-
-  build-and-deploy:
-    needs: [check-secrets]
-    if: >
-      needs.check-secrets.outputs.has-all-secrets == 'true' &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || 
-      (github.event_name == 'pull_request' && github.event.action != 'closed') || 
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'))
-    runs-on: ubuntu-latest
-    name: Build and Deploy
+    name: Build and Validate
 
     steps:
       - name: Checkout repository
@@ -127,125 +91,22 @@ jobs:
       - name: Build Blazor WASM
         run: dotnet publish src/Mystira.App.PWA/Mystira.App.PWA.csproj -c Release -o publish
 
-      - name: Update version.json
+      - name: Verify Build Output
         run: |
-          VERSION="1.0.${{ github.run_number }}"
-          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          COMMIT_SHA="${{ github.sha }}"
-          cat > publish/wwwroot/version.json << EOF
-          {
-            "version": "${VERSION}",
-            "buildDate": "${BUILD_DATE}",
-            "commitSha": "${COMMIT_SHA:0:7}",
-            "releaseNotes": "Build #${{ github.run_number }} (Dev) from ${COMMIT_SHA:0:7}"
-          }
-          EOF
-          echo "✓ Updated version.json to version ${VERSION}"
-          cat publish/wwwroot/version.json
-
-      - name: Configure Environment Header for Development
-        run: |
-          echo "Setting Blazor-Environment header to Development..."
-          jq '.globalHeaders = (.globalHeaders // {}) | .globalHeaders."Blazor-Environment" = "Development"' publish/wwwroot/staticwebapp.config.json > temp.json
-          mv temp.json publish/wwwroot/staticwebapp.config.json
-          echo "✓ Blazor-Environment header set to Development"
-          cat publish/wwwroot/staticwebapp.config.json | grep -A 1 "globalHeaders"
-
-      - name: Deploy to Azure Static Web App
-        id: swa-deploy
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DEV }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          action: "upload"
-          app_location: "publish/wwwroot"
-          skip_app_build: true
-          skip_api_build: true
-
-      - name: Smoke test - Health check
-        id: smoke-test
-        env:
-          # Configurable startup wait time (default 30s for dev)
-          POST_DEPLOY_WAIT_SECONDS: ${{ vars.POST_DEPLOY_WAIT_SECONDS || '30' }}
-        run: |
-          # Extract SWA URL from deployment output or construct it
-          SWA_URL="${{ steps.swa-deploy.outputs.static_web_app_url }}"
-          
-          if [ -z "$SWA_URL" ]; then
-            # Fallback: construct URL from SWA name
-            SWA_URL="https://${{ env.AZURE_SWA_NAME }}.azurestaticapps.net"
+          echo "Verifying build output..."
+          if [ ! -d "publish/wwwroot" ]; then
+            echo "ERROR: Build output directory not found"
+            exit 1
           fi
-          
-          echo "🔍 Running post-deployment smoke tests for ${SWA_URL}"
+          echo "Build output verified successfully"
+          ls -la publish/wwwroot
 
-          # Wait for deployment to stabilize (configurable via repository variable)
-          echo "⏳ Waiting ${POST_DEPLOY_WAIT_SECONDS}s for SWA startup..."
-          sleep ${POST_DEPLOY_WAIT_SECONDS}
-
-          # Retry logic with exponential backoff
-          MAX_RETRIES=6
-          INITIAL_DELAY=5
-          MAX_DELAY=30
-
-          echo ""
-          echo "📋 Testing SWA availability"
-          for i in $(seq 1 $MAX_RETRIES); do
-            DELAY=$((INITIAL_DELAY * (2 ** (i-1))))
-            [ $DELAY -gt $MAX_DELAY ] && DELAY=$MAX_DELAY
-
-            echo "  Attempt $i of $MAX_RETRIES..."
-
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-              --connect-timeout 15 \
-              --max-time 30 \
-              "${SWA_URL}" || echo "000")
-
-            echo "    Status: ${HTTP_STATUS}"
-
-            if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "304" ]; then
-              echo "  ✅ SWA is accessible and responding!"
-              echo "deployment_status=healthy" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-
-            if [ $i -eq $MAX_RETRIES ]; then
-              echo "⚠️ SWA health check failed after $MAX_RETRIES attempts"
-              echo "deployment_status=degraded" >> $GITHUB_OUTPUT
-              # Don't fail dev builds - SWA might take longer to propagate
-              exit 0
-            fi
-
-            echo "    Retrying in ${DELAY}s (exponential backoff)..."
-            sleep $DELAY
-          done
-
-  deploy-skipped:
-    runs-on: ubuntu-latest
-    needs: [check-secrets]
-    name: Deployment Skipped - Missing Secrets
-    if: >
-      needs.check-secrets.outputs.has-all-secrets != 'true' &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || 
-      (github.event_name == 'pull_request' && github.event.action != 'closed') || 
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'))
-
-    steps:
-      - name: Report missing secrets
+      - name: Build Summary
         run: |
-          echo "::error::Deployment skipped due to missing secrets: ${{ needs.check-secrets.outputs.missing-secrets }}"
-          echo ""
-          echo "Please configure the following secrets in GitHub Settings → Secrets and variables → Actions:"
-          echo "  - AZURE_STATIC_WEB_APPS_API_TOKEN_DEV"
-          exit 1
-
-  close-pr:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    name: Close PR Preview
-
-    steps:
-      - name: Close Pull Request
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DEV }}
-          action: "close"
+          echo "## PWA Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Build and validation passed successfully." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** Deployment is handled by [Mystira.workspace](https://github.com/phoenixvc/Mystira.workspace) via repository_dispatch." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See [trigger-workspace-deploy.yml](.github/workflows/trigger-workspace-deploy.yml) for deployment trigger configuration." >> $GITHUB_STEP_SUMMARY
