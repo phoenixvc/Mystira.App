@@ -26,9 +26,6 @@ concurrency:
   group: mystira-app-pwa-ci-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -44,6 +41,9 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "9.0.x"
+          source-url: https://nuget.pkg.github.com/phoenixvc/index.json
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install wasm-tools workload
         run: dotnet workload install wasm-tools
