@@ -48,6 +48,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Mystira.App.Domain\Mystira.App.Domain.csproj" />
-    <ProjectReference Include="..\Mystira.App.Contracts\Mystira.App.Contracts.csproj" />
+    <PackageReference Include="Mystira.Contracts" Version="1.0.*" />
   </ItemGroup>
 </Project>

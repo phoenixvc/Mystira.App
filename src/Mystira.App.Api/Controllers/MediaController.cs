@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.MediaAssets.Queries;
 using Mystira.App.Domain.Models;
-using ErrorResponse = Mystira.App.Contracts.Responses.Common.ErrorResponse;
+using ErrorResponse = Mystira.Contracts.App.Responses.Common.ErrorResponse;
 
 namespace Mystira.App.Api.Controllers;
 
