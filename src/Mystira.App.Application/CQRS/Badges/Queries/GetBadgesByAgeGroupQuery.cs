@@ -1,4 +1,4 @@
-﻿using Mystira.App.Contracts.Responses.Badges;
+﻿using Mystira.Contracts.App.Responses.Badges;
 
 namespace Mystira.App.Application.CQRS.Badges.Queries;
 

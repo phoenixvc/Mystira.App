@@ -212,8 +212,8 @@ dotnet test --filter "FullyQualifiedName~ScenarioTests" --verbosity normal  # Sp
    - `DeleteScenarioUseCase`
 
 4. **DTOs in Contracts Project Only:**
-   - Request DTOs: `Mystira.App.Contracts/Requests/`
-   - Response DTOs: `Mystira.App.Contracts/Responses/`
+   - Request DTOs: `Mystira.Contracts.App/Requests/`
+   - Response DTOs: `Mystira.Contracts.App/Responses/`
 
 ### **Code Quality Standards**
 
@@ -267,7 +267,7 @@ From `docs/best-practices.md`:
 
 ### **Adding a New API Endpoint**
 
-1. **Create Request/Response DTOs** in `Mystira.App.Contracts/`
+1. **Create Request/Response DTOs** in `Mystira.Contracts.App/`
 2. **Create Use Case** in `Mystira.App.Application/UseCases/`
 3. **Register Use Case** in `Program.cs` DI container
 4. **Create Controller Method** in appropriate API project:
@@ -328,7 +328,7 @@ Mystira.App/
 ├── src/
 │   ├── Mystira.App.Domain/              # Core business models (netstandard2.1 ⚠️)
 │   ├── Mystira.App.Application/         # Use Cases, Ports
-│   ├── Mystira.App.Contracts/           # DTOs (Requests/Responses)
+│   ├── Mystira.Contracts.App/           # DTOs (Requests/Responses)
 │   ├── Mystira.App.Infrastructure.Data/ # EF Core, Repositories
 │   ├── Mystira.App.Infrastructure.Azure/# Azure services (Blob, Email)
 │   ├── Mystira.App.Infrastructure.Discord/ # Discord bot

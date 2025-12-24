@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Mystira.App.Contracts.Ports.Health;
+using Mystira.Contracts.App.Ports.Health;
 
 namespace Mystira.App.Shared.Adapters;
 

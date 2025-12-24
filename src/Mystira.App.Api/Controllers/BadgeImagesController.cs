@@ -2,7 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Badges.Queries;
-using Mystira.App.Contracts.Responses.Common;
+using Mystira.Contracts.App.Responses.Common;
 
 namespace Mystira.App.Api.Controllers;
 

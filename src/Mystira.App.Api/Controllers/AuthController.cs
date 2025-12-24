@@ -2,8 +2,8 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Mystira.App.Application.CQRS.Auth.Commands;
-using Mystira.App.Contracts.Requests.Auth;
-using Mystira.App.Contracts.Responses.Auth;
+using Mystira.Contracts.App.Requests.Auth;
+using Mystira.Contracts.App.Responses.Auth;
 using Mystira.App.Shared.Logging;
 
 namespace Mystira.App.Api.Controllers

@@ -5,7 +5,7 @@ using Mystira.App.Application.Ports;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Ports.Storage;
 using Mystira.App.Application.UseCases.Media;
-using Mystira.App.Contracts.Requests.Media;
+using Mystira.Contracts.App.Requests.Media;
 using Mystira.App.Domain.Models;
 using Xunit;
 

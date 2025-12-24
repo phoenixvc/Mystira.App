@@ -73,8 +73,8 @@ Mystira.App.Api/
 ```csharp
 // Location: Api/Controllers/ScenariosController.cs
 using Mystira.App.Application.UseCases.Scenarios;  // Use cases ✅
-using Mystira.App.Contracts.Requests.Scenarios;
-using Mystira.App.Contracts.Responses;
+using Mystira.Contracts.App.Requests.Scenarios;
+using Mystira.Contracts.App.Responses;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -475,7 +475,7 @@ grep -r "new DbContext\|SaveChangesAsync\|BlobClient" Controllers/
 - **[Infrastructure.Data](../Mystira.App.Infrastructure.Data/README.md)** - Data implementations wired in DI
 - **[Infrastructure.Azure](../Mystira.App.Infrastructure.Azure/README.md)** - Azure implementations wired in DI
 - **[Domain](../Mystira.App.Domain/README.md)** - Domain entities returned in responses
-- **[Contracts](../Mystira.App.Contracts/README.md)** - Request/Response DTOs
+- **[Contracts](../Mystira.Contracts.App/README.md)** - Request/Response DTOs
 
 ## Summary
 

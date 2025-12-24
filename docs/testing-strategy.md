@@ -423,7 +423,7 @@ public class {EntityName}Tests
 ```csharp
 using FluentAssertions;
 using Mystira.App.Application.CQRS.{Feature}.Commands;
-using Mystira.App.Contracts.Requests.{Feature};
+using Mystira.Contracts.App.Requests.{Feature};
 using Mystira.App.Domain.Models;
 using Xunit;
 
@@ -490,7 +490,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Mystira.App.Api.Controllers;
-using Mystira.App.Contracts.Responses.Common;
+using Mystira.Contracts.App.Responses.Common;
 using Xunit;
 
 namespace Mystira.App.Api.Tests.Controllers;

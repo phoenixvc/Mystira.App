@@ -1,5 +1,5 @@
 using Mystira.App.Application.Interfaces;
-using Mystira.App.Contracts.Responses.Media;
+using Mystira.Contracts.App.Responses.Media;
 
 namespace Mystira.App.Application.CQRS.Avatars.Queries;
 

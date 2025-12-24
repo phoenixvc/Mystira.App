@@ -54,7 +54,7 @@ Hexagonal Architecture, also known as Ports and Adapters, is an architectural pa
 - **Dependencies**: Application, Contracts
 - **Example**: `GameSessionsController`, `Home.razor`
 
-### Contracts Layer (`Mystira.App.Contracts`)
+### Contracts Layer (`Mystira.Contracts.App`)
 
 - **Purpose**: API contracts and DTOs
 - **Contains**: Request/Response DTOs, API Models

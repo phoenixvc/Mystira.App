@@ -9,19 +9,18 @@ on:
     branches: [dev]
     paths:
       - "src/Mystira.App.PWA/**"
-      - "src/Mystira.App.Contracts/**"
       - ".github/workflows/mystira-app-pwa-cicd-dev.yml"
   pull_request:
     branches: [dev]
     types: [opened, synchronize, reopened]
     paths:
       - "src/Mystira.App.PWA/**"
-      - "src/Mystira.App.Contracts/**"
       - ".github/workflows/mystira-app-pwa-cicd-dev.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: mystira-app-pwa-ci-${{ github.ref }}
@@ -45,6 +44,14 @@ jobs:
 
       - name: Install wasm-tools workload
         run: dotnet workload install wasm-tools
+
+      - name: Configure GitHub Packages NuGet source
+        run: |
+          dotnet nuget add source https://nuget.pkg.github.com/phoenixvc/index.json \
+            --name github \
+            --username ${{ github.actor }} \
+            --password ${{ secrets.GITHUB_TOKEN }} \
+            --store-password-in-clear-text
 
       - name: Validate API Configuration
         run: |

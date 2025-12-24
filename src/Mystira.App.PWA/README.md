@@ -635,7 +635,7 @@ PWA/Models/
 - ❌ Violates DRY principle
 
 **Recommendation**:
-- **ADD** reference to `Mystira.App.Contracts` project
+- **ADD** reference to `Mystira.Contracts.App` project
 - **DELETE** all models from `PWA/Models/` that exist in Contracts
 - **USE** Contracts DTOs for all API communication
 - Keep only PWA-specific view models (if any)
@@ -644,7 +644,7 @@ PWA/Models/
 ```diff
   <ItemGroup>
     <ProjectReference Include="../Mystira.App.Domain/Mystira.App.Domain.csproj" />
-+   <ProjectReference Include="../Mystira.App.Contracts/Mystira.App.Contracts.csproj" />
++   <ProjectReference Include="../Mystira.Contracts.App/Mystira.Contracts.App.csproj" />
   </ItemGroup>
 ```
 
@@ -720,7 +720,7 @@ using Mystira.App.Domain.ValueObjects;
 ### 🟡 High Priority
 
 - [ ] **Add Contracts project reference**
-  - Add `<ProjectReference Include="../Mystira.App.Contracts/..." />`
+  - Add `<ProjectReference Include="../Mystira.Contracts.App/..." />`
   - Location: `Mystira.App.PWA.csproj`
 
 - [ ] **Replace PWA models with Contracts DTOs**
@@ -814,7 +814,7 @@ using Mystira.App.Domain.ValueObjects;
 ## Related Documentation
 
 - **[API](../Mystira.App.Api/README.md)** - Backend API consumed by PWA
-- **[Contracts](../Mystira.App.Contracts/README.md)** - DTOs for API communication
+- **[Contracts](../Mystira.Contracts.App/README.md)** - DTOs for API communication
 - **[Domain](../Mystira.App.Domain/README.md)** - Shared domain models (minimize usage)
 - **[Main README](../../README.md)** - Project overview
 

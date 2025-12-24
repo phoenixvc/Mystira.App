@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Mystira.App.Contracts.Responses.Badges;
+using Mystira.Contracts.App.Responses.Badges;
 using Mystira.App.PWA.Services;
 using Xunit;
 

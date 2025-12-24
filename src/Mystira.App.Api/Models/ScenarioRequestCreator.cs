@@ -1,5 +1,5 @@
 using Mystira.App.Application.Parsers;
-using Mystira.App.Contracts.Requests.Scenarios;
+using Mystira.Contracts.App.Requests.Scenarios;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Models;
