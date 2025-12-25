@@ -63,7 +63,7 @@ public class GetSessionStatsUseCase
             PlayerCompassProgressTotals = progress,
             RecentEchoes = recentEchoes,
             Achievements = session.Achievements?.Cast<object>().ToList() ?? new List<object>(),
-            TotalChoices = session.ChoiceHistory.Count,
+            TotalChoices = session.ChoiceHistory?.Count ?? 0,
             SessionDuration = session.EndTime?.Subtract(session.StartTime) ?? DateTime.UtcNow.Subtract(session.StartTime)
         };
 
