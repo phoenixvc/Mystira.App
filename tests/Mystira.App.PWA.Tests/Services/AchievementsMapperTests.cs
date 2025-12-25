@@ -45,8 +45,8 @@ public class AchievementsMapperTests
             {
                 new AxisProgressResponse
                 {
-                    AxisId = "Courage",
-                    AxisName = "Courage",
+                    CompassAxisId = "Courage",
+                    CompassAxisName = "Courage",
                     CurrentScore = 12,
                     Tiers =
                     {
@@ -127,8 +127,8 @@ public class AchievementsMapperTests
             {
                 new AxisProgressResponse
                 {
-                    AxisId = "Wisdom",
-                    AxisName = "Wisdom",
+                    CompassAxisId = "Wisdom",
+                    CompassAxisName = "Wisdom",
                     CurrentScore = 0,
                     Tiers =
                     {
@@ -171,7 +171,7 @@ public class AchievementsMapperTests
             {
                 new AxisProgressResponse
                 {
-                    AxisId = "A",
+                    CompassAxisId = "A",
                     CurrentScore = 50,
                     Tiers =
                     {

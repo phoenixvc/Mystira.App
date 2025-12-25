@@ -97,8 +97,8 @@ public sealed class GetProfileBadgeProgressQueryHandler : IQueryHandler<GetProfi
 
             response.AxisProgresses.Add(new AxisProgressResponse
             {
-                AxisId = axisId,
-                AxisName = axisName,
+                CompassAxisId = axisId,
+                CompassAxisName = axisName,
                 CurrentScore = currentScore,
                 Tiers = axisTiers
             });
