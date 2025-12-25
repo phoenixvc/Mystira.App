@@ -60,22 +60,21 @@ public class ListMediaUseCase
         var totalCount = query.Count();
         var totalPages = (int)Math.Ceiling((double)totalCount / request.PageSize);
 
-        var mediaAssets = query
+        var media = await query
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
-            .ToList();
-
-        var media = mediaAssets.Select(m => new MediaItem
-        {
-            MediaId = m.MediaId,
-            Url = m.Url,
-            MediaType = m.MediaType,
-            Description = m.Description,
-            Tags = m.Tags,
-            FileSizeBytes = m.FileSizeBytes,
-            CreatedAt = m.CreatedAt,
-            UpdatedAt = m.UpdatedAt
-        }).ToList();
+            .Select(m => new MediaItem
+            {
+                MediaId = m.MediaId,
+                Url = m.Url,
+                MediaType = m.MediaType,
+                Description = m.Description,
+                Tags = m.Tags,
+                FileSizeBytes = m.FileSizeBytes,
+                CreatedAt = m.CreatedAt,
+                UpdatedAt = m.UpdatedAt
+            })
+            .ToListAsync();
 
         return Task.FromResult(new MediaQueryResponse
         {
