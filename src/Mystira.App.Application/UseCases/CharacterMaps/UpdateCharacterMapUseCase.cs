@@ -60,7 +60,7 @@ public class UpdateCharacterMapUseCase
 
         if (request.Metadata != null)
         {
-            characterMap.Metadata = request.Metadata;
+            characterMap.Metadata = MapMetadata(request.Metadata);
         }
 
         characterMap.UpdatedAt = DateTime.UtcNow;
@@ -70,6 +70,44 @@ public class UpdateCharacterMapUseCase
 
         _logger.LogInformation("Updated character map: {CharacterMapId}", characterMapId);
         return characterMap;
+    }
+
+    private static CharacterMetadata MapMetadata(Dictionary<string, object>? metadata)
+    {
+        if (metadata == null)
+        {
+            return new CharacterMetadata();
+        }
+
+        return new CharacterMetadata
+        {
+            Roles = GetListFromMetadata(metadata, "roles"),
+            Archetypes = GetListFromMetadata(metadata, "archetypes"),
+            Species = metadata.TryGetValue("species", out var species) ? species?.ToString() ?? string.Empty : string.Empty,
+            Age = metadata.TryGetValue("age", out var age) ? Convert.ToInt32(age) : 0,
+            Traits = GetListFromMetadata(metadata, "traits"),
+            Backstory = metadata.TryGetValue("backstory", out var backstory) ? backstory?.ToString() ?? string.Empty : string.Empty
+        };
+    }
+
+    private static List<string> GetListFromMetadata(Dictionary<string, object> metadata, string key)
+    {
+        if (!metadata.TryGetValue(key, out var value) || value == null)
+        {
+            return new List<string>();
+        }
+
+        if (value is IEnumerable<object> enumerable)
+        {
+            return enumerable.Select(x => x?.ToString() ?? string.Empty).Where(s => !string.IsNullOrEmpty(s)).ToList();
+        }
+
+        if (value is IEnumerable<string> strings)
+        {
+            return strings.ToList();
+        }
+
+        return new List<string>();
     }
 }
 

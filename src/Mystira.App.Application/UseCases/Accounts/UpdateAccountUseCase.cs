@@ -50,7 +50,16 @@ public class UpdateAccountUseCase
 
         if (request.Settings != null)
         {
-            account.Settings = request.Settings;
+            // Map from Contracts AccountSettings to Domain AccountSettings
+            account.Settings = new AccountSettings
+            {
+                Id = account.Settings.Id,
+                CacheCredentials = request.Settings.CacheCredentials,
+                RequireAuthOnStartup = request.Settings.RequireAuthOnStartup,
+                PreferredLanguage = request.Settings.PreferredLanguage,
+                NotificationsEnabled = request.Settings.NotificationsEnabled,
+                Theme = request.Settings.Theme
+            };
         }
 
         account.LastLoginAt = DateTime.UtcNow;

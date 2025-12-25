@@ -42,8 +42,8 @@ public class UpdateSubscriptionUseCase
             throw new ArgumentException($"Account not found: {accountId}", nameof(accountId));
         }
 
-        // Update subscription properties
-        account.Subscription.Type = request.Type;
+        // Update subscription properties - convert from Contracts enum to Domain enum
+        account.Subscription.Type = (SubscriptionType)(int)request.Type;
 
         if (request.ProductId != null)
         {

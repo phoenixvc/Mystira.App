@@ -48,14 +48,14 @@ public class CreateScenarioUseCase
             Title = request.Title,
             Description = request.Description,
             Tags = request.Tags,
-            Difficulty = request.Difficulty,
-            SessionLength = request.SessionLength,
+            Difficulty = (DifficultyLevel)(int)request.Difficulty,
+            SessionLength = (SessionLength)(int)request.SessionLength,
             Archetypes = request.Archetypes?.Select(a => Archetype.Parse(a)!).ToList() ?? new List<Archetype>(),
             AgeGroup = request.AgeGroup,
             MinimumAge = request.MinimumAge,
             CoreAxes = request.CoreAxes?.Select(a => CoreAxis.Parse(a)!).ToList() ?? new List<CoreAxis>(),
-            Characters = request.Characters,
-            Scenes = request.Scenes,
+            Characters = request.Characters?.Select(MapToScenarioCharacter).ToList() ?? new List<ScenarioCharacter>(),
+            Scenes = request.Scenes?.Select(MapToScene).ToList() ?? new List<Scene>(),
             CreatedAt = DateTime.UtcNow
         };
 
@@ -87,6 +87,60 @@ public class CreateScenarioUseCase
             var errorMessages = string.Join(", ", errors.Select(e => e.ToString()).ToList());
             throw new ArgumentException($"Scenario validation failed: {errorMessages}");
         }
+    }
+
+    private static ScenarioCharacter MapToScenarioCharacter(CharacterRequest c)
+    {
+        return new ScenarioCharacter
+        {
+            Id = c.Id,
+            Name = c.Name,
+            Image = c.Image,
+            Audio = c.Audio,
+            Metadata = new ScenarioCharacterMetadata
+            {
+                Role = c.Metadata?.Role ?? new List<string>(),
+                Archetype = c.Metadata?.Archetype?.Select(a => Archetype.Parse(a)!).ToList() ?? new List<Archetype>(),
+                Species = c.Metadata?.Species ?? string.Empty,
+                Age = c.Metadata?.Age ?? 0,
+                Traits = c.Metadata?.Traits ?? new List<string>(),
+                Backstory = c.Metadata?.Backstory ?? string.Empty
+            }
+        };
+    }
+
+    private static Scene MapToScene(SceneRequest s)
+    {
+        return new Scene
+        {
+            Id = s.Id,
+            Title = s.Title,
+            Type = Enum.TryParse<SceneType>(s.Type, true, out var sceneType) ? sceneType : SceneType.Narrative,
+            Description = s.Description,
+            NextSceneId = s.NextSceneId,
+            Difficulty = s.Difficulty,
+            ActiveCharacter = s.ActiveCharacter,
+            Media = s.Media != null ? new MediaReferences
+            {
+                Image = s.Media.Image,
+                Audio = s.Media.Audio,
+                Video = s.Media.Video
+            } : null,
+            Branches = s.Branches?.Select(b => new Branch
+            {
+                Text = b.Text,
+                NextSceneId = b.NextSceneId,
+                CompassAxis = b.CompassAxis,
+                CompassDirection = b.CompassDirection,
+                CompassDelta = b.CompassDelta
+            }).ToList() ?? new List<Branch>(),
+            EchoReveals = s.EchoReveals?.Select(e => new EchoReveal
+            {
+                Condition = e.Condition,
+                Message = e.Message,
+                Tone = e.Tone
+            }).ToList() ?? new List<EchoReveal>()
+        };
     }
 }
 

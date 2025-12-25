@@ -50,9 +50,9 @@ public class GetSessionsByProfileQueryHandler : IQueryHandler<GetSessionsByProfi
                 {
                     PlayerId = p.PlayerId,
                     Axis = p.Axis,
-                    Total = p.Total
+                    Total = (int)p.Total
                 }).ToList(),
-                Status = s.Status,
+                Status = s.Status.ToString(),
                 CurrentSceneId = s.CurrentSceneId,
                 ChoiceCount = s.ChoiceHistory?.Count ?? 0,
                 EchoCount = s.EchoHistory?.Count ?? 0,

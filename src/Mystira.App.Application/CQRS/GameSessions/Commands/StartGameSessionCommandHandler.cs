@@ -103,7 +103,7 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
                 && request.CharacterAssignments != null
                 && request.CharacterAssignments.Any())
             {
-                primary.CharacterAssignments = request.CharacterAssignments.Select(MapToDomain).ToList();
+                primary.CharacterAssignments = request.CharacterAssignments.Select(ca => MapToDomain(ca)).ToList();
                 updated = true;
             }
 
@@ -191,7 +191,7 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
 
         if (request.CharacterAssignments != null && request.CharacterAssignments.Any())
         {
-            session.CharacterAssignments = request.CharacterAssignments.Select(MapToDomain).ToList();
+            session.CharacterAssignments = request.CharacterAssignments.Select(ca => MapToDomain(ca)).ToList();
 
             // If PlayerNames not provided, derive from assignments (non-unused only)
             if (session.PlayerNames == null || !session.PlayerNames.Any())

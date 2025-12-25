@@ -30,12 +30,14 @@ public class GetScenariosUseCase
         // Apply filters
         if (request.Difficulty.HasValue)
         {
-            query = query.Where(s => s.Difficulty == request.Difficulty.Value);
+            var difficulty = (DifficultyLevel)(int)request.Difficulty.Value;
+            query = query.Where(s => s.Difficulty == difficulty);
         }
 
         if (request.SessionLength.HasValue)
         {
-            query = query.Where(s => s.SessionLength == request.SessionLength.Value);
+            var sessionLength = (SessionLength)(int)request.SessionLength.Value;
+            query = query.Where(s => s.SessionLength == sessionLength);
         }
 
         if (request.MinimumAge.HasValue)
@@ -79,14 +81,14 @@ public class GetScenariosUseCase
                 Title = s.Title,
                 Description = s.Description,
                 Tags = s.Tags,
-                Difficulty = s.Difficulty,
-                SessionLength = s.SessionLength,
+                Difficulty = s.Difficulty.ToString(),
+                SessionLength = s.SessionLength.ToString(),
                 Archetypes = s.Archetypes.Select(a => a.Value).ToList(),
                 MinimumAge = s.MinimumAge,
                 AgeGroup = s.AgeGroup,
                 CoreAxes = s.CoreAxes.Select(a => a.Value).ToList(),
                 CreatedAt = s.CreatedAt,
-                MusicPalette = s.MusicPalette
+                MusicPalette = s.MusicPalette?.DefaultProfile.ToString()
             })
             .ToListAsync();
 
