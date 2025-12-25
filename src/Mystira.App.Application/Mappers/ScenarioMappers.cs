@@ -69,9 +69,8 @@ public static class ScenarioMappers
             {
                 Role = characterRequest.Metadata?.Role ?? new List<string>(),
                 Archetype = characterRequest.Metadata?.Archetype?
-                    .Select(a => Archetype.Parse(a))
-                    .Where(a => a != null)
-                    .Select(a => a!)
+                    .Select(Archetype.Parse)
+                    .OfType<Archetype>()
                     .ToList() ?? new List<Archetype>(),
                 Species = characterRequest.Metadata?.Species ?? string.Empty,
                 Age = characterRequest.Metadata?.Age ?? 0,
@@ -135,9 +134,8 @@ public static class ScenarioMappers
         }
 
         return archetypes
-            .Select(a => Archetype.Parse(a))
-            .Where(a => a != null)
-            .Select(a => a!)
+            .Select(Archetype.Parse)
+            .OfType<Archetype>()
             .ToList();
     }
 
@@ -154,9 +152,8 @@ public static class ScenarioMappers
         }
 
         return coreAxes
-            .Select(a => CoreAxis.Parse(a))
-            .Where(a => a != null)
-            .Select(a => a!)
+            .Select(CoreAxis.Parse)
+            .OfType<CoreAxis>()
             .ToList();
     }
 }
