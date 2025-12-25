@@ -1,7 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.PWA.Models;
+using MediatR;
+using Mystira.App.Application.Abstractions.Repositories;
+using Mystira.App.Domain.Aggregates.Scenarios;
+using Mystira.Contracts.App.Responses.Scenarios;
+
+namespace Mystira.App.Application.CQRS.Scenarios.Queries;
 
 namespace Mystira.App.Application.CQRS.Scenarios.Queries;
 
