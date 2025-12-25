@@ -85,7 +85,7 @@ public class CreateScenarioCommandHandler : ICommandHandler<CreateScenarioComman
         return scenario;
     }
 
-    private void ValidateAgainstSchema(Contracts.Requests.Scenarios.CreateScenarioRequest request)
+    private void ValidateAgainstSchema(Contracts.App.Requests.Scenarios.CreateScenarioRequest request)
     {
         var json = System.Text.Json.JsonSerializer.Serialize(request, SchemaSerializerOptions);
         var errors = ScenarioJsonSchema.Validate(json);
