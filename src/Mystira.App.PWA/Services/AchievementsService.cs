@@ -32,9 +32,8 @@ public class AchievementsService : IAchievementsService
                 return AchievementsLoadResult.Fail("Unable to load achievements right now. Please try again.");
             }
 
-            var ageGroupId = !string.IsNullOrWhiteSpace(progress.AgeGroupId)
-                ? progress.AgeGroupId
-                : (!string.IsNullOrWhiteSpace(profile.AgeGroup) ? profile.AgeGroup : "6-9");
+            // Use profile's age group since BadgeProgressResponse doesn't carry age group
+            var ageGroupId = !string.IsNullOrWhiteSpace(profile.AgeGroup) ? profile.AgeGroup : "6-9";
 
             // Use Task-based caching to ensure multiple concurrent requests for the same age group
             // only trigger a single API call.
