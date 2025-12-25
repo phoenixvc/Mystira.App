@@ -100,7 +100,11 @@ public class CreateScenarioUseCase
             Metadata = new ScenarioCharacterMetadata
             {
                 Role = c.Metadata?.Role ?? new List<string>(),
-                Archetype = c.Metadata?.Archetype?.Select(a => Archetype.Parse(a)!).ToList() ?? new List<Archetype>(),
+                Archetype = c.Metadata?.Archetype?
+                    .Select(a => Archetype.Parse(a))
+                    .Where(a => a != null)
+                    .Select(a => a!)
+                    .ToList() ?? new List<Archetype>(),
                 Species = c.Metadata?.Species ?? string.Empty,
                 Age = c.Metadata?.Age ?? 0,
                 Traits = c.Metadata?.Traits ?? new List<string>(),
