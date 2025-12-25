@@ -20,8 +20,10 @@ public static class ScenarioMappers
     {
         if (!Enum.IsDefined(typeof(DifficultyLevel), requestDifficulty))
         {
+            var validValues = string.Join(", ", Enum.GetValues<DifficultyLevel>()
+                .Select(e => $"{e} ({(int)e})"));
             throw new ArgumentException(
-                $"Invalid difficulty level: {requestDifficulty}. Must be one of: {string.Join(", ", Enum.GetNames(typeof(DifficultyLevel)))}",
+                $"Invalid difficulty level: {requestDifficulty}. Valid values are: {validValues}",
                 nameof(requestDifficulty));
         }
         
@@ -39,8 +41,10 @@ public static class ScenarioMappers
     {
         if (!Enum.IsDefined(typeof(SessionLength), requestSessionLength))
         {
+            var validValues = string.Join(", ", Enum.GetValues<SessionLength>()
+                .Select(e => $"{e} ({(int)e})"));
             throw new ArgumentException(
-                $"Invalid session length: {requestSessionLength}. Must be one of: {string.Join(", ", Enum.GetNames(typeof(SessionLength)))}",
+                $"Invalid session length: {requestSessionLength}. Valid values are: {validValues}",
                 nameof(requestSessionLength));
         }
         
