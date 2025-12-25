@@ -22,7 +22,7 @@ public class ListMediaUseCase
         _logger = logger;
     }
 
-    public Task<MediaQueryResponse> ExecuteAsync(MediaQueryRequest request)
+    public async Task<MediaQueryResponse> ExecuteAsync(MediaQueryRequest request)
     {
         var query = _repository.GetQueryable();
 
@@ -57,7 +57,7 @@ public class ListMediaUseCase
             _ => request.SortDescending ? query.OrderByDescending(m => m.CreatedAt) : query.OrderBy(m => m.CreatedAt)
         };
 
-        var totalCount = query.Count();
+        var totalCount = await query.CountAsync();
         var totalPages = (int)Math.Ceiling((double)totalCount / request.PageSize);
 
         var media = await query
@@ -76,14 +76,14 @@ public class ListMediaUseCase
             })
             .ToListAsync();
 
-        return Task.FromResult(new MediaQueryResponse
+        return new MediaQueryResponse
         {
             Media = media,
             TotalCount = totalCount,
             Page = request.Page,
             PageSize = request.PageSize,
             TotalPages = totalPages
-        });
+        };
     }
 }
 
