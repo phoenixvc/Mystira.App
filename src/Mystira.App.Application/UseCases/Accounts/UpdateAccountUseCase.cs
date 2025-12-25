@@ -53,7 +53,7 @@ public class UpdateAccountUseCase
             // Map from Contracts AccountSettings to Domain AccountSettings
             account.Settings = new AccountSettings
             {
-                Id = account.Settings.Id,
+                Id = account.Settings?.Id ?? Guid.NewGuid().ToString(),
                 CacheCredentials = request.Settings.CacheCredentials,
                 RequireAuthOnStartup = request.Settings.RequireAuthOnStartup,
                 PreferredLanguage = request.Settings.PreferredLanguage,
