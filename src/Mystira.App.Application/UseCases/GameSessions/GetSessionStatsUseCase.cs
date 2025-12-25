@@ -51,11 +51,11 @@ public class GetSessionStatsUseCase
             })
             .ToList();
 
-        var recentEchoes = session.EchoHistory
+        var recentEchoes = session.EchoHistory?
             .OrderByDescending(e => e.Timestamp)
             .Take(5)
             .Cast<object>()
-            .ToList();
+            .ToList() ?? new List<object>();
 
         var stats = new SessionStatsResponse
         {
