@@ -34,6 +34,9 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+          source-url: https://nuget.pkg.github.com/phoenixvc/index.json
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
       - name: Cache NuGet packages
         uses: actions/cache@v4
@@ -44,14 +47,6 @@ jobs:
 
       - name: Install wasm-tools workload
         run: dotnet workload install wasm-tools
-
-      - name: Configure GitHub Packages NuGet source
-        run: |
-          dotnet nuget add source https://nuget.pkg.github.com/phoenixvc/index.json \
-            --name github \
-            --username ${{ github.actor }} \
-            --password ${{ secrets.GITHUB_TOKEN }} \
-            --store-password-in-clear-text
 
       - name: Restore dependencies
         run: dotnet restore

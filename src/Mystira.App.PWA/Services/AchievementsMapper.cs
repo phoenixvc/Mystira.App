@@ -19,7 +19,7 @@ public static class AchievementsMapper
             .ToDictionary(g => g.Key, g => g.OrderBy(b => b.TierOrder).ToList(), StringComparer.OrdinalIgnoreCase);
 
         var progressByAxis = axisProgresses
-            .GroupBy(a => a.AxisId, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(a => a.CompassAxisId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         var axisAchievementList = axisAchievements ?? Array.Empty<AxisAchievementResponse>();
@@ -35,7 +35,7 @@ public static class AchievementsMapper
         foreach (var axisId in axisIds)
         {
             progressByAxis.TryGetValue(axisId, out var axisProgress);
-            var axisName = axisProgress?.AxisName ?? axisId;
+            var axisName = axisProgress?.CompassAxisName ?? axisId;
 
             var currentScore = axisProgress?.CurrentScore ?? 0f;
             if (currentScore <= 0f && axisProgress?.Tiers?.Count > 0)
