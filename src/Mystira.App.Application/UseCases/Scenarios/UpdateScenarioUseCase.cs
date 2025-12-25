@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Validation;
+using Mystira.App.Application.Mappers;
 using Mystira.Contracts.App.Requests.Scenarios;
 using Mystira.App.Domain.Models;
 using NJsonSchema;
@@ -51,14 +52,14 @@ public class UpdateScenarioUseCase
         scenario.Title = request.Title;
         scenario.Description = request.Description;
         scenario.Tags = request.Tags;
-        scenario.Difficulty = (DifficultyLevel)(int)request.Difficulty;
-        scenario.SessionLength = (SessionLength)(int)request.SessionLength;
-        scenario.Archetypes = request.Archetypes?.Select(a => Archetype.Parse(a)!).ToList() ?? new List<Archetype>();
+        scenario.Difficulty = ScenarioMappers.MapDifficultyLevel((int)request.Difficulty);
+        scenario.SessionLength = ScenarioMappers.MapSessionLength((int)request.SessionLength);
+        scenario.Archetypes = ScenarioMappers.ParseArchetypes(request.Archetypes);
         scenario.AgeGroup = request.AgeGroup;
         scenario.MinimumAge = request.MinimumAge;
-        scenario.CoreAxes = request.CoreAxes?.Select(a => CoreAxis.Parse(a)!).ToList() ?? new List<CoreAxis>();
-        scenario.Characters = request.Characters?.Select(MapToScenarioCharacter).ToList() ?? new List<ScenarioCharacter>();
-        scenario.Scenes = request.Scenes?.Select(MapToScene).ToList() ?? new List<Scene>();
+        scenario.CoreAxes = ScenarioMappers.ParseCoreAxes(request.CoreAxes);
+        scenario.Characters = request.Characters?.Select(ScenarioMappers.MapToScenarioCharacter).ToList() ?? new List<ScenarioCharacter>();
+        scenario.Scenes = request.Scenes?.Select(ScenarioMappers.MapToScene).ToList() ?? new List<Scene>();
 
         await _validateScenarioUseCase.ExecuteAsync(scenario);
 
@@ -81,58 +82,5 @@ public class UpdateScenarioUseCase
         }
     }
 
-    private static ScenarioCharacter MapToScenarioCharacter(CharacterRequest c)
-    {
-        return new ScenarioCharacter
-        {
-            Id = c.Id,
-            Name = c.Name,
-            Image = c.Image,
-            Audio = c.Audio,
-            Metadata = new ScenarioCharacterMetadata
-            {
-                Role = c.Metadata?.Role ?? new List<string>(),
-                Archetype = c.Metadata?.Archetype?.Select(a => Archetype.Parse(a)!).ToList() ?? new List<Archetype>(),
-                Species = c.Metadata?.Species ?? string.Empty,
-                Age = c.Metadata?.Age ?? 0,
-                Traits = c.Metadata?.Traits ?? new List<string>(),
-                Backstory = c.Metadata?.Backstory ?? string.Empty
-            }
-        };
-    }
-
-    private static Scene MapToScene(SceneRequest s)
-    {
-        return new Scene
-        {
-            Id = s.Id,
-            Title = s.Title,
-            Type = Enum.TryParse<SceneType>(s.Type, true, out var sceneType) ? sceneType : SceneType.Narrative,
-            Description = s.Description,
-            NextSceneId = s.NextSceneId,
-            Difficulty = s.Difficulty,
-            ActiveCharacter = s.ActiveCharacter,
-            Media = s.Media != null ? new MediaReferences
-            {
-                Image = s.Media.Image,
-                Audio = s.Media.Audio,
-                Video = s.Media.Video
-            } : null,
-            Branches = s.Branches?.Select(b => new Branch
-            {
-                Text = b.Text,
-                NextSceneId = b.NextSceneId,
-                CompassAxis = b.CompassAxis,
-                CompassDirection = b.CompassDirection,
-                CompassDelta = b.CompassDelta
-            }).ToList() ?? new List<Branch>(),
-            EchoReveals = s.EchoReveals?.Select(e => new EchoReveal
-            {
-                Condition = e.Condition,
-                Message = e.Message,
-                Tone = e.Tone
-            }).ToList() ?? new List<EchoReveal>()
-        };
-    }
 }
 

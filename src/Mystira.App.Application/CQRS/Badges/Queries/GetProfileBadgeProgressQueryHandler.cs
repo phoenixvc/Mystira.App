@@ -99,7 +99,7 @@ public sealed class GetProfileBadgeProgressQueryHandler : IQueryHandler<GetProfi
             {
                 CompassAxisId = axisId,
                 CompassAxisName = axisName,
-                CurrentScore = (int)currentScore,
+                CurrentScore = (int)Math.Round(currentScore, MidpointRounding.AwayFromZero),
                 Tiers = axisTiers
             });
         }
