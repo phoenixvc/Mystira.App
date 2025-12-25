@@ -46,20 +46,21 @@ public class GetSessionStatsQueryHandler : IQueryHandler<GetSessionStatsQuery, S
             {
                 PlayerId = p.PlayerId,
                 Axis = p.Axis,
-                Total = p.Total
+                Total = (int)p.Total
             })
             .ToList();
 
         var recentEchoes = session.EchoHistory?
             .TakeLast(10)
-            .ToList() ?? new List<EchoLog>();
+            .Cast<object>()
+            .ToList() ?? new List<object>();
 
         var stats = new SessionStatsResponse
         {
             CompassValues = compassValues,
             PlayerCompassProgressTotals = playerProgress,
             RecentEchoes = recentEchoes,
-            Achievements = session.Achievements ?? new List<SessionAchievement>(),
+            Achievements = session.Achievements?.Cast<object>().ToList() ?? new List<object>(),
             TotalChoices = session.ChoiceHistory?.Count ?? 0,
             SessionDuration = session.GetTotalElapsedTime()
         };

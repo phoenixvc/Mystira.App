@@ -2,6 +2,7 @@ using System.Collections;
 using System.Data;
 using Mystira.Contracts.App.Requests.Scenarios;
 using Mystira.App.Domain.Models;
+using ContractEnums = Mystira.Contracts.App.Enums;
 
 namespace Mystira.App.Application.Parsers;
 
@@ -33,14 +34,14 @@ public static class ScenarioParser
             Title = (string)scenarioData["title"]!,
             Description = (string)scenarioData["description"]!,
             Tags = ((List<object>)scenarioData["tags"]!).Select(o => (string)o).ToList(),
-            Difficulty = Enum.Parse<DifficultyLevel>((string)scenarioData["difficulty"]!, true),
-            SessionLength = Enum.Parse<SessionLength>((string)scenarioData["session_length"]!, true),
+            Difficulty = Enum.Parse<ContractEnums.DifficultyLevel>((string)scenarioData["difficulty"]!, true),
+            SessionLength = Enum.Parse<ContractEnums.SessionLength>((string)scenarioData["session_length"]!, true),
             Archetypes = ((List<object>)scenarioData["archetypes"]!).Select(o => (string)o).ToList(),
             AgeGroup = scenarioData["age_group"]?.ToString() ?? string.Empty,
             MinimumAge = Convert.ToInt32(scenarioData["minimum_age"]!),
             CoreAxes = coreAxesList,
-            Characters = charactersObj.Select(o => CharacterParser.Parse((Dictionary<object, object>)o)).ToList(),
-            Scenes = scenes.Select(o => SceneParser.Parse((Dictionary<object, object>)o)).ToList(),
+            Characters = charactersObj.Select(o => MapToCharacterRequest(CharacterParser.Parse((Dictionary<object, object>)o))).ToList(),
+            Scenes = scenes.Select(o => MapToSceneRequest(SceneParser.Parse((Dictionary<object, object>)o))).ToList(),
             Image = scenarioData.GetValueOrDefault("image")?.ToString()
         };
 
@@ -71,7 +72,7 @@ public static class ScenarioParser
             throw new DataException("Scenario does not contain a difficulty.");
         }
 
-        if (!Enum.TryParse<DifficultyLevel>((string)d, true, out _))
+        if (!Enum.TryParse<ContractEnums.DifficultyLevel>((string)d, true, out _))
         {
             throw new DataException("Scenario does not contain a valid difficulty level.");
         }
@@ -81,7 +82,7 @@ public static class ScenarioParser
             throw new DataException("Scenario does not contain session_length.");
         }
 
-        if (!Enum.TryParse<SessionLength>((string)s, true, out _))
+        if (!Enum.TryParse<ContractEnums.SessionLength>((string)s, true, out _))
         {
             throw new DataException("Scenario does not contain a valid session_length.");
         }
@@ -129,6 +130,60 @@ public static class ScenarioParser
         }
 
         return new List<string>();
+    }
+
+    private static CharacterRequest MapToCharacterRequest(ScenarioCharacter character)
+    {
+        return new CharacterRequest
+        {
+            Id = character.Id,
+            Name = character.Name,
+            Image = character.Image,
+            Audio = character.Audio,
+            Metadata = new CharacterMetadataRequest
+            {
+                Role = character.Metadata.Role,
+                Archetype = character.Metadata.Archetype.Select(a => a.Value).ToList(),
+                Species = character.Metadata.Species,
+                Age = character.Metadata.Age,
+                Traits = character.Metadata.Traits,
+                Backstory = character.Metadata.Backstory
+            }
+        };
+    }
+
+    private static SceneRequest MapToSceneRequest(Scene scene)
+    {
+        return new SceneRequest
+        {
+            Id = scene.Id,
+            Title = scene.Title,
+            Type = scene.Type.ToString(),
+            Description = scene.Description,
+            NextSceneId = scene.NextSceneId,
+            Difficulty = scene.Difficulty,
+            ActiveCharacter = scene.ActiveCharacter,
+            Media = scene.Media != null ? new MediaReferencesRequest
+            {
+                Image = scene.Media.Image,
+                Audio = scene.Media.Audio,
+                Video = scene.Media.Video
+            } : null,
+            Branches = scene.Branches.Select(b => new BranchRequest
+            {
+                Text = b.Text,
+                NextSceneId = b.NextSceneId,
+                CompassAxis = b.CompassAxis,
+                CompassDirection = b.CompassDirection,
+                CompassDelta = b.CompassDelta
+            }).ToList(),
+            EchoReveals = scene.EchoReveals.Select(e => new EchoRevealRequest
+            {
+                Condition = e.Condition,
+                Message = e.Message,
+                Tone = e.Tone
+            }).ToList()
+        };
     }
 }
 

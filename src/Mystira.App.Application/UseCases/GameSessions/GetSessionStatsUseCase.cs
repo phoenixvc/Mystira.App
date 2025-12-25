@@ -47,22 +47,23 @@ public class GetSessionStatsUseCase
             {
                 PlayerId = p.PlayerId,
                 Axis = p.Axis,
-                Total = p.Total
+                Total = (int)p.Total
             })
             .ToList();
 
-        var recentEchoes = session.EchoHistory
+        var recentEchoes = session.EchoHistory?
             .OrderByDescending(e => e.Timestamp)
             .Take(5)
-            .ToList();
+            .Cast<object>()
+            .ToList() ?? new List<object>();
 
         var stats = new SessionStatsResponse
         {
             CompassValues = compassValues,
             PlayerCompassProgressTotals = progress,
             RecentEchoes = recentEchoes,
-            Achievements = session.Achievements,
-            TotalChoices = session.ChoiceHistory.Count,
+            Achievements = session.Achievements?.Cast<object>().ToList() ?? new List<object>(),
+            TotalChoices = session.ChoiceHistory?.Count ?? 0,
             SessionDuration = session.EndTime?.Subtract(session.StartTime) ?? DateTime.UtcNow.Subtract(session.StartTime)
         };
 

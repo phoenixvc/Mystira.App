@@ -49,14 +49,14 @@ public class GetScenarioAttributionQueryHandler : IQueryHandler<GetScenarioAttri
             IsIpRegistered = scenario.StoryProtocol?.IsRegistered ?? false,
             IpAssetId = scenario.StoryProtocol?.IpAssetId,
             RegisteredAt = scenario.StoryProtocol?.RegisteredAt,
-            Credits = new List<CreatorCreditResponse>()
+            Credits = new List<CreatorCredit>()
         };
 
         if (scenario.StoryProtocol?.Contributors != null)
         {
             foreach (var contributor in scenario.StoryProtocol.Contributors)
             {
-                response.Credits.Add(new CreatorCreditResponse
+                response.Credits.Add(new CreatorCredit
                 {
                     Name = contributor.Name,
                     Role = ContributorHelpers.GetRoleDisplayName(contributor.Role),

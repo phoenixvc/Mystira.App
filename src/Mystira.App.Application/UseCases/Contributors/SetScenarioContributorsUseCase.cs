@@ -39,7 +39,7 @@ public class SetScenarioContributorsUseCase
             Id = Guid.NewGuid().ToString(),
             Name = c.Name,
             WalletAddress = c.WalletAddress,
-            Role = c.Role,
+            Role = (ContributorRole)(int)c.Role,
             ContributionPercentage = c.ContributionPercentage,
             Email = c.Email,
             Notes = c.Notes,

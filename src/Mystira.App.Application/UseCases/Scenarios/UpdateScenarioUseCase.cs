@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Validation;
+using Mystira.App.Application.Mappers;
 using Mystira.Contracts.App.Requests.Scenarios;
 using Mystira.App.Domain.Models;
 using NJsonSchema;
@@ -51,14 +52,14 @@ public class UpdateScenarioUseCase
         scenario.Title = request.Title;
         scenario.Description = request.Description;
         scenario.Tags = request.Tags;
-        scenario.Difficulty = request.Difficulty;
-        scenario.SessionLength = request.SessionLength;
-        scenario.Archetypes = request.Archetypes?.Select(a => Archetype.Parse(a)!).ToList() ?? new List<Archetype>();
+        scenario.Difficulty = ScenarioMappers.MapDifficultyLevel((int)request.Difficulty);
+        scenario.SessionLength = ScenarioMappers.MapSessionLength((int)request.SessionLength);
+        scenario.Archetypes = ScenarioMappers.ParseArchetypes(request.Archetypes);
         scenario.AgeGroup = request.AgeGroup;
         scenario.MinimumAge = request.MinimumAge;
-        scenario.CoreAxes = request.CoreAxes?.Select(a => CoreAxis.Parse(a)!).ToList() ?? new List<CoreAxis>();
-        scenario.Characters = request.Characters;
-        scenario.Scenes = request.Scenes;
+        scenario.CoreAxes = ScenarioMappers.ParseCoreAxes(request.CoreAxes);
+        scenario.Characters = request.Characters?.Select(ScenarioMappers.MapToScenarioCharacter).ToList() ?? new List<ScenarioCharacter>();
+        scenario.Scenes = request.Scenes?.Select(ScenarioMappers.MapToScene).ToList() ?? new List<Scene>();
 
         await _validateScenarioUseCase.ExecuteAsync(scenario);
 
@@ -80,5 +81,6 @@ public class UpdateScenarioUseCase
             throw new ArgumentException($"Scenario validation failed: {errorMessages}");
         }
     }
+
 }
 
