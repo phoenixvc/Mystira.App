@@ -965,17 +965,17 @@ else
         {
             bool isSuccess;
             string message;
+            int target = gameSession.CurrentScene.RollTarget ?? 0;
 
             if (gameSession.Scenario.AgeGroup == "1-2")
             {
                 // Always success with young exclamations
                 string[] youngExclamations = new[] { "Yipee!", "Hooray!", "Wow!" };
                 message = youngExclamations[new Random().Next(youngExclamations.Length)];
-                isSuccess = true;
+                isSuccess = arg >= target;
             }
             else if (gameSession.Scenario.AgeGroup == "3-5")
             {
-                int target = gameSession.CurrentScene.RollTarget ?? 0;
                 isSuccess = arg >= target;
                 if (isSuccess)
                 {
@@ -990,7 +990,6 @@ else
             }
             else
             {
-                int target = gameSession.CurrentScene.RollTarget ?? 0;
                 isSuccess = arg >= target;
                 message = isSuccess ? "Success!" : "Fail!";
             }
