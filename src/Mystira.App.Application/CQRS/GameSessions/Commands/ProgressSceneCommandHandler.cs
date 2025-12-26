@@ -5,28 +5,22 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.GameSessions.Commands;
 
 /// <summary>
-/// Handler for ProgressSceneCommand
-/// Updates the current scene of a game session
+/// Wolverine handler for ProgressSceneCommand.
+/// Updates the current scene of a game session.
+/// Uses static method convention for cleaner, more testable code.
 /// </summary>
-public class ProgressSceneCommandHandler : ICommandHandler<ProgressSceneCommand, GameSession?>
+public static class ProgressSceneCommandHandler
 {
-    private readonly IGameSessionRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<ProgressSceneCommandHandler> _logger;
-
-    public ProgressSceneCommandHandler(
+    /// <summary>
+    /// Handles the ProgressSceneCommand.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<GameSession?> Handle(
+        ProgressSceneCommand command,
         IGameSessionRepository repository,
         IUnitOfWork unitOfWork,
-        ILogger<ProgressSceneCommandHandler> logger)
-    {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-    }
-
-    public async Task<GameSession?> Handle(
-        ProgressSceneCommand command,
-        CancellationToken cancellationToken)
+        ILogger logger,
+        CancellationToken ct)
     {
         var request = command.Request;
 
@@ -41,10 +35,10 @@ public class ProgressSceneCommandHandler : ICommandHandler<ProgressSceneCommand,
             throw new ArgumentException("SceneId is required");
         }
 
-        var session = await _repository.GetByIdAsync(request.SessionId);
+        var session = await repository.GetByIdAsync(request.SessionId);
         if (session == null)
         {
-            _logger.LogWarning("Session not found: {SessionId}", request.SessionId);
+            logger.LogWarning("Session not found: {SessionId}", request.SessionId);
             return null;
         }
 
@@ -58,12 +52,12 @@ public class ProgressSceneCommandHandler : ICommandHandler<ProgressSceneCommand,
         session.CurrentSceneId = request.SceneId;
 
         // Update in repository
-        await _repository.UpdateAsync(session);
+        await repository.UpdateAsync(session);
 
         // Persist changes
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(ct);
 
-        _logger.LogInformation(
+        logger.LogInformation(
             "Progressed session {SessionId} to scene {SceneId}",
             session.Id, request.SceneId);
 

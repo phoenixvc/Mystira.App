@@ -3,28 +3,28 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Mystira.App.Api.Controllers;
 using Mystira.App.Application.CQRS.Health.Queries;
 using Mystira.Contracts.App.Responses.Common;
+using Wolverine;
 using Xunit;
 
 namespace Mystira.App.Api.Tests.Controllers;
 
 public class HealthControllerTests
 {
-    private readonly Mock<IMediator> _mockMediator;
+    private readonly Mock<IMessageBus> _mockBus;
     private readonly Mock<ILogger<HealthController>> _mockLogger;
     private readonly HealthController _controller;
 
     public HealthControllerTests()
     {
-        _mockMediator = new Mock<IMediator>();
+        _mockBus = new Mock<IMessageBus>();
         _mockLogger = new Mock<ILogger<HealthController>>();
-        _controller = new HealthController(_mockMediator.Object, _mockLogger.Object);
+        _controller = new HealthController(_mockBus.Object, _mockLogger.Object);
     }
 
     [Fact]
@@ -37,8 +37,8 @@ public class HealthControllerTests
             Results: new Dictionary<string, object>()
         );
 
-        _mockMediator
-            .Setup(x => x.Send(It.IsAny<GetHealthCheckQuery>(), It.IsAny<CancellationToken>()))
+        _mockBus
+            .Setup(x => x.InvokeAsync<HealthCheckResult>(It.IsAny<GetHealthCheckQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(healthCheckResult);
 
         // Act
@@ -66,8 +66,8 @@ public class HealthControllerTests
             }
         );
 
-        _mockMediator
-            .Setup(x => x.Send(It.IsAny<GetHealthCheckQuery>(), It.IsAny<CancellationToken>()))
+        _mockBus
+            .Setup(x => x.InvokeAsync<HealthCheckResult>(It.IsAny<GetHealthCheckQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(healthCheckResult);
 
         // Act
@@ -95,8 +95,8 @@ public class HealthControllerTests
             }
         );
 
-        _mockMediator
-            .Setup(x => x.Send(It.IsAny<GetHealthCheckQuery>(), It.IsAny<CancellationToken>()))
+        _mockBus
+            .Setup(x => x.InvokeAsync<HealthCheckResult>(It.IsAny<GetHealthCheckQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(healthCheckResult);
 
         // Act
@@ -121,8 +121,8 @@ public class HealthControllerTests
             Results: new Dictionary<string, object>()
         );
 
-        _mockMediator
-            .Setup(x => x.Send(It.IsAny<GetHealthCheckQuery>(), It.IsAny<CancellationToken>()))
+        _mockBus
+            .Setup(x => x.InvokeAsync<HealthCheckResult>(It.IsAny<GetHealthCheckQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(healthCheckResult);
 
         // Act
@@ -150,8 +150,8 @@ public class HealthControllerTests
             }
         );
 
-        _mockMediator
-            .Setup(x => x.Send(It.IsAny<GetHealthCheckQuery>(), It.IsAny<CancellationToken>()))
+        _mockBus
+            .Setup(x => x.InvokeAsync<HealthCheckResult>(It.IsAny<GetHealthCheckQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(healthCheckResult);
 
         // Act
@@ -175,8 +175,8 @@ public class HealthControllerTests
         // Arrange
         var readinessResult = new ProbeResult("Ready", DateTime.UtcNow);
 
-        _mockMediator
-            .Setup(x => x.Send(It.IsAny<GetReadinessQuery>(), It.IsAny<CancellationToken>()))
+        _mockBus
+            .Setup(x => x.InvokeAsync<ProbeResult>(It.IsAny<GetReadinessQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(readinessResult);
 
         // Act
@@ -193,8 +193,8 @@ public class HealthControllerTests
         // Arrange
         var livenessResult = new ProbeResult("Alive", DateTime.UtcNow);
 
-        _mockMediator
-            .Setup(x => x.Send(It.IsAny<GetLivenessQuery>(), It.IsAny<CancellationToken>()))
+        _mockBus
+            .Setup(x => x.InvokeAsync<ProbeResult>(It.IsAny<GetLivenessQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(livenessResult);
 
         // Act

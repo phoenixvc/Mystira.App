@@ -10,16 +10,11 @@ using NJsonSchema;
 namespace Mystira.App.Application.CQRS.Scenarios.Commands;
 
 /// <summary>
-/// Handler for CreateScenarioCommand - creates a new scenario
-/// This is a write operation that modifies state
+/// Wolverine handler for CreateScenarioCommand.
+/// Creates a new scenario - this is a write operation that modifies state.
 /// </summary>
-public class CreateScenarioCommandHandler : ICommandHandler<CreateScenarioCommand, Scenario>
+public static class CreateScenarioCommandHandler
 {
-    private readonly IScenarioRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<CreateScenarioCommandHandler> _logger;
-    private readonly ValidateScenarioUseCase _validateScenarioUseCase;
-
     private static readonly JsonSchema ScenarioJsonSchema =
         JsonSchema.FromJsonAsync(ScenarioSchemaDefinitions.StorySchema).GetAwaiter().GetResult();
 
@@ -30,19 +25,17 @@ public class CreateScenarioCommandHandler : ICommandHandler<CreateScenarioComman
         Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() }
     };
 
-    public CreateScenarioCommandHandler(
+    /// <summary>
+    /// Handles the CreateScenarioCommand by creating a new scenario in the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<Scenario> Handle(
+        CreateScenarioCommand command,
         IScenarioRepository repository,
         IUnitOfWork unitOfWork,
-        ILogger<CreateScenarioCommandHandler> logger,
-        ValidateScenarioUseCase validateScenarioUseCase)
-    {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-        _validateScenarioUseCase = validateScenarioUseCase;
-    }
-
-    public async Task<Scenario> Handle(CreateScenarioCommand command, CancellationToken cancellationToken)
+        ValidateScenarioUseCase validateScenarioUseCase,
+        ILogger logger,
+        CancellationToken ct)
     {
         var request = command.Request;
 
@@ -56,38 +49,38 @@ public class CreateScenarioCommandHandler : ICommandHandler<CreateScenarioComman
             Title = request.Title,
             Description = request.Description,
             Tags = request.Tags,
-            Difficulty = ScenarioMappers.MapDifficultyLevel((int)request.Difficulty),
-            SessionLength = ScenarioMappers.MapSessionLength((int)request.SessionLength),
-            Archetypes = ScenarioMappers.ParseArchetypes(request.Archetypes),
+            Difficulty = ScenarioMapper.MapDifficultyLevel((int)request.Difficulty),
+            SessionLength = ScenarioMapper.MapSessionLength((int)request.SessionLength),
+            Archetypes = ScenarioMapper.ParseArchetypes(request.Archetypes),
             AgeGroup = request.AgeGroup,
             MinimumAge = request.MinimumAge,
-            CoreAxes = ScenarioMappers.ParseCoreAxes(request.CoreAxes),
-            Characters = request.Characters?.Select(ScenarioMappers.MapToScenarioCharacter).ToList() ?? new List<ScenarioCharacter>(),
-            Scenes = request.Scenes?.Select(ScenarioMappers.MapToScene).ToList() ?? new List<Scene>(),
+            CoreAxes = ScenarioMapper.ParseCoreAxes(request.CoreAxes),
+            Characters = request.Characters?.Select(ScenarioMapper.ToScenarioCharacter).ToList() ?? new List<ScenarioCharacter>(),
+            Scenes = request.Scenes?.Select(ScenarioMapper.ToScene).ToList() ?? new List<Scene>(),
             CreatedAt = DateTime.UtcNow
         };
 
         // Validate scenario business rules
-        await _validateScenarioUseCase.ExecuteAsync(scenario);
+        await validateScenarioUseCase.ExecuteAsync(scenario);
 
         // Persist scenario
-        await _repository.AddAsync(scenario);
+        await repository.AddAsync(scenario);
 
         try
         {
-            await _unitOfWork.SaveChangesAsync();
+            await unitOfWork.SaveChangesAsync();
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error saving scenario: {ScenarioId}", scenario.Id);
+            logger.LogError(e, "Error saving scenario: {ScenarioId}", scenario.Id);
             throw;
         }
 
-        _logger.LogInformation("Created new scenario: {ScenarioId} - {Title}", scenario.Id, scenario.Title);
+        logger.LogInformation("Created new scenario: {ScenarioId} - {Title}", scenario.Id, scenario.Title);
         return scenario;
     }
 
-    private void ValidateAgainstSchema(Contracts.App.Requests.Scenarios.CreateScenarioRequest request)
+    private static void ValidateAgainstSchema(Contracts.App.Requests.Scenarios.CreateScenarioRequest request)
     {
         var json = System.Text.Json.JsonSerializer.Serialize(request, SchemaSerializerOptions);
         var errors = ScenarioJsonSchema.Validate(json);
@@ -98,6 +91,4 @@ public class CreateScenarioCommandHandler : ICommandHandler<CreateScenarioComman
             throw new ArgumentException($"Scenario validation failed: {errorMessages}");
         }
     }
-
-
 }

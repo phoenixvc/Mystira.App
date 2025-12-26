@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Attribution.Queries;
 using Mystira.App.Application.CQRS.ContentBundles.Queries;
@@ -13,12 +13,12 @@ namespace Mystira.App.Api.Controllers;
 [Produces("application/json")]
 public class BundlesController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
     private readonly ILogger<BundlesController> _logger;
 
-    public BundlesController(IMediator mediator, ILogger<BundlesController> logger)
+    public BundlesController(IMessageBus bus, ILogger<BundlesController> logger)
     {
-        _mediator = mediator;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -32,7 +32,7 @@ public class BundlesController : ControllerBase
         try
         {
             var query = new GetAllContentBundlesQuery();
-            var bundles = await _mediator.Send(query);
+            var bundles = await _bus.InvokeAsync<IEnumerable<ContentBundle>>(query);
             return Ok(bundles);
         }
         catch (Exception ex)
@@ -53,7 +53,7 @@ public class BundlesController : ControllerBase
         try
         {
             var query = new GetContentBundlesByAgeGroupQuery(ageGroup);
-            var bundles = await _mediator.Send(query);
+            var bundles = await _bus.InvokeAsync<IEnumerable<ContentBundle>>(query);
             return Ok(bundles);
         }
         catch (ArgumentException ex)
@@ -83,7 +83,7 @@ public class BundlesController : ControllerBase
         try
         {
             var query = new GetBundleAttributionQuery(id);
-            var attribution = await _mediator.Send(query);
+            var attribution = await _bus.InvokeAsync<ContentAttributionResponse?>(query);
 
             if (attribution == null)
             {
@@ -122,7 +122,7 @@ public class BundlesController : ControllerBase
         try
         {
             var query = new GetBundleIpStatusQuery(id);
-            var ipStatus = await _mediator.Send(query);
+            var ipStatus = await _bus.InvokeAsync<IpVerificationResponse?>(query);
 
             if (ipStatus == null)
             {

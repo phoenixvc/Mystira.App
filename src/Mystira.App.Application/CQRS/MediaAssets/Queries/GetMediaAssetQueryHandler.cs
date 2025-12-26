@@ -4,32 +4,26 @@ using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.MediaAssets.Queries;
 
-public class GetMediaAssetQueryHandler : IQueryHandler<GetMediaAssetQuery, MediaAsset?>
+/// <summary>
+/// Wolverine handler for retrieving a media asset by MediaId
+/// </summary>
+public static class GetMediaAssetQueryHandler
 {
-    private readonly IMediaAssetRepository _repository;
-    private readonly ILogger<GetMediaAssetQueryHandler> _logger;
-
-    public GetMediaAssetQueryHandler(
-        IMediaAssetRepository repository,
-        ILogger<GetMediaAssetQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<MediaAsset?> Handle(
+    public static async Task<MediaAsset?> Handle(
         GetMediaAssetQuery request,
-        CancellationToken cancellationToken)
+        IMediaAssetRepository repository,
+        ILogger<GetMediaAssetQuery> logger,
+        CancellationToken ct)
     {
         // MediaId is an external identifier stored in the MediaAsset document; do not use the DB primary key.
-        var media = await _repository.GetByMediaIdAsync(request.MediaId);
+        var media = await repository.GetByMediaIdAsync(request.MediaId);
         if (media == null)
         {
-            _logger.LogDebug("Media asset not found by MediaId {MediaId}", request.MediaId);
+            logger.LogDebug("Media asset not found by MediaId {MediaId}", request.MediaId);
             return null;
         }
 
-        _logger.LogDebug("Retrieved media asset by MediaId {MediaId}", request.MediaId);
+        logger.LogDebug("Retrieved media asset by MediaId {MediaId}", request.MediaId);
         return media;
     }
 }

@@ -7,33 +7,26 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.Attribution.Queries;
 
 /// <summary>
-/// Handler for GetScenarioAttributionQuery - retrieves creator credits for a scenario
+/// Wolverine handler for GetScenarioAttributionQuery - retrieves creator credits for a scenario
 /// </summary>
-public class GetScenarioAttributionQueryHandler : IQueryHandler<GetScenarioAttributionQuery, ContentAttributionResponse?>
+public static class GetScenarioAttributionQueryHandler
 {
-    private readonly IScenarioRepository _repository;
-    private readonly ILogger<GetScenarioAttributionQueryHandler> _logger;
-
-    public GetScenarioAttributionQueryHandler(
+    public static async Task<ContentAttributionResponse?> Handle(
+        GetScenarioAttributionQuery request,
         IScenarioRepository repository,
-        ILogger<GetScenarioAttributionQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<ContentAttributionResponse?> Handle(GetScenarioAttributionQuery request, CancellationToken cancellationToken)
+        ILogger<GetScenarioAttributionQuery> logger,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.ScenarioId))
         {
             throw new ArgumentException("Scenario ID cannot be null or empty", nameof(request.ScenarioId));
         }
 
-        var scenario = await _repository.GetByIdAsync(request.ScenarioId);
+        var scenario = await repository.GetByIdAsync(request.ScenarioId);
 
         if (scenario == null)
         {
-            _logger.LogWarning("Scenario not found for attribution: {ScenarioId}", request.ScenarioId);
+            logger.LogWarning("Scenario not found for attribution: {ScenarioId}", request.ScenarioId);
             return null;
         }
 

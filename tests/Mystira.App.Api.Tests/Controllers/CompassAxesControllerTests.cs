@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -10,16 +9,17 @@ using Moq;
 using Mystira.App.Api.Controllers;
 using Mystira.App.Application.CQRS.CompassAxes.Queries;
 using Mystira.App.Domain.Models;
+using Wolverine;
 using Xunit;
 
 namespace Mystira.App.Api.Tests.Controllers;
 
 public class CompassAxesControllerTests
 {
-    private static CompassAxesController CreateController(Mock<IMediator> mediatorMock)
+    private static CompassAxesController CreateController(Mock<IMessageBus> busMock)
     {
         var logger = new Mock<ILogger<CompassAxesController>>().Object;
-        var controller = new CompassAxesController(mediatorMock.Object, logger)
+        var controller = new CompassAxesController(busMock.Object, logger)
         {
             ControllerContext = new ControllerContext
             {
@@ -38,10 +38,10 @@ public class CompassAxesControllerTests
             new() { Id = "axis-1", Name = "Courage", Description = "Measures bravery" },
             new() { Id = "axis-2", Name = "Wisdom", Description = "Measures knowledge" }
         };
-        var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<GetAllCompassAxesQuery>(), It.IsAny<CancellationToken>()))
+        var bus = new Mock<IMessageBus>();
+        bus.Setup(m => m.InvokeAsync<List<CompassAxis>>(It.IsAny<GetAllCompassAxesQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(axes);
-        var controller = CreateController(mediator);
+        var controller = CreateController(bus);
 
         // Act
         var result = await controller.GetAllCompassAxes();
@@ -50,17 +50,17 @@ public class CompassAxesControllerTests
         result.Result.Should().BeOfType<OkObjectResult>();
         var ok = result.Result as OkObjectResult;
         ok!.Value.Should().BeEquivalentTo(axes);
-        mediator.Verify(m => m.Send(It.IsAny<GetAllCompassAxesQuery>(), It.IsAny<CancellationToken>()), Times.Once);
+        bus.Verify(m => m.InvokeAsync<List<CompassAxis>>(It.IsAny<GetAllCompassAxesQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()), Times.Once);
     }
 
     [Fact]
     public async Task GetAllCompassAxes_WhenEmpty_ReturnsEmptyList()
     {
         // Arrange
-        var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<GetAllCompassAxesQuery>(), It.IsAny<CancellationToken>()))
+        var bus = new Mock<IMessageBus>();
+        bus.Setup(m => m.InvokeAsync<List<CompassAxis>>(It.IsAny<GetAllCompassAxesQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(new List<CompassAxis>());
-        var controller = CreateController(mediator);
+        var controller = CreateController(bus);
 
         // Act
         var result = await controller.GetAllCompassAxes();
@@ -77,10 +77,10 @@ public class CompassAxesControllerTests
     {
         // Arrange
         var axis = new CompassAxis { Id = "axis-1", Name = "Courage", Description = "Measures bravery" };
-        var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<GetCompassAxisByIdQuery>(), It.IsAny<CancellationToken>()))
+        var bus = new Mock<IMessageBus>();
+        bus.Setup(m => m.InvokeAsync<CompassAxis?>(It.IsAny<GetCompassAxisByIdQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(axis);
-        var controller = CreateController(mediator);
+        var controller = CreateController(bus);
 
         // Act
         var result = await controller.GetCompassAxisById("axis-1");
@@ -95,10 +95,10 @@ public class CompassAxesControllerTests
     public async Task GetCompassAxisById_ReturnsNotFound_WhenNotExists()
     {
         // Arrange
-        var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<GetCompassAxisByIdQuery>(), It.IsAny<CancellationToken>()))
+        var bus = new Mock<IMessageBus>();
+        bus.Setup(m => m.InvokeAsync<CompassAxis?>(It.IsAny<GetCompassAxisByIdQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync((CompassAxis?)null);
-        var controller = CreateController(mediator);
+        var controller = CreateController(bus);
 
         // Act
         var result = await controller.GetCompassAxisById("non-existent");
@@ -111,10 +111,10 @@ public class CompassAxesControllerTests
     public async Task ValidateCompassAxis_ReturnsTrue_WhenValid()
     {
         // Arrange
-        var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<ValidateCompassAxisQuery>(), It.IsAny<CancellationToken>()))
+        var bus = new Mock<IMessageBus>();
+        bus.Setup(m => m.InvokeAsync<bool>(It.IsAny<ValidateCompassAxisQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(true);
-        var controller = CreateController(mediator);
+        var controller = CreateController(bus);
 
         // Act
         var result = await controller.ValidateCompassAxis(new ValidateCompassAxisRequest { Name = "Courage" });
@@ -127,10 +127,10 @@ public class CompassAxesControllerTests
     public async Task ValidateCompassAxis_ReturnsFalse_WhenInvalid()
     {
         // Arrange
-        var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<ValidateCompassAxisQuery>(), It.IsAny<CancellationToken>()))
+        var bus = new Mock<IMessageBus>();
+        bus.Setup(m => m.InvokeAsync<bool>(It.IsAny<ValidateCompassAxisQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(false);
-        var controller = CreateController(mediator);
+        var controller = CreateController(bus);
 
         // Act
         var result = await controller.ValidateCompassAxis(new ValidateCompassAxisRequest { Name = "NonExistent" });

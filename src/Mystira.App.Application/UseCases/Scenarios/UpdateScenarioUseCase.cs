@@ -52,14 +52,14 @@ public class UpdateScenarioUseCase
         scenario.Title = request.Title;
         scenario.Description = request.Description;
         scenario.Tags = request.Tags;
-        scenario.Difficulty = ScenarioMappers.MapDifficultyLevel((int)request.Difficulty);
-        scenario.SessionLength = ScenarioMappers.MapSessionLength((int)request.SessionLength);
-        scenario.Archetypes = ScenarioMappers.ParseArchetypes(request.Archetypes);
+        scenario.Difficulty = ScenarioMapper.MapDifficultyLevel((int)request.Difficulty);
+        scenario.SessionLength = ScenarioMapper.MapSessionLength((int)request.SessionLength);
+        scenario.Archetypes = ScenarioMapper.ParseArchetypes(request.Archetypes);
         scenario.AgeGroup = request.AgeGroup;
         scenario.MinimumAge = request.MinimumAge;
-        scenario.CoreAxes = ScenarioMappers.ParseCoreAxes(request.CoreAxes);
-        scenario.Characters = request.Characters?.Select(ScenarioMappers.MapToScenarioCharacter).ToList() ?? new List<ScenarioCharacter>();
-        scenario.Scenes = request.Scenes?.Select(ScenarioMappers.MapToScene).ToList() ?? new List<Scene>();
+        scenario.CoreAxes = ScenarioMapper.ParseCoreAxes(request.CoreAxes);
+        scenario.Characters = request.Characters?.Select(ScenarioMapper.ToScenarioCharacter).ToList() ?? new List<ScenarioCharacter>();
+        scenario.Scenes = request.Scenes?.Select(ScenarioMapper.ToScene).ToList() ?? new List<Scene>();
 
         await _validateScenarioUseCase.ExecuteAsync(scenario);
 

@@ -4,22 +4,15 @@ using Mystira.App.Application.Ports;
 namespace Mystira.App.Application.CQRS.Royalties.Commands;
 
 /// <summary>
-/// Handler for ClaimRoyaltiesCommand
+/// Wolverine message handler for claiming royalties from IP assets.
 /// </summary>
-public class ClaimRoyaltiesCommandHandler : ICommandHandler<ClaimRoyaltiesCommand, string>
+public static class ClaimRoyaltiesCommandHandler
 {
-    private readonly IStoryProtocolService _storyProtocolService;
-    private readonly ILogger<ClaimRoyaltiesCommandHandler> _logger;
-
-    public ClaimRoyaltiesCommandHandler(
+    public static async Task<string> Handle(
+        ClaimRoyaltiesCommand request,
         IStoryProtocolService storyProtocolService,
-        ILogger<ClaimRoyaltiesCommandHandler> logger)
-    {
-        _storyProtocolService = storyProtocolService;
-        _logger = logger;
-    }
-
-    public async Task<string> Handle(ClaimRoyaltiesCommand request, CancellationToken cancellationToken)
+        ILogger<ClaimRoyaltiesCommand> logger,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.IpAssetId))
         {
@@ -31,11 +24,11 @@ public class ClaimRoyaltiesCommandHandler : ICommandHandler<ClaimRoyaltiesComman
             throw new ArgumentException("Contributor wallet address cannot be null or empty", nameof(request.ContributorWallet));
         }
 
-        _logger.LogInformation(
+        logger.LogInformation(
             "Claiming royalties for wallet {Wallet} from IP Asset: {IpAssetId}",
             request.ContributorWallet, request.IpAssetId);
 
-        return await _storyProtocolService.ClaimRoyaltiesAsync(
+        return await storyProtocolService.ClaimRoyaltiesAsync(
             request.IpAssetId,
             request.ContributorWallet);
     }

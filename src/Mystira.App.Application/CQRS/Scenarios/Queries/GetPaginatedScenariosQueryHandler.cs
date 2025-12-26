@@ -6,34 +6,31 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.Scenarios.Queries;
 
 /// <summary>
-/// Handler for GetPaginatedScenariosQuery
-/// Demonstrates how to use Specification Pattern with pagination
+/// Wolverine handler for GetPaginatedScenariosQuery.
+/// Demonstrates how to use Specification Pattern with pagination.
 /// </summary>
-public class GetPaginatedScenariosQueryHandler : IQueryHandler<GetPaginatedScenariosQuery, IEnumerable<Scenario>>
+public static class GetPaginatedScenariosQueryHandler
 {
-    private readonly IScenarioRepository _repository;
-    private readonly ILogger<GetPaginatedScenariosQueryHandler> _logger;
-
-    public GetPaginatedScenariosQueryHandler(
+    /// <summary>
+    /// Handles the GetPaginatedScenariosQuery by retrieving paginated scenarios from the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<IEnumerable<Scenario>> Handle(
+        GetPaginatedScenariosQuery query,
         IScenarioRepository repository,
-        ILogger<GetPaginatedScenariosQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<IEnumerable<Scenario>> Handle(GetPaginatedScenariosQuery request, CancellationToken cancellationToken)
+        ILogger logger,
+        CancellationToken ct)
     {
         // Create specification for paginated scenarios
         var spec = new ScenariosPaginatedSpec(
-            skip: (request.PageNumber - 1) * request.PageSize,
-            take: request.PageSize);
+            skip: (query.PageNumber - 1) * query.PageSize,
+            take: query.PageSize);
 
         // Use specification to query repository
-        var scenarios = await _repository.ListAsync(spec);
+        var scenarios = await repository.ListAsync(spec);
 
-        _logger.LogDebug("Retrieved page {PageNumber} with {Count} scenarios (page size: {PageSize})",
-            request.PageNumber, scenarios.Count(), request.PageSize);
+        logger.LogDebug("Retrieved page {PageNumber} with {Count} scenarios (page size: {PageSize})",
+            query.PageNumber, scenarios.Count(), query.PageSize);
 
         return scenarios;
     }

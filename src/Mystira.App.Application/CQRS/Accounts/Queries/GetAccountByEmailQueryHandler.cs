@@ -4,23 +4,24 @@ using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.Accounts.Queries;
 
-public class GetAccountByEmailQueryHandler : IQueryHandler<GetAccountByEmailQuery, Account?>
+/// <summary>
+/// Wolverine handler for GetAccountByEmailQuery.
+/// Uses static method convention for cleaner, more testable code.
+/// </summary>
+public static class GetAccountByEmailQueryHandler
 {
-    private readonly IAccountRepository _repository;
-    private readonly ILogger<GetAccountByEmailQueryHandler> _logger;
-
-    public GetAccountByEmailQueryHandler(
+    /// <summary>
+    /// Handles the GetAccountByEmailQuery by retrieving an account from the repository by email.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<Account?> Handle(
+        GetAccountByEmailQuery query,
         IAccountRepository repository,
-        ILogger<GetAccountByEmailQueryHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<Account?> Handle(GetAccountByEmailQuery request, CancellationToken cancellationToken)
-    {
-        var account = await _repository.GetByEmailAsync(request.Email);
-        _logger.LogDebug("Retrieved account by email {Email}", request.Email);
+        var account = await repository.GetByEmailAsync(query.Email);
+        logger.LogDebug("Retrieved account by email {Email}", query.Email);
         return account;
     }
 }

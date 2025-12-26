@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Royalties.Commands;
@@ -18,12 +18,12 @@ namespace Mystira.App.Api.Controllers;
 [Produces("application/json")]
 public class RoyaltiesController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
     private readonly ILogger<RoyaltiesController> _logger;
 
-    public RoyaltiesController(IMediator mediator, ILogger<RoyaltiesController> logger)
+    public RoyaltiesController(IMessageBus bus, ILogger<RoyaltiesController> logger)
     {
-        _mediator = mediator;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -61,7 +61,7 @@ public class RoyaltiesController : ControllerBase
             }
 
             var query = new GetClaimableRoyaltiesQuery(ipAssetId);
-            var balance = await _mediator.Send(query);
+            var balance = await _bus.InvokeAsync<RoyaltyBalance>(query);
 
             return Ok(balance);
         }
@@ -132,7 +132,7 @@ public class RoyaltiesController : ControllerBase
             }
 
             var command = new PayRoyaltyCommand(ipAssetId, request.Amount, request.PayerReference);
-            var result = await _mediator.Send(command);
+            var result = await _bus.InvokeAsync<RoyaltyPaymentResult>(command);
 
             if (!result.Success)
             {
@@ -226,7 +226,7 @@ public class RoyaltiesController : ControllerBase
             }
 
             var command = new ClaimRoyaltiesCommand(ipAssetId, request.ContributorWallet);
-            var txHash = await _mediator.Send(command);
+            var txHash = await _bus.InvokeAsync<string>(command);
 
             return Ok(new ClaimRoyaltiesResponse
             {

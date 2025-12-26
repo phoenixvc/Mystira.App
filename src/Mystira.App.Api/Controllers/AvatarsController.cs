@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Avatars.Queries;
 using Mystira.Contracts.App.Responses.Common;
@@ -8,19 +8,19 @@ namespace Mystira.App.Api.Controllers;
 
 /// <summary>
 /// Controller for avatar configuration management.
-/// Follows hexagonal architecture - uses only IMediator (CQRS pattern).
+/// Follows hexagonal architecture - uses only IMessageBus (CQRS pattern).
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class AvatarsController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
     private readonly ILogger<AvatarsController> _logger;
 
-    public AvatarsController(IMediator mediator, ILogger<AvatarsController> logger)
+    public AvatarsController(IMessageBus bus, ILogger<AvatarsController> logger)
     {
-        _mediator = mediator;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -33,7 +33,7 @@ public class AvatarsController : ControllerBase
         try
         {
             var query = new GetAvatarsQuery();
-            var avatars = await _mediator.Send(query);
+            var avatars = await _bus.InvokeAsync<AvatarResponse>(query);
             return Ok(avatars);
         }
         catch (Exception ex)
@@ -65,7 +65,7 @@ public class AvatarsController : ControllerBase
             }
 
             var query = new GetAvatarsByAgeGroupQuery(ageGroup);
-            var avatars = await _mediator.Send(query);
+            var avatars = await _bus.InvokeAsync<AvatarConfigurationResponse?>(query);
 
             if (avatars == null)
             {

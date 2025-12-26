@@ -5,47 +5,34 @@ using Mystira.App.Application.Services;
 namespace Mystira.App.Application.CQRS.Archetypes.Commands;
 
 /// <summary>
-/// Handler for deleting an archetype.
+/// Wolverine handler for deleting an archetype.
 /// </summary>
-public class DeleteArchetypeCommandHandler : ICommandHandler<DeleteArchetypeCommand, bool>
+public static class DeleteArchetypeCommandHandler
 {
-    private readonly IArchetypeRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IQueryCacheInvalidationService _cacheInvalidation;
-    private readonly ILogger<DeleteArchetypeCommandHandler> _logger;
-
-    public DeleteArchetypeCommandHandler(
+    public static async Task<bool> Handle(
+        DeleteArchetypeCommand command,
         IArchetypeRepository repository,
         IUnitOfWork unitOfWork,
         IQueryCacheInvalidationService cacheInvalidation,
-        ILogger<DeleteArchetypeCommandHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _cacheInvalidation = cacheInvalidation;
-        _logger = logger;
-    }
+        logger.LogInformation("Deleting archetype with id: {Id}", command.Id);
 
-    public async Task<bool> Handle(
-        DeleteArchetypeCommand command,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Deleting archetype with id: {Id}", command.Id);
-
-        var archetype = await _repository.GetByIdAsync(command.Id);
+        var archetype = await repository.GetByIdAsync(command.Id);
         if (archetype == null)
         {
-            _logger.LogWarning("Archetype with id {Id} not found", command.Id);
+            logger.LogWarning("Archetype with id {Id} not found", command.Id);
             return false;
         }
 
-        await _repository.DeleteAsync(command.Id);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.DeleteAsync(command.Id);
+        await unitOfWork.SaveChangesAsync(ct);
 
         // Invalidate cache
-        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:Archetypes");
+        cacheInvalidation.InvalidateCacheByPrefix("MasterData:Archetypes");
 
-        _logger.LogInformation("Successfully deleted archetype with id: {Id}", command.Id);
+        logger.LogInformation("Successfully deleted archetype with id: {Id}", command.Id);
         return true;
     }
 }

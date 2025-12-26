@@ -5,26 +5,27 @@ using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.UserBadges.Queries;
 
-public class GetUserBadgesQueryHandler : IQueryHandler<GetUserBadgesQuery, List<UserBadge>>
+/// <summary>
+/// Wolverine handler for GetUserBadgesQuery.
+/// Retrieves all badges for a user profile.
+/// </summary>
+public static class GetUserBadgesQueryHandler
 {
-    private readonly IUserBadgeRepository _repository;
-    private readonly ILogger<GetUserBadgesQueryHandler> _logger;
-
-    public GetUserBadgesQueryHandler(
+    /// <summary>
+    /// Handles the GetUserBadgesQuery by retrieving user badges from the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<List<UserBadge>> Handle(
+        GetUserBadgesQuery query,
         IUserBadgeRepository repository,
-        ILogger<GetUserBadgesQueryHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _logger = logger;
-    }
+        var spec = new UserBadgesByProfileSpec(query.UserProfileId);
+        var badges = await repository.ListAsync(spec);
 
-    public async Task<List<UserBadge>> Handle(GetUserBadgesQuery request, CancellationToken cancellationToken)
-    {
-        var spec = new UserBadgesByProfileSpec(request.UserProfileId);
-        var badges = await _repository.ListAsync(spec);
-
-        _logger.LogDebug("Retrieved {Count} badges for user profile {UserProfileId}",
-            badges.Count(), request.UserProfileId);
+        logger.LogDebug("Retrieved {Count} badges for user profile {UserProfileId}",
+            badges.Count(), query.UserProfileId);
 
         return badges.ToList();
     }

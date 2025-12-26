@@ -74,7 +74,7 @@ Application defines the platform-agnostic port interface:
 
 - **Frameworks:** .NET 9 (Unified across all projects).
 - **Frontend:** Blazor WebAssembly PWA with Service Workers and custom Image Cache.
-- **Backend:** ASP.NET Core with MediatR (CQRS) and FluentValidation.
+- **Backend:** ASP.NET Core with Wolverine (CQRS/Messaging) and FluentValidation.
 - **Persistence:** Azure Cosmos DB (EF Core 9 provider) and Azure Blob Storage.
 - **Resilience:** Polly policies (Retry, Circuit Breaker) applied to all inter-service communication.
 - **Storage:** `InMemoryStoreService` for session-state (transient) and JS IndexedDB for binary asset caching.

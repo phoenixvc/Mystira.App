@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using MediatR;
+using Wolverine;
 using Mystira.App.Application.CQRS.Auth.Commands;
 using Mystira.App.Application.CQRS.Auth.Responses;
 using Mystira.Contracts.App.Requests.Auth;
@@ -41,12 +42,15 @@ public class AuthControllerIntegrationTests : IClassFixture<WebApplicationFactor
 
             builder.ConfigureServices(services =>
             {
-                // We can mock MediatR if we want to isolate the Controller's IL generation issue
-                var mediatorMock = new Mock<IMediator>();
-                mediatorMock.Setup(m => m.Send(It.IsAny<IRequest<AuthResponse>>(), It.IsAny<CancellationToken>()))
+                // Mock IMessageBus to isolate the Controller
+                var busMock = new Mock<IMessageBus>();
+                busMock.Setup(m => m.InvokeAsync<AuthResponse>(
+                        It.IsAny<PasswordlessSigninCommand>(),
+                        It.IsAny<CancellationToken>(),
+                        It.IsAny<TimeSpan?>()))
                     .ReturnsAsync(new AuthResponse(true, "Check your email", "123456"));
 
-                services.AddScoped(_ => mediatorMock.Object);
+                services.AddScoped(_ => busMock.Object);
             });
         });
     }

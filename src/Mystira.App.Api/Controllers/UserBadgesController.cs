@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.UserBadges.Commands;
 using Mystira.App.Application.CQRS.UserBadges.Queries;
@@ -11,21 +11,21 @@ namespace Mystira.App.Api.Controllers;
 
 /// <summary>
 /// Controller for user badge management.
-/// Follows hexagonal architecture - uses only IMediator (CQRS pattern).
+/// Follows hexagonal architecture - uses only IMessageBus (CQRS pattern).
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class UserBadgesController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
     private readonly ILogger<UserBadgesController> _logger;
 
     public UserBadgesController(
-        IMediator mediator,
+        IMessageBus bus,
         ILogger<UserBadgesController> logger)
     {
-        _mediator = mediator;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -51,7 +51,7 @@ public class UserBadgesController : ControllerBase
             }
 
             var command = new AwardBadgeCommand(request);
-            var badge = await _mediator.Send(command);
+            var badge = await _bus.InvokeAsync<UserBadge>(command);
             return CreatedAtAction(nameof(GetUserBadges),
                 new { userProfileId = request.UserProfileId }, badge);
         }
@@ -84,7 +84,7 @@ public class UserBadgesController : ControllerBase
         try
         {
             var query = new GetUserBadgesQuery(userProfileId);
-            var badges = await _mediator.Send(query);
+            var badges = await _bus.InvokeAsync<List<UserBadge>>(query);
             return Ok(badges);
         }
         catch (Exception ex)
@@ -107,7 +107,7 @@ public class UserBadgesController : ControllerBase
         try
         {
             var query = new GetUserBadgesForAxisQuery(userProfileId, axis);
-            var badges = await _mediator.Send(query);
+            var badges = await _bus.InvokeAsync<List<UserBadge>>(query);
             return Ok(badges);
         }
         catch (Exception ex)
@@ -131,7 +131,7 @@ public class UserBadgesController : ControllerBase
         try
         {
             var query = new HasUserEarnedBadgeQuery(userProfileId, badgeConfigurationId);
-            var hasEarned = await _mediator.Send(query);
+            var hasEarned = await _bus.InvokeAsync<bool>(query);
             return Ok(new { hasEarned });
         }
         catch (Exception ex)
@@ -155,7 +155,7 @@ public class UserBadgesController : ControllerBase
         try
         {
             var query = new GetBadgeStatisticsQuery(userProfileId);
-            var statistics = await _mediator.Send(query);
+            var statistics = await _bus.InvokeAsync<Dictionary<string, int>>(query);
             return Ok(statistics);
         }
         catch (Exception ex)
@@ -178,7 +178,7 @@ public class UserBadgesController : ControllerBase
         try
         {
             var query = new GetBadgesForAccountByEmailQuery(email);
-            var badges = await _mediator.Send(query);
+            var badges = await _bus.InvokeAsync<List<UserBadge>>(query);
 
             if (!badges.Any())
             {
@@ -211,7 +211,7 @@ public class UserBadgesController : ControllerBase
         try
         {
             var query = new GetBadgeStatisticsForAccountByEmailQuery(email);
-            var statistics = await _mediator.Send(query);
+            var statistics = await _bus.InvokeAsync<Dictionary<string, int>>(query);
 
             return Ok(statistics);
         }

@@ -1,8 +1,8 @@
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -12,21 +12,22 @@ using Mystira.App.Api.Controllers;
 using Mystira.App.Application.CQRS.MediaAssets.Queries;
 using Mystira.Contracts.App.Responses.Common;
 using Mystira.App.Domain.Models;
+using Wolverine;
 using Xunit;
 
 namespace Mystira.App.Api.Tests.Controllers;
 
 /// <summary>
 /// Tests for MediaController - validates hexagonal architecture compliance.
-/// Controller should ONLY use IMediator (CQRS pattern), no direct service dependencies.
+/// Controller should ONLY use IMessageBus (CQRS pattern), no direct service dependencies.
 /// </summary>
 public class MediaControllerTests
 {
-    private static MediaController CreateController(Mock<IMediator> mediatorMock)
+    private static MediaController CreateController(Mock<IMessageBus> busMock)
     {
         var logger = new Mock<ILogger<MediaController>>().Object;
         var controller = new MediaController(
-            mediatorMock.Object,
+            busMock.Object,
             logger)
         {
             ControllerContext = new ControllerContext
@@ -50,10 +51,10 @@ public class MediaControllerTests
             MimeType = "image/png",
             Url = "https://example.com/logo.png"
         };
-        var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<GetMediaAssetQuery>(), It.IsAny<CancellationToken>()))
+        var bus = new Mock<IMessageBus>();
+        bus.Setup(m => m.InvokeAsync<MediaAsset?>(It.IsAny<GetMediaAssetQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(mediaAsset);
-        var controller = CreateController(mediator);
+        var controller = CreateController(bus);
 
         // Act
         var result = await controller.GetMediaById(mediaId);
@@ -62,7 +63,7 @@ public class MediaControllerTests
         result.Result.Should().BeOfType<OkObjectResult>();
         var ok = result.Result as OkObjectResult;
         ok!.Value.Should().BeEquivalentTo(mediaAsset);
-        mediator.Verify(m => m.Send(It.IsAny<GetMediaAssetQuery>(), It.IsAny<CancellationToken>()), Times.Once);
+        bus.Verify(m => m.InvokeAsync<MediaAsset?>(It.IsAny<GetMediaAssetQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()), Times.Once);
     }
 
     [Fact]
@@ -70,10 +71,10 @@ public class MediaControllerTests
     {
         // Arrange
         var mediaId = "non-existent-media";
-        var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<GetMediaAssetQuery>(), It.IsAny<CancellationToken>()))
+        var bus = new Mock<IMessageBus>();
+        bus.Setup(m => m.InvokeAsync<MediaAsset?>(It.IsAny<GetMediaAssetQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync((MediaAsset?)null);
-        var controller = CreateController(mediator);
+        var controller = CreateController(bus);
 
         // Act
         var result = await controller.GetMediaById(mediaId);
@@ -94,10 +95,10 @@ public class MediaControllerTests
         var stream = new MemoryStream(new byte[] { 1, 2, 3, 4 });
         var contentType = "image/png";
         var fileName = "logo.png";
-        var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<GetMediaFileQuery>(), It.IsAny<CancellationToken>()))
+        var bus = new Mock<IMessageBus>();
+        bus.Setup(m => m.InvokeAsync<(Stream, string, string)?>(It.IsAny<GetMediaFileQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync((stream, contentType, fileName));
-        var controller = CreateController(mediator);
+        var controller = CreateController(bus);
 
         // Act
         var result = await controller.GetMediaFile(mediaId);
@@ -107,7 +108,7 @@ public class MediaControllerTests
         var file = (FileStreamResult)result;
         file.ContentType.Should().Be(contentType);
         file.FileDownloadName.Should().Be(fileName);
-        mediator.Verify(m => m.Send(It.IsAny<GetMediaFileQuery>(), It.IsAny<CancellationToken>()), Times.Once);
+        bus.Verify(m => m.InvokeAsync<(Stream, string, string)?>(It.IsAny<GetMediaFileQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()), Times.Once);
     }
 
     [Fact]
@@ -115,10 +116,10 @@ public class MediaControllerTests
     {
         // Arrange
         var mediaId = "non-existent-media";
-        var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<GetMediaFileQuery>(), It.IsAny<CancellationToken>()))
+        var bus = new Mock<IMessageBus>();
+        bus.Setup(m => m.InvokeAsync<(Stream, string, string)?>(It.IsAny<GetMediaFileQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(((Stream, string, string)?)null);
-        var controller = CreateController(mediator);
+        var controller = CreateController(bus);
 
         // Act
         var result = await controller.GetMediaFile(mediaId);
@@ -173,15 +174,15 @@ public class MediaControllerTests
     }
 
     [Fact]
-    public void MediaController_OnlyDependsOnIMediator()
+    public void MediaController_OnlyDependsOnIMessageBus()
     {
         // Arrange & Act
         var constructor = typeof(MediaController).GetConstructors()[0];
         var parameters = constructor.GetParameters();
 
         // Assert
-        parameters.Should().HaveCount(2, "controller should only have IMediator and ILogger dependencies");
-        parameters[0].ParameterType.Name.Should().Be("IMediator");
+        parameters.Should().HaveCount(2, "controller should only have IMessageBus and ILogger dependencies");
+        parameters[0].ParameterType.Name.Should().Be("IMessageBus");
         parameters[1].ParameterType.Name.Should().Contain("ILogger");
     }
 }

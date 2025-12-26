@@ -49,14 +49,14 @@ public class CreateScenarioUseCase
             Title = request.Title,
             Description = request.Description,
             Tags = request.Tags,
-            Difficulty = ScenarioMappers.MapDifficultyLevel((int)request.Difficulty),
-            SessionLength = ScenarioMappers.MapSessionLength((int)request.SessionLength),
-            Archetypes = ScenarioMappers.ParseArchetypes(request.Archetypes),
+            Difficulty = ScenarioMapper.MapDifficultyLevel((int)request.Difficulty),
+            SessionLength = ScenarioMapper.MapSessionLength((int)request.SessionLength),
+            Archetypes = ScenarioMapper.ParseArchetypes(request.Archetypes),
             AgeGroup = request.AgeGroup,
             MinimumAge = request.MinimumAge,
-            CoreAxes = ScenarioMappers.ParseCoreAxes(request.CoreAxes),
-            Characters = request.Characters?.Select(ScenarioMappers.MapToScenarioCharacter).ToList() ?? new List<ScenarioCharacter>(),
-            Scenes = request.Scenes?.Select(ScenarioMappers.MapToScene).ToList() ?? new List<Scene>(),
+            CoreAxes = ScenarioMapper.ParseCoreAxes(request.CoreAxes),
+            Characters = request.Characters?.Select(ScenarioMapper.ToScenarioCharacter).ToList() ?? new List<ScenarioCharacter>(),
+            Scenes = request.Scenes?.Select(ScenarioMapper.ToScene).ToList() ?? new List<Scene>(),
             CreatedAt = DateTime.UtcNow
         };
 

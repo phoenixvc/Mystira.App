@@ -7,30 +7,26 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.GameSessions.Queries;
 
 /// <summary>
-/// Handler for GetSessionStatsQuery
-/// Calculates and returns session statistics
+/// Wolverine handler for GetSessionStatsQuery.
+/// Calculates and returns session statistics.
+/// Uses static method convention for cleaner, more testable code.
 /// </summary>
-public class GetSessionStatsQueryHandler : IQueryHandler<GetSessionStatsQuery, SessionStatsResponse?>
+public static class GetSessionStatsQueryHandler
 {
-    private readonly IGameSessionRepository _repository;
-    private readonly ILogger<GetSessionStatsQueryHandler> _logger;
-
-    public GetSessionStatsQueryHandler(
-        IGameSessionRepository repository,
-        ILogger<GetSessionStatsQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<SessionStatsResponse?> Handle(
+    /// <summary>
+    /// Handles the GetSessionStatsQuery.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<SessionStatsResponse?> Handle(
         GetSessionStatsQuery request,
-        CancellationToken cancellationToken)
+        IGameSessionRepository repository,
+        ILogger logger,
+        CancellationToken ct)
     {
-        var session = await _repository.GetByIdAsync(request.SessionId);
+        var session = await repository.GetByIdAsync(request.SessionId);
         if (session == null)
         {
-            _logger.LogWarning("Session not found: {SessionId}", request.SessionId);
+            logger.LogWarning("Session not found: {SessionId}", request.SessionId);
             return null;
         }
 
@@ -65,7 +61,7 @@ public class GetSessionStatsQueryHandler : IQueryHandler<GetSessionStatsQuery, S
             SessionDuration = session.GetTotalElapsedTime()
         };
 
-        _logger.LogDebug("Retrieved stats for session {SessionId}", request.SessionId);
+        logger.LogDebug("Retrieved stats for session {SessionId}", request.SessionId);
 
         return stats;
     }

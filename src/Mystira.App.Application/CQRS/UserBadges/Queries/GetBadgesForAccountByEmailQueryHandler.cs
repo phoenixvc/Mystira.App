@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.CQRS.Accounts.Queries;
 using Mystira.App.Application.CQRS.UserProfiles.Queries;
@@ -7,50 +7,45 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.UserBadges.Queries;
 
 /// <summary>
-/// Handler for retrieving all badges for all profiles in an account.
+/// Wolverine handler for GetBadgesForAccountByEmailQuery.
+/// Retrieves all badges for all profiles in an account.
 /// Coordinates account lookup, profile retrieval, and badge aggregation.
 /// </summary>
-public class GetBadgesForAccountByEmailQueryHandler
-    : IQueryHandler<GetBadgesForAccountByEmailQuery, List<UserBadge>>
+public static class GetBadgesForAccountByEmailQueryHandler
 {
-    private readonly IMediator _mediator;
-    private readonly ILogger<GetBadgesForAccountByEmailQueryHandler> _logger;
-
-    public GetBadgesForAccountByEmailQueryHandler(
-        IMediator mediator,
-        ILogger<GetBadgesForAccountByEmailQueryHandler> logger)
-    {
-        _mediator = mediator;
-        _logger = logger;
-    }
-
-    public async Task<List<UserBadge>> Handle(
+    /// <summary>
+    /// Handles the GetBadgesForAccountByEmailQuery by aggregating badges across all profiles in an account.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<List<UserBadge>> Handle(
         GetBadgesForAccountByEmailQuery query,
-        CancellationToken cancellationToken)
+        IMessageBus messageBus,
+        ILogger logger,
+        CancellationToken ct)
     {
-        _logger.LogInformation("Getting badges for account with email {Email}", query.Email);
+        logger.LogInformation("Getting badges for account with email {Email}", query.Email);
 
         // Get account by email
         var accountQuery = new GetAccountByEmailQuery(query.Email);
-        var account = await _mediator.Send(accountQuery, cancellationToken);
+        var account = await messageBus.InvokeAsync<Account?>(accountQuery, ct);
 
         if (account == null)
         {
-            _logger.LogWarning("Account not found for email {Email}", query.Email);
+            logger.LogWarning("Account not found for email {Email}", query.Email);
             return new List<UserBadge>();
         }
 
         // Get profiles for account
         var profilesQuery = new GetProfilesByAccountQuery(account.Id);
-        var profiles = await _mediator.Send(profilesQuery, cancellationToken);
+        var profiles = await messageBus.InvokeAsync<List<UserProfile>>(profilesQuery, ct);
 
         // Get badges for all profiles in parallel
         var badgeTasks = profiles.Select(profile =>
-            _mediator.Send(new GetUserBadgesQuery(profile.Id), cancellationToken));
+            messageBus.InvokeAsync<List<UserBadge>>(new GetUserBadgesQuery(profile.Id), ct));
         var badgeResults = await Task.WhenAll(badgeTasks);
         var allBadges = badgeResults.SelectMany(b => b).ToList();
 
-        _logger.LogInformation("Found {Count} total badges for account {Email}",
+        logger.LogInformation("Found {Count} total badges for account {Email}",
             allBadges.Count, query.Email);
 
         return allBadges;

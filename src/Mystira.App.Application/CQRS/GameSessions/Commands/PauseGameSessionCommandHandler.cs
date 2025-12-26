@@ -5,39 +5,33 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.GameSessions.Commands;
 
 /// <summary>
-/// Handler for PauseGameSessionCommand
-/// Pauses an active game session and records the pause time
+/// Wolverine handler for PauseGameSessionCommand.
+/// Pauses an active game session and records the pause time.
+/// Uses static method convention for cleaner, more testable code.
 /// </summary>
-public class PauseGameSessionCommandHandler : ICommandHandler<PauseGameSessionCommand, GameSession?>
+public static class PauseGameSessionCommandHandler
 {
-    private readonly IGameSessionRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<PauseGameSessionCommandHandler> _logger;
-
-    public PauseGameSessionCommandHandler(
+    /// <summary>
+    /// Handles the PauseGameSessionCommand.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<GameSession?> Handle(
+        PauseGameSessionCommand command,
         IGameSessionRepository repository,
         IUnitOfWork unitOfWork,
-        ILogger<PauseGameSessionCommandHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-    }
-
-    public async Task<GameSession?> Handle(
-        PauseGameSessionCommand command,
-        CancellationToken cancellationToken)
-    {
-        var session = await _repository.GetByIdAsync(command.SessionId);
+        var session = await repository.GetByIdAsync(command.SessionId);
         if (session == null)
         {
-            _logger.LogWarning("Session not found: {SessionId}", command.SessionId);
+            logger.LogWarning("Session not found: {SessionId}", command.SessionId);
             return null;
         }
 
         if (session.Status != SessionStatus.InProgress)
         {
-            _logger.LogWarning("Cannot pause session {SessionId} - not in progress. Current status: {Status}",
+            logger.LogWarning("Cannot pause session {SessionId} - not in progress. Current status: {Status}",
                 command.SessionId, session.Status);
             return null;
         }
@@ -48,12 +42,12 @@ public class PauseGameSessionCommandHandler : ICommandHandler<PauseGameSessionCo
         session.PausedAt = DateTime.UtcNow;
 
         // Update in repository
-        await _repository.UpdateAsync(session);
+        await repository.UpdateAsync(session);
 
         // Persist changes
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Paused game session {SessionId}", session.Id);
+        logger.LogInformation("Paused game session {SessionId}", session.Id);
 
         return session;
     }

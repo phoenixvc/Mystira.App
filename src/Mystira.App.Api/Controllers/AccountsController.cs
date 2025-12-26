@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Accounts.Commands;
 using Mystira.App.Application.CQRS.Accounts.Queries;
@@ -9,18 +9,18 @@ namespace Mystira.App.Api.Controllers;
 
 /// <summary>
 /// Controller for account management.
-/// Follows hexagonal architecture - uses only IMediator (CQRS pattern).
+/// Follows hexagonal architecture - uses only IMessageBus (CQRS pattern).
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class AccountsController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
     private readonly ILogger<AccountsController> _logger;
 
-    public AccountsController(IMediator mediator, ILogger<AccountsController> logger)
+    public AccountsController(IMessageBus bus, ILogger<AccountsController> logger)
     {
-        _mediator = mediator;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -33,7 +33,7 @@ public class AccountsController : ControllerBase
         try
         {
             var query = new GetAccountByEmailQuery(email);
-            var account = await _mediator.Send(query);
+            var account = await _bus.InvokeAsync<Account?>(query);
             if (account == null)
             {
                 return NotFound($"Account with email {email} not found");
@@ -57,7 +57,7 @@ public class AccountsController : ControllerBase
         try
         {
             var query = new GetAccountQuery(accountId);
-            var account = await _mediator.Send(query);
+            var account = await _bus.InvokeAsync<Account?>(query);
             if (account == null)
             {
                 return NotFound($"Account with ID {accountId} not found");
@@ -98,7 +98,7 @@ public class AccountsController : ControllerBase
                 request.Subscription,
                 request.Settings);
 
-            var createdAccount = await _mediator.Send(command);
+            var createdAccount = await _bus.InvokeAsync<Account>(command);
             return CreatedAtAction(nameof(GetAccountById), new { accountId = createdAccount.Id }, createdAccount);
         }
         catch (InvalidOperationException ex)
@@ -127,7 +127,7 @@ public class AccountsController : ControllerBase
                 request.Subscription,
                 request.Settings);
 
-            var updatedAccount = await _mediator.Send(command);
+            var updatedAccount = await _bus.InvokeAsync<Account?>(command);
             if (updatedAccount == null)
             {
                 return NotFound($"Account with ID {accountId} not found");
@@ -151,7 +151,7 @@ public class AccountsController : ControllerBase
         try
         {
             var command = new DeleteAccountCommand(accountId);
-            var success = await _mediator.Send(command);
+            var success = await _bus.InvokeAsync<bool>(command);
             if (!success)
             {
                 return NotFound($"Account with ID {accountId} not found");
@@ -180,7 +180,7 @@ public class AccountsController : ControllerBase
             }
 
             var command = new LinkProfilesToAccountCommand(accountId, request.UserProfileIds);
-            var success = await _mediator.Send(command);
+            var success = await _bus.InvokeAsync<bool>(command);
             if (!success)
             {
                 return NotFound($"Account with ID {accountId} not found or no profiles were linked");
@@ -204,7 +204,7 @@ public class AccountsController : ControllerBase
         try
         {
             var query = new GetProfilesByAccountQuery(accountId);
-            var profiles = await _mediator.Send(query);
+            var profiles = await _bus.InvokeAsync<List<UserProfile>>(query);
             return Ok(profiles);
         }
         catch (Exception ex)
@@ -223,7 +223,7 @@ public class AccountsController : ControllerBase
         try
         {
             var query = new ValidateAccountQuery(email);
-            var isValid = await _mediator.Send(query);
+            var isValid = await _bus.InvokeAsync<bool>(query);
             return Ok(isValid);
         }
         catch (Exception ex)

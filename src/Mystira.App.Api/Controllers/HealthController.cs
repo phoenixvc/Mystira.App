@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Health.Queries;
 using Mystira.App.Api.Models;
@@ -10,12 +10,12 @@ namespace Mystira.App.Api.Controllers;
 [Produces("application/json")]
 public class HealthController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
     private readonly ILogger<HealthController> _logger;
 
-    public HealthController(IMediator mediator, ILogger<HealthController> logger)
+    public HealthController(IMessageBus bus, ILogger<HealthController> logger)
     {
-        _mediator = mediator;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -26,7 +26,7 @@ public class HealthController : ControllerBase
     public async Task<ActionResult<HealthCheckResponse>> GetHealth()
     {
         var query = new GetHealthCheckQuery();
-        var result = await _mediator.Send(query);
+        var result = await _bus.InvokeAsync<HealthCheckResult>(query);
 
         var response = new HealthCheckResponse
         {
@@ -53,7 +53,7 @@ public class HealthController : ControllerBase
     public async Task<ActionResult> GetReady()
     {
         var query = new GetReadinessQuery();
-        var result = await _mediator.Send(query);
+        var result = await _bus.InvokeAsync<ReadinessResult>(query);
 
         return Ok(new { status = result.Status, timestamp = result.Timestamp });
     }
@@ -65,7 +65,7 @@ public class HealthController : ControllerBase
     public async Task<ActionResult> GetLive()
     {
         var query = new GetLivenessQuery();
-        var result = await _mediator.Send(query);
+        var result = await _bus.InvokeAsync<LivenessResult>(query);
 
         return Ok(new { status = result.Status, timestamp = result.Timestamp });
     }

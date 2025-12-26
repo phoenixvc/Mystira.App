@@ -1,86 +1,93 @@
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Mystira.App.Application.Behaviors;
-using Mystira.App.Application.CQRS;
+using Mystira.Shared.CQRS;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Services;
 using Mystira.App.Infrastructure.Data;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.UnitOfWork;
+using Wolverine;
 using IUnitOfWork = Mystira.App.Application.Ports.Data.IUnitOfWork;
 
 namespace Mystira.App.Application.Tests.CQRS;
 
 /// <summary>
 /// Base class for CQRS integration tests.
-/// Provides in-memory database, repositories, and MediatR with caching.
+/// Provides in-memory database, repositories, and Wolverine message bus with caching.
 /// </summary>
-public abstract class CqrsIntegrationTestBase : IDisposable
+public abstract class CqrsIntegrationTestBase : IAsyncDisposable, IDisposable
 {
-    protected ServiceProvider ServiceProvider { get; }
+    protected IHost Host { get; }
+    protected IServiceProvider ServiceProvider => Host.Services;
     protected MystiraAppDbContext DbContext { get; }
-    protected IMediator Mediator { get; }
+    protected IMessageBus MessageBus { get; }
     protected IMemoryCache Cache { get; }
     protected IQueryCacheInvalidationService CacheInvalidation { get; }
 
     protected CqrsIntegrationTestBase()
     {
-        var services = new ServiceCollection();
+        var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder();
 
         // Add in-memory database
-        services.AddDbContext<MystiraAppDbContext>(options =>
+        builder.Services.AddDbContext<MystiraAppDbContext>(options =>
             options.UseInMemoryDatabase($"TestDb_{Guid.NewGuid()}"));
 
-        services.AddScoped<DbContext>(sp => sp.GetRequiredService<MystiraAppDbContext>());
+        builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<MystiraAppDbContext>());
 
         // Add repositories
-        services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
-        services.AddScoped<IGameSessionRepository, GameSessionRepository>();
-        services.AddScoped<IUserProfileRepository, UserProfileRepository>();
-        services.AddScoped<IAccountRepository, AccountRepository>();
-        services.AddScoped<IScenarioRepository, ScenarioRepository>();
-        services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
-        services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
-        services.AddScoped<IBadgeRepository, BadgeRepository>();
-        services.AddScoped<IAxisAchievementRepository, AxisAchievementRepository>();
-        services.AddScoped<IBadgeImageRepository, BadgeImageRepository>();
-        services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
-        services.AddScoped<IAgeGroupRepository, AgeGroupRepository>();
-        services.AddScoped<ICompassAxisRepository, CompassAxisRepository>();
-        services.AddScoped<IArchetypeRepository, ArchetypeRepository>();
-        services.AddScoped<IFantasyThemeRepository, FantasyThemeRepository>();
-        services.AddScoped<IEchoTypeRepository, EchoTypeRepository>();
+        builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+        builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();
+        builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
+        builder.Services.AddScoped<IAccountRepository, AccountRepository>();
+        builder.Services.AddScoped<IScenarioRepository, ScenarioRepository>();
+        builder.Services.AddScoped<IContentBundleRepository, ContentBundleRepository>();
+        builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
+        builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
+        builder.Services.AddScoped<IAxisAchievementRepository, AxisAchievementRepository>();
+        builder.Services.AddScoped<IBadgeImageRepository, BadgeImageRepository>();
+        builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
+        builder.Services.AddScoped<IAgeGroupRepository, AgeGroupRepository>();
+        builder.Services.AddScoped<ICompassAxisRepository, CompassAxisRepository>();
+        builder.Services.AddScoped<IArchetypeRepository, ArchetypeRepository>();
+        builder.Services.AddScoped<IFantasyThemeRepository, FantasyThemeRepository>();
+        builder.Services.AddScoped<IEchoTypeRepository, EchoTypeRepository>();
 
         // Add Unit of Work (explicitly use Application port as service type)
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         // Add Memory Cache
-        services.AddMemoryCache(options =>
+        builder.Services.AddMemoryCache(options =>
         {
             options.SizeLimit = 1024;
             options.CompactionPercentage = 0.25;
         });
 
         // Add Cache Invalidation Service
-        services.AddSingleton<IQueryCacheInvalidationService, QueryCacheInvalidationService>();
-
-        // Add MediatR with caching behavior
-        services.AddMediatR(cfg =>
-        {
-            // Register handlers from Application assembly; using IQuery<> marker type
-            cfg.RegisterServicesFromAssembly(typeof(IQuery<>).Assembly);
-            cfg.AddOpenBehavior(typeof(QueryCachingBehavior<,>));
-        });
+        builder.Services.AddSingleton<IQueryCacheInvalidationService, QueryCacheInvalidationService>();
 
         // Add logging
-        services.AddLogging(builder => builder.AddDebug().SetMinimumLevel(LogLevel.Debug));
+        builder.Logging.AddDebug().SetMinimumLevel(LogLevel.Debug);
 
-        ServiceProvider = services.BuildServiceProvider();
+        // Configure Wolverine
+        builder.Host.UseWolverine(opts =>
+        {
+            // Discover handlers from Application assembly
+            opts.Discovery.IncludeAssembly(typeof(IQuery<>).Assembly);
+
+            // Use durable local queues for testing
+            opts.Policies.UseDurableLocalQueues();
+        });
+
+        Host = builder.Build();
+
+        // Start the host to initialize Wolverine
+        Host.Start();
+
         DbContext = ServiceProvider.GetRequiredService<MystiraAppDbContext>();
-        Mediator = ServiceProvider.GetRequiredService<IMediator>();
+        MessageBus = ServiceProvider.GetRequiredService<IMessageBus>();
         Cache = ServiceProvider.GetRequiredService<IMemoryCache>();
         CacheInvalidation = ServiceProvider.GetRequiredService<IQueryCacheInvalidationService>();
     }
@@ -107,11 +114,17 @@ public abstract class CqrsIntegrationTestBase : IDisposable
         CacheInvalidation.ClearTrackedKeys();
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         CacheInvalidation?.ClearTrackedKeys();
         DbContext?.Dispose();
-        ServiceProvider?.Dispose();
+        await Host.StopAsync();
+        Host.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    public void Dispose()
+    {
+        DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 }

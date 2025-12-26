@@ -5,28 +5,22 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.GameSessions.Commands;
 
 /// <summary>
-/// Handler for MakeChoiceCommand
-/// Records a player's choice in the game session and updates the current scene
+/// Wolverine handler for MakeChoiceCommand.
+/// Records a player's choice in the game session and updates the current scene.
+/// Uses static method convention for cleaner, more testable code.
 /// </summary>
-public class MakeChoiceCommandHandler : ICommandHandler<MakeChoiceCommand, GameSession?>
+public static class MakeChoiceCommandHandler
 {
-    private readonly IGameSessionRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<MakeChoiceCommandHandler> _logger;
-
-    public MakeChoiceCommandHandler(
+    /// <summary>
+    /// Handles the MakeChoiceCommand.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<GameSession?> Handle(
+        MakeChoiceCommand command,
         IGameSessionRepository repository,
         IUnitOfWork unitOfWork,
-        ILogger<MakeChoiceCommandHandler> logger)
-    {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-    }
-
-    public async Task<GameSession?> Handle(
-        MakeChoiceCommand command,
-        CancellationToken cancellationToken)
+        ILogger logger,
+        CancellationToken ct)
     {
         var request = command.Request;
 
@@ -50,10 +44,10 @@ public class MakeChoiceCommandHandler : ICommandHandler<MakeChoiceCommand, GameS
             throw new ArgumentException("NextSceneId is required");
         }
 
-        var session = await _repository.GetByIdAsync(request.SessionId);
+        var session = await repository.GetByIdAsync(request.SessionId);
         if (session == null)
         {
-            _logger.LogWarning("Session not found: {SessionId}", request.SessionId);
+            logger.LogWarning("Session not found: {SessionId}", request.SessionId);
             return null;
         }
 
@@ -103,10 +97,10 @@ public class MakeChoiceCommandHandler : ICommandHandler<MakeChoiceCommand, GameS
 
         session.RecalculateCompassProgressFromHistory();
 
-        await _repository.UpdateAsync(session);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.UpdateAsync(session);
+        await unitOfWork.SaveChangesAsync(ct);
 
-        _logger.LogInformation(
+        logger.LogInformation(
             "Recorded choice in session {SessionId}: {ChoiceText} -> {NextSceneId} (PlayerId={PlayerId})",
             session.Id,
             request.ChoiceText,

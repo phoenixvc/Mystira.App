@@ -333,7 +333,7 @@ CQRS separates **read operations** (Queries) from **write operations** (Commands
 └──────────────┬──────────────────────────────────┘
                ↓
 ┌──────────────┴──────────────────────────────────┐
-│            MediatR (Mediator)                   │
+│         Wolverine (Message Bus)                 │
 └──────┬───────────────────────────┬──────────────┘
        ↓                           ↓
 ┌──────────────────┐     ┌──────────────────────┐
@@ -372,15 +372,16 @@ namespace Mystira.App.Application.CQRS.Scenarios.Commands;
 public record CreateScenarioCommand(CreateScenarioRequest Request) : ICommand<Scenario>;
 ```
 
-**Example - CreateScenarioCommandHandler:**
+**Example - CreateScenarioCommandHandler (Wolverine static handler):**
 ```csharp
-public class CreateScenarioCommandHandler : ICommandHandler<CreateScenarioCommand, Scenario>
+public static class CreateScenarioCommandHandler
 {
-    private readonly IScenarioRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<CreateScenarioCommandHandler> _logger;
-
-    public async Task<Scenario> Handle(CreateScenarioCommand command, CancellationToken cancellationToken)
+    public static async Task<Scenario> Handle(
+        CreateScenarioCommand command,
+        IScenarioRepository repository,
+        IUnitOfWork unitOfWork,
+        ILogger logger,
+        CancellationToken cancellationToken)
     {
         // 1. Validate
         // 2. Create domain entity
@@ -413,16 +414,17 @@ namespace Mystira.App.Application.CQRS.Scenarios.Queries;
 public record GetScenarioQuery(string ScenarioId) : IQuery<Scenario?>;
 ```
 
-**Example - GetScenarioQueryHandler:**
+**Example - GetScenarioQueryHandler (Wolverine static handler):**
 ```csharp
-public class GetScenarioQueryHandler : IQueryHandler<GetScenarioQuery, Scenario?>
+public static class GetScenarioQueryHandler
 {
-    private readonly IScenarioRepository _repository;
-    private readonly ILogger<GetScenarioQueryHandler> _logger;
-
-    public async Task<Scenario?> Handle(GetScenarioQuery request, CancellationToken cancellationToken)
+    public static async Task<Scenario?> Handle(
+        GetScenarioQuery request,
+        IScenarioRepository repository,
+        ILogger logger,
+        CancellationToken cancellationToken)
     {
-        return await _repository.GetByIdAsync(request.ScenarioId);
+        return await repository.GetByIdAsync(request.ScenarioId);
     }
 }
 ```
@@ -434,11 +436,11 @@ public class GetScenarioQueryHandler : IQueryHandler<GetScenarioQuery, Scenario?
 [Route("api/scenarios")]
 public class ScenariosController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
 
-    public ScenariosController(IMediator mediator)
+    public ScenariosController(IMessageBus bus)
     {
-        _mediator = mediator;
+        _bus = bus;
     }
 
     // Command (Write)
@@ -446,7 +448,7 @@ public class ScenariosController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateScenarioRequest request)
     {
         var command = new CreateScenarioCommand(request);
-        var scenario = await _mediator.Send(command);
+        var scenario = await _bus.InvokeAsync<Scenario>(command);
         return CreatedAtAction(nameof(Get), new { id = scenario.Id }, scenario);
     }
 
@@ -455,7 +457,7 @@ public class ScenariosController : ControllerBase
     public async Task<IActionResult> Get(string id)
     {
         var query = new GetScenarioQuery(id);
-        var scenario = await _mediator.Send(query);
+        var scenario = await _bus.InvokeAsync<Scenario?>(query);
         if (scenario == null) return NotFound();
         return Ok(scenario);
     }
@@ -464,31 +466,31 @@ public class ScenariosController : ControllerBase
 
 ### CQRS Base Interfaces
 
-**ICommand<TResponse>** - Commands that return a result:
+**ICommand<TResponse>** - Commands that return a result (marker interface for Wolverine):
 ```csharp
-public interface ICommand<out TResponse> : IRequest<TResponse> { }
+public interface ICommand<out TResponse> { }
 ```
 
 **ICommand** - Commands with no result:
 ```csharp
-public interface ICommand : IRequest { }
+public interface ICommand { }
 ```
 
 **IQuery<TResponse>** - Queries (always return data):
 ```csharp
-public interface IQuery<out TResponse> : IRequest<TResponse> { }
+public interface IQuery<out TResponse> { }
 ```
 
-**ICommandHandler<TCommand, TResponse>** - Command handlers:
+**Wolverine Handlers** - Convention-based static methods:
 ```csharp
-public interface ICommandHandler<in TCommand, TResponse> : IRequestHandler<TCommand, TResponse>
-    where TCommand : ICommand<TResponse> { }
-```
-
-**IQueryHandler<TQuery, TResponse>** - Query handlers:
-```csharp
-public interface IQueryHandler<in TQuery, TResponse> : IRequestHandler<TQuery, TResponse>
-    where TQuery : IQuery<TResponse> { }
+// Wolverine discovers handlers by convention - no interfaces needed
+public static class CreateScenarioCommandHandler
+{
+    public static async Task<Scenario> Handle(
+        CreateScenarioCommand command,
+        IScenarioRepository repository,
+        CancellationToken ct) => ...
+}
 ```
 
 ---
@@ -711,7 +713,7 @@ public class GetPaginatedScenariosQueryHandler : IQueryHandler<GetPaginatedScena
 public async Task<IActionResult> GetScenarios([FromQuery] int page = 1, [FromQuery] int size = 10)
 {
     var query = new GetPaginatedScenariosQuery(page, size);
-    var scenarios = await _mediator.Send(query);
+    var scenarios = await _bus.InvokeAsync<IEnumerable<Scenario>>(query);
     return Ok(scenarios);
 }
 ```
@@ -739,11 +741,11 @@ public async Task<IActionResult> GetScenarios([FromQuery] int page = 1, [FromQue
 
 ### NuGet Packages
 ```xml
-<PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
-<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
-<PackageReference Include="AutoMapper" Version="13.0.1" />
+<PackageReference Include="Wolverine" Version="3.8.3" />
+<PackageReference Include="FluentValidation" Version="11.11.0" />
+<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
 <PackageReference Include="NJsonSchema" Version="11.1.0" />
-<PackageReference Include="MediatR" Version="12.4.1" />
+<PackageReference Include="Ardalis.Specification" Version="9.3.1" />
 ```
 
 ---
@@ -877,7 +879,7 @@ public class AccountsController : ControllerBase
 
 1. **CQRS (Command Query Responsibility Segregation)** - Separate read/write operations
 2. **Specification Pattern** - Reusable, composable query logic
-3. **Mediator Pattern** - MediatR for request/response handling
+3. **Message Bus Pattern** - Wolverine for event-driven messaging
 4. **Repository Pattern** - Data access through repositories
 5. **Unit of Work** - Transactional consistency
 6. **Dependency Injection** - All dependencies injected

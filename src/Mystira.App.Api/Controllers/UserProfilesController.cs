@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.UserProfiles.Commands;
@@ -11,21 +11,21 @@ namespace Mystira.App.Api.Controllers;
 
 /// <summary>
 /// Controller for user profile management.
-/// Follows hexagonal architecture - uses only IMediator (CQRS pattern).
+/// Follows hexagonal architecture - uses only IMessageBus (CQRS pattern).
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class UserProfilesController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
     private readonly ILogger<UserProfilesController> _logger;
 
     public UserProfilesController(
-        IMediator mediator,
+        IMessageBus bus,
         ILogger<UserProfilesController> logger)
     {
-        _mediator = mediator;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -51,7 +51,7 @@ public class UserProfilesController : ControllerBase
             }
 
             var command = new CreateUserProfileCommand(request);
-            var profile = await _mediator.Send(command);
+            var profile = await _bus.InvokeAsync<UserProfile>(command);
             return CreatedAtAction(nameof(GetProfileById), new { id = profile.Id }, profile);
         }
         catch (ArgumentException ex)
@@ -85,7 +85,7 @@ public class UserProfilesController : ControllerBase
             _logger.LogInformation("Getting profiles for account {AccountId}", accountId);
 
             var query = new GetProfilesByAccountQuery(accountId);
-            var profiles = await _mediator.Send(query);
+            var profiles = await _bus.InvokeAsync<List<UserProfile>>(query);
             return Ok(profiles);
         }
         catch (Exception ex)
@@ -108,7 +108,7 @@ public class UserProfilesController : ControllerBase
         try
         {
             var query = new GetUserProfileQuery(id);
-            var profile = await _mediator.Send(query);
+            var profile = await _bus.InvokeAsync<UserProfile?>(query);
             if (profile == null)
             {
                 return NotFound(new ErrorResponse
@@ -153,7 +153,7 @@ public class UserProfilesController : ControllerBase
             }
 
             var command = new UpdateUserProfileCommand(id, request);
-            var updatedProfile = await _mediator.Send(command);
+            var updatedProfile = await _bus.InvokeAsync<UserProfile?>(command);
             if (updatedProfile == null)
             {
                 return NotFound(new ErrorResponse
@@ -207,7 +207,7 @@ public class UserProfilesController : ControllerBase
             }
 
             var command = new UpdateUserProfileCommand(profileId, request);
-            var updatedProfile = await _mediator.Send(command);
+            var updatedProfile = await _bus.InvokeAsync<UserProfile?>(command);
             if (updatedProfile == null)
             {
                 return NotFound(new ErrorResponse
@@ -248,7 +248,7 @@ public class UserProfilesController : ControllerBase
         try
         {
             var command = new DeleteUserProfileCommand(id);
-            var deleted = await _mediator.Send(command);
+            var deleted = await _bus.InvokeAsync<bool>(command);
             if (!deleted)
             {
                 return NotFound(new ErrorResponse
@@ -280,7 +280,7 @@ public class UserProfilesController : ControllerBase
         try
         {
             var command = new CompleteOnboardingCommand(id);
-            var success = await _mediator.Send(command);
+            var success = await _bus.InvokeAsync<bool>(command);
             if (!success)
             {
                 return NotFound(new ErrorResponse
@@ -326,7 +326,7 @@ public class UserProfilesController : ControllerBase
             }
 
             var command = new CreateMultipleProfilesCommand(request);
-            var profiles = await _mediator.Send(command);
+            var profiles = await _bus.InvokeAsync<List<UserProfile>>(command);
             return Ok(profiles);
         }
         catch (Exception ex)
@@ -365,7 +365,7 @@ public class UserProfilesController : ControllerBase
                 request.ProfileId,
                 request.CharacterId,
                 request.IsNpcAssignment);
-            var success = await _mediator.Send(command);
+            var success = await _bus.InvokeAsync<bool>(command);
 
             if (!success)
             {
@@ -400,7 +400,7 @@ public class UserProfilesController : ControllerBase
         try
         {
             var command = new RemoveProfileFromAccountCommand(profileId);
-            var success = await _mediator.Send(command);
+            var success = await _bus.InvokeAsync<bool>(command);
 
             if (!success)
             {

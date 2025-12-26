@@ -5,40 +5,30 @@ using Mystira.Contracts.App.Responses.Media;
 namespace Mystira.App.Application.CQRS.Avatars.Queries;
 
 /// <summary>
-/// Handler for retrieving avatars for a specific age group.
+/// Wolverine handler for retrieving avatars for a specific age group.
 /// Returns empty list if age group not found.
 /// </summary>
-public class GetAvatarsByAgeGroupQueryHandler
-    : IQueryHandler<GetAvatarsByAgeGroupQuery, AvatarConfigurationResponse?>
+public static class GetAvatarsByAgeGroupQueryHandler
 {
-    private readonly IAvatarConfigurationFileRepository _repository;
-    private readonly ILogger<GetAvatarsByAgeGroupQueryHandler> _logger;
-
-    public GetAvatarsByAgeGroupQueryHandler(
-        IAvatarConfigurationFileRepository repository,
-        ILogger<GetAvatarsByAgeGroupQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<AvatarConfigurationResponse?> Handle(
+    public static async Task<AvatarConfigurationResponse?> Handle(
         GetAvatarsByAgeGroupQuery query,
-        CancellationToken cancellationToken)
+        IAvatarConfigurationFileRepository repository,
+        ILogger<GetAvatarsByAgeGroupQuery> logger,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(query.AgeGroup))
         {
-            _logger.LogWarning("Age group is required");
+            logger.LogWarning("Age group is required");
             return null;
         }
 
-        _logger.LogInformation("Retrieving avatars for age group: {AgeGroup}", query.AgeGroup);
+        logger.LogInformation("Retrieving avatars for age group: {AgeGroup}", query.AgeGroup);
 
-        var configFile = await _repository.GetAsync();
+        var configFile = await repository.GetAsync();
 
         if (configFile == null || !configFile.AgeGroupAvatars.TryGetValue(query.AgeGroup, out var avatars))
         {
-            _logger.LogInformation("No avatars found for age group: {AgeGroup}", query.AgeGroup);
+            logger.LogInformation("No avatars found for age group: {AgeGroup}", query.AgeGroup);
             return new AvatarConfigurationResponse
             {
                 AgeGroup = query.AgeGroup,
@@ -46,7 +36,7 @@ public class GetAvatarsByAgeGroupQueryHandler
             };
         }
 
-        _logger.LogInformation("Found {Count} avatars for age group: {AgeGroup}",
+        logger.LogInformation("Found {Count} avatars for age group: {AgeGroup}",
             avatars.Count, query.AgeGroup);
 
         return new AvatarConfigurationResponse

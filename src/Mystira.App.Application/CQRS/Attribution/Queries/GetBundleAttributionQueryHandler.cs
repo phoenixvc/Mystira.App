@@ -7,33 +7,26 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.Attribution.Queries;
 
 /// <summary>
-/// Handler for GetBundleAttributionQuery - retrieves creator credits for a content bundle
+/// Wolverine handler for GetBundleAttributionQuery - retrieves creator credits for a content bundle
 /// </summary>
-public class GetBundleAttributionQueryHandler : IQueryHandler<GetBundleAttributionQuery, ContentAttributionResponse?>
+public static class GetBundleAttributionQueryHandler
 {
-    private readonly IContentBundleRepository _repository;
-    private readonly ILogger<GetBundleAttributionQueryHandler> _logger;
-
-    public GetBundleAttributionQueryHandler(
+    public static async Task<ContentAttributionResponse?> Handle(
+        GetBundleAttributionQuery request,
         IContentBundleRepository repository,
-        ILogger<GetBundleAttributionQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<ContentAttributionResponse?> Handle(GetBundleAttributionQuery request, CancellationToken cancellationToken)
+        ILogger<GetBundleAttributionQuery> logger,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.BundleId))
         {
             throw new ArgumentException("Bundle ID cannot be null or empty", nameof(request.BundleId));
         }
 
-        var bundle = await _repository.GetByIdAsync(request.BundleId);
+        var bundle = await repository.GetByIdAsync(request.BundleId);
 
         if (bundle == null)
         {
-            _logger.LogWarning("Content bundle not found for attribution: {BundleId}", request.BundleId);
+            logger.LogWarning("Content bundle not found for attribution: {BundleId}", request.BundleId);
             return null;
         }
 

@@ -4,34 +4,25 @@ using Mystira.App.Application.Ports.Messaging;
 namespace Mystira.App.Application.CQRS.Discord.Queries;
 
 /// <summary>
-/// Handler for retrieving Discord bot status.
+/// Wolverine message handler for retrieving Discord bot status.
 /// Checks bot service state via the platform-agnostic IChatBotService.
 /// </summary>
-public class GetDiscordBotStatusQueryHandler
-    : IQueryHandler<GetDiscordBotStatusQuery, DiscordBotStatusResponse>
+public static class GetDiscordBotStatusQueryHandler
 {
-    // FIX: Remove optional dependency anti-pattern - require the service
-    private readonly IChatBotService _chatBotService;
-    private readonly ILogger<GetDiscordBotStatusQueryHandler> _logger;
-
-    public GetDiscordBotStatusQueryHandler(
-        ILogger<GetDiscordBotStatusQueryHandler> logger,
-        IChatBotService chatBotService)
-    {
-        _logger = logger;
-        _chatBotService = chatBotService ?? throw new ArgumentNullException(nameof(chatBotService));
-    }
-
-    public Task<DiscordBotStatusResponse> Handle(
+    public static Task<DiscordBotStatusResponse> Handle(
         GetDiscordBotStatusQuery request,
-        CancellationToken cancellationToken)
+        IChatBotService chatBotService,
+        ILogger<GetDiscordBotStatusQuery> logger,
+        CancellationToken ct)
     {
-        var status = _chatBotService.GetStatus();
+        if (chatBotService == null)
+            throw new ArgumentNullException(nameof(chatBotService));
 
-        _logger.LogDebug("Discord bot status: Enabled={Enabled}, Connected={Connected}, Username={Username}",
+        var status = chatBotService.GetStatus();
+
+        logger.LogDebug("Discord bot status: Enabled={Enabled}, Connected={Connected}, Username={Username}",
             status.IsEnabled, status.IsConnected, status.BotName);
 
-        // FIX: Include BotId from status instead of always returning null
         return Task.FromResult(new DiscordBotStatusResponse(
             Enabled: status.IsEnabled,
             Connected: status.IsConnected,

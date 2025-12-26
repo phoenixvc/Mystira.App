@@ -4,26 +4,23 @@ using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.UserBadges.Commands;
 
-public class AwardBadgeCommandHandler : ICommandHandler<AwardBadgeCommand, UserBadge>
+/// <summary>
+/// Wolverine handler for AwardBadgeCommand.
+/// Awards a badge to a user profile - this is a write operation that modifies state.
+/// </summary>
+public static class AwardBadgeCommandHandler
 {
-    private readonly IUserBadgeRepository _repository;
-    private readonly IRepository<BadgeConfiguration> _badgeConfigRepository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<AwardBadgeCommandHandler> _logger;
-
-    public AwardBadgeCommandHandler(
+    /// <summary>
+    /// Handles the AwardBadgeCommand by creating a user badge in the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<UserBadge> Handle(
+        AwardBadgeCommand command,
         IUserBadgeRepository repository,
         IRepository<BadgeConfiguration> badgeConfigRepository,
         IUnitOfWork unitOfWork,
-        ILogger<AwardBadgeCommandHandler> logger)
-    {
-        _repository = repository;
-        _badgeConfigRepository = badgeConfigRepository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-    }
-
-    public async Task<UserBadge> Handle(AwardBadgeCommand command, CancellationToken cancellationToken)
+        ILogger logger,
+        CancellationToken ct)
     {
         var request = command.Request;
 
@@ -37,7 +34,7 @@ public class AwardBadgeCommandHandler : ICommandHandler<AwardBadgeCommand, UserB
             throw new ArgumentException("BadgeConfigurationId is required");
         }
 
-        var badgeConfig = await _badgeConfigRepository.GetByIdAsync(request.BadgeConfigurationId);
+        var badgeConfig = await badgeConfigRepository.GetByIdAsync(request.BadgeConfigurationId);
         if (badgeConfig == null)
         {
             throw new ArgumentException($"Badge not found: {request.BadgeConfigurationId}");
@@ -60,10 +57,10 @@ public class AwardBadgeCommandHandler : ICommandHandler<AwardBadgeCommand, UserB
             EarnedAt = DateTime.UtcNow
         };
 
-        await _repository.AddAsync(badge);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.AddAsync(badge);
+        await unitOfWork.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Awarded badge {BadgeId} to user profile {UserProfileId}",
+        logger.LogInformation("Awarded badge {BadgeId} to user profile {UserProfileId}",
             badge.Id, request.UserProfileId);
 
         return badge;

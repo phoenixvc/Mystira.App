@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.AgeGroups.Queries;
 using Mystira.App.Api.Models;
@@ -10,12 +10,12 @@ namespace Mystira.App.Api.Controllers;
 [Route("api/[controller]")]
 public class AgeGroupsController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
     private readonly ILogger<AgeGroupsController> _logger;
 
-    public AgeGroupsController(IMediator mediator, ILogger<AgeGroupsController> logger)
+    public AgeGroupsController(IMessageBus bus, ILogger<AgeGroupsController> logger)
     {
-        _mediator = mediator;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -23,7 +23,7 @@ public class AgeGroupsController : ControllerBase
     public async Task<ActionResult<List<AgeGroupDefinition>>> GetAllAgeGroups()
     {
         _logger.LogInformation("GET: Retrieving all age groups");
-        var ageGroups = await _mediator.Send(new GetAllAgeGroupsQuery());
+        var ageGroups = await _bus.InvokeAsync<List<AgeGroupDefinition>>(new GetAllAgeGroupsQuery());
         return Ok(ageGroups);
     }
 
@@ -31,7 +31,7 @@ public class AgeGroupsController : ControllerBase
     public async Task<ActionResult<AgeGroupDefinition>> GetAgeGroupById(string id)
     {
         _logger.LogInformation("GET: Retrieving age group with id: {Id}", id);
-        var ageGroup = await _mediator.Send(new GetAgeGroupByIdQuery(id));
+        var ageGroup = await _bus.InvokeAsync<AgeGroupDefinition?>(new GetAgeGroupByIdQuery(id));
         if (ageGroup == null)
         {
             _logger.LogWarning("Age group with id {Id} not found", id);
@@ -45,7 +45,7 @@ public class AgeGroupsController : ControllerBase
     {
         _logger.LogInformation("POST: Validating age group: {Value}", request.Value);
 
-        var isValid = await _mediator.Send(new ValidateAgeGroupQuery(request.Value));
+        var isValid = await _bus.InvokeAsync<bool>(new ValidateAgeGroupQuery(request.Value));
         return Ok(new ValidationResult { IsValid = isValid });
     }
 }

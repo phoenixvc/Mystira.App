@@ -6,32 +6,24 @@ using ContractCharacterAssignmentDto = Mystira.Contracts.App.Models.CharacterAss
 namespace Mystira.App.Application.CQRS.GameSessions.Commands;
 
 /// <summary>
-/// Handler for StartGameSessionCommand
+/// Wolverine handler for StartGameSessionCommand.
 /// Creates a new game session with initial state.
 /// Ensures only one active session exists per account/profile/scenario.
+/// Uses static method convention for cleaner, more testable code.
 /// </summary>
-public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCommand, GameSession>
+public static class StartGameSessionCommandHandler
 {
-    private readonly IGameSessionRepository _repository;
-    private readonly IScenarioRepository _scenarioRepository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<StartGameSessionCommandHandler> _logger;
-
-    public StartGameSessionCommandHandler(
+    /// <summary>
+    /// Handles the StartGameSessionCommand.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<GameSession> Handle(
+        StartGameSessionCommand command,
         IGameSessionRepository repository,
         IScenarioRepository scenarioRepository,
         IUnitOfWork unitOfWork,
-        ILogger<StartGameSessionCommandHandler> logger)
-    {
-        _repository = repository;
-        _scenarioRepository = scenarioRepository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-    }
-
-    public async Task<GameSession> Handle(
-        StartGameSessionCommand command,
-        CancellationToken cancellationToken)
+        ILogger logger,
+        CancellationToken ct)
     {
         var request = command.Request;
 
@@ -58,7 +50,7 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
 
         // If there is already an active session for this scenario/account/profile, reuse it.
         // This prevents duplicates caused by retries, double-clicks, or user re-entering start flow.
-        var existingActiveSessions = (await _repository
+        var existingActiveSessions = (await repository
                 .GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId))
             .Where(s => string.Equals(s.ProfileId, request.ProfileId, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(s => s.StartTime)
@@ -71,7 +63,7 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
 
             if (duplicates.Any())
             {
-                _logger.LogWarning(
+                logger.LogWarning(
                     "Found {Count} duplicate active sessions for ScenarioId={ScenarioId}, AccountId={AccountId}, ProfileId={ProfileId}. Cleaning up.",
                     duplicates.Count,
                     request.ScenarioId,
@@ -82,18 +74,18 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
                 {
                     if (IsEffectivelyEmptySession(duplicate))
                     {
-                        await _repository.DeleteAsync(duplicate.Id);
+                        await repository.DeleteAsync(duplicate.Id);
                     }
                     else
                     {
                         duplicate.Status = SessionStatus.Abandoned;
                         duplicate.EndTime = DateTime.UtcNow;
                         duplicate.ElapsedTime = duplicate.EndTime.Value - duplicate.StartTime;
-                        await _repository.UpdateAsync(duplicate);
+                        await repository.UpdateAsync(duplicate);
                     }
                 }
 
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await unitOfWork.SaveChangesAsync(ct);
             }
 
             var updated = false;
@@ -129,7 +121,7 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
             // Ensure the server-side session has an initial CurrentSceneId so it can be resumed cleanly.
             if (string.IsNullOrWhiteSpace(primary.CurrentSceneId))
             {
-                var scenario = await _scenarioRepository.GetByIdAsync(request.ScenarioId);
+                var scenario = await scenarioRepository.GetByIdAsync(request.ScenarioId);
                 if (scenario != null)
                 {
                     primary.CurrentSceneId = DetermineStartingSceneId(scenario);
@@ -140,11 +132,11 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
 
             if (updated)
             {
-                await _repository.UpdateAsync(primary);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await repository.UpdateAsync(primary);
+                await unitOfWork.SaveChangesAsync(ct);
             }
 
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Reusing existing active game session {SessionId} for ScenarioId={ScenarioId}, AccountId={AccountId}, ProfileId={ProfileId}",
                 primary.Id,
                 request.ScenarioId,
@@ -154,12 +146,12 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
             return primary;
         }
 
-        var scenarioEntity = await _scenarioRepository.GetByIdAsync(request.ScenarioId);
+        var scenarioEntity = await scenarioRepository.GetByIdAsync(request.ScenarioId);
         if (scenarioEntity == null)
         {
             // Be tolerant in case a stale/invalid scenario id is provided (or tests that don't seed scenarios).
             // When scenario data is unavailable, we still create the session, but cannot initialize scene/axis metadata.
-            _logger.LogWarning(
+            logger.LogWarning(
                 "Scenario {ScenarioId} was not found when starting a game session. Creating session without scenario metadata.",
                 request.ScenarioId);
         }
@@ -219,10 +211,10 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
             }
         }
 
-        await _repository.AddAsync(session);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.AddAsync(session);
+        await unitOfWork.SaveChangesAsync(ct);
 
-        _logger.LogInformation(
+        logger.LogInformation(
             "Started game session {SessionId} for scenario {ScenarioId}, account {AccountId}",
             session.Id,
             request.ScenarioId,

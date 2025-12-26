@@ -4,33 +4,26 @@ using Mystira.App.Application.Ports.Data;
 namespace Mystira.App.Application.CQRS.UserProfiles.Commands;
 
 /// <summary>
-/// Handler for CompleteOnboardingCommand
-/// Marks the onboarding process as completed for a user profile
+/// Wolverine handler for CompleteOnboardingCommand.
+/// Marks the onboarding process as completed for a user profile.
 /// </summary>
-public class CompleteOnboardingCommandHandler : ICommandHandler<CompleteOnboardingCommand, bool>
+public static class CompleteOnboardingCommandHandler
 {
-    private readonly IUserProfileRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<CompleteOnboardingCommandHandler> _logger;
-
-    public CompleteOnboardingCommandHandler(
+    /// <summary>
+    /// Handles the CompleteOnboardingCommand by marking onboarding as complete.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<bool> Handle(
+        CompleteOnboardingCommand command,
         IUserProfileRepository repository,
         IUnitOfWork unitOfWork,
-        ILogger<CompleteOnboardingCommandHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-    }
-
-    public async Task<bool> Handle(
-        CompleteOnboardingCommand command,
-        CancellationToken cancellationToken)
-    {
-        var profile = await _repository.GetByIdAsync(command.ProfileId);
+        var profile = await repository.GetByIdAsync(command.ProfileId);
         if (profile == null)
         {
-            _logger.LogWarning("Profile not found: {ProfileId}", command.ProfileId);
+            logger.LogWarning("Profile not found: {ProfileId}", command.ProfileId);
             return false;
         }
 
@@ -39,12 +32,12 @@ public class CompleteOnboardingCommandHandler : ICommandHandler<CompleteOnboardi
         profile.UpdatedAt = DateTime.UtcNow;
 
         // Update in repository
-        await _repository.UpdateAsync(profile);
+        await repository.UpdateAsync(profile);
 
         // Persist changes
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Completed onboarding for profile {ProfileId}", command.ProfileId);
+        logger.LogInformation("Completed onboarding for profile {ProfileId}", command.ProfileId);
 
         return true;
     }

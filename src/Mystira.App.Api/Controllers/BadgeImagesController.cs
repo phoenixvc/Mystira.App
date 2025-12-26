@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Badges.Queries;
@@ -10,12 +10,12 @@ namespace Mystira.App.Api.Controllers;
 [Route("api/badges/images")]
 public class BadgeImagesController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
     private readonly ILogger<BadgeImagesController> _logger;
 
-    public BadgeImagesController(IMediator mediator, ILogger<BadgeImagesController> logger)
+    public BadgeImagesController(IMessageBus bus, ILogger<BadgeImagesController> logger)
     {
-        _mediator = mediator;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -34,7 +34,7 @@ public class BadgeImagesController : ControllerBase
 
         try
         {
-            var result = await _mediator.Send(new GetBadgeImageQuery(imageId));
+            var result = await _bus.InvokeAsync<BadgeImageResult?>(new GetBadgeImageQuery(imageId));
 
             if (result is null)
             {

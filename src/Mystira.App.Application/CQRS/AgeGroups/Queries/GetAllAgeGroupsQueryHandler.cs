@@ -5,28 +5,19 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.AgeGroups.Queries;
 
 /// <summary>
-/// Handler for retrieving all age groups.
+/// Wolverine handler for retrieving all age groups.
 /// </summary>
-public class GetAllAgeGroupsQueryHandler : IQueryHandler<GetAllAgeGroupsQuery, List<AgeGroupDefinition>>
+public static class GetAllAgeGroupsQueryHandler
 {
-    private readonly IAgeGroupRepository _repository;
-    private readonly ILogger<GetAllAgeGroupsQueryHandler> _logger;
-
-    public GetAllAgeGroupsQueryHandler(
-        IAgeGroupRepository repository,
-        ILogger<GetAllAgeGroupsQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<List<AgeGroupDefinition>> Handle(
+    public static async Task<List<AgeGroupDefinition>> Handle(
         GetAllAgeGroupsQuery query,
-        CancellationToken cancellationToken)
+        IAgeGroupRepository repository,
+        ILogger logger,
+        CancellationToken ct)
     {
-        _logger.LogInformation("Retrieving all age groups");
-        var ageGroups = await _repository.GetAllAsync();
-        _logger.LogInformation("Retrieved {Count} age groups", ageGroups.Count);
+        logger.LogInformation("Retrieving all age groups");
+        var ageGroups = await repository.GetAllAsync();
+        logger.LogInformation("Retrieved {Count} age groups", ageGroups.Count);
         return ageGroups;
     }
 }

@@ -8,43 +8,34 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.Attribution.Queries;
 
 /// <summary>
-/// Handler for GetBundleIpStatusQuery - retrieves IP registration status for a content bundle
+/// Wolverine handler for GetBundleIpStatusQuery - retrieves IP registration status for a content bundle
 /// </summary>
-public class GetBundleIpStatusQueryHandler : IQueryHandler<GetBundleIpStatusQuery, IpVerificationResponse?>
+public static class GetBundleIpStatusQueryHandler
 {
-    private readonly IContentBundleRepository _repository;
-    private readonly ILogger<GetBundleIpStatusQueryHandler> _logger;
-    private readonly StoryProtocolOptions _options;
-
-    public GetBundleIpStatusQueryHandler(
+    public static async Task<IpVerificationResponse?> Handle(
+        GetBundleIpStatusQuery request,
         IContentBundleRepository repository,
-        ILogger<GetBundleIpStatusQueryHandler> logger,
-        IOptions<StoryProtocolOptions> options)
-    {
-        _repository = repository;
-        _logger = logger;
-        _options = options.Value;
-    }
-
-    public async Task<IpVerificationResponse?> Handle(GetBundleIpStatusQuery request, CancellationToken cancellationToken)
+        ILogger<GetBundleIpStatusQuery> logger,
+        IOptions<StoryProtocolOptions> options,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.BundleId))
         {
             throw new ArgumentException("Bundle ID cannot be null or empty", nameof(request.BundleId));
         }
 
-        var bundle = await _repository.GetByIdAsync(request.BundleId);
+        var bundle = await repository.GetByIdAsync(request.BundleId);
 
         if (bundle == null)
         {
-            _logger.LogWarning("Content bundle not found for IP status check: {BundleId}", request.BundleId);
+            logger.LogWarning("Content bundle not found for IP status check: {BundleId}", request.BundleId);
             return null;
         }
 
-        return MapToIpStatusResponse(bundle);
+        return MapToIpStatusResponse(bundle, options.Value);
     }
 
-    private IpVerificationResponse MapToIpStatusResponse(ContentBundle bundle)
+    private static IpVerificationResponse MapToIpStatusResponse(ContentBundle bundle, StoryProtocolOptions options)
     {
         var storyProtocol = bundle.StoryProtocol;
         var isRegistered = storyProtocol?.IsRegistered ?? false;
@@ -60,7 +51,7 @@ public class GetBundleIpStatusQueryHandler : IQueryHandler<GetBundleIpStatusQuer
             RoyaltyModuleId = storyProtocol?.RoyaltyModuleId,
             ContributorCount = storyProtocol?.Contributors?.Count ?? 0,
             ExplorerUrl = isRegistered && !string.IsNullOrEmpty(storyProtocol?.IpAssetId)
-                ? $"{_options.ExplorerBaseUrl}/address/{storyProtocol.IpAssetId}"
+                ? $"{options.ExplorerBaseUrl}/address/{storyProtocol.IpAssetId}"
                 : null
         };
     }

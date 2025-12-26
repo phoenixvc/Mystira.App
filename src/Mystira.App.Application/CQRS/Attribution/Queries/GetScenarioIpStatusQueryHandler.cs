@@ -8,43 +8,34 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.Attribution.Queries;
 
 /// <summary>
-/// Handler for GetScenarioIpStatusQuery - retrieves IP registration status for a scenario
+/// Wolverine handler for GetScenarioIpStatusQuery - retrieves IP registration status for a scenario
 /// </summary>
-public class GetScenarioIpStatusQueryHandler : IQueryHandler<GetScenarioIpStatusQuery, IpVerificationResponse?>
+public static class GetScenarioIpStatusQueryHandler
 {
-    private readonly IScenarioRepository _repository;
-    private readonly ILogger<GetScenarioIpStatusQueryHandler> _logger;
-    private readonly StoryProtocolOptions _options;
-
-    public GetScenarioIpStatusQueryHandler(
+    public static async Task<IpVerificationResponse?> Handle(
+        GetScenarioIpStatusQuery request,
         IScenarioRepository repository,
-        ILogger<GetScenarioIpStatusQueryHandler> logger,
-        IOptions<StoryProtocolOptions> options)
-    {
-        _repository = repository;
-        _logger = logger;
-        _options = options.Value;
-    }
-
-    public async Task<IpVerificationResponse?> Handle(GetScenarioIpStatusQuery request, CancellationToken cancellationToken)
+        ILogger<GetScenarioIpStatusQuery> logger,
+        IOptions<StoryProtocolOptions> options,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.ScenarioId))
         {
             throw new ArgumentException("Scenario ID cannot be null or empty", nameof(request.ScenarioId));
         }
 
-        var scenario = await _repository.GetByIdAsync(request.ScenarioId);
+        var scenario = await repository.GetByIdAsync(request.ScenarioId);
 
         if (scenario == null)
         {
-            _logger.LogWarning("Scenario not found for IP status check: {ScenarioId}", request.ScenarioId);
+            logger.LogWarning("Scenario not found for IP status check: {ScenarioId}", request.ScenarioId);
             return null;
         }
 
-        return MapToIpStatusResponse(scenario);
+        return MapToIpStatusResponse(scenario, options.Value);
     }
 
-    private IpVerificationResponse MapToIpStatusResponse(Scenario scenario)
+    private static IpVerificationResponse MapToIpStatusResponse(Scenario scenario, StoryProtocolOptions options)
     {
         var storyProtocol = scenario.StoryProtocol;
         var isRegistered = storyProtocol?.IsRegistered ?? false;
@@ -60,7 +51,7 @@ public class GetScenarioIpStatusQueryHandler : IQueryHandler<GetScenarioIpStatus
             RoyaltyModuleId = storyProtocol?.RoyaltyModuleId,
             ContributorCount = storyProtocol?.Contributors?.Count ?? 0,
             ExplorerUrl = isRegistered && !string.IsNullOrEmpty(storyProtocol?.IpAssetId)
-                ? $"{_options.ExplorerBaseUrl}/address/{storyProtocol.IpAssetId}"
+                ? $"{options.ExplorerBaseUrl}/address/{storyProtocol.IpAssetId}"
                 : null
         };
     }

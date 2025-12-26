@@ -6,29 +6,20 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.Avatars.Queries;
 
 /// <summary>
-/// Handler for retrieving all avatar configurations.
+/// Wolverine handler for retrieving all avatar configurations.
 /// Returns avatars grouped by age group, ensuring all age groups are initialized.
 /// </summary>
-public class GetAvatarsQueryHandler : IQueryHandler<GetAvatarsQuery, AvatarResponse>
+public static class GetAvatarsQueryHandler
 {
-    private readonly IAvatarConfigurationFileRepository _repository;
-    private readonly ILogger<GetAvatarsQueryHandler> _logger;
-
-    public GetAvatarsQueryHandler(
-        IAvatarConfigurationFileRepository repository,
-        ILogger<GetAvatarsQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<AvatarResponse> Handle(
+    public static async Task<AvatarResponse> Handle(
         GetAvatarsQuery query,
-        CancellationToken cancellationToken)
+        IAvatarConfigurationFileRepository repository,
+        ILogger<GetAvatarsQuery> logger,
+        CancellationToken ct)
     {
-        _logger.LogInformation("Retrieving all avatar configurations");
+        logger.LogInformation("Retrieving all avatar configurations");
 
-        var configFile = await _repository.GetAsync();
+        var configFile = await repository.GetAsync();
 
         var response = new AvatarResponse
         {
@@ -41,7 +32,7 @@ public class GetAvatarsQueryHandler : IQueryHandler<GetAvatarsQuery, AvatarRespo
             response.AgeGroupAvatars.TryAdd(ageGroup, new List<string>());
         }
 
-        _logger.LogInformation("Retrieved avatars for {Count} age groups", response.AgeGroupAvatars.Count);
+        logger.LogInformation("Retrieved avatars for {Count} age groups", response.AgeGroupAvatars.Count);
         return response;
     }
 }

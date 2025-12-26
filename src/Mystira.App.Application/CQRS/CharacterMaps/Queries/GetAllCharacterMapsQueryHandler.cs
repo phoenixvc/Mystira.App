@@ -5,47 +5,40 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.CharacterMaps.Queries;
 
 /// <summary>
-/// Handler for retrieving all character maps.
+/// Wolverine handler for retrieving all character maps.
 /// Initializes with default characters if the collection is empty.
 /// </summary>
-public class GetAllCharacterMapsQueryHandler : IQueryHandler<GetAllCharacterMapsQuery, List<CharacterMap>>
+public static class GetAllCharacterMapsQueryHandler
 {
-    private readonly ICharacterMapRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<GetAllCharacterMapsQueryHandler> _logger;
-
-    public GetAllCharacterMapsQueryHandler(
+    public static async Task<List<CharacterMap>> Handle(
+        GetAllCharacterMapsQuery query,
         ICharacterMapRepository repository,
         IUnitOfWork unitOfWork,
-        ILogger<GetAllCharacterMapsQueryHandler> _logger)
+        ILogger<GetAllCharacterMapsQuery> logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        this._logger = _logger;
-    }
+        logger.LogInformation("Retrieving all character maps");
 
-    public async Task<List<CharacterMap>> Handle(
-        GetAllCharacterMapsQuery query,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Retrieving all character maps");
-
-        var characterMaps = (await _repository.GetAllAsync()).ToList();
+        var characterMaps = (await repository.GetAllAsync()).ToList();
 
         // Initialize with default data if empty
         if (!characterMaps.Any())
         {
-            await InitializeDefaultCharacterMapsAsync(cancellationToken);
-            characterMaps = (await _repository.GetAllAsync()).ToList();
+            await InitializeDefaultCharacterMapsAsync(repository, unitOfWork, logger, ct);
+            characterMaps = (await repository.GetAllAsync()).ToList();
         }
 
-        _logger.LogInformation("Found {Count} character maps", characterMaps.Count);
+        logger.LogInformation("Found {Count} character maps", characterMaps.Count);
         return characterMaps;
     }
 
-    private async Task InitializeDefaultCharacterMapsAsync(CancellationToken cancellationToken)
+    private static async Task InitializeDefaultCharacterMapsAsync(
+        ICharacterMapRepository repository,
+        IUnitOfWork unitOfWork,
+        ILogger<GetAllCharacterMapsQuery> logger,
+        CancellationToken ct)
     {
-        _logger.LogInformation("Initializing default character maps");
+        logger.LogInformation("Initializing default character maps");
 
         var elarion = new CharacterMap
         {
@@ -85,10 +78,10 @@ public class GetAllCharacterMapsQueryHandler : IQueryHandler<GetAllCharacterMaps
             UpdatedAt = DateTime.UtcNow
         };
 
-        await _repository.AddAsync(elarion);
-        await _repository.AddAsync(grubb);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.AddAsync(elarion);
+        await repository.AddAsync(grubb);
+        await unitOfWork.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Initialized 2 default character maps");
+        logger.LogInformation("Initialized 2 default character maps");
     }
 }

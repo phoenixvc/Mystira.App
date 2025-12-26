@@ -5,27 +5,24 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.Scenarios.Queries;
 
 /// <summary>
-/// Handler for GetScenariosQuery - retrieves all scenarios
-/// This is a read-only operation that doesn't modify state
+/// Wolverine handler for GetScenariosQuery.
+/// Retrieves all scenarios - this is a read-only operation that doesn't modify state.
 /// </summary>
-public class GetScenariosQueryHandler : IQueryHandler<GetScenariosQuery, IEnumerable<Scenario>>
+public static class GetScenariosQueryHandler
 {
-    private readonly IScenarioRepository _repository;
-    private readonly ILogger<GetScenariosQueryHandler> _logger;
-
-    public GetScenariosQueryHandler(
+    /// <summary>
+    /// Handles the GetScenariosQuery by retrieving all scenarios from the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<IEnumerable<Scenario>> Handle(
+        GetScenariosQuery query,
         IScenarioRepository repository,
-        ILogger<GetScenariosQueryHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _logger = logger;
-    }
+        var scenarios = await repository.GetAllAsync();
 
-    public async Task<IEnumerable<Scenario>> Handle(GetScenariosQuery request, CancellationToken cancellationToken)
-    {
-        var scenarios = await _repository.GetAllAsync();
-
-        _logger.LogDebug("Retrieved {Count} scenarios", scenarios.Count());
+        logger.LogDebug("Retrieved {Count} scenarios", scenarios.Count());
 
         return scenarios;
     }

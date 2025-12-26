@@ -5,28 +5,19 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.Archetypes.Queries;
 
 /// <summary>
-/// Handler for retrieving all archetypes.
+/// Wolverine handler for retrieving all archetypes.
 /// </summary>
-public class GetAllArchetypesQueryHandler : IQueryHandler<GetAllArchetypesQuery, List<ArchetypeDefinition>>
+public static class GetAllArchetypesQueryHandler
 {
-    private readonly IArchetypeRepository _repository;
-    private readonly ILogger<GetAllArchetypesQueryHandler> _logger;
-
-    public GetAllArchetypesQueryHandler(
-        IArchetypeRepository repository,
-        ILogger<GetAllArchetypesQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<List<ArchetypeDefinition>> Handle(
+    public static async Task<List<ArchetypeDefinition>> Handle(
         GetAllArchetypesQuery query,
-        CancellationToken cancellationToken)
+        IArchetypeRepository repository,
+        ILogger logger,
+        CancellationToken ct)
     {
-        _logger.LogInformation("Retrieving all archetypes");
-        var archetypes = await _repository.GetAllAsync();
-        _logger.LogInformation("Retrieved {Count} archetypes", archetypes.Count);
+        logger.LogInformation("Retrieving all archetypes");
+        var archetypes = await repository.GetAllAsync();
+        logger.LogInformation("Retrieved {Count} archetypes", archetypes.Count);
         return archetypes;
     }
 }

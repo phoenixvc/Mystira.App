@@ -6,33 +6,24 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.ContentBundles.Queries;
 
 /// <summary>
-/// Handler for GetAllContentBundlesQuery
+/// Wolverine handler for GetAllContentBundlesQuery
 /// Retrieves all active content bundles
 /// </summary>
-public class GetAllContentBundlesQueryHandler : IQueryHandler<GetAllContentBundlesQuery, IEnumerable<ContentBundle>>
+public static class GetAllContentBundlesQueryHandler
 {
-    private readonly IContentBundleRepository _repository;
-    private readonly ILogger<GetAllContentBundlesQueryHandler> _logger;
-
-    public GetAllContentBundlesQueryHandler(
-        IContentBundleRepository repository,
-        ILogger<GetAllContentBundlesQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<IEnumerable<ContentBundle>> Handle(
+    public static async Task<IEnumerable<ContentBundle>> Handle(
         GetAllContentBundlesQuery request,
-        CancellationToken cancellationToken)
+        IContentBundleRepository repository,
+        ILogger<GetAllContentBundlesQuery> logger,
+        CancellationToken ct)
     {
         // Use specification for consistent filtering
         var spec = new ActiveContentBundlesSpec();
 
         // Execute query
-        var bundles = await _repository.ListAsync(spec);
+        var bundles = await repository.ListAsync(spec);
 
-        _logger.LogDebug("Retrieved {Count} content bundles", bundles.Count());
+        logger.LogDebug("Retrieved {Count} content bundles", bundles.Count());
 
         return bundles;
     }

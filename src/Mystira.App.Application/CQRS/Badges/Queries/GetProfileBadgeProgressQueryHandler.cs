@@ -1,30 +1,27 @@
-﻿using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Ports.Data;
 using Mystira.Contracts.App.Responses.Badges;
 
 namespace Mystira.App.Application.CQRS.Badges.Queries;
 
-public sealed class GetProfileBadgeProgressQueryHandler : IQueryHandler<GetProfileBadgeProgressQuery, BadgeProgressResponse?>
+/// <summary>
+/// Wolverine handler for GetProfileBadgeProgressQuery.
+/// Retrieves badge progress information for a user profile.
+/// </summary>
+public static class GetProfileBadgeProgressQueryHandler
 {
-    private readonly IBadgeRepository _badgeRepository;
-    private readonly ICompassAxisRepository _axisRepository;
-    private readonly IUserBadgeRepository _userBadgeRepository;
-    private readonly IUserProfileRepository _profileRepository;
-
-    public GetProfileBadgeProgressQueryHandler(
+    /// <summary>
+    /// Handles the GetProfileBadgeProgressQuery by retrieving badge progress from the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<BadgeProgressResponse?> Handle(
+        GetProfileBadgeProgressQuery query,
         IBadgeRepository badgeRepository,
         ICompassAxisRepository axisRepository,
         IUserBadgeRepository userBadgeRepository,
-        IUserProfileRepository profileRepository)
+        IUserProfileRepository profileRepository,
+        CancellationToken ct)
     {
-        _badgeRepository = badgeRepository;
-        _axisRepository = axisRepository;
-        _userBadgeRepository = userBadgeRepository;
-        _profileRepository = profileRepository;
-    }
-
-    public async Task<BadgeProgressResponse?> Handle(GetProfileBadgeProgressQuery request, CancellationToken cancellationToken)
-    {
-        var profile = await _profileRepository.GetByIdAsync(request.ProfileId);
+        var profile = await profileRepository.GetByIdAsync(query.ProfileId);
         if (profile == null) return null;
 
         var ageGroupId = profile.AgeGroup?.Value ?? "6-9";
@@ -33,7 +30,7 @@ public sealed class GetProfileBadgeProgressQueryHandler : IQueryHandler<GetProfi
         // ORDER BY in the query which requires a composite index. To avoid runtime
         // failures when composite indexes are not yet deployed, always perform
         // ordering in-memory here.
-        var allBadges = await _badgeRepository.GetByAgeGroupAsync(ageGroupId);
+        var allBadges = await badgeRepository.GetByAgeGroupAsync(ageGroupId);
 
         var badgesByAxis = allBadges
             .GroupBy(b => b.CompassAxisId)
@@ -42,9 +39,9 @@ public sealed class GetProfileBadgeProgressQueryHandler : IQueryHandler<GetProfi
                 g => g.OrderBy(b => b.TierOrder).ToList()
             );
 
-        var userBadges = (await _userBadgeRepository.GetByUserProfileIdAsync(request.ProfileId)).ToList();
+        var userBadges = (await userBadgeRepository.GetByUserProfileIdAsync(query.ProfileId)).ToList();
 
-        var axes = await _axisRepository.GetAllAsync();
+        var axes = await axisRepository.GetAllAsync();
         var axisDictionary = axes.ToDictionary(a => a.Id, a => a);
 
         var response = new BadgeProgressResponse

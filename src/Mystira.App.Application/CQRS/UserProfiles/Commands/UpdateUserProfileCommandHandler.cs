@@ -5,33 +5,26 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.UserProfiles.Commands;
 
 /// <summary>
-/// Handler for UpdateUserProfileCommand
-/// Updates an existing user profile with new information
+/// Wolverine handler for UpdateUserProfileCommand.
+/// Updates an existing user profile with new information.
 /// </summary>
-public class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUserProfileCommand, UserProfile?>
+public static class UpdateUserProfileCommandHandler
 {
-    private readonly IUserProfileRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<UpdateUserProfileCommandHandler> _logger;
-
-    public UpdateUserProfileCommandHandler(
+    /// <summary>
+    /// Handles the UpdateUserProfileCommand by updating a user profile.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<UserProfile?> Handle(
+        UpdateUserProfileCommand command,
         IUserProfileRepository repository,
         IUnitOfWork unitOfWork,
-        ILogger<UpdateUserProfileCommandHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-    }
-
-    public async Task<UserProfile?> Handle(
-        UpdateUserProfileCommand command,
-        CancellationToken cancellationToken)
-    {
-        var profile = await _repository.GetByIdAsync(command.ProfileId);
+        var profile = await repository.GetByIdAsync(command.ProfileId);
         if (profile == null)
         {
-            _logger.LogWarning("Profile not found: {ProfileId}", command.ProfileId);
+            logger.LogWarning("Profile not found: {ProfileId}", command.ProfileId);
             return null;
         }
 
@@ -99,12 +92,12 @@ public class UpdateUserProfileCommandHandler : ICommandHandler<UpdateUserProfile
         profile.UpdatedAt = DateTime.UtcNow;
 
         // Update in repository
-        await _repository.UpdateAsync(profile);
+        await repository.UpdateAsync(profile);
 
         // Persist changes
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Updated user profile {ProfileId}", profile.Id);
+        logger.LogInformation("Updated user profile {ProfileId}", profile.Id);
 
         return profile;
     }

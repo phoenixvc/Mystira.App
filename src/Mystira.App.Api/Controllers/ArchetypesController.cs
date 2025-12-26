@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Archetypes.Queries;
 using Mystira.App.Api.Models;
@@ -10,12 +10,12 @@ namespace Mystira.App.Api.Controllers;
 [Route("api/[controller]")]
 public class ArchetypesController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
     private readonly ILogger<ArchetypesController> _logger;
 
-    public ArchetypesController(IMediator mediator, ILogger<ArchetypesController> logger)
+    public ArchetypesController(IMessageBus bus, ILogger<ArchetypesController> logger)
     {
-        _mediator = mediator;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -23,7 +23,7 @@ public class ArchetypesController : ControllerBase
     public async Task<ActionResult<List<ArchetypeDefinition>>> GetAllArchetypes()
     {
         _logger.LogInformation("GET: Retrieving all archetypes");
-        var archetypes = await _mediator.Send(new GetAllArchetypesQuery());
+        var archetypes = await _bus.InvokeAsync<List<ArchetypeDefinition>>(new GetAllArchetypesQuery());
         return Ok(archetypes);
     }
 
@@ -31,7 +31,7 @@ public class ArchetypesController : ControllerBase
     public async Task<ActionResult<ArchetypeDefinition>> GetArchetypeById(string id)
     {
         _logger.LogInformation("GET: Retrieving archetype with id: {Id}", id);
-        var archetype = await _mediator.Send(new GetArchetypeByIdQuery(id));
+        var archetype = await _bus.InvokeAsync<ArchetypeDefinition?>(new GetArchetypeByIdQuery(id));
         if (archetype == null)
         {
             _logger.LogWarning("Archetype with id {Id} not found", id);
@@ -45,7 +45,7 @@ public class ArchetypesController : ControllerBase
     {
         _logger.LogInformation("POST: Validating archetype: {Name}", request.Name);
 
-        var isValid = await _mediator.Send(new ValidateArchetypeQuery(request.Name));
+        var isValid = await _bus.InvokeAsync<bool>(new ValidateArchetypeQuery(request.Name));
         return Ok(new ValidationResult { IsValid = isValid });
     }
 }

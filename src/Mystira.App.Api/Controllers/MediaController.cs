@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.MediaAssets.Queries;
@@ -12,12 +12,12 @@ namespace Mystira.App.Api.Controllers;
 [Produces("application/json")]
 public class MediaController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
     private readonly ILogger<MediaController> _logger;
 
-    public MediaController(IMediator mediator, ILogger<MediaController> logger)
+    public MediaController(IMessageBus bus, ILogger<MediaController> logger)
     {
-        _mediator = mediator;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -31,7 +31,7 @@ public class MediaController : ControllerBase
         try
         {
             var query = new GetMediaAssetQuery(mediaId);
-            var media = await _mediator.Send(query);
+            var media = await _bus.InvokeAsync<MediaAsset?>(query);
             if (media == null)
             {
                 return NotFound(new ErrorResponse
@@ -64,7 +64,7 @@ public class MediaController : ControllerBase
         try
         {
             var query = new GetMediaFileQuery(mediaId);
-            var result = await _mediator.Send(query);
+            var result = await _bus.InvokeAsync<(Stream, string, string)?>(query);
 
             if (result == null)
             {

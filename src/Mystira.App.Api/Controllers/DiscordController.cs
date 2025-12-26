@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Discord.Commands;
@@ -13,14 +13,14 @@ namespace Mystira.App.Api.Controllers;
 [Route("api/[controller]")]
 public class DiscordController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
     private readonly ILogger<DiscordController> _logger;
 
     public DiscordController(
-        IMediator mediator,
+        IMessageBus bus,
         ILogger<DiscordController> logger)
     {
-        _mediator = mediator;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -32,7 +32,7 @@ public class DiscordController : ControllerBase
     public async Task<IActionResult> GetStatus()
     {
         var query = new GetDiscordBotStatusQuery();
-        var status = await _mediator.Send(query);
+        var status = await _bus.InvokeAsync<DiscordBotStatus>(query);
 
         return Ok(new
         {
@@ -52,7 +52,7 @@ public class DiscordController : ControllerBase
     public async Task<IActionResult> SendMessage([FromBody] SendMessageRequest request)
     {
         var command = new SendDiscordMessageCommand(request.ChannelId, request.Message);
-        var (success, message) = await _mediator.Send(command);
+        var (success, message) = await _bus.InvokeAsync<(bool, string)>(command);
 
         if (!success)
         {
@@ -97,7 +97,7 @@ public class DiscordController : ControllerBase
             request.Footer,
             commandFields);
 
-        var (success, message) = await _mediator.Send(command);
+        var (success, message) = await _bus.InvokeAsync<(bool, string)>(command);
 
         if (!success)
         {

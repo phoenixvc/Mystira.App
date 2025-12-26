@@ -5,47 +5,39 @@ using Mystira.App.Application.Services;
 namespace Mystira.App.Application.CQRS.FantasyThemes.Commands;
 
 /// <summary>
-/// Handler for deleting a fantasy theme.
+/// Wolverine handler for deleting a fantasy theme.
+/// Uses static method convention for cleaner, more testable code.
 /// </summary>
-public class DeleteFantasyThemeCommandHandler : ICommandHandler<DeleteFantasyThemeCommand, bool>
+public static class DeleteFantasyThemeCommandHandler
 {
-    private readonly IFantasyThemeRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IQueryCacheInvalidationService _cacheInvalidation;
-    private readonly ILogger<DeleteFantasyThemeCommandHandler> _logger;
-
-    public DeleteFantasyThemeCommandHandler(
+    /// <summary>
+    /// Handles the DeleteFantasyThemeCommand.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<bool> Handle(
+        DeleteFantasyThemeCommand command,
         IFantasyThemeRepository repository,
         IUnitOfWork unitOfWork,
         IQueryCacheInvalidationService cacheInvalidation,
-        ILogger<DeleteFantasyThemeCommandHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _cacheInvalidation = cacheInvalidation;
-        _logger = logger;
-    }
+        logger.LogInformation("Deleting fantasy theme with id: {Id}", command.Id);
 
-    public async Task<bool> Handle(
-        DeleteFantasyThemeCommand command,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Deleting fantasy theme with id: {Id}", command.Id);
-
-        var fantasyTheme = await _repository.GetByIdAsync(command.Id);
+        var fantasyTheme = await repository.GetByIdAsync(command.Id);
         if (fantasyTheme == null)
         {
-            _logger.LogWarning("Fantasy theme with id {Id} not found", command.Id);
+            logger.LogWarning("Fantasy theme with id {Id} not found", command.Id);
             return false;
         }
 
-        await _repository.DeleteAsync(command.Id);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.DeleteAsync(command.Id);
+        await unitOfWork.SaveChangesAsync(ct);
 
         // Invalidate cache
-        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:FantasyThemes");
+        cacheInvalidation.InvalidateCacheByPrefix("MasterData:FantasyThemes");
 
-        _logger.LogInformation("Successfully deleted fantasy theme with id: {Id}", command.Id);
+        logger.LogInformation("Successfully deleted fantasy theme with id: {Id}", command.Id);
         return true;
     }
 }

@@ -6,32 +6,19 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.AgeGroups.Commands;
 
 /// <summary>
-/// Handler for creating a new age group.
+/// Wolverine handler for creating a new age group.
 /// </summary>
-public class CreateAgeGroupCommandHandler : ICommandHandler<CreateAgeGroupCommand, AgeGroupDefinition>
+public static class CreateAgeGroupCommandHandler
 {
-    private readonly IAgeGroupRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IQueryCacheInvalidationService _cacheInvalidation;
-    private readonly ILogger<CreateAgeGroupCommandHandler> _logger;
-
-    public CreateAgeGroupCommandHandler(
+    public static async Task<AgeGroupDefinition> Handle(
+        CreateAgeGroupCommand command,
         IAgeGroupRepository repository,
         IUnitOfWork unitOfWork,
         IQueryCacheInvalidationService cacheInvalidation,
-        ILogger<CreateAgeGroupCommandHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _cacheInvalidation = cacheInvalidation;
-        _logger = logger;
-    }
-
-    public async Task<AgeGroupDefinition> Handle(
-        CreateAgeGroupCommand command,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Creating age group: {Name}", command.Name);
+        logger.LogInformation("Creating age group: {Name}", command.Name);
 
         if (string.IsNullOrWhiteSpace(command.Name))
         {
@@ -55,13 +42,13 @@ public class CreateAgeGroupCommandHandler : ICommandHandler<CreateAgeGroupComman
             UpdatedAt = DateTime.UtcNow
         };
 
-        await _repository.AddAsync(ageGroup);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.AddAsync(ageGroup);
+        await unitOfWork.SaveChangesAsync(ct);
 
         // Invalidate cache
-        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:AgeGroups");
+        cacheInvalidation.InvalidateCacheByPrefix("MasterData:AgeGroups");
 
-        _logger.LogInformation("Successfully created age group with id: {Id}", ageGroup.Id);
+        logger.LogInformation("Successfully created age group with id: {Id}", ageGroup.Id);
         return ageGroup;
     }
 }

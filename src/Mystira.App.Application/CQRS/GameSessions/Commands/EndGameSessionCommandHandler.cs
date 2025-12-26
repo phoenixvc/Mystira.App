@@ -5,33 +5,27 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.GameSessions.Commands;
 
 /// <summary>
-/// Handler for EndGameSessionCommand
-/// Marks a session as completed and sets the end time
+/// Wolverine handler for EndGameSessionCommand.
+/// Marks a session as completed and sets the end time.
+/// Uses static method convention for cleaner, more testable code.
 /// </summary>
-public class EndGameSessionCommandHandler : ICommandHandler<EndGameSessionCommand, GameSession?>
+public static class EndGameSessionCommandHandler
 {
-    private readonly IGameSessionRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<EndGameSessionCommandHandler> _logger;
-
-    public EndGameSessionCommandHandler(
+    /// <summary>
+    /// Handles the EndGameSessionCommand.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<GameSession?> Handle(
+        EndGameSessionCommand command,
         IGameSessionRepository repository,
         IUnitOfWork unitOfWork,
-        ILogger<EndGameSessionCommandHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-    }
-
-    public async Task<GameSession?> Handle(
-        EndGameSessionCommand command,
-        CancellationToken cancellationToken)
-    {
-        var session = await _repository.GetByIdAsync(command.SessionId);
+        var session = await repository.GetByIdAsync(command.SessionId);
         if (session == null)
         {
-            _logger.LogWarning("Session not found: {SessionId}", command.SessionId);
+            logger.LogWarning("Session not found: {SessionId}", command.SessionId);
             return null;
         }
 
@@ -40,12 +34,12 @@ public class EndGameSessionCommandHandler : ICommandHandler<EndGameSessionComman
         session.EndTime = DateTime.UtcNow;
 
         // Update in repository
-        await _repository.UpdateAsync(session);
+        await repository.UpdateAsync(session);
 
         // Persist changes
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Ended game session {SessionId}", session.Id);
+        logger.LogInformation("Ended game session {SessionId}", session.Id);
 
         return session;
     }

@@ -8,25 +8,21 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.GameSessions.Queries;
 
 /// <summary>
-/// Handler for GetSessionsByAccountQuery
-/// Retrieves all sessions for a specific account
+/// Wolverine handler for GetSessionsByAccountQuery.
+/// Retrieves all sessions for a specific account.
+/// Uses static method convention for cleaner, more testable code.
 /// </summary>
-public class GetSessionsByAccountQueryHandler : IQueryHandler<GetSessionsByAccountQuery, List<GameSessionResponse>>
+public static class GetSessionsByAccountQueryHandler
 {
-    private readonly IGameSessionRepository _repository;
-    private readonly ILogger<GetSessionsByAccountQueryHandler> _logger;
-
-    public GetSessionsByAccountQueryHandler(
-        IGameSessionRepository repository,
-        ILogger<GetSessionsByAccountQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<List<GameSessionResponse>> Handle(
+    /// <summary>
+    /// Handles the GetSessionsByAccountQuery.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<List<GameSessionResponse>> Handle(
         GetSessionsByAccountQuery request,
-        CancellationToken cancellationToken)
+        IGameSessionRepository repository,
+        ILogger logger,
+        CancellationToken ct)
     {
         if (string.IsNullOrEmpty(request.AccountId))
         {
@@ -34,7 +30,7 @@ public class GetSessionsByAccountQueryHandler : IQueryHandler<GetSessionsByAccou
         }
 
         var spec = new SessionsByAccountSpec(request.AccountId);
-        var sessions = await _repository.ListAsync(spec);
+        var sessions = await repository.ListAsync(spec);
 
         var response = sessions.Select(s =>
         {
@@ -89,7 +85,7 @@ public class GetSessionsByAccountQueryHandler : IQueryHandler<GetSessionsByAccou
             };
         }).ToList();
 
-        _logger.LogDebug("Retrieved {Count} sessions for account {AccountId}", response.Count, request.AccountId);
+        logger.LogDebug("Retrieved {Count} sessions for account {AccountId}", response.Count, request.AccountId);
 
         return response;
     }

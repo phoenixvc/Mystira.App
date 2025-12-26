@@ -1,45 +1,37 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Services;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.GameSessions.Commands;
 
-public class FinalizeGameSessionCommandHandler : ICommandHandler<FinalizeGameSessionCommand, FinalizeGameSessionResult>
+/// <summary>
+/// Wolverine handler for FinalizeGameSessionCommand.
+/// Finalizes a game session by scoring scenarios and awarding badges to participating profiles.
+/// Uses static method convention for cleaner, more testable code.
+/// </summary>
+public static class FinalizeGameSessionCommandHandler
 {
-    private readonly IGameSessionRepository _sessionRepository;
-    private readonly IUserProfileRepository _profileRepository;
-    private readonly IPlayerScenarioScoreRepository _scoreRepository;
-    private readonly IAxisScoringService _scoringService;
-    private readonly IBadgeAwardingService _badgeService;
-    private readonly ILogger<FinalizeGameSessionCommandHandler> _logger;
-
-    public FinalizeGameSessionCommandHandler(
+    /// <summary>
+    /// Handles the FinalizeGameSessionCommand.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<FinalizeGameSessionResult> Handle(
+        FinalizeGameSessionCommand command,
         IGameSessionRepository sessionRepository,
         IUserProfileRepository profileRepository,
         IPlayerScenarioScoreRepository scoreRepository,
         IAxisScoringService scoringService,
         IBadgeAwardingService badgeService,
-        ILogger<FinalizeGameSessionCommandHandler> logger)
-    {
-        _sessionRepository = sessionRepository;
-        _profileRepository = profileRepository;
-        _scoreRepository = scoreRepository;
-        _scoringService = scoringService;
-        _badgeService = badgeService;
-        _logger = logger;
-    }
-
-    public async Task<FinalizeGameSessionResult> Handle(
-        FinalizeGameSessionCommand command,
-        CancellationToken cancellationToken)
+        ILogger logger,
+        CancellationToken ct)
     {
         var result = new FinalizeGameSessionResult { SessionId = command.SessionId };
 
-        var session = await _sessionRepository.GetByIdAsync(command.SessionId);
+        var session = await sessionRepository.GetByIdAsync(command.SessionId);
         if (session == null)
         {
-            _logger.LogWarning("Session not found for finalize: {SessionId}", command.SessionId);
+            logger.LogWarning("Session not found for finalize: {SessionId}", command.SessionId);
             return result;
         }
 
@@ -60,19 +52,19 @@ public class FinalizeGameSessionCommandHandler : ICommandHandler<FinalizeGameSes
 
         foreach (var profileId in profileIds)
         {
-            var profile = await _profileRepository.GetByIdAsync(profileId);
+            var profile = await profileRepository.GetByIdAsync(profileId);
             if (profile == null)
             {
-                _logger.LogWarning("Profile {ProfileId} not found while finalizing session {SessionId}", profileId, session.Id);
+                logger.LogWarning("Profile {ProfileId} not found while finalizing session {SessionId}", profileId, session.Id);
                 continue;
             }
 
             // Score first-time plays only (service skips if already scored)
-            PlayerScenarioScore? score = await _scoringService.ScoreSessionAsync(session, profile);
+            PlayerScenarioScore? score = await scoringService.ScoreSessionAsync(session, profile);
             var alreadyPlayed = score == null;
 
             // Compute cumulative axis totals across all scored scenarios for this profile
-            var allScores = await _scoreRepository.GetByProfileIdAsync(profile.Id);
+            var allScores = await scoreRepository.GetByProfileIdAsync(profile.Id);
             var cumulative = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
             foreach (var s in allScores)
             {
@@ -84,7 +76,7 @@ public class FinalizeGameSessionCommandHandler : ICommandHandler<FinalizeGameSes
             }
 
             // Award badges based on cumulative totals (will no-op for already-earned badges)
-            var newBadges = await _badgeService.AwardBadgesAsync(profile, cumulative);
+            var newBadges = await badgeService.AwardBadgesAsync(profile, cumulative);
 
             // Always include an entry so the client can show players who did/didn't receive a badge
             result.Awards.Add(new ProfileBadgeAwards
@@ -96,7 +88,7 @@ public class FinalizeGameSessionCommandHandler : ICommandHandler<FinalizeGameSes
             });
         }
 
-        _logger.LogInformation("Finalized session {SessionId}. New badge awards for {Count} profile(s).",
+        logger.LogInformation("Finalized session {SessionId}. New badge awards for {Count} profile(s).",
             session.Id, result.Awards.Count);
 
         return result;

@@ -1,20 +1,24 @@
-﻿using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Ports.Data;
 using Mystira.Contracts.App.Responses.Badges;
 
 namespace Mystira.App.Application.CQRS.Badges.Queries;
 
-public sealed class GetBadgesByAgeGroupQueryHandler : IQueryHandler<GetBadgesByAgeGroupQuery, List<BadgeResponse>>
+/// <summary>
+/// Wolverine handler for GetBadgesByAgeGroupQuery.
+/// Retrieves badges filtered by age group.
+/// </summary>
+public static class GetBadgesByAgeGroupQueryHandler
 {
-    private readonly IBadgeRepository _badgeRepository;
-
-    public GetBadgesByAgeGroupQueryHandler(IBadgeRepository badgeRepository)
+    /// <summary>
+    /// Handles the GetBadgesByAgeGroupQuery by retrieving badges for a specific age group from the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<List<BadgeResponse>> Handle(
+        GetBadgesByAgeGroupQuery query,
+        IBadgeRepository badgeRepository,
+        CancellationToken ct)
     {
-        _badgeRepository = badgeRepository;
-    }
-
-    public async Task<List<BadgeResponse>> Handle(GetBadgesByAgeGroupQuery request, CancellationToken cancellationToken)
-    {
-        var badges = await _badgeRepository.GetByAgeGroupAsync(request.AgeGroupId);
+        var badges = await badgeRepository.GetByAgeGroupAsync(query.AgeGroupId);
         return badges
             .OrderBy(b => b.CompassAxisId)
             .ThenBy(b => b.TierOrder)
