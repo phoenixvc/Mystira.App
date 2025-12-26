@@ -1,8 +1,9 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Contracts.Models.GameSessions;
-using Mystira.App.Contracts.Responses.GameSessions;
-using Mystira.App.Domain.Specifications;
+using Mystira.App.Application.Specifications;
+using Mystira.Contracts.App.Models.GameSessions;
+using Mystira.Contracts.App.Responses.GameSessions;
+using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.GameSessions.Queries;
 
@@ -32,7 +33,7 @@ public class GetSessionsByProfileQueryHandler : IQueryHandler<GetSessionsByProfi
             throw new ArgumentException("ProfileId is required");
         }
 
-        var spec = new SessionsByProfileSpecification(request.ProfileId);
+        var spec = new SessionsByProfileSpec(request.ProfileId);
         var sessions = await _repository.ListAsync(spec);
 
         var response = sessions.Select(s =>
@@ -50,9 +51,9 @@ public class GetSessionsByProfileQueryHandler : IQueryHandler<GetSessionsByProfi
                 {
                     PlayerId = p.PlayerId,
                     Axis = p.Axis,
-                    Total = p.Total
+                    Total = (int)p.Total
                 }).ToList(),
-                Status = s.Status,
+                Status = s.Status.ToString(),
                 CurrentSceneId = s.CurrentSceneId,
                 ChoiceCount = s.ChoiceHistory?.Count ?? 0,
                 EchoCount = s.EchoHistory?.Count ?? 0,

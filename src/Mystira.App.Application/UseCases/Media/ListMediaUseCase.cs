@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Contracts.Requests.Media;
-using Mystira.App.Contracts.Responses.Media;
+using Mystira.Contracts.App.Requests.Media;
+using Mystira.Contracts.App.Responses.Media;
 
 namespace Mystira.App.Application.UseCases.Media;
 
@@ -63,6 +63,12 @@ public class ListMediaUseCase
         var media = await query
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
+            .Select(m => new MediaItem
+            {
+                Id = m.MediaId,
+                Url = m.Url,
+                MediaType = m.MediaType
+            })
             .ToListAsync();
 
         return new MediaQueryResponse

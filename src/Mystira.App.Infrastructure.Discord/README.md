@@ -35,29 +35,82 @@ Discord.NET SDK
 
 ## Project Structure
 
-```
-Mystira.App.Infrastructure.Discord/
-├── Services/
-│   ├── DiscordBotService.cs              # Implements IMessagingService
-│   └── DiscordBotHostedService.cs        # Background service for bot
-├── HealthChecks/
-│   └── DiscordBotHealthCheck.cs          # Discord health monitoring
-├── Configuration/
-│   └── DiscordOptions.cs                 # Configuration model
-└── ServiceCollectionExtensions.cs        # DI registration
-```
+- [Mystira Application Suite](#mystira-application-suite)
+  - [Deployments](#deployments)
+  - [Repository Overview](#repository-overview)
+  - [Design System & Visual Identity](#design-system--visual-identity)
+  - [Technology Stack](#technology-stack)
+  - [🏗️ Architecture & Design Patterns](#️-architecture--design-patterns)
+  - [Audit Findings & Governance](#audit-findings--governance)
+  - [Getting Started](#getting-started)
+  - [Testing & Quality Gates](#testing--quality-gates)
+  - [Technical Debt & Future Work](#technical-debt--future-work)
+  - [Contributing / PR Checklist](#contributing--pr-checklist)
+  - [AI Assistant Integration](#ai-assistant-integration)
 
 **Port Interface** (defined in Application layer):
 - `IMessagingService` lives in `Application/Ports/Messaging/`
 - Infrastructure.Discord references Application to implement this port
 
-## Port Implementation
+| Label         | Area                                   | Description                                                                             |
+| ------------- | -------------------------------------- | --------------------------------------------------------------------------------------- |
+| 🧠 Domain      | `src/Mystira.App.Domain`               | Core domain models, enumerations, and shared business logic.                           |
+| ☁️ Azure Infra | `src/Mystira.App.Infrastructure.Azure` | Azure configuration, Cosmos DB & Blob Storage adapters.                                 |
+| 🌐 Public API  | `src/Mystira.App.Api`                  | ASP.NET Core API serving PWA and mobile clients.                                        |
+| 🛡️ Admin API   | `src/Mystira.App.Admin.Api`            | Internal-facing API for content management and moderation.                              |
+| 📱 PWA         | `src/Mystira.App.PWA`                  | Blazor WebAssembly PWA with offline assets and haptics.                                 |
+| 📊 Ops Console | `tools/Mystira.App.CosmosConsole`    | CLI for Cosmos DB exports and analytics.                                                |
+
+## Design System & Visual Identity
+
+The Mystira brand is built for children (5-12) and parents, balancing playfulness with safety.
+
+- **Primary Color:** `#7c3aed` (Violet) - Used for primary actions and achievements.
+- **Neutral Color:** `#1F2937` (Dark Gray) - Foundation for layouts and text.
+- **Success Color:** `#10B981` (Green) - Used for badge notifications.
+- **UX Principles:** Card-based layouts, high contrast, mobile-first responsiveness, and COPPA-first data handling.
 
 Application defines the platform-agnostic port interface:
 
-```csharp
-// Location: Application/Ports/Messaging/IMessagingService.cs
-namespace Mystira.App.Application.Ports.Messaging;
+- **Frameworks:** .NET 9 (Unified across all projects).
+- **Frontend:** Blazor WebAssembly PWA with Service Workers and custom Image Cache.
+- **Backend:** ASP.NET Core with MediatR (CQRS) and FluentValidation.
+- **Persistence:** Azure Cosmos DB (EF Core 9 provider) and Azure Blob Storage.
+- **Resilience:** Polly policies (Retry, Circuit Breaker) applied to all inter-service communication.
+- **Storage:** `InMemoryStoreService` for session-state (transient) and JS IndexedDB for binary asset caching.
+
+## 🏗️ Architecture & Design Patterns
+
+Mystira uses **Hexagonal Architecture (Ports & Adapters)** to decouple business logic from infrastructure.
+
+### Hexagonal Model
+```
+┌────────────────────────────────┐
+│  Infrastructure (Adapters)     │
+│  • CosmosDB, Blob, WhatsApp    │
+└──────────────┬─────────────────┘
+               │ implements
+               ↓
+┌────────────────────────────────┐
+│  Application (Ports)           │
+│  • Handlers, Interfaces, Specs │
+└──────────────┬─────────────────┘
+               │ depends on
+               ↓
+┌────────────────────────────────┐
+│  Domain (Core)                 │
+│  • Models, Value Objects       │
+└────────────────────────────────┘
+```
+
+## Audit Findings & Governance
+
+A governed audit (2025-12) identified and resolved the following:
+
+- **BUG-01:** Fixed DFS cycle logic in `CalculateBadgeScoresQueryHandler` to prevent score corruption in circular stories.
+- **REF-01:** Standardized storage naming by renaming `IndexedDbService` to `InMemoryStoreService`.
+- **PERF-01:** Implemented LRU eviction and 7-day TTL in `imageCacheManager.js` to prevent unbounded storage growth.
+- **Governance:** Established strict COPPA compliance guidelines for data handling.
 
 public interface IMessagingService
 {
@@ -509,11 +562,16 @@ public class SlackMessagingService : IMessagingService
 - ✅ Manages Discord-specific health checks and configuration
 - ✅ Maintains clean hexagonal architecture
 
-**What This Layer Does NOT Do**:
-- ❌ Define port interfaces (Application does that)
-- ❌ Contain business logic (Application/Domain does that)
-- ❌ Make decisions about when to send messages (Application decides)
+## Technical Debt & Future Work
 
+Implementation progress and outstanding technical debt are tracked in the [Technical Debt Registry](docs/technical-debt-registry.md).
+
+### Planned Future Work
+- **Story Protocol Hardening:** Complete actual contract ABI integration for real-time IP attribution.
+- **Offline Persistence:** Transition `InMemoryStoreService` to a real IndexedDB-backed persistence layer for the PWA.
+- **Adaptive Music:** Enhance the audio engine with engagement-based cross-fading.
+
+## Contributing / PR Checklist
 **Key Success Metrics**:
 - ✅ **Zero reverse dependencies** - Application never references Infrastructure.Discord
 - ✅ **Clean interfaces** - All ports defined in Application layer

@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Mystira.App.Api.Controllers;
 using Mystira.App.Application.CQRS.MediaAssets.Queries;
-using Mystira.App.Contracts.Responses.Common;
+using Mystira.Contracts.App.Responses.Common;
 using Mystira.App.Domain.Models;
 using Xunit;
 
@@ -155,6 +155,21 @@ public class MediaControllerTests
 
         // Assert
         attributes.Should().NotBeEmpty("GetMediaFile should have [AllowAnonymous] attribute for landing page access");
+    }
+
+    [Fact]
+    public void MediaController_GetMediaFile_HasResponseCacheAttribute()
+    {
+        // Arrange
+        var method = typeof(MediaController).GetMethod("GetMediaFile");
+
+        // Act
+        var attribute = (ResponseCacheAttribute?)method!.GetCustomAttributes(typeof(ResponseCacheAttribute), false)[0];
+
+        // Assert
+        attribute.Should().NotBeNull();
+        attribute!.Duration.Should().Be(31536000);
+        attribute.Location.Should().Be(ResponseCacheLocation.Any);
     }
 
     [Fact]

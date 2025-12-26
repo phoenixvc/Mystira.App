@@ -11,9 +11,9 @@ using Azure.Security.KeyVault.Secrets;
 using Nethereum.Web3;
 using Nethereum.Hex.HexTypes;
 using Nethereum.RPC.Eth.DTOs;
+using Mystira.App.Application.Configuration.StoryProtocol;
 using Mystira.App.Application.Ports;
 using Mystira.App.Domain.Models;
-using Mystira.App.Infrastructure.StoryProtocol.Configuration;
 
 namespace Mystira.App.Infrastructure.StoryProtocol.Services;
 
@@ -626,7 +626,7 @@ public class StoryProtocolService : IStoryProtocolService
 
         foreach (var log in receipt.Logs)
         {
-            var logObject = log as Newtonsoft.Json.Linq.JObject;
+            var logObject = Newtonsoft.Json.Linq.JObject.FromObject(log);
             if (logObject == null) continue;
 
             var topics = logObject["topics"] as Newtonsoft.Json.Linq.JArray;
@@ -661,7 +661,7 @@ public class StoryProtocolService : IStoryProtocolService
 
         foreach (var log in receipt.Logs)
         {
-            var logObject = log as Newtonsoft.Json.Linq.JObject;
+            var logObject = Newtonsoft.Json.Linq.JObject.FromObject(log);
             if (logObject == null) continue;
 
             var topics = logObject["topics"] as Newtonsoft.Json.Linq.JArray;
@@ -684,10 +684,11 @@ public class StoryProtocolService : IStoryProtocolService
         }
 
         // Fallback: use the contract address from the first log that's likely the IP Asset
-        if (receipt.Logs.Count > 0)
+        if (receipt.Logs != null && receipt.Logs.Length > 0)
         {
-            var firstLog = receipt.Logs[0] as Newtonsoft.Json.Linq.JObject;
-            var address = firstLog?["address"]?.ToString();
+            var firstLog = receipt.Logs[0];
+            var logObject = Newtonsoft.Json.Linq.JObject.FromObject(firstLog);
+            var address = logObject?["address"]?.ToString();
             if (!string.IsNullOrEmpty(address))
                 return address.ToLowerInvariant();
         }

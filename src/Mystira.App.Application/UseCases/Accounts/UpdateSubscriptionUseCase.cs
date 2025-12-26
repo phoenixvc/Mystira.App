@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Contracts.Requests.Accounts;
+using Mystira.Contracts.App.Requests.Accounts;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.UseCases.Accounts;
@@ -42,8 +42,8 @@ public class UpdateSubscriptionUseCase
             throw new ArgumentException($"Account not found: {accountId}", nameof(accountId));
         }
 
-        // Update subscription properties
-        account.Subscription.Type = request.Type;
+        // Update subscription properties - convert from Contracts enum to Domain enum
+        account.Subscription.Type = (SubscriptionType)(int)request.Type;
 
         if (request.ProductId != null)
         {

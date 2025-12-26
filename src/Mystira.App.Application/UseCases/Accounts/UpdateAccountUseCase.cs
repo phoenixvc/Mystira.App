@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Contracts.Requests.Accounts;
+using Mystira.Contracts.App.Requests.Accounts;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.UseCases.Accounts;
@@ -50,7 +50,12 @@ public class UpdateAccountUseCase
 
         if (request.Settings != null)
         {
-            account.Settings = request.Settings;
+            // Map from Contracts AccountSettings to Domain AccountSettings
+            // Only update properties that exist in the Contracts type
+            account.Settings ??= new AccountSettings();
+            account.Settings.PreferredLanguage = request.Settings.PreferredLanguage ?? account.Settings.PreferredLanguage;
+            account.Settings.NotificationsEnabled = request.Settings.NotificationsEnabled ?? account.Settings.NotificationsEnabled;
+            account.Settings.Theme = request.Settings.Theme ?? account.Settings.Theme;
         }
 
         account.LastLoginAt = DateTime.UtcNow;

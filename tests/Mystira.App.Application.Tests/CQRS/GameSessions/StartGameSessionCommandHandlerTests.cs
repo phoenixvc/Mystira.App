@@ -1,10 +1,11 @@
-﻿using FluentAssertions;
+using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.CQRS.GameSessions.Commands;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Contracts.Models.GameSessions;
-using Mystira.App.Contracts.Requests.GameSessions;
+using Mystira.Contracts.App.Models;
+using Mystira.Contracts.App.Requests.GameSessions;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data;
 using Xunit;
@@ -16,9 +17,39 @@ public class StartGameSessionCommandHandlerTests : CqrsIntegrationTestBase
     private StartGameSessionCommandHandler CreateHandler()
     {
         var repo = ServiceProvider.GetRequiredService<IGameSessionRepository>();
+        var scenarioRepo = ServiceProvider.GetRequiredService<IScenarioRepository>();
         var uow = ServiceProvider.GetRequiredService<IUnitOfWork>();
         var logger = ServiceProvider.GetRequiredService<ILogger<StartGameSessionCommandHandler>>();
-        return new StartGameSessionCommandHandler(repo, uow, logger);
+        return new StartGameSessionCommandHandler(repo, scenarioRepo, uow, logger);
+    }
+
+    private async Task SeedScenarioAsync(string scenarioId)
+    {
+        if (await DbContext.Scenarios.AnyAsync(s => s.Id == scenarioId))
+        {
+            return;
+        }
+
+        DbContext.Scenarios.Add(new Scenario
+        {
+            Id = scenarioId,
+            Title = $"Scenario {scenarioId}",
+            AgeGroup = "6-9",
+            MinimumAge = 0,
+            CoreAxes = new List<CoreAxis> { new("Honesty") },
+            Scenes = new List<Scene>
+            {
+                new()
+                {
+                    Id = "scene-1",
+                    Title = "Start",
+                    Type = SceneType.Narrative,
+                    Description = "Start"
+                }
+            }
+        });
+
+        await DbContext.SaveChangesAsync();
     }
 
     [Fact]
@@ -34,6 +65,8 @@ public class StartGameSessionCommandHandlerTests : CqrsIntegrationTestBase
             PlayerNames = new() { "Ava" },
             TargetAgeGroup = "6-9"
         };
+
+        await SeedScenarioAsync(req.ScenarioId);
 
         var session = await handler.Handle(new StartGameSessionCommand(req), CancellationToken.None);
 
@@ -68,7 +101,6 @@ public class StartGameSessionCommandHandlerTests : CqrsIntegrationTestBase
                     CharacterName = "Hero",
                     Role = "Leader",
                     Archetype = "Brave",
-                    IsUnused = false,
                     PlayerAssignment = new PlayerAssignmentDto { Type = "Player", ProfileName = "Ben" }
                 },
                 new CharacterAssignmentDto
@@ -77,7 +109,6 @@ public class StartGameSessionCommandHandlerTests : CqrsIntegrationTestBase
                     CharacterName = "Mage",
                     Role = "Support",
                     Archetype = "Wise",
-                    IsUnused = false,
                     PlayerAssignment = new PlayerAssignmentDto { Type = "Guest", GuestName = "Cara" }
                 },
                 new CharacterAssignmentDto
@@ -85,16 +116,62 @@ public class StartGameSessionCommandHandlerTests : CqrsIntegrationTestBase
                     CharacterId = "c3",
                     CharacterName = "Unused",
                     Role = "",
-                    Archetype = "",
-                    IsUnused = true
+                    Archetype = ""
                 }
             }
         };
+
+        await SeedScenarioAsync(req.ScenarioId);
 
         var session = await handler.Handle(new StartGameSessionCommand(req), CancellationToken.None);
 
         session.PlayerNames.Should().BeEquivalentTo(new[] { "Ben", "Cara" });
         session.CharacterAssignments.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task Start_WhenActiveSessionAlreadyExists_ReusesIt()
+    {
+        var handler = CreateHandler();
+
+        await SeedScenarioAsync("scenario-3");
+
+        DbContext.GameSessions.Add(new GameSession
+        {
+            Id = "existing-session",
+            ScenarioId = "scenario-3",
+            AccountId = "acc-1",
+            ProfileId = "prof-1",
+            PlayerNames = new List<string> { "Ava" },
+            Status = SessionStatus.InProgress,
+            StartTime = DateTime.UtcNow.AddMinutes(-5),
+            CurrentSceneId = "scene-1",
+            TargetAgeGroupName = "6-9"
+        });
+
+        await DbContext.SaveChangesAsync();
+
+        var req = new StartGameSessionRequest
+        {
+            ScenarioId = "scenario-3",
+            AccountId = "acc-1",
+            ProfileId = "prof-1",
+            PlayerNames = new() { "Ava" },
+            TargetAgeGroup = "6-9"
+        };
+
+        var session = await handler.Handle(new StartGameSessionCommand(req), CancellationToken.None);
+
+        session.Id.Should().Be("existing-session");
+
+        var activeCount = await DbContext.GameSessions
+            .CountAsync(s =>
+                s.ScenarioId == "scenario-3"
+                && s.AccountId == "acc-1"
+                && s.ProfileId == "prof-1"
+                && (s.Status == SessionStatus.InProgress || s.Status == SessionStatus.Paused));
+
+        activeCount.Should().Be(1);
     }
 
     [Theory]

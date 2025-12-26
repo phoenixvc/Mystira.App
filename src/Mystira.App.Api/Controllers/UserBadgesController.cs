@@ -2,8 +2,9 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.UserBadges.Commands;
 using Mystira.App.Application.CQRS.UserBadges.Queries;
-using Mystira.App.Contracts.Requests.Badges;
-using Mystira.App.Contracts.Responses.Common;
+using Mystira.Contracts.App.Requests.Badges;
+using Mystira.Contracts.App.Responses.Common;
+using Mystira.App.Api.Models;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;

@@ -9,7 +9,7 @@ using Mystira.App.Api.Services;
 using Mystira.App.Application.Behaviors;
 using Mystira.App.Application.Ports;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Application.Ports.Health;
+using Mystira.Contracts.App.Ports.Health;
 using Mystira.App.Application.Ports.Media;
 using Mystira.App.Application.Ports.Messaging;
 using Mystira.App.Application.Services;
@@ -22,16 +22,21 @@ using Mystira.App.Infrastructure.Azure;
 using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
 using Mystira.App.Infrastructure.Data;
+using Mystira.App.Infrastructure.Data.Caching;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.Services;
 using Microsoft.ApplicationInsights.Extensibility;
 using Mystira.App.Infrastructure.Discord;
 using Mystira.App.Infrastructure.Discord.Services;
 using Mystira.App.Infrastructure.StoryProtocol;
+using Mystira.App.Shared.Adapters;
+using Mystira.App.Shared.Configuration;
 using Mystira.App.Shared.Middleware;
+using Mystira.App.Shared.Services;
 using Mystira.App.Shared.Telemetry;
 using Serilog;
 using Serilog.Events;
+// using Wolverine; // Commented out - Wolverine not currently in project dependencies
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SERILOG BOOTSTRAP LOGGING (before host is built)
@@ -49,6 +54,14 @@ try
     var builder = WebApplication.CreateBuilder(args);
 
     // ═══════════════════════════════════════════════════════════════════════════════
+    // AZURE KEY VAULT CONFIGURATION (for secure secret management)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Add Key Vault as configuration source - uses Managed Identity in Azure
+    // Secrets are loaded and accessible via IConfiguration like any other setting
+    // Example: configuration["JwtSettings:RsaPrivateKey"] loads from Key Vault
+    builder.Configuration.AddKeyVaultConfiguration(builder.Environment);
+
+    // ═══════════════════════════════════════════════════════════════════════════════
     // SERILOG CONFIGURATION (reads from appsettings.json)
     // ═══════════════════════════════════════════════════════════════════════════════
     builder.Host.UseSerilog((context, services, configuration) => configuration
@@ -64,6 +77,23 @@ try
         .WriteTo.ApplicationInsights(
             services.GetService<TelemetryConfiguration>(),
             TelemetryConverter.Traces));
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // WOLVERINE MESSAGING (alongside MediatR during migration)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Wolverine is configured to run alongside MediatR during the gradual migration.
+    // New handlers will use Wolverine convention-based patterns while existing
+    // MediatR handlers continue to work. See: ADR-0015 Wolverine Migration
+    // NOTE: Wolverine disabled until package is added to project dependencies
+    // builder.Host.UseWolverine(opts =>
+    // {
+    //     // Discover handlers from Application assembly
+    //     opts.Discovery.IncludeAssembly(typeof(Mystira.App.Application.CQRS.ICommand<>).Assembly);
+    //
+    //     // Local in-process messaging only for now (no external transport)
+    //     // Azure Service Bus can be added later for distributed scenarios
+    //     opts.Policies.AutoApplyTransactions();
+    // });
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // APPLICATION INSIGHTS TELEMETRY CONFIGURATION
@@ -389,7 +419,6 @@ builder.Services.AddScoped<IPlayerScenarioScoreRepository, PlayerScenarioScoreRe
 builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
 builder.Services.AddScoped<IBadgeImageRepository, BadgeImageRepository>();
 builder.Services.AddScoped<IAxisAchievementRepository, AxisAchievementRepository>();
-builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
 
 builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
 builder.Services.AddScoped<IMediaMetadataFileRepository, MediaMetadataFileRepository>();
@@ -457,7 +486,6 @@ builder.Services.AddScoped<DownloadMediaUseCase>();
 
 // Register application services
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
-builder.Services.AddScoped<IAppStatusService, AppStatusService>();
 builder.Services.AddScoped<Mystira.App.Shared.Services.IJwtService, Mystira.App.Shared.Services.JwtService>();
 // Domain services for scoring and awards
 builder.Services.AddScoped<IAxisScoringService, AxisScoringService>();
@@ -465,9 +493,7 @@ builder.Services.AddScoped<IBadgeAwardingService, BadgeAwardingService>();
 
 // Register Application.Ports adapters for CQRS handlers
 builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, JwtServiceAdapter>();
-// Use infrastructure email service directly - configuration is read from AzureCommunicationServices section
-builder.Services.AddAzureEmailService(builder.Configuration);
-builder.Services.AddScoped<IHealthCheckPort, Mystira.App.Shared.Adapters.HealthCheckPortAdapter>();
+builder.Services.AddScoped<IHealthCheckPort, HealthCheckPortAdapter>();
 builder.Services.AddScoped<IMediaMetadataService, MediaMetadataService>();
 
 // Configure Memory Cache for query caching
@@ -476,6 +502,16 @@ builder.Services.AddMemoryCache(options =>
     options.SizeLimit = 1024; // Limit cache to 1024 entries
     options.CompactionPercentage = 0.25; // Compact 25% when size limit reached
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DISTRIBUTED CACHING (Redis or In-Memory fallback)
+// ═══════════════════════════════════════════════════════════════════════════════
+builder.Services.AddRedisCaching(builder.Configuration);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DISTRIBUTED TRACING (W3C Trace Context propagation)
+// ═══════════════════════════════════════════════════════════════════════════════
+builder.Services.AddDistributedTracing("Mystira.App.Api", builder.Environment.EnvironmentName);
 
 // Configure MediatR for CQRS pattern
 builder.Services.AddMediatR(cfg =>
@@ -489,6 +525,14 @@ builder.Services.AddMediatR(cfg =>
 
 // Register query cache invalidation service
 builder.Services.AddSingleton<IQueryCacheInvalidationService, QueryCacheInvalidationService>();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GLOBAL EXCEPTION HANDLING (Mystira.Shared.Exceptions)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Provides consistent error responses using RFC 7807 Problem Details format.
+// Catches domain exceptions (NotFoundException, ValidationException, etc.)
+// and converts them to appropriate HTTP status codes.
+builder.Services.AddProblemDetails();
 
 // Configure Health Checks
 var healthChecksBuilder = builder.Services.AddHealthChecks()
@@ -593,7 +637,9 @@ builder.Services.AddCors(options =>
 
 // Configure logging
 builder.Logging.AddConsole();
+#if !DEBUG
 builder.Logging.AddAzureWebAppDiagnostics();
+#endif
 
 // Configure Rate Limiting (BUG-5: Prevent brute-force attacks)
 builder.Services.AddRateLimiter(options =>
@@ -658,6 +704,9 @@ if (app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+// Add global exception handler (converts exceptions to ProblemDetails)
+app.UseExceptionHandler();
+
 // Add OWASP security headers (BUG-6)
 app.UseSecurityHeaders();
 
@@ -693,6 +742,33 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Apply strict rate limiting to auth endpoints via metadata (BUG-5)
+// This avoids dynamic IL generation issues in .NET 9 caused by [EnableRateLimiting] attributes on the controller/actions.
+// We apply it here after MapControllers so it's applied to the endpoints directly.
+// Note: We use the exact paths matching the AuthController routes.
+var authEndpoints = new[]
+{
+    "/api/auth/passwordless/signup",
+    "/api/auth/passwordless/verify",
+    "/api/auth/passwordless/signin",
+    "/api/auth/passwordless/signin/verify",
+    "/api/auth/refresh"
+};
+
+// MapControllers doesn't return the builder in a way that we can easily filter,
+// so we'll use a more standard approach for .NET 9 if possible,
+// or just stick to the fact that attributes ARE the standard way and
+// this IL bug might be specific to some combination.
+// Since we found that removing attributes fixes it, let's use a convention-based
+// approach to apply rate limiting to these routes.
+// We'll use a Global Rate Limiter that checks the path, or just use the MapControllers
+// metadata if we can find a way to access it.
+// Actually, the simplest and most robust way in .NET 9 to apply a policy
+// without attributes is to use the RequireRateLimiting on the endpoint group.
+
+app.MapGroup("/api/auth")
+   .RequireRateLimiting("auth");
 
 // Map health check endpoints
 // /health - checks all dependencies (blob storage, database, discord if enabled)

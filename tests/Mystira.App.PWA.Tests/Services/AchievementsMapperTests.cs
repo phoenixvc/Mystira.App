@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Mystira.App.Contracts.Responses.Badges;
+using Mystira.Contracts.App.Responses.Badges;
 using Mystira.App.PWA.Services;
 using Xunit;
 
@@ -15,6 +15,7 @@ public class AchievementsMapperTests
             new()
             {
                 Id = "badge-bronze",
+                Name = "Brave Beginner Badge",
                 AgeGroupId = "6-9",
                 CompassAxisId = "Courage",
                 Tier = "Bronze",
@@ -27,6 +28,7 @@ public class AchievementsMapperTests
             new()
             {
                 Id = "badge-silver",
+                Name = "Brave Explorer Badge",
                 AgeGroupId = "6-9",
                 CompassAxisId = "Courage",
                 Tier = "Silver",
@@ -41,19 +43,25 @@ public class AchievementsMapperTests
         var progress = new BadgeProgressResponse
         {
             AgeGroupId = "6-9",
-            AxisProgresses =
+            Badge = new BadgeResponse { Id = "badge-bronze", Name = "Brave Beginner Badge", Description = "You chose the brave path." },
+            CurrentValue = 12,
+            TargetValue = 20,
+            AxisProgresses = new List<AxisProgressResponse>
             {
-                new AxisProgressResponse
+                new()
                 {
-                    AxisId = "Courage",
+                    CompassAxisId = "Courage",
+                    CompassAxisName = "Courage",
                     AxisName = "Courage",
                     CurrentScore = 12,
-                    Tiers =
+                    CurrentLevel = 1,
+                    Tiers = new List<BadgeTierProgressResponse>
                     {
-                        new BadgeTierProgressResponse
+                        new()
                         {
                             BadgeId = "badge-bronze",
                             Tier = "Bronze",
+                            TierName = "Bronze",
                             TierOrder = 1,
                             Title = "Brave Beginner",
                             Description = "You chose the brave path.",
@@ -62,7 +70,9 @@ public class AchievementsMapperTests
                             IsEarned = true,
                             EarnedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                             ProgressToThreshold = 12,
-                            RemainingScore = 0
+                            RemainingScore = 0,
+                            TotalBadges = 2,
+                            EarnedBadges = 1
                         }
                     }
                 }
@@ -74,11 +84,15 @@ public class AchievementsMapperTests
             new()
             {
                 Id = "axis-copy-1",
+                Name = "Courage Achievement",
                 AgeGroupId = "6-9",
                 CompassAxisId = "Courage",
                 CompassAxisName = "Courage",
+                AxisName = "Courage",
                 AxesDirection = "positive",
-                Description = "Try bold choices to help others."
+                Description = "Try bold choices to help others.",
+                Level = 1,
+                ScoreThreshold = 10
             }
         };
 
@@ -109,6 +123,7 @@ public class AchievementsMapperTests
             new()
             {
                 Id = "badge-bronze",
+                Name = "Wise Beginner Badge",
                 AgeGroupId = "6-9",
                 CompassAxisId = "Wisdom",
                 Tier = "Bronze",
@@ -123,19 +138,25 @@ public class AchievementsMapperTests
         var progress = new BadgeProgressResponse
         {
             AgeGroupId = "6-9",
-            AxisProgresses =
+            Badge = new BadgeResponse { Id = "badge-bronze", Name = "Wise Beginner Badge", Description = "You learned something." },
+            CurrentValue = 3,
+            TargetValue = 5,
+            AxisProgresses = new List<AxisProgressResponse>
             {
-                new AxisProgressResponse
+                new()
                 {
-                    AxisId = "Wisdom",
+                    CompassAxisId = "Wisdom",
+                    CompassAxisName = "Wisdom",
                     AxisName = "Wisdom",
                     CurrentScore = 0,
-                    Tiers =
+                    CurrentLevel = 0,
+                    Tiers = new List<BadgeTierProgressResponse>
                     {
-                        new BadgeTierProgressResponse
+                        new()
                         {
                             BadgeId = "badge-bronze",
                             Tier = "Bronze",
+                            TierName = "Bronze",
                             TierOrder = 1,
                             Title = "Wise Beginner",
                             Description = "You learned something.",
@@ -143,7 +164,9 @@ public class AchievementsMapperTests
                             ImageId = "wisdom-bronze",
                             IsEarned = false,
                             ProgressToThreshold = 3,
-                            RemainingScore = 2
+                            RemainingScore = 2,
+                            TotalBadges = 1,
+                            EarnedBadges = 0
                         }
                     }
                 }
@@ -161,23 +184,28 @@ public class AchievementsMapperTests
     {
         var config = new List<BadgeResponse>
         {
-            new() { Id = "p", CompassAxisId = "A", Tier = "Platinum", TierOrder = 4, RequiredScore = 100 },
-            new() { Id = "d", CompassAxisId = "A", Tier = "Diamond", TierOrder = 5, RequiredScore = 200 }
+            new() { Id = "p", Name = "Platinum Badge", CompassAxisId = "A", Tier = "Platinum", TierOrder = 4, RequiredScore = 100, Description = "Platinum tier" },
+            new() { Id = "d", Name = "Diamond Badge", CompassAxisId = "A", Tier = "Diamond", TierOrder = 5, RequiredScore = 200, Description = "Diamond tier" }
         };
 
         var progress = new BadgeProgressResponse
         {
-            AxisProgresses =
+            Badge = new BadgeResponse { Id = "p", Name = "Platinum Badge", Description = "Platinum tier" },
+            CurrentValue = 50,
+            TargetValue = 100,
+            AxisProgresses = new List<AxisProgressResponse>
             {
-                new AxisProgressResponse
+                new()
                 {
-                    AxisId = "A",
+                    CompassAxisId = "A",
+                    AxisName = "A",
                     CurrentScore = 50,
-                    Tiers =
+                    CurrentLevel = 3,
+                    Tiers = new List<BadgeTierProgressResponse>
                     {
                         // Simulate specific progress for Diamond but not Platinum
-                        new BadgeTierProgressResponse { BadgeId = "p", RequiredScore = 100, ProgressToThreshold = 0 },
-                        new BadgeTierProgressResponse { BadgeId = "d", RequiredScore = 200, ProgressToThreshold = 50 }
+                        new() { BadgeId = "p", TierName = "Platinum", TierOrder = 4, RequiredScore = 100, ProgressToThreshold = 0, TotalBadges = 2, EarnedBadges = 0 },
+                        new() { BadgeId = "d", TierName = "Diamond", TierOrder = 5, RequiredScore = 200, ProgressToThreshold = 50, TotalBadges = 2, EarnedBadges = 0 }
                     }
                 }
             }

@@ -1,8 +1,8 @@
+using Ardalis.Specification;
+using Ardalis.Specification.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
-using Mystira.App.Domain.Specifications;
-using Mystira.App.Infrastructure.Data.Specifications;
 
 namespace Mystira.App.Infrastructure.Data.Repositories;
 
@@ -88,6 +88,6 @@ public class AxisAchievementRepository : IAxisAchievementRepository
 
     private IQueryable<AxisAchievement> ApplySpecification(ISpecification<AxisAchievement> spec)
     {
-        return SpecificationEvaluator<AxisAchievement>.GetQuery(_context.AxisAchievements.AsQueryable(), spec);
+        return SpecificationEvaluator.Default.GetQuery(_context.AxisAchievements.AsQueryable(), spec);
     }
 }

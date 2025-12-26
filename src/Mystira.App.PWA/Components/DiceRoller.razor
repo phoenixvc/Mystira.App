@@ -8,10 +8,10 @@
         {
             var value = i < Results.Count ? Results[i] : 1;
             var dieIdx = i;
-            <div class="die @(IsRolling ? "rolling" : "") clickable" 
-                 style="@GetDieTransform(i)" 
-                 @onclick="Roll" 
-                 role="button" 
+            <div class="die @(IsRolling ? "rolling" : "") clickable"
+                 style="@GetDieTransform(i)"
+                 @onclick="Roll"
+                 role="button"
                  aria-label="Roll the dice">
                 @* Golden tube trail elements *@
                 <svg class="golden-tube tube-1" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -88,22 +88,22 @@
 
     <audio @ref="audioRef" preload="auto">
         <!-- Replace with your own file if you like -->
-        <source src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAA..." type="audio/mp3"/>
+        <source src="sounds/dice-roll-900ms.mp3" type="audio/mp3"/>
     </audio>
 </div>
 
 @code {
     // Public parameters
     [Parameter] public EventCallback<int> OnRollResult { get; set; }
-    
+
     [Parameter] public int DiceCount { get; set; } = 2;
     [Parameter] public int Faces { get; set; } = 6;
     [Parameter] public bool DarkMode { get; set; } = false;
     [Parameter] public bool SoundOn { get; set; } = true;
     [Parameter] public bool HapticsOn { get; set; } = true;
-    [Parameter] public int RollDurationMs { get; set; } = 900;
+    [Parameter] public int RollDurationMs { get; set; } = 1500;
     [Parameter] public int WaitAfterRollDuration { get; set; } = 0;
-    
+
     private static readonly int[] AllowedFaces = new[] { 4, 6, 8, 10, 12, 20, 100 };
 
     private bool IsRolling { get; set; }
@@ -133,7 +133,7 @@
 
         try
         {
-            await PlayClickAsync();
+            await PlayDiceRollAsync();
             await HapticAsync(2);
 
             if (Results.Count != DiceCount)
@@ -141,6 +141,9 @@
 
             // Animate “spinning” faces
             await AnimateRollAsync(RollDurationMs, token);
+
+            // Stop the dice roll sound as soon as dice land
+            await StopDiceRollAsync();
 
             HistoryEntries.Insert(0, new RollHistory(DiceCount, Faces, Results.ToArray(), DateTime.UtcNow));
 
@@ -159,7 +162,7 @@
     private async Task AnimateRollAsync(int durationMs, CancellationToken token)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var step = 60; // ms between face changes
+        var step = 100; // ms between face changes
 
         while (sw.ElapsedMilliseconds < durationMs && !token.IsCancellationRequested)
         {
@@ -207,6 +210,18 @@
     {
         if (!SoundOn || string.IsNullOrEmpty(audioRef.Id)) return;
         try { await JS.InvokeVoidAsync("diceAudio.play", audioRef); } catch { }
+    }
+
+    private async Task PlayDiceRollAsync()
+    {
+        if (!SoundOn) return;
+        try { await JS.InvokeVoidAsync("diceAudio.playRoll", "sounds/dice-roll-1500ms.mp3"); } catch { }
+    }
+
+    private async Task StopDiceRollAsync()
+    {
+        if (!SoundOn) return;
+        try { await JS.InvokeVoidAsync("diceAudio.stopRoll"); } catch { }
     }
 
     private async Task HapticAsync(int ms)

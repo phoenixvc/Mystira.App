@@ -172,6 +172,27 @@
 
                     <hr class="my-4" />
 
+                    <div class="text-center mb-3">
+                        <p class="text-muted mb-3">Or sign in with</p>
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-lg w-100"
+                                @onclick="SignInWithGoogle"
+                                disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <span>Redirecting...</span>
+                            }
+                            else
+                            {
+                                <i class="fab fa-google me-2"></i>
+                                <span>Continue with Google</span>
+                            }
+                        </button>
+                    </div>
+
+                    <hr class="my-4" />
+
                     <div class="text-center">
                         <p class="mb-0 text-muted">
                             Don't have an account?
@@ -203,7 +224,7 @@
     private bool isResendingCode = false;
     private bool rememberMe = true;
     private bool rememberMeUserSet = false;
-    private System.Timers.Timer? countdownTimer;
+    private Timer? countdownTimer;
 
     private async Task RequestSigninCode()
     {
@@ -356,7 +377,7 @@
         StopResendCountdown();
         resendCountdown = 15;
 
-        countdownTimer = new System.Timers.Timer(1000);
+        countdownTimer = new Timer(1000);
         countdownTimer.Elapsed += OnCountdownTimerElapsed;
         countdownTimer.AutoReset = true;
         countdownTimer.Start();
@@ -423,6 +444,39 @@
         rememberMeUserSet = true;
         AuthService.SetRememberMe(rememberMe);
         StateHasChanged();
+    }
+
+    private async Task SignInWithGoogle()
+    {
+        try
+        {
+            isSubmitting = true;
+            errorMessage = string.Empty;
+            StateHasChanged();
+
+            Logger.LogInformation("Initiating Google sign-in via Entra External ID");
+
+            // Check if using Entra External ID auth service
+            if (AuthService is EntraExternalIdAuthService entraService)
+            {
+                // Use domain_hint to skip the Entra signin page and go directly to Google
+                await entraService.LoginWithEntraAsync("Google");
+            }
+            else
+            {
+                errorMessage = "Google sign-in is not available with the current authentication provider.";
+                Logger.LogWarning("Attempted Google sign-in but EntraExternalIdAuthService is not configured");
+                isSubmitting = false;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initiating Google sign-in");
+            errorMessage = "An error occurred while signing in with Google. Please try again.";
+            isSubmitting = false;
+            StateHasChanged();
+        }
     }
 
     public void Dispose()

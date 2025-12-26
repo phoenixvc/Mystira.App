@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Specifications;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.UseCases.GameSessions;
@@ -10,15 +11,18 @@ namespace Mystira.App.Application.UseCases.GameSessions;
 public class CheckAchievementsUseCase
 {
     private readonly IGameSessionRepository _repository;
+    private readonly IRepository<BadgeConfiguration> _badgeRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<CheckAchievementsUseCase> _logger;
 
     public CheckAchievementsUseCase(
         IGameSessionRepository repository,
+        IRepository<BadgeConfiguration> badgeRepository,
         IUnitOfWork unitOfWork,
         ILogger<CheckAchievementsUseCase> logger)
     {
         _repository = repository;
+        _badgeRepository = badgeRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -39,15 +43,19 @@ public class CheckAchievementsUseCase
 
         var achievements = new List<SessionAchievement>();
 
-        // TODO: Enhancement - Replace hardcoded threshold with BadgeConfigurationApiService to get dynamic badge thresholds
-        // This will allow badge thresholds to be configured per axis and updated without code changes
-        // For now, using simple threshold logic (3.0f) as placeholder
-        var defaultThreshold = 3.0f;
+        // Fetch all badge configurations to check thresholds dynamically
+        var badgeConfigs = await _badgeRepository.ListAsync(new AllBadgeConfigurationsSpec());
 
         // Check compass threshold achievements
         foreach (var compassTracking in session.CompassValues.Values)
         {
-            if (Math.Abs(compassTracking.CurrentValue) >= defaultThreshold)
+            // Find badge configuration for this axis
+            var axisBadge = badgeConfigs.FirstOrDefault(b => b.Axis.Equals(compassTracking.Axis, StringComparison.OrdinalIgnoreCase));
+
+            // Use configured threshold or fallback to 3.0f if not found
+            var threshold = axisBadge?.Threshold ?? 3.0f;
+
+            if (Math.Abs(compassTracking.CurrentValue) >= threshold)
             {
                 var achievementId = $"{session.Id}_{compassTracking.Axis}_threshold";
                 if (!session.Achievements.Any(a => a.Id == achievementId))
@@ -55,12 +63,12 @@ public class CheckAchievementsUseCase
                     achievements.Add(new SessionAchievement
                     {
                         Id = achievementId,
-                        Title = $"{compassTracking.Axis.Replace("_", " ").ToTitleCase()} Badge",
-                        Description = $"Reached {compassTracking.Axis} threshold of {defaultThreshold}",
-                        IconName = $"badge_{compassTracking.Axis}",
+                        Title = axisBadge?.Name ?? $"{compassTracking.Axis.Replace("_", " ").ToTitleCase()} Badge",
+                        Description = axisBadge?.Message ?? $"Reached {compassTracking.Axis} threshold of {threshold}",
+                        IconName = !string.IsNullOrEmpty(axisBadge?.ImageId) ? axisBadge.ImageId : $"badge_{compassTracking.Axis}",
                         Type = AchievementType.CompassThreshold,
                         CompassAxis = compassTracking.Axis,
-                        ThresholdValue = defaultThreshold,
+                        ThresholdValue = threshold,
                         EarnedAt = DateTime.UtcNow
                     });
                 }

@@ -8,87 +8,6 @@
         <canvas id="particle-canvas" class="particle-canvas" aria-hidden="true"
                 style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: auto;"></canvas>
 
-        <!-- Golden Light Tubes - vine-like tubes that twine around the logo/video area (hidden for now) -->
-        @* TODO: Re-enable golden tubes when ready
-        <div class="golden-lights @(showVideo ? "video-mode" : "logo-mode")" aria-hidden="true" id="golden-lights-container">
-            <svg class="golden-light-svg" viewBox="0 0 600 500" preserveAspectRatio="xMidYMid meet">
-                <!-- Twining vine tubes that wrap around center -->
-                <g class="light-tube-group light-tube-group-1">
-                    <!-- Left twining vine - wraps around from top-left -->
-                    <path class="light-tube light-tube-1"
-                          d="M 80 120 C 120 80, 180 100, 220 160 C 260 220, 240 260, 280 280 C 320 300, 340 260, 320 220 C 300 180, 340 140, 380 160 C 420 180, 400 240, 360 280"
-                          fill="none" stroke="url(#goldenGradient1)" stroke-width="3" stroke-linecap="round" />
-                    <path class="light-tube light-tube-1-glow"
-                          d="M 80 120 C 120 80, 180 100, 220 160 C 260 220, 240 260, 280 280 C 320 300, 340 260, 320 220 C 300 180, 340 140, 380 160 C 420 180, 400 240, 360 280"
-                          fill="none" stroke="url(#goldenGradient1)" stroke-width="12" opacity="0.25" stroke-linecap="round" />
-                </g>
-
-                <g class="light-tube-group light-tube-group-2">
-                    <!-- Right twining vine - wraps around from top-right -->
-                    <path class="light-tube light-tube-2"
-                          d="M 520 140 C 480 100, 420 120, 380 180 C 340 240, 360 280, 320 300 C 280 320, 260 280, 280 240 C 300 200, 260 160, 220 180 C 180 200, 200 260, 240 300"
-                          fill="none" stroke="url(#goldenGradient2)" stroke-width="3" stroke-linecap="round" />
-                    <path class="light-tube light-tube-2-glow"
-                          d="M 520 140 C 480 100, 420 120, 380 180 C 340 240, 360 280, 320 300 C 280 320, 260 280, 280 240 C 300 200, 260 160, 220 180 C 180 200, 200 260, 240 300"
-                          fill="none" stroke="url(#goldenGradient2)" stroke-width="12" opacity="0.25" stroke-linecap="round" />
-                </g>
-
-                <g class="light-tube-group light-tube-group-3">
-                    <!-- Inner wrapping spiral - tighter around logo center -->
-                    <path class="light-tube light-tube-3"
-                          d="M 240 200 C 260 160, 340 160, 360 200 C 380 240, 360 280, 320 300 C 280 320, 240 300, 240 260 C 240 220, 280 200, 300 220 C 320 240, 300 280, 280 280"
-                          fill="none" stroke="url(#goldenGradient3)" stroke-width="2.5" stroke-linecap="round" />
-                    <path class="light-tube light-tube-3-glow"
-                          d="M 240 200 C 260 160, 340 160, 360 200 C 380 240, 360 280, 320 300 C 280 320, 240 300, 240 260 C 240 220, 280 200, 300 220 C 320 240, 300 280, 280 280"
-                          fill="none" stroke="url(#goldenGradient3)" stroke-width="10" opacity="0.2" stroke-linecap="round" />
-                </g>
-
-                <!-- Additional subtle tendril -->
-                <g class="light-tube-group light-tube-group-4">
-                    <path class="light-tube light-tube-4"
-                          d="M 180 320 C 220 340, 280 340, 300 300 C 320 260, 300 220, 340 200 C 380 180, 420 220, 400 280"
-                          fill="none" stroke="url(#goldenGradient4)" stroke-width="2" stroke-linecap="round" />
-                    <path class="light-tube light-tube-4-glow"
-                          d="M 180 320 C 220 340, 280 340, 300 300 C 320 260, 300 220, 340 200 C 380 180, 420 220, 400 280"
-                          fill="none" stroke="url(#goldenGradient4)" stroke-width="8" opacity="0.15" stroke-linecap="round" />
-                </g>
-
-                <!-- Gradients with brighter golden colors -->
-                <defs>
-                    <linearGradient id="goldenGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#FFD700;stop-opacity:0.9" />
-                        <stop offset="50%" style="stop-color:#FFA500;stop-opacity:0.7" />
-                        <stop offset="100%" style="stop-color:#FF8C00;stop-opacity:0.5" />
-                    </linearGradient>
-                    <linearGradient id="goldenGradient2" x1="100%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" style="stop-color:#FFD700;stop-opacity:0.85" />
-                        <stop offset="50%" style="stop-color:#FFA500;stop-opacity:0.65" />
-                        <stop offset="100%" style="stop-color:#FF8C00;stop-opacity:0.45" />
-                    </linearGradient>
-                    <linearGradient id="goldenGradient3" x1="50%" y1="0%" x2="50%" y2="100%">
-                        <stop offset="0%" style="stop-color:#FFE066;stop-opacity:0.75" />
-                        <stop offset="50%" style="stop-color:#FFD700;stop-opacity:0.6" />
-                        <stop offset="100%" style="stop-color:#FFA500;stop-opacity:0.4" />
-                    </linearGradient>
-                    <linearGradient id="goldenGradient4" x1="0%" y1="100%" x2="100%" y2="0%">
-                        <stop offset="0%" style="stop-color:#FFE066;stop-opacity:0.6" />
-                        <stop offset="50%" style="stop-color:#FFD700;stop-opacity:0.5" />
-                        <stop offset="100%" style="stop-color:#FFA500;stop-opacity:0.35" />
-                    </linearGradient>
-
-                    <!-- Filter for extra glow effect -->
-                    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                        <feMerge>
-                            <feMergeNode in="coloredBlur"/>
-                            <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
-                    </filter>
-                </defs>
-            </svg>
-        </div>
-        *@
-
         <div class="hero-content" style="position: relative; z-index: 1;">
             <h1 class="mystira-title mb-2">
                 <span class="title-text">Mystira</span><span class="alpha-badge">ALPHA</span>
@@ -257,7 +176,7 @@
     private bool showReplayButton = false;
     private bool showFullIntro = false;
     private bool showLogoAnimation = false; // SVG animation after video
-    private System.Threading.Timer? _animationTimer;
+    private Timer? _animationTimer;
     private DotNetObjectReference<HeroSection>? _dotNetRef;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -302,14 +221,14 @@
 
         // Stop animation after 4 seconds
         _animationTimer?.Dispose();
-        _animationTimer = new System.Threading.Timer(_ =>
+        _animationTimer = new Timer(_ =>
         {
             InvokeAsync(() =>
             {
                 showLogoAnimation = false;
                 StateHasChanged();
             });
-        }, null, 4000, System.Threading.Timeout.Infinite);
+        }, null, 4000, Timeout.Infinite);
     }
 
     [JSInvokable]

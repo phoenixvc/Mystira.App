@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Mystira.App.Application.Configuration.StoryProtocol;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Contracts.Responses.Attribution;
+using Mystira.Contracts.App.Responses.Attribution;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.Attribution.Queries;
@@ -12,17 +14,16 @@ public class GetBundleIpStatusQueryHandler : IQueryHandler<GetBundleIpStatusQuer
 {
     private readonly IContentBundleRepository _repository;
     private readonly ILogger<GetBundleIpStatusQueryHandler> _logger;
-
-    // TODO: Move to configuration (StoryProtocolOptions.ExplorerBaseUrl) via DI
-    // Default is Story Protocol Odyssey testnet explorer
-    private const string StoryProtocolExplorerBaseUrl = "https://odyssey.storyscan.xyz/address";
+    private readonly StoryProtocolOptions _options;
 
     public GetBundleIpStatusQueryHandler(
         IContentBundleRepository repository,
-        ILogger<GetBundleIpStatusQueryHandler> logger)
+        ILogger<GetBundleIpStatusQueryHandler> logger,
+        IOptions<StoryProtocolOptions> options)
     {
         _repository = repository;
         _logger = logger;
+        _options = options.Value;
     }
 
     public async Task<IpVerificationResponse?> Handle(GetBundleIpStatusQuery request, CancellationToken cancellationToken)
@@ -43,7 +44,7 @@ public class GetBundleIpStatusQueryHandler : IQueryHandler<GetBundleIpStatusQuer
         return MapToIpStatusResponse(bundle);
     }
 
-    private static IpVerificationResponse MapToIpStatusResponse(ContentBundle bundle)
+    private IpVerificationResponse MapToIpStatusResponse(ContentBundle bundle)
     {
         var storyProtocol = bundle.StoryProtocol;
         var isRegistered = storyProtocol?.IsRegistered ?? false;
@@ -59,7 +60,7 @@ public class GetBundleIpStatusQueryHandler : IQueryHandler<GetBundleIpStatusQuer
             RoyaltyModuleId = storyProtocol?.RoyaltyModuleId,
             ContributorCount = storyProtocol?.Contributors?.Count ?? 0,
             ExplorerUrl = isRegistered && !string.IsNullOrEmpty(storyProtocol?.IpAssetId)
-                ? $"{StoryProtocolExplorerBaseUrl}/{storyProtocol.IpAssetId}"
+                ? $"{_options.ExplorerBaseUrl}/address/{storyProtocol.IpAssetId}"
                 : null
         };
     }

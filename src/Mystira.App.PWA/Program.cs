@@ -2,10 +2,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Extensions.Http.Resilience;
 using Mystira.App.PWA;
 using Mystira.App.PWA.Services;
+using Mystira.App.PWA.Services.Music;
 using Polly;
-using Polly.Extensions.Http;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -61,90 +62,112 @@ void ConfigureApiHttpClient(HttpClient client)
     client.BaseAddress = new Uri(defaultApiUrl);
 }
 
-// Factory function to create resilience policies for each client
+// Polly v8 resilience configuration using Microsoft.Extensions.Http.Resilience
 // IMPORTANT: Each client gets its OWN circuit breaker instance to prevent cascade failures
 // (If ScenarioApi fails, it shouldn't block AuthApi, etc.)
-IAsyncPolicy<HttpResponseMessage> CreateResiliencePolicy(string clientName)
+Action<ResiliencePipelineBuilder<HttpResponseMessage>> ConfigureStandardResilience(string clientName) => builder =>
 {
-    // Retry policy: exponential backoff (2s, 4s, 8s) on transient errors
-    var retryPolicy = HttpPolicyExtensions
-        .HandleTransientHttpError()
-        .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-            onRetry: (outcome, timespan, retryAttempt, _) =>
-            {
-                Console.WriteLine($"[{clientName}:Retry] Attempt {retryAttempt} after {timespan.TotalSeconds}s - {outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString()}");
-            });
+    // Add retry with exponential backoff (2s, 4s, 8s) on transient errors
+    builder.AddRetry(new HttpRetryStrategyOptions
+    {
+        MaxRetryAttempts = 3,
+        BackoffType = DelayBackoffType.Exponential,
+        Delay = TimeSpan.FromSeconds(2),
+        ShouldHandle = static args => ValueTask.FromResult(HttpClientResiliencePredicates.IsTransient(args.Outcome)),
+        OnRetry = args =>
+        {
+            Console.WriteLine($"[{clientName}:Retry] Attempt {args.AttemptNumber} after {args.RetryDelay.TotalSeconds}s - {args.Outcome.Exception?.Message ?? args.Outcome.Result?.StatusCode.ToString()}");
+            return default;
+        }
+    });
 
-    // Circuit breaker: opens after 5 failures, stays open for 30s
-    // Each client has its own circuit breaker state
-    var circuitBreakerPolicy = HttpPolicyExtensions
-        .HandleTransientHttpError()
-        .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30),
-            onBreak: (outcome, breakDelay) =>
-            {
-                Console.WriteLine($"[{clientName}:CircuitBreaker] Opened for {breakDelay.TotalSeconds}s - {outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString()}");
-            },
-            onReset: () => Console.WriteLine($"[{clientName}:CircuitBreaker] Reset"),
-            onHalfOpen: () => Console.WriteLine($"[{clientName}:CircuitBreaker] Half-open, testing..."));
+    // Add circuit breaker: opens after 5 failures, stays open for 30s
+    builder.AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
+    {
+        FailureRatio = 0.5,
+        MinimumThroughput = 5,
+        SamplingDuration = TimeSpan.FromSeconds(30),
+        BreakDuration = TimeSpan.FromSeconds(30),
+        ShouldHandle = static args => ValueTask.FromResult(HttpClientResiliencePredicates.IsTransient(args.Outcome)),
+        OnOpened = args =>
+        {
+            Console.WriteLine($"[{clientName}:CircuitBreaker] Opened for {args.BreakDuration.TotalSeconds}s");
+            return default;
+        },
+        OnClosed = _ =>
+        {
+            Console.WriteLine($"[{clientName}:CircuitBreaker] Reset");
+            return default;
+        },
+        OnHalfOpened = _ =>
+        {
+            Console.WriteLine($"[{clientName}:CircuitBreaker] Half-open, testing...");
+            return default;
+        }
+    });
 
-    // Timeout policy: 30 second timeout per request
-    var timeoutPolicy = Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(30));
+    // Add timeout: 30 second timeout per request
+    builder.AddTimeout(TimeSpan.FromSeconds(30));
+};
 
-    // Combined policy: timeout wraps retry wraps circuit breaker
-    return Policy.WrapAsync(timeoutPolicy, retryPolicy, circuitBreakerPolicy);
-}
-
-// Register domain-specific API clients with dynamic base address resolution and resilience policies
+// Register domain-specific API clients with dynamic base address resolution and resilience policies (Polly v8)
 // Each client uses ApiBaseAddressHandler to resolve URLs from localStorage
-// IMPORTANT: Each client gets its own circuit breaker via CreateResiliencePolicy()
+// IMPORTANT: Each client gets its own circuit breaker via ConfigureStandardResilience()
 builder.Services.AddHttpClient<IScenarioApiClient, ScenarioApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("ScenarioApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("ScenarioApi", ConfigureStandardResilience("ScenarioApi"));
 
 builder.Services.AddHttpClient<IGameSessionApiClient, GameSessionApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("GameSessionApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("GameSessionApi", ConfigureStandardResilience("GameSessionApi"));
+
+// Music and Audio Services
+builder.Services.AddSingleton<IMusicResolver, MusicResolver>();
+builder.Services.AddSingleton<IAudioStateStore, AudioStateStore>();
+builder.Services.AddSingleton<IAudioBus, AudioBus>();
+builder.Services.AddSingleton<SceneAudioOrchestrator>();
+builder.Services.AddScoped<IAudioCacheService, AudioCacheService>();
 
 builder.Services.AddHttpClient<IUserProfileApiClient, UserProfileApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("UserProfileApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("UserProfileApi", ConfigureStandardResilience("UserProfileApi"));
 
 builder.Services.AddHttpClient<IAuthApiClient, AuthApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("AuthApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("AuthApi", ConfigureStandardResilience("AuthApi"));
 
 builder.Services.AddHttpClient<IMediaApiClient, MediaApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("MediaApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("MediaApi", ConfigureStandardResilience("MediaApi"));
 
 builder.Services.AddHttpClient<IAvatarApiClient, AvatarApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("AvatarApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("AvatarApi", ConfigureStandardResilience("AvatarApi"));
 
 builder.Services.AddHttpClient<IContentBundleApiClient, ContentBundleApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("ContentBundleApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("ContentBundleApi", ConfigureStandardResilience("ContentBundleApi"));
 
 builder.Services.AddHttpClient<ICharacterApiClient, CharacterApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("CharacterApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("CharacterApi", ConfigureStandardResilience("CharacterApi"));
 
 // Feature flag: Discord integration can be disabled via configuration
 var discordEnabled = builder.Configuration.GetValue<bool>("Features:Discord:Enabled");
 if (discordEnabled)
 {
     builder.Services.AddHttpClient<IDiscordApiClient, DiscordApiClient>(ConfigureApiHttpClient)
-        .AddPolicyHandler(CreateResiliencePolicy("DiscordApi"))
         .AddHttpMessageHandler<ApiBaseAddressHandler>()
-        .AddHttpMessageHandler<AuthHeaderHandler>();
+        .AddHttpMessageHandler<AuthHeaderHandler>()
+        .AddResilienceHandler("DiscordApi", ConfigureStandardResilience("DiscordApi"));
 }
 else
 {
@@ -153,14 +176,14 @@ else
 }
 
 builder.Services.AddHttpClient<IAttributionApiClient, AttributionApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("AttributionApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("AttributionApi", ConfigureStandardResilience("AttributionApi"));
 
 builder.Services.AddHttpClient<IBadgesApiClient, BadgesApiClient>(ConfigureApiHttpClient)
-    .AddPolicyHandler(CreateResiliencePolicy("BadgesApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+    .AddHttpMessageHandler<AuthHeaderHandler>()
+    .AddResilienceHandler("BadgesApi", ConfigureStandardResilience("BadgesApi"));
 
 // Register main ApiClient that composes all domain clients
 builder.Services.AddScoped<IApiClient, ApiClient>();
@@ -175,17 +198,28 @@ builder.Services.Configure<JsonSerializerOptions>(options =>
 
 // Register services
 builder.Services.AddScoped<ITokenProvider, LocalStorageTokenProvider>();
-builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Configure authentication provider based on configuration
+var authProvider = builder.Configuration["Authentication:Provider"];
+if (authProvider == "EntraExternalId")
+{
+    builder.Services.AddScoped<IAuthService, EntraExternalIdAuthService>();
+}
+else
+{
+    // Default to custom passwordless authentication
+    builder.Services.AddScoped<IAuthService, AuthService>();
+}
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<IGameSessionService, GameSessionService>();
-builder.Services.AddScoped<IIndexedDbService, IndexedDbService>();
+builder.Services.AddScoped<IInMemoryStoreService, InMemoryStoreService>();
 builder.Services.AddScoped<ICharacterAssignmentService, CharacterAssignmentService>();
 builder.Services.AddSingleton<IImageCacheService, ImageCacheService>();
 builder.Services.AddScoped<IPlayerContextService, PlayerContextService>();
 builder.Services.AddScoped<IAchievementsService, AchievementsService>();
 builder.Services.AddScoped<IAwardsState, AwardsState>();
 // Settings service (localStorage-backed)
-builder.Services.AddScoped<ISettingsService, SettingsService>();
+builder.Services.AddSingleton<ISettingsService, SettingsService>();
 
 // UI Services
 builder.Services.AddScoped<ToastService>();
@@ -218,14 +252,14 @@ try
     var profileService = host.Services.GetService<IProfileService>();
     var apiClient = host.Services.GetService<IApiClient>();
     var gameSessionService = host.Services.GetService<IGameSessionService>();
-    var indexedDbService = host.Services.GetService<IIndexedDbService>();
+    var inMemoryStoreService = host.Services.GetService<IInMemoryStoreService>();
 
     logger.LogInformation("Services registered:");
     logger.LogInformation("- AuthService: {AuthService}", authService?.GetType().Name ?? "Not registered");
     logger.LogInformation("- ProfileService: {ProfileService}", profileService?.GetType().Name ?? "Not registered");
     logger.LogInformation("- ApiClient: {ApiClient}", apiClient?.GetType().Name ?? "Not registered");
     logger.LogInformation("- GameSessionService: {GameSessionService}", gameSessionService?.GetType().Name ?? "Not registered");
-    logger.LogInformation("- IndexedDbService: {IndexedDbService}", indexedDbService?.GetType().Name ?? "Not registered");
+    logger.LogInformation("- InMemoryStoreService: {InMemoryStoreService}", inMemoryStoreService?.GetType().Name ?? "Not registered");
 
     await host.RunAsync();
 }

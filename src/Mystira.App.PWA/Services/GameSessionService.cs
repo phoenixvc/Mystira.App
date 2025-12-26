@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Mystira.App.PWA.Models;
+using Mystira.App.PWA.Services.Music;
 
 namespace Mystira.App.PWA.Services;
 
@@ -8,6 +9,7 @@ public partial class GameSessionService : IGameSessionService
     private readonly ILogger<GameSessionService> _logger;
     private readonly IApiClient _apiClient;
     private readonly IAuthService _authService;
+    private readonly SceneAudioOrchestrator _audioOrchestrator;
 
     public event EventHandler<GameSession?>? GameSessionChanged;
 
@@ -29,11 +31,12 @@ public partial class GameSessionService : IGameSessionService
     private bool _isPaused = false;
     public bool IsPaused => _isPaused;
 
-    public GameSessionService(ILogger<GameSessionService> logger, IApiClient apiClient, IAuthService authService)
+    public GameSessionService(ILogger<GameSessionService> logger, IApiClient apiClient, IAuthService authService, SceneAudioOrchestrator audioOrchestrator)
     {
         _logger = logger;
         _apiClient = apiClient;
         _authService = authService;
+        _audioOrchestrator = audioOrchestrator;
     }
 
     public async Task<bool> StartGameSessionAsync(Scenario scenario)
@@ -124,6 +127,12 @@ public partial class GameSessionService : IGameSessionService
                 _characterAssignments = new List<CharacterAssignment>();
             }
 
+            // Orchestrate Audio
+            if (startingScene != null)
+            {
+                await _audioOrchestrator.EnterSceneAsync(startingScene, scenario);
+            }
+
             _logger.LogInformation("Game session started successfully with ID: {SessionId}", apiGameSession.Id);
             return true;
         }
@@ -186,6 +195,9 @@ public partial class GameSessionService : IGameSessionService
 
             CurrentGameSession.CurrentScene = scene;
             CurrentGameSession.CurrentSceneId = sceneId;
+
+            // Orchestrate Audio
+            await _audioOrchestrator.EnterSceneAsync(scene, CurrentGameSession.Scenario);
 
             // Progress the session on the server
             var progressedSession = await _apiClient.ProgressSessionSceneAsync(CurrentGameSession.Id, sceneId);
@@ -258,6 +270,9 @@ public partial class GameSessionService : IGameSessionService
             {
                 CurrentGameSession.IsCompleted = true;
 
+                // Stop all audio when session is completed
+                await _audioOrchestrator.StopAllAsync();
+
                 // Trigger the event to notify subscribers
                 GameSessionChanged?.Invoke(this, CurrentGameSession);
             }
@@ -299,6 +314,9 @@ public partial class GameSessionService : IGameSessionService
 
             _isPaused = true;
 
+            // Pause all audio when session is paused
+            await _audioOrchestrator.OnSceneActionAsync(true);
+
             // Trigger the event to notify subscribers
             GameSessionChanged?.Invoke(this, CurrentGameSession);
 
@@ -339,8 +357,17 @@ public partial class GameSessionService : IGameSessionService
 
             _isPaused = false;
 
+            // Orchestrate audio for current scene on resume
+            if (CurrentGameSession?.CurrentScene != null)
+            {
+                await _audioOrchestrator.EnterSceneAsync(CurrentGameSession.CurrentScene, CurrentGameSession.Scenario);
+            }
+
+            // Resume all audio when session is resumed
+            await _audioOrchestrator.OnSceneActionAsync(false);
+
             // If API returned session data, merge essential fields and hydrate assignments
-            if (apiSession != null)
+            if (apiSession != null && CurrentGameSession != null)
             {
                 // Preserve local scenario/scenes, but update metadata
                 CurrentGameSession.IsCompleted = apiSession.IsCompleted;

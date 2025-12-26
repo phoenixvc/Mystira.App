@@ -1,12 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
-    <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <!-- NuGet Package Metadata -->
+    <PackageId>Mystira.App.Shared</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Mystira Team</Authors>
+    <Company>Phoenix VC</Company>
+    <Description>Mystira platform shared utilities. Logging, health checks, JWT handling, and cross-cutting concerns.</Description>
+    <RepositoryUrl>https://github.com/phoenixvc/Mystira.App</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>UNLICENSED</PackageLicenseExpression>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PackageTags>mystira;shared;utilities;internal</PackageTags>
   </PropertyGroup>
-  <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
@@ -28,9 +40,14 @@
 
     <!-- For Health Checks -->
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
+
+    <!-- Azure Key Vault Configuration -->
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.4.0" />
+    <PackageReference Include="Azure.Identity" Version="1.17.1" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Mystira.App.Application\Mystira.App.Application.csproj" />
     <ProjectReference Include="..\Mystira.App.Domain\Mystira.App.Domain.csproj" />
+    <PackageReference Include="Mystira.Contracts" Version="0.2.0-*" />
   </ItemGroup>
 </Project>

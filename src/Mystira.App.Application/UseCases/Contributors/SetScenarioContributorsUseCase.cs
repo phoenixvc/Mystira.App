@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Contracts.Requests.Contributors;
+using Mystira.Contracts.App.Requests.Contributors;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.UseCases.Contributors;
@@ -39,7 +39,7 @@ public class SetScenarioContributorsUseCase
             Id = Guid.NewGuid().ToString(),
             Name = c.Name,
             WalletAddress = c.WalletAddress,
-            Role = c.Role,
+            Role = (ContributorRole)(int)c.Role,
             ContributionPercentage = c.ContributionPercentage,
             Email = c.Email,
             Notes = c.Notes,

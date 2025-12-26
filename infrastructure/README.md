@@ -1,5 +1,44 @@
 # Mystira Infrastructure as Code
 
+> ⚠️ **DEPRECATED**: This Bicep infrastructure is being migrated to Terraform.
+>
+> ## Migration to Terraform
+>
+> Infrastructure for Mystira.App is now managed centrally in **[Mystira.workspace](https://github.com/phoenixvc/Mystira.workspace)**.
+>
+> ### New Location
+> ```
+> Mystira.workspace/infra/terraform/modules/mystira-app/
+> ├── main.tf           # All resources (Cosmos, App Service, SWA, etc.)
+> ├── variables.tf      # Configuration variables
+> ├── outputs.tf        # Resource outputs
+> └── README.md         # Documentation
+> ```
+>
+> ### Benefits of Centralized Infrastructure
+> - **Single source of truth** for all Mystira infrastructure
+> - **Consistent tooling** with other services (Publisher, Chain, Story Generator)
+> - **Shared modules** for common patterns (networking, monitoring, security)
+> - **State management** via Azure Storage backend
+> - **Import support** for existing resources deployed via Bicep
+>
+> ### Migration Steps
+> 1. Clone Mystira.workspace: `git clone https://github.com/phoenixvc/Mystira.workspace`
+> 2. Navigate to: `cd infra/terraform/environments/dev`
+> 3. Run import script: `./import-mystira-app.sh`
+> 4. Verify state: `terraform plan`
+> 5. Continue managing via Terraform
+>
+> ### Existing Resources
+> Resources already deployed via these Bicep templates can be imported into Terraform
+> without recreation. The import script handles this automatically.
+>
+> ---
+>
+> # Legacy Documentation (Bicep)
+>
+> The documentation below is preserved for reference during the migration period.
+
 This directory contains Bicep templates for deploying the Mystira application infrastructure to Azure.
 
 ## Naming Convention

@@ -1,4 +1,8 @@
-name: API CI/CD - Dev Environment
+name: API CI - Dev Environment
+
+# This workflow handles CI (build/test) only.
+# Deployment is triggered via repository_dispatch to Mystira.workspace.
+# See: trigger-workspace-deploy.yml
 
 on:
   push:
@@ -6,7 +10,6 @@ on:
     paths:
       - "src/Mystira.App.Api/**"
       - "src/Mystira.App.Domain/**"
-      - "src/Mystira.App.Contracts/**"
       - "src/Mystira.App.Application/**"
       - "src/Mystira.App.Infrastructure.Data/**"
       - "src/Mystira.App.Infrastructure.Azure/**"
@@ -15,12 +18,11 @@ on:
       - "src/Mystira.App.Shared/**"
       - ".github/workflows/mystira-app-api-cicd-dev.yml"
   pull_request:
-    branches: [dev] # PRs targeting dev
-    types: [opened, synchronize, reopened, closed]
+    branches: [dev]
+    types: [opened, synchronize, reopened]
     paths:
       - "src/Mystira.App.Api/**"
       - "src/Mystira.App.Domain/**"
-      - "src/Mystira.App.Contracts/**"
       - "src/Mystira.App.Application/**"
       - "src/Mystira.App.Infrastructure.Data/**"
       - "src/Mystira.App.Infrastructure.Azure/**"
@@ -28,32 +30,19 @@ on:
       - "src/Mystira.App.Infrastructure.StoryProtocol/**"
       - "src/Mystira.App.Shared/**"
       - ".github/workflows/mystira-app-api-cicd-dev.yml"
-  workflow_run:
-    workflows: ["Infrastructure Deploy - Dev"]
-    types: [completed]
-    branches: [dev]
   workflow_dispatch:
 
-# Least-privilege defaults
 permissions:
   contents: read
+  packages: read
 
-# Avoid overlapping runs on same ref (branch/PR)
 concurrency:
-  group: mystira-app-api-${{ github.ref }}
+  group: mystira-app-api-ci-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   DOTNET_VERSION: "9.0.x"
-  # Resource name follows convention: [org]-[env]-[project]-[type]-[region]
-  AZURE_WEBAPP_NAME: "mys-dev-mystira-api-san"
-  AZURE_WEBAPP_PACKAGE_PATH: "./publish"
   DOTNET_CLI_TELEMETRY_OPTOUT: "1"
-  # Evaluates to "true"/"false" at workflow parse time
-  HAS_PUBLISH_PROFILE_DEV: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV != '' }}
-  # Application Insights for deployment annotations
-  APP_INSIGHTS_NAME: "mys-dev-mystira-appins-san"
-  RESOURCE_GROUP: "mys-dev-mystira-rg-san"
 
 jobs:
   build-and-test:
@@ -67,6 +56,16 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+          source-url: https://nuget.pkg.github.com/phoenixvc/index.json
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
 
       - name: Install wasm-tools workload
         run: dotnet workload install wasm-tools
@@ -77,199 +76,15 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      - name: Test
-        run: dotnet test --no-build --configuration Release --verbosity normal
+      - name: Test with parallel execution
+        run: dotnet test --no-build --configuration Release --verbosity normal -- RunConfiguration.MaxCpuCount=0
 
-      - name: Publish
-        run: dotnet publish src/Mystira.App.Api/Mystira.App.Api.csproj --configuration Release --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
-        with:
-          name: mystira-app-api
-          path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-
-  deploy-dev:
-    runs-on: ubuntu-latest
-    needs: build-and-test
-
-    # Deploy on:
-    # - Direct push to dev
-    # - PR into dev is CLOSED *and* MERGED
-    # - Infrastructure Deploy workflow completed successfully
-    # - Manual workflow dispatch
-    if: >
-      (github.event_name == 'push' && github.ref == 'refs/heads/dev') ||
-      (github.event_name == 'pull_request' &&
-       github.event.action == 'closed' &&
-       github.event.pull_request.merged == true &&
-       github.base_ref == 'dev') ||
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'workflow_dispatch')
-
-    environment: development
-
-    steps:
-      - name: Validate required secrets for dev deployment
-        if: env.HAS_PUBLISH_PROFILE_DEV != 'true'
+      - name: Build Summary
         run: |
-          echo "ERROR: Secret AZURE_WEBAPP_PUBLISH_PROFILE_DEV is not set."
-          exit 1
-
-      - name: Validate Azure credentials for app settings
-        env:
-          HAS_AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS != '' }}
-        if: env.HAS_AZURE_CREDENTIALS != 'true'
-        run: |
-          echo "ERROR: Secret AZURE_CREDENTIALS is not set. Required for configuring app settings."
-          exit 1
-
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: mystira-app-api
-          path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-
-      - name: Deploy to Azure Web App (Development)
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_DEV }}
-          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Configure Azure Communication Services settings
-        uses: azure/appservice-settings@v1
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          app-settings-json: |
-            [
-              {"name": "AzureCommunicationServices__ConnectionString", "value": "${{ secrets.AZURE_ACS_CONNECTION_STRING }}", "slotSetting": false},
-              {"name": "AzureCommunicationServices__SenderEmail", "value": "${{ secrets.AZURE_ACS_SENDER_EMAIL_DEV }}", "slotSetting": false}
-            ]
-
-      - name: Configure JWT RS256 settings
-        uses: azure/appservice-settings@v1
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          app-settings-json: |
-            [
-              {"name": "JwtSettings__RsaPrivateKey", "value": "${{ secrets.JWT_RSA_PRIVATE_KEY }}", "slotSetting": false},
-              {"name": "JwtSettings__RsaPublicKey", "value": "${{ secrets.JWT_RSA_PUBLIC_KEY }}", "slotSetting": false},
-              {"name": "JwtSettings__Issuer", "value": "MystiraAPI", "slotSetting": false},
-              {"name": "JwtSettings__Audience", "value": "MystiraPWA", "slotSetting": false}
-            ]
-
-      - name: Configure Story Protocol settings
-        uses: azure/appservice-settings@v1
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          app-settings-json: |
-            [
-              {"name": "StoryProtocol__Enabled", "value": "false", "slotSetting": false},
-              {"name": "StoryProtocol__UseMockImplementation", "value": "true", "slotSetting": false},
-              {"name": "StoryProtocol__Network", "value": "aeneid", "slotSetting": false},
-              {"name": "StoryProtocol__RpcUrl", "value": "${{ secrets.STORY_PROTOCOL_RPC_URL || 'https://aeneid.storyrpc.io' }}", "slotSetting": false},
-              {"name": "StoryProtocol__PrivateKey", "value": "${{ secrets.STORY_PROTOCOL_WALLET_PRIVATE_KEY }}", "slotSetting": false}
-            ]
-
-      - name: Configure Database Settings
-        uses: azure/appservice-settings@v1
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          app-settings-json: |
-            [
-              {"name": "InitializeDatabaseOnStartup", "value": "true", "slotSetting": false},
-              {"name": "SeedMasterDataOnStartup", "value": "true", "slotSetting": false}
-            ]
-
-      - name: Smoke test - Health check
-        id: smoke-test
-        env:
-          # Configurable startup wait time (default 30s for dev)
-          POST_DEPLOY_WAIT_SECONDS: ${{ vars.POST_DEPLOY_WAIT_SECONDS || '30' }}
-        run: |
-          APP_URL="https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
-          echo "🔍 Running post-deployment smoke tests for ${APP_URL}"
-
-          # Wait for deployment to stabilize (configurable via repository variable)
-          echo "⏳ Waiting ${POST_DEPLOY_WAIT_SECONDS}s for App Service startup..."
-          sleep ${POST_DEPLOY_WAIT_SECONDS}
-
-          # Retry logic with exponential backoff
-          MAX_RETRIES=6
-          INITIAL_DELAY=5
-          MAX_DELAY=30
-
-          # Test 1: Basic health check (liveness)
-          echo ""
-          echo "📋 Test 1: Liveness check (/health)"
-          for i in $(seq 1 $MAX_RETRIES); do
-            DELAY=$((INITIAL_DELAY * (2 ** (i-1))))
-            [ $DELAY -gt $MAX_DELAY ] && DELAY=$MAX_DELAY
-
-            echo "  Attempt $i of $MAX_RETRIES..."
-
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-              --connect-timeout 15 \
-              --max-time 45 \
-              "${APP_URL}/health" || echo "000")
-
-            echo "    /health status: ${HTTP_STATUS}"
-
-            if [ "$HTTP_STATUS" = "200" ]; then
-              echo "  ✅ Liveness check passed!"
-              break
-            fi
-
-            if [ $i -eq $MAX_RETRIES ]; then
-              echo "❌ Liveness check failed after $MAX_RETRIES attempts"
-              echo "health_status=unhealthy" >> $GITHUB_OUTPUT
-              echo "::warning::Health check failed - deployment may need investigation"
-              exit 0  # Don't fail dev builds
-            fi
-
-            echo "    Retrying in ${DELAY}s (exponential backoff)..."
-            sleep $DELAY
-          done
-
-          # Test 2: Readiness check (includes database connectivity)
-          echo ""
-          echo "📋 Test 2: Readiness check (/health/ready)"
-          for i in $(seq 1 $MAX_RETRIES); do
-            DELAY=$((INITIAL_DELAY * (2 ** (i-1))))
-            [ $DELAY -gt $MAX_DELAY ] && DELAY=$MAX_DELAY
-
-            echo "  Attempt $i of $MAX_RETRIES..."
-
-            READY_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-              --connect-timeout 10 \
-              --max-time 30 \
-              "${APP_URL}/health/ready" || echo "000")
-
-            echo "    /health/ready status: ${READY_STATUS}"
-
-            if [ "$READY_STATUS" = "200" ]; then
-              echo "  ✅ Readiness check passed!"
-              echo "health_status=healthy" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-
-            if [ $i -eq $MAX_RETRIES ]; then
-              echo "⚠️ Readiness check failed after $MAX_RETRIES attempts (app may still be initializing)"
-              echo "health_status=degraded" >> $GITHUB_OUTPUT
-              exit 0  # Don't fail dev builds
-            fi
-
-            echo "    Retrying in ${DELAY}s (exponential backoff)..."
-            sleep $DELAY
-          done
-
-      - name: Azure Logout
-        if: always()
-        run: az logout
+          echo "## API Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Build and tests passed successfully." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** Deployment is handled by [Mystira.workspace](https://github.com/phoenixvc/Mystira.workspace) via repository_dispatch." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See [trigger-workspace-deploy.yml](.github/workflows/trigger-workspace-deploy.yml) for deployment trigger configuration." >> $GITHUB_STEP_SUMMARY

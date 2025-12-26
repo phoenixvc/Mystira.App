@@ -1,5 +1,5 @@
 using Mystira.App.Application.Interfaces;
-using Mystira.App.Contracts.Responses.Attribution;
+using Mystira.Contracts.App.Responses.Attribution;
 
 namespace Mystira.App.Application.CQRS.Attribution.Queries;
 

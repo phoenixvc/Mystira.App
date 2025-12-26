@@ -1,39 +1,35 @@
-name: PWA CI/CD - Dev Environment
+name: PWA CI - Dev Environment
+
+# This workflow handles CI (build/test) only.
+# Deployment is triggered via repository_dispatch to Mystira.workspace.
+# See: trigger-workspace-deploy.yml
 
 on:
   push:
     branches: [dev]
     paths:
       - "src/Mystira.App.PWA/**"
-      - "src/Mystira.App.Contracts/**"
       - ".github/workflows/mystira-app-pwa-cicd-dev.yml"
   pull_request:
     branches: [dev]
-    types: [opened, synchronize, reopened, closed]
-    # Note: No path filter to ensure cleanup job always runs when PR is closed
-    # The build-and-deploy job has its own path filtering via job-level conditions
-  workflow_run:
-    workflows: ["Infrastructure Deploy - Dev"]
-    types: [completed]
-    branches: [dev]
+    types: [opened, synchronize, reopened]
+    paths:
+      - "src/Mystira.App.PWA/**"
+      - ".github/workflows/mystira-app-pwa-cicd-dev.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
-  group: mystira-app-pwa-dev-${{ github.ref }}
+  group: mystira-app-pwa-ci-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  # SWA name follows convention: [org]-[env]-[project]-swa-[region]
-  AZURE_SWA_NAME: "mys-dev-mystira-swa-eus2"
-
 jobs:
-  build-and-deploy:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+  build:
     runs-on: ubuntu-latest
-    name: Build and Deploy
+    name: Build and Validate
 
     steps:
       - name: Checkout repository
@@ -45,6 +41,9 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "9.0.x"
+          source-url: https://nuget.pkg.github.com/phoenixvc/index.json
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
       - name: Install wasm-tools workload
         run: dotnet workload install wasm-tools
@@ -94,48 +93,22 @@ jobs:
       - name: Build Blazor WASM
         run: dotnet publish src/Mystira.App.PWA/Mystira.App.PWA.csproj -c Release -o publish
 
-      - name: Update version.json
+      - name: Verify Build Output
         run: |
-          VERSION="1.0.${{ github.run_number }}"
-          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          COMMIT_SHA="${{ github.sha }}"
-          cat > publish/wwwroot/version.json << EOF
-          {
-            "version": "${VERSION}",
-            "buildDate": "${BUILD_DATE}",
-            "commitSha": "${COMMIT_SHA:0:7}",
-            "releaseNotes": "Build #${{ github.run_number }} (Dev) from ${COMMIT_SHA:0:7}"
-          }
-          EOF
-          echo "✓ Updated version.json to version ${VERSION}"
-          cat publish/wwwroot/version.json
+          echo "Verifying build output..."
+          if [ ! -d "publish/wwwroot" ]; then
+            echo "ERROR: Build output directory not found"
+            exit 1
+          fi
+          echo "Build output verified successfully"
+          ls -la publish/wwwroot
 
-      - name: Configure Environment Header for Development
+      - name: Build Summary
         run: |
-          echo "Setting Blazor-Environment header to Development..."
-          jq '.globalHeaders = (.globalHeaders // {}) | .globalHeaders."Blazor-Environment" = "Development"' publish/wwwroot/staticwebapp.config.json > temp.json
-          mv temp.json publish/wwwroot/staticwebapp.config.json
-          echo "✓ Blazor-Environment header set to Development"
-          cat publish/wwwroot/staticwebapp.config.json | grep -A 1 "globalHeaders"
-
-      - name: Deploy to Azure Static Web App
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DEV }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          action: "upload"
-          app_location: "publish/wwwroot"
-          skip_app_build: true
-          skip_api_build: true
-
-  close-pr:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    name: Close PR Preview
-
-    steps:
-      - name: Close Pull Request
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DEV }}
-          action: "close"
+          echo "## PWA Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Build and validation passed successfully." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** Deployment is handled by [Mystira.workspace](https://github.com/phoenixvc/Mystira.workspace) via repository_dispatch." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See [trigger-workspace-deploy.yml](.github/workflows/trigger-workspace-deploy.yml) for deployment trigger configuration." >> $GITHUB_STEP_SUMMARY

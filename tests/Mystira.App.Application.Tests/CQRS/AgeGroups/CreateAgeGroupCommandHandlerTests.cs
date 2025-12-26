@@ -103,7 +103,7 @@ public class CreateAgeGroupCommandHandlerTests : CqrsIntegrationTestBase
 
         var retrieved = await DbContext.AgeGroupDefinitions.FindAsync(created.Id);
         retrieved.Should().NotBeNull();
-        retrieved.Name.Should().Be("Adults");
+        retrieved!.Name.Should().Be("Adults");
         retrieved.Value.Should().Be("18+");
     }
 }

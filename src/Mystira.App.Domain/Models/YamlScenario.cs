@@ -47,29 +47,54 @@ public class YamlScenario
     [YamlMember(Alias = "version")]
     public string Version { get; set; } = string.Empty;
 
+    [YamlMember(Alias = "image")]
+    public string? Image { get; set; }
+
+    [YamlMember(Alias = "music_palette")]
+    public YamlMusicPalette? MusicPalette { get; set; }
+
     [YamlMember(Alias = "scenes")]
     public List<YamlScene> Scenes { get; set; } = new();
 
     // Convert to domain model
     public Scenario ToDomainModel()
     {
-        var axes = CoreAxes?.Any() == true ? CoreAxes : LegacyCompassAxes ?? new List<string>();
-
         return new Scenario
         {
             Id = Id,
             Title = Title,
             Description = Description,
             Tags = Tags,
-            Difficulty = Enum.Parse<DifficultyLevel>(Difficulty),
-            SessionLength = Enum.Parse<SessionLength>(SessionLength),
-            Archetypes = Archetypes.Where(a => Archetype.Parse(a) != null).Select(Archetype.Parse).ToList()!,
+            Difficulty = Enum.TryParse<DifficultyLevel>(Difficulty, out var diff) ? diff : Mystira.App.Domain.Models.DifficultyLevel.Medium,
+            SessionLength = Enum.TryParse<SessionLength>(SessionLength, out var len) ? len : Mystira.App.Domain.Models.SessionLength.Medium,
+            Archetypes = MapArchetypes(),
             AgeGroup = AgeGroup,
             MinimumAge = MinimumAge,
-            CoreAxes = axes.Where(a => CoreAxis.Parse(a) != null).Select(CoreAxis.Parse).ToList()!,
+            CoreAxes = MapCoreAxes(),
             CreatedAt = DateTime.TryParse(CreatedAt, out var createdAt) ? createdAt : DateTime.UtcNow,
+            Image = Image,
+            MusicPalette = MusicPalette?.ToDomainModel(),
             Scenes = Scenes.Select(s => s.ToDomainModel()).ToList()
         };
+    }
+
+    private List<Archetype> MapArchetypes()
+    {
+        return Archetypes
+            .Select(Archetype.Parse)
+            .Where(a => a != null)
+            .Cast<Archetype>()
+            .ToList();
+    }
+
+    private List<CoreAxis> MapCoreAxes()
+    {
+        var source = CoreAxes?.Any() == true ? CoreAxes : LegacyCompassAxes ?? new List<string>();
+        return source
+            .Select(CoreAxis.Parse)
+            .Where(a => a != null)
+            .Cast<CoreAxis>()
+            .ToList();
     }
 }
 
@@ -111,6 +136,12 @@ public class YamlScene
     [YamlMember(Alias = "echo_reveal_references")]
     public List<YamlEchoRevealReference> LegacyEchoRevealReferences { get; set; } = new();
 
+    [YamlMember(Alias = "music")]
+    public YamlSceneMusicSettings? Music { get; set; }
+
+    [YamlMember(Alias = "sound_effects")]
+    public List<YamlSceneSoundEffect> SoundEffects { get; set; } = new();
+
     public Scene ToDomainModel()
     {
         var nextSceneId = !string.IsNullOrWhiteSpace(NextScene) ? NextScene : LegacyNextSceneId;
@@ -127,7 +158,9 @@ public class YamlScene
             Difficulty = Difficulty,
             Media = Media?.ToDomainModel(),
             Branches = Branches.Select(b => b.ToDomainModel()).ToList(),
-            EchoReveals = echoReveals.Select<YamlEchoRevealReference, EchoReveal>(e => e.ToDomainModel()).ToList()
+            EchoReveals = echoReveals.Select<YamlEchoRevealReference, EchoReveal>(e => e.ToDomainModel()).ToList(),
+            Music = Music?.ToDomainModel(),
+            SoundEffects = SoundEffects.Select(s => s.ToDomainModel()).ToList()
         };
     }
 }
@@ -260,6 +293,96 @@ public class YamlEchoRevealReference
             RevealMechanic = RevealMechanic,
             MaxAgeScenes = MaxAgeScenes,
             Required = Required
+        };
+    }
+}
+
+public class YamlMusicPalette
+{
+    [YamlMember(Alias = "default_profile")]
+    public string DefaultProfile { get; set; } = "neutral";
+
+    [YamlMember(Alias = "tracks_by_profile")]
+    public Dictionary<string, List<string>> TracksByProfile { get; set; } = new();
+
+    public MusicPalette ToDomainModel()
+    {
+        Enum.TryParse<MusicProfile>(DefaultProfile, true, out var profile);
+        return new MusicPalette
+        {
+            DefaultProfile = profile,
+            TracksByProfile = TracksByProfile != null
+                ? new Dictionary<string, List<string>>(TracksByProfile, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
+        };
+    }
+}
+
+public class YamlSceneMusicSettings
+{
+    [YamlMember(Alias = "profile")]
+    public string Profile { get; set; } = string.Empty;
+
+    [YamlMember(Alias = "energy")]
+    public double? Energy { get; set; }
+
+    [YamlMember(Alias = "continuity")]
+    public string Continuity { get; set; } = "prefer_continue";
+
+    [YamlMember(Alias = "transition_hint")]
+    public string TransitionHint { get; set; } = "auto";
+
+    [YamlMember(Alias = "priority")]
+    public string Priority { get; set; } = "background";
+
+    [YamlMember(Alias = "ducking")]
+    public string Ducking { get; set; } = "none";
+
+    public SceneMusicSettings ToDomainModel()
+    {
+        Enum.TryParse<MusicProfile>(Profile, true, out var profile);
+
+        return new SceneMusicSettings
+        {
+            Profile = profile,
+            Energy = Energy,
+            Continuity = ParseEnum<MusicContinuity>(Continuity),
+            TransitionHint = ParseEnum<MusicTransitionHint>(TransitionHint),
+            Priority = ParseEnum<MusicPriority>(Priority),
+            Ducking = ParseEnum<MusicDucking>(Ducking)
+        };
+    }
+
+    private T ParseEnum<T>(string value) where T : struct
+    {
+        if (string.IsNullOrEmpty(value)) return default;
+        var clean = value.Replace("_", "");
+        if (Enum.TryParse<T>(clean, true, out var result))
+        {
+            return result;
+        }
+        return default;
+    }
+}
+
+public class YamlSceneSoundEffect
+{
+    [YamlMember(Alias = "track")]
+    public string Track { get; set; } = string.Empty;
+
+    [YamlMember(Alias = "loopable")]
+    public bool Loopable { get; set; }
+
+    [YamlMember(Alias = "energy")]
+    public double Energy { get; set; }
+
+    public SceneSoundEffect ToDomainModel()
+    {
+        return new SceneSoundEffect
+        {
+            Track = Track,
+            Loopable = Loopable,
+            Energy = Energy
         };
     }
 }

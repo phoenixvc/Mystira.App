@@ -1,0 +1,181 @@
+name: Trigger Workspace Deployment
+
+# This workflow notifies Mystira.workspace to deploy instead of deploying directly.
+# Benefits:
+# - Centralized deployment logic in workspace repo
+# - Automatic submodule reference updates
+# - Consistent deployment patterns across environments
+#
+# Event Types (per CI/CD Setup Guide):
+# - app-deploy: API deployment to App Service
+# - app-swa-deploy: SWA deployment (Blazor WASM frontend)
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      # API-related paths
+      - "src/Mystira.App.Api/**"
+      - "src/Mystira.App.Domain/**"
+      - "src/Mystira.Contracts.App/**"
+      - "src/Mystira.App.Application/**"
+      - "src/Mystira.App.Infrastructure.Data/**"
+      - "src/Mystira.App.Infrastructure.Azure/**"
+      - "src/Mystira.App.Infrastructure.Discord/**"
+      - "src/Mystira.App.Infrastructure.StoryProtocol/**"
+      - "src/Mystira.App.Shared/**"
+      # PWA-related paths
+      - "src/Mystira.App.PWA/**"
+
+  # Allow manual triggering with component selection
+  workflow_dispatch:
+    inputs:
+      component:
+        description: 'Component to deploy'
+        required: true
+        type: choice
+        options:
+          - all
+          - api
+          - pwa
+
+permissions:
+  contents: read
+
+jobs:
+  # Detect which components changed
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api-changed: ${{ steps.changes.outputs.api }}
+      pwa-changed: ${{ steps.changes.outputs.pwa }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect file changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual trigger - use input
+            COMPONENT="${{ github.event.inputs.component }}"
+            if [ "$COMPONENT" = "all" ] || [ "$COMPONENT" = "api" ]; then
+              echo "api=true" >> $GITHUB_OUTPUT
+            else
+              echo "api=false" >> $GITHUB_OUTPUT
+            fi
+            if [ "$COMPONENT" = "all" ] || [ "$COMPONENT" = "pwa" ]; then
+              echo "pwa=true" >> $GITHUB_OUTPUT
+            else
+              echo "pwa=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Detect changes from git diff
+            API_PATHS="src/Mystira.App.Api src/Mystira.App.Domain src/Mystira.Contracts.App src/Mystira.App.Application src/Mystira.App.Infrastructure"
+            PWA_PATHS="src/Mystira.App.PWA src/Mystira.Contracts.App"
+
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD)
+
+            API_CHANGED="false"
+            PWA_CHANGED="false"
+
+            for file in $CHANGED_FILES; do
+              for path in $API_PATHS; do
+                if [[ "$file" == "$path"* ]]; then
+                  API_CHANGED="true"
+                  break
+                fi
+              done
+              for path in $PWA_PATHS; do
+                if [[ "$file" == "$path"* ]]; then
+                  PWA_CHANGED="true"
+                  break
+                fi
+              done
+            done
+
+            echo "api=${API_CHANGED}" >> $GITHUB_OUTPUT
+            echo "pwa=${PWA_CHANGED}" >> $GITHUB_OUTPUT
+          fi
+
+  # Trigger workspace deployment for API (App Service)
+  trigger-api-deploy:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.api-changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Workspace API Deployment
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.MYSTIRA_GITHUB_SUBMODULE_ACCESS_TOKEN }}
+          repository: phoenixvc/Mystira.workspace
+          event-type: app-deploy
+          client-payload: |
+            {
+              "environment": "dev",
+              "ref": "${{ github.sha }}",
+              "triggered_by": "${{ github.actor }}",
+              "run_id": "${{ github.run_id }}",
+              "repository": "${{ github.repository }}",
+              "image_tag": "",
+              "pr_number": ""
+            }
+
+      - name: Log dispatch details
+        run: |
+          echo "## API Deployment Triggered" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Event Type | \`app-deploy\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Target | \`mys-dev-app-api-san\` (App Service) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | dev |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Deployment will be handled by [Mystira.workspace](https://github.com/phoenixvc/Mystira.workspace/actions)" >> $GITHUB_STEP_SUMMARY
+
+  # Trigger workspace deployment for PWA (Static Web App)
+  trigger-pwa-deploy:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.pwa-changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Workspace SWA Deployment
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.MYSTIRA_GITHUB_SUBMODULE_ACCESS_TOKEN }}
+          repository: phoenixvc/Mystira.workspace
+          event-type: app-swa-deploy
+          client-payload: |
+            {
+              "environment": "dev",
+              "ref": "${{ github.sha }}",
+              "triggered_by": "${{ github.actor }}",
+              "run_id": "${{ github.run_id }}",
+              "repository": "${{ github.repository }}",
+              "image_tag": "",
+              "pr_number": ""
+            }
+
+      - name: Log dispatch details
+        run: |
+          echo "## SWA Deployment Triggered" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Event Type | \`app-swa-deploy\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Target | \`mys-dev-mystira-swa-eus2\` (Static Web App) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | dev |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Deployment will be handled by [Mystira.workspace](https://github.com/phoenixvc/Mystira.workspace/actions)" >> $GITHUB_STEP_SUMMARY

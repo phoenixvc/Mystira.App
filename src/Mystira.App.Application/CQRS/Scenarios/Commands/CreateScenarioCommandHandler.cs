@@ -2,6 +2,8 @@ using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.UseCases.Scenarios;
 using Mystira.App.Application.Validation;
+using Mystira.App.Application.Mappers;
+using Mystira.Contracts.App.Requests.Scenarios;
 using Mystira.App.Domain.Models;
 using NJsonSchema;
 
@@ -54,14 +56,14 @@ public class CreateScenarioCommandHandler : ICommandHandler<CreateScenarioComman
             Title = request.Title,
             Description = request.Description,
             Tags = request.Tags,
-            Difficulty = request.Difficulty,
-            SessionLength = request.SessionLength,
-            Archetypes = request.Archetypes?.Select(a => Archetype.Parse(a)!).ToList() ?? new List<Archetype>(),
+            Difficulty = ScenarioMappers.MapDifficultyLevel((int)request.Difficulty),
+            SessionLength = ScenarioMappers.MapSessionLength((int)request.SessionLength),
+            Archetypes = ScenarioMappers.ParseArchetypes(request.Archetypes),
             AgeGroup = request.AgeGroup,
             MinimumAge = request.MinimumAge,
-            CoreAxes = request.CoreAxes?.Select(a => CoreAxis.Parse(a)!).ToList() ?? new List<CoreAxis>(),
-            Characters = request.Characters,
-            Scenes = request.Scenes,
+            CoreAxes = ScenarioMappers.ParseCoreAxes(request.CoreAxes),
+            Characters = request.Characters?.Select(ScenarioMappers.MapToScenarioCharacter).ToList() ?? new List<ScenarioCharacter>(),
+            Scenes = request.Scenes?.Select(ScenarioMappers.MapToScene).ToList() ?? new List<Scene>(),
             CreatedAt = DateTime.UtcNow
         };
 
@@ -85,15 +87,17 @@ public class CreateScenarioCommandHandler : ICommandHandler<CreateScenarioComman
         return scenario;
     }
 
-    private void ValidateAgainstSchema(Contracts.Requests.Scenarios.CreateScenarioRequest request)
+    private void ValidateAgainstSchema(Contracts.App.Requests.Scenarios.CreateScenarioRequest request)
     {
         var json = System.Text.Json.JsonSerializer.Serialize(request, SchemaSerializerOptions);
         var errors = ScenarioJsonSchema.Validate(json);
 
         if (errors.Count > 0)
         {
-            var errorMessages = string.Join(", ", errors.Select(e => e.ToString()));
+            var errorMessages = string.Join(", ", errors.Select(e => e.ToString()).ToList());
             throw new ArgumentException($"Scenario validation failed: {errorMessages}");
         }
     }
+
+
 }

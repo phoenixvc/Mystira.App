@@ -1,4 +1,4 @@
-﻿@* Encapsulated Adventures/Bundles/Filters area extracted from Home *@
+@* Encapsulated Adventures/Bundles/Filters area extracted from Home *@
 @inject NavigationManager NavigationManager
 @inject IAuthService AuthService
 @inject IProfileService ProfileService
@@ -36,7 +36,7 @@
             FilterTitle="@GetFilterTitle()" />
 
         @* Active Adventures (below Filter, above Bundles) *@
-        @if (inProgressSessions.Any())
+        @if (VisibleInProgressSessions.Any())
         {
             <div class="row mb-3 active-adventures-section">
                 <div class="col-12">
@@ -44,7 +44,7 @@
                         <h6 class="active-adventures-title">
                             <i class="fas fa-play-circle"></i>
                             Active Adventures
-                            <span class="active-adventures-badge">@inProgressSessions.Count</span>
+                            <span class="active-adventures-badge">@VisibleInProgressSessions.Count</span>
                         </h6>
                         <div class="form-check form-switch active-adventures-toggle">
                             <input class="form-check-input" type="checkbox" role="switch" id="toggleActiveAdventures"
@@ -58,7 +58,7 @@
                     @if (showActiveAdventures)
                     {
                         <div class="row">
-                            @foreach (var session in inProgressSessions)
+                            @foreach (var session in VisibleInProgressSessions)
                             {
                                 var scenario = scenarios.FirstOrDefault(s => s.Id == session.ScenarioId);
                                 if (scenario != null)
@@ -222,6 +222,11 @@
     private List<ContentBundle> bundles = new();
     private List<ContentBundle> filteredBundles = new();
     private List<GameSession> inProgressSessions = new();
+
+    private IReadOnlyList<GameSession> VisibleInProgressSessions => inProgressSessions
+        .Where(s => scenarios.Any(sc => sc.Id == s.ScenarioId))
+        .ToList();
+
     private bool isLoadingBundles = false;
     private string? selectedBundleId;
     private string selectedBundleTitle => bundles.FirstOrDefault(b => b.Id == selectedBundleId)?.Title ?? string.Empty;
@@ -622,11 +627,24 @@
                 return;
             }
 
-            var currentScene = fullScenario.Scenes.FirstOrDefault(s => s.Id == activeSession.CurrentSceneId);
+            var currentScene = fullScenario.Scenes.FirstOrDefault(s => string.Equals(s.Id?.Trim(), activeSession.CurrentSceneId?.Trim(), StringComparison.OrdinalIgnoreCase));
             if (currentScene == null)
             {
-                Logger.LogError("Could not find current scene {SceneId} in scenario {ScenarioId}",
+                Logger.LogWarning("Could not find current scene {SceneId} in scenario {ScenarioId}. Falling back to first scene.",
                     activeSession.CurrentSceneId, scenario.Id);
+
+                if (fullScenario.Scenes.Any())
+                {
+                    Logger.LogInformation("Available scene IDs in scenario {ScenarioId}: {SceneIds}",
+                        scenario.Id, string.Join(", ", fullScenario.Scenes.Select(s => s.Id)));
+                }
+
+                currentScene = fullScenario.Scenes.FirstOrDefault();
+            }
+
+            if (currentScene == null)
+            {
+                Logger.LogError("Scenario {ScenarioId} has no scenes.", scenario.Id);
                 return;
             }
 
@@ -657,14 +675,14 @@
 
             GameSessionService.SetCurrentGameSession(localGameSession);
 
+            NavigationManager.NavigateTo("/game");
+
             // Ensure server-side resume is called so assignments and state are restored
             var resumed = await GameSessionService.ResumeGameSessionAsync();
             if (!resumed)
             {
                 Logger.LogWarning("Failed to resume session via API for session: {SessionId}. Continuing locally.", activeSession.Id);
             }
-
-            NavigationManager.NavigateTo("/game");
         }
         catch (AuthenticationException authEx)
         {
@@ -701,10 +719,18 @@
                 return;
             }
 
-            var currentScene = fullScenario.Scenes.FirstOrDefault(s => s.Id == session.CurrentSceneId);
+            var currentScene = fullScenario.Scenes.FirstOrDefault(s => string.Equals(s.Id?.Trim(), session.CurrentSceneId?.Trim(), StringComparison.OrdinalIgnoreCase));
             if (currentScene == null)
             {
-                Logger.LogWarning("Current scene not found in scenario, using first scene");
+                Logger.LogWarning("Current scene {SceneId} not found in scenario {ScenarioId}, falling back to first scene",
+                    session.CurrentSceneId, fullScenario.Id);
+
+                if (fullScenario.Scenes.Any())
+                {
+                    Logger.LogInformation("Available scene IDs in scenario {ScenarioId}: {SceneIds}",
+                        fullScenario.Id, string.Join(", ", fullScenario.Scenes.Select(s => s.Id)));
+                }
+
                 currentScene = fullScenario.Scenes.FirstOrDefault();
             }
 
@@ -738,14 +764,14 @@
 
             GameSessionService.SetCurrentGameSession(localSession);
 
+            NavigationManager.NavigateTo("/game");
+
             // Ensure server-side resume is called so assignments and state are restored
             var resumed = await GameSessionService.ResumeGameSessionAsync();
             if (!resumed)
             {
                 Logger.LogWarning("Failed to resume session via API for session: {SessionId}. Continuing locally.", session.Id);
             }
-
-            NavigationManager.NavigateTo("/game");
         }
         catch (Exception ex)
         {

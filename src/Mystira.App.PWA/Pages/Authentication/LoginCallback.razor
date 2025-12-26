@@ -1,0 +1,103 @@
+@page "/authentication/login-callback"
+@using Mystira.App.PWA.Services
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject ILogger<LoginCallback> Logger
+
+<PageTitle>Signing in...</PageTitle>
+
+<div class="login-callback-container">
+    <div class="login-callback-content">
+        @if (_isProcessing)
+        {
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Processing login...</span>
+            </div>
+            <h3 class="mt-3">Signing you in...</h3>
+            <p class="text-muted">Please wait while we complete your authentication.</p>
+        }
+        else if (_hasError)
+        {
+            <div class="alert alert-danger" role="alert">
+                <h4 class="alert-heading">Authentication Failed</h4>
+                <p>@_errorMessage</p>
+                <hr>
+                <p class="mb-0">
+                    <a href="/" class="btn btn-primary">Return to Home</a>
+                </p>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private bool _isProcessing = true;
+    private bool _hasError = false;
+    private string _errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Logger.LogInformation("Login callback page initialized");
+
+            // Check if AuthService supports Entra External ID
+            if (AuthService is EntraExternalIdAuthService entraService)
+            {
+                var success = await entraService.HandleLoginCallbackAsync();
+                
+                if (success)
+                {
+                    Logger.LogInformation("Login callback successful, redirecting to home");
+                    Navigation.NavigateTo("/", forceLoad: true);
+                }
+                else
+                {
+                    _hasError = true;
+                    _errorMessage = "Failed to process authentication response. Please try again.";
+                    Logger.LogWarning("Login callback failed");
+                }
+            }
+            else
+            {
+                _hasError = true;
+                _errorMessage = "Entra External ID authentication is not configured.";
+                Logger.LogError("AuthService is not EntraExternalIdAuthService");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error processing login callback");
+            _hasError = true;
+            _errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+}
+
+<style>
+    .login-callback-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .login-callback-content {
+        background: white;
+        padding: 3rem;
+        border-radius: 1rem;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        max-width: 500px;
+    }
+
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+</style>

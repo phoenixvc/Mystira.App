@@ -38,8 +38,6 @@ public class ApiInfoController : ControllerBase
             {
                 new MasterDataEntityInfo { Name = "CompassAxis", Endpoint = "/api/compassaxes", Count = null },
                 new MasterDataEntityInfo { Name = "Archetype", Endpoint = "/api/archetypes", Count = null },
-                new MasterDataEntityInfo { Name = "EchoType", Endpoint = "/api/echotypes", Count = null },
-                new MasterDataEntityInfo { Name = "FantasyTheme", Endpoint = "/api/fantasythemes", Count = null },
                 new MasterDataEntityInfo { Name = "AgeGroup", Endpoint = "/api/agegroups", Count = null }
             },
             DeprecatedApis = new[]

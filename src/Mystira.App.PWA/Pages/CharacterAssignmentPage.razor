@@ -7,7 +7,11 @@
 @inject ILogger<CharacterAssignment> Logger
 @inject IJSRuntime JSRuntime
 @inject ISettingsService SettingsService
+@inject Mystira.App.PWA.Services.Music.IAudioCacheService AudioCacheService
+@inject Mystira.App.PWA.Services.Music.IAudioBus AudioBus
+@inject Mystira.App.PWA.Services.Music.SceneAudioOrchestrator AudioOrchestrator
 @using System.Linq
+@implements IAsyncDisposable
 
 <PageTitle>Assign Players • Mystira</PageTitle>
 
@@ -203,7 +207,7 @@ else
 
                         <div class="btn-disabled-wrapper">
                             <button class="btn btn-primary-custom btn-lg" @onclick="BeginSession"
-                                disabled="@(!CanBeginSession)">
+                                disabled="@(!CanBeginSession || isStartingSession)">
                                 @if (isStartingSession)
                                 {
                                     <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -215,7 +219,7 @@ else
                                     <span>Begin Session</span>
                                 }
                             </button>
-                            @if (!CanBeginSession)
+                            @if (!CanBeginSession && !isStartingSession)
                             {
                                 <span class="disabled-tooltip">
                                     <i class="fas fa-info-circle me-1"></i>Assign all characters first
@@ -559,11 +563,19 @@ else
                 </div>
                 <div class="modal-footer">
                     @* Cancel is specifically requested for toddler (1-2) assignment flow *@
-                    <button type="button" class="btn btn-outline-secondary" @onclick="CancelToddlerAssignment">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CancelToddlerAssignment" disabled="@isStartingSession">
                         Cancel
                     </button>
-                    <button type="button" class="btn btn-primary" @onclick="ConfirmInitialAssignment" disabled="@(!CanConfirmInitialAssignment())">
-                        Assign to All
+                    <button type="button" class="btn btn-primary" @onclick="ConfirmInitialAssignment" disabled="@(!CanConfirmInitialAssignment() || isStartingSession)">
+                        @if (isStartingSession)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span>Starting...</span>
+                        }
+                        else
+                        {
+                            <span>Assign to All</span>
+                        }
                     </button>
                 </div>
             </div>
@@ -604,7 +616,9 @@ else
     private bool ageGroupDontShowAgain = false;
     private bool dontShowGuestWarning = false;
     private List<string> mismatchedProfileNames = new();
+#pragma warning disable CS0414 // Field is assigned but its value is never used
     private bool showReplayWarningModal = false;
+#pragma warning restore CS0414
     private bool replayDontShowAgain = false;
     private List<string> replayingProfileNames = new();
 
@@ -613,7 +627,23 @@ else
 
     // Audio
     private string? isPlayingAudio = null;
-    private IJSObjectReference? audioModule;
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            // If we are starting a session, we want the music to continue to the game page.
+            // Otherwise (e.g. going back to home), we stop all audio.
+            if (!isStartingSession)
+            {
+                await AudioOrchestrator.StopAllAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Error disposing audio in CharacterAssignment");
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -622,13 +652,11 @@ else
             Logger.LogInformation("Initializing character assignment for scenario: {ScenarioId}", ScenarioId);
             await LoadCharacterAssignmentData();
 
+            // Load settings
+            dontShowGuestWarning = !await SettingsService.GetShowGuestWarningAsync();
+
             // Show the initial bulk assignment prompt only for toddler scenarios (age group 1-2)
             showInitialAssignmentPrompt = IsToddlerScenario;
-
-            // Load the audio module when component initializes
-            audioModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-            "import", "./js/audioPlayer.js");
-
         }
         catch (Exception ex)
         {
@@ -649,6 +677,12 @@ else
         {
             characterAssignments = assignmentData.CharacterAssignments;
             availableProfiles = assignmentData.AvailableProfiles;
+
+            if (assignmentData.Scenario != null)
+            {
+                // Pre-cache all audio for this scenario
+                _ = AudioCacheService.CacheScenarioAudioAsync(assignmentData.Scenario);
+            }
         }
     }
 
@@ -657,11 +691,11 @@ else
         try
         {
             // Stop any playing audio preview
-            if (!string.IsNullOrEmpty(isPlayingAudio) && audioModule is not null)
+            if (!string.IsNullOrEmpty(isPlayingAudio))
             {
                 try
                 {
-                    await audioModule.InvokeVoidAsync("stopAudio");
+                    await AudioOrchestrator.StopAllAsync();
                     isPlayingAudio = null;
                 }
                 catch { /* best-effort */ }
@@ -723,14 +757,18 @@ else
                 };
             }
 
-            showInitialAssignmentPrompt = false;
             // For 1-2 age group, start immediately after a single selection
             if (IsToddlerScenario)
             {
-                await CheckForWarningsAndContinue();
+                isStartingSession = true;
+                StateHasChanged();
+                Logger.LogInformation("Toddler scenario: Auto-starting with selected profile {ProfileId}", profile.Id);
+                await CheckForWarningsAndContinue(true);
+                showInitialAssignmentPrompt = false;
                 return;
             }
 
+            showInitialAssignmentPrompt = false;
             StateHasChanged();
             return;
         }
@@ -745,6 +783,9 @@ else
                 return;
             }
 
+            isStartingSession = true;
+            StateHasChanged();
+
             var profileRequest = new CreateUserProfileRequest
             {
                 Name = newProfileName,
@@ -758,6 +799,7 @@ else
             var createdProfile = await ApiClient.CreateProfileAsync(profileRequest);
             if (createdProfile == null)
             {
+                isStartingSession = false;
                 validationMessage = "Failed to create profile. Please try again.";
                 StateHasChanged();
                 return;
@@ -778,17 +820,20 @@ else
                 };
             }
 
+            if (IsToddlerScenario)
+            {
+                Logger.LogInformation("Toddler scenario: Auto-starting with new profile {ProfileId}", createdProfile.Id);
+                await CheckForWarningsAndContinue(true);
+                showInitialAssignmentPrompt = false;
+                return;
+            }
+
             showInitialAssignmentPrompt = false;
             // Reset new profile form state
             newProfileName = string.Empty;
             newProfileAgeRange = string.Empty;
             selectedAvatarMediaId = null;
             isAvatarSelected = false;
-            if (IsToddlerScenario)
-            {
-                await CheckForWarningsAndContinue();
-                return;
-            }
 
             StateHasChanged();
             return;
@@ -796,6 +841,9 @@ else
 
         if (assignmentTab == "guest")
         {
+            isStartingSession = true;
+            StateHasChanged();
+
             // Defer to guest warning modal before applying unless user opted out
             if (dontShowGuestWarning)
             {
@@ -805,8 +853,10 @@ else
             }
             else
             {
+                isStartingSession = false; // Reset while showing modal
                 pendingInitialGuestApplyAll = true;
                 showGuestWarningModal = true;
+                showInitialAssignmentPrompt = false; // Hide the prompt so warning is visible
                 StateHasChanged();
                 return;
             }
@@ -1071,7 +1121,7 @@ else
         await CheckForWarningsAndContinue();
     }
 
-    private async Task CheckForWarningsAndContinue()
+    private async Task CheckForWarningsAndContinue(bool skipGuestWarning = false)
     {
         try
         {
@@ -1094,28 +1144,31 @@ else
             }
 
             // Check if only guests are assigned (no user profiles)
-            var assignedCharacters = characterAssignments
-                .Where(ca => !ca.IsUnused && ca.PlayerAssignment != null)
-                .ToList();
-
-            var hasOnlyGuests = assignedCharacters.All(ca =>
-                ca.PlayerAssignment!.Type == "Guest" ||
-                (ca.PlayerAssignment!.Type == "AI" && string.IsNullOrEmpty(ca.PlayerAssignment!.ProfileId)));
-
-            if (hasOnlyGuests)
+            if (!skipGuestWarning)
             {
-                // Show guest warning modal unless the user opted out via global settings
-                var showGuestWarning = await SettingsService.GetShowGuestWarningAsync();
-                if (!showGuestWarning)
+                var assignedCharacters = characterAssignments
+                    .Where(ca => !ca.IsUnused && ca.PlayerAssignment != null)
+                    .ToList();
+
+                var hasOnlyGuests = assignedCharacters.All(ca =>
+                    ca.PlayerAssignment!.Type == "Guest" ||
+                    (ca.PlayerAssignment!.Type == "AI" && string.IsNullOrEmpty(ca.PlayerAssignment!.ProfileId)));
+
+                if (hasOnlyGuests)
                 {
-                    await ContinueWithGameSession();
-                    return;
-                }
-                else
-                {
-                    showGuestWarningModal = true;
-                    StateHasChanged();
-                    return;
+                    // Show guest warning modal unless the user opted out via global settings
+                    var showGuestWarning = await SettingsService.GetShowGuestWarningAsync();
+                    if (!showGuestWarning)
+                    {
+                        await ContinueWithGameSession();
+                        return;
+                    }
+                    else
+                    {
+                        showGuestWarningModal = true;
+                        StateHasChanged();
+                        return;
+                    }
                 }
             }
 
@@ -1199,6 +1252,7 @@ else
 
             if (guestProfilesToCreate.Any())
             {
+                Logger.LogInformation("Creating {Count} guest profiles", guestProfilesToCreate.Count);
                 foreach (var guest in guestProfilesToCreate)
                 {
                     var guestProfileRequest = new CreateGuestProfileRequest
@@ -1232,27 +1286,36 @@ else
                 Scenario = assignmentData!.Scenario // Pass the full scenario for local session setup
             };
 
+            Logger.LogInformation("Calling StartGameSessionWithAssignmentsAsync");
             var success = await CharacterAssignmentService.StartGameSessionWithAssignmentsAsync(request);
 
             if (success)
             {
                 Logger.LogInformation("Session started successfully, navigating to {NavigationManagerBaseUri}game",
                 NavigationManager.BaseUri);
+                // Keep isStartingSession = true during navigation to prevent StopAllAsync in DisposeAsync
                 NavigationManager.NavigateTo("/game");
+                return; // skip setting isStartingSession = false in finally
             }
             else
             {
                 Logger.LogError("Failed to start game session");
+                isStartingSession = false;
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error starting game session");
+            isStartingSession = false;
         }
         finally
         {
-            isStartingSession = false;
-            StateHasChanged();
+            // Only reset if we are not navigating away for a success
+            // If success was true, we returned early above.
+            if (!isStartingSession)
+            {
+                StateHasChanged();
+            }
         }
     }
 
@@ -1287,7 +1350,8 @@ else
             // For toddler scenarios, auto-start immediately after choosing guest
             if (IsToddlerScenario)
             {
-                await CheckForWarningsAndContinue();
+                Logger.LogInformation("Toddler scenario: Auto-starting with guest {GuestName}", guestName);
+                await CheckForWarningsAndContinue(true);
                 return;
             }
 
@@ -1307,6 +1371,7 @@ else
         {
             // Keep the initial prompt open; do not apply guest assignments
             pendingInitialGuestApplyAll = false;
+            showInitialAssignmentPrompt = true; // Show it back so they can change selection
         }
         StateHasChanged();
     }
@@ -1333,15 +1398,10 @@ else
     {
         try
         {
-            if (audioModule == null)
-            {
-                return;
-            }
-
             if (isPlayingAudio == audioUrl)
             {
                 // Stop the currently playing audio
-                await audioModule.InvokeVoidAsync("stopAudio");
+                await AudioBus.StopSoundEffectAsync(audioUrl);
                 isPlayingAudio = null;
             }
             else
@@ -1349,11 +1409,11 @@ else
                 // Stop any currently playing audio first
                 if (!string.IsNullOrEmpty(isPlayingAudio))
                 {
-                    await audioModule.InvokeVoidAsync("stopAudio");
+                    await AudioBus.StopSoundEffectAsync(isPlayingAudio);
                 }
 
                 // Start playing the new audio
-                await audioModule.InvokeVoidAsync("playAudio", audioUrl);
+                await AudioBus.PlaySoundEffectAsync(audioUrl, false, 1.0f);
                 isPlayingAudio = audioUrl;
             }
         }

@@ -60,12 +60,26 @@
 
     <!-- Custom CSS -->
     <link href="css/app.css" rel="stylesheet" />
+    <link href="css/loading-static.css" rel="stylesheet" />
     <!-- Blazor Scoped CSS Bundle (component-specific styles from .razor.css files) -->
     <link href="Mystira.App.PWA.styles.css" rel="stylesheet" />
     <link rel="icon" type="image/png" href="favicon.png" />
 
     <!-- Scripts -->
     <script src="js/imageCacheManager.js"></script>
+    <script src="js/loadingProgress.js"></script>
+    <script>
+        // Start loading progress as soon as the script is available
+        if (window.mystiraLoading) {
+            window.mystiraLoading.start();
+            // Automatically advance to checking connection after a short delay
+            setTimeout(() => {
+                if (window.mystiraLoading.getCurrentStage()?.id === 'initializing') {
+                    window.mystiraLoading.updateStage('checking-connection');
+                }
+            }, 800);
+        }
+    </script>
 
     <!-- API Configuration Persistence (Read-only) -->
     <!-- All write operations are handled by C# ApiConfigurationService via JSInterop -->
@@ -138,12 +152,37 @@
 
 <body>
     <div id="app">
-        <div class="d-flex justify-content-center align-items-center vh-100">
-            <div class="text-center">
-                <div class="spinner-border text-primary mb-3" role="status">
-                    <span class="visually-hidden">Loading...</span>
+        <!-- Static loading experience shown while Blazor starts -->
+        <div class="loading-experience">
+            <div class="loading-container">
+                <!-- Mystira Logo -->
+                <div class="loading-logo-container">
+                    <img src="images/mystira-logo.webp" alt="Mystira Logo" class="loading-logo" onerror="this.src='icons/icon-512.png'" />
+                    <h1 class="loading-title">Mystira</h1>
                 </div>
-                <div class="text-muted">Loading Mystira...</div>
+
+                <!-- Initial Progress Card (Static) -->
+                <div class="progress-tracker" id="static-progress-tracker">
+                    <div class="progress-stage current" id="stage-initializing">
+                        <div class="stage-icon">
+                            <i class="fas fa-rocket"></i>
+                        </div>
+                        <div class="stage-content">
+                            <div class="stage-message" id="static-stage-message">
+                                Starting Mystira…
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading Animation -->
+                <div class="loading-animation">
+                    <div class="loading-dots">
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -302,6 +341,12 @@
                         // Store registration for later use
                         window.swRegistration = registration;
 
+                        // Set up progress tracking integration
+                        if (window.mystiraLoading) {
+                            // Note: Cannot pass functions through postMessage, so we'll use a different approach
+                            console.log('[MystiraLoading] Progress tracking setup attempted');
+                        }
+
                         // Check for service worker updates periodically
                         registration.addEventListener('updatefound', () => {
                             console.log('New service worker found, installing...');
@@ -315,6 +360,11 @@
                                     // Notify Blazor component if available
                                     if (updateNotificationHandler) {
                                         updateNotificationHandler.invokeMethodAsync('OnServiceWorkerUpdate');
+                                    }
+
+                                    // Also notify loading system
+                                    if (window.mystiraLoading) {
+                                        window.mystiraLoading.updateStage('service-worker-update');
                                     }
                                 }
                             });

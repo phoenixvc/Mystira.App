@@ -6,6 +6,25 @@ const LOG_PREFIX = '[Mystira ServiceWorker]';
 const ICON_CACHE_NAME = 'pwa-icon-cache-v2';
 const CORE_CACHE_NAME = 'pwa-core-cache-v2';
 
+// Progress tracking
+let progressData = {
+    iconProgress: { current: 0, total: 0 },
+    coreProgress: { current: 0, total: 0 }
+};
+
+function notifyProgress(type, current, total) {
+    // Post message to clients
+    self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+            client.postMessage({
+                type: `${type.toUpperCase()}_PROGRESS`,
+                current,
+                total
+            });
+        });
+    });
+}
+
 // Files to cache (essential PWA files)
 const filesToCache = [
     // PWA Icons
@@ -38,7 +57,9 @@ const performanceAssets = [
     // Logo and key images (cached separately for instant rendering)
     './icons/icon-512.png',
     './icons/icon-192.png',
-    './icons/favicon.png'
+    './icons/favicon.png',
+    './images/mystira-logo.webp',
+    './images/gamesession-background.webp'
 ];
 
 // Helper to normalize and de-duplicate request URLs
@@ -66,24 +87,69 @@ self.addEventListener('install', event => {
     const iconUrls = uniqueUrls(filesToCache.concat(performanceAssets));
     const coreUrls = uniqueUrls(coreFilesToCache);
 
+    // Initialize progress tracking
+    progressData.iconProgress.total = iconUrls.length;
+    progressData.coreProgress.total = coreUrls.length;
+    progressData.iconProgress.current = 0;
+    progressData.coreProgress.current = 0;
+
     event.waitUntil(
         (async () => {
             try {
-                // Cache icons
+                // Cache icons with progress tracking
                 const iconCache = await caches.open(ICON_CACHE_NAME);
                 console.log('Service Worker: Caching Icon Files');
-                await iconCache.addAll(iconUrls);
 
-                // Cache core files
+                let iconCompleted = 0;
+                for (const url of iconUrls) {
+                    try {
+                        await iconCache.add(url);
+                        iconCompleted++;
+                        progressData.iconProgress.current = iconCompleted;
+                        notifyProgress('cache', iconCompleted, iconUrls.length);
+                        console.log(`Service Worker: Cached icon ${iconCompleted}/${iconUrls.length}: ${url}`);
+                    } catch (error) {
+                        console.warn(`Service Worker: Failed to cache icon: ${url}`, error);
+                        iconCompleted++;
+                        progressData.iconProgress.current = iconCompleted;
+                        notifyProgress('cache', iconCompleted, iconUrls.length);
+                    }
+                }
+
+                // Cache core files with progress tracking
                 const coreCache = await caches.open(CORE_CACHE_NAME);
                 console.log('Service Worker: Caching Core Files');
-                await coreCache.addAll(coreUrls);
+
+                let coreCompleted = 0;
+                for (const url of coreUrls) {
+                    try {
+                        await coreCache.add(url);
+                        coreCompleted++;
+                        progressData.coreProgress.current = coreCompleted;
+                        notifyProgress('cache', iconCompleted + coreCompleted, iconUrls.length + coreUrls.length);
+                        console.log(`Service Worker: Cached core file ${coreCompleted}/${coreUrls.length}: ${url}`);
+                    } catch (error) {
+                        console.warn(`Service Worker: Failed to cache core file: ${url}`, error);
+                        coreCompleted++;
+                        progressData.coreProgress.current = coreCompleted;
+                        notifyProgress('cache', iconCompleted + coreCompleted, iconUrls.length + coreUrls.length);
+                    }
+                }
 
                 console.log('Service Worker: All Essential Files Cached');
+
+                // Final progress update
+                notifyProgress('cache', iconUrls.length + coreUrls.length, iconUrls.length + coreUrls.length);
+
             } catch (error) {
                 console.error('Failed to cache PWA assets:', error);
                 console.debug('Icon URLs attempted:', iconUrls);
                 console.debug('Core URLs attempted:', coreUrls);
+
+                // Notify partial progress on error
+                const totalCompleted = progressData.iconProgress.current + progressData.coreProgress.current;
+                const totalExpected = iconUrls.length + coreUrls.length;
+                notifyProgress('cache', totalCompleted, totalExpected);
             }
         })()
     );

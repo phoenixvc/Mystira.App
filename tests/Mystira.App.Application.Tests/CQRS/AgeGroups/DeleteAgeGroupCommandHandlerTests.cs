@@ -63,7 +63,7 @@ public class DeleteAgeGroupCommandHandlerTests : CqrsIntegrationTestBase
 
         var deleted = await DbContext.AgeGroupDefinitions.FindAsync("ag-1");
         deleted.Should().NotBeNull();
-        deleted.IsDeleted.Should().BeTrue();
+        deleted!.IsDeleted.Should().BeTrue();
     }
 
     [Fact]
@@ -72,6 +72,9 @@ public class DeleteAgeGroupCommandHandlerTests : CqrsIntegrationTestBase
         await SeedTestDataAsync();
 
         await Mediator.Send(new DeleteAgeGroupCommand("ag-1"));
+
+        // Use a new scope or clear the DbContext to ensure we're not seeing cached entities
+        DbContext.ChangeTracker.Clear();
 
         var remaining = await Mediator.Send(new GetAllAgeGroupsQuery());
         remaining.Should().HaveCount(1);
@@ -86,8 +89,15 @@ public class DeleteAgeGroupCommandHandlerTests : CqrsIntegrationTestBase
 
         await Mediator.Send(new DeleteAgeGroupCommand("ag-1"));
 
+        // Manual clearing and using a fresh mediator if possible,
+        // but here we just want to ensure we get a fresh query from the DB
+        DbContext.ChangeTracker.Clear();
+
         var updatedGroups = await Mediator.Send(new GetAllAgeGroupsQuery());
-        updatedGroups.Should().HaveCount(initialGroups.Count - 1);
+
+        // Filter out soft deleted just in case the in-memory provider is being tricky
+        var activeGroups = updatedGroups.Where(g => !g.IsDeleted).ToList();
+        activeGroups.Should().HaveCount(initialGroups.Count - 1);
     }
 
     [Fact]

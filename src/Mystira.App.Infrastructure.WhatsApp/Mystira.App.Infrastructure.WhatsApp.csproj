@@ -1,23 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <NoWarn>$(NoWarn);NU1608</NoWarn>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="Azure.Communication.Messages" Version="1.1.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.0" />
+    <PackageReference Include="Twilio" Version="7.8.0" />
+    <PackageReference Include="Azure.Communication.Messages" Version="1.0.0" />
+    <PackageReference Include="Azure.Core" Version="1.50.0" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\Mystira.App.Application\Mystira.App.Application.csproj" />
   </ItemGroup>
-
 </Project>

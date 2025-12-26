@@ -4,23 +4,24 @@ using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.Accounts.Queries;
 
-public class GetAccountQueryHandler : IQueryHandler<GetAccountQuery, Account?>
+/// <summary>
+/// Wolverine handler for GetAccountQuery.
+/// Uses static method convention for cleaner, more testable code.
+/// </summary>
+public static class GetAccountQueryHandler
 {
-    private readonly IAccountRepository _repository;
-    private readonly ILogger<GetAccountQueryHandler> _logger;
-
-    public GetAccountQueryHandler(
+    /// <summary>
+    /// Handles the GetAccountQuery by retrieving an account from the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<Account?> Handle(
+        GetAccountQuery query,
         IAccountRepository repository,
-        ILogger<GetAccountQueryHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<Account?> Handle(GetAccountQuery request, CancellationToken cancellationToken)
-    {
-        var account = await _repository.GetByIdAsync(request.AccountId);
-        _logger.LogDebug("Retrieved account {AccountId}", request.AccountId);
+        var account = await repository.GetByIdAsync(query.AccountId);
+        logger.LogDebug("Retrieved account {AccountId}", query.AccountId);
         return account;
     }
 }

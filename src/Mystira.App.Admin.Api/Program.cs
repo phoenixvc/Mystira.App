@@ -5,11 +5,11 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.DataProtection;
 using Mystira.App.Admin.Api.Adapters;
 using Mystira.App.Admin.Api.Services;
 using Mystira.App.Application.Behaviors;
 using Mystira.App.Application.Services;
-// Note: Avoid unqualified IJwtService to prevent ambiguity with Application port interface
 using Mystira.App.Application.Ports.Messaging;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Ports.Media;
@@ -49,6 +49,13 @@ try
     Log.Information("Starting Mystira.App.Admin.Api");
 
     var builder = WebApplication.CreateBuilder(args);
+
+    // Share DataProtection between Admin.Web and Admin.Api so auth cookies work across apps
+    var sharedKeysPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "..", ".aspnet-keys"));
+    builder.Services
+        .AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(sharedKeysPath))
+        .SetApplicationName("Mystira.Admin");
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // SERILOG CONFIGURATION (reads from appsettings.json)
@@ -403,18 +410,15 @@ builder.Services.AddAuthorization();
 // Register application services - Admin API services
 builder.Services.AddScoped<IScenarioApiService, ScenarioApiService>();
 builder.Services.AddScoped<ICharacterMapApiService, CharacterMapApiService>();
-builder.Services.AddScoped<Mystira.App.Admin.Api.Services.IAppStatusService, Mystira.App.Admin.Api.Services.AppStatusService>();
 builder.Services.AddScoped<IBundleService, BundleService>();
 builder.Services.AddScoped<ICharacterMapFileService, CharacterMapFileService>();
 builder.Services.AddScoped<IMediaMetadataService, Mystira.App.Admin.Api.Services.MediaMetadataService>();
 builder.Services.AddScoped<ICharacterMediaMetadataService, CharacterMediaMetadataService>();
 builder.Services.AddScoped<IMediaApiService, MediaApiService>();
 builder.Services.AddScoped<IAvatarApiService, AvatarApiService>();
-builder.Services.AddScoped<Mystira.App.Admin.Api.Services.IHealthCheckService, Mystira.App.Admin.Api.Adapters.HealthCheckServiceAdapter>();
+builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
 // Badges admin service
-builder.Services.AddScoped<Mystira.App.Admin.Api.Services.IBadgeAdminService, Mystira.App.Admin.Api.Services.BadgeAdminService>();
-// Register email service for consistency across all APIs
-builder.Services.AddAzureEmailService(builder.Configuration);
+builder.Services.AddScoped<IBadgeAdminService, BadgeAdminService>();
 // Register Application.Ports.IMediaMetadataService for use cases
 builder.Services.AddScoped<Mystira.App.Application.Ports.IMediaMetadataService, MediaMetadataServiceAdapter>();
 // Register repositories
@@ -431,7 +435,6 @@ builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
 builder.Services.AddScoped<IBadgeImageRepository, BadgeImageRepository>();
 builder.Services.AddScoped<IAxisAchievementRepository, AxisAchievementRepository>();
 builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
-builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
 builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
 builder.Services.AddScoped<IMediaMetadataFileRepository, MediaMetadataFileRepository>();
 builder.Services.AddScoped<ICharacterMediaMetadataFileRepository, CharacterMediaMetadataFileRepository>();
@@ -446,10 +449,10 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Auth and application ports/adapters
 builder.Services.AddScoped<Mystira.App.Shared.Services.IJwtService, Mystira.App.Shared.Services.JwtService>();
-builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, Mystira.App.Admin.Api.Adapters.JwtServiceAdapter>();
+builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, JwtServiceAdapter>();
 
 // Health port adapter for CQRS handlers
-builder.Services.AddScoped<Mystira.App.Application.Ports.Health.IHealthCheckPort, Mystira.App.Shared.Adapters.HealthCheckPortAdapter>();
+builder.Services.AddScoped<Mystira.Contracts.App.Ports.Health.IHealthCheckPort, Mystira.App.Shared.Adapters.HealthCheckPortAdapter>();
 
 // Discord/Messaging: keep as No-Op in this environment
 builder.Services.AddSingleton<NoOpChatBotService>();

@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using Mystira.App.Application.Ports.Health;
+using Mystira.Contracts.App.Ports.Health;
 
 namespace Mystira.App.Application.CQRS.Health.Queries;
 
@@ -49,7 +49,7 @@ public class GetHealthCheckQueryHandler
                 report.Status, stopwatch.ElapsedMilliseconds);
 
             return new HealthCheckResult(
-                Status: report.Status,
+                Status: report.Status.ToString(),
                 Duration: stopwatch.Elapsed,
                 Results: results
             );

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Archetypes.Queries;
+using Mystira.App.Api.Models;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;
@@ -40,12 +41,12 @@ public class ArchetypesController : ControllerBase
     }
 
     [HttpPost("validate")]
-    public async Task<ActionResult<dynamic>> ValidateArchetype([FromBody] ValidateArchetypeRequest request)
+    public async Task<ActionResult<ValidationResult>> ValidateArchetype([FromBody] ValidateArchetypeRequest request)
     {
         _logger.LogInformation("POST: Validating archetype: {Name}", request.Name);
 
         var isValid = await _mediator.Send(new ValidateArchetypeQuery(request.Name));
-        return Ok(new { isValid });
+        return Ok(new ValidationResult { IsValid = isValid });
     }
 }
 

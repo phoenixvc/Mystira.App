@@ -22,6 +22,21 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-git"],
       "description": "Git operations for version control"
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"],
+      "description": "Browser automation for testing the Blazor PWA using Playwright"
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "description": "Knowledge graph-based persistent memory across sessions"
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "description": "Structured problem-solving with stepwise reasoning and reflection"
     }
   },
   "resources": {

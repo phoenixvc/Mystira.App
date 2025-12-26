@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Helpers;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Contracts.Responses.Attribution;
+using Mystira.Contracts.App.Responses.Attribution;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.Attribution.Queries;
@@ -49,14 +49,14 @@ public class GetBundleAttributionQueryHandler : IQueryHandler<GetBundleAttributi
             IsIpRegistered = bundle.StoryProtocol?.IsRegistered ?? false,
             IpAssetId = bundle.StoryProtocol?.IpAssetId,
             RegisteredAt = bundle.StoryProtocol?.RegisteredAt,
-            Credits = new List<CreatorCreditResponse>()
+            Credits = new List<CreatorCredit>()
         };
 
         if (bundle.StoryProtocol?.Contributors != null)
         {
             foreach (var contributor in bundle.StoryProtocol.Contributors)
             {
-                response.Credits.Add(new CreatorCreditResponse
+                response.Credits.Add(new CreatorCredit
                 {
                     Name = contributor.Name,
                     Role = ContributorHelpers.GetRoleDisplayName(contributor.Role),

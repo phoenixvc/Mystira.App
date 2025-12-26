@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using Mystira.Contracts.App.Responses.Badges;
 using Mystira.App.PWA.Models;
 
 namespace Mystira.App.PWA.Services;
@@ -6,6 +8,8 @@ public class AchievementsService : IAchievementsService
 {
     private readonly IBadgesApiClient _badgesApiClient;
     private readonly ILogger<AchievementsService> _logger;
+    private readonly ConcurrentDictionary<string, Task<List<BadgeResponse>?>> _badgeConfigTasks = new();
+    private readonly ConcurrentDictionary<string, Task<List<AxisAchievementResponse>?>> _axisAchievementTasks = new();
 
     public AchievementsService(IBadgesApiClient badgesApiClient, ILogger<AchievementsService> logger)
     {
@@ -28,12 +32,16 @@ public class AchievementsService : IAchievementsService
                 return AchievementsLoadResult.Fail("Unable to load achievements right now. Please try again.");
             }
 
-            var ageGroupId = !string.IsNullOrWhiteSpace(progress.AgeGroupId)
-                ? progress.AgeGroupId
-                : (!string.IsNullOrWhiteSpace(profile.AgeGroup) ? profile.AgeGroup : "6-9");
+            // Use profile's age group since BadgeProgressResponse doesn't carry age group
+            var ageGroupId = !string.IsNullOrWhiteSpace(profile.AgeGroup) ? profile.AgeGroup : "6-9";
 
-            var badgeConfiguration = await _badgesApiClient.GetBadgesByAgeGroupAsync(ageGroupId);
-            var axisAchievements = await _badgesApiClient.GetAxisAchievementsAsync(ageGroupId);
+            // Use Task-based caching to ensure multiple concurrent requests for the same age group
+            // only trigger a single API call.
+            var badgeConfiguration = await _badgeConfigTasks.GetOrAdd(ageGroupId,
+                id => _badgesApiClient.GetBadgesByAgeGroupAsync(id)) ?? new List<BadgeResponse>();
+
+            var axisAchievements = await _axisAchievementTasks.GetOrAdd(ageGroupId,
+                id => _badgesApiClient.GetAxisAchievementsAsync(id)) ?? new List<AxisAchievementResponse>();
 
             var axes = AchievementsMapper.MapAxes(
                 badgeConfiguration,

@@ -1,6 +1,6 @@
 using FluentAssertions;
 using Mystira.App.Application.CQRS.UserBadges.Commands;
-using Mystira.App.Contracts.Requests.Badges;
+using Mystira.Contracts.App.Requests.Badges;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.Tests.CQRS.UserBadges;
@@ -60,7 +60,6 @@ public class UserBadgeCommandTests : CqrsIntegrationTestBase
         {
             UserProfileId = "profile-1",
             BadgeConfigurationId = "badge-config-1",
-            Axis = "Courage",
             TriggerValue = 80
         };
         var command = new AwardBadgeCommand(request);
@@ -91,8 +90,7 @@ public class UserBadgeCommandTests : CqrsIntegrationTestBase
         var request = new AwardBadgeRequest
         {
             UserProfileId = "", // Missing
-            BadgeConfigurationId = "badge-config-1",
-            Axis = "Courage"
+            BadgeConfigurationId = "badge-config-1"
         };
         var command = new AwardBadgeCommand(request);
 
@@ -111,8 +109,7 @@ public class UserBadgeCommandTests : CqrsIntegrationTestBase
         var request = new AwardBadgeRequest
         {
             UserProfileId = "profile-1",
-            BadgeConfigurationId = "", // Missing
-            Axis = "Courage"
+            BadgeConfigurationId = "" // Missing
         };
         var command = new AwardBadgeCommand(request);
 
@@ -131,14 +128,12 @@ public class UserBadgeCommandTests : CqrsIntegrationTestBase
         var request1 = new AwardBadgeRequest
         {
             UserProfileId = "profile-1",
-            BadgeConfigurationId = "badge-config-1",
-            Axis = "Courage"
+            BadgeConfigurationId = "badge-config-1"
         };
         var request2 = new AwardBadgeRequest
         {
             UserProfileId = "profile-1",
-            BadgeConfigurationId = "badge-config-2",
-            Axis = "Wisdom"
+            BadgeConfigurationId = "badge-config-2"
         };
 
         // Act
@@ -164,7 +159,6 @@ public class UserBadgeCommandTests : CqrsIntegrationTestBase
         {
             UserProfileId = "profile-1",
             BadgeConfigurationId = "badge-config-1",
-            Axis = "Courage",
             TriggerValue = 85,
             GameSessionId = "session-123",
             ScenarioId = "scenario-456"
@@ -188,8 +182,7 @@ public class UserBadgeCommandTests : CqrsIntegrationTestBase
         var request = new AwardBadgeRequest
         {
             UserProfileId = "profile-1",
-            BadgeConfigurationId = "badge-config-1",
-            Axis = "Courage"
+            BadgeConfigurationId = "badge-config-1"
         };
         var command = new AwardBadgeCommand(request);
 

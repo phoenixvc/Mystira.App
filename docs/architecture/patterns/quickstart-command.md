@@ -32,7 +32,7 @@ Commands are **records** that represent a write operation. They're immutable and
 **Create**: `Application/CQRS/ContentBundles/Commands/CreateContentBundleCommand.cs`
 
 ```csharp
-using Mystira.App.Contracts.Requests.ContentBundles;
+using Mystira.Contracts.App.Requests.ContentBundles;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.ContentBundles.Commands;
@@ -146,7 +146,7 @@ Controllers dispatch commands using `IMediator`.
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.ContentBundles.Commands;
-using Mystira.App.Contracts.Requests.ContentBundles;
+using Mystira.Contracts.App.Requests.ContentBundles;
 
 [ApiController]
 [Route("api/content-bundles")]
@@ -229,7 +229,7 @@ using Xunit;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.CQRS.ContentBundles.Commands;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Contracts.Requests.ContentBundles;
+using Mystira.Contracts.App.Requests.ContentBundles;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.Tests.CQRS.ContentBundles.Commands;

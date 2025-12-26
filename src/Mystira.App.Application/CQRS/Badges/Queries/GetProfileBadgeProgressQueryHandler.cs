@@ -1,5 +1,5 @@
 ﻿using Mystira.App.Application.Ports.Data;
-using Mystira.App.Contracts.Responses.Badges;
+using Mystira.Contracts.App.Responses.Badges;
 
 namespace Mystira.App.Application.CQRS.Badges.Queries;
 
@@ -97,9 +97,9 @@ public sealed class GetProfileBadgeProgressQueryHandler : IQueryHandler<GetProfi
 
             response.AxisProgresses.Add(new AxisProgressResponse
             {
-                AxisId = axisId,
-                AxisName = axisName,
-                CurrentScore = currentScore,
+                CompassAxisId = axisId,
+                CompassAxisName = axisName,
+                CurrentScore = (int)Math.Round(currentScore, MidpointRounding.AwayFromZero),
                 Tiers = axisTiers
             });
         }

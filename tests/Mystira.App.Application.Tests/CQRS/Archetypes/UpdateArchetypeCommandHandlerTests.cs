@@ -37,7 +37,7 @@ public class UpdateArchetypeCommandHandlerTests : CqrsIntegrationTestBase
         var result = await Mediator.Send(command);
 
         result.Should().NotBeNull();
-        result.Id.Should().Be("arch-1");
+        result!.Id.Should().Be("arch-1");
         result.Name.Should().Be("The Brave Hero");
         result.Description.Should().Be("Updated hero description");
     }
@@ -71,7 +71,7 @@ public class UpdateArchetypeCommandHandlerTests : CqrsIntegrationTestBase
 
         var updated = await DbContext.ArchetypeDefinitions.FindAsync("arch-1");
         updated.Should().NotBeNull();
-        updated.Name.Should().Be("The Mentor");
+        updated!.Name.Should().Be("The Mentor");
         updated.Description.Should().Be("The wise mentor archetype");
     }
 
@@ -80,7 +80,7 @@ public class UpdateArchetypeCommandHandlerTests : CqrsIntegrationTestBase
     {
         await SeedTestDataAsync();
         var originalArchetype = await DbContext.ArchetypeDefinitions.FindAsync("arch-1");
-        var originalUpdateTime = originalArchetype.UpdatedAt;
+        var originalUpdateTime = originalArchetype!.UpdatedAt;
 
         await Task.Delay(100);
 
@@ -92,7 +92,7 @@ public class UpdateArchetypeCommandHandlerTests : CqrsIntegrationTestBase
 
         var result = await Mediator.Send(command);
 
-        result.UpdatedAt.Should().BeAfter(originalUpdateTime);
+        result!.UpdatedAt.Should().BeAfter(originalUpdateTime);
     }
 
     [Fact]
@@ -127,6 +127,6 @@ public class UpdateArchetypeCommandHandlerTests : CqrsIntegrationTestBase
 
         var result = await Mediator.Send(command);
 
-        result.Description.Should().Be(string.Empty);
+        result!.Description.Should().Be(string.Empty);
     }
 }

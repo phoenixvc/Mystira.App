@@ -1,8 +1,10 @@
+using System.Text.RegularExpressions;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Mystira.App.Shared.Logging;
 
 namespace Mystira.App.Shared.Telemetry;
 
@@ -86,12 +88,17 @@ public interface ICustomMetrics
     /// Tracks JWT token refresh attempt.
     /// </summary>
     void TrackTokenRefresh(string? userId, bool success, string? failureReason = null);
+
+    /// <summary>
+    /// Tracks dual-write operation failure in polyglot persistence.
+    /// </summary>
+    void TrackDualWriteFailure(string entityType, string operation, string errorMessage, bool compensationEnabled);
 }
 
 /// <summary>
 /// Implementation of ICustomMetrics that sends telemetry to Application Insights.
 /// </summary>
-public class CustomMetrics : ICustomMetrics
+public partial class CustomMetrics : ICustomMetrics
 {
     private readonly TelemetryClient? _telemetryClient;
     private readonly ILogger<CustomMetrics> _logger;
@@ -432,6 +439,68 @@ public class CustomMetrics : ICustomMetrics
             _logger.LogWarning("Token refresh failed for user {UserId}: {Reason}", userId ?? "unknown", failureReason ?? "unknown");
         }
     }
+
+    public void TrackDualWriteFailure(string entityType, string operation, string errorMessage, bool compensationEnabled)
+    {
+        // Sanitize error message to prevent sensitive data leakage
+        var sanitizedError = SanitizeErrorMessage(errorMessage);
+
+        var properties = new Dictionary<string, string>
+        {
+            ["EntityType"] = entityType,
+            ["Operation"] = operation,
+            ["ErrorMessage"] = sanitizedError,
+            ["CompensationEnabled"] = compensationEnabled.ToString(),
+            ["Environment"] = _environment,
+            ["Severity"] = "High" // This should trigger alerting
+        };
+
+        TrackEvent("Polyglot.DualWrite.Failed", properties);
+        TrackMetric("Polyglot.DualWriteFailures", 1, properties);
+
+        _logger.LogError("Dual-write failure for {EntityType} during {Operation}. Compensation: {Compensation}. Error: {Error}",
+            entityType, operation, compensationEnabled, sanitizedError);
+    }
+
+    /// <summary>
+    /// Sanitizes error messages to prevent sensitive data leakage.
+    /// Removes connection strings, credentials, emails, and truncates long messages.
+    /// </summary>
+    private static string SanitizeErrorMessage(string errorMessage)
+    {
+        if (string.IsNullOrEmpty(errorMessage))
+            return "[empty]";
+
+        // Redact any email addresses that might be in the error message
+        var sanitized = PiiRedactor.RedactEmailsInString(errorMessage);
+
+        // Remove connection strings (common patterns)
+        sanitized = ConnectionStringRegex().Replace(
+            sanitized,
+            "[CONNECTION_PARAM]=[REDACTED]");
+
+        // Remove API keys and tokens
+        sanitized = ApiKeyRegex().Replace(
+            sanitized,
+            "$1=[REDACTED]");
+
+        // Remove newlines and carriage returns (log injection prevention)
+        sanitized = sanitized.Replace("\r", "").Replace("\n", " ");
+
+        // Truncate long error messages
+        if (sanitized.Length > 200)
+        {
+            sanitized = sanitized[..200] + "...[truncated]";
+        }
+
+        return sanitized;
+    }
+
+    [GeneratedRegex(@"(Server|Data Source|Database|User Id|Password|Uid|Pwd|ConnectionString|AccountKey|AccountName|SharedAccessKey|SAS)=[^;]{1,256}", RegexOptions.IgnoreCase)]
+    private static partial Regex ConnectionStringRegex();
+
+    [GeneratedRegex(@"(api[_-]?key|token|bearer|authorization|secret)[\s:=""']+([\w_/+=-]{1,128})", RegexOptions.IgnoreCase)]
+    private static partial Regex ApiKeyRegex();
 }
 
 /// <summary>

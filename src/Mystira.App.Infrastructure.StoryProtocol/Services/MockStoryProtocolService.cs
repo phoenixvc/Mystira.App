@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Mystira.App.Application.Configuration.StoryProtocol;
 using Mystira.App.Application.Ports;
 using Mystira.App.Domain.Models;
-using Mystira.App.Infrastructure.StoryProtocol.Configuration;
 
 namespace Mystira.App.Infrastructure.StoryProtocol.Services;
 

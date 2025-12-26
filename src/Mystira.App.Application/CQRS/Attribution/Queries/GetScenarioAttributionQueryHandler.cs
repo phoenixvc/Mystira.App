@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Helpers;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Contracts.Responses.Attribution;
+using Mystira.Contracts.App.Responses.Attribution;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.Attribution.Queries;
@@ -49,14 +49,14 @@ public class GetScenarioAttributionQueryHandler : IQueryHandler<GetScenarioAttri
             IsIpRegistered = scenario.StoryProtocol?.IsRegistered ?? false,
             IpAssetId = scenario.StoryProtocol?.IpAssetId,
             RegisteredAt = scenario.StoryProtocol?.RegisteredAt,
-            Credits = new List<CreatorCreditResponse>()
+            Credits = new List<CreatorCredit>()
         };
 
         if (scenario.StoryProtocol?.Contributors != null)
         {
             foreach (var contributor in scenario.StoryProtocol.Contributors)
             {
-                response.Credits.Add(new CreatorCreditResponse
+                response.Credits.Add(new CreatorCredit
                 {
                     Name = contributor.Name,
                     Role = ContributorHelpers.GetRoleDisplayName(contributor.Role),
