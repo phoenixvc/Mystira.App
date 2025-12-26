@@ -161,7 +161,7 @@ public static class ScenarioParser
             Type = scene.Type.ToString(),
             Description = scene.Description,
             NextSceneId = scene.NextSceneId,
-            Difficulty = scene.Difficulty,
+            Difficulty = scene.Difficulty?.ToString(),
             ActiveCharacter = scene.ActiveCharacter,
             Media = scene.Media != null ? new MediaReferencesRequest
             {
@@ -171,17 +171,17 @@ public static class ScenarioParser
             } : null,
             Branches = scene.Branches.Select(b => new BranchRequest
             {
-                Text = b.Text,
+                Text = b.Choice,
                 NextSceneId = b.NextSceneId,
-                CompassAxis = b.CompassAxis,
-                CompassDirection = b.CompassDirection,
-                CompassDelta = b.CompassDelta
+                CompassAxis = b.CompassChange?.Axis,
+                CompassDirection = b.CompassChange?.Direction,
+                CompassDelta = b.CompassChange?.Delta
             }).ToList(),
             EchoReveals = scene.EchoReveals.Select(e => new EchoRevealRequest
             {
-                Condition = e.Condition,
-                Message = e.Message,
-                Tone = e.Tone
+                Condition = e.TriggerSceneId,
+                Message = e.RevealMechanic,
+                Tone = e.EchoType
             }).ToList()
         };
     }

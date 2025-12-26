@@ -88,7 +88,7 @@ public class GetScenariosUseCase
                 AgeGroup = s.AgeGroup,
                 CoreAxes = s.CoreAxes.Select(a => a.Value).ToList(),
                 CreatedAt = s.CreatedAt,
-                MusicPalette = s.MusicPalette?.DefaultProfile.ToString()
+                MusicPalette = s.MusicPalette != null ? s.MusicPalette.DefaultProfile.ToString() : null
             })
             .ToListAsync();
 

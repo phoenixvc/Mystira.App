@@ -96,7 +96,7 @@ public static class ScenarioMappers
                 : SceneType.Narrative,
             Description = sceneRequest.Description,
             NextSceneId = sceneRequest.NextSceneId,
-            Difficulty = sceneRequest.Difficulty,
+            Difficulty = string.IsNullOrEmpty(sceneRequest.Difficulty) ? null : int.TryParse(sceneRequest.Difficulty, out var diff) ? diff : null,
             ActiveCharacter = sceneRequest.ActiveCharacter,
             Media = sceneRequest.Media != null ? new MediaReferences
             {
@@ -106,17 +106,22 @@ public static class ScenarioMappers
             } : null,
             Branches = sceneRequest.Branches?.Select(b => new Branch
             {
-                Text = b.Text,
-                NextSceneId = b.NextSceneId,
-                CompassAxis = b.CompassAxis,
-                CompassDirection = b.CompassDirection,
-                CompassDelta = b.CompassDelta
+                Choice = b.Text ?? string.Empty,
+                NextSceneId = b.NextSceneId ?? string.Empty,
+                CompassChange = (b.CompassAxis != null || b.CompassDirection != null || b.CompassDelta.HasValue)
+                    ? new CompassChange
+                    {
+                        Axis = b.CompassAxis ?? string.Empty,
+                        Direction = b.CompassDirection ?? string.Empty,
+                        Delta = b.CompassDelta ?? 0.0
+                    }
+                    : null
             }).ToList() ?? new List<Branch>(),
             EchoReveals = sceneRequest.EchoReveals?.Select(e => new EchoReveal
             {
-                Condition = e.Condition,
-                Message = e.Message,
-                Tone = e.Tone
+                EchoType = e.Tone ?? "honesty",
+                TriggerSceneId = e.Condition ?? string.Empty,
+                RevealMechanic = e.Message
             }).ToList() ?? new List<EchoReveal>()
         };
     }
