@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.UserProfiles.Commands;
 using Mystira.App.Application.CQRS.UserProfiles.Queries;
 using Mystira.Contracts.App.Requests.UserProfiles;
-using Mystira.Contracts.App.Responses.Common;
+using Mystira.App.Api.Models;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;
