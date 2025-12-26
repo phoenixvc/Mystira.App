@@ -1,6 +1,6 @@
 using FluentAssertions;
 using Mystira.App.Application.CQRS.GameSessions.Commands;
-using Mystira.Contracts.App.Models.GameSessions;
+using Mystira.Contracts.App.Models;
 using Mystira.Contracts.App.Requests.GameSessions;
 using Mystira.App.Domain.Models;
 using Xunit;
@@ -238,8 +238,7 @@ public class GameSessionCommandTests : CqrsIntegrationTestBase
                     PlayerAssignment = new PlayerAssignmentDto
                     {
                         Type = "Guest",
-                        GuestName = "GuestPlayer",
-                        GuestAgeRange = "6-9"
+                        GuestName = "GuestPlayer"
                     }
                 }
             },

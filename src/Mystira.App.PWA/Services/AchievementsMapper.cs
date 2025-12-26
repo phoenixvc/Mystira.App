@@ -63,7 +63,7 @@ public static class AchievementsMapper
             var progressTiers = axisProgress?.Tiers ?? new List<BadgeTierProgressResponse>();
             var progressTierByBadgeId = progressTiers
                 .Where(t => !string.IsNullOrWhiteSpace(t.BadgeId))
-                .ToDictionary(t => t.BadgeId, t => t, StringComparer.OrdinalIgnoreCase);
+                .ToDictionary(t => t.BadgeId!, t => t, StringComparer.OrdinalIgnoreCase);
 
             foreach (var badge in configTiers)
             {

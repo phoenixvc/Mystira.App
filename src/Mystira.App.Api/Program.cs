@@ -36,7 +36,7 @@ using Mystira.App.Shared.Services;
 using Mystira.App.Shared.Telemetry;
 using Serilog;
 using Serilog.Events;
-using Wolverine;
+// using Wolverine; // Commented out - Wolverine not currently in project dependencies
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SERILOG BOOTSTRAP LOGGING (before host is built)
@@ -84,15 +84,16 @@ try
     // Wolverine is configured to run alongside MediatR during the gradual migration.
     // New handlers will use Wolverine convention-based patterns while existing
     // MediatR handlers continue to work. See: ADR-0015 Wolverine Migration
-    builder.Host.UseWolverine(opts =>
-    {
-        // Discover handlers from Application assembly
-        opts.Discovery.IncludeAssembly(typeof(Mystira.App.Application.CQRS.ICommand<>).Assembly);
-
-        // Local in-process messaging only for now (no external transport)
-        // Azure Service Bus can be added later for distributed scenarios
-        opts.Policies.AutoApplyTransactions();
-    });
+    // NOTE: Wolverine disabled until package is added to project dependencies
+    // builder.Host.UseWolverine(opts =>
+    // {
+    //     // Discover handlers from Application assembly
+    //     opts.Discovery.IncludeAssembly(typeof(Mystira.App.Application.CQRS.ICommand<>).Assembly);
+    //
+    //     // Local in-process messaging only for now (no external transport)
+    //     // Azure Service Bus can be added later for distributed scenarios
+    //     opts.Policies.AutoApplyTransactions();
+    // });
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // APPLICATION INSIGHTS TELEMETRY CONFIGURATION
@@ -418,7 +419,6 @@ builder.Services.AddScoped<IPlayerScenarioScoreRepository, PlayerScenarioScoreRe
 builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
 builder.Services.AddScoped<IBadgeImageRepository, BadgeImageRepository>();
 builder.Services.AddScoped<IAxisAchievementRepository, AxisAchievementRepository>();
-builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
 
 builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
 builder.Services.AddScoped<IMediaMetadataFileRepository, MediaMetadataFileRepository>();
@@ -493,8 +493,6 @@ builder.Services.AddScoped<IBadgeAwardingService, BadgeAwardingService>();
 
 // Register Application.Ports adapters for CQRS handlers
 builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, JwtServiceAdapter>();
-// Use infrastructure email service directly - configuration is read from AzureCommunicationServices section
-builder.Services.AddAzureEmailService(builder.Configuration);
 builder.Services.AddScoped<IHealthCheckPort, HealthCheckPortAdapter>();
 builder.Services.AddScoped<IMediaMetadataService, MediaMetadataService>();
 

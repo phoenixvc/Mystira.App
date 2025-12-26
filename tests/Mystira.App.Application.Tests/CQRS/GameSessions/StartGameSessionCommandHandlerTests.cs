@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.CQRS.GameSessions.Commands;
 using Mystira.App.Application.Ports.Data;
-using Mystira.Contracts.App.Models.GameSessions;
+using Mystira.Contracts.App.Models;
 using Mystira.Contracts.App.Requests.GameSessions;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data;
@@ -101,7 +101,6 @@ public class StartGameSessionCommandHandlerTests : CqrsIntegrationTestBase
                     CharacterName = "Hero",
                     Role = "Leader",
                     Archetype = "Brave",
-                    IsUnused = false,
                     PlayerAssignment = new PlayerAssignmentDto { Type = "Player", ProfileName = "Ben" }
                 },
                 new CharacterAssignmentDto
@@ -110,7 +109,6 @@ public class StartGameSessionCommandHandlerTests : CqrsIntegrationTestBase
                     CharacterName = "Mage",
                     Role = "Support",
                     Archetype = "Wise",
-                    IsUnused = false,
                     PlayerAssignment = new PlayerAssignmentDto { Type = "Guest", GuestName = "Cara" }
                 },
                 new CharacterAssignmentDto
@@ -118,8 +116,7 @@ public class StartGameSessionCommandHandlerTests : CqrsIntegrationTestBase
                     CharacterId = "c3",
                     CharacterName = "Unused",
                     Role = "",
-                    Archetype = "",
-                    IsUnused = true
+                    Archetype = ""
                 }
             }
         };

@@ -2,7 +2,8 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Badges.Queries;
 using Mystira.Contracts.App.Responses.Badges;
-using Mystira.Contracts.App.Responses.Common;
+using Mystira.App.Api.Models;
+using AppQueries = Mystira.App.Application.CQRS.Badges.Queries;
 
 namespace Mystira.App.Api.Controllers;
 
@@ -157,11 +158,11 @@ public class BadgesController : ControllerBase
     /// <param name="request">Request payload containing a non-empty ContentBundleId and a non-empty list of Percentiles used to compute per-tier scores.</param>
     /// <returns>A list of CompassAxisScoreResult where each item maps the requested percentiles to score thresholds for a compass axis.</returns>
     [HttpPost("calculate-scores")]
-    [ProducesResponseType(typeof(List<CompassAxisScoreResult>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(List<AppQueries.CompassAxisScoreResult>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<List<CompassAxisScoreResult>>> CalculateBadgeScores(
+    public async Task<ActionResult<List<AppQueries.CompassAxisScoreResult>>> CalculateBadgeScores(
         [FromBody] CalculateBadgeScoresRequest request)
     {
         if (request == null)

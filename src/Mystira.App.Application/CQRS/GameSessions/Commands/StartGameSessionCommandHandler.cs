@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.Contracts.App.Models.GameSessions;
 using Mystira.App.Domain.Models;
+using ContractCharacterAssignmentDto = Mystira.Contracts.App.Models.CharacterAssignmentDto;
 
 namespace Mystira.App.Application.CQRS.GameSessions.Commands;
 
@@ -262,7 +262,7 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
             ?? scenario.Scenes.First().Id;
     }
 
-    private static SessionCharacterAssignment MapToDomain(CharacterAssignmentDto dto)
+    private static SessionCharacterAssignment MapToDomain(ContractCharacterAssignmentDto dto)
     {
         return new SessionCharacterAssignment
         {
@@ -272,7 +272,6 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
             Audio = dto.Audio,
             Role = dto.Role,
             Archetype = dto.Archetype,
-            IsUnused = dto.IsUnused,
             PlayerAssignment = dto.PlayerAssignment == null
                 ? null
                 : new SessionPlayerAssignment

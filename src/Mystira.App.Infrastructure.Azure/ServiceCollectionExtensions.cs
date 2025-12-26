@@ -146,15 +146,4 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
-
-    /// <summary>
-    /// Add Azure Communication Services email service.
-    /// Registers IEmailService from Application.Ports.Auth.
-    /// Configuration is read from AzureCommunicationServices:ConnectionString and AzureCommunicationServices:SenderEmail.
-    /// </summary>
-    public static IServiceCollection AddAzureEmailService(this IServiceCollection services, IConfiguration configuration)
-    {
-        services.AddScoped<IEmailService, AzureEmailService>();
-        return services;
-    }
 }

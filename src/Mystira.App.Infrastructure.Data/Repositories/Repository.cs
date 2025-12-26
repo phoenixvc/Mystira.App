@@ -1,7 +1,7 @@
+using Ardalis.Specification;
+using Ardalis.Specification.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Domain.Specifications;
-using Mystira.App.Infrastructure.Data.Specifications;
 
 namespace Mystira.App.Infrastructure.Data.Repositories;
 
@@ -91,7 +91,7 @@ public class Repository<TEntity> : IRepository<TEntity> where TEntity : class
 
     private IQueryable<TEntity> ApplySpecification(ISpecification<TEntity> spec)
     {
-        return SpecificationEvaluator<TEntity>.GetQuery(_dbSet.AsQueryable(), spec);
+        return SpecificationEvaluator.Default.GetQuery(_dbSet.AsQueryable(), spec);
     }
 }
 

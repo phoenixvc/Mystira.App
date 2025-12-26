@@ -6,8 +6,8 @@ using Mystira.App.Application.CQRS.GameSessions.Commands;
 using Mystira.App.Application.CQRS.GameSessions.Queries;
 using Mystira.Contracts.App.Requests.GameSessions;
 using Mystira.Contracts.App.Requests.Scenarios;
-using Mystira.Contracts.App.Responses.Common;
 using Mystira.Contracts.App.Responses.GameSessions;
+using Mystira.App.Api.Models;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;

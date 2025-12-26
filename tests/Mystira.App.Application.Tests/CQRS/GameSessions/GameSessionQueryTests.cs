@@ -185,7 +185,7 @@ public class GameSessionQueryTests : CqrsIntegrationTestBase
         session.Id.Should().Be("session-4");
         session.ScenarioId.Should().Be("scenario-3");
         session.ProfileId.Should().Be("profile-3");
-        session.Status.Should().Be(SessionStatus.InProgress);
+        session.Status.Should().Be(SessionStatus.InProgress.ToString());
     }
 
     #endregion
@@ -235,8 +235,8 @@ public class GameSessionQueryTests : CqrsIntegrationTestBase
 
         // Assert
         result.Should().HaveCount(2);
-        result.Should().Contain(s => s.Status == SessionStatus.Completed);
-        result.Should().Contain(s => s.Status == SessionStatus.InProgress);
+        result.Should().Contain(s => s.Status == SessionStatus.Completed.ToString());
+        result.Should().Contain(s => s.Status == SessionStatus.InProgress.ToString());
     }
 
     #endregion
@@ -257,7 +257,7 @@ public class GameSessionQueryTests : CqrsIntegrationTestBase
         result.Should().NotBeNull();
         // Should return session-2 (InProgress) and session-3 (Paused) but not session-1 (Completed)
         result.Should().HaveCount(2);
-        result.Should().OnlyContain(s => s.Status == SessionStatus.InProgress || s.Status == SessionStatus.Paused);
+        result.Should().OnlyContain(s => s.Status == SessionStatus.InProgress.ToString() || s.Status == SessionStatus.Paused.ToString());
     }
 
     #endregion

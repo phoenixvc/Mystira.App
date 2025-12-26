@@ -1,7 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Health.Queries;
-using Mystira.Contracts.App.Responses.Common;
+using Mystira.App.Api.Models;
 
 namespace Mystira.App.Api.Controllers;
 

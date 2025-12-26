@@ -51,15 +51,11 @@ public class UpdateAccountUseCase
         if (request.Settings != null)
         {
             // Map from Contracts AccountSettings to Domain AccountSettings
-            account.Settings = new AccountSettings
-            {
-                Id = account.Settings?.Id ?? Guid.NewGuid().ToString(),
-                CacheCredentials = request.Settings.CacheCredentials,
-                RequireAuthOnStartup = request.Settings.RequireAuthOnStartup,
-                PreferredLanguage = request.Settings.PreferredLanguage,
-                NotificationsEnabled = request.Settings.NotificationsEnabled,
-                Theme = request.Settings.Theme
-            };
+            // Only update properties that exist in the Contracts type
+            account.Settings ??= new AccountSettings();
+            account.Settings.PreferredLanguage = request.Settings.PreferredLanguage ?? account.Settings.PreferredLanguage;
+            account.Settings.NotificationsEnabled = request.Settings.NotificationsEnabled ?? account.Settings.NotificationsEnabled;
+            account.Settings.Theme = request.Settings.Theme ?? account.Settings.Theme;
         }
 
         account.LastLoginAt = DateTime.UtcNow;

@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.PWA.Models;
+using Mystira.Contracts.App.Responses.Scenarios;
 
 namespace Mystira.App.Application.CQRS.Scenarios.Queries;
 
@@ -78,7 +78,7 @@ public class GetScenariosWithGameStateQueryHandler
                 CoreAxes = scenario.CoreAxes?.Select(a => a.Value).ToList() ?? new List<string>(),
                 Tags = scenario.Tags?.ToList() ?? new List<string>(),
                 Archetypes = scenario.Archetypes?.Select(a => a.ToString()).ToList() ?? new List<string>(),
-                GameState = gameState,
+                GameState = gameState.ToString(),
                 LastPlayedAt = lastSession?.StartTime,
                 PlayCount = sessions.Count,
                 Image = scenario.Image
