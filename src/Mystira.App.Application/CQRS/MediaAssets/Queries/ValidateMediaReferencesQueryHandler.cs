@@ -4,28 +4,18 @@ using Mystira.App.Application.Ports.Data;
 namespace Mystira.App.Application.CQRS.MediaAssets.Queries;
 
 /// <summary>
-/// Handler for validating media references exist in the system.
+/// Wolverine handler for validating media references exist in the system.
 /// Ensures data integrity when creating content that references media assets.
 /// </summary>
-public class ValidateMediaReferencesQueryHandler
-    : IQueryHandler<ValidateMediaReferencesQuery, MediaValidationResult>
+public static class ValidateMediaReferencesQueryHandler
 {
-    private readonly IMediaAssetRepository _repository;
-    private readonly ILogger<ValidateMediaReferencesQueryHandler> _logger;
-
-    public ValidateMediaReferencesQueryHandler(
-        IMediaAssetRepository repository,
-        ILogger<ValidateMediaReferencesQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<MediaValidationResult> Handle(
+    public static async Task<MediaValidationResult> Handle(
         ValidateMediaReferencesQuery request,
-        CancellationToken cancellationToken)
+        IMediaAssetRepository repository,
+        ILogger<ValidateMediaReferencesQuery> logger,
+        CancellationToken ct)
     {
-        _logger.LogInformation(
+        logger.LogInformation(
             "Validating {Count} media references",
             request.MediaIds.Count);
 
@@ -47,7 +37,7 @@ public class ValidateMediaReferencesQueryHandler
 
         foreach (var mediaId in uniqueMediaIds)
         {
-            var exists = await _repository.ExistsAsync(mediaId);
+            var exists = await repository.ExistsAsync(mediaId);
             if (!exists)
             {
                 missingIds.Add(mediaId);
@@ -59,14 +49,14 @@ public class ValidateMediaReferencesQueryHandler
 
         if (missingIds.Any())
         {
-            _logger.LogWarning(
+            logger.LogWarning(
                 "Media validation failed: {MissingCount} missing media IDs: {MissingIds}",
                 missingIds.Count,
                 string.Join(", ", missingIds));
         }
         else
         {
-            _logger.LogInformation(
+            logger.LogInformation(
                 "Media validation successful: all {Count} references valid",
                 uniqueMediaIds.Count);
         }

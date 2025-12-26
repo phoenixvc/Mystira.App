@@ -6,37 +6,24 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.AgeGroups.Commands;
 
 /// <summary>
-/// Handler for updating an existing age group.
+/// Wolverine handler for updating an existing age group.
 /// </summary>
-public class UpdateAgeGroupCommandHandler : ICommandHandler<UpdateAgeGroupCommand, AgeGroupDefinition?>
+public static class UpdateAgeGroupCommandHandler
 {
-    private readonly IAgeGroupRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IQueryCacheInvalidationService _cacheInvalidation;
-    private readonly ILogger<UpdateAgeGroupCommandHandler> _logger;
-
-    public UpdateAgeGroupCommandHandler(
+    public static async Task<AgeGroupDefinition?> Handle(
+        UpdateAgeGroupCommand command,
         IAgeGroupRepository repository,
         IUnitOfWork unitOfWork,
         IQueryCacheInvalidationService cacheInvalidation,
-        ILogger<UpdateAgeGroupCommandHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _cacheInvalidation = cacheInvalidation;
-        _logger = logger;
-    }
+        logger.LogInformation("Updating age group with id: {Id}", command.Id);
 
-    public async Task<AgeGroupDefinition?> Handle(
-        UpdateAgeGroupCommand command,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Updating age group with id: {Id}", command.Id);
-
-        var existingAgeGroup = await _repository.GetByIdAsync(command.Id);
+        var existingAgeGroup = await repository.GetByIdAsync(command.Id);
         if (existingAgeGroup == null)
         {
-            _logger.LogWarning("Age group with id {Id} not found", command.Id);
+            logger.LogWarning("Age group with id {Id} not found", command.Id);
             return null;
         }
 
@@ -47,13 +34,13 @@ public class UpdateAgeGroupCommandHandler : ICommandHandler<UpdateAgeGroupComman
         existingAgeGroup.Description = command.Description;
         existingAgeGroup.UpdatedAt = DateTime.UtcNow;
 
-        await _repository.UpdateAsync(existingAgeGroup);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.UpdateAsync(existingAgeGroup);
+        await unitOfWork.SaveChangesAsync(ct);
 
         // Invalidate cache
-        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:AgeGroups");
+        cacheInvalidation.InvalidateCacheByPrefix("MasterData:AgeGroups");
 
-        _logger.LogInformation("Successfully updated age group with id: {Id}", command.Id);
+        logger.LogInformation("Successfully updated age group with id: {Id}", command.Id);
         return existingAgeGroup;
     }
 }

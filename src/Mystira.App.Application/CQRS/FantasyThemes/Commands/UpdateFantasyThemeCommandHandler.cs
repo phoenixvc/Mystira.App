@@ -6,37 +6,29 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.FantasyThemes.Commands;
 
 /// <summary>
-/// Handler for updating an existing fantasy theme.
+/// Wolverine handler for updating an existing fantasy theme.
+/// Uses static method convention for cleaner, more testable code.
 /// </summary>
-public class UpdateFantasyThemeCommandHandler : ICommandHandler<UpdateFantasyThemeCommand, FantasyThemeDefinition?>
+public static class UpdateFantasyThemeCommandHandler
 {
-    private readonly IFantasyThemeRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IQueryCacheInvalidationService _cacheInvalidation;
-    private readonly ILogger<UpdateFantasyThemeCommandHandler> _logger;
-
-    public UpdateFantasyThemeCommandHandler(
+    /// <summary>
+    /// Handles the UpdateFantasyThemeCommand.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<FantasyThemeDefinition?> Handle(
+        UpdateFantasyThemeCommand command,
         IFantasyThemeRepository repository,
         IUnitOfWork unitOfWork,
         IQueryCacheInvalidationService cacheInvalidation,
-        ILogger<UpdateFantasyThemeCommandHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _cacheInvalidation = cacheInvalidation;
-        _logger = logger;
-    }
+        logger.LogInformation("Updating fantasy theme with id: {Id}", command.Id);
 
-    public async Task<FantasyThemeDefinition?> Handle(
-        UpdateFantasyThemeCommand command,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Updating fantasy theme with id: {Id}", command.Id);
-
-        var existingFantasyTheme = await _repository.GetByIdAsync(command.Id);
+        var existingFantasyTheme = await repository.GetByIdAsync(command.Id);
         if (existingFantasyTheme == null)
         {
-            _logger.LogWarning("Fantasy theme with id {Id} not found", command.Id);
+            logger.LogWarning("Fantasy theme with id {Id} not found", command.Id);
             return null;
         }
 
@@ -44,13 +36,13 @@ public class UpdateFantasyThemeCommandHandler : ICommandHandler<UpdateFantasyThe
         existingFantasyTheme.Description = command.Description;
         existingFantasyTheme.UpdatedAt = DateTime.UtcNow;
 
-        await _repository.UpdateAsync(existingFantasyTheme);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.UpdateAsync(existingFantasyTheme);
+        await unitOfWork.SaveChangesAsync(ct);
 
         // Invalidate cache
-        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:FantasyThemes");
+        cacheInvalidation.InvalidateCacheByPrefix("MasterData:FantasyThemes");
 
-        _logger.LogInformation("Successfully updated fantasy theme with id: {Id}", command.Id);
+        logger.LogInformation("Successfully updated fantasy theme with id: {Id}", command.Id);
         return existingFantasyTheme;
     }
 }

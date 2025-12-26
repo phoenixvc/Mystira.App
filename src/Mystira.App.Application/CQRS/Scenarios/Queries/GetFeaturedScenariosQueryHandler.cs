@@ -6,36 +6,30 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.Scenarios.Queries;
 
 /// <summary>
-/// Handler for retrieving featured scenarios.
+/// Wolverine handler for GetFeaturedScenariosQuery.
 /// Returns scenarios marked as featured and active.
 /// </summary>
-public class GetFeaturedScenariosQueryHandler
-    : IQueryHandler<GetFeaturedScenariosQuery, List<Scenario>>
+public static class GetFeaturedScenariosQueryHandler
 {
-    private readonly IScenarioRepository _repository;
-    private readonly ILogger<GetFeaturedScenariosQueryHandler> _logger;
-
-    public GetFeaturedScenariosQueryHandler(
+    /// <summary>
+    /// Handles the GetFeaturedScenariosQuery by retrieving featured scenarios from the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<List<Scenario>> Handle(
+        GetFeaturedScenariosQuery query,
         IScenarioRepository repository,
-        ILogger<GetFeaturedScenariosQueryHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<List<Scenario>> Handle(
-        GetFeaturedScenariosQuery request,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Retrieving featured scenarios");
+        logger.LogInformation("Retrieving featured scenarios");
 
         // Get featured and active scenarios
-        var scenarios = await _repository.GetQueryable()
+        var scenarios = await repository.GetQueryable()
             .Where(s => s.IsFeatured && s.IsActive)
             .OrderBy(s => s.Title)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(ct);
 
-        _logger.LogInformation("Found {Count} featured scenarios", scenarios.Count);
+        logger.LogInformation("Found {Count} featured scenarios", scenarios.Count);
 
         return scenarios;
     }

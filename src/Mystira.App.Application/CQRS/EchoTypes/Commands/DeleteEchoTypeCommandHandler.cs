@@ -5,47 +5,34 @@ using Mystira.App.Application.Services;
 namespace Mystira.App.Application.CQRS.EchoTypes.Commands;
 
 /// <summary>
-/// Handler for deleting an echo type.
+/// Wolverine handler for deleting an echo type.
 /// </summary>
-public class DeleteEchoTypeCommandHandler : ICommandHandler<DeleteEchoTypeCommand, bool>
+public static class DeleteEchoTypeCommandHandler
 {
-    private readonly IEchoTypeRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IQueryCacheInvalidationService _cacheInvalidation;
-    private readonly ILogger<DeleteEchoTypeCommandHandler> _logger;
-
-    public DeleteEchoTypeCommandHandler(
+    public static async Task<bool> Handle(
+        DeleteEchoTypeCommand command,
         IEchoTypeRepository repository,
         IUnitOfWork unitOfWork,
         IQueryCacheInvalidationService cacheInvalidation,
-        ILogger<DeleteEchoTypeCommandHandler> logger)
+        ILogger<DeleteEchoTypeCommand> logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _cacheInvalidation = cacheInvalidation;
-        _logger = logger;
-    }
+        logger.LogInformation("Deleting echo type with id: {Id}", command.Id);
 
-    public async Task<bool> Handle(
-        DeleteEchoTypeCommand command,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Deleting echo type with id: {Id}", command.Id);
-
-        var echoType = await _repository.GetByIdAsync(command.Id);
+        var echoType = await repository.GetByIdAsync(command.Id);
         if (echoType == null)
         {
-            _logger.LogWarning("Echo type with id {Id} not found", command.Id);
+            logger.LogWarning("Echo type with id {Id} not found", command.Id);
             return false;
         }
 
-        await _repository.DeleteAsync(command.Id);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.DeleteAsync(command.Id);
+        await unitOfWork.SaveChangesAsync(ct);
 
         // Invalidate cache
-        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:EchoTypes");
+        cacheInvalidation.InvalidateCacheByPrefix("MasterData:EchoTypes");
 
-        _logger.LogInformation("Successfully deleted echo type with id: {Id}", command.Id);
+        logger.LogInformation("Successfully deleted echo type with id: {Id}", command.Id);
         return true;
     }
 }

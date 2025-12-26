@@ -3,24 +3,17 @@ using Microsoft.Extensions.Logging;
 namespace Mystira.App.Application.CQRS.Health.Queries;
 
 /// <summary>
-/// Handler for liveness probe.
+/// Wolverine message handler for liveness probe.
 /// Simple check indicating application is alive and running.
 /// </summary>
-public class GetLivenessQueryHandler
-    : IQueryHandler<GetLivenessQuery, ProbeResult>
+public static class GetLivenessQueryHandler
 {
-    private readonly ILogger<GetLivenessQueryHandler> _logger;
-
-    public GetLivenessQueryHandler(ILogger<GetLivenessQueryHandler> logger)
-    {
-        _logger = logger;
-    }
-
-    public Task<ProbeResult> Handle(
+    public static Task<ProbeResult> Handle(
         GetLivenessQuery request,
-        CancellationToken cancellationToken)
+        ILogger<GetLivenessQuery> logger,
+        CancellationToken ct)
     {
-        _logger.LogDebug("Liveness probe checked");
+        logger.LogDebug("Liveness probe checked");
 
         return Task.FromResult(new ProbeResult(
             Status: "alive",

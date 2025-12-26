@@ -4,32 +4,28 @@ using Mystira.App.Application.Ports.Data;
 namespace Mystira.App.Application.CQRS.UserBadges.Queries;
 
 /// <summary>
-/// Handler for checking if a user has earned a specific badge.
+/// Wolverine handler for HasUserEarnedBadgeQuery.
+/// Checks if a user has earned a specific badge.
 /// </summary>
-public class HasUserEarnedBadgeQueryHandler : IQueryHandler<HasUserEarnedBadgeQuery, bool>
+public static class HasUserEarnedBadgeQueryHandler
 {
-    private readonly IUserBadgeRepository _repository;
-    private readonly ILogger<HasUserEarnedBadgeQueryHandler> _logger;
-
-    public HasUserEarnedBadgeQueryHandler(
-        IUserBadgeRepository repository,
-        ILogger<HasUserEarnedBadgeQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<bool> Handle(
+    /// <summary>
+    /// Handles the HasUserEarnedBadgeQuery by checking if a user has earned a specific badge.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<bool> Handle(
         HasUserEarnedBadgeQuery query,
-        CancellationToken cancellationToken)
+        IUserBadgeRepository repository,
+        ILogger logger,
+        CancellationToken ct)
     {
-        _logger.LogInformation("Checking if user {UserProfileId} has earned badge {BadgeId}",
+        logger.LogInformation("Checking if user {UserProfileId} has earned badge {BadgeId}",
             query.UserProfileId, query.BadgeConfigurationId);
 
-        var badges = await _repository.GetByUserProfileIdAsync(query.UserProfileId);
+        var badges = await repository.GetByUserProfileIdAsync(query.UserProfileId);
         var hasEarned = badges.Any(b => b.BadgeConfigurationId == query.BadgeConfigurationId);
 
-        _logger.LogInformation("User {UserProfileId} {Status} badge {BadgeId}",
+        logger.LogInformation("User {UserProfileId} {Status} badge {BadgeId}",
             query.UserProfileId, hasEarned ? "has earned" : "has not earned", query.BadgeConfigurationId);
 
         return hasEarned;

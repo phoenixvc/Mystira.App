@@ -8,25 +8,21 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.GameSessions.Queries;
 
 /// <summary>
-/// Handler for GetInProgressSessionsQuery
-/// Retrieves sessions that are currently in progress or paused
+/// Wolverine handler for GetInProgressSessionsQuery.
+/// Retrieves sessions that are currently in progress or paused.
+/// Uses static method convention for cleaner, more testable code.
 /// </summary>
-public class GetInProgressSessionsQueryHandler : IQueryHandler<GetInProgressSessionsQuery, List<GameSessionResponse>>
+public static class GetInProgressSessionsQueryHandler
 {
-    private readonly IGameSessionRepository _repository;
-    private readonly ILogger<GetInProgressSessionsQueryHandler> _logger;
-
-    public GetInProgressSessionsQueryHandler(
-        IGameSessionRepository repository,
-        ILogger<GetInProgressSessionsQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<List<GameSessionResponse>> Handle(
+    /// <summary>
+    /// Handles the GetInProgressSessionsQuery.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<List<GameSessionResponse>> Handle(
         GetInProgressSessionsQuery request,
-        CancellationToken cancellationToken)
+        IGameSessionRepository repository,
+        ILogger logger,
+        CancellationToken ct)
     {
         if (string.IsNullOrEmpty(request.AccountId))
         {
@@ -34,7 +30,7 @@ public class GetInProgressSessionsQueryHandler : IQueryHandler<GetInProgressSess
         }
 
         var spec = new InProgressSessionsSpec(request.AccountId);
-        var sessions = await _repository.ListAsync(spec);
+        var sessions = await repository.ListAsync(spec);
 
         // Defensive: if historical data contains duplicates (e.g., retries that created multiple active sessions),
         // only return the most recent active session per (ScenarioId, ProfileId) pair.
@@ -50,7 +46,7 @@ public class GetInProgressSessionsQueryHandler : IQueryHandler<GetInProgressSess
 
         if (meaningfulSessions.Count != ordered.Count)
         {
-            _logger.LogWarning(
+            logger.LogWarning(
                 "Filtered empty in-progress sessions for account {AccountId}: {OriginalCount} -> {FilteredCount}",
                 request.AccountId,
                 ordered.Count,
@@ -64,7 +60,7 @@ public class GetInProgressSessionsQueryHandler : IQueryHandler<GetInProgressSess
 
         if (uniqueSessions.Count != meaningfulSessions.Count)
         {
-            _logger.LogWarning(
+            logger.LogWarning(
                 "Deduplicated in-progress sessions for account {AccountId}: {OriginalCount} -> {UniqueCount}",
                 request.AccountId,
                 meaningfulSessions.Count,
@@ -124,7 +120,7 @@ public class GetInProgressSessionsQueryHandler : IQueryHandler<GetInProgressSess
             };
         }).ToList();
 
-        _logger.LogDebug("Retrieved {Count} in-progress sessions for account {AccountId}", response.Count, request.AccountId);
+        logger.LogDebug("Retrieved {Count} in-progress sessions for account {AccountId}", response.Count, request.AccountId);
 
         return response;
     }

@@ -5,31 +5,27 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.FantasyThemes.Queries;
 
 /// <summary>
-/// Handler for retrieving a fantasy theme by ID.
+/// Wolverine handler for retrieving a fantasy theme by ID.
+/// Uses static method convention for cleaner, more testable code.
 /// </summary>
-public class GetFantasyThemeByIdQueryHandler : IQueryHandler<GetFantasyThemeByIdQuery, FantasyThemeDefinition?>
+public static class GetFantasyThemeByIdQueryHandler
 {
-    private readonly IFantasyThemeRepository _repository;
-    private readonly ILogger<GetFantasyThemeByIdQueryHandler> _logger;
-
-    public GetFantasyThemeByIdQueryHandler(
-        IFantasyThemeRepository repository,
-        ILogger<GetFantasyThemeByIdQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<FantasyThemeDefinition?> Handle(
+    /// <summary>
+    /// Handles the GetFantasyThemeByIdQuery.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<FantasyThemeDefinition?> Handle(
         GetFantasyThemeByIdQuery query,
-        CancellationToken cancellationToken)
+        IFantasyThemeRepository repository,
+        ILogger logger,
+        CancellationToken ct)
     {
-        _logger.LogInformation("Retrieving fantasy theme with id: {Id}", query.Id);
-        var fantasyTheme = await _repository.GetByIdAsync(query.Id);
+        logger.LogInformation("Retrieving fantasy theme with id: {Id}", query.Id);
+        var fantasyTheme = await repository.GetByIdAsync(query.Id);
 
         if (fantasyTheme == null)
         {
-            _logger.LogWarning("Fantasy theme with id {Id} not found", query.Id);
+            logger.LogWarning("Fantasy theme with id {Id} not found", query.Id);
         }
 
         return fantasyTheme;

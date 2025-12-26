@@ -6,32 +6,19 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.CompassAxes.Commands;
 
 /// <summary>
-/// Handler for creating a new compass axis.
+/// Wolverine handler for creating a new compass axis.
 /// </summary>
-public class CreateCompassAxisCommandHandler : ICommandHandler<CreateCompassAxisCommand, CompassAxis>
+public static class CreateCompassAxisCommandHandler
 {
-    private readonly ICompassAxisRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IQueryCacheInvalidationService _cacheInvalidation;
-    private readonly ILogger<CreateCompassAxisCommandHandler> _logger;
-
-    public CreateCompassAxisCommandHandler(
+    public static async Task<CompassAxis> Handle(
+        CreateCompassAxisCommand command,
         ICompassAxisRepository repository,
         IUnitOfWork unitOfWork,
         IQueryCacheInvalidationService cacheInvalidation,
-        ILogger<CreateCompassAxisCommandHandler> logger)
+        ILogger<CreateCompassAxisCommand> logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _cacheInvalidation = cacheInvalidation;
-        _logger = logger;
-    }
-
-    public async Task<CompassAxis> Handle(
-        CreateCompassAxisCommand command,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Creating compass axis: {Name}", command.Name);
+        logger.LogInformation("Creating compass axis: {Name}", command.Name);
 
         if (string.IsNullOrWhiteSpace(command.Name))
         {
@@ -47,13 +34,13 @@ public class CreateCompassAxisCommandHandler : ICommandHandler<CreateCompassAxis
             UpdatedAt = DateTime.UtcNow
         };
 
-        await _repository.AddAsync(axis);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.AddAsync(axis);
+        await unitOfWork.SaveChangesAsync(ct);
 
         // Invalidate cache
-        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:CompassAxes");
+        cacheInvalidation.InvalidateCacheByPrefix("MasterData:CompassAxes");
 
-        _logger.LogInformation("Successfully created compass axis with id: {Id}", axis.Id);
+        logger.LogInformation("Successfully created compass axis with id: {Id}", axis.Id);
         return axis;
     }
 }

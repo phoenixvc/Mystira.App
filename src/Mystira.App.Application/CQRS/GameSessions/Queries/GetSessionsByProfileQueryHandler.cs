@@ -8,25 +8,21 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.GameSessions.Queries;
 
 /// <summary>
-/// Handler for GetSessionsByProfileQuery
-/// Retrieves all sessions for a specific user profile
+/// Wolverine handler for GetSessionsByProfileQuery.
+/// Retrieves all sessions for a specific user profile.
+/// Uses static method convention for cleaner, more testable code.
 /// </summary>
-public class GetSessionsByProfileQueryHandler : IQueryHandler<GetSessionsByProfileQuery, List<GameSessionResponse>>
+public static class GetSessionsByProfileQueryHandler
 {
-    private readonly IGameSessionRepository _repository;
-    private readonly ILogger<GetSessionsByProfileQueryHandler> _logger;
-
-    public GetSessionsByProfileQueryHandler(
-        IGameSessionRepository repository,
-        ILogger<GetSessionsByProfileQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<List<GameSessionResponse>> Handle(
+    /// <summary>
+    /// Handles the GetSessionsByProfileQuery.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<List<GameSessionResponse>> Handle(
         GetSessionsByProfileQuery request,
-        CancellationToken cancellationToken)
+        IGameSessionRepository repository,
+        ILogger logger,
+        CancellationToken ct)
     {
         if (string.IsNullOrEmpty(request.ProfileId))
         {
@@ -34,7 +30,7 @@ public class GetSessionsByProfileQueryHandler : IQueryHandler<GetSessionsByProfi
         }
 
         var spec = new SessionsByProfileSpec(request.ProfileId);
-        var sessions = await _repository.ListAsync(spec);
+        var sessions = await repository.ListAsync(spec);
 
         var response = sessions.Select(s =>
         {
@@ -67,7 +63,7 @@ public class GetSessionsByProfileQueryHandler : IQueryHandler<GetSessionsByProfi
             };
         }).ToList();
 
-        _logger.LogDebug("Retrieved {Count} sessions for profile {ProfileId}", response.Count, request.ProfileId);
+        logger.LogDebug("Retrieved {Count} sessions for profile {ProfileId}", response.Count, request.ProfileId);
 
         return response;
     }

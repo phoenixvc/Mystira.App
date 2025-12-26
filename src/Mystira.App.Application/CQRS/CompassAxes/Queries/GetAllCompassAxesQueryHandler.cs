@@ -5,28 +5,19 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.CompassAxes.Queries;
 
 /// <summary>
-/// Handler for retrieving all compass axes.
+/// Wolverine handler for retrieving all compass axes.
 /// </summary>
-public class GetAllCompassAxesQueryHandler : IQueryHandler<GetAllCompassAxesQuery, List<CompassAxis>>
+public static class GetAllCompassAxesQueryHandler
 {
-    private readonly ICompassAxisRepository _repository;
-    private readonly ILogger<GetAllCompassAxesQueryHandler> _logger;
-
-    public GetAllCompassAxesQueryHandler(
-        ICompassAxisRepository repository,
-        ILogger<GetAllCompassAxesQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<List<CompassAxis>> Handle(
+    public static async Task<List<CompassAxis>> Handle(
         GetAllCompassAxesQuery query,
-        CancellationToken cancellationToken)
+        ICompassAxisRepository repository,
+        ILogger<GetAllCompassAxesQuery> logger,
+        CancellationToken ct)
     {
-        _logger.LogInformation("Retrieving all compass axes");
-        var axes = await _repository.GetAllAsync();
-        _logger.LogInformation("Retrieved {Count} compass axes", axes.Count);
+        logger.LogInformation("Retrieving all compass axes");
+        var axes = await repository.GetAllAsync();
+        logger.LogInformation("Retrieved {Count} compass axes", axes.Count);
         return axes;
     }
 }

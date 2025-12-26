@@ -4,41 +4,40 @@ using Mystira.App.Application.Ports.Data;
 namespace Mystira.App.Application.CQRS.Accounts.Queries;
 
 /// <summary>
-/// Handler for validating account existence by email.
+/// Wolverine handler for ValidateAccountQuery.
+/// Validates account existence by email.
 /// Returns true if account exists, false otherwise.
+/// Uses static method convention for cleaner, more testable code.
 /// </summary>
-public class ValidateAccountQueryHandler : IQueryHandler<ValidateAccountQuery, bool>
+public static class ValidateAccountQueryHandler
 {
-    private readonly IAccountRepository _repository;
-    private readonly ILogger<ValidateAccountQueryHandler> _logger;
-
-    public ValidateAccountQueryHandler(
+    /// <summary>
+    /// Handles the ValidateAccountQuery by checking if an account exists with the given email.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<bool> Handle(
+        ValidateAccountQuery query,
         IAccountRepository repository,
-        ILogger<ValidateAccountQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<bool> Handle(ValidateAccountQuery query, CancellationToken cancellationToken)
+        ILogger logger,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(query.Email))
         {
-            _logger.LogWarning("Cannot validate account: Email is null or empty");
+            logger.LogWarning("Cannot validate account: Email is null or empty");
             return false;
         }
 
         try
         {
-            var account = await _repository.GetByEmailAsync(query.Email);
+            var account = await repository.GetByEmailAsync(query.Email);
             var isValid = account != null;
 
-            _logger.LogInformation("Account validation for {Email}: {IsValid}", query.Email, isValid);
+            logger.LogInformation("Account validation for {Email}: {IsValid}", query.Email, isValid);
             return isValid;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error validating account for email {Email}", query.Email);
+            logger.LogError(ex, "Error validating account for email {Email}", query.Email);
             return false;
         }
     }

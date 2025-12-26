@@ -6,42 +6,35 @@ using Mystira.Contracts.App.Responses.Scenarios;
 namespace Mystira.App.Application.CQRS.Scenarios.Queries;
 
 /// <summary>
-/// Handler for retrieving scenarios with associated game session state.
+/// Wolverine handler for GetScenariosWithGameStateQuery.
+/// Retrieves scenarios with associated game session state.
 /// Combines scenario data with player's game session progress.
 /// </summary>
-public class GetScenariosWithGameStateQueryHandler
-    : IQueryHandler<GetScenariosWithGameStateQuery, ScenarioGameStateResponse>
+public static class GetScenariosWithGameStateQueryHandler
 {
-    private readonly IScenarioRepository _scenarioRepository;
-    private readonly IGameSessionRepository _gameSessionRepository;
-    private readonly ILogger<GetScenariosWithGameStateQueryHandler> _logger;
-
-    public GetScenariosWithGameStateQueryHandler(
+    /// <summary>
+    /// Handles the GetScenariosWithGameStateQuery by retrieving scenarios with game state from the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<ScenarioGameStateResponse> Handle(
+        GetScenariosWithGameStateQuery query,
         IScenarioRepository scenarioRepository,
         IGameSessionRepository gameSessionRepository,
-        ILogger<GetScenariosWithGameStateQueryHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _scenarioRepository = scenarioRepository;
-        _gameSessionRepository = gameSessionRepository;
-        _logger = logger;
-    }
-
-    public async Task<ScenarioGameStateResponse> Handle(
-        GetScenariosWithGameStateQuery request,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation(
+        logger.LogInformation(
             "Retrieving scenarios with game state for account: {AccountId}",
-            request.AccountId);
+            query.AccountId);
 
         // 1. Get all active scenarios using direct LINQ query
-        var scenarios = await _scenarioRepository.GetQueryable()
+        var scenarios = await scenarioRepository.GetQueryable()
             .Where(s => s.IsActive)
             .OrderBy(s => s.Title)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(ct);
 
         // 2. Get all game sessions for this account
-        var gameSessions = await _gameSessionRepository.GetByAccountIdAsync(request.AccountId);
+        var gameSessions = await gameSessionRepository.GetByAccountIdAsync(query.AccountId);
 
         // 3. Build response with game state
         var scenariosWithState = scenarios.Select(scenario =>
@@ -91,10 +84,10 @@ public class GetScenariosWithGameStateQueryHandler
             TotalCount = scenarios.Count
         };
 
-        _logger.LogInformation(
+        logger.LogInformation(
             "Retrieved {Total} scenarios for account {AccountId}",
             response.TotalCount,
-            request.AccountId);
+            query.AccountId);
 
         return response;
     }

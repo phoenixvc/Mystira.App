@@ -1,20 +1,24 @@
-﻿using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Ports.Data;
 using Mystira.Contracts.App.Responses.Badges;
 
 namespace Mystira.App.Application.CQRS.Badges.Queries;
 
-public sealed class GetBadgeDetailQueryHandler : IQueryHandler<GetBadgeDetailQuery, BadgeResponse?>
+/// <summary>
+/// Wolverine handler for GetBadgeDetailQuery.
+/// Retrieves detailed information for a specific badge.
+/// </summary>
+public static class GetBadgeDetailQueryHandler
 {
-    private readonly IBadgeRepository _badgeRepository;
-
-    public GetBadgeDetailQueryHandler(IBadgeRepository badgeRepository)
+    /// <summary>
+    /// Handles the GetBadgeDetailQuery by retrieving badge details from the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<BadgeResponse?> Handle(
+        GetBadgeDetailQuery query,
+        IBadgeRepository badgeRepository,
+        CancellationToken ct)
     {
-        _badgeRepository = badgeRepository;
-    }
-
-    public async Task<BadgeResponse?> Handle(GetBadgeDetailQuery request, CancellationToken cancellationToken)
-    {
-        var badge = await _badgeRepository.GetByIdAsync(request.BadgeId);
+        var badge = await badgeRepository.GetByIdAsync(query.BadgeId);
         if (badge == null) return null;
 
         return new BadgeResponse

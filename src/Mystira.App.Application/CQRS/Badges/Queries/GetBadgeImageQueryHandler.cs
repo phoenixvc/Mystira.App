@@ -1,22 +1,26 @@
-﻿using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Application.CQRS.Badges.Queries;
 
-public sealed class GetBadgeImageQueryHandler : IQueryHandler<GetBadgeImageQuery, BadgeImageResult?>
+/// <summary>
+/// Wolverine handler for GetBadgeImageQuery.
+/// Retrieves badge image data by image ID.
+/// </summary>
+public static class GetBadgeImageQueryHandler
 {
-    private readonly IBadgeImageRepository _badgeImageRepository;
-
-    public GetBadgeImageQueryHandler(IBadgeImageRepository badgeImageRepository)
+    /// <summary>
+    /// Handles the GetBadgeImageQuery by retrieving badge image data from the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<BadgeImageResult?> Handle(
+        GetBadgeImageQuery query,
+        IBadgeImageRepository badgeImageRepository,
+        CancellationToken ct)
     {
-        _badgeImageRepository = badgeImageRepository;
-    }
+        var decodedId = Uri.UnescapeDataString(query.ImageId);
 
-    public async Task<BadgeImageResult?> Handle(GetBadgeImageQuery request, CancellationToken cancellationToken)
-    {
-        var decodedId = Uri.UnescapeDataString(request.ImageId);
-
-        var image = await _badgeImageRepository.GetByImageIdAsync(decodedId)
-                    ?? await _badgeImageRepository.GetByIdAsync(decodedId);
+        var image = await badgeImageRepository.GetByImageIdAsync(decodedId)
+                    ?? await badgeImageRepository.GetByIdAsync(decodedId);
 
         if (image?.ImageData is not { Length: > 0 }) return null;
 

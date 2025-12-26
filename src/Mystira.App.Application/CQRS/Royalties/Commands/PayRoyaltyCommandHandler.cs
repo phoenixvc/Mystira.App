@@ -5,22 +5,15 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.Royalties.Commands;
 
 /// <summary>
-/// Handler for PayRoyaltyCommand
+/// Wolverine message handler for paying royalties to IP assets.
 /// </summary>
-public class PayRoyaltyCommandHandler : ICommandHandler<PayRoyaltyCommand, RoyaltyPaymentResult>
+public static class PayRoyaltyCommandHandler
 {
-    private readonly IStoryProtocolService _storyProtocolService;
-    private readonly ILogger<PayRoyaltyCommandHandler> _logger;
-
-    public PayRoyaltyCommandHandler(
+    public static async Task<RoyaltyPaymentResult> Handle(
+        PayRoyaltyCommand request,
         IStoryProtocolService storyProtocolService,
-        ILogger<PayRoyaltyCommandHandler> logger)
-    {
-        _storyProtocolService = storyProtocolService;
-        _logger = logger;
-    }
-
-    public async Task<RoyaltyPaymentResult> Handle(PayRoyaltyCommand request, CancellationToken cancellationToken)
+        ILogger<PayRoyaltyCommand> logger,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.IpAssetId))
         {
@@ -32,11 +25,11 @@ public class PayRoyaltyCommandHandler : ICommandHandler<PayRoyaltyCommand, Royal
             throw new ArgumentException("Amount must be greater than zero", nameof(request.Amount));
         }
 
-        _logger.LogInformation(
+        logger.LogInformation(
             "Processing royalty payment of {Amount} to IP Asset: {IpAssetId}",
             request.Amount, request.IpAssetId);
 
-        return await _storyProtocolService.PayRoyaltyAsync(
+        return await storyProtocolService.PayRoyaltyAsync(
             request.IpAssetId,
             request.Amount,
             request.PayerReference);

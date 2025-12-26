@@ -4,26 +4,25 @@ using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.Accounts.Commands;
 
-public class CreateAccountCommandHandler : ICommandHandler<CreateAccountCommand, Account>
+/// <summary>
+/// Wolverine handler for CreateAccountCommand.
+/// Uses static method convention for cleaner, more testable code.
+/// </summary>
+public static class CreateAccountCommandHandler
 {
-    private readonly IAccountRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<CreateAccountCommandHandler> _logger;
-
-    public CreateAccountCommandHandler(
+    /// <summary>
+    /// Handles the CreateAccountCommand by creating a new account in the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<Account> Handle(
+        CreateAccountCommand command,
         IAccountRepository repository,
         IUnitOfWork unitOfWork,
-        ILogger<CreateAccountCommandHandler> logger)
-    {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-    }
-
-    public async Task<Account> Handle(CreateAccountCommand command, CancellationToken cancellationToken)
+        ILogger logger,
+        CancellationToken ct)
     {
         // Check if account already exists
-        var existing = await _repository.GetByEmailAsync(command.Email);
+        var existing = await repository.GetByEmailAsync(command.Email);
         if (existing != null)
         {
             throw new InvalidOperationException($"Account with email {command.Email} already exists");
@@ -42,10 +41,10 @@ public class CreateAccountCommandHandler : ICommandHandler<CreateAccountCommand,
             LastLoginAt = DateTime.UtcNow
         };
 
-        await _repository.AddAsync(account);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.AddAsync(account);
+        await unitOfWork.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Created account {AccountId} for email {Email}", account.Id, account.Email);
+        logger.LogInformation("Created account {AccountId} for email {Email}", account.Id, account.Email);
         return account;
     }
 }

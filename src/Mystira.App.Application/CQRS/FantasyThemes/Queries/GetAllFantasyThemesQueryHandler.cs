@@ -5,28 +5,24 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.FantasyThemes.Queries;
 
 /// <summary>
-/// Handler for retrieving all fantasy themes.
+/// Wolverine handler for retrieving all fantasy themes.
+/// Uses static method convention for cleaner, more testable code.
 /// </summary>
-public class GetAllFantasyThemesQueryHandler : IQueryHandler<GetAllFantasyThemesQuery, List<FantasyThemeDefinition>>
+public static class GetAllFantasyThemesQueryHandler
 {
-    private readonly IFantasyThemeRepository _repository;
-    private readonly ILogger<GetAllFantasyThemesQueryHandler> _logger;
-
-    public GetAllFantasyThemesQueryHandler(
-        IFantasyThemeRepository repository,
-        ILogger<GetAllFantasyThemesQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<List<FantasyThemeDefinition>> Handle(
+    /// <summary>
+    /// Handles the GetAllFantasyThemesQuery.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<List<FantasyThemeDefinition>> Handle(
         GetAllFantasyThemesQuery query,
-        CancellationToken cancellationToken)
+        IFantasyThemeRepository repository,
+        ILogger logger,
+        CancellationToken ct)
     {
-        _logger.LogInformation("Retrieving all fantasy themes");
-        var fantasyThemes = await _repository.GetAllAsync();
-        _logger.LogInformation("Retrieved {Count} fantasy themes", fantasyThemes.Count);
+        logger.LogInformation("Retrieving all fantasy themes");
+        var fantasyThemes = await repository.GetAllAsync();
+        logger.LogInformation("Retrieved {Count} fantasy themes", fantasyThemes.Count);
         return fantasyThemes;
     }
 }

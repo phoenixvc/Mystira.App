@@ -6,30 +6,21 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.ContentBundles.Queries;
 
 /// <summary>
-/// Handler for GetContentBundlesByAgeGroupQuery
+/// Wolverine handler for GetContentBundlesByAgeGroupQuery
 /// Retrieves content bundles filtered by age group
 /// </summary>
-public class GetContentBundlesByAgeGroupQueryHandler : IQueryHandler<GetContentBundlesByAgeGroupQuery, IEnumerable<ContentBundle>>
+public static class GetContentBundlesByAgeGroupQueryHandler
 {
-    private readonly IContentBundleRepository _repository;
-    private readonly ILogger<GetContentBundlesByAgeGroupQueryHandler> _logger;
-
-    public GetContentBundlesByAgeGroupQueryHandler(
-        IContentBundleRepository repository,
-        ILogger<GetContentBundlesByAgeGroupQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<IEnumerable<ContentBundle>> Handle(
+    public static async Task<IEnumerable<ContentBundle>> Handle(
         GetContentBundlesByAgeGroupQuery request,
-        CancellationToken cancellationToken)
+        IContentBundleRepository repository,
+        ILogger<GetContentBundlesByAgeGroupQuery> logger,
+        CancellationToken ct)
     {
         // Validate input
         if (string.IsNullOrWhiteSpace(request.AgeGroup))
         {
-            _logger.LogWarning("Age group cannot be null or empty");
+            logger.LogWarning("Age group cannot be null or empty");
             throw new ArgumentException("Age group cannot be null or empty", nameof(request.AgeGroup));
         }
 
@@ -37,9 +28,9 @@ public class GetContentBundlesByAgeGroupQueryHandler : IQueryHandler<GetContentB
         var spec = new ContentBundlesByAgeGroupSpec(request.AgeGroup);
 
         // Execute query using repository
-        var bundles = await _repository.ListAsync(spec);
+        var bundles = await repository.ListAsync(spec);
 
-        _logger.LogDebug("Retrieved {Count} bundles for age group {AgeGroup}",
+        logger.LogDebug("Retrieved {Count} bundles for age group {AgeGroup}",
             bundles.Count(), request.AgeGroup);
 
         return bundles;

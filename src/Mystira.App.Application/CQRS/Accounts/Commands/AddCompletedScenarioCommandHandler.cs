@@ -4,45 +4,40 @@ using Mystira.App.Application.Ports.Data;
 namespace Mystira.App.Application.CQRS.Accounts.Commands;
 
 /// <summary>
-/// Handler for marking a scenario as completed for an account.
+/// Wolverine handler for AddCompletedScenarioCommand.
+/// Marks a scenario as completed for an account.
 /// Adds the scenario ID to the account's completed scenarios list if not already present.
+/// Uses static method convention for cleaner, more testable code.
 /// </summary>
-public class AddCompletedScenarioCommandHandler : ICommandHandler<AddCompletedScenarioCommand, bool>
+public static class AddCompletedScenarioCommandHandler
 {
-    private readonly IAccountRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<AddCompletedScenarioCommandHandler> _logger;
-
-    public AddCompletedScenarioCommandHandler(
+    /// <summary>
+    /// Handles the AddCompletedScenarioCommand by adding a scenario to the account's completed list.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<bool> Handle(
+        AddCompletedScenarioCommand command,
         IAccountRepository repository,
         IUnitOfWork unitOfWork,
-        ILogger<AddCompletedScenarioCommandHandler> logger)
-    {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-    }
-
-    public async Task<bool> Handle(
-        AddCompletedScenarioCommand command,
-        CancellationToken cancellationToken)
+        ILogger logger,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(command.AccountId))
         {
-            _logger.LogWarning("Cannot add completed scenario: Account ID is null or empty");
+            logger.LogWarning("Cannot add completed scenario: Account ID is null or empty");
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(command.ScenarioId))
         {
-            _logger.LogWarning("Cannot add completed scenario: Scenario ID is null or empty");
+            logger.LogWarning("Cannot add completed scenario: Scenario ID is null or empty");
             return false;
         }
 
-        var account = await _repository.GetByIdAsync(command.AccountId);
+        var account = await repository.GetByIdAsync(command.AccountId);
         if (account == null)
         {
-            _logger.LogWarning("Account not found: {AccountId}", command.AccountId);
+            logger.LogWarning("Account not found: {AccountId}", command.AccountId);
             return false;
         }
 
@@ -56,15 +51,15 @@ public class AddCompletedScenarioCommandHandler : ICommandHandler<AddCompletedSc
         if (!account.CompletedScenarioIds.Contains(command.ScenarioId))
         {
             account.CompletedScenarioIds.Add(command.ScenarioId);
-            await _repository.UpdateAsync(account);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await repository.UpdateAsync(account);
+            await unitOfWork.SaveChangesAsync(ct);
 
-            _logger.LogInformation("Added completed scenario {ScenarioId} to account {AccountId}",
+            logger.LogInformation("Added completed scenario {ScenarioId} to account {AccountId}",
                 command.ScenarioId, command.AccountId);
         }
         else
         {
-            _logger.LogDebug("Scenario {ScenarioId} already marked as completed for account {AccountId}",
+            logger.LogDebug("Scenario {ScenarioId} already marked as completed for account {AccountId}",
                 command.ScenarioId, command.AccountId);
         }
 

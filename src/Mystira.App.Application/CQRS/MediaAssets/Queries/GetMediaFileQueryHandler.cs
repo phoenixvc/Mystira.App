@@ -5,44 +5,32 @@ using Mystira.App.Application.Ports.Storage;
 namespace Mystira.App.Application.CQRS.MediaAssets.Queries;
 
 /// <summary>
-/// Handler for retrieving media file content for download/streaming.
+/// Wolverine handler for retrieving media file content for download/streaming.
 /// Coordinates between metadata repository and blob storage.
 /// </summary>
-public class GetMediaFileQueryHandler
-    : IQueryHandler<GetMediaFileQuery, (Stream stream, string contentType, string fileName)?>
+public static class GetMediaFileQueryHandler
 {
-    private readonly IMediaAssetRepository _repository;
-    private readonly IBlobService _blobService;
-    private readonly ILogger<GetMediaFileQueryHandler> _logger;
-
-    public GetMediaFileQueryHandler(
+    public static async Task<(Stream stream, string contentType, string fileName)?> Handle(
+        GetMediaFileQuery request,
         IMediaAssetRepository repository,
         IBlobService blobService,
-        ILogger<GetMediaFileQueryHandler> logger)
+        ILogger<GetMediaFileQuery> logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _blobService = blobService;
-        _logger = logger;
-    }
-
-    public async Task<(Stream stream, string contentType, string fileName)?> Handle(
-        GetMediaFileQuery request,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Retrieving media file for MediaId: {MediaId}", request.MediaId);
+        logger.LogInformation("Retrieving media file for MediaId: {MediaId}", request.MediaId);
 
         // 1. Get media asset metadata by external MediaId (not DB primary key)
-        var mediaAsset = await _repository.GetByMediaIdAsync(request.MediaId);
+        var mediaAsset = await repository.GetByMediaIdAsync(request.MediaId);
         if (mediaAsset == null)
         {
-            _logger.LogWarning("Media asset not found by MediaId: {MediaId}", request.MediaId);
+            logger.LogWarning("Media asset not found by MediaId: {MediaId}", request.MediaId);
             return null;
         }
 
         // 2. Validate media has URL/blob reference
         if (string.IsNullOrEmpty(mediaAsset.Url))
         {
-            _logger.LogWarning("Media asset {MediaId} has no URL", request.MediaId);
+            logger.LogWarning("Media asset {MediaId} has no URL", request.MediaId);
             return null;
         }
 
@@ -51,11 +39,11 @@ public class GetMediaFileQueryHandler
             // 3. Download file from blob storage
             // Extract blob name from URL (assuming URL format: https://.../container/blobname)
             var blobName = ExtractBlobNameFromUrl(mediaAsset.Url);
-            var stream = await _blobService.DownloadMediaAsync(blobName);
+            var stream = await blobService.DownloadMediaAsync(blobName);
 
             if (stream == null)
             {
-                _logger.LogWarning("Failed to download blob for MediaId: {MediaId}", request.MediaId);
+                logger.LogWarning("Failed to download blob for MediaId: {MediaId}", request.MediaId);
                 return null;
             }
 
@@ -70,21 +58,21 @@ public class GetMediaFileQueryHandler
                 try
                 {
                     var size = stream.Length; // safe when CanSeek == true
-                    _logger.LogInformation(
+                    logger.LogInformation(
                         "Successfully retrieved media file: {MediaId}, Size: {Size} bytes",
                         request.MediaId,
                         size);
                 }
                 catch (NotSupportedException)
                 {
-                    _logger.LogInformation(
+                    logger.LogInformation(
                         "Successfully retrieved media file: {MediaId}, Size: unknown (non-seekable)",
                         request.MediaId);
                 }
             }
             else
             {
-                _logger.LogInformation(
+                logger.LogInformation(
                     "Successfully retrieved media file: {MediaId}, Size: unknown (streaming)",
                     request.MediaId);
             }
@@ -93,12 +81,12 @@ public class GetMediaFileQueryHandler
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error downloading media file: {MediaId}", request.MediaId);
+            logger.LogError(ex, "Error downloading media file: {MediaId}", request.MediaId);
             throw;
         }
     }
 
-    private string ExtractBlobNameFromUrl(string url)
+    private static string ExtractBlobNameFromUrl(string url)
     {
         // Extract blob name from URL
         // URL format: https://account.blob.core.windows.net/container/path/to/file.ext
@@ -115,7 +103,7 @@ public class GetMediaFileQueryHandler
         return segments.Last().TrimStart('/');
     }
 
-    private string GetFileName(Domain.Models.MediaAsset mediaAsset)
+    private static string GetFileName(Domain.Models.MediaAsset mediaAsset)
     {
         // Prefer explicit filename, fallback to MediaId with extension
         if (!string.IsNullOrEmpty(mediaAsset.MediaId))
@@ -127,7 +115,7 @@ public class GetMediaFileQueryHandler
         return $"media-{mediaAsset.Id}.bin";
     }
 
-    private string GetFileExtension(string mimeType)
+    private static string GetFileExtension(string mimeType)
     {
         return mimeType switch
         {

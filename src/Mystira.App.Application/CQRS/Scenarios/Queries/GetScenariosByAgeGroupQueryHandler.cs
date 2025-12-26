@@ -6,32 +6,29 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.Scenarios.Queries;
 
 /// <summary>
-/// Handler for GetScenariosByAgeGroupQuery
-/// Demonstrates how to use Specification Pattern with CQRS queries
+/// Wolverine handler for GetScenariosByAgeGroupQuery.
+/// Demonstrates how to use Specification Pattern with CQRS queries.
 /// </summary>
-public class GetScenariosByAgeGroupQueryHandler : IQueryHandler<GetScenariosByAgeGroupQuery, IEnumerable<Scenario>>
+public static class GetScenariosByAgeGroupQueryHandler
 {
-    private readonly IScenarioRepository _repository;
-    private readonly ILogger<GetScenariosByAgeGroupQueryHandler> _logger;
-
-    public GetScenariosByAgeGroupQueryHandler(
+    /// <summary>
+    /// Handles the GetScenariosByAgeGroupQuery by retrieving scenarios filtered by age group from the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<IEnumerable<Scenario>> Handle(
+        GetScenariosByAgeGroupQuery query,
         IScenarioRepository repository,
-        ILogger<GetScenariosByAgeGroupQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<IEnumerable<Scenario>> Handle(GetScenariosByAgeGroupQuery request, CancellationToken cancellationToken)
+        ILogger logger,
+        CancellationToken ct)
     {
         // Create specification for scenarios by age group
-        var spec = new ScenariosByAgeGroupSpec(request.AgeGroup);
+        var spec = new ScenariosByAgeGroupSpec(query.AgeGroup);
 
         // Use specification to query repository
-        var scenarios = await _repository.ListAsync(spec);
+        var scenarios = await repository.ListAsync(spec);
 
-        _logger.LogDebug("Retrieved {Count} scenarios for age group: {AgeGroup}",
-            scenarios.Count(), request.AgeGroup);
+        logger.LogDebug("Retrieved {Count} scenarios for age group: {AgeGroup}",
+            scenarios.Count(), query.AgeGroup);
 
         return scenarios;
     }

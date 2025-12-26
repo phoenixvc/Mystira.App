@@ -6,32 +6,19 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.Archetypes.Commands;
 
 /// <summary>
-/// Handler for creating a new archetype.
+/// Wolverine handler for creating a new archetype.
 /// </summary>
-public class CreateArchetypeCommandHandler : ICommandHandler<CreateArchetypeCommand, ArchetypeDefinition>
+public static class CreateArchetypeCommandHandler
 {
-    private readonly IArchetypeRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IQueryCacheInvalidationService _cacheInvalidation;
-    private readonly ILogger<CreateArchetypeCommandHandler> _logger;
-
-    public CreateArchetypeCommandHandler(
+    public static async Task<ArchetypeDefinition> Handle(
+        CreateArchetypeCommand command,
         IArchetypeRepository repository,
         IUnitOfWork unitOfWork,
         IQueryCacheInvalidationService cacheInvalidation,
-        ILogger<CreateArchetypeCommandHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _cacheInvalidation = cacheInvalidation;
-        _logger = logger;
-    }
-
-    public async Task<ArchetypeDefinition> Handle(
-        CreateArchetypeCommand command,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Creating archetype: {Name}", command.Name);
+        logger.LogInformation("Creating archetype: {Name}", command.Name);
 
         if (string.IsNullOrWhiteSpace(command.Name))
         {
@@ -47,13 +34,13 @@ public class CreateArchetypeCommandHandler : ICommandHandler<CreateArchetypeComm
             UpdatedAt = DateTime.UtcNow
         };
 
-        await _repository.AddAsync(archetype);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.AddAsync(archetype);
+        await unitOfWork.SaveChangesAsync(ct);
 
         // Invalidate cache
-        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:Archetypes");
+        cacheInvalidation.InvalidateCacheByPrefix("MasterData:Archetypes");
 
-        _logger.LogInformation("Successfully created archetype with id: {Id}", archetype.Id);
+        logger.LogInformation("Successfully created archetype with id: {Id}", archetype.Id);
         return archetype;
     }
 }

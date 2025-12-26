@@ -1,25 +1,26 @@
-﻿using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Ports.Data;
 using Mystira.Contracts.App.Responses.Badges;
 
 namespace Mystira.App.Application.CQRS.Badges.Queries;
 
-public sealed class GetAxisAchievementsQueryHandler : IQueryHandler<GetAxisAchievementsQuery, List<AxisAchievementResponse>>
+/// <summary>
+/// Wolverine handler for GetAxisAchievementsQuery.
+/// Retrieves axis achievements for a specific age group.
+/// </summary>
+public static class GetAxisAchievementsQueryHandler
 {
-    private readonly IAxisAchievementRepository _axisAchievementRepository;
-    private readonly ICompassAxisRepository _axisRepository;
-
-    public GetAxisAchievementsQueryHandler(
+    /// <summary>
+    /// Handles the GetAxisAchievementsQuery by retrieving axis achievements from the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<List<AxisAchievementResponse>> Handle(
+        GetAxisAchievementsQuery query,
         IAxisAchievementRepository axisAchievementRepository,
-        ICompassAxisRepository axisRepository)
+        ICompassAxisRepository axisRepository,
+        CancellationToken ct)
     {
-        _axisAchievementRepository = axisAchievementRepository;
-        _axisRepository = axisRepository;
-    }
-
-    public async Task<List<AxisAchievementResponse>> Handle(GetAxisAchievementsQuery request, CancellationToken cancellationToken)
-    {
-        var achievements = await _axisAchievementRepository.GetByAgeGroupAsync(request.AgeGroupId);
-        var axes = await _axisRepository.GetAllAsync();
+        var achievements = await axisAchievementRepository.GetByAgeGroupAsync(query.AgeGroupId);
+        var axes = await axisRepository.GetAllAsync();
 
         var axisLookup = axes
             .SelectMany(a => new[] { (Key: a.Id, Value: a), (Key: a.Name, Value: a) })

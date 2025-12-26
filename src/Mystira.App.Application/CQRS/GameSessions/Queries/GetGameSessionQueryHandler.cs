@@ -5,35 +5,31 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.GameSessions.Queries;
 
 /// <summary>
-/// Handler for GetGameSessionQuery
-/// Retrieves a single game session by ID
+/// Wolverine handler for GetGameSessionQuery.
+/// Retrieves a single game session by ID.
+/// Uses static method convention for cleaner, more testable code.
 /// </summary>
-public class GetGameSessionQueryHandler : IQueryHandler<GetGameSessionQuery, GameSession?>
+public static class GetGameSessionQueryHandler
 {
-    private readonly IGameSessionRepository _repository;
-    private readonly ILogger<GetGameSessionQueryHandler> _logger;
-
-    public GetGameSessionQueryHandler(
-        IGameSessionRepository repository,
-        ILogger<GetGameSessionQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<GameSession?> Handle(
+    /// <summary>
+    /// Handles the GetGameSessionQuery.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<GameSession?> Handle(
         GetGameSessionQuery request,
-        CancellationToken cancellationToken)
+        IGameSessionRepository repository,
+        ILogger logger,
+        CancellationToken ct)
     {
-        var session = await _repository.GetByIdAsync(request.SessionId);
+        var session = await repository.GetByIdAsync(request.SessionId);
 
         if (session == null)
         {
-            _logger.LogDebug("Session not found: {SessionId}", request.SessionId);
+            logger.LogDebug("Session not found: {SessionId}", request.SessionId);
         }
         else
         {
-            _logger.LogDebug("Retrieved session {SessionId}", request.SessionId);
+            logger.LogDebug("Retrieved session {SessionId}", request.SessionId);
         }
 
         return session;

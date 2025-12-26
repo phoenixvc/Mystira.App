@@ -6,32 +6,19 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.EchoTypes.Commands;
 
 /// <summary>
-/// Handler for creating a new echo type.
+/// Wolverine handler for creating a new echo type.
 /// </summary>
-public class CreateEchoTypeCommandHandler : ICommandHandler<CreateEchoTypeCommand, EchoTypeDefinition>
+public static class CreateEchoTypeCommandHandler
 {
-    private readonly IEchoTypeRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IQueryCacheInvalidationService _cacheInvalidation;
-    private readonly ILogger<CreateEchoTypeCommandHandler> _logger;
-
-    public CreateEchoTypeCommandHandler(
+    public static async Task<EchoTypeDefinition> Handle(
+        CreateEchoTypeCommand command,
         IEchoTypeRepository repository,
         IUnitOfWork unitOfWork,
         IQueryCacheInvalidationService cacheInvalidation,
-        ILogger<CreateEchoTypeCommandHandler> logger)
+        ILogger<CreateEchoTypeCommand> logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _cacheInvalidation = cacheInvalidation;
-        _logger = logger;
-    }
-
-    public async Task<EchoTypeDefinition> Handle(
-        CreateEchoTypeCommand command,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Creating echo type: {Name}", command.Name);
+        logger.LogInformation("Creating echo type: {Name}", command.Name);
 
         if (string.IsNullOrWhiteSpace(command.Name))
         {
@@ -47,13 +34,13 @@ public class CreateEchoTypeCommandHandler : ICommandHandler<CreateEchoTypeComman
             UpdatedAt = DateTime.UtcNow
         };
 
-        await _repository.AddAsync(echoType);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.AddAsync(echoType);
+        await unitOfWork.SaveChangesAsync(ct);
 
         // Invalidate cache
-        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:EchoTypes");
+        cacheInvalidation.InvalidateCacheByPrefix("MasterData:EchoTypes");
 
-        _logger.LogInformation("Successfully created echo type with id: {Id}", echoType.Id);
+        logger.LogInformation("Successfully created echo type with id: {Id}", echoType.Id);
         return echoType;
     }
 }

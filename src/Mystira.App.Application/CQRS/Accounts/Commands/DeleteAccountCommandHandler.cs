@@ -3,35 +3,34 @@ using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Application.CQRS.Accounts.Commands;
 
-public class DeleteAccountCommandHandler : ICommandHandler<DeleteAccountCommand, bool>
+/// <summary>
+/// Wolverine handler for DeleteAccountCommand.
+/// Uses static method convention for cleaner, more testable code.
+/// </summary>
+public static class DeleteAccountCommandHandler
 {
-    private readonly IAccountRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<DeleteAccountCommandHandler> _logger;
-
-    public DeleteAccountCommandHandler(
+    /// <summary>
+    /// Handles the DeleteAccountCommand by deleting an account from the repository.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<bool> Handle(
+        DeleteAccountCommand command,
         IAccountRepository repository,
         IUnitOfWork unitOfWork,
-        ILogger<DeleteAccountCommandHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-    }
-
-    public async Task<bool> Handle(DeleteAccountCommand command, CancellationToken cancellationToken)
-    {
-        var account = await _repository.GetByIdAsync(command.AccountId);
+        var account = await repository.GetByIdAsync(command.AccountId);
         if (account == null)
         {
-            _logger.LogWarning("Account not found: {AccountId}", command.AccountId);
+            logger.LogWarning("Account not found: {AccountId}", command.AccountId);
             return false;
         }
 
-        await _repository.DeleteAsync(account.Id);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.DeleteAsync(account.Id);
+        await unitOfWork.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Deleted account {AccountId}", command.AccountId);
+        logger.LogInformation("Deleted account {AccountId}", command.AccountId);
         return true;
     }
 }

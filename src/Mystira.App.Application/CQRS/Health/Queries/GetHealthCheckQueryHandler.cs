@@ -5,32 +5,22 @@ using Mystira.Contracts.App.Ports.Health;
 namespace Mystira.App.Application.CQRS.Health.Queries;
 
 /// <summary>
-/// Handler for retrieving application health check status.
+/// Wolverine message handler for retrieving application health check status.
 /// Executes health checks and formats results.
 /// </summary>
-public class GetHealthCheckQueryHandler
-    : IQueryHandler<GetHealthCheckQuery, HealthCheckResult>
+public static class GetHealthCheckQueryHandler
 {
-    private readonly IHealthCheckPort _healthCheckPort;
-    private readonly ILogger<GetHealthCheckQueryHandler> _logger;
-
-    public GetHealthCheckQueryHandler(
-        IHealthCheckPort healthCheckPort,
-        ILogger<GetHealthCheckQueryHandler> logger)
-    {
-        _healthCheckPort = healthCheckPort;
-        _logger = logger;
-    }
-
-    public async Task<HealthCheckResult> Handle(
+    public static async Task<HealthCheckResult> Handle(
         GetHealthCheckQuery request,
-        CancellationToken cancellationToken)
+        IHealthCheckPort healthCheckPort,
+        ILogger<GetHealthCheckQuery> logger,
+        CancellationToken ct)
     {
         var stopwatch = Stopwatch.StartNew();
 
         try
         {
-            var report = await _healthCheckPort.CheckHealthAsync(cancellationToken);
+            var report = await healthCheckPort.CheckHealthAsync(ct);
             stopwatch.Stop();
 
             var results = report.Entries.ToDictionary(
@@ -45,7 +35,7 @@ public class GetHealthCheckQueryHandler
                 }
             );
 
-            _logger.LogInformation("Health check completed: {Status}, Duration: {Duration}ms",
+            logger.LogInformation("Health check completed: {Status}, Duration: {Duration}ms",
                 report.Status, stopwatch.ElapsedMilliseconds);
 
             return new HealthCheckResult(
@@ -57,7 +47,7 @@ public class GetHealthCheckQueryHandler
         catch (Exception ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Error during health check execution");
+            logger.LogError(ex, "Error during health check execution");
 
             var errorResults = new Dictionary<string, object>
             {

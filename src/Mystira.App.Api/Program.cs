@@ -36,7 +36,7 @@ using Mystira.App.Shared.Services;
 using Mystira.App.Shared.Telemetry;
 using Serilog;
 using Serilog.Events;
-// using Wolverine; // Commented out - Wolverine not currently in project dependencies
+using Wolverine;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SERILOG BOOTSTRAP LOGGING (before host is built)
@@ -525,6 +525,26 @@ builder.Services.AddMediatR(cfg =>
 
 // Register query cache invalidation service
 builder.Services.AddSingleton<IQueryCacheInvalidationService, QueryCacheInvalidationService>();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WOLVERINE MESSAGE BUS (ADR-0015: Event-Driven Architecture)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Wolverine provides:
+// - Convention-based handler discovery (static Handle methods)
+// - Dependency injection via method parameters
+// - In-memory message handling (can be extended to Azure Service Bus)
+// - Eventual migration path from MediatR
+builder.Host.UseWolverine(opts =>
+{
+    // Discover handlers from Application assembly
+    opts.Discovery.IncludeAssembly(typeof(Mystira.App.Application.CQRS.ICommand<>).Assembly);
+
+    // Configure durable inbox/outbox (for future distributed messaging)
+    // opts.Policies.AutoApplyTransactions();
+
+    // Run handlers inline during migration period (same behavior as MediatR)
+    opts.Policies.UseDurableLocalQueues();
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // GLOBAL EXCEPTION HANDLING (Mystira.Shared.Exceptions)

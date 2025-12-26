@@ -6,32 +6,24 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.FantasyThemes.Commands;
 
 /// <summary>
-/// Handler for creating a new fantasy theme.
+/// Wolverine handler for creating a new fantasy theme.
+/// Uses static method convention for cleaner, more testable code.
 /// </summary>
-public class CreateFantasyThemeCommandHandler : ICommandHandler<CreateFantasyThemeCommand, FantasyThemeDefinition>
+public static class CreateFantasyThemeCommandHandler
 {
-    private readonly IFantasyThemeRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IQueryCacheInvalidationService _cacheInvalidation;
-    private readonly ILogger<CreateFantasyThemeCommandHandler> _logger;
-
-    public CreateFantasyThemeCommandHandler(
+    /// <summary>
+    /// Handles the CreateFantasyThemeCommand.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<FantasyThemeDefinition> Handle(
+        CreateFantasyThemeCommand command,
         IFantasyThemeRepository repository,
         IUnitOfWork unitOfWork,
         IQueryCacheInvalidationService cacheInvalidation,
-        ILogger<CreateFantasyThemeCommandHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _cacheInvalidation = cacheInvalidation;
-        _logger = logger;
-    }
-
-    public async Task<FantasyThemeDefinition> Handle(
-        CreateFantasyThemeCommand command,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Creating fantasy theme: {Name}", command.Name);
+        logger.LogInformation("Creating fantasy theme: {Name}", command.Name);
 
         if (string.IsNullOrWhiteSpace(command.Name))
         {
@@ -47,13 +39,13 @@ public class CreateFantasyThemeCommandHandler : ICommandHandler<CreateFantasyThe
             UpdatedAt = DateTime.UtcNow
         };
 
-        await _repository.AddAsync(fantasyTheme);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.AddAsync(fantasyTheme);
+        await unitOfWork.SaveChangesAsync(ct);
 
         // Invalidate cache
-        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:FantasyThemes");
+        cacheInvalidation.InvalidateCacheByPrefix("MasterData:FantasyThemes");
 
-        _logger.LogInformation("Successfully created fantasy theme with id: {Id}", fantasyTheme.Id);
+        logger.LogInformation("Successfully created fantasy theme with id: {Id}", fantasyTheme.Id);
         return fantasyTheme;
     }
 }

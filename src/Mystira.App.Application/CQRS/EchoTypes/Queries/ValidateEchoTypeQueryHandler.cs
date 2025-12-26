@@ -4,28 +4,19 @@ using Mystira.App.Application.Ports.Data;
 namespace Mystira.App.Application.CQRS.EchoTypes.Queries;
 
 /// <summary>
-/// Handler for validating if an echo type name exists.
+/// Wolverine handler for validating if an echo type name exists.
 /// </summary>
-public class ValidateEchoTypeQueryHandler : IQueryHandler<ValidateEchoTypeQuery, bool>
+public static class ValidateEchoTypeQueryHandler
 {
-    private readonly IEchoTypeRepository _repository;
-    private readonly ILogger<ValidateEchoTypeQueryHandler> _logger;
-
-    public ValidateEchoTypeQueryHandler(
-        IEchoTypeRepository repository,
-        ILogger<ValidateEchoTypeQueryHandler> logger)
-    {
-        _repository = repository;
-        _logger = logger;
-    }
-
-    public async Task<bool> Handle(
+    public static async Task<bool> Handle(
         ValidateEchoTypeQuery query,
-        CancellationToken cancellationToken)
+        IEchoTypeRepository repository,
+        ILogger<ValidateEchoTypeQuery> logger,
+        CancellationToken ct)
     {
-        _logger.LogInformation("Validating echo type: {Name}", query.Name);
-        var isValid = await _repository.ExistsByNameAsync(query.Name);
-        _logger.LogInformation("Echo type '{Name}' is {Status}", query.Name, isValid ? "valid" : "invalid");
+        logger.LogInformation("Validating echo type: {Name}", query.Name);
+        var isValid = await repository.ExistsByNameAsync(query.Name);
+        logger.LogInformation("Echo type '{Name}' is {Status}", query.Name, isValid ? "valid" : "invalid");
         return isValid;
     }
 }

@@ -5,28 +5,21 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.UserProfiles.Commands;
 
 /// <summary>
-/// Handler for CreateUserProfileCommand
-/// Creates a new user profile with the specified details
+/// Wolverine handler for CreateUserProfileCommand.
+/// Creates a new user profile with the specified details.
 /// </summary>
-public class CreateUserProfileCommandHandler : ICommandHandler<CreateUserProfileCommand, UserProfile>
+public static class CreateUserProfileCommandHandler
 {
-    private readonly IUserProfileRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<CreateUserProfileCommandHandler> _logger;
-
-    public CreateUserProfileCommandHandler(
+    /// <summary>
+    /// Handles the CreateUserProfileCommand by creating a new user profile.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<UserProfile> Handle(
+        CreateUserProfileCommand command,
         IUserProfileRepository repository,
         IUnitOfWork unitOfWork,
-        ILogger<CreateUserProfileCommandHandler> logger)
-    {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-    }
-
-    public async Task<UserProfile> Handle(
-        CreateUserProfileCommand command,
-        CancellationToken cancellationToken)
+        ILogger logger,
+        CancellationToken ct)
     {
         var request = command.Request;
 
@@ -82,12 +75,12 @@ public class CreateUserProfileCommandHandler : ICommandHandler<CreateUserProfile
         }
 
         // Add to repository
-        await _repository.AddAsync(profile);
+        await repository.AddAsync(profile);
 
         // Persist changes
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Created user profile {ProfileId} with name {Name}", profile.Id, profile.Name);
+        logger.LogInformation("Created user profile {ProfileId} with name {Name}", profile.Id, profile.Name);
 
         return profile;
     }

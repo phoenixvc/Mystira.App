@@ -4,43 +4,36 @@ using Mystira.App.Application.Ports.Data;
 namespace Mystira.App.Application.CQRS.UserProfiles.Commands;
 
 /// <summary>
-/// Handler for DeleteUserProfileCommand
-/// Deletes a user profile and all associated data (COPPA compliance)
+/// Wolverine handler for DeleteUserProfileCommand.
+/// Deletes a user profile and all associated data (COPPA compliance).
 /// </summary>
-public class DeleteUserProfileCommandHandler : ICommandHandler<DeleteUserProfileCommand, bool>
+public static class DeleteUserProfileCommandHandler
 {
-    private readonly IUserProfileRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<DeleteUserProfileCommandHandler> _logger;
-
-    public DeleteUserProfileCommandHandler(
+    /// <summary>
+    /// Handles the DeleteUserProfileCommand by deleting a user profile.
+    /// Wolverine injects dependencies as method parameters.
+    /// </summary>
+    public static async Task<bool> Handle(
+        DeleteUserProfileCommand command,
         IUserProfileRepository repository,
         IUnitOfWork unitOfWork,
-        ILogger<DeleteUserProfileCommandHandler> logger)
+        ILogger logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-    }
-
-    public async Task<bool> Handle(
-        DeleteUserProfileCommand command,
-        CancellationToken cancellationToken)
-    {
-        var profile = await _repository.GetByIdAsync(command.ProfileId);
+        var profile = await repository.GetByIdAsync(command.ProfileId);
         if (profile == null)
         {
-            _logger.LogWarning("Profile not found: {ProfileId}", command.ProfileId);
+            logger.LogWarning("Profile not found: {ProfileId}", command.ProfileId);
             return false;
         }
 
         // Delete profile
-        await _repository.DeleteAsync(profile.Id);
+        await repository.DeleteAsync(profile.Id);
 
         // Persist changes
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Deleted user profile {ProfileId}", command.ProfileId);
+        logger.LogInformation("Deleted user profile {ProfileId}", command.ProfileId);
 
         return true;
     }

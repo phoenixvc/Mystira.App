@@ -6,37 +6,24 @@ using Mystira.App.Domain.Models;
 namespace Mystira.App.Application.CQRS.CompassAxes.Commands;
 
 /// <summary>
-/// Handler for updating an existing compass axis.
+/// Wolverine handler for updating an existing compass axis.
 /// </summary>
-public class UpdateCompassAxisCommandHandler : ICommandHandler<UpdateCompassAxisCommand, CompassAxis?>
+public static class UpdateCompassAxisCommandHandler
 {
-    private readonly ICompassAxisRepository _repository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IQueryCacheInvalidationService _cacheInvalidation;
-    private readonly ILogger<UpdateCompassAxisCommandHandler> _logger;
-
-    public UpdateCompassAxisCommandHandler(
+    public static async Task<CompassAxis?> Handle(
+        UpdateCompassAxisCommand command,
         ICompassAxisRepository repository,
         IUnitOfWork unitOfWork,
         IQueryCacheInvalidationService cacheInvalidation,
-        ILogger<UpdateCompassAxisCommandHandler> logger)
+        ILogger<UpdateCompassAxisCommand> logger,
+        CancellationToken ct)
     {
-        _repository = repository;
-        _unitOfWork = unitOfWork;
-        _cacheInvalidation = cacheInvalidation;
-        _logger = logger;
-    }
+        logger.LogInformation("Updating compass axis with id: {Id}", command.Id);
 
-    public async Task<CompassAxis?> Handle(
-        UpdateCompassAxisCommand command,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Updating compass axis with id: {Id}", command.Id);
-
-        var existingAxis = await _repository.GetByIdAsync(command.Id);
+        var existingAxis = await repository.GetByIdAsync(command.Id);
         if (existingAxis == null)
         {
-            _logger.LogWarning("Compass axis with id {Id} not found", command.Id);
+            logger.LogWarning("Compass axis with id {Id} not found", command.Id);
             return null;
         }
 
@@ -44,13 +31,13 @@ public class UpdateCompassAxisCommandHandler : ICommandHandler<UpdateCompassAxis
         existingAxis.Description = command.Description;
         existingAxis.UpdatedAt = DateTime.UtcNow;
 
-        await _repository.UpdateAsync(existingAxis);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await repository.UpdateAsync(existingAxis);
+        await unitOfWork.SaveChangesAsync(ct);
 
         // Invalidate cache
-        _cacheInvalidation.InvalidateCacheByPrefix("MasterData:CompassAxes");
+        cacheInvalidation.InvalidateCacheByPrefix("MasterData:CompassAxes");
 
-        _logger.LogInformation("Successfully updated compass axis with id: {Id}", command.Id);
+        logger.LogInformation("Successfully updated compass axis with id: {Id}", command.Id);
         return existingAxis;
     }
 }
