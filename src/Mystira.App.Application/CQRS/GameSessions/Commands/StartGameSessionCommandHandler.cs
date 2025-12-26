@@ -279,12 +279,9 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
                     Type = dto.PlayerAssignment.Type,
                     ProfileId = dto.PlayerAssignment.ProfileId,
                     ProfileName = dto.PlayerAssignment.ProfileName,
-                    ProfileImage = dto.PlayerAssignment.ProfileImage,
-                    SelectedAvatarMediaId = dto.PlayerAssignment.SelectedAvatarMediaId,
-                    GuestName = dto.PlayerAssignment.GuestName,
-                    GuestAgeRange = dto.PlayerAssignment.GuestAgeRange,
-                    GuestAvatar = dto.PlayerAssignment.GuestAvatar,
-                    SaveAsProfile = dto.PlayerAssignment.SaveAsProfile
+                    GuestName = dto.PlayerAssignment.GuestName
+                    // Note: ProfileImage, SelectedAvatarMediaId, GuestAgeRange, GuestAvatar, SaveAsProfile
+                    // are not in Contracts DTO - these must be added to Mystira.Contracts.PlayerAssignmentDto
                 }
         };
     }
