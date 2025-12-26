@@ -34,9 +34,14 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          source-url: https://nuget.pkg.github.com/phoenixvc/index.json
-        env:
-          NUGET_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
+
+      - name: Configure GitHub Packages authentication
+        run: |
+          dotnet nuget update source github \
+            --username phoenixvc \
+            --password ${{ secrets.GH_PACKAGES_TOKEN }} \
+            --store-password-in-clear-text \
+            --configfile nuget.config
 
       - name: Cache NuGet packages
         uses: actions/cache@v4
