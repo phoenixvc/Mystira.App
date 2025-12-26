@@ -24,8 +24,8 @@
     <PackageReference Include="Wolverine" Version="3.8.3" />
     <!-- Mapperly for compile-time object mapping (Roslyn source generator) -->
     <PackageReference Include="Riok.Mapperly" Version="4.1.1" />
-    <PackageReference Include="FluentValidation" Version="11.11.0" />
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
+    <PackageReference Include="FluentValidation" Version="11.12.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.12.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
     <PackageReference Include="NJsonSchema" Version="11.1.0" />
     <!-- Ardalis.Specification for composable query patterns (per workspace ADR-0014) -->
