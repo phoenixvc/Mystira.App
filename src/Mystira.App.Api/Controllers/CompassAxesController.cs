@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.CompassAxes.Queries;
 using Mystira.App.Api.Models;
@@ -10,12 +10,12 @@ namespace Mystira.App.Api.Controllers;
 [Route("api/[controller]")]
 public class CompassAxesController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
     private readonly ILogger<CompassAxesController> _logger;
 
-    public CompassAxesController(IMediator mediator, ILogger<CompassAxesController> logger)
+    public CompassAxesController(IMessageBus bus, ILogger<CompassAxesController> logger)
     {
-        _mediator = mediator;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -23,7 +23,7 @@ public class CompassAxesController : ControllerBase
     public async Task<ActionResult<List<CompassAxis>>> GetAllCompassAxes()
     {
         _logger.LogInformation("GET: Retrieving all compass axes");
-        var axes = await _mediator.Send(new GetAllCompassAxesQuery());
+        var axes = await _bus.InvokeAsync<List<CompassAxis>>(new GetAllCompassAxesQuery());
         return Ok(axes);
     }
 
@@ -31,7 +31,7 @@ public class CompassAxesController : ControllerBase
     public async Task<ActionResult<CompassAxis>> GetCompassAxisById(string id)
     {
         _logger.LogInformation("GET: Retrieving compass axis with id: {Id}", id);
-        var axis = await _mediator.Send(new GetCompassAxisByIdQuery(id));
+        var axis = await _bus.InvokeAsync<CompassAxis?>(new GetCompassAxisByIdQuery(id));
         if (axis == null)
         {
             _logger.LogWarning("Compass axis with id {Id} not found", id);
@@ -45,7 +45,7 @@ public class CompassAxesController : ControllerBase
     {
         _logger.LogInformation("POST: Validating compass axis: {Name}", request.Name);
 
-        var isValid = await _mediator.Send(new ValidateCompassAxisQuery(request.Name));
+        var isValid = await _bus.InvokeAsync<bool>(new ValidateCompassAxisQuery(request.Name));
         return Ok(new ValidationResult { IsValid = isValid });
     }
 }

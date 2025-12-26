@@ -79,23 +79,6 @@ try
             TelemetryConverter.Traces));
 
     // ═══════════════════════════════════════════════════════════════════════════════
-    // WOLVERINE MESSAGING (alongside MediatR during migration)
-    // ═══════════════════════════════════════════════════════════════════════════════
-    // Wolverine is configured to run alongside MediatR during the gradual migration.
-    // New handlers will use Wolverine convention-based patterns while existing
-    // MediatR handlers continue to work. See: ADR-0015 Wolverine Migration
-    // NOTE: Wolverine disabled until package is added to project dependencies
-    // builder.Host.UseWolverine(opts =>
-    // {
-    //     // Discover handlers from Application assembly
-    //     opts.Discovery.IncludeAssembly(typeof(Mystira.App.Application.CQRS.ICommand<>).Assembly);
-    //
-    //     // Local in-process messaging only for now (no external transport)
-    //     // Azure Service Bus can be added later for distributed scenarios
-    //     opts.Policies.AutoApplyTransactions();
-    // });
-
-    // ═══════════════════════════════════════════════════════════════════════════════
     // APPLICATION INSIGHTS TELEMETRY CONFIGURATION
     // ═══════════════════════════════════════════════════════════════════════════════
     builder.Services.AddApplicationInsightsTelemetry(options =>
@@ -513,19 +496,6 @@ builder.Services.AddRedisCaching(builder.Configuration);
 // ═══════════════════════════════════════════════════════════════════════════════
 builder.Services.AddDistributedTracing("Mystira.App.Api", builder.Environment.EnvironmentName);
 
-// Configure MediatR for CQRS pattern
-builder.Services.AddMediatR(cfg =>
-{
-    // Register all handlers from Application assembly
-    cfg.RegisterServicesFromAssembly(typeof(Mystira.App.Application.CQRS.ICommand<>).Assembly);
-
-    // Add query caching pipeline behavior
-    cfg.AddOpenBehavior(typeof(QueryCachingBehavior<,>));
-});
-
-// Register query cache invalidation service
-builder.Services.AddSingleton<IQueryCacheInvalidationService, QueryCacheInvalidationService>();
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // WOLVERINE MESSAGE BUS (ADR-0015: Event-Driven Architecture)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -533,7 +503,7 @@ builder.Services.AddSingleton<IQueryCacheInvalidationService, QueryCacheInvalida
 // - Convention-based handler discovery (static Handle methods)
 // - Dependency injection via method parameters
 // - In-memory message handling (can be extended to Azure Service Bus)
-// - Eventual migration path from MediatR
+// - Replaces MediatR for CQRS pattern
 builder.Host.UseWolverine(opts =>
 {
     // Discover handlers from Application assembly
@@ -542,9 +512,12 @@ builder.Host.UseWolverine(opts =>
     // Configure durable inbox/outbox (for future distributed messaging)
     // opts.Policies.AutoApplyTransactions();
 
-    // Run handlers inline during migration period (same behavior as MediatR)
+    // Run handlers inline (same behavior as MediatR)
     opts.Policies.UseDurableLocalQueues();
 });
+
+// Register query cache invalidation service
+builder.Services.AddSingleton<IQueryCacheInvalidationService, QueryCacheInvalidationService>();
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // GLOBAL EXCEPTION HANDLING (Mystira.Shared.Exceptions)

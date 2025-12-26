@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Accounts.Commands;
@@ -14,21 +14,21 @@ namespace Mystira.App.Api.Controllers;
 
 /// <summary>
 /// Controller for game session management.
-/// Follows hexagonal architecture - uses only IMediator (CQRS pattern).
+/// Follows hexagonal architecture - uses only IMessageBus (CQRS pattern).
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class GameSessionsController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
     private readonly ILogger<GameSessionsController> _logger;
 
     public GameSessionsController(
-        IMediator mediator,
+        IMessageBus bus,
         ILogger<GameSessionsController> logger)
     {
-        _mediator = mediator;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -64,7 +64,7 @@ public class GameSessionsController : ControllerBase
             }
 
             var command = new StartGameSessionCommand(request);
-            var session = await _mediator.Send(command);
+            var session = await _bus.InvokeAsync<GameSession>(command);
             return CreatedAtAction(nameof(GetSession), new { id = session.Id }, session);
         }
         catch (ArgumentException ex)
@@ -110,7 +110,7 @@ public class GameSessionsController : ControllerBase
             }
 
             var command = new PauseGameSessionCommand(id);
-            var session = await _mediator.Send(command);
+            var session = await _bus.InvokeAsync<GameSession?>(command);
             if (session == null)
             {
                 return NotFound(new ErrorResponse
@@ -156,7 +156,7 @@ public class GameSessionsController : ControllerBase
             }
 
             var command = new ResumeGameSessionCommand(id);
-            var session = await _mediator.Send(command);
+            var session = await _bus.InvokeAsync<GameSession?>(command);
             if (session == null)
             {
                 return NotFound(new ErrorResponse
@@ -189,7 +189,7 @@ public class GameSessionsController : ControllerBase
         try
         {
             var command = new EndGameSessionCommand(id);
-            var session = await _mediator.Send(command);
+            var session = await _bus.InvokeAsync<GameSession?>(command);
             if (session == null)
             {
                 return NotFound(new ErrorResponse
@@ -222,7 +222,7 @@ public class GameSessionsController : ControllerBase
         try
         {
             var command = new FinalizeGameSessionCommand(id);
-            var result = await _mediator.Send(command);
+            var result = await _bus.InvokeAsync<object>(command);
 
             // Always return 200 with the aggregation result; if session not found, Awards will be empty
             return Ok(result);
@@ -266,7 +266,7 @@ public class GameSessionsController : ControllerBase
             }
 
             var query = new GetSessionsByAccountQuery(accountId);
-            var sessions = await _mediator.Send(query);
+            var sessions = await _bus.InvokeAsync<List<GameSessionResponse>>(query);
             return Ok(sessions);
         }
         catch (Exception ex)
@@ -303,7 +303,7 @@ public class GameSessionsController : ControllerBase
             }
 
             var command = new MakeChoiceCommand(request);
-            var session = await _mediator.Send(command);
+            var session = await _bus.InvokeAsync<GameSession?>(command);
             if (session == null)
             {
                 return NotFound(new ErrorResponse
@@ -353,7 +353,7 @@ public class GameSessionsController : ControllerBase
         try
         {
             var query = new GetGameSessionQuery(id);
-            var session = await _mediator.Send(query);
+            var session = await _bus.InvokeAsync<GameSession?>(query);
             if (session == null)
             {
                 return NotFound(new ErrorResponse
@@ -385,7 +385,7 @@ public class GameSessionsController : ControllerBase
         try
         {
             var query = new GetSessionsByProfileQuery(profileId);
-            var sessions = await _mediator.Send(query);
+            var sessions = await _bus.InvokeAsync<List<GameSessionResponse>>(query);
             return Ok(sessions);
         }
         catch (Exception ex)
@@ -409,7 +409,7 @@ public class GameSessionsController : ControllerBase
         try
         {
             var query = new GetInProgressSessionsQuery(accountId);
-            var sessions = await _mediator.Send(query);
+            var sessions = await _bus.InvokeAsync<List<GameSessionResponse>>(query);
             return Ok(sessions);
         }
         catch (Exception ex)
@@ -433,7 +433,7 @@ public class GameSessionsController : ControllerBase
         try
         {
             var query = new GetSessionStatsQuery(id);
-            var stats = await _mediator.Send(query);
+            var stats = await _bus.InvokeAsync<SessionStatsResponse?>(query);
             if (stats == null)
             {
                 return NotFound(new ErrorResponse
@@ -465,7 +465,7 @@ public class GameSessionsController : ControllerBase
         try
         {
             var query = new GetAchievementsQuery(id);
-            var achievements = await _mediator.Send(query);
+            var achievements = await _bus.InvokeAsync<List<SessionAchievement>>(query);
             return Ok(achievements);
         }
         catch (Exception ex)
@@ -498,7 +498,7 @@ public class GameSessionsController : ControllerBase
 
             request.SessionId = id;
             var command = new ProgressSceneCommand(request);
-            var session = await _mediator.Send(command);
+            var session = await _bus.InvokeAsync<GameSession?>(command);
             if (session == null)
             {
                 return NotFound(new ErrorResponse
@@ -557,7 +557,7 @@ public class GameSessionsController : ControllerBase
             }
 
             var command = new AddCompletedScenarioCommand(request.AccountId, request.ScenarioId);
-            var success = await _mediator.Send(command);
+            var success = await _bus.InvokeAsync<bool>(command);
             if (!success)
             {
                 return NotFound(new ErrorResponse

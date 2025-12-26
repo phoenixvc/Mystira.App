@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Badges.Queries;
 using Mystira.Contracts.App.Responses.Badges;
@@ -16,12 +16,12 @@ namespace Mystira.App.Api.Controllers;
 [Produces("application/json")]
 public class BadgesController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
     private readonly ILogger<BadgesController> _logger;
 
-    public BadgesController(IMediator mediator, ILogger<BadgesController> logger)
+    public BadgesController(IMessageBus bus, ILogger<BadgesController> logger)
     {
-        _mediator = mediator;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -42,7 +42,7 @@ public class BadgesController : ControllerBase
 
         try
         {
-            var response = await _mediator.Send(new GetBadgesByAgeGroupQuery(ageGroup));
+            var response = await _bus.InvokeAsync<List<BadgeResponse>>(new GetBadgesByAgeGroupQuery(ageGroup));
             return Ok(response);
         }
         catch (Exception ex)
@@ -73,7 +73,7 @@ public class BadgesController : ControllerBase
 
         try
         {
-            var response = await _mediator.Send(new GetAxisAchievementsQuery(ageGroupId));
+            var response = await _bus.InvokeAsync<List<AxisAchievementResponse>>(new GetAxisAchievementsQuery(ageGroupId));
             return Ok(response);
         }
         catch (Exception ex)
@@ -95,7 +95,7 @@ public class BadgesController : ControllerBase
     {
         try
         {
-            var badge = await _mediator.Send(new GetBadgeDetailQuery(badgeId));
+            var badge = await _bus.InvokeAsync<BadgeResponse?>(new GetBadgeDetailQuery(badgeId));
             if (badge == null)
             {
                 return NotFound(new ErrorResponse
@@ -128,7 +128,7 @@ public class BadgesController : ControllerBase
     {
         try
         {
-            var progress = await _mediator.Send(new GetProfileBadgeProgressQuery(profileId));
+            var progress = await _bus.InvokeAsync<BadgeProgressResponse?>(new GetProfileBadgeProgressQuery(profileId));
             if (progress == null)
             {
                 return NotFound(new ErrorResponse
@@ -198,7 +198,7 @@ public class BadgesController : ControllerBase
                 request.ContentBundleId,
                 request.Percentiles);
 
-            var results = await _mediator.Send(query);
+            var results = await _bus.InvokeAsync<List<AppQueries.CompassAxisScoreResult>>(query);
             return Ok(results);
         }
         catch (ArgumentException ex)

@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Attribution.Queries;
 using Mystira.App.Application.CQRS.Scenarios.Queries;
@@ -12,19 +12,19 @@ namespace Mystira.App.Api.Controllers;
 
 /// <summary>
 /// Controller for scenario management.
-/// Follows hexagonal architecture - uses only IMediator (CQRS pattern).
+/// Follows hexagonal architecture - uses only IMessageBus (CQRS pattern).
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class ScenariosController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
     private readonly ILogger<ScenariosController> _logger;
 
-    public ScenariosController(IMediator mediator, ILogger<ScenariosController> logger)
+    public ScenariosController(IMessageBus bus, ILogger<ScenariosController> logger)
     {
-        _mediator = mediator;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -43,7 +43,7 @@ public class ScenariosController : ControllerBase
                 request.AgeGroup,
                 request.Genre);
 
-            var result = await _mediator.Send(query);
+            var result = await _bus.InvokeAsync<ScenarioListResponse>(query);
             return Ok(result);
         }
         catch (Exception ex)
@@ -66,7 +66,7 @@ public class ScenariosController : ControllerBase
         try
         {
             var query = new GetScenarioQuery(id);
-            var scenario = await _mediator.Send(query);
+            var scenario = await _bus.InvokeAsync<Scenario?>(query);
 
             if (scenario == null)
             {
@@ -99,7 +99,7 @@ public class ScenariosController : ControllerBase
         try
         {
             var query = new GetScenariosByAgeGroupQuery(ageGroup);
-            var scenarios = await _mediator.Send(query);
+            var scenarios = await _bus.InvokeAsync<List<Scenario>>(query);
             return Ok(scenarios);
         }
         catch (Exception ex)
@@ -122,7 +122,7 @@ public class ScenariosController : ControllerBase
         try
         {
             var query = new GetFeaturedScenariosQuery();
-            var scenarios = await _mediator.Send(query);
+            var scenarios = await _bus.InvokeAsync<List<Scenario>>(query);
             return Ok(scenarios);
         }
         catch (Exception ex)
@@ -147,7 +147,7 @@ public class ScenariosController : ControllerBase
             _logger.LogInformation("Fetching scenarios with game state for account: {AccountId}", accountId);
 
             var query = new GetScenariosWithGameStateQuery(accountId);
-            var result = await _mediator.Send(query);
+            var result = await _bus.InvokeAsync<ScenarioGameStateResponse>(query);
 
             return Ok(result);
         }
@@ -175,7 +175,7 @@ public class ScenariosController : ControllerBase
     public async Task<ActionResult<ContentAttributionResponse>> GetScenarioAttribution(string id)
     {
         var query = new GetScenarioAttributionQuery(id);
-        var attribution = await _mediator.Send(query);
+        var attribution = await _bus.InvokeAsync<ContentAttributionResponse?>(query);
 
         if (attribution == null)
         {
@@ -202,7 +202,7 @@ public class ScenariosController : ControllerBase
     public async Task<ActionResult<IpVerificationResponse>> GetScenarioIpStatus(string id)
     {
         var query = new GetScenarioIpStatusQuery(id);
-        var ipStatus = await _mediator.Send(query);
+        var ipStatus = await _bus.InvokeAsync<IpVerificationResponse?>(query);
 
         if (ipStatus == null)
         {

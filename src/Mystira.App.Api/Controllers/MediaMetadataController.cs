@@ -1,4 +1,4 @@
-using MediatR;
+using Wolverine;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Api.Models;
 using Mystira.App.Application.CQRS.MediaMetadata.Queries;
@@ -11,12 +11,12 @@ namespace Mystira.App.Api.Controllers;
 [Produces("application/json")]
 public class MediaMetadataController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMessageBus _bus;
     private readonly ILogger<MediaMetadataController> _logger;
 
-    public MediaMetadataController(IMediator mediator, ILogger<MediaMetadataController> logger)
+    public MediaMetadataController(IMessageBus bus, ILogger<MediaMetadataController> logger)
     {
-        _mediator = mediator;
+        _bus = bus;
         _logger = logger;
     }
 
@@ -29,7 +29,7 @@ public class MediaMetadataController : ControllerBase
         try
         {
             var query = new GetMediaMetadataFileQuery();
-            var metadataFile = await _mediator.Send(query);
+            var metadataFile = await _bus.InvokeAsync<MediaMetadataFile>(query);
             return Ok(metadataFile);
         }
         catch (Exception ex)

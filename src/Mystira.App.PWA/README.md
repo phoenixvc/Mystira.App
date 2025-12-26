@@ -361,7 +361,7 @@ Each Blazor component manages local state:
 Consider state management libraries:
 - **Fluxor**: Redux-like state management
 - **Blazor State**: Simple state container
-- **MediatR**: Message-based communication
+- **Wolverine**: Message-based communication (used by backend)
 
 ## Configuration
 

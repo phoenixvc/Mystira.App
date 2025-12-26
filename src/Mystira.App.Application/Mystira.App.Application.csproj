@@ -20,8 +20,7 @@
     <PackageTags>mystira;application;cqrs;internal</PackageTags>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="MediatR" Version="12.4.1" />
-    <!-- Wolverine for event-driven messaging (ADR-0015 migration) -->
+    <!-- Wolverine for event-driven messaging (ADR-0015 migration - replaced MediatR) -->
     <PackageReference Include="Wolverine" Version="3.8.3" />
     <PackageReference Include="FluentValidation" Version="11.11.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
