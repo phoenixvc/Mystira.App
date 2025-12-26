@@ -36,8 +36,8 @@
     <ProjectReference Include="..\Mystira.App.Infrastructure.Azure\Mystira.App.Infrastructure.Azure.csproj" />
     <ProjectReference Include="..\Mystira.App.Infrastructure.Data\Mystira.App.Infrastructure.Data.csproj" />
     <ProjectReference Include="..\Mystira.App.Infrastructure.StoryProtocol\Mystira.App.Infrastructure.StoryProtocol.csproj" />
-    <PackageReference Include="Mystira.Contracts" Version="0.4.*-*" />
-    <PackageReference Include="Mystira.Shared" Version="0.4.*-*" />
+    <PackageReference Include="Mystira.Contracts" Version="0.4.0-alpha" />
+    <PackageReference Include="Mystira.Shared" Version="0.4.0-alpha" />
     <!-- Wolverine HTTP integration for API endpoints -->
     <PackageReference Include="WolverineFx" Version="3.8.3" />
     <PackageReference Include="WolverineFx.Http" Version="3.8.3" />
