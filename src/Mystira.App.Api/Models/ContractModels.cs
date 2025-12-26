@@ -3,6 +3,7 @@ namespace Mystira.App.Api.Models;
 /// <summary>
 /// Local models to bridge gaps with Mystira.Contracts package.
 /// These types are defined locally as they are not available in the current Contracts package version.
+/// TODO: Move these to Mystira.Contracts package (see docs/contracts-migration.md)
 /// </summary>
 
 // Common models
@@ -25,83 +26,6 @@ public class HealthCheckResponse
     public string Status { get; set; } = string.Empty;
     public TimeSpan Duration { get; set; }
     public Dictionary<string, object>? Results { get; set; }
-}
-
-public class AgeGroupDefinition
-{
-    public string Id { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public int MinimumAge { get; set; }
-    public int MaximumAge { get; set; }
-}
-
-public class ArchetypeDefinition
-{
-    public string Id { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public string? Description { get; set; }
-}
-
-// Auth models
-public class PasswordlessSignupRequest
-{
-    public string Email { get; set; } = string.Empty;
-    public string DisplayName { get; set; } = string.Empty;
-}
-
-public class PasswordlessSignupResponse
-{
-    public bool Success { get; set; }
-    public string? Message { get; set; }
-    public string? Email { get; set; }
-    public string? ErrorDetails { get; set; }
-}
-
-public class PasswordlessVerifyRequest
-{
-    public string Email { get; set; } = string.Empty;
-    public string Code { get; set; } = string.Empty;
-}
-
-public class PasswordlessVerifyResponse
-{
-    public bool Success { get; set; }
-    public string? Message { get; set; }
-    public object? Account { get; set; }
-    public string? Token { get; set; }
-    public string? RefreshToken { get; set; }
-    public DateTime? TokenExpiresAt { get; set; }
-    public DateTime? RefreshTokenExpiresAt { get; set; }
-    public string? ErrorDetails { get; set; }
-}
-
-public class PasswordlessSigninRequest
-{
-    public string Email { get; set; } = string.Empty;
-}
-
-public class PasswordlessSigninResponse
-{
-    public bool Success { get; set; }
-    public string? Message { get; set; }
-    public string? Email { get; set; }
-    public string? ErrorDetails { get; set; }
-}
-
-public class RefreshTokenRequest
-{
-    public string Token { get; set; } = string.Empty;
-    public string RefreshToken { get; set; } = string.Empty;
-}
-
-public class RefreshTokenResponse
-{
-    public bool Success { get; set; }
-    public string? Message { get; set; }
-    public string? Token { get; set; }
-    public string? RefreshToken { get; set; }
-    public DateTime? TokenExpiresAt { get; set; }
-    public DateTime? RefreshTokenExpiresAt { get; set; }
 }
 
 // Royalty models

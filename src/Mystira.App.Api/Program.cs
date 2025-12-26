@@ -419,7 +419,6 @@ builder.Services.AddScoped<IPlayerScenarioScoreRepository, PlayerScenarioScoreRe
 builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
 builder.Services.AddScoped<IBadgeImageRepository, BadgeImageRepository>();
 builder.Services.AddScoped<IAxisAchievementRepository, AxisAchievementRepository>();
-builder.Services.AddScoped<IPendingSignupRepository, PendingSignupRepository>();
 
 builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
 builder.Services.AddScoped<IMediaMetadataFileRepository, MediaMetadataFileRepository>();
@@ -494,8 +493,6 @@ builder.Services.AddScoped<IBadgeAwardingService, BadgeAwardingService>();
 
 // Register Application.Ports adapters for CQRS handlers
 builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, JwtServiceAdapter>();
-// Use infrastructure email service directly - configuration is read from AzureCommunicationServices section
-builder.Services.AddAzureEmailService(builder.Configuration);
 builder.Services.AddScoped<IHealthCheckPort, HealthCheckPortAdapter>();
 builder.Services.AddScoped<IMediaMetadataService, MediaMetadataService>();
 

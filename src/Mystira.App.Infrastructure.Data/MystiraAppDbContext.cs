@@ -21,7 +21,6 @@ public partial class MystiraAppDbContext : DbContext
     public DbSet<UserProfile> UserProfiles { get; set; }
     public DbSet<UserBadge> UserBadges { get; set; }
     public DbSet<Account> Accounts { get; set; }
-    public DbSet<PendingSignup> PendingSignups { get; set; }
 
     // Scenario Management
     public DbSet<Scenario> Scenarios { get; set; }
@@ -884,23 +883,6 @@ public partial class MystiraAppDbContext : DbContext
                                   c1.Keys.All(k => c2.ContainsKey(k) && c1[k].SequenceEqual(c2[k])),
                       c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.Key.GetHashCode(), v.Value.Aggregate(0, (a2, s) => HashCode.Combine(a2, s.GetHashCode())))),
                       c => new Dictionary<string, List<string>>(c.ToDictionary(kvp => kvp.Key, kvp => new List<string>(kvp.Value)))));
-        });
-
-        // Configure PendingSignup
-        modelBuilder.Entity<PendingSignup>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-
-            // Only apply Cosmos DB configurations when not using in-memory database
-            if (!isInMemoryDatabase)
-            {
-                // Map Email property to lowercase 'email' to match container partition key path /email
-                entity.Property(e => e.Email).ToJsonProperty("email");
-
-                // Note: PendingSignups container uses /email as partition key path
-                entity.ToContainer("PendingSignups")
-                      .HasPartitionKey(e => e.Email);
-            }
         });
 
         // Configure CompassTracking as a separate container for analytics
