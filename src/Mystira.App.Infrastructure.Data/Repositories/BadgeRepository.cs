@@ -1,8 +1,8 @@
+using Ardalis.Specification;
+using Ardalis.Specification.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
-using Mystira.App.Domain.Specifications;
-using Mystira.App.Infrastructure.Data.Specifications;
 
 namespace Mystira.App.Infrastructure.Data.Repositories;
 
@@ -100,6 +100,6 @@ public class BadgeRepository : IBadgeRepository
 
     private IQueryable<Badge> ApplySpecification(ISpecification<Badge> spec)
     {
-        return SpecificationEvaluator<Badge>.GetQuery(_context.Badges.AsQueryable(), spec);
+        return SpecificationEvaluator.Default.GetQuery(_context.Badges.AsQueryable(), spec);
     }
 }
