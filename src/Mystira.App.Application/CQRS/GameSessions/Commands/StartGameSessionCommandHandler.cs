@@ -279,7 +279,12 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
                     Type = dto.PlayerAssignment.Type,
                     ProfileId = dto.PlayerAssignment.ProfileId,
                     ProfileName = dto.PlayerAssignment.ProfileName,
-                    GuestName = dto.PlayerAssignment.GuestName
+                    ProfileImage = dto.PlayerAssignment.ProfileImage,
+                    SelectedAvatarMediaId = dto.PlayerAssignment.SelectedAvatarMediaId,
+                    GuestName = dto.PlayerAssignment.GuestName,
+                    GuestAgeRange = dto.PlayerAssignment.GuestAgeRange,
+                    GuestAvatar = dto.PlayerAssignment.GuestAvatar,
+                    SaveAsProfile = dto.PlayerAssignment.SaveAsProfile
                 }
         };
     }
