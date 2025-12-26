@@ -9,7 +9,7 @@ This test project contains comprehensive integration tests for the CQRS implemen
 - Query handler tests (read operations)
 - Caching behavior tests
 - Specification pattern tests
-- Full MediatR pipeline testing
+- Full Wolverine message bus testing
 
 ## Test Structure
 
@@ -69,7 +69,7 @@ dotnet test tests/Mystira.App.Application.Tests/ --filter "Category=Caching"
 All integration tests inherit from `CqrsIntegrationTestBase`, which provides:
 
 - **In-memory database** - Fresh database per test class instance
-- **Full MediatR pipeline** - Including caching behaviors
+- **Full Wolverine message bus** - Including caching middleware
 - **All repositories** - Registered with DI container
 - **IMemoryCache** - For testing query caching
 - **Cache invalidation service** - For testing cache management
@@ -92,7 +92,7 @@ public class MyEntityTests : CqrsIntegrationTestBase
         await SeedTestDataAsync();
 
         var query = new GetMyEntityQuery("test-1");
-        var result = await Mediator.Send(query);
+        var result = await MessageBus.InvokeAsync<MyEntity?>(query);
 
         result.Should().NotBeNull();
     }

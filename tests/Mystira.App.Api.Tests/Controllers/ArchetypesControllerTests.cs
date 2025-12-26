@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -10,16 +9,17 @@ using Moq;
 using Mystira.App.Api.Controllers;
 using Mystira.App.Application.CQRS.Archetypes.Queries;
 using Mystira.App.Domain.Models;
+using Wolverine;
 using Xunit;
 
 namespace Mystira.App.Api.Tests.Controllers;
 
 public class ArchetypesControllerTests
 {
-    private static ArchetypesController CreateController(Mock<IMediator> mediatorMock)
+    private static ArchetypesController CreateController(Mock<IMessageBus> busMock)
     {
         var logger = new Mock<ILogger<ArchetypesController>>().Object;
-        var controller = new ArchetypesController(mediatorMock.Object, logger)
+        var controller = new ArchetypesController(busMock.Object, logger)
         {
             ControllerContext = new ControllerContext
             {
@@ -38,10 +38,10 @@ public class ArchetypesControllerTests
             new() { Id = "arch-1", Name = "Hero", Description = "The protagonist" },
             new() { Id = "arch-2", Name = "Mentor", Description = "The wise guide" }
         };
-        var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<GetAllArchetypesQuery>(), It.IsAny<CancellationToken>()))
+        var bus = new Mock<IMessageBus>();
+        bus.Setup(m => m.InvokeAsync<List<ArchetypeDefinition>>(It.IsAny<GetAllArchetypesQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(archetypes);
-        var controller = CreateController(mediator);
+        var controller = CreateController(bus);
 
         // Act
         var result = await controller.GetAllArchetypes();
@@ -50,17 +50,17 @@ public class ArchetypesControllerTests
         result.Result.Should().BeOfType<OkObjectResult>();
         var ok = result.Result as OkObjectResult;
         ok!.Value.Should().BeEquivalentTo(archetypes);
-        mediator.Verify(m => m.Send(It.IsAny<GetAllArchetypesQuery>(), It.IsAny<CancellationToken>()), Times.Once);
+        bus.Verify(m => m.InvokeAsync<List<ArchetypeDefinition>>(It.IsAny<GetAllArchetypesQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()), Times.Once);
     }
 
     [Fact]
     public async Task GetAllArchetypes_WhenEmpty_ReturnsEmptyList()
     {
         // Arrange
-        var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<GetAllArchetypesQuery>(), It.IsAny<CancellationToken>()))
+        var bus = new Mock<IMessageBus>();
+        bus.Setup(m => m.InvokeAsync<List<ArchetypeDefinition>>(It.IsAny<GetAllArchetypesQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(new List<ArchetypeDefinition>());
-        var controller = CreateController(mediator);
+        var controller = CreateController(bus);
 
         // Act
         var result = await controller.GetAllArchetypes();
@@ -78,10 +78,10 @@ public class ArchetypesControllerTests
     {
         // Arrange
         var archetype = new ArchetypeDefinition { Id = "arch-1", Name = "Hero", Description = "The protagonist" };
-        var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<GetArchetypeByIdQuery>(), It.IsAny<CancellationToken>()))
+        var bus = new Mock<IMessageBus>();
+        bus.Setup(m => m.InvokeAsync<ArchetypeDefinition?>(It.IsAny<GetArchetypeByIdQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(archetype);
-        var controller = CreateController(mediator);
+        var controller = CreateController(bus);
 
         // Act
         var result = await controller.GetArchetypeById("arch-1");
@@ -96,10 +96,10 @@ public class ArchetypesControllerTests
     public async Task GetArchetypeById_ReturnsNotFound_WhenNotExists()
     {
         // Arrange
-        var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<GetArchetypeByIdQuery>(), It.IsAny<CancellationToken>()))
+        var bus = new Mock<IMessageBus>();
+        bus.Setup(m => m.InvokeAsync<ArchetypeDefinition?>(It.IsAny<GetArchetypeByIdQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync((ArchetypeDefinition?)null);
-        var controller = CreateController(mediator);
+        var controller = CreateController(bus);
 
         // Act
         var result = await controller.GetArchetypeById("non-existent");
@@ -112,10 +112,10 @@ public class ArchetypesControllerTests
     public async Task ValidateArchetype_ReturnsTrue_WhenValid()
     {
         // Arrange
-        var mediator = new Mock<IMediator>();
-        mediator.Setup(m => m.Send(It.IsAny<ValidateArchetypeQuery>(), It.IsAny<CancellationToken>()))
+        var bus = new Mock<IMessageBus>();
+        bus.Setup(m => m.InvokeAsync<bool>(It.IsAny<ValidateArchetypeQuery>(), It.IsAny<CancellationToken>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync(true);
-        var controller = CreateController(mediator);
+        var controller = CreateController(bus);
 
         // Act
         var result = await controller.ValidateArchetype(new ValidateArchetypeRequest { Name = "Hero" });
