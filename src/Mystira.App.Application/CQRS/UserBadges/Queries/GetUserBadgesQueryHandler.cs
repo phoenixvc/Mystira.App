@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Specifications;
 using Mystira.App.Domain.Models;
-using Mystira.App.Domain.Specifications;
 
 namespace Mystira.App.Application.CQRS.UserBadges.Queries;
 
@@ -20,7 +20,7 @@ public class GetUserBadgesQueryHandler : IQueryHandler<GetUserBadgesQuery, List<
 
     public async Task<List<UserBadge>> Handle(GetUserBadgesQuery request, CancellationToken cancellationToken)
     {
-        var spec = new UserBadgesByProfileSpecification(request.UserProfileId);
+        var spec = new UserBadgesByProfileSpec(request.UserProfileId);
         var badges = await _repository.ListAsync(spec);
 
         _logger.LogDebug("Retrieved {Count} badges for user profile {UserProfileId}",

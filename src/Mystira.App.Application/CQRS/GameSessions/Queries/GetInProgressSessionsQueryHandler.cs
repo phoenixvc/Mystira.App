@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Specifications;
 using Mystira.Contracts.App.Models.GameSessions;
 using Mystira.Contracts.App.Responses.GameSessions;
 using Mystira.App.Domain.Models;
-using Mystira.App.Domain.Specifications;
 
 namespace Mystira.App.Application.CQRS.GameSessions.Queries;
 
@@ -33,7 +33,7 @@ public class GetInProgressSessionsQueryHandler : IQueryHandler<GetInProgressSess
             throw new ArgumentException("AccountId is required");
         }
 
-        var spec = new InProgressSessionsSpecification(request.AccountId);
+        var spec = new InProgressSessionsSpec(request.AccountId);
         var sessions = await _repository.ListAsync(spec);
 
         // Defensive: if historical data contains duplicates (e.g., retries that created multiple active sessions),

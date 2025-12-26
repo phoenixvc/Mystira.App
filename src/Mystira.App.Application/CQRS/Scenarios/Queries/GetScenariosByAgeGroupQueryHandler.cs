@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Specifications;
 using Mystira.App.Domain.Models;
-using Mystira.App.Domain.Specifications;
 
 namespace Mystira.App.Application.CQRS.Scenarios.Queries;
 
@@ -25,7 +25,7 @@ public class GetScenariosByAgeGroupQueryHandler : IQueryHandler<GetScenariosByAg
     public async Task<IEnumerable<Scenario>> Handle(GetScenariosByAgeGroupQuery request, CancellationToken cancellationToken)
     {
         // Create specification for scenarios by age group
-        var spec = new ScenariosByAgeGroupSpecification(request.AgeGroup);
+        var spec = new ScenariosByAgeGroupSpec(request.AgeGroup);
 
         // Use specification to query repository
         var scenarios = await _repository.ListAsync(spec);
