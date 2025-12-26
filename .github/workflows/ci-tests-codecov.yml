@@ -35,10 +35,6 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Authenticate to GitHub Packages
-        run: |
-          dotnet nuget update source github --username ${{ github.actor }} --password ${{ secrets.GH_PACKAGES_TOKEN }} --store-password-in-clear-text
-
       - name: Cache NuGet packages
         uses: actions/cache@v4
         with:
@@ -51,6 +47,8 @@ jobs:
 
       - name: Restore dependencies
         run: dotnet restore
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build
         run: dotnet build --no-restore --configuration Release
