@@ -50,6 +50,9 @@ jobs:
 
       - name: Restore dependencies
         run: dotnet restore
+        env:
+          GITHUB_USERNAME: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
       - name: Validate API Configuration
         run: |
