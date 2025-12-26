@@ -1,4 +1,4 @@
-﻿using Mystira.App.Application.CQRS;
+﻿using Mystira.Shared.CQRS;
 using Mystira.App.Application.Interfaces;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
