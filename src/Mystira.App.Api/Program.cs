@@ -552,6 +552,7 @@ builder.Host.UseWolverine(opts =>
 // Provides consistent error responses using RFC 7807 Problem Details format.
 // Catches domain exceptions (NotFoundException, ValidationException, etc.)
 // and converts them to appropriate HTTP status codes.
+builder.Services.AddExceptionHandler<Mystira.App.Api.Middleware.GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 // Configure Health Checks
