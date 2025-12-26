@@ -174,7 +174,6 @@ public static class ScenarioParser
                 Text = b.Choice,
                 NextSceneId = b.NextSceneId,
                 CompassAxis = b.CompassChange?.Axis,
-                CompassDirection = b.CompassChange?.Direction,
                 CompassDelta = b.CompassChange?.Delta
             }).ToList(),
             EchoReveals = scene.EchoReveals.Select(e => new EchoRevealRequest

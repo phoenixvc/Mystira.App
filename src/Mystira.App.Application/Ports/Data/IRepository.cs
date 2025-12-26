@@ -1,4 +1,4 @@
-using Mystira.App.Domain.Specifications;
+using Ardalis.Specification;
 
 namespace Mystira.App.Application.Ports.Data;
 

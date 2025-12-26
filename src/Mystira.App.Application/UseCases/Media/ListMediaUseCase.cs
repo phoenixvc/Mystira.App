@@ -65,14 +65,9 @@ public class ListMediaUseCase
             .Take(request.PageSize)
             .Select(m => new MediaItem
             {
-                MediaId = m.MediaId,
+                Id = m.MediaId,
                 Url = m.Url,
-                MediaType = m.MediaType,
-                Description = m.Description,
-                Tags = m.Tags,
-                FileSizeBytes = m.FileSizeBytes,
-                CreatedAt = m.CreatedAt,
-                UpdatedAt = m.UpdatedAt
+                MediaType = m.MediaType
             })
             .ToListAsync();
 

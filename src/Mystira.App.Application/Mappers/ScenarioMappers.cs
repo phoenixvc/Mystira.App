@@ -108,11 +108,10 @@ public static class ScenarioMappers
             {
                 Choice = b.Text ?? string.Empty,
                 NextSceneId = b.NextSceneId ?? string.Empty,
-                CompassChange = (b.CompassAxis != null || b.CompassDirection != null || b.CompassDelta.HasValue)
+                CompassChange = (b.CompassAxis != null || b.CompassDelta.HasValue)
                     ? new CompassChange
                     {
                         Axis = b.CompassAxis ?? string.Empty,
-                        Direction = b.CompassDirection ?? string.Empty,
                         Delta = b.CompassDelta ?? 0.0
                     }
                     : null

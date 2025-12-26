@@ -272,7 +272,6 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
             Audio = dto.Audio,
             Role = dto.Role,
             Archetype = dto.Archetype,
-            IsUnused = dto.IsUnused,
             PlayerAssignment = dto.PlayerAssignment == null
                 ? null
                 : new SessionPlayerAssignment
@@ -280,12 +279,7 @@ public class StartGameSessionCommandHandler : ICommandHandler<StartGameSessionCo
                     Type = dto.PlayerAssignment.Type,
                     ProfileId = dto.PlayerAssignment.ProfileId,
                     ProfileName = dto.PlayerAssignment.ProfileName,
-                    ProfileImage = dto.PlayerAssignment.ProfileImage,
-                    SelectedAvatarMediaId = dto.PlayerAssignment.SelectedAvatarMediaId,
-                    GuestName = dto.PlayerAssignment.GuestName,
-                    GuestAgeRange = dto.PlayerAssignment.GuestAgeRange,
-                    GuestAvatar = dto.PlayerAssignment.GuestAvatar,
-                    SaveAsProfile = dto.PlayerAssignment.SaveAsProfile
+                    GuestName = dto.PlayerAssignment.GuestName
                 }
         };
     }

@@ -78,7 +78,7 @@ public class GetScenariosWithGameStateQueryHandler
                 CoreAxes = scenario.CoreAxes?.Select(a => a.Value).ToList() ?? new List<string>(),
                 Tags = scenario.Tags?.ToList() ?? new List<string>(),
                 Archetypes = scenario.Archetypes?.Select(a => a.ToString()).ToList() ?? new List<string>(),
-                GameState = gameState,
+                GameState = gameState.ToString(),
                 LastPlayedAt = lastSession?.StartTime,
                 PlayCount = sessions.Count,
                 Image = scenario.Image
