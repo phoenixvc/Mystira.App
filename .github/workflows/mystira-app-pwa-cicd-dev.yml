@@ -44,7 +44,7 @@ jobs:
 
       - name: Authenticate to GitHub Packages
         run: |
-          dotnet nuget add source --username ${{ github.actor }} --password ${{ secrets.GH_PACKAGES_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/phoenixvc/index.json"
+          dotnet nuget update source github --username ${{ github.actor }} --password ${{ secrets.GH_PACKAGES_TOKEN }} --store-password-in-clear-text
 
       - name: Install wasm-tools workload
         run: dotnet workload install wasm-tools
