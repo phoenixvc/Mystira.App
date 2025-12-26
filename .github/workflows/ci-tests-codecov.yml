@@ -37,7 +37,9 @@ jobs:
 
       - name: Configure GitHub Packages authentication
         run: |
-          dotnet nuget update source github \
+          dotnet nuget remove source github --configfile nuget.config || true
+          dotnet nuget add source https://nuget.pkg.github.com/phoenixvc/index.json \
+            --name github \
             --username phoenixvc \
             --password ${{ secrets.GH_PACKAGES_TOKEN }} \
             --store-password-in-clear-text \
