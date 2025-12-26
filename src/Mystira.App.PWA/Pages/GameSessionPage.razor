@@ -835,17 +835,7 @@ else
             StateHasChanged();
 
             // Determine if the roll was successful using the cached outcome to avoid mismatch with UI
-            bool isSuccess;
-            if (gameSession.Scenario.AgeGroup == "1-2")
-            {
-                // Always success for age group 1-2
-                isSuccess = true;
-            }
-            else
-            {
-                // Use cached success if available; otherwise compute against target
-                isSuccess = lastRollSuccess ?? (rollResult.Value >= (gameSession.CurrentScene.RollTarget ?? 0));
-            }
+            bool isSuccess = lastRollSuccess ?? (rollResult.Value >= (gameSession.CurrentScene.RollTarget ?? 0));
 
             Logger.LogInformation("Processing roll result: {RollResult}, Target: {Target}, Success: {IsSuccess}",
                 rollResult.Value, gameSession.CurrentScene.RollTarget, isSuccess);
@@ -912,10 +902,17 @@ else
 
             if (gameSession.Scenario.AgeGroup == "1-2")
             {
-                // Always success with young exclamations
-                string[] youngExclamations = new[] { "Yipee!", "Hooray!", "Wow!" };
-                message = youngExclamations[new Random().Next(youngExclamations.Length)];
                 isSuccess = arg >= target;
+                if (isSuccess)
+                {
+                    string[] youngExclamations = new[] { "Yipee!", "Hooray!", "Wow!" };
+                    message = youngExclamations[new Random().Next(youngExclamations.Length)];
+                }
+                else
+                {
+                    string[] failureExclamations = new[] { "Oops!", "Uh-oh!", "Whoops!", "Oh dear!", "Whoopsie!" };
+                    message = failureExclamations[new Random().Next(failureExclamations.Length)];
+                }
             }
             else if (gameSession.Scenario.AgeGroup == "3-5")
             {
