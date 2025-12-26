@@ -34,7 +34,7 @@
     <PackageReference Include="Grpc.Tools" Version="2.76.0" PrivateAssets="All" />
 
     <!-- Health checks -->
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="9.0.11" />
   </ItemGroup>
 
   <!-- Protocol Buffer definitions for ChainService -->
