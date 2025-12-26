@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Specifications;
 using Mystira.App.Domain.Models;
-using Mystira.App.Domain.Specifications;
 
 namespace Mystira.App.Application.CQRS.Scenarios.Queries;
 
@@ -25,7 +25,9 @@ public class GetPaginatedScenariosQueryHandler : IQueryHandler<GetPaginatedScena
     public async Task<IEnumerable<Scenario>> Handle(GetPaginatedScenariosQuery request, CancellationToken cancellationToken)
     {
         // Create specification for paginated scenarios
-        var spec = new PaginatedScenariosSpecification(request.PageNumber, request.PageSize);
+        var spec = new ScenariosPaginatedSpec(
+            skip: (request.PageNumber - 1) * request.PageSize,
+            take: request.PageSize);
 
         // Use specification to query repository
         var scenarios = await _repository.ListAsync(spec);

@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
+using Mystira.App.Application.Specifications;
 using Mystira.App.Domain.Models;
-using Mystira.App.Domain.Specifications;
 
 namespace Mystira.App.Application.CQRS.ContentBundles.Queries;
 
@@ -34,7 +34,7 @@ public class GetContentBundlesByAgeGroupQueryHandler : IQueryHandler<GetContentB
         }
 
         // Create specification for reusable query logic
-        var spec = new ContentBundlesByAgeGroupSpecification(request.AgeGroup);
+        var spec = new ContentBundlesByAgeGroupSpec(request.AgeGroup);
 
         // Execute query using repository
         var bundles = await _repository.ListAsync(spec);
