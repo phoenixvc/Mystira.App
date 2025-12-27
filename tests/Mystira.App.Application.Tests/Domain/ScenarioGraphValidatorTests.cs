@@ -14,7 +14,7 @@ public class ScenarioGraphValidatorTests
     public void ValidateGraph_WithNullScenes_ReturnsTrue()
     {
         // Arrange
-        var scenario = new Scenario { Id = "test", Scenes = null };
+        var scenario = new Scenario { Id = "test", Scenes = null! };
 
         // Act
         var result = _validator.ValidateGraph(scenario, out var errors);
