@@ -15,6 +15,23 @@ using IUnitOfWork = Mystira.App.Application.Ports.Data.IUnitOfWork;
 namespace Mystira.App.Application.Tests.CQRS;
 
 /// <summary>
+/// Adapter that provides MediatR-like Send syntax using Wolverine's IMessageBus.
+/// This allows existing tests to work without code changes.
+/// </summary>
+public class MediatorAdapter
+{
+    private readonly IMessageBus _bus;
+
+    public MediatorAdapter(IMessageBus bus) => _bus = bus;
+
+    public Task<TResponse> Send<TResponse>(IQuery<TResponse> query)
+        => _bus.InvokeAsync<TResponse>(query);
+
+    public Task<TResponse> Send<TResponse>(ICommand<TResponse> command)
+        => _bus.InvokeAsync<TResponse>(command);
+}
+
+/// <summary>
 /// Base class for CQRS integration tests.
 /// Provides in-memory database, repositories, and Wolverine message bus with caching.
 /// </summary>
@@ -24,6 +41,7 @@ public abstract class CqrsIntegrationTestBase : IAsyncDisposable, IDisposable
     protected IServiceProvider ServiceProvider => Host.Services;
     protected MystiraAppDbContext DbContext { get; }
     protected IMessageBus MessageBus { get; }
+    protected MediatorAdapter Mediator { get; }
     protected IMemoryCache Cache { get; }
     protected IQueryCacheInvalidationService CacheInvalidation { get; }
 
@@ -88,6 +106,7 @@ public abstract class CqrsIntegrationTestBase : IAsyncDisposable, IDisposable
 
         DbContext = ServiceProvider.GetRequiredService<MystiraAppDbContext>();
         MessageBus = ServiceProvider.GetRequiredService<IMessageBus>();
+        Mediator = new MediatorAdapter(MessageBus);
         Cache = ServiceProvider.GetRequiredService<IMemoryCache>();
         CacheInvalidation = ServiceProvider.GetRequiredService<IQueryCacheInvalidationService>();
     }
