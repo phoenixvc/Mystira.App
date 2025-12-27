@@ -2,6 +2,49 @@
 
 This document describes our continuous integration and continuous deployment (CI/CD) architecture.
 
+## Terminology Glossary
+
+> **Important**: These terms are used interchangeably but mean the same thing.
+
+| Term | Also Known As | What It Actually Is |
+|------|---------------|---------------------|
+| **PWA** | SWA, Frontend, Blazor WASM | The Blazor WebAssembly frontend (`Mystira.App.PWA`). Deployed to Azure Static Web App. |
+| **SWA** | PWA, Frontend | Azure Static Web App - the hosting service for the PWA |
+| **API** | Backend | The .NET API (`Mystira.App.Api`). Deployed to Azure App Service. |
+
+## Quick Reference: How to Deploy to Dev
+
+### API Deployment (App Service)
+
+| Method | How |
+|--------|-----|
+| **Automatic** | Push to `dev` branch (triggers `[Deploy] Trigger Workspace` → full build/deploy) |
+| **Manual** | Run `[Deploy] Trigger Workspace` → select `api` |
+
+This triggers a full build and deploy to Azure App Service via the workspace repo.
+
+### SWA/PWA Deployment (Static Web App)
+
+| Method | How |
+|--------|-----|
+| **Automatic** | Push to `dev` branch → Azure SWA CI/CD deploys directly |
+| **Manual** | Run `[Deploy] Trigger Workspace` → select `pwa` ⚠️ |
+
+> ⚠️ **Important**: The `[Deploy] Trigger Workspace` workflow for PWA **does NOT deploy directly**.
+> It only updates the submodule reference in `Mystira.workspace`.
+> The actual SWA deployment is handled by **Azure Static Web Apps CI/CD** which monitors this repo directly.
+>
+> **Translation**: Just push to `dev` and Azure handles the SWA deployment automatically.
+
+### Workspace Event Types Reference
+
+| Event Type | What It Does |
+|------------|--------------|
+| `app-deploy` | Full API deployment (build + deploy to App Service) |
+| `app-swa-deploy` | Just updates submodule ref (SWA deploys itself via Azure) |
+| `devhub-deploy` | Just updates submodule ref |
+| `story-generator-swa-deploy` | Just updates submodule ref |
+
 ## Overview
 
 ```
@@ -9,9 +52,11 @@ This document describes our continuous integration and continuous deployment (CI
 │                              CI/CD Pipeline                                  │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐           │
-│  │  Build   │────▶│   Test   │────▶│ Validate │────▶│  Deploy  │           │
-│  └──────────┘     └──────────┘     └──────────┘     └──────────┘           │
+│  This Repo (Mystira.App)              Mystira.workspace                     │
+│  ┌──────────┐     ┌──────────┐        ┌──────────┐     ┌──────────┐        │
+│  │  Build   │────▶│   Test   │───────▶│  Deploy  │────▶│   Live   │        │
+│  └──────────┘     └──────────┘        └──────────┘     └──────────┘        │
+│       CI workflows               repository_dispatch    Actual deploy       │
 │                                                                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
@@ -100,19 +145,37 @@ This document describes our continuous integration and continuous deployment (CI
 
 ## Workflow Files
 
-### Application Workflows
+### CI Workflows (Build & Test Only)
 
-| Workflow | File | Purpose | Manual Deploy |
-|----------|------|---------|---------------|
-| API CI/CD - Dev | `.github/workflows/mystira-app-api-cicd-dev.yml` | Build, test, deploy API to dev | ✅ |
-| API CI/CD - Staging | `.github/workflows/mystira-app-api-cicd-staging.yml` | Build, test, deploy API to staging | ✅ |
-| API CI/CD - Prod | `.github/workflows/mystira-app-api-cicd-prod.yml` | Build, test, deploy API to production | ✅ |
-| Admin API CI/CD - Dev | `.github/workflows/mystira-app-admin-api-cicd-dev.yml` | Build, test, deploy Admin API to dev | ✅ |
-| Admin API CI/CD - Staging | `.github/workflows/mystira-app-admin-api-cicd-staging.yml` | Build, test, deploy Admin API to staging | ✅ |
-| Admin API CI/CD - Prod | `.github/workflows/mystira-app-admin-api-cicd-prod.yml` | Build, test, deploy Admin API to production | ✅ |
-| PWA CI/CD - Dev | `.github/workflows/mystira-app-pwa-cicd-dev.yml` | Build, test, deploy PWA to dev | - |
-| PWA CI/CD - Staging | `.github/workflows/mystira-app-pwa-cicd-staging.yml` | Build, test, deploy PWA to staging | - |
-| PWA CI/CD - Prod | `.github/workflows/mystira-app-pwa-cicd-prod.yml` | Build, test, deploy PWA to production | - |
+These workflows run tests but **do NOT deploy**:
+
+| Workflow | File | Triggers On |
+|----------|------|-------------|
+| `[API] Build & Test (Dev)` | `api-ci-dev.yml` | Push/PR to `dev` with API changes |
+| `[PWA] Build & Test (Dev)` | `pwa-ci-dev.yml` | Push/PR to `dev` with PWA changes |
+| `[CI] Tests & Coverage` | `ci-tests.yml` | All PRs |
+
+### Deployment Workflows
+
+| Workflow | File | What It Does |
+|----------|------|--------------|
+| `[Deploy] Trigger Workspace` | `deploy-trigger-workspace.yml` | Sends deploy event to `Mystira.workspace` |
+| `[API] Rollback (Production)` | `api-rollback-prod.yml` | Rollback API to previous version |
+
+### Supporting Workflows
+
+| Workflow | File | Purpose |
+|----------|------|---------|
+| `[PWA] Cleanup Preview Environments` | `pwa-cleanup-preview.yml` | Cleans up PR preview deployments |
+| `[PWA] Smoke Tests [Preview]` | `pwa-smoke-tests.yml` | Runs smoke tests on preview URLs |
+| Security Scanning | `security-scanning.yml` | CodeQL and dependency scanning |
+
+### Where Actual Deployment Happens
+
+| Component | Deployed By |
+|-----------|-------------|
+| **API** | `Mystira.workspace` repo (via `repository_dispatch`) |
+| **SWA/PWA** | Azure Static Web Apps CI/CD (monitors this repo directly) |
 
 ### Infrastructure Workflows
 
@@ -121,35 +184,32 @@ This document describes our continuous integration and continuous deployment (CI
 
 ## Manual Deployment
 
-All API and Admin API workflows support manual deployment invocation via GitHub's `workflow_dispatch` event.
+### How to Trigger Manual API Deployment
 
-### How to Trigger Manual Deployment
+1. Go to **Actions** tab in GitHub
+2. Select **`[Deploy] Trigger Workspace`** from the sidebar
+3. Click **"Run workflow"** dropdown
+4. Select component:
+   - `api` - Deploy API only
+   - `pwa` - Update PWA submodule ref (SWA deploys itself)
+   - `all` - Both
+5. Click **"Run workflow"**
 
-1. **Navigate to Actions Tab**
-   - Go to the GitHub repository
-   - Click on the **Actions** tab
+### How SWA/PWA Actually Deploys
 
-2. **Select Workflow**
-   - Choose the desired workflow from the left sidebar:
-     - "API CI/CD - Dev Environment"
-     - "API CI/CD - Staging Environment"
-     - "API CI/CD - Production Environment"
-     - "Admin API CI/CD - Dev Environment"
-     - "Admin API CI/CD - Staging Environment"
-     - "Admin API CI/CD - Production Environment"
+The SWA deployment is **not triggered via GitHub Actions in this repo**.
 
-3. **Run Workflow**
-   - Click the **"Run workflow"** dropdown button (top right)
-   - Select the target branch that corresponds to your desired environment:
-     - `dev` branch → deploys to **Development** environment
-     - `staging` branch → deploys to **Staging** environment
-     - `main` branch → deploys to **Production** environment
-   - Click **"Run workflow"** to start the deployment
+Azure Static Web Apps has its own CI/CD that:
+- Monitors this repo directly
+- Triggers on push to `dev`/`staging`/`main` branches
+- Deploys automatically without needing manual intervention
 
-4. **Monitor Progress**
-   - The workflow will appear in the workflow runs list
-   - Click on the run to see real-time logs
-   - Deployment will go through: Build → Test → Deploy stages
+To manually redeploy the SWA, just push a commit to the target branch.
+
+### Monitor Deployment Progress
+
+- **API deployment**: Check [Mystira.workspace Actions](https://github.com/phoenixvc/Mystira.workspace/actions)
+- **SWA deployment**: Check Azure Portal → Static Web App → Deployment history
 
 ### When to Use Manual Deployment
 
