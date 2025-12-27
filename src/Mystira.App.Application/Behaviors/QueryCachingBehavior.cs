@@ -1,13 +1,13 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Mystira.App.Application.Interfaces;
 using Mystira.App.Application.Services;
-using Mystira.Shared.Caching;
 using Wolverine;
 
 namespace Mystira.App.Application.Behaviors;
 
 /// <summary>
-/// Wolverine middleware that caches query results for queries implementing ICachedQuery.
+/// Wolverine middleware that caches query results for queries implementing ICacheableQuery.
 /// Uses in-memory caching with configurable expiration per query.
 /// This is invoked via Wolverine's handler chain middleware.
 /// </summary>
@@ -31,7 +31,7 @@ public class QueryCachingMiddleware
     /// Wolverine middleware method that wraps handler execution with caching logic.
     /// Called Before in the handler chain for cacheable queries.
     /// </summary>
-    public Task<T?> TryGetFromCache<T>(ICachedQuery query)
+    public Task<T?> TryGetFromCache<T>(ICacheableQuery query)
     {
         var cacheKey = query.CacheKey;
 
@@ -49,7 +49,7 @@ public class QueryCachingMiddleware
     /// Caches the response after handler execution.
     /// Called After in the handler chain for cacheable queries.
     /// </summary>
-    public void CacheResponse<T>(ICachedQuery query, T response)
+    public void CacheResponse<T>(ICacheableQuery query, T response)
     {
         var cacheKey = query.CacheKey;
 
@@ -80,7 +80,7 @@ public static class QueryCacheHelper
     /// Use this in handlers for cacheable queries.
     /// </summary>
     public static async Task<T> ExecuteWithCache<T>(
-        ICachedQuery query,
+        ICacheableQuery query,
         IMemoryCache cache,
         IQueryCacheInvalidationService cacheInvalidation,
         ILogger logger,
