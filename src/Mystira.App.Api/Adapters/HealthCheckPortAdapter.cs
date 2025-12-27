@@ -15,6 +15,12 @@ public class HealthCheckPortAdapter : IHealthCheckPort
         _healthCheckService = healthCheckService;
     }
 
+    /// <inheritdoc />
+    public string Name => "AspNetCoreHealthCheck";
+
+    /// <inheritdoc />
+    public IEnumerable<string> Tags => ["api", "infrastructure"];
+
     public async Task<Mystira.Contracts.App.Ports.Health.HealthReport> CheckHealthAsync(CancellationToken cancellationToken = default)
     {
         var aspNetHealthReport = await _healthCheckService.CheckHealthAsync(cancellationToken);
