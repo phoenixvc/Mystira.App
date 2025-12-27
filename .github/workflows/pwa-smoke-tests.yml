@@ -1,4 +1,4 @@
-name: SWA Preview - Smoke Tests
+name: "[PWA] Smoke Tests (Preview)"
 
 on:
   workflow_run:

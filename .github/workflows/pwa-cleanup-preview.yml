@@ -1,4 +1,4 @@
-name: SWA Cleanup - Staging Environments
+name: "[PWA] Cleanup Preview Environments"
 
 on:
   workflow_dispatch:
