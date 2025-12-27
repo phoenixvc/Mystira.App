@@ -44,7 +44,7 @@
   <ItemGroup>
     <ProjectReference Include="../Mystira.App.Domain/Mystira.App.Domain.csproj" />
     <!-- Only Contracts is needed for PWA - Shared has ASP.NET Core deps incompatible with browser-wasm -->
-    <PackageReference Include="Mystira.Contracts" Version="0.4.*-*" />
+    <PackageReference Include="Mystira.Contracts" Version="0.4.0-alpha*" />
   </ItemGroup>
 
   <ItemGroup>
