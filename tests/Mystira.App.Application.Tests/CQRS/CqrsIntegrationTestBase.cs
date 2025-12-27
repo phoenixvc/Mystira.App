@@ -89,8 +89,8 @@ public abstract class CqrsIntegrationTestBase : IAsyncDisposable, IDisposable
         // Add logging
         builder.Logging.AddDebug().SetMinimumLevel(LogLevel.Debug);
 
-        // Configure Wolverine
-        builder.Host.UseWolverine(opts =>
+        // Configure Wolverine using AddWolverine (compatible with .NET 9 HostApplicationBuilder)
+        builder.Services.AddWolverine(opts =>
         {
             // Discover handlers from Application assembly
             opts.Discovery.IncludeAssembly(typeof(IQuery<>).Assembly);
