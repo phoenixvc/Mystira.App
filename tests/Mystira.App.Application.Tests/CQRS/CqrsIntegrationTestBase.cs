@@ -92,8 +92,9 @@ public abstract class CqrsIntegrationTestBase : IAsyncDisposable, IDisposable
         // Configure Wolverine using AddWolverine (compatible with .NET 9 HostApplicationBuilder)
         builder.Services.AddWolverine(opts =>
         {
-            // Discover handlers from Application assembly
-            opts.Discovery.IncludeAssembly(typeof(IQuery<>).Assembly);
+            // Discover handlers from Application assembly (not Mystira.Shared where IQuery<> is defined)
+            // IQueryCacheInvalidationService is in Mystira.App.Application, same assembly as the handlers
+            opts.Discovery.IncludeAssembly(typeof(IQueryCacheInvalidationService).Assembly);
 
             // Use durable local queues for testing
             opts.Policies.UseDurableLocalQueues();
