@@ -32,7 +32,7 @@ public class DiscordController : ControllerBase
     public async Task<IActionResult> GetStatus()
     {
         var query = new GetDiscordBotStatusQuery();
-        var status = await _bus.InvokeAsync<DiscordBotStatus>(query);
+        var status = await _bus.InvokeAsync<DiscordBotStatusResponse>(query);
 
         return Ok(new
         {

@@ -507,7 +507,7 @@ builder.Services.AddDistributedTracing("Mystira.App.Api", builder.Environment.En
 builder.Host.UseWolverine(opts =>
 {
     // Discover handlers from Application assembly
-    opts.Discovery.IncludeAssembly(typeof(Mystira.App.Application.CQRS.ICommand<>).Assembly);
+    opts.Discovery.IncludeAssembly(typeof(Mystira.Shared.CQRS.IQuery<>).Assembly);
 
     // Configure durable inbox/outbox (for future distributed messaging)
     // opts.Policies.AutoApplyTransactions();

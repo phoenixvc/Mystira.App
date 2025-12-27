@@ -1,4 +1,4 @@
-﻿using Mystira.Shared.CQRS;
+using Mystira.Shared.CQRS;
 using Mystira.App.Application.Interfaces;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
@@ -12,7 +12,6 @@ public record GetAllBadgeConfigurationsQuery
 }
 
 public sealed class GetAllBadgeConfigurationsQueryHandler
-    : IQueryHandler<GetAllBadgeConfigurationsQuery, List<BadgeConfiguration>>
 {
     private readonly IRepository<BadgeConfiguration> _repository;
 

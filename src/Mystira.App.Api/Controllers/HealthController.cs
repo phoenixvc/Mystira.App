@@ -53,7 +53,7 @@ public class HealthController : ControllerBase
     public async Task<ActionResult> GetReady()
     {
         var query = new GetReadinessQuery();
-        var result = await _bus.InvokeAsync<ReadinessResult>(query);
+        var result = await _bus.InvokeAsync<ProbeResult>(query);
 
         return Ok(new { status = result.Status, timestamp = result.Timestamp });
     }
@@ -65,7 +65,7 @@ public class HealthController : ControllerBase
     public async Task<ActionResult> GetLive()
     {
         var query = new GetLivenessQuery();
-        var result = await _bus.InvokeAsync<LivenessResult>(query);
+        var result = await _bus.InvokeAsync<ProbeResult>(query);
 
         return Ok(new { status = result.Status, timestamp = result.Timestamp });
     }
