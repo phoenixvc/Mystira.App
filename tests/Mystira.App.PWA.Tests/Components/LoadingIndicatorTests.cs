@@ -8,13 +8,13 @@ namespace Mystira.App.PWA.Tests.Components;
 /// <summary>
 /// Tests for LoadingIndicator component - validates loading states and skeleton rendering
 /// </summary>
-public class LoadingIndicatorTests : TestContext
+public class LoadingIndicatorTests : BunitContext
 {
     [Fact]
     public void LoadingIndicator_WithDefaultParameters_RendersSpinner()
     {
         // Act
-        var cut = RenderComponent<LoadingIndicator>();
+        var cut = Render<LoadingIndicator>();
 
         // Assert
         cut.Find(".loading-spinner").Should().NotBeNull();
@@ -28,7 +28,7 @@ public class LoadingIndicatorTests : TestContext
         var message = "Loading adventures...";
 
         // Act
-        var cut = RenderComponent<LoadingIndicator>(parameters => parameters
+        var cut = Render<LoadingIndicator>(parameters => parameters
             .Add(p => p.Message, message));
 
         // Assert
@@ -39,7 +39,7 @@ public class LoadingIndicatorTests : TestContext
     public void LoadingIndicator_WithSkeletonMode_RendersSkeleton()
     {
         // Act
-        var cut = RenderComponent<LoadingIndicator>(parameters => parameters
+        var cut = Render<LoadingIndicator>(parameters => parameters
             .Add(p => p.ShowSpinner, false)
             .Add(p => p.ShowSkeleton, true));
 
@@ -55,7 +55,7 @@ public class LoadingIndicatorTests : TestContext
         var skeletonCount = 5;
 
         // Act
-        var cut = RenderComponent<LoadingIndicator>(parameters => parameters
+        var cut = Render<LoadingIndicator>(parameters => parameters
             .Add(p => p.ShowSpinner, false)
             .Add(p => p.ShowSkeleton, true)
             .Add(p => p.SkeletonCount, skeletonCount));
@@ -68,7 +68,7 @@ public class LoadingIndicatorTests : TestContext
     public void LoadingIndicator_WithBothModes_RendersBoth()
     {
         // Act
-        var cut = RenderComponent<LoadingIndicator>(parameters => parameters
+        var cut = Render<LoadingIndicator>(parameters => parameters
             .Add(p => p.ShowSpinner, true)
             .Add(p => p.ShowSkeleton, true));
 
@@ -81,7 +81,7 @@ public class LoadingIndicatorTests : TestContext
     public void LoadingIndicator_HasAriaAttributes()
     {
         // Act
-        var cut = RenderComponent<LoadingIndicator>();
+        var cut = Render<LoadingIndicator>();
 
         // Assert
         var container = cut.Find(".loading-container");
@@ -93,7 +93,7 @@ public class LoadingIndicatorTests : TestContext
     public void LoadingIndicator_WithNoMessage_DoesNotRenderMessageElement()
     {
         // Act
-        var cut = RenderComponent<LoadingIndicator>();
+        var cut = Render<LoadingIndicator>();
 
         // Assert
         cut.FindAll(".loading-message").Should().BeEmpty();
@@ -103,7 +103,7 @@ public class LoadingIndicatorTests : TestContext
     public void LoadingIndicator_SkeletonLines_HaveCorrectClasses()
     {
         // Act
-        var cut = RenderComponent<LoadingIndicator>(parameters => parameters
+        var cut = Render<LoadingIndicator>(parameters => parameters
             .Add(p => p.ShowSpinner, false)
             .Add(p => p.ShowSkeleton, true));
 
@@ -122,7 +122,7 @@ public class LoadingIndicatorTests : TestContext
     public void LoadingIndicator_WithVariousSkeletonCounts_RendersCorrectly(int count)
     {
         // Act
-        var cut = RenderComponent<LoadingIndicator>(parameters => parameters
+        var cut = Render<LoadingIndicator>(parameters => parameters
             .Add(p => p.ShowSpinner, false)
             .Add(p => p.ShowSkeleton, true)
             .Add(p => p.SkeletonCount, count));

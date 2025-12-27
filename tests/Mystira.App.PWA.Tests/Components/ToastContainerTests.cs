@@ -10,7 +10,7 @@ namespace Mystira.App.PWA.Tests.Components;
 /// <summary>
 /// Tests for ToastContainer component - validates toast rendering and user interactions
 /// </summary>
-public class ToastContainerTests : TestContext
+public class ToastContainerTests : BunitContext
 {
     [Fact]
     public void ToastContainer_OnInitialized_SubscribesToToastService()
@@ -20,7 +20,7 @@ public class ToastContainerTests : TestContext
         Services.AddSingleton(toastService);
 
         // Act
-        var cut = RenderComponent<ToastContainer>();
+        var cut = Render<ToastContainer>();
 
         // Show a toast
         toastService.ShowSuccess("Test message");
@@ -37,7 +37,7 @@ public class ToastContainerTests : TestContext
         // Arrange
         var toastService = new ToastService();
         Services.AddSingleton(toastService);
-        var cut = RenderComponent<ToastContainer>();
+        var cut = Render<ToastContainer>();
 
         // Act
         toastService.ShowSuccess("Success message");
@@ -55,7 +55,7 @@ public class ToastContainerTests : TestContext
         // Arrange
         var toastService = new ToastService();
         Services.AddSingleton(toastService);
-        var cut = RenderComponent<ToastContainer>();
+        var cut = Render<ToastContainer>();
 
         toastService.ShowSuccess("Message to close");
         cut.WaitForState(() => cut.FindAll(".toast").Count == 1);
@@ -75,7 +75,7 @@ public class ToastContainerTests : TestContext
         // Arrange
         var toastService = new ToastService();
         Services.AddSingleton(toastService);
-        var cut = RenderComponent<ToastContainer>();
+        var cut = Render<ToastContainer>();
 
         // Act
         toastService.ShowSuccess("Message 1");
@@ -96,7 +96,7 @@ public class ToastContainerTests : TestContext
         // Arrange
         var toastService = new ToastService();
         Services.AddSingleton(toastService);
-        var cut = RenderComponent<ToastContainer>();
+        var cut = Render<ToastContainer>();
 
         toastService.ShowSuccess("Message 1");
         toastService.ShowError("Message 2");
@@ -118,7 +118,7 @@ public class ToastContainerTests : TestContext
         Services.AddSingleton(toastService);
 
         // Act
-        var cut = RenderComponent<ToastContainer>();
+        var cut = Render<ToastContainer>();
 
         // Assert
         var container = cut.Find(".toast-container");
@@ -132,7 +132,7 @@ public class ToastContainerTests : TestContext
         // Arrange
         var toastService = new ToastService();
         Services.AddSingleton(toastService);
-        var cut = RenderComponent<ToastContainer>();
+        var cut = Render<ToastContainer>();
 
         // Act
         toastService.ShowSuccess("Test");
@@ -153,7 +153,7 @@ public class ToastContainerTests : TestContext
         // Arrange
         var toastService = new ToastService();
         Services.AddSingleton(toastService);
-        var cut = RenderComponent<ToastContainer>();
+        var cut = Render<ToastContainer>();
 
         // Act
         toastService.Show("Test message", type);
@@ -171,7 +171,7 @@ public class ToastContainerTests : TestContext
         // Arrange
         var toastService = new ToastService();
         Services.AddSingleton(toastService);
-        var cut = RenderComponent<ToastContainer>();
+        var cut = Render<ToastContainer>();
 
         toastService.ShowSuccess("Test 1");
         toastService.ShowError("Test 2");
