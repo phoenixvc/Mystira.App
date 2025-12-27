@@ -257,7 +257,7 @@ public class UserProfilesControllerTests
     {
         // Arrange
         var profileId = "profile-1";
-        var request = new UpdateUserProfileRequest { Name = "Updated Name" };
+        var request = new UpdateUserProfileRequest { Bio = "Updated bio text" };
         var updatedProfile = new UserProfile { Id = profileId, Name = "Updated Name" };
 
         _mockBus
@@ -281,7 +281,7 @@ public class UserProfilesControllerTests
     {
         // Arrange
         var profileId = "nonexistent";
-        var request = new UpdateUserProfileRequest { Name = "Updated Name" };
+        var request = new UpdateUserProfileRequest { Bio = "Updated bio text" };
 
         _mockBus
             .Setup(x => x.InvokeAsync<UserProfile?>(
@@ -302,7 +302,7 @@ public class UserProfilesControllerTests
     {
         // Arrange
         var profileId = "profile-1";
-        var request = new UpdateUserProfileRequest { Name = "" };
+        var request = new UpdateUserProfileRequest { Bio = "" };
 
         _mockBus
             .Setup(x => x.InvokeAsync<UserProfile?>(
@@ -327,7 +327,7 @@ public class UserProfilesControllerTests
     {
         // Arrange
         var profileId = "profile-1";
-        var request = new UpdateUserProfileRequest { Name = "Updated Name" };
+        var request = new UpdateUserProfileRequest { Bio = "Updated bio text" };
         var updatedProfile = new UserProfile { Id = profileId, Name = "Updated Name" };
 
         _mockBus
@@ -351,7 +351,7 @@ public class UserProfilesControllerTests
     {
         // Arrange
         var profileId = "nonexistent";
-        var request = new UpdateUserProfileRequest { Name = "Updated Name" };
+        var request = new UpdateUserProfileRequest { Bio = "Updated bio text" };
 
         _mockBus
             .Setup(x => x.InvokeAsync<UserProfile?>(
@@ -486,11 +486,10 @@ public class UserProfilesControllerTests
         // Arrange
         var request = new CreateMultipleProfilesRequest
         {
-            AccountId = "account-1",
-            Profiles = new List<ProfileData>
+            Profiles = new List<CreateUserProfileRequest>
             {
-                new ProfileData { Name = "Player 1" },
-                new ProfileData { Name = "Player 2" }
+                new CreateUserProfileRequest { Name = "Player 1", AccountId = "account-1" },
+                new CreateUserProfileRequest { Name = "Player 2", AccountId = "account-1" }
             }
         };
         var createdProfiles = new List<UserProfile>
@@ -519,7 +518,7 @@ public class UserProfilesControllerTests
     public async Task CreateMultipleProfiles_WhenExceptionThrown_ReturnsInternalServerError()
     {
         // Arrange
-        var request = new CreateMultipleProfilesRequest { AccountId = "account-1" };
+        var request = new CreateMultipleProfilesRequest { Profiles = new List<CreateUserProfileRequest>() };
 
         _mockBus
             .Setup(x => x.InvokeAsync<List<UserProfile>>(

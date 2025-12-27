@@ -45,8 +45,8 @@ public class BadgesControllerTests
         var ageGroup = "8-12";
         var badges = new List<BadgeResponse>
         {
-            new BadgeResponse { BadgeId = "badge-1", Name = "Explorer" },
-            new BadgeResponse { BadgeId = "badge-2", Name = "Adventurer" }
+            new BadgeResponse { Id = "badge-1", Title = "Explorer" },
+            new BadgeResponse { Id = "badge-2", Title = "Adventurer" }
         };
 
         _mockBus
@@ -123,7 +123,7 @@ public class BadgesControllerTests
         var ageGroupId = "age-8-12";
         var achievements = new List<AxisAchievementResponse>
         {
-            new AxisAchievementResponse { AxisId = "axis-1", AchievementName = "Brave Heart" }
+            new AxisAchievementResponse { CompassAxisId = "axis-1", CompassAxisName = "Brave Heart" }
         };
 
         _mockBus
@@ -185,7 +185,7 @@ public class BadgesControllerTests
     {
         // Arrange
         var badgeId = "badge-1";
-        var badge = new BadgeResponse { BadgeId = badgeId, Name = "Explorer" };
+        var badge = new BadgeResponse { Id = badgeId, Title = "Explorer" };
 
         _mockBus
             .Setup(x => x.InvokeAsync<BadgeResponse?>(
@@ -200,7 +200,7 @@ public class BadgesControllerTests
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedBadge = okResult.Value.Should().BeOfType<BadgeResponse>().Subject;
-        returnedBadge.BadgeId.Should().Be(badgeId);
+        returnedBadge.Id.Should().Be(badgeId);
     }
 
     [Fact]

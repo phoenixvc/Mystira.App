@@ -240,7 +240,7 @@ public class JsonConverterTests
     #region Complex Object Serialization Tests
 
     [Fact]
-    public void Scenario_WithCoreAxis_SerializesAndDeserializesCorrectly()
+    public void Scenario_WithCompassChange_SerializesAndDeserializesCorrectly()
     {
         // Arrange
         var scenario = new Scenario
@@ -257,8 +257,13 @@ public class JsonConverterTests
                     {
                         new Branch
                         {
-                            Text = "Be brave",
-                            CoreAxisImpact = new CoreAxis("courage")
+                            Choice = "Be brave",
+                            NextSceneId = "scene-2",
+                            CompassChange = new CompassChange
+                            {
+                                Axis = "courage",
+                                Delta = 1.0
+                            }
                         }
                     }
                 }
@@ -273,8 +278,9 @@ public class JsonConverterTests
         deserialized.Should().NotBeNull();
         deserialized!.Scenes.Should().HaveCount(1);
         deserialized.Scenes![0].Branches.Should().HaveCount(1);
-        deserialized.Scenes[0].Branches![0].CoreAxisImpact.Should().NotBeNull();
-        deserialized.Scenes[0].Branches![0].CoreAxisImpact!.Value.Should().Be("courage");
+        deserialized.Scenes[0].Branches![0].Choice.Should().Be("Be brave");
+        deserialized.Scenes[0].Branches![0].CompassChange.Should().NotBeNull();
+        deserialized.Scenes[0].Branches![0].CompassChange!.Axis.Should().Be("courage");
     }
 
     [Fact]

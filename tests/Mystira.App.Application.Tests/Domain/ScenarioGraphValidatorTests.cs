@@ -105,8 +105,8 @@ public class ScenarioGraphValidatorTests
                     Title = "Start",
                     Branches = new List<Branch>
                     {
-                        new Branch { Text = "Go left", NextSceneId = "scene-2" },
-                        new Branch { Text = "Go right", NextSceneId = "scene-3" }
+                        new Branch { Choice = "Go left", NextSceneId = "scene-2" },
+                        new Branch { Choice = "Go right", NextSceneId = "scene-3" }
                     }
                 },
                 new Scene { Id = "scene-2", Title = "Left Path", NextSceneId = "scene-4" },
@@ -185,7 +185,7 @@ public class ScenarioGraphValidatorTests
                     Title = "Start",
                     Branches = new List<Branch>
                     {
-                        new Branch { Text = "Continue", NextSceneId = "scene-2" }
+                        new Branch { Choice = "Continue", NextSceneId = "scene-2" }
                     }
                 },
                 new Scene
@@ -194,7 +194,7 @@ public class ScenarioGraphValidatorTests
                     Title = "Middle",
                     Branches = new List<Branch>
                     {
-                        new Branch { Text = "Loop back", NextSceneId = "scene-1" }
+                        new Branch { Choice = "Loop back", NextSceneId = "scene-1" }
                     }
                 }
             }
@@ -308,8 +308,8 @@ public class ScenarioGraphValidatorTests
                     Title = "Start",
                     Branches = new List<Branch>
                     {
-                        new Branch { Text = "Left", NextSceneId = "scene-2" },
-                        new Branch { Text = "Right", NextSceneId = "scene-3" }
+                        new Branch { Choice = "Left", NextSceneId = "scene-2" },
+                        new Branch { Choice = "Right", NextSceneId = "scene-3" }
                     }
                 },
                 new Scene { Id = "scene-2", Title = "Left", NextSceneId = "scene-4" },
@@ -346,7 +346,7 @@ public class ScenarioGraphValidatorTests
                     NextSceneId = "scene-2",
                     Branches = new List<Branch>
                     {
-                        new Branch { Text = "Alternative", NextSceneId = "scene-3" }
+                        new Branch { Choice = "Alternative", NextSceneId = "scene-3" }
                     }
                 },
                 new Scene { Id = "scene-2", Title = "Default Path", NextSceneId = null },

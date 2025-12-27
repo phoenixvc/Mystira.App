@@ -225,7 +225,7 @@ public class GameSessionsControllerTests
     {
         // Arrange
         var sessionId = "session-1";
-        var session = new GameSession { Id = sessionId, Status = GameSessionStatus.Paused };
+        var session = new GameSession { Id = sessionId, Status = SessionStatus.Paused };
 
         _mockBus
             .Setup(x => x.InvokeAsync<GameSession?>(
@@ -240,7 +240,7 @@ public class GameSessionsControllerTests
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedSession = okResult.Value.Should().BeOfType<GameSession>().Subject;
-        returnedSession.Status.Should().Be(GameSessionStatus.Paused);
+        returnedSession.Status.Should().Be(SessionStatus.Paused);
     }
 
     [Fact]
@@ -286,7 +286,7 @@ public class GameSessionsControllerTests
     {
         // Arrange
         var sessionId = "session-1";
-        var session = new GameSession { Id = sessionId, Status = GameSessionStatus.InProgress };
+        var session = new GameSession { Id = sessionId, Status = SessionStatus.InProgress };
 
         _mockBus
             .Setup(x => x.InvokeAsync<GameSession?>(
@@ -301,7 +301,7 @@ public class GameSessionsControllerTests
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedSession = okResult.Value.Should().BeOfType<GameSession>().Subject;
-        returnedSession.Status.Should().Be(GameSessionStatus.InProgress);
+        returnedSession.Status.Should().Be(SessionStatus.InProgress);
     }
 
     [Fact]
@@ -333,7 +333,7 @@ public class GameSessionsControllerTests
     {
         // Arrange
         var sessionId = "session-1";
-        var session = new GameSession { Id = sessionId, Status = GameSessionStatus.Completed };
+        var session = new GameSession { Id = sessionId, Status = SessionStatus.Completed };
 
         _mockBus
             .Setup(x => x.InvokeAsync<GameSession?>(
@@ -348,7 +348,7 @@ public class GameSessionsControllerTests
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedSession = okResult.Value.Should().BeOfType<GameSession>().Subject;
-        returnedSession.Status.Should().Be(GameSessionStatus.Completed);
+        returnedSession.Status.Should().Be(SessionStatus.Completed);
     }
 
     [Fact]
@@ -567,7 +567,9 @@ public class GameSessionsControllerTests
         var request = new MakeChoiceRequest
         {
             SessionId = "session-1",
-            ChoiceId = "choice-1"
+            SceneId = "scene-1",
+            ChoiceText = "Make a brave choice",
+            NextSceneId = "scene-2"
         };
         var session = new GameSession { Id = "session-1" };
 
@@ -593,7 +595,9 @@ public class GameSessionsControllerTests
         var request = new MakeChoiceRequest
         {
             SessionId = "nonexistent",
-            ChoiceId = "choice-1"
+            SceneId = "scene-1",
+            ChoiceText = "Make a choice",
+            NextSceneId = "scene-2"
         };
 
         _mockBus
@@ -617,7 +621,9 @@ public class GameSessionsControllerTests
         var request = new MakeChoiceRequest
         {
             SessionId = "session-1",
-            ChoiceId = "choice-1"
+            SceneId = "scene-1",
+            ChoiceText = "Make a choice",
+            NextSceneId = "scene-2"
         };
 
         _mockBus
@@ -643,7 +649,7 @@ public class GameSessionsControllerTests
     {
         // Arrange
         var sessionId = "session-1";
-        var stats = new SessionStatsResponse { SessionId = sessionId };
+        var stats = new SessionStatsResponse { TotalChoices = 5 };
 
         _mockBus
             .Setup(x => x.InvokeAsync<SessionStatsResponse?>(
@@ -691,7 +697,7 @@ public class GameSessionsControllerTests
         var sessionId = "session-1";
         var achievements = new List<SessionAchievement>
         {
-            new SessionAchievement { AchievementId = "achievement-1" }
+            new SessionAchievement { Id = "achievement-1", Title = "First Steps" }
         };
 
         _mockBus
@@ -719,7 +725,7 @@ public class GameSessionsControllerTests
     {
         // Arrange
         var sessionId = "session-1";
-        var request = new ProgressSceneRequest { NextSceneId = "scene-2" };
+        var request = new ProgressSceneRequest { SceneId = "scene-2" };
         var session = new GameSession { Id = sessionId };
 
         _mockBus
@@ -742,7 +748,7 @@ public class GameSessionsControllerTests
     {
         // Arrange
         var sessionId = "nonexistent";
-        var request = new ProgressSceneRequest { NextSceneId = "scene-2" };
+        var request = new ProgressSceneRequest { SceneId = "scene-2" };
 
         _mockBus
             .Setup(x => x.InvokeAsync<GameSession?>(
