@@ -49,9 +49,10 @@ public abstract class CqrsIntegrationTestBase : IAsyncDisposable, IDisposable
     {
         var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder();
 
-        // Add in-memory database
+        // Add in-memory database - capture database name ONCE so all scopes use the same database
+        var databaseName = $"TestDb_{Guid.NewGuid()}";
         builder.Services.AddDbContext<MystiraAppDbContext>(options =>
-            options.UseInMemoryDatabase($"TestDb_{Guid.NewGuid()}"));
+            options.UseInMemoryDatabase(databaseName));
 
         builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<MystiraAppDbContext>());
 
