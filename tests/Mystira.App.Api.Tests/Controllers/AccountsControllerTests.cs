@@ -65,7 +65,7 @@ public class AccountsControllerTests
                 It.IsAny<GetAccountByEmailQuery>(),
                 It.IsAny<CancellationToken>(),
                 It.IsAny<TimeSpan?>()))
-            .ReturnsAsync((Account?)null);
+            .ReturnsAsync(default(Account));
 
         // Act
         var result = await _controller.GetAccountByEmail(email);
@@ -133,7 +133,7 @@ public class AccountsControllerTests
                 It.IsAny<GetAccountQuery>(),
                 It.IsAny<CancellationToken>(),
                 It.IsAny<TimeSpan?>()))
-            .ReturnsAsync((Account?)null);
+            .ReturnsAsync(default(Account));
 
         // Act
         var result = await _controller.GetAccountById(accountId);
@@ -276,7 +276,7 @@ public class AccountsControllerTests
                 It.IsAny<UpdateAccountCommand>(),
                 It.IsAny<CancellationToken>(),
                 It.IsAny<TimeSpan?>()))
-            .ReturnsAsync((Account?)null);
+            .ReturnsAsync(default(Account));
 
         // Act
         var result = await _controller.UpdateAccount(accountId, request);

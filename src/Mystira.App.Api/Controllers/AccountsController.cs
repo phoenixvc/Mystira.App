@@ -43,7 +43,7 @@ public class AccountsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting account by email {Email}", email);
+            _logger.LogError(ex, "Error getting account by email");
             return StatusCode(500, "Internal server error");
         }
     }
@@ -67,7 +67,7 @@ public class AccountsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting account by ID {AccountId}", accountId);
+            _logger.LogError(ex, "Error getting account by ID");
             return StatusCode(500, "Internal server error");
         }
     }
@@ -137,7 +137,7 @@ public class AccountsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating account {AccountId}", accountId);
+            _logger.LogError(ex, "Error updating account");
             return StatusCode(500, "Internal server error");
         }
     }
@@ -161,7 +161,7 @@ public class AccountsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting account {AccountId}", accountId);
+            _logger.LogError(ex, "Error deleting account");
             return StatusCode(500, "Internal server error");
         }
     }
@@ -190,7 +190,7 @@ public class AccountsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error linking profiles to account {AccountId}", accountId);
+            _logger.LogError(ex, "Error linking profiles to account");
             return StatusCode(500, "Internal server error");
         }
     }
@@ -209,7 +209,7 @@ public class AccountsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting profiles for account {AccountId}", accountId);
+            _logger.LogError(ex, "Error getting profiles for account");
             return StatusCode(500, "Internal server error");
         }
     }
@@ -228,7 +228,7 @@ public class AccountsController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error validating account {Email}", email);
+            _logger.LogError(ex, "Error validating account");
             return StatusCode(500, "Internal server error");
         }
     }
