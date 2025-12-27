@@ -12,6 +12,7 @@ using Mystira.App.Api.Controllers;
 using Mystira.App.Application.CQRS.Accounts.Commands;
 using Mystira.App.Application.CQRS.GameSessions.Commands;
 using Mystira.App.Application.CQRS.GameSessions.Queries;
+using Mystira.App.Application.Ports.Services;
 using Mystira.App.Domain.Models;
 using Mystira.Contracts.App.Requests.GameSessions;
 using Mystira.Contracts.App.Requests.Scenarios;
@@ -24,20 +25,26 @@ namespace Mystira.App.Api.Tests.Controllers;
 public class GameSessionsControllerTests
 {
     private readonly Mock<IMessageBus> _mockBus;
+    private readonly Mock<ICurrentUserService> _mockCurrentUser;
     private readonly Mock<ILogger<GameSessionsController>> _mockLogger;
     private readonly GameSessionsController _controller;
 
     public GameSessionsControllerTests()
     {
         _mockBus = new Mock<IMessageBus>();
+        _mockCurrentUser = new Mock<ICurrentUserService>();
         _mockLogger = new Mock<ILogger<GameSessionsController>>();
-        _controller = new GameSessionsController(_mockBus.Object, _mockLogger.Object);
+        _controller = new GameSessionsController(_mockBus.Object, _mockCurrentUser.Object, _mockLogger.Object);
 
         SetupControllerContext();
     }
 
     private void SetupControllerContext(string? accountId = "test-account-id", bool isAdmin = false)
     {
+        // Setup ICurrentUserService mock
+        _mockCurrentUser.Setup(x => x.GetAccountId()).Returns(accountId);
+        _mockCurrentUser.Setup(x => x.IsAuthenticated).Returns(accountId != null);
+
         var claims = new List<Claim>();
         if (accountId != null)
         {
