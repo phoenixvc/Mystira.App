@@ -6,38 +6,72 @@
     align-items: center;
     justify-content: center;
     min-height: 100vh;
+    min-height: 100dvh;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     font-family: 'Cormorant Garamond', serif;
     padding: 2rem;
     text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Subtle animated background */
+.loading-experience::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+/* Dark mode support */
+:global(html[data-theme="dark"]) .loading-experience {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+}
+
+:global(html[data-theme="dark"]) .loading-experience::before {
+    background:
+        radial-gradient(ellipse at 30% 20%, rgba(124, 58, 237, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
 }
 
 .loading-container {
-    max-width: 600px;
+    max-width: 400px;
     width: 100%;
-    animation: fadeInUp 0.8s ease-out;
+    animation: fadeInUp 0.6s ease-out;
+    position: relative;
+    z-index: 1;
 }
 
 /* Logo and Title */
 .loading-logo-container {
-    margin-bottom: 3rem;
+    margin-bottom: 2rem;
 }
 
 .loading-logo {
-    width: 400px;
-    height: 400px;
+    width: 120px;
+    height: 120px;
     object-fit: contain;
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+    animation: logoPulse 2s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
 }
 
 .loading-title {
     font-family: 'Cinzel', serif;
-    font-size: 2.5rem;
+    font-size: 2rem;
     font-weight: 700;
-    margin-top: 1rem;
+    margin-top: 0.75rem;
     color: white;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    letter-spacing: 0.1em;
 }
 
 /* Progress Tracker */
@@ -380,16 +414,16 @@
 /* Responsive Design */
 @media (max-width: 768px) {
     .loading-experience {
-        padding: 1rem;
+        padding: 1.5rem 1rem;
     }
 
     .loading-logo {
-        width: 200px;
-        height: 200px;
+        width: 100px;
+        height: 100px;
     }
 
     .loading-title {
-        font-size: 2rem;
+        font-size: 1.75rem;
     }
 
     .progress-stage {
@@ -424,8 +458,13 @@
 }
 
 @media (max-width: 480px) {
+    .loading-logo {
+        width: 80px;
+        height: 80px;
+    }
+
     .loading-title {
-        font-size: 1.75rem;
+        font-size: 1.5rem;
     }
 
     .fallback-title {
@@ -438,5 +477,37 @@
 
     .progress-detail {
         font-size: 0.8rem;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .loading-logo {
+        animation: none;
+    }
+
+    .loading-container {
+        animation: none;
+    }
+
+    .dot {
+        animation: none;
+        opacity: 0.6;
+    }
+
+    .dot:nth-child(2) {
+        opacity: 0.8;
+    }
+
+    .dot:nth-child(3) {
+        opacity: 1;
+    }
+
+    .progress-stage.current {
+        animation: none;
+    }
+
+    .progress-stage.current .stage-icon {
+        animation: none;
     }
 }
