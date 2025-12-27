@@ -95,7 +95,7 @@ public class ScenariosControllerTests
                 It.IsAny<GetPaginatedScenariosQuery>(),
                 It.IsAny<CancellationToken>(),
                 It.IsAny<TimeSpan?>()))
-            .Callback<GetPaginatedScenariosQuery, CancellationToken, TimeSpan?>((q, _, _) => capturedQuery = q)
+            .Callback<object, CancellationToken, TimeSpan?>((q, _, _) => capturedQuery = (GetPaginatedScenariosQuery)q)
             .ReturnsAsync(new ScenarioListResponse());
 
         // Act
