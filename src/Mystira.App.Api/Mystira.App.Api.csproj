@@ -46,6 +46,7 @@
     <PackageReference Include="WolverineFx.Http" Version="5.9.2" />
     <ProjectReference Include="..\Mystira.App.Application\Mystira.App.Application.csproj" />
     <ProjectReference Include="..\Mystira.App.Infrastructure.Discord\Mystira.App.Infrastructure.Discord.csproj" />
+    <ProjectReference Include="..\Mystira.App.Infrastructure.Payments\Mystira.App.Infrastructure.Payments.csproj" />
   </ItemGroup>
 
   <ItemGroup>

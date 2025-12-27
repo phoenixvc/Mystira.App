@@ -28,6 +28,7 @@ using Microsoft.ApplicationInsights.Extensibility;
 using Mystira.App.Infrastructure.Discord;
 using Mystira.App.Infrastructure.Discord.Services;
 using Mystira.App.Infrastructure.StoryProtocol;
+using Mystira.App.Infrastructure.Payments;
 using Mystira.Shared.Configuration;
 using Mystira.Shared.Middleware;
 using Mystira.Shared.Telemetry;
@@ -221,6 +222,9 @@ builder.Services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingSe
 
 // Add Story Protocol Services
 builder.Services.AddStoryProtocolServices(builder.Configuration);
+
+// Add Payment Services (PeachPayments or mock based on configuration)
+builder.Services.AddPaymentServices(builder.Configuration);
 
 // Configure JWT Authentication - Load from secure configuration only
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];
@@ -525,7 +529,8 @@ builder.Services.AddProblemDetails();
 
 // Configure Health Checks
 var healthChecksBuilder = builder.Services.AddHealthChecks()
-    .AddCheck<BlobStorageHealthCheck>("blob_storage");
+    .AddCheck<BlobStorageHealthCheck>("blob_storage")
+    .AddPaymentServiceHealthCheck();
 
 // Only add Cosmos DB health check when using Cosmos DB (not in-memory)
 if (useCosmosDb)
