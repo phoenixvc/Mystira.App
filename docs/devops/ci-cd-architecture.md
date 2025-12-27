@@ -27,15 +27,10 @@ This triggers a full build and deploy to Azure App Service via the workspace rep
 
 | Method | How |
 |--------|-----|
-| **Automatic** | Push to `dev` branch → triggers workspace → workspace deploys SWA |
-| **Manual** | Run `[Deploy] Trigger Workspace` → select `pwa` |
+| **Automatic** | Push to `dev` branch → `[PWA] Deploy to Dev` builds and deploys |
+| **Manual** | Run `[PWA] Deploy to Dev` workflow |
 
-> ⚠️ **Important**: There is **no SWA deployment workflow in this repo**.
->
-> The `[Deploy] Trigger Workspace` workflow only updates the submodule reference in `Mystira.workspace`.
-> The actual SWA build and deployment happens in the **workspace repo**, not here.
->
-> Check [Mystira.workspace](https://github.com/phoenixvc/Mystira.workspace/actions) for deployment status.
+Deployment happens directly from this repo via Azure Static Web Apps.
 
 ### Workspace Event Types Reference
 
@@ -160,7 +155,8 @@ These workflows run tests but **do NOT deploy**:
 
 | Workflow | File | What It Does |
 |----------|------|--------------|
-| `[Deploy] Trigger Workspace` | `deploy-trigger-workspace.yml` | Sends deploy event to `Mystira.workspace` |
+| `[PWA] Deploy to Dev` | `pwa-deploy-dev.yml` | Builds and deploys PWA to dev SWA |
+| `[Deploy] Trigger Workspace` | `deploy-trigger-workspace.yml` | Sends deploy event to `Mystira.workspace` (API only) |
 | `[API] Rollback (Production)` | `api-rollback-prod.yml` | Rollback API to previous version |
 
 ### Supporting Workflows
@@ -176,7 +172,7 @@ These workflows run tests but **do NOT deploy**:
 | Component | Deployed By |
 |-----------|-------------|
 | **API** | `Mystira.workspace` repo (via `repository_dispatch`) |
-| **SWA/PWA** | Azure Static Web Apps CI/CD (monitors this repo directly) |
+| **SWA/PWA** | This repo (`pwa-deploy-dev.yml`) → Azure Static Web App |
 
 ### Infrastructure Workflows
 
@@ -185,29 +181,32 @@ These workflows run tests but **do NOT deploy**:
 
 ## Manual Deployment
 
+### How to Trigger Manual PWA/SWA Deployment
+
+1. Go to **Actions** tab in GitHub
+2. Select **`[PWA] Deploy to Dev`** from the sidebar
+3. Click **"Run workflow"** → **"Run workflow"**
+
 ### How to Trigger Manual API Deployment
 
 1. Go to **Actions** tab in GitHub
 2. Select **`[Deploy] Trigger Workspace`** from the sidebar
 3. Click **"Run workflow"** dropdown
-4. Select component:
-   - `api` - Deploy API only
-   - `pwa` - Update PWA submodule ref (SWA deploys itself)
-   - `all` - Both
+4. Select `api`
 5. Click **"Run workflow"**
 
 ### How SWA/PWA Actually Deploys
 
-> ⚠️ **There is no SWA deployment workflow in this repo.**
->
-> The `[Deploy] Trigger Workspace` workflow with `pwa` selected only updates the submodule reference in `Mystira.workspace` - it does NOT build or deploy the SWA.
->
-> **Actual SWA deployment is handled by `Mystira.workspace`** - check that repo's workflows for the real deployment logic.
+The `[PWA] Deploy to Dev` workflow:
+1. Builds the Blazor WASM app (`dotnet publish`)
+2. Deploys to Azure Static Web App using `Azure/static-web-apps-deploy@v1`
+
+This happens directly in this repo - no workspace involvement needed.
 
 ### Monitor Deployment Progress
 
 - **API deployment**: Check [Mystira.workspace Actions](https://github.com/phoenixvc/Mystira.workspace/actions)
-- **SWA deployment**: Check [Mystira.workspace Actions](https://github.com/phoenixvc/Mystira.workspace/actions) (deployment happens there, not here)
+- **SWA deployment**: Check this repo's Actions → `[PWA] Deploy to Dev`
 
 ### When to Use Manual Deployment
 
