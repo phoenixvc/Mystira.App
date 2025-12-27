@@ -31,13 +31,6 @@ Start-Process powershell -ArgumentList "-NoExit", "-File", "$PSScriptRoot\start-
 # Wait a bit for API to start
 Start-Sleep -Seconds 5
 
-# Start Admin API in background
-Write-Host "Starting Admin API..." -ForegroundColor Green
-Start-Process powershell -ArgumentList "-NoExit", "-File", "$PSScriptRoot\start-admin-api.ps1" -WindowStyle Minimized
-
-# Wait a bit for Admin API to start
-Start-Sleep -Seconds 5
-
 # Start PWA in background
 Write-Host "Starting PWA..." -ForegroundColor Green
 Start-Process powershell -ArgumentList "-NoExit", "-File", "$PSScriptRoot\start-pwa.ps1" -WindowStyle Minimized
@@ -58,8 +51,6 @@ Start-Sleep -Seconds 10
 Write-Host "Opening browsers..." -ForegroundColor Green
 Start-Process "https://localhost:7096/swagger"
 Start-Sleep -Seconds 2
-Start-Process "https://localhost:7096/admin"
-Start-Sleep -Seconds 2
 Start-Process "http://localhost:7000"
 
 Write-Host ""
@@ -69,7 +60,6 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Services:" -ForegroundColor Yellow
 Write-Host "  - API:        https://localhost:7096/swagger" -ForegroundColor White
-Write-Host "  - Admin UI:   https://localhost:7096/admin" -ForegroundColor White
 Write-Host "  - PWA:        http://localhost:7000" -ForegroundColor White
 Write-Host "  - DevHub:     Desktop application (Tauri)" -ForegroundColor White
 Write-Host ""
