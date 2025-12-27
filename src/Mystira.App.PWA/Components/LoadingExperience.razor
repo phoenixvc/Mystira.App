@@ -194,8 +194,12 @@
     {
         if (firstRender)
         {
-            // Set up JavaScript event handlers
+            // IMPORTANT: Set up JavaScript event handlers BEFORE starting
+            // This prevents race conditions where events fire before handlers exist
             await SetupJavaScriptIntegration();
+
+            // Small delay to ensure handlers are registered
+            await Task.Delay(50);
 
             // Start the loading experience
             StartLoadingExperience();
@@ -231,34 +235,34 @@
                     if (stage != null) currentId = stage.Id;
                 }
 
-                // Progress through initial stages linked to actual app startup events
-                // We skip stages that were already completed in static mode
+                // Progress through stages quickly - Blazor is already loaded at this point
+                // These delays are just for visual feedback, not actual work
 
                 if (IsBeforeOrEqual(currentId, "initializing")) {
-                    await Task.Delay(400); // Wait for JS init
+                    await Task.Delay(100);
                     await jsRuntime.InvokeVoidAsync("window.mystiraLoading.updateStage", "checking-connection");
                     currentId = "checking-connection";
                 }
 
                 if (IsBeforeOrEqual(currentId, "checking-connection")) {
-                    await Task.Delay(600); // Simulate connection check
+                    await Task.Delay(150);
                     await jsRuntime.InvokeVoidAsync("window.mystiraLoading.updateStage", "loading-library");
                     currentId = "loading-library";
                 }
 
                 if (IsBeforeOrEqual(currentId, "loading-library")) {
-                    await Task.Delay(1200); // Simulate library loading
+                    await Task.Delay(200);
                     await jsRuntime.InvokeVoidAsync("window.mystiraLoading.updateStage", "preparing-engine");
                     currentId = "preparing-engine";
                 }
 
                 if (IsBeforeOrEqual(currentId, "preparing-engine")) {
-                    await Task.Delay(800); // Simulate engine prep
+                    await Task.Delay(150);
                     await jsRuntime.InvokeVoidAsync("window.mystiraLoading.updateStage", "almost-ready");
                     currentId = "almost-ready";
                 }
 
-                await Task.Delay(300); // Final polish
+                await Task.Delay(100);
                 await jsRuntime.InvokeVoidAsync("window.mystiraLoading.complete");
             });
         }
