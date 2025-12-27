@@ -25,7 +25,7 @@
     <!-- Mapperly for compile-time object mapping (Roslyn source generator) -->
     <PackageReference Include="Riok.Mapperly" Version="4.3.1" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.12.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.11" />
     <PackageReference Include="NJsonSchema" Version="11.5.2" />
     <!-- Ardalis.Specification for composable query patterns (per workspace ADR-0014) -->
