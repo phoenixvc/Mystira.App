@@ -387,6 +387,10 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// Register HttpContextAccessor and CurrentUserService for user context access
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<Mystira.App.Application.Ports.Services.ICurrentUserService, Mystira.App.Api.Services.CurrentUserService>();
+
 // Register repositories
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>)); // Generic repository
 builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();

@@ -1,9 +1,8 @@
-using System.Security.Claims;
-
 namespace Mystira.App.Application.Ports.Services;
 
 /// <summary>
-/// Service for accessing the current authenticated user's information
+/// Service for accessing the current authenticated user's information.
+/// Implementation should use Mystira.Shared.Extensions.ClaimsPrincipalExtensions.
 /// </summary>
 public interface ICurrentUserService
 {
@@ -28,37 +27,17 @@ public interface ICurrentUserService
     string? GetClaim(string claimType);
 
     /// <summary>
+    /// Gets the current user's email address
+    /// </summary>
+    string? GetEmail();
+
+    /// <summary>
+    /// Gets the current user's display name
+    /// </summary>
+    string? GetDisplayName();
+
+    /// <summary>
     /// Gets whether the current user is authenticated
     /// </summary>
     bool IsAuthenticated { get; }
-}
-
-/// <summary>
-/// Extension methods for ClaimsPrincipal
-/// </summary>
-public static class ClaimsPrincipalExtensions
-{
-    /// <summary>
-    /// Gets the account ID from common claim types
-    /// </summary>
-    /// <param name="principal">The claims principal</param>
-    /// <returns>The account ID, or null if not found</returns>
-    public static string? GetAccountId(this ClaimsPrincipal principal)
-    {
-        return principal.FindFirst("sub")?.Value
-            ?? principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
-            ?? principal.FindFirst("account_id")?.Value;
-    }
-
-    /// <summary>
-    /// Gets the account ID, throwing if not authenticated
-    /// </summary>
-    /// <param name="principal">The claims principal</param>
-    /// <returns>The account ID</returns>
-    /// <exception cref="UnauthorizedAccessException">Thrown when account ID is not found</exception>
-    public static string GetRequiredAccountId(this ClaimsPrincipal principal)
-    {
-        return principal.GetAccountId()
-            ?? throw new UnauthorizedAccessException("User is not authenticated or account ID not found");
-    }
 }

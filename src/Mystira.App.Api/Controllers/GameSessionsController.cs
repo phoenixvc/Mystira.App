@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.Accounts.Commands;
 using Mystira.App.Application.CQRS.GameSessions.Commands;
 using Mystira.App.Application.CQRS.GameSessions.Queries;
+using Mystira.App.Application.Ports.Services;
 using Mystira.Contracts.App.Requests.GameSessions;
 using Mystira.Contracts.App.Requests.Scenarios;
 using Mystira.Contracts.App.Responses.GameSessions;
@@ -22,13 +23,16 @@ namespace Mystira.App.Api.Controllers;
 public class GameSessionsController : ControllerBase
 {
     private readonly IMessageBus _bus;
+    private readonly ICurrentUserService _currentUser;
     private readonly ILogger<GameSessionsController> _logger;
 
     public GameSessionsController(
         IMessageBus bus,
+        ICurrentUserService currentUser,
         ILogger<GameSessionsController> logger)
     {
         _bus = bus;
+        _currentUser = currentUser;
         _logger = logger;
     }
 
@@ -50,10 +54,7 @@ public class GameSessionsController : ControllerBase
                 });
             }
 
-            var accountId = User.FindFirst("sub")?.Value
-                ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                ?? User.FindFirst("account_id")?.Value;
-
+            var accountId = _currentUser.GetAccountId();
             if (string.IsNullOrEmpty(accountId))
             {
                 return Unauthorized(new ErrorResponse
@@ -96,10 +97,7 @@ public class GameSessionsController : ControllerBase
     {
         try
         {
-            var accountId = User.FindFirst("sub")?.Value
-                ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                ?? User.FindFirst("account_id")?.Value;
-
+            var accountId = _currentUser.GetAccountId();
             if (string.IsNullOrEmpty(accountId))
             {
                 return Unauthorized(new ErrorResponse
@@ -142,10 +140,7 @@ public class GameSessionsController : ControllerBase
     {
         try
         {
-            var accountId = User.FindFirst("sub")?.Value
-                ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                ?? User.FindFirst("account_id")?.Value;
-
+            var accountId = _currentUser.GetAccountId();
             if (string.IsNullOrEmpty(accountId))
             {
                 return Unauthorized(new ErrorResponse
@@ -247,10 +242,7 @@ public class GameSessionsController : ControllerBase
     {
         try
         {
-            var requestingAccountId = User.FindFirst("sub")?.Value
-                ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                ?? User.FindFirst("account_id")?.Value;
-
+            var requestingAccountId = _currentUser.GetAccountId();
             if (string.IsNullOrEmpty(requestingAccountId))
             {
                 return Unauthorized(new ErrorResponse
