@@ -2,7 +2,7 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Mystira.App.Shared.Telemetry;
+using Mystira.Shared.Telemetry;
 using System.Diagnostics;
 
 namespace Mystira.App.Application.Tests.Telemetry;

@@ -9,7 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Moq;
-using Mystira.App.Shared.Services;
+using Mystira.Shared.Authentication;
 using Xunit;
 
 namespace Mystira.App.Api.Tests.Services;

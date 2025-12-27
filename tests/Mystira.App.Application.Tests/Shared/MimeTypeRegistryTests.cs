@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Mystira.App.Shared.Media;
+using Mystira.Shared.Media;
 using Xunit;
 
 namespace Mystira.App.Application.Tests.Shared;

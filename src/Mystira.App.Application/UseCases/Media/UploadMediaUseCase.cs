@@ -5,7 +5,7 @@ using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Ports.Storage;
 using Mystira.Contracts.App.Requests.Media;
 using Mystira.App.Domain.Models;
-using Mystira.App.Shared.Media;
+using Mystira.Shared.Media;
 
 namespace Mystira.App.Application.UseCases.Media;
 
