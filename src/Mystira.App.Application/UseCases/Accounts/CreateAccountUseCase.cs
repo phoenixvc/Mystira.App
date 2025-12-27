@@ -41,7 +41,7 @@ public class CreateAccountUseCase
         var account = new Account
         {
             Id = Guid.NewGuid().ToString(),
-            Auth0UserId = request.Auth0UserId,
+            ExternalUserId = request.ExternalUserId,
             Email = request.Email,
             DisplayName = request.DisplayName ?? request.Email,
             Role = "Guest",

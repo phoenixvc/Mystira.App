@@ -16,11 +16,11 @@ public class AccountSpecificationsTests
     {
         _accounts = new List<Account>
         {
-            CreateAccount("1", "user1@example.com", "auth0|user1", true),
-            CreateAccount("2", "user2@example.com", "auth0|user2", true),
-            CreateAccount("3", "admin@example.com", "auth0|admin", true),
-            CreateAccount("4", "inactive@example.com", "auth0|inactive", false),
-            CreateAccount("5", "test@test.com", "auth0|test", true),
+            CreateAccount("1", "user1@example.com", "entra|user1", true),
+            CreateAccount("2", "user2@example.com", "entra|user2", true),
+            CreateAccount("3", "admin@example.com", "entra|admin", true),
+            CreateAccount("4", "inactive@example.com", "entra|inactive", false),
+            CreateAccount("5", "test@test.com", "entra|test", true),
         };
     }
 
@@ -66,10 +66,10 @@ public class AccountSpecificationsTests
     }
 
     [Fact]
-    public void AccountByAuth0UserIdSpec_ShouldMatchExactId()
+    public void AccountByExternalUserIdSpec_ShouldMatchExactId()
     {
         // Arrange
-        var spec = new AccountByAuth0UserIdSpec("auth0|admin");
+        var spec = new AccountByExternalUserIdSpec("entra|admin");
 
         // Act
         var result = _accounts.AsQueryable().Where(spec.WhereExpressions.First().Filter).ToList();
@@ -152,13 +152,13 @@ public class AccountSpecificationsTests
         result.Should().OnlyContain(a => a.Email.Contains("user"));
     }
 
-    private static Account CreateAccount(string id, string email, string auth0UserId, bool isActive)
+    private static Account CreateAccount(string id, string email, string externalUserId, bool isActive)
     {
         return new Account
         {
             Id = id,
             Email = email,
-            Auth0UserId = auth0UserId,
+            ExternalUserId = externalUserId,
             Subscription = new SubscriptionDetails { IsActive = isActive },
             CreatedAt = DateTime.UtcNow,
             LastLoginAt = DateTime.UtcNow

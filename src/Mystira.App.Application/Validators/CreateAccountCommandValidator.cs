@@ -10,11 +10,11 @@ public class CreateAccountCommandValidator : AbstractValidator<CreateAccountComm
 {
     public CreateAccountCommandValidator()
     {
-        RuleFor(x => x.Auth0UserId)
+        RuleFor(x => x.ExternalUserId)
             .NotEmpty()
-            .WithMessage("Auth0 user ID is required")
+            .WithMessage("External user ID is required")
             .MaximumLength(128)
-            .WithMessage("Auth0 user ID cannot exceed 128 characters");
+            .WithMessage("External user ID cannot exceed 128 characters");
 
         RuleFor(x => x.Email)
             .NotEmpty()

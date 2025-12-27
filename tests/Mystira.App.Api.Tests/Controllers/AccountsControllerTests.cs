@@ -152,7 +152,7 @@ public class AccountsControllerTests
         // Arrange
         var request = new CreateAccountRequest
         {
-            Auth0UserId = "auth0|123",
+            ExternalUserId = "entra|123",
             Email = "new@example.com",
             DisplayName = "New User"
         };
@@ -181,7 +181,7 @@ public class AccountsControllerTests
         // Arrange
         var request = new CreateAccountRequest
         {
-            Auth0UserId = "auth0|123",
+            ExternalUserId = "entra|123",
             Email = "",
             DisplayName = "New User"
         };
@@ -194,12 +194,12 @@ public class AccountsControllerTests
     }
 
     [Fact]
-    public async Task CreateAccount_WithMissingAuth0UserId_ReturnsBadRequest()
+    public async Task CreateAccount_WithMissingExternalUserId_ReturnsBadRequest()
     {
         // Arrange
         var request = new CreateAccountRequest
         {
-            Auth0UserId = "",
+            ExternalUserId = "",
             Email = "test@example.com",
             DisplayName = "New User"
         };
@@ -217,7 +217,7 @@ public class AccountsControllerTests
         // Arrange
         var request = new CreateAccountRequest
         {
-            Auth0UserId = "auth0|123",
+            ExternalUserId = "entra|123",
             Email = "existing@example.com",
             DisplayName = "New User"
         };

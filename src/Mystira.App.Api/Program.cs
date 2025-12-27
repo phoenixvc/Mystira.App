@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Mystira.App.Api.Adapters;
-using Mystira.App.Api.Services;
 using Mystira.App.Application.Behaviors;
 using Mystira.App.Application.Ports;
 using Mystira.App.Application.Ports.Data;
@@ -467,13 +466,11 @@ builder.Services.AddScoped<DownloadMediaUseCase>();
 
 // Register application services
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
-builder.Services.AddScoped<Mystira.App.Api.Services.IJwtService, Mystira.App.Api.Services.JwtService>();
 // Domain services for scoring and awards
 builder.Services.AddScoped<IAxisScoringService, AxisScoringService>();
 builder.Services.AddScoped<IBadgeAwardingService, BadgeAwardingService>();
 
 // Register Application.Ports adapters for CQRS handlers
-builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, JwtServiceAdapter>();
 builder.Services.AddScoped<IHealthCheckPort, HealthCheckPortAdapter>();
 builder.Services.AddScoped<IMediaMetadataService, MediaMetadataService>();
 

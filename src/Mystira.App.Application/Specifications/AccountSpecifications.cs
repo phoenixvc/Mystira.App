@@ -16,14 +16,14 @@ public sealed class AccountByEmailSpec : SingleEntitySpecification<Account>
 }
 
 /// <summary>
-/// Specification to find an account by Auth0 user ID.
+/// Specification to find an account by external user ID (Entra External ID).
 /// Returns a single result.
 /// </summary>
-public sealed class AccountByAuth0UserIdSpec : SingleEntitySpecification<Account>
+public sealed class AccountByExternalUserIdSpec : SingleEntitySpecification<Account>
 {
-    public AccountByAuth0UserIdSpec(string auth0UserId)
+    public AccountByExternalUserIdSpec(string externalUserId)
     {
-        Query.Where(a => a.Auth0UserId == auth0UserId);
+        Query.Where(a => a.ExternalUserId == externalUserId);
     }
 }
 

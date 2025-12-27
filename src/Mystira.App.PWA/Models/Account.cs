@@ -3,7 +3,7 @@ namespace Mystira.App.PWA.Models;
 public class Account
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
-    public string Auth0UserId { get; set; } = string.Empty; // Auth0 user identifier
+    public string ExternalUserId { get; set; } = string.Empty; // External identity provider user identifier (Entra External ID)
     public string Email { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public List<string> UserProfileIds { get; set; } = new(); // Can have multiple user profiles

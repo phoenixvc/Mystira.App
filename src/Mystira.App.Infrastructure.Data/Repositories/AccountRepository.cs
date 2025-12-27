@@ -19,9 +19,9 @@ public class AccountRepository : Repository<Account>, IAccountRepository
             .FirstOrDefaultAsync(a => a.Email.ToLower() == email.ToLower());
     }
 
-    public async Task<Account?> GetByAuth0UserIdAsync(string auth0UserId)
+    public async Task<Account?> GetByExternalUserIdAsync(string externalUserId)
     {
-        return await _dbSet.FirstOrDefaultAsync(a => a.Auth0UserId == auth0UserId);
+        return await _dbSet.FirstOrDefaultAsync(a => a.ExternalUserId == externalUserId);
     }
 
     public async Task<bool> ExistsByEmailAsync(string email)
