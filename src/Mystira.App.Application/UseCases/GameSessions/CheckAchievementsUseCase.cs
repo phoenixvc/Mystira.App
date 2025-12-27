@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Mystira.App.Application.Helpers;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Specifications;
 using Mystira.App.Domain.Models;
@@ -126,28 +127,6 @@ public class CheckAchievementsUseCase
         }
 
         return achievements;
-    }
-}
-
-// Extension method for title case conversion
-internal static class StringExtensions
-{
-    public static string ToTitleCase(this string input)
-    {
-        if (string.IsNullOrEmpty(input))
-        {
-            return input;
-        }
-
-        var words = input.Split(' ', '_', '-');
-        for (int i = 0; i < words.Length; i++)
-        {
-            if (words[i].Length > 0)
-            {
-                words[i] = char.ToUpper(words[i][0]) + words[i].Substring(1).ToLower();
-            }
-        }
-        return string.Join(" ", words);
     }
 }
 
