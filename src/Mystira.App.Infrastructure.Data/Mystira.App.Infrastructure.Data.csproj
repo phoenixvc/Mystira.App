@@ -22,7 +22,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" Version="9.0.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.11" />
-    <PackageReference Include="JsonSchema.Net" Version="7.2.3" />
+    <PackageReference Include="JsonSchema.Net" Version="7.4.0" />
     <!-- Ardalis.Specification EF Core integration (per workspace ADR-0014) -->
     <PackageReference Include="Ardalis.Specification.EntityFrameworkCore" Version="9.3.1" />
     <!-- Polly for resilience patterns (per workspace ADR-0014) -->
