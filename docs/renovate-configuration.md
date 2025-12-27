@@ -63,7 +63,10 @@ Internal `Mystira.*` packages should be updated through the following process:
 
 After modifying `renovate.json`:
 
-1. Validate JSON syntax: `python3 -m json.tool renovate.json`
+1. Validate JSON syntax using one of these methods:
+   - `python3 -m json.tool renovate.json` (if Python 3 is available)
+   - `jq . renovate.json` (if jq is installed)
+   - Use any online JSON validator
 2. Check against schema: The `$schema` property provides IntelliSense in most editors
 3. Trigger a Renovate run by checking the box in the Dependency Dashboard issue
 
