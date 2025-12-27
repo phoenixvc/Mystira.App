@@ -10,20 +10,21 @@
   "packageRules": [
     {
       "matchManagers": ["nuget"],
-      "matchPackagePatterns": ["^Mystira\\."],
-      "groupName": "Mystira packages",
-      "schedule": ["at any time"]
+      "matchPackageNames": ["Mystira.Shared", "Mystira.Contracts"],
+      "enabled": false,
+      "description": "Disable updates for internal Mystira packages managed separately"
+    },
+    {
+      "matchManagers": ["nuget"],
+      "matchPackagePatterns": ["^Mystira\\.App\\."],
+      "groupName": "Mystira.App internal packages",
+      "enabled": false,
+      "description": "Disable updates for internal Mystira.App packages"
     },
     {
       "matchManagers": ["nuget"],
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": false
     }
-  ],
-  "nuget": {
-    "registryUrls": [
-      "https://api.nuget.org/v3/index.json",
-      "https://nuget.pkg.github.com/phoenixvc/index.json"
-    ]
-  }
+  ]
 }
