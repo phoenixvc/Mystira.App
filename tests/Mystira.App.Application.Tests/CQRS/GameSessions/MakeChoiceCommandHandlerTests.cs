@@ -274,7 +274,7 @@ public class MakeChoiceCommandHandlerTests
         // Assert
         result.Should().NotBeNull();
         result!.ElapsedTime.Should().BeGreaterThan(TimeSpan.Zero);
-        result.ElapsedTime.TotalMinutes.Should().BeGreaterOrEqualTo(4.9);
+        result.ElapsedTime.TotalMinutes.Should().BeGreaterThanOrEqualTo(4.9);
     }
 
     [Fact]

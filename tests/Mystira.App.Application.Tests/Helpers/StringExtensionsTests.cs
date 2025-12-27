@@ -55,7 +55,7 @@ public class StringExtensionsTests
 
         // Assert
         result.Should().EndWith("...");
-        result.Length.Should().BeLessOrEqualTo(20);
+        result.Length.Should().BeLessThanOrEqualTo(20);
     }
 
     [Theory]

@@ -269,8 +269,8 @@ public class StartGameSessionCommandHandlerTests
         var scenario = CreateTestScenario();
         scenario.CoreAxes = new List<CoreAxis>
         {
-            CoreAxis.Parse("courage"),
-            CoreAxis.Parse("wisdom")
+            CoreAxis.Parse("courage")!,
+            CoreAxis.Parse("wisdom")!
         };
 
         _sessionRepository.Setup(r => r.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId))
