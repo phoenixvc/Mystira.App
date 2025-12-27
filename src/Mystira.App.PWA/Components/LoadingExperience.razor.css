@@ -124,3 +124,35 @@
         font-size: 1rem;
     }
 }
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .loading-logo {
+        animation: none;
+    }
+
+    .loading-container {
+        animation: none;
+    }
+
+    .dot {
+        animation: none;
+        opacity: 0.6;
+    }
+
+    .dot:nth-child(2) {
+        opacity: 0.8;
+    }
+
+    .dot:nth-child(3) {
+        opacity: 1;
+    }
+
+    .progress-stage.current {
+        animation: none;
+    }
+
+    .progress-stage.current .stage-icon {
+        animation: none;
+    }
+}
