@@ -45,9 +45,9 @@ public class AgeGroupsControllerTests
         // Arrange
         var ageGroups = new List<AgeGroupDefinition>
         {
-            new AgeGroupDefinition { Id = "kids", Name = "Kids", MinAge = 5, MaxAge = 12 },
-            new AgeGroupDefinition { Id = "teens", Name = "Teens", MinAge = 13, MaxAge = 17 },
-            new AgeGroupDefinition { Id = "adults", Name = "Adults", MinAge = 18, MaxAge = null }
+            new AgeGroupDefinition { Id = "kids", Name = "Kids", MinimumAge = 5, MaximumAge = 12 },
+            new AgeGroupDefinition { Id = "teens", Name = "Teens", MinimumAge = 13, MaximumAge = 17 },
+            new AgeGroupDefinition { Id = "adults", Name = "Adults", MinimumAge = 18, MaximumAge = 99 }
         };
 
         _mockBus
@@ -95,7 +95,7 @@ public class AgeGroupsControllerTests
     {
         // Arrange
         var ageGroupId = "kids";
-        var ageGroup = new AgeGroupDefinition { Id = ageGroupId, Name = "Kids", MinAge = 5, MaxAge = 12 };
+        var ageGroup = new AgeGroupDefinition { Id = ageGroupId, Name = "Kids", MinimumAge = 5, MaximumAge = 12 };
 
         _mockBus
             .Setup(x => x.InvokeAsync<AgeGroupDefinition?>(

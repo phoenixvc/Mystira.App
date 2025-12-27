@@ -400,8 +400,8 @@ public class AccountsControllerTests
         var accountId = "acc-1";
         var profiles = new List<UserProfile>
         {
-            new UserProfile { Id = "profile-1", DisplayName = "Player 1" },
-            new UserProfile { Id = "profile-2", DisplayName = "Player 2" }
+            new UserProfile { Id = "profile-1", Name = "Player 1" },
+            new UserProfile { Id = "profile-2", Name = "Player 2" }
         };
 
         _mockBus
