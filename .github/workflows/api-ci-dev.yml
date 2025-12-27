@@ -1,8 +1,8 @@
-name: API CI - Dev Environment
+name: "[API] Build & Test (Dev)"
 
 # This workflow handles CI (build/test) only.
 # Deployment is triggered via repository_dispatch to Mystira.workspace.
-# See: trigger-workspace-deploy.yml
+# See: deploy-trigger-workspace.yml
 
 on:
   push:
@@ -16,7 +16,7 @@ on:
       - "src/Mystira.App.Infrastructure.Discord/**"
       - "src/Mystira.App.Infrastructure.StoryProtocol/**"
       - "src/Mystira.App.Shared/**"
-      - ".github/workflows/mystira-app-api-cicd-dev.yml"
+      - ".github/workflows/api-ci-dev.yml"
   pull_request:
     branches: [dev]
     types: [opened, synchronize, reopened]
@@ -29,7 +29,7 @@ on:
       - "src/Mystira.App.Infrastructure.Discord/**"
       - "src/Mystira.App.Infrastructure.StoryProtocol/**"
       - "src/Mystira.App.Shared/**"
-      - ".github/workflows/mystira-app-api-cicd-dev.yml"
+      - ".github/workflows/api-ci-dev.yml"
   workflow_dispatch:
 
 permissions:
@@ -87,4 +87,4 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Note:** Deployment is handled by [Mystira.workspace](https://github.com/phoenixvc/Mystira.workspace) via repository_dispatch." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "See [trigger-workspace-deploy.yml](.github/workflows/trigger-workspace-deploy.yml) for deployment trigger configuration." >> $GITHUB_STEP_SUMMARY
+          echo "See [deploy-trigger-workspace.yml](.github/workflows/deploy-trigger-workspace.yml) for deployment trigger configuration." >> $GITHUB_STEP_SUMMARY

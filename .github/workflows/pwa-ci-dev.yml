@@ -1,21 +1,21 @@
-name: PWA CI - Dev Environment
+name: "[PWA] Build & Test (Dev)"
 
 # This workflow handles CI (build/test) only.
 # Deployment is triggered via repository_dispatch to Mystira.workspace.
-# See: trigger-workspace-deploy.yml
+# See: deploy-trigger-workspace.yml
 
 on:
   push:
     branches: [dev]
     paths:
       - "src/Mystira.App.PWA/**"
-      - ".github/workflows/mystira-app-pwa-cicd-dev.yml"
+      - ".github/workflows/pwa-ci-dev.yml"
   pull_request:
     branches: [dev]
     types: [opened, synchronize, reopened]
     paths:
       - "src/Mystira.App.PWA/**"
-      - ".github/workflows/mystira-app-pwa-cicd-dev.yml"
+      - ".github/workflows/pwa-ci-dev.yml"
   workflow_dispatch:
 
 permissions:
@@ -111,4 +111,4 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Note:** Deployment is handled by [Mystira.workspace](https://github.com/phoenixvc/Mystira.workspace) via repository_dispatch." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "See [trigger-workspace-deploy.yml](.github/workflows/trigger-workspace-deploy.yml) for deployment trigger configuration." >> $GITHUB_STEP_SUMMARY
+          echo "See [deploy-trigger-workspace.yml](.github/workflows/deploy-trigger-workspace.yml) for deployment trigger configuration." >> $GITHUB_STEP_SUMMARY
