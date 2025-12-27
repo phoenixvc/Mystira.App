@@ -1,10 +1,10 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Mystira.App.Application.Ports.Health;
+using Mystira.Contracts.App.Ports.Health;
 
 namespace Mystira.App.Api.Adapters;
 
 /// <summary>
-/// Adapter that adapts ASP.NET Core HealthCheckService to Application.Ports.Health.IHealthCheckPort
+/// Adapter that adapts ASP.NET Core HealthCheckService to Mystira.Contracts.App.Ports.Health.IHealthCheckPort
 /// </summary>
 public class HealthCheckPortAdapter : IHealthCheckPort
 {
@@ -15,17 +15,17 @@ public class HealthCheckPortAdapter : IHealthCheckPort
         _healthCheckService = healthCheckService;
     }
 
-    public async Task<Application.Ports.Health.HealthReport> CheckHealthAsync(CancellationToken cancellationToken = default)
+    public async Task<Mystira.Contracts.App.Ports.Health.HealthReport> CheckHealthAsync(CancellationToken cancellationToken = default)
     {
         var aspNetHealthReport = await _healthCheckService.CheckHealthAsync(cancellationToken);
 
-        return new Application.Ports.Health.HealthReport
+        return new Mystira.Contracts.App.Ports.Health.HealthReport
         {
             Status = aspNetHealthReport.Status.ToString(),
             Duration = aspNetHealthReport.TotalDuration,
             Entries = aspNetHealthReport.Entries.ToDictionary(
                 e => e.Key,
-                e => new Application.Ports.Health.HealthCheckEntry
+                e => new Mystira.Contracts.App.Ports.Health.HealthCheckEntry
                 {
                     Status = e.Value.Status.ToString(),
                     Description = e.Value.Description,
