@@ -5,6 +5,7 @@ using Mystira.App.Application.CQRS.GameSessions.Commands;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
 using Mystira.Contracts.App.Models;
+using Mystira.Contracts.App.Requests.GameSessions;
 
 namespace Mystira.App.Application.Tests.CQRS.GameSessions;
 

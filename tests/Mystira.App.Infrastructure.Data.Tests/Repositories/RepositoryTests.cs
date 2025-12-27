@@ -181,7 +181,6 @@ public class RepositoryTests : IDisposable
         {
             Id = Guid.NewGuid().ToString(),
             Name = "Test Badge",
-            Description = "Test Description",
             Axis = axis ?? "default",
             Threshold = 3.0f,
             Message = "Test message"
