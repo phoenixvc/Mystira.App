@@ -1,462 +1,115 @@
-/* LoadingExperience.css - Enhanced PWA loading experience styles */
+/* Loading screen - clean but with character */
 
-.loading-experience {
+.loading-screen {
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
     min-height: 100dvh;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    font-family: 'Cormorant Garamond', serif;
-    padding: 2rem;
-    text-align: center;
     position: relative;
     overflow: hidden;
 }
 
-/* Subtle animated background */
-.loading-experience::before {
+/* Subtle animated glow */
+.loading-screen::before {
     content: '';
     position: absolute;
     inset: 0;
     background:
-        radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-        radial-gradient(ellipse at 70% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
+        radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
     pointer-events: none;
 }
 
-/* Dark mode support */
-:global(html[data-theme="dark"]) .loading-experience {
+/* Dark mode */
+:global(html[data-theme="dark"]) .loading-screen {
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
 }
 
-:global(html[data-theme="dark"]) .loading-experience::before {
+:global(html[data-theme="dark"]) .loading-screen::before {
     background:
-        radial-gradient(ellipse at 30% 20%, rgba(124, 58, 237, 0.15) 0%, transparent 50%),
-        radial-gradient(ellipse at 70% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%);
+        radial-gradient(ellipse at 30% 20%, rgba(124, 58, 237, 0.2) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 50%);
 }
 
-.loading-container {
-    max-width: 400px;
-    width: 100%;
-    animation: fadeInUp 0.6s ease-out;
+.loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
     position: relative;
     z-index: 1;
+    animation: fadeIn 0.5s ease-out;
 }
 
-/* Logo and Title */
-.loading-logo-container {
-    margin-bottom: 2rem;
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .loading-logo {
-    width: 120px;
-    height: 120px;
+    width: 100px;
+    height: 100px;
     object-fit: contain;
+    border-radius: 20px;
     filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
-    animation: logoPulse 2s ease-in-out infinite;
-}
-
-@keyframes logoPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
 }
 
 .loading-title {
     font-family: 'Cinzel', serif;
     font-size: 2rem;
-    font-weight: 700;
-    margin-top: 0.75rem;
-    color: white;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    letter-spacing: 0.1em;
-}
-
-/* Progress Tracker */
-.progress-tracker {
-    width: 100%;
-    margin-bottom: 2rem;
-}
-
-.progress-stage {
-    display: flex;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    backdrop-filter: blur(10px);
-    border: 2px solid transparent;
-    transition: all 0.3s ease;
-}
-
-.progress-stage.pending {
-    opacity: 0.6;
-    border-color: rgba(255, 255, 255, 0.2);
-}
-
-.progress-stage.current {
-    border-color: #ffd700;
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
-    animation: pulse 2s infinite;
-}
-
-.progress-stage.completed {
-    border-color: #4CAF50;
-    background: rgba(76, 175, 80, 0.2);
-}
-
-.stage-icon {
-    width: 50px;
-    height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    margin-right: 1rem;
-    flex-shrink: 0;
-    font-size: 1.2rem;
-}
-
-.progress-stage.completed .stage-icon {
-    background: #4CAF50;
-}
-
-.progress-stage.current .stage-icon {
-    background: #ffd700;
-    animation: iconGlow 1.5s ease-in-out infinite alternate;
-}
-
-.stage-content {
-    flex: 1;
-    text-align: left;
-}
-
-.stage-message {
-    font-size: 1.1rem;
     font-weight: 600;
-    margin-bottom: 0.5rem;
     color: white;
+    margin: 0;
+    letter-spacing: 0.1em;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.progress-detail {
-    font-size: 0.9rem;
-    opacity: 0.8;
-    font-weight: normal;
-}
-
-.progress-bar {
-    width: 100%;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #ffd700, #ffed4e);
-    border-radius: 2px;
-    transition: width 0.3s ease;
-    animation: progressShimmer 2s infinite;
-}
-
-.stage-check {
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #4CAF50;
-    border-radius: 50%;
-    color: white;
-    font-size: 0.8rem;
-    margin-left: 1rem;
-    flex-shrink: 0;
-}
-
-/* Loading Animation */
-.loading-animation {
+.loading-status {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.5rem;
-    margin: 2rem 0;
+    gap: 1rem;
+    margin-top: 1.5rem;
 }
 
 .loading-spinner {
-    width: 50px;
-    height: 50px;
-    border: 4px solid rgba(255, 255, 255, 0.3);
-    border-top: 4px solid #ffd700;
+    width: 36px;
+    height: 36px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #ffd700;
     border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-.loading-dots {
-    display: flex;
-    gap: 8px;
-}
-
-.dot {
-    width: 12px;
-    height: 12px;
-    background: white;
-    border-radius: 50%;
-    animation: dotBounce 1.4s infinite ease-in-out both;
-}
-
-.dot:nth-child(1) { animation-delay: -0.32s; }
-.dot:nth-child(2) { animation-delay: -0.16s; }
-.dot:nth-child(3) { animation-delay: 0s; }
-
-/* Timeout Warning */
-.timeout-warning {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    background: rgba(255, 193, 7, 0.2);
-    border: 2px solid rgba(255, 193, 7, 0.5);
-    border-radius: 12px;
-    margin-top: 2rem;
-    animation: fadeIn 0.5s ease;
-}
-
-.warning-icon {
-    font-size: 1.5rem;
-    color: #ffc107;
-}
-
-.warning-message {
-    margin: 0;
-    font-size: 1rem;
-    opacity: 0.9;
-}
-
-/* Fallback Actions */
-.fallback-container {
-    max-width: 500px;
-    width: 100%;
-    animation: fadeInUp 0.8s ease-out;
-}
-
-.fallback-logo {
-    margin-bottom: 2rem;
-}
-
-.fallback-logo-img {
-    width: 80px;
-    height: 80px;
-    object-fit: contain;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-}
-
-.fallback-title {
-    font-family: 'Cinzel', serif;
-    font-size: 2rem;
-    font-weight: 600;
-    margin: 1rem 0 0.5rem 0;
-    color: white;
-}
-
-.fallback-subtitle {
-    font-size: 1.1rem;
-    opacity: 0.8;
-    margin: 0;
-}
-
-.fallback-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin: 2rem 0;
-}
-
-.fallback-action-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 1.5rem 1rem;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-decoration: none;
-    color: white;
-    backdrop-filter: blur(10px);
-    position: relative;
-    overflow: hidden;
-}
-
-.fallback-action-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.5s ease;
-}
-
-.fallback-action-btn:hover::before {
-    left: 100%;
-}
-
-.fallback-action-btn.primary {
-    background: linear-gradient(135deg, #4CAF50, #45a049);
-}
-
-.fallback-action-btn.secondary {
-    background: linear-gradient(135deg, #2196F3, #1976D2);
-}
-
-.fallback-action-btn.warning {
-    background: linear-gradient(135deg, #FF9800, #F57C00);
-}
-
-.fallback-action-btn.info {
-    background: linear-gradient(135deg, #9C27B0, #7B1FA2);
-}
-
-.fallback-action-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-}
-
-.fallback-action-btn i {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-}
-
-.fallback-action-btn span {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 0.25rem;
-}
-
-.fallback-action-btn small {
-    font-size: 0.8rem;
-    opacity: 0.8;
-}
-
-.elapsed-time {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    font-size: 0.9rem;
-    opacity: 0.8;
-}
-
-/* Animations */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-
-@keyframes pulse {
-    0%, 100% {
-        box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
-    }
-    50% {
-        box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
-    }
-}
-
-@keyframes iconGlow {
-    0% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.5); }
-    100% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.8); }
+    animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    to { transform: rotate(360deg); }
 }
 
-@keyframes dotBounce {
-    0%, 80%, 100% {
-        transform: scale(0);
-    }
-    40% {
-        transform: scale(1);
-    }
+.loading-message {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+    min-height: 1.5em;
+    text-align: center;
 }
 
-@keyframes progressShimmer {
-    0% {
-        background-position: -200px 0;
-    }
-    100% {
-        background-position: calc(200px + 100%) 0;
-    }
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .loading-experience {
-        padding: 1.5rem 1rem;
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .loading-spinner {
+        animation: none;
+        border-top-color: #ffd700;
+        border-right-color: #ffd700;
     }
 
-    .loading-logo {
-        width: 100px;
-        height: 100px;
-    }
-
-    .loading-title {
-        font-size: 1.75rem;
-    }
-
-    .progress-stage {
-        padding: 0.75rem;
-    }
-
-    .stage-icon {
-        width: 40px;
-        height: 40px;
-        font-size: 1rem;
-    }
-
-    .stage-message {
-        font-size: 1rem;
-    }
-
-    .fallback-actions {
-        grid-template-columns: 1fr;
-    }
-
-    .fallback-title {
-        font-size: 1.5rem;
-    }
-
-    .fallback-action-btn {
-        padding: 1.25rem 1rem;
-    }
-
-    .fallback-action-btn i {
-        font-size: 1.5rem;
+    .loading-content {
+        animation: none;
     }
 }
 
+/* Mobile */
 @media (max-width: 480px) {
     .loading-logo {
         width: 80px;
@@ -464,19 +117,11 @@
     }
 
     .loading-title {
-        font-size: 1.5rem;
+        font-size: 1.75rem;
     }
 
-    .fallback-title {
-        font-size: 1.25rem;
-    }
-
-    .stage-message {
-        font-size: 0.9rem;
-    }
-
-    .progress-detail {
-        font-size: 0.8rem;
+    .loading-message {
+        font-size: 1rem;
     }
 }
 
