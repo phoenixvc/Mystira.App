@@ -1,5 +1,3 @@
-using Mystira.Shared.CQRS;
-
 namespace Mystira.App.Application.CQRS.Badges.Queries;
 
 /// <summary>

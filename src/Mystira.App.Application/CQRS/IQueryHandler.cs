@@ -9,5 +9,5 @@ namespace Mystira.App.Application.CQRS;
 /// <typeparam name="TResponse">The response type.</typeparam>
 public interface IQueryHandler<in TQuery, TResponse> where TQuery : IQuery<TResponse>
 {
-    Task<TResponse> HandleAsync(TQuery query, CancellationToken cancellationToken = default);
+    Task<TResponse> Handle(TQuery request, CancellationToken cancellationToken = default);
 }
