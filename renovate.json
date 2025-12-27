@@ -23,6 +23,24 @@
     },
     {
       "matchManagers": ["nuget"],
+      "matchPackagePatterns": ["^Microsoft\\.(AspNetCore|EntityFrameworkCore|Extensions)"],
+      "allowedVersions": "<10.0.0",
+      "description": "Pin to .NET 9.x - do not upgrade to .NET 10 until explicit migration"
+    },
+    {
+      "matchManagers": ["nuget"],
+      "matchPackageNames": ["Swashbuckle.AspNetCore"],
+      "allowedVersions": "<10.0.0",
+      "description": "Pin Swashbuckle to 7.x/8.x - v10 requires Microsoft.OpenApi 2.x breaking changes"
+    },
+    {
+      "matchManagers": ["nuget"],
+      "matchPackageNames": ["Serilog.AspNetCore"],
+      "allowedVersions": "<10.0.0",
+      "description": "Pin Serilog.AspNetCore to 9.x - v10 is for .NET 10"
+    },
+    {
+      "matchManagers": ["nuget"],
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": false
     }
