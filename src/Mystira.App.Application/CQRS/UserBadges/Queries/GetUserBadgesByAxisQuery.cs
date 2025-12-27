@@ -8,7 +8,6 @@ public record GetUserBadgesByAxisQuery(string UserProfileId, string Axis)
     : IQuery<List<UserBadge>>;
 
 public sealed class GetUserBadgesByAxisQueryHandler
-    : IQueryHandler<GetUserBadgesByAxisQuery, List<UserBadge>>
 {
     private readonly IUserBadgeRepository _userBadgeRepository;
 

@@ -12,7 +12,6 @@ public record GetAllBadgeConfigurationsQuery
 }
 
 public sealed class GetAllBadgeConfigurationsQueryHandler
-    : IQueryHandler<GetAllBadgeConfigurationsQuery, List<BadgeConfiguration>>
 {
     private readonly IRepository<BadgeConfiguration> _repository;
 
