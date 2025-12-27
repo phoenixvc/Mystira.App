@@ -28,7 +28,6 @@ using Mystira.App.Infrastructure.Data.Services;
 using Microsoft.ApplicationInsights.Extensibility;
 using Mystira.App.Infrastructure.Discord;
 using Mystira.App.Infrastructure.Discord.Services;
-using Mystira.App.Infrastructure.StoryProtocol;
 using Mystira.App.Infrastructure.Payments;
 using Mystira.Shared.Configuration;
 using Mystira.Shared.Middleware;
@@ -220,9 +219,6 @@ builder.Services.AddAzureBlobStorage(builder.Configuration);
 builder.Services.Configure<AudioTranscodingOptions>(builder.Configuration.GetSection(AudioTranscodingOptions.SectionName));
 // Register Application.Ports.Media.IAudioTranscodingService for use cases
 builder.Services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingService>();
-
-// Add Story Protocol Services
-builder.Services.AddStoryProtocolServices(builder.Configuration);
 
 // Add Payment Services (PeachPayments or mock based on configuration)
 builder.Services.AddPaymentServices(builder.Configuration);
