@@ -327,7 +327,7 @@ public class BadgesControllerTests
         };
         var results = new List<CompassAxisScoreResult>
         {
-            new CompassAxisScoreResult { AxisId = "axis-1" }
+            new CompassAxisScoreResult { AxisName = "Courage" }
         };
 
         _mockBus
