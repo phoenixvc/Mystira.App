@@ -27,18 +27,29 @@ public class HealthCheckPortAdapter : IHealthCheckPort
 
         return new Mystira.Contracts.App.Ports.Health.HealthReport
         {
-            Status = aspNetHealthReport.Status.ToString(),
-            Duration = aspNetHealthReport.TotalDuration,
+            Status = MapHealthStatus(aspNetHealthReport.Status),
+            TotalDuration = aspNetHealthReport.TotalDuration,
             Entries = aspNetHealthReport.Entries.ToDictionary(
                 e => e.Key,
                 e => new Mystira.Contracts.App.Ports.Health.HealthCheckEntry
                 {
-                    Status = e.Value.Status.ToString(),
+                    Status = MapHealthStatus(e.Value.Status),
                     Description = e.Value.Description,
                     Duration = e.Value.Duration,
-                    Exception = e.Value.Exception?.ToString(),
+                    Exception = e.Value.Exception,
                     Data = e.Value.Data != null ? new Dictionary<string, object>(e.Value.Data) : null
                 })
+        };
+    }
+
+    private static Mystira.Contracts.App.Ports.Health.HealthStatus MapHealthStatus(Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus status)
+    {
+        return status switch
+        {
+            Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Healthy => Mystira.Contracts.App.Ports.Health.HealthStatus.Healthy,
+            Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Degraded => Mystira.Contracts.App.Ports.Health.HealthStatus.Degraded,
+            Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy => Mystira.Contracts.App.Ports.Health.HealthStatus.Unhealthy,
+            _ => Mystira.Contracts.App.Ports.Health.HealthStatus.Unhealthy
         };
     }
 }

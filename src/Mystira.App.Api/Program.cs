@@ -31,7 +31,6 @@ using Mystira.App.Infrastructure.Discord.Services;
 using Mystira.App.Infrastructure.StoryProtocol;
 using Mystira.Shared.Configuration;
 using Mystira.Shared.Middleware;
-using Mystira.Shared.Authentication;
 using Mystira.Shared.Telemetry;
 using Serilog;
 using Serilog.Events;
@@ -468,7 +467,7 @@ builder.Services.AddScoped<DownloadMediaUseCase>();
 
 // Register application services
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
-builder.Services.AddScoped<Mystira.Shared.Authentication.IJwtService, Mystira.Shared.Authentication.JwtService>();
+builder.Services.AddScoped<Mystira.App.Api.Services.IJwtService, Mystira.App.Api.Services.JwtService>();
 // Domain services for scoring and awards
 builder.Services.AddScoped<IAxisScoringService, AxisScoringService>();
 builder.Services.AddScoped<IBadgeAwardingService, BadgeAwardingService>();
