@@ -10,7 +10,7 @@ Accounts represent user authentication and subscription management. Account oper
 
 Account management operations are currently handled through services:
 
-- Account creation and authentication (via Auth0 integration)
+- Account creation and authentication (via Entra External ID integration)
 - Subscription management (via services)
 - Account settings management (via services)
 

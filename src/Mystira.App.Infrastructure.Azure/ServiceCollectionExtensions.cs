@@ -4,7 +4,6 @@ using Azure.Storage.Blobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Mystira.App.Application.Ports.Auth;
 using Mystira.App.Application.Ports.Media;
 using Mystira.App.Application.Ports.Storage;
 using Mystira.App.Infrastructure.Azure.Configuration;

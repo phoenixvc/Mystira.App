@@ -62,7 +62,7 @@ Mystira.App/
 | Technology | .NET 9 | Unified stack |
 | Architecture | Hexagonal + CQRS | Clean architecture |
 | Database | Azure Cosmos DB | Document store |
-| Authentication | Auth0 | OAuth 2.0 / OIDC |
+| Authentication | Entra External ID | OAuth 2.0 / OIDC |
 | Deployment | Azure App Service | PaaS model |
 
 ### Analysis Criteria

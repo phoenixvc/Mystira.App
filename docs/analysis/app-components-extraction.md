@@ -34,7 +34,7 @@ Mystira.App/
 | Domain Models | Both APIs | Code (project reference) |
 | CQRS Handlers | Both APIs | Code (project reference) |
 | Repositories | Both APIs | Code (project reference) |
-| Authentication | Both APIs | Configuration (Auth0) |
+| Authentication | Both APIs | Configuration (Entra External ID) |
 | Database | Both APIs | Data (Cosmos DB) |
 
 ---

@@ -41,7 +41,7 @@ public class CreateAccountUseCase
         var account = new Account
         {
             Id = Guid.NewGuid().ToString(),
-            ExternalUserId = request.ExternalUserId,
+            ExternalUserId = request.Auth0UserId, // Map from Contracts Auth0UserId to domain ExternalUserId
             Email = request.Email,
             DisplayName = request.DisplayName ?? request.Email,
             Role = "Guest",
