@@ -124,7 +124,7 @@ public static partial class ScenarioMapper
     private static int? ParseDifficulty(string? difficulty)
         => string.IsNullOrEmpty(difficulty) ? null : int.TryParse(difficulty, out var diff) ? diff : null;
 
-    private static MediaReferences? MapMedia(MediaRequest? media)
+    private static MediaReferences? MapMedia(MediaReferencesRequest? media)
         => media != null ? new MediaReferences
         {
             Image = media.Image,
