@@ -1,0 +1,96 @@
+name: "[PWA] Deploy to Dev"
+
+# Builds and deploys the PWA (Blazor WASM) to Azure Static Web App - Dev environment
+# This workflow actually deploys, unlike the CI workflow which only builds/tests
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "src/Mystira.App.PWA/**"
+      - ".github/workflows/pwa-deploy-dev.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: pwa-deploy-dev
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: "9.0.x"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    name: Build and Deploy to Dev
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          source-url: https://nuget.pkg.github.com/phoenixvc/index.json
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
+
+      - name: Install wasm-tools workload
+        run: dotnet workload install wasm-tools
+
+      - name: Validate API Configuration
+        run: |
+          echo "Validating appsettings configuration for dev..."
+
+          DEFAULT_API_URL=$(jq -r '.ApiConfiguration.DefaultApiBaseUrl // empty' src/Mystira.App.PWA/wwwroot/appsettings.json)
+          if [ -z "$DEFAULT_API_URL" ]; then
+            echo "ERROR: Missing DefaultApiBaseUrl in appsettings.json"
+            exit 1
+          fi
+
+          if ! [[ "$DEFAULT_API_URL" =~ ^https:// ]]; then
+            echo "ERROR: API URL must use HTTPS: $DEFAULT_API_URL"
+            exit 1
+          fi
+
+          echo "✓ API configuration validation passed"
+          echo "  - Default API: $DEFAULT_API_URL"
+
+      - name: Build Blazor WASM
+        run: dotnet publish src/Mystira.App.PWA/Mystira.App.PWA.csproj -c Release -o publish
+
+      - name: Verify Build Output
+        run: |
+          if [ ! -d "publish/wwwroot" ]; then
+            echo "ERROR: Build output directory not found"
+            exit 1
+          fi
+          echo "✓ Build output verified"
+          ls -la publish/wwwroot
+
+      - name: Deploy to Azure Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DEV }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "publish/wwwroot"
+          skip_app_build: true
+          skip_api_build: true
+
+      - name: Deployment Summary
+        run: |
+          echo "## PWA Deployed to Dev" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | Dev |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY

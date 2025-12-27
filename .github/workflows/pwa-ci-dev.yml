@@ -1,8 +1,7 @@
 name: "[PWA] Build & Test (Dev)"
 
 # This workflow handles CI (build/test) only.
-# Deployment is triggered via repository_dispatch to Mystira.workspace.
-# See: deploy-trigger-workspace.yml
+# Deployment is handled by pwa-deploy-dev.yml
 
 on:
   push:
@@ -109,6 +108,4 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Build and validation passed successfully." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Note:** Deployment is handled by [Mystira.workspace](https://github.com/phoenixvc/Mystira.workspace) via repository_dispatch." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "See [deploy-trigger-workspace.yml](.github/workflows/deploy-trigger-workspace.yml) for deployment trigger configuration." >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** Deployment is handled by [pwa-deploy-dev.yml](.github/workflows/pwa-deploy-dev.yml)." >> $GITHUB_STEP_SUMMARY
