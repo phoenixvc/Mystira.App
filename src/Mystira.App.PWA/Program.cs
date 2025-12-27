@@ -135,11 +135,6 @@ builder.Services.AddHttpClient<IUserProfileApiClient, UserProfileApiClient>(Conf
     .AddHttpMessageHandler<AuthHeaderHandler>()
     .AddResilienceHandler("UserProfileApi", ConfigureStandardResilience("UserProfileApi"));
 
-builder.Services.AddHttpClient<IAuthApiClient, AuthApiClient>(ConfigureApiHttpClient)
-    .AddHttpMessageHandler<ApiBaseAddressHandler>()
-    .AddHttpMessageHandler<AuthHeaderHandler>()
-    .AddResilienceHandler("AuthApi", ConfigureStandardResilience("AuthApi"));
-
 builder.Services.AddHttpClient<IMediaApiClient, MediaApiClient>(ConfigureApiHttpClient)
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>()
@@ -199,17 +194,8 @@ builder.Services.Configure<JsonSerializerOptions>(options =>
 // Register services
 builder.Services.AddScoped<ITokenProvider, LocalStorageTokenProvider>();
 
-// Configure authentication provider based on configuration
-var authProvider = builder.Configuration["Authentication:Provider"];
-if (authProvider == "EntraExternalId")
-{
-    builder.Services.AddScoped<IAuthService, EntraExternalIdAuthService>();
-}
-else
-{
-    // Default to custom passwordless authentication
-    builder.Services.AddScoped<IAuthService, AuthService>();
-}
+// Register authentication service (Entra External ID)
+builder.Services.AddScoped<IAuthService, EntraExternalIdAuthService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<IGameSessionService, GameSessionService>();
 builder.Services.AddScoped<IInMemoryStoreService, InMemoryStoreService>();
@@ -282,7 +268,6 @@ static void SetDevelopmentModeForApiClients(IServiceProvider services, bool isDe
         typeof(IScenarioApiClient),
         typeof(IGameSessionApiClient),
         typeof(IUserProfileApiClient),
-        typeof(IAuthApiClient),
         typeof(IMediaApiClient),
         typeof(IAvatarApiClient),
         typeof(IContentBundleApiClient),

@@ -1,206 +1,57 @@
 @page "/signin"
-@using System.Timers
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject ILogger<SignIn> Logger
-@implements IDisposable
 
-<PageTitle>Sign In • Mystira</PageTitle>
+<PageTitle>Sign In - Mystira</PageTitle>
 
-<div class="container-fluid py-3">
+<div class="container-fluid py-5">
     <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <div class="card shadow-lg auth-card">
-                <div class="card-body p-5">
-                    <div class="text-center mb-4">
-                        <i class="fas fa-dragon fa-4x text-primary-custom mb-3"></i>
-                        <h2 class="card-title">Welcome Back</h2>
-                        <p class="text-muted">Sign in to continue your adventure</p>
-                    </div>
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-lg">
+                <div class="card-body p-5 text-center">
+                    <i class="fas fa-dragon fa-4x text-primary-custom mb-4"></i>
+                    <h2 class="card-title mb-3">Welcome Back</h2>
+                    <p class="text-muted mb-4">Sign in to continue your adventure</p>
 
-                    @if (currentStep == SignInStep.Email)
+                    @if (!string.IsNullOrEmpty(errorMessage))
                     {
-                        <form @onsubmit="RequestSigninCode" @onsubmit:preventDefault>
-                            <div class="mb-3">
-                                <label for="email" class="form-label">
-                                    <i class="fas fa-envelope me-2"></i>Email Address
-                                </label>
-                                <input type="email"
-                                       class="form-control form-control-lg"
-                                       id="email"
-                                       @bind="email"
-                                       placeholder="Enter your email"
-                                       required
-                                       disabled="@isSubmitting"
-                                       autocomplete="email" />
-                            </div>
-
-                            <div class="mb-3 form-check">
-                                <input type="checkbox"
-                                       class="form-check-input"
-                                       id="rememberMe"
-                                       checked="@rememberMe"
-                                       @onchange="OnRememberMeChanged"
-                                       aria-label="Remember me for 30 days" />
-                                <label class="form-check-label" for="rememberMe">
-                                    Remember me for 30 days
-                                </label>
-                            </div>
-                            <div class="form-text mb-3">
-                                <i class="fas fa-info-circle me-2"></i>Stay signed in on this device for faster access
-                            </div>
-
-                            @if (!string.IsNullOrEmpty(errorMessage))
-                            {
-                                <div class="alert alert-danger" role="alert">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    @errorMessage
-                                </div>
-                            }
-
-                            @if (!string.IsNullOrEmpty(successMessage))
-                            {
-                                <div class="alert alert-success" role="alert">
-                                    <i class="fas fa-check-circle me-2"></i>
-                                    @successMessage
-                                </div>
-                            }
-
-                            <button type="submit"
-                                    class="btn btn-primary-custom btn-lg w-100"
-                                    disabled="@isSubmitting">
-                                @if (isSubmitting)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    <span>Sending...</span>
-                                }
-                                else
-                                {
-                                    <i class="fas fa-paper-plane me-2"></i>
-                                    <span>Send Sign-In Code</span>
-                                }
-                            </button>
-                        </form>
-                    }
-                    else if (currentStep == SignInStep.Verification)
-                    {
-                        <form @onsubmit="VerifySigninCode" @onsubmit:preventDefault>
-                            <div class="mb-3">
-                                <label class="form-label">
-                                    <i class="fas fa-envelope me-2"></i>Email Address
-                                </label>
-                                <div class="form-control email-display">@email</div>
-                            </div>
-
-                            <div class="mb-4">
-                                <label for="inputCode" class="form-label">
-                                    <i class="fas fa-key me-2"></i>Verification Code
-                                </label>
-                                <input type="text"
-                                       class="form-control form-control-lg text-center verification-code-input"
-                                       id="inputCode"
-                                       @bind="inputCode"
-                                       placeholder="0 0 0 0 0 0"
-                                       maxlength="6"
-                                       pattern="[0-9]{6}"
-                                       required
-                                       disabled="@isSubmitting"
-                                       @oninput="OnCodeInput"
-                                       autocomplete="one-time-code" />
-                                <div class="alert alert-success mt-3" role="alert" aria-live="polite">
-                                    <i class="fas fa-check-circle me-2"></i>
-                                    Check your email for the sign-in code
-                                    <span class="d-block mt-1 small text-muted">Not seeing it? Check your spam or junk folder.</span>
-                                </div>
-                            </div>
-
-                            @if (!string.IsNullOrEmpty(errorMessage))
-                            {
-                                <div class="alert alert-danger" role="alert">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    @errorMessage
-                                </div>
-                            }
-
-                            <div class="d-grid gap-2">
-                                <button type="submit"
-                                        class="btn btn-primary-custom btn-lg"
-                                        disabled="@isSubmitting">
-                                    @if (isSubmitting)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                        <span>Verifying...</span>
-                                    }
-                                    else
-                                    {
-                                        <i class="fas fa-sign-in-alt me-2"></i>
-                                        <span>Sign In</span>
-                                    }
-                                </button>
-
-                                <button type="button"
-                                        class="btn btn-outline-primary"
-                                        @onclick="ResendCode"
-                                        disabled="@(isSubmitting || resendCountdown > 0 || isResendingCode)">
-                                    @if (isResendingCode)
-                                    {
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                        <span>Sending...</span>
-                                    }
-                                    else if (resendCountdown > 0)
-                                    {
-                                        <i class="fas fa-clock me-2"></i>
-                                        <span>Resend Code (@resendCountdown s)</span>
-                                    }
-                                    else
-                                    {
-                                        <i class="fas fa-redo me-2"></i>
-                                        <span>Resend Code</span>
-                                    }
-                                </button>
-
-                                <button type="button"
-                                        class="btn btn-outline-secondary"
-                                        @onclick="GoBack"
-                                        disabled="@isSubmitting">
-                                    <i class="fas fa-arrow-left me-2"></i>
-                                    Back
-                                </button>
-                            </div>
-                        </form>
+                        <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            @errorMessage
+                        </div>
                     }
 
-                    <hr class="my-4" />
-
-                    <div class="text-center mb-3">
-                        <p class="text-muted mb-3">Or sign in with</p>
+                    @if (isLoading)
+                    {
+                        <div class="d-flex flex-column align-items-center">
+                            <div class="spinner-border text-primary mb-3" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-muted">Redirecting to sign in...</p>
+                        </div>
+                    }
+                    else
+                    {
                         <button type="button"
-                                class="btn btn-outline-secondary btn-lg w-100"
+                                class="btn btn-primary-custom btn-lg w-100 mb-3"
                                 @onclick="SignInWithGoogle"
-                                disabled="@isSubmitting">
-                            @if (isSubmitting)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                <span>Redirecting...</span>
-                            }
-                            else
-                            {
-                                <i class="fab fa-google me-2"></i>
-                                <span>Continue with Google</span>
-                            }
+                                disabled="@isLoading">
+                            <i class="fab fa-google me-2"></i>
+                            Continue with Google
                         </button>
-                    </div>
 
-                    <hr class="my-4" />
+                        <hr class="my-4" />
 
-                    <div class="text-center">
-                        <p class="mb-0 text-muted">
-                            Don't have an account?
-                            <a href="/signup" class="text-primary-custom text-decoration-none">
-                                Register
-                            </a>
-                        </p>
-                    </div>
+                        <div class="text-center">
+                            <p class="mb-0 text-muted">
+                                Don't have an account?
+                                <a href="/signup" class="text-primary-custom text-decoration-none">
+                                    Get Started
+                                </a>
+                            </p>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -208,212 +59,11 @@
 </div>
 
 @code {
-    private enum SignInStep
-    {
-        Email,
-        Verification
-    }
-
-    private SignInStep currentStep = SignInStep.Email;
-    private string email = string.Empty;
-    private string inputCode = string.Empty;
-    private bool isSubmitting = false;
+    private bool isLoading = false;
     private string errorMessage = string.Empty;
-    private string successMessage = string.Empty;
-    private int resendCountdown = 0;
-    private bool isResendingCode = false;
-    private bool rememberMe = true;
-    private bool rememberMeUserSet = false;
-    private Timer? countdownTimer;
-
-    private async Task RequestSigninCode()
-    {
-        if (isSubmitting)
-        {
-            return; // guard against double submit
-        }
-        try
-        {
-            isSubmitting = true;
-            errorMessage = string.Empty;
-            successMessage = string.Empty;
-            StateHasChanged(); // Immediately show loading state
-            await Task.Yield(); // Allow UI to render before making API call
-
-            Logger.LogInformation("Requesting sign-in code for email: {Email}", email);
-
-            var (success, message) = await AuthService.RequestPasswordlessSigninAsync(email);
-
-            if (success)
-            {
-                successMessage = message;
-                currentStep = SignInStep.Verification;
-                StartResendCountdown();
-                Logger.LogInformation("Sign-in code sent successfully for: {Email}", email);
-            }
-            else
-            {
-                errorMessage = message;
-                Logger.LogWarning("Failed to send sign-in code for: {Email}. Message: {Message}", email, message);
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = "An error occurred while sending sign-in code. Please try again.";
-            Logger.LogError(ex, "Error requesting sign-in code for: {Email}", email);
-        }
-        finally
-        {
-            isSubmitting = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task ResendCode()
-    {
-        if (resendCountdown > 0 || isResendingCode)
-        {
-            return;
-        }
-
-        try
-        {
-            isResendingCode = true;
-            errorMessage = string.Empty;
-            successMessage = string.Empty;
-
-            Logger.LogInformation("Resending sign-in code for email: {Email}", email);
-
-            var (success, message) = await AuthService.RequestPasswordlessSigninAsync(email);
-
-            if (success)
-            {
-                successMessage = message;
-                StartResendCountdown();
-                Logger.LogInformation("Sign-in code re-sent successfully for: {Email}", email);
-            }
-            else
-            {
-                errorMessage = message;
-                Logger.LogWarning("Failed to re-send sign-in code for: {Email}. Message: {Message}", email, message);
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = "An error occurred while resending sign-in code. Please try again.";
-            Logger.LogError(ex, "Error resending sign-in code for: {Email}", email);
-        }
-        finally
-        {
-            isResendingCode = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task VerifySigninCode()
-    {
-        if (isSubmitting)
-        {
-            return; // guard against double submit
-        }
-        try
-        {
-            isSubmitting = true;
-            errorMessage = string.Empty;
-            successMessage = string.Empty;
-
-            Logger.LogInformation("Verifying sign-in code for email: {Email}", email);
-
-            // Set remember me preference before verification
-            AuthService.SetRememberMe(rememberMe);
-
-            var (success, message, account) = await AuthService.VerifyPasswordlessSigninAsync(email, inputCode);
-
-            if (success && account != null)
-            {
-                StopResendCountdown();
-                Logger.LogInformation("Sign-in successful for: {Email}", email);
-                Navigation.NavigateTo("/");
-            }
-            else
-            {
-                errorMessage = message ?? "Invalid verification code. Please try again.";
-                Logger.LogWarning("Failed to verify sign-in code for: {Email}. Message: {Message}", email, message);
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = "An error occurred while verifying the code. Please try again.";
-            Logger.LogError(ex, "Error verifying sign-in code for: {Email}", email);
-        }
-        finally
-        {
-            isSubmitting = false;
-            StateHasChanged();
-        }
-    }
-
-    private void OnCodeInput(ChangeEventArgs e)
-    {
-        var value = e.Value?.ToString() ?? string.Empty;
-        // Only allow numbers and limit to 6 digits
-        var filtered = new string(value.Where(char.IsDigit).ToArray());
-        inputCode = filtered.Length > 6 ? filtered.Substring(0, 6) : filtered;
-        StateHasChanged();
-    }
-
-    private void GoBack()
-    {
-        currentStep = SignInStep.Email;
-        inputCode = string.Empty;
-        errorMessage = string.Empty;
-        successMessage = string.Empty;
-        StopResendCountdown();
-        errorMessage = string.Empty;
-    }
-
-    private void StartResendCountdown()
-    {
-        StopResendCountdown();
-        resendCountdown = 15;
-
-        countdownTimer = new Timer(1000);
-        countdownTimer.Elapsed += OnCountdownTimerElapsed;
-        countdownTimer.AutoReset = true;
-        countdownTimer.Start();
-    }
-
-    private void StopResendCountdown()
-    {
-        if (countdownTimer != null)
-        {
-            countdownTimer.Stop();
-            countdownTimer.Elapsed -= OnCountdownTimerElapsed;
-            countdownTimer.Dispose();
-            countdownTimer = null;
-        }
-        resendCountdown = 0;
-    }
-
-    private void OnCountdownTimerElapsed(object? sender, ElapsedEventArgs e)
-    {
-        resendCountdown--;
-        if (resendCountdown <= 0)
-        {
-            StopResendCountdown();
-        }
-        InvokeAsync(StateHasChanged);
-    }
 
     protected override async Task OnInitializedAsync()
     {
-        // Load previously saved remember-me preference so the checkbox keeps its state across reloads
-        var savedRemember = await AuthService.GetRememberMeAsync();
-        if (!rememberMeUserSet)
-        {
-            rememberMe = savedRemember;
-        }
-
         var isAuthenticated = await AuthService.IsAuthenticatedAsync();
         if (isAuthenticated)
         {
@@ -421,66 +71,34 @@
         }
     }
 
-    private void OnRememberMeChanged(ChangeEventArgs e)
-    {
-        if (e?.Value is bool b)
-        {
-            rememberMe = b;
-        }
-        else
-        {
-            // Fallback parse in case of unexpected value type
-            var str = e?.Value?.ToString();
-            if (bool.TryParse(str, out var parsed))
-            {
-                rememberMe = parsed;
-            }
-            else
-            {
-                rememberMe = !rememberMe; // toggle as last resort
-            }
-        }
-
-        rememberMeUserSet = true;
-        AuthService.SetRememberMe(rememberMe);
-        StateHasChanged();
-    }
-
     private async Task SignInWithGoogle()
     {
         try
         {
-            isSubmitting = true;
+            isLoading = true;
             errorMessage = string.Empty;
             StateHasChanged();
 
             Logger.LogInformation("Initiating Google sign-in via Entra External ID");
 
-            // Check if using Entra External ID auth service
             if (AuthService is EntraExternalIdAuthService entraService)
             {
-                // Use domain_hint to skip the Entra signin page and go directly to Google
                 await entraService.LoginWithEntraAsync("Google");
             }
             else
             {
-                errorMessage = "Google sign-in is not available with the current authentication provider.";
-                Logger.LogWarning("Attempted Google sign-in but EntraExternalIdAuthService is not configured");
-                isSubmitting = false;
+                errorMessage = "Authentication provider is not configured correctly.";
+                Logger.LogError("EntraExternalIdAuthService is not configured");
+                isLoading = false;
                 StateHasChanged();
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error initiating Google sign-in");
-            errorMessage = "An error occurred while signing in with Google. Please try again.";
-            isSubmitting = false;
+            errorMessage = "An error occurred while signing in. Please try again.";
+            isLoading = false;
             StateHasChanged();
         }
-    }
-
-    public void Dispose()
-    {
-        StopResendCountdown();
     }
 }

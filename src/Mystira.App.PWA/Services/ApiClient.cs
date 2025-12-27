@@ -10,7 +10,6 @@ public class ApiClient : IApiClient
     private readonly IScenarioApiClient _scenarioClient;
     private readonly IGameSessionApiClient _gameSessionClient;
     private readonly IUserProfileApiClient _userProfileClient;
-    private readonly IAuthApiClient _authClient;
     private readonly IMediaApiClient _mediaClient;
     private readonly IAvatarApiClient _avatarClient;
     private readonly IContentBundleApiClient _contentBundleClient;
@@ -20,7 +19,6 @@ public class ApiClient : IApiClient
         IScenarioApiClient scenarioClient,
         IGameSessionApiClient gameSessionClient,
         IUserProfileApiClient userProfileClient,
-        IAuthApiClient authClient,
         IMediaApiClient mediaClient,
         IAvatarApiClient avatarClient,
         IContentBundleApiClient contentBundleClient,
@@ -29,7 +27,6 @@ public class ApiClient : IApiClient
         _scenarioClient = scenarioClient;
         _gameSessionClient = gameSessionClient;
         _userProfileClient = userProfileClient;
-        _authClient = authClient;
         _mediaClient = mediaClient;
         _avatarClient = avatarClient;
         _contentBundleClient = contentBundleClient;
@@ -81,19 +78,6 @@ public class ApiClient : IApiClient
     public Task<List<UserProfile>?> CreateMultipleProfilesAsync(CreateMultipleProfilesRequest request) => _userProfileClient.CreateMultipleProfilesAsync(request);
     public Task<UserProfile?> UpdateProfileAsync(string id, UpdateUserProfileRequest request) => _userProfileClient.UpdateProfileAsync(id, request);
     public Task<bool> DeleteProfileAsync(string id) => _userProfileClient.DeleteProfileAsync(id);
-
-    // Auth methods
-    public Task<PasswordlessSignupResponse?> RequestPasswordlessSignupAsync(string email, string displayName) =>
-        _authClient.RequestPasswordlessSignupAsync(email, displayName);
-    public Task<PasswordlessVerifyResponse?> VerifyPasswordlessSignupAsync(string email, string code) =>
-        _authClient.VerifyPasswordlessSignupAsync(email, code);
-    public Task<PasswordlessSigninResponse?> RequestPasswordlessSigninAsync(string email) =>
-        _authClient.RequestPasswordlessSigninAsync(email);
-    public Task<PasswordlessVerifyResponse?> VerifyPasswordlessSigninAsync(string email, string code) =>
-        _authClient.VerifyPasswordlessSigninAsync(email, code);
-    public Task<RefreshTokenResponse?> RefreshTokenAsync(string token, string refreshToken) =>
-        _authClient.RefreshTokenAsync(token, refreshToken);
-    public Task<Account?> GetAccountByEmailAsync(string email) => _authClient.GetAccountByEmailAsync(email);
 
     // Media methods
     public Task<string?> GetMediaUrlFromId(string mediaId) => _mediaClient.GetMediaUrlFromId(mediaId);
