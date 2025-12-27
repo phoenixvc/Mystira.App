@@ -15,7 +15,7 @@ The `Account` domain model represents a user account with authentication, subscr
 | Property                | Type                      | Description                                    |
 | ----------------------- | ------------------------- | ---------------------------------------------- |
 | `Id`                    | `string`                  | Unique identifier (GUID)                      |
-| `Auth0UserId`           | `string`                  | Auth0 user identifier                         |
+| `ExternalUserId`        | `string`                  | External identity provider user identifier (Entra External ID) |
 | `Email`                  | `string`                  | Account email address                         |
 | `DisplayName`           | `string`                  | Display name for the account                  |
 | `Role`                  | `string`                  | User role (default: "Guest", can be "Admin")  |
@@ -102,7 +102,7 @@ Enumeration of subscription types:
 
 - Stored in Cosmos DB via `IAccountRepository`
 - Managed through `UnitOfWork` pattern
-- Indexed by `Id`, `Auth0UserId`, and `Email`
+- Indexed by `Id`, `ExternalUserId`, and `Email`
 
 ## Related Documentation
 

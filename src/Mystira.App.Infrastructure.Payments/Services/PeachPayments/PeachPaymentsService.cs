@@ -6,6 +6,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Mystira.App.Application.Ports.Payments;
 using Mystira.App.Infrastructure.Payments.Configuration;
+using Mystira.Contracts.App.Enums;
+using Mystira.Contracts.App.Requests.Payments;
+using Mystira.Contracts.App.Responses.Payments;
 
 namespace Mystira.App.Infrastructure.Payments.Services.PeachPayments;
 

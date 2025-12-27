@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the passwordless sign-up process implemented in Mystira using Auth0-compatible authentication. The system allows users to create accounts with minimal information (email and display name only) using a magic code sent to their email.
+This document describes the passwordless sign-up process implemented in Mystira using Entra External ID authentication. The system allows users to create accounts with minimal information (email and display name only) using a magic code sent to their email.
 
 ## Architecture
 
@@ -69,7 +69,7 @@ User Journey:
 5. User enters code from email
 6. System:
    - Validates code against PendingSignup
-   - Creates Account with Auth0UserId
+   - Creates Account with ExternalUserId
    - Marks PendingSignup as used
    - Returns Account and demo token
 7. AuthService updates local state
@@ -89,9 +89,9 @@ User Journey:
 - Email validation
 - XSS protection through Razor component escaping
 
-### Auth0 Integration
-- Creates Auth0UserId in format: `auth0|<guid>`
-- Ready for future Auth0 real authentication
+### Entra External ID Integration
+- Creates ExternalUserId for identity provider linking
+- Uses Entra External ID for authentication
 - Compatible with existing Account model
 
 ### Development Features
@@ -152,7 +152,7 @@ Response:
   "message": "Account created successfully",
   "account": {
     "id": "uuid",
-    "auth0UserId": "auth0|uuid",
+    "externalUserId": "entra|uuid",
     "email": "user@example.com",
     "displayName": "John Doe",
     "createdAt": "2024-01-01T12:00:00Z",
@@ -179,7 +179,7 @@ Response:
 ### Production Deployment
 - Uses Cosmos DB
 - Email service integration ready (currently logs to console)
-- Auth0 user ID generation format compatible
+- Entra External ID compatible
 
 ## Future Enhancements
 
@@ -188,9 +188,9 @@ Response:
    - HTML email templates
    - Resend functionality
 
-2. **Real Auth0 Integration**
-   - Integrate with Auth0 Management API
-   - Use Auth0 passwordless flow
+2. **Entra External ID Integration**
+   - Full integration with Entra External ID
+   - Use Entra passwordless flow
    - Two-factor authentication
 
 3. **Additional Features**
@@ -227,7 +227,7 @@ The system gracefully handles:
 - Codes are numeric only (easier to remember, standard for SMS)
 - Expiration prevents brute force attacks
 - Email verification validates user control of email
-- Auth0UserId format allows future Auth0 integration
+- ExternalUserId format supports Entra External ID integration
 - No sensitive data in logs
 
 ## Files Modified/Created

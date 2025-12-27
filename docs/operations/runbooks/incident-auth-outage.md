@@ -132,13 +132,13 @@ curl https://api.mystira.app/health/ready
 
 ### Scenario E: Upstream Auth Provider Down
 
-**Symptoms**: Cannot connect to Auth0, Azure AD B2C, etc.
+**Symptoms**: Cannot connect to Entra External ID, etc.
 
 **Resolution**:
 
 ```bash
 # 1. Check provider status page
-# Auth0: status.auth0.com
+# Entra External ID: status.azure.com
 # Azure AD: status.azure.com
 
 # 2. Verify network connectivity

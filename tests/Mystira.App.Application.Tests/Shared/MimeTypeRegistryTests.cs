@@ -127,13 +127,13 @@ public class MimeTypeRegistryTests
     [Theory]
     [InlineData("application/unknown")]
     [InlineData("application/x-custom-type")]
-    public void GetExtension_WithUnknownMimeType_ReturnsNull(string mimeType)
+    public void GetExtension_WithUnknownMimeType_ReturnsEmptyString(string mimeType)
     {
         // Act
         var result = MimeTypeRegistry.GetExtension(mimeType);
 
-        // Assert
-        result.Should().BeNull();
+        // Assert - Mystira.Shared 0.4.3 returns empty string for unknown types
+        result.Should().BeEmpty();
     }
 
     [Fact]

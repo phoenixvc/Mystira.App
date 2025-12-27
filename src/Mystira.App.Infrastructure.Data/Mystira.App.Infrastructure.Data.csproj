@@ -31,7 +31,7 @@
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.1" />
     <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
     <!-- Shared telemetry interfaces -->
-    <PackageReference Include="Mystira.Shared" Version="0.4.2-alpha*" />
+    <PackageReference Include="Mystira.Shared" Version="0.4.3-alpha*" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Mystira.App.Domain\Mystira.App.Domain.csproj" />
