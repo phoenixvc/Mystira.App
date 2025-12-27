@@ -10,7 +10,6 @@ using Moq;
 using Mystira.App.Api.Controllers;
 using Mystira.App.Application.CQRS.Badges.Queries;
 using Mystira.Contracts.App.Responses.Badges;
-using CompassAxisScoreResult = Mystira.App.Application.CQRS.Badges.Queries.CompassAxisScoreResult;
 using Wolverine;
 using Xunit;
 
