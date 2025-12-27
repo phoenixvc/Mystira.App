@@ -10,13 +10,13 @@ namespace Mystira.App.PWA.Tests.Components;
 /// <summary>
 /// Tests for ErrorBoundaryWrapper component - validates error handling and recovery
 /// </summary>
-public class ErrorBoundaryWrapperTests : TestContext
+public class ErrorBoundaryWrapperTests : BunitContext
 {
     [Fact]
     public void ErrorBoundaryWrapper_WithoutError_RendersChildContent()
     {
         // Arrange & Act
-        var cut = RenderComponent<ErrorBoundaryWrapper>(parameters => parameters
+        var cut = Render<ErrorBoundaryWrapper>(parameters => parameters
             .AddChildContent("<div class='test-child'>Child content</div>"));
 
         // Assert
@@ -31,7 +31,7 @@ public class ErrorBoundaryWrapperTests : TestContext
         var customTitle = "Oops! Something broke";
 
         // Act
-        var cut = RenderComponent<ErrorBoundaryWrapper>(parameters => parameters
+        var cut = Render<ErrorBoundaryWrapper>(parameters => parameters
             .Add(p => p.ErrorTitle, customTitle)
             .AddChildContent("<div>Content</div>"));
 
@@ -46,7 +46,7 @@ public class ErrorBoundaryWrapperTests : TestContext
         var customMessage = "We encountered an unexpected error. Please try again.";
 
         // Act
-        var cut = RenderComponent<ErrorBoundaryWrapper>(parameters => parameters
+        var cut = Render<ErrorBoundaryWrapper>(parameters => parameters
             .Add(p => p.ErrorMessage, customMessage)
             .AddChildContent("<div>Content</div>"));
 
@@ -58,7 +58,7 @@ public class ErrorBoundaryWrapperTests : TestContext
     public void ErrorBoundaryWrapper_WithShowDetails_HasCorrectProperty()
     {
         // Act
-        var cut = RenderComponent<ErrorBoundaryWrapper>(parameters => parameters
+        var cut = Render<ErrorBoundaryWrapper>(parameters => parameters
             .Add(p => p.ShowDetails, true)
             .AddChildContent("<div>Content</div>"));
 
@@ -73,7 +73,7 @@ public class ErrorBoundaryWrapperTests : TestContext
         var customButtonText = "Retry Operation";
 
         // Act
-        var cut = RenderComponent<ErrorBoundaryWrapper>(parameters => parameters
+        var cut = Render<ErrorBoundaryWrapper>(parameters => parameters
             .Add(p => p.RecoverButtonText, customButtonText)
             .AddChildContent("<div>Content</div>"));
 
@@ -85,7 +85,7 @@ public class ErrorBoundaryWrapperTests : TestContext
     public void ErrorBoundaryWrapper_WithShowReloadButtonFalse_HasCorrectProperty()
     {
         // Act
-        var cut = RenderComponent<ErrorBoundaryWrapper>(parameters => parameters
+        var cut = Render<ErrorBoundaryWrapper>(parameters => parameters
             .Add(p => p.ShowReloadButton, false)
             .AddChildContent("<div>Content</div>"));
 
@@ -97,7 +97,7 @@ public class ErrorBoundaryWrapperTests : TestContext
     public void ErrorBoundaryWrapper_DefaultValues_AreSetCorrectly()
     {
         // Act
-        var cut = RenderComponent<ErrorBoundaryWrapper>(parameters => parameters
+        var cut = Render<ErrorBoundaryWrapper>(parameters => parameters
             .AddChildContent("<div>Content</div>"));
 
         // Assert
@@ -119,7 +119,7 @@ public class ErrorBoundaryWrapperTests : TestContext
     public void ErrorBoundaryWrapper_WhenChildThrows_ShowsErrorUI()
     {
         // Arrange
-        var cut = RenderComponent<ErrorBoundaryWrapper>(parameters => parameters
+        var cut = Render<ErrorBoundaryWrapper>(parameters => parameters
             .AddChildContent<ThrowingComponent>());
 
         // Assert

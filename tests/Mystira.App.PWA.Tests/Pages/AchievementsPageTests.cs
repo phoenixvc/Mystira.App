@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Mystira.App.PWA.Tests.Pages;
 
-public class AchievementsPageTests : TestContext
+public class AchievementsPageTests : BunitContext
 {
     [Fact]
     public void AchievementsPage_DisplaysTierCards()
@@ -26,7 +26,7 @@ public class AchievementsPageTests : TestContext
         Services.AddSingleton<IPlayerContextService>(new FakePlayerContextService());
         Services.AddSingleton<IAchievementsService>(new FakeAchievementsService());
 
-        var cut = RenderComponent<AchievementsPage>();
+        var cut = Render<AchievementsPage>();
 
         // Switch to Advanced view where tier cards are rendered
         cut.WaitForAssertion(() => cut.Find(".view-toggle .btn-outline-secondary").Click());
