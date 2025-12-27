@@ -27,14 +27,15 @@ This triggers a full build and deploy to Azure App Service via the workspace rep
 
 | Method | How |
 |--------|-----|
-| **Automatic** | Push to `dev` branch → Azure SWA CI/CD deploys directly |
-| **Manual** | Run `[Deploy] Trigger Workspace` → select `pwa` ⚠️ |
+| **Automatic** | Push to `dev` branch → triggers workspace → workspace deploys SWA |
+| **Manual** | Run `[Deploy] Trigger Workspace` → select `pwa` |
 
-> ⚠️ **Important**: The `[Deploy] Trigger Workspace` workflow for PWA **does NOT deploy directly**.
-> It only updates the submodule reference in `Mystira.workspace`.
-> The actual SWA deployment is handled by **Azure Static Web Apps CI/CD** which monitors this repo directly.
+> ⚠️ **Important**: There is **no SWA deployment workflow in this repo**.
 >
-> **Translation**: Just push to `dev` and Azure handles the SWA deployment automatically.
+> The `[Deploy] Trigger Workspace` workflow only updates the submodule reference in `Mystira.workspace`.
+> The actual SWA build and deployment happens in the **workspace repo**, not here.
+>
+> Check [Mystira.workspace](https://github.com/phoenixvc/Mystira.workspace/actions) for deployment status.
 
 ### Workspace Event Types Reference
 
@@ -197,19 +198,16 @@ These workflows run tests but **do NOT deploy**:
 
 ### How SWA/PWA Actually Deploys
 
-The SWA deployment is **not triggered via GitHub Actions in this repo**.
-
-Azure Static Web Apps has its own CI/CD that:
-- Monitors this repo directly
-- Triggers on push to `dev`/`staging`/`main` branches
-- Deploys automatically without needing manual intervention
-
-To manually redeploy the SWA, just push a commit to the target branch.
+> ⚠️ **There is no SWA deployment workflow in this repo.**
+>
+> The `[Deploy] Trigger Workspace` workflow with `pwa` selected only updates the submodule reference in `Mystira.workspace` - it does NOT build or deploy the SWA.
+>
+> **Actual SWA deployment is handled by `Mystira.workspace`** - check that repo's workflows for the real deployment logic.
 
 ### Monitor Deployment Progress
 
 - **API deployment**: Check [Mystira.workspace Actions](https://github.com/phoenixvc/Mystira.workspace/actions)
-- **SWA deployment**: Check Azure Portal → Static Web App → Deployment history
+- **SWA deployment**: Check [Mystira.workspace Actions](https://github.com/phoenixvc/Mystira.workspace/actions) (deployment happens there, not here)
 
 ### When to Use Manual Deployment
 
