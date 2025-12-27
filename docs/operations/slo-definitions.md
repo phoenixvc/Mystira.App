@@ -188,7 +188,7 @@ Based on SLO definitions, configure the following alerts:
 ### Tertiary Panel: Dependencies
 - Cosmos DB latency and RU consumption
 - Blob Storage operations
-- External API health (Story Protocol, Auth0)
+- External API health (Story Protocol, Entra External ID)
 
 ### Business Panel: User Engagement
 - Active game sessions

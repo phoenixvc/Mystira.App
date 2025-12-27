@@ -476,7 +476,7 @@ Per [Workspace ADR-0013](https://github.com/phoenixvc/Mystira.workspace/blob/dev
 
 - Azure subscription with sufficient quotas
 - GitHub Actions runners
-- External service availability (Auth0, Cosmos DB, etc.)
+- External service availability (Entra External ID, Cosmos DB, etc.)
 
 ### Quality Gates
 

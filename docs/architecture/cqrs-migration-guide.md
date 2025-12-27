@@ -730,10 +730,10 @@ public async Task<ActionResult<List<GameSession>>> GetByAccount(string accountId
 {
     // HTTP Concern: Extract claims from JWT
     var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-    var auth0UserId = User.FindFirst("sub")?.Value ?? userIdClaim;
+    var externalUserId = User.FindFirst("sub")?.Value ?? userIdClaim;
 
     // HTTP Concern: Authorization check
-    if (string.IsNullOrEmpty(auth0UserId))
+    if (string.IsNullOrEmpty(externalUserId))
     {
         return Unauthorized(new ErrorResponse
         {

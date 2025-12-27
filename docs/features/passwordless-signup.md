@@ -179,7 +179,7 @@ Response:
 ### Production Deployment
 - Uses Cosmos DB
 - Email service integration ready (currently logs to console)
-- Auth0 user ID generation format compatible
+- Entra External ID compatible
 
 ## Future Enhancements
 
