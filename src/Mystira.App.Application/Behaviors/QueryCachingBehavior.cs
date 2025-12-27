@@ -31,18 +31,18 @@ public class QueryCachingMiddleware
     /// Wolverine middleware method that wraps handler execution with caching logic.
     /// Called Before in the handler chain for cacheable queries.
     /// </summary>
-    public async Task<T?> TryGetFromCache<T>(ICacheableQuery query)
+    public Task<T?> TryGetFromCache<T>(ICacheableQuery query)
     {
         var cacheKey = query.CacheKey;
 
         if (_cache.TryGetValue(cacheKey, out T? cachedResponse) && cachedResponse != null)
         {
             _logger.LogDebug("Cache hit for query with key {CacheKey}", cacheKey);
-            return cachedResponse;
+            return Task.FromResult<T?>(cachedResponse);
         }
 
         _logger.LogDebug("Cache miss for query with key {CacheKey}", cacheKey);
-        return default;
+        return Task.FromResult<T?>(default);
     }
 
     /// <summary>

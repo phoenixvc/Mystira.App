@@ -43,7 +43,7 @@ public class CreateAccountUseCase
             Id = Guid.NewGuid().ToString(),
             Auth0UserId = request.Auth0UserId,
             Email = request.Email,
-            DisplayName = request.DisplayName,
+            DisplayName = request.DisplayName ?? request.Email,
             Role = "Guest",
             UserProfileIds = new List<string>(),
             CompletedScenarioIds = new List<string>(),
