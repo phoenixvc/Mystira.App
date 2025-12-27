@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Mystira.App.Api.Adapters;
-using Mystira.App.Api.Services;
 using Mystira.App.Application.Behaviors;
 using Mystira.App.Application.Ports;
 using Mystira.App.Application.Ports.Data;
@@ -29,11 +28,10 @@ using Microsoft.ApplicationInsights.Extensibility;
 using Mystira.App.Infrastructure.Discord;
 using Mystira.App.Infrastructure.Discord.Services;
 using Mystira.App.Infrastructure.StoryProtocol;
-using Mystira.App.Shared.Adapters;
-using Mystira.App.Shared.Configuration;
-using Mystira.App.Shared.Middleware;
-using Mystira.App.Shared.Services;
-using Mystira.App.Shared.Telemetry;
+using Mystira.App.Infrastructure.Payments;
+using Mystira.Shared.Configuration;
+using Mystira.Shared.Middleware;
+using Mystira.Shared.Telemetry;
 using Serilog;
 using Serilog.Events;
 using Wolverine;
@@ -224,6 +222,9 @@ builder.Services.AddSingleton<IAudioTranscodingService, FfmpegAudioTranscodingSe
 
 // Add Story Protocol Services
 builder.Services.AddStoryProtocolServices(builder.Configuration);
+
+// Add Payment Services (PeachPayments or mock based on configuration)
+builder.Services.AddPaymentServices(builder.Configuration);
 
 // Configure JWT Authentication - Load from secure configuration only
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"];
@@ -469,13 +470,11 @@ builder.Services.AddScoped<DownloadMediaUseCase>();
 
 // Register application services
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
-builder.Services.AddScoped<Mystira.App.Shared.Services.IJwtService, Mystira.App.Shared.Services.JwtService>();
 // Domain services for scoring and awards
 builder.Services.AddScoped<IAxisScoringService, AxisScoringService>();
 builder.Services.AddScoped<IBadgeAwardingService, BadgeAwardingService>();
 
 // Register Application.Ports adapters for CQRS handlers
-builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, JwtServiceAdapter>();
 builder.Services.AddScoped<IHealthCheckPort, HealthCheckPortAdapter>();
 builder.Services.AddScoped<IMediaMetadataService, MediaMetadataService>();
 
@@ -530,7 +529,8 @@ builder.Services.AddProblemDetails();
 
 // Configure Health Checks
 var healthChecksBuilder = builder.Services.AddHealthChecks()
-    .AddCheck<BlobStorageHealthCheck>("blob_storage");
+    .AddCheck<BlobStorageHealthCheck>("blob_storage")
+    .AddPaymentServiceHealthCheck();
 
 // Only add Cosmos DB health check when using Cosmos DB (not in-memory)
 if (useCosmosDb)

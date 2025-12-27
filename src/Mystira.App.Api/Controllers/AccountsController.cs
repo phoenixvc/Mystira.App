@@ -85,13 +85,13 @@ public class AccountsController : ControllerBase
                 return BadRequest("Email is required");
             }
 
-            if (string.IsNullOrEmpty(request.Auth0UserId))
+            if (string.IsNullOrEmpty(request.ExternalUserId))
             {
-                return BadRequest("Auth0 User ID is required");
+                return BadRequest("External User ID is required");
             }
 
             var command = new CreateAccountCommand(
-                request.Auth0UserId,
+                request.ExternalUserId,
                 request.Email,
                 request.DisplayName,
                 request.UserProfileIds,
@@ -239,7 +239,7 @@ public class AccountsController : ControllerBase
 /// </summary>
 public class CreateAccountRequest
 {
-    public string Auth0UserId { get; set; } = string.Empty;
+    public string ExternalUserId { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string? DisplayName { get; set; }
     public List<string>? UserProfileIds { get; set; }

@@ -40,7 +40,7 @@ public static class GetHealthCheckQueryHandler
 
             return new HealthCheckResult(
                 Status: report.Status.ToString(),
-                Duration: stopwatch.Elapsed,
+                Duration: report.TotalDuration,
                 Results: results
             );
         }

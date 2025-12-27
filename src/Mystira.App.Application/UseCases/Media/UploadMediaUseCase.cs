@@ -5,7 +5,7 @@ using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Ports.Storage;
 using Mystira.Contracts.App.Requests.Media;
 using Mystira.App.Domain.Models;
-using Mystira.App.Shared.Media;
+using Mystira.Shared.Media;
 
 namespace Mystira.App.Application.UseCases.Media;
 
@@ -39,7 +39,7 @@ public class UploadMediaUseCase
         ValidateMediaFile(request);
 
         // Validate that media metadata entry exists and resolve the media ID
-        var resolvedMediaId = await ValidateAndResolveMediaId(request.MediaId, request.FileName);
+        var resolvedMediaId = await ValidateAndResolveMediaId(request.MediaId ?? string.Empty, request.FileName);
 
         // Check if media with this ID already exists
         var existingMedia = await _repository.GetByMediaIdAsync(resolvedMediaId);
@@ -49,6 +49,7 @@ public class UploadMediaUseCase
         }
 
         // Calculate file hash
+        ArgumentNullException.ThrowIfNull(request.FileStream, nameof(request.FileStream));
         var hash = await CalculateFileHashAsync(request.FileStream);
 
         // Reset stream position for upload

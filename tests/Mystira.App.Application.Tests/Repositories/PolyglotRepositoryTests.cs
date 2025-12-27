@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Infrastructure.Data.Polyglot;
-using Mystira.App.Shared.Telemetry;
+using Mystira.Shared.Telemetry;
 
 namespace Mystira.App.Application.Tests.Repositories;
 

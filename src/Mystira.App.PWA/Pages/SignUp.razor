@@ -1,240 +1,114 @@
 @page "/signup"
-@using System.Timers
-@implements IDisposable
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject ILogger<SignUp> Logger
 
-<PageTitle>Sign Up • Mystira</PageTitle>
+<PageTitle>Get Started - Mystira</PageTitle>
 
-<div class="container-fluid py-4">
-    <div class="row justify-content-center">
-        <div class="col-md-5">
-            <div class="card shadow-lg">
-                <div class="card-body p-5">
-                    <div class="text-center mb-4">
-                        <i class="fas fa-dragon fa-3x text-primary-custom mb-3"></i>
-                        <h2 class="card-title">Join Mystira</h2>
-                        <p class="text-muted">Start your magical adventure</p>
+<div class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card @(isLoading ? "loading" : "")">
+            <!-- Logo and Branding -->
+            <div class="auth-header">
+                <a href="/" class="auth-logo-link">
+                    <img src="images/mystira-logo.webp" alt="Mystira" class="auth-logo" />
+                </a>
+                <h1 class="auth-title">Join Mystira</h1>
+                <p class="auth-subtitle">Start your magical adventure today</p>
+            </div>
+
+            <!-- Error Message -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="auth-error" role="alert">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>@errorMessage</span>
+                </div>
+            }
+
+            <!-- Sign Up Content -->
+            <div class="auth-content">
+                @if (isLoading)
+                {
+                    <div class="auth-loading">
+                        <div class="auth-spinner">
+                            <div class="spinner-ring"></div>
+                            <i class="fab fa-google spinner-icon"></i>
+                        </div>
+                        <p class="loading-text">Connecting to Google...</p>
+                        <p class="loading-subtext">Creating your account</p>
+                    </div>
+                }
+                else
+                {
+                    <!-- Benefits List -->
+                    <div class="signup-benefits">
+                        <div class="benefit-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Free to get started</span>
+                        </div>
+                        <div class="benefit-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Interactive story adventures</span>
+                        </div>
+                        <div class="benefit-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Safe for the whole family</span>
+                        </div>
                     </div>
 
-                    @if (!signupStep.HasValue || signupStep == SignupStep.Initial)
-                    {
-                        <form @onsubmit="HandleRequestSignup" autocomplete="on">
-                            <div class="mb-3">
-                                <label for="email" class="form-label">Email Address</label>
-                                <input type="email" class="form-control" id="email"
-                                       @bind="email" placeholder="your@email.com"
-                                       disabled="@isSubmitting" required
-                                       autocomplete="email" />
-                                @if (!string.IsNullOrEmpty(emailError))
-                                {
-                                    <div class="text-danger small mt-1">@emailError</div>
-                                }
-                            </div>
+                    <!-- Google Sign Up Button -->
+                    <button type="button"
+                            class="google-signin-btn"
+                            @onclick="SignUpWithGoogle"
+                            disabled="@isLoading">
+                        <svg class="google-icon" viewBox="0 0 24 24" width="24" height="24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                        </svg>
+                        <span>Continue with Google</span>
+                    </button>
 
-                            <div class="mb-4">
-                                <label for="displayName" class="form-label">Display Name</label>
-                                <input type="text" class="form-control" id="displayName"
-                                       @bind="displayName" placeholder="Your Name"
-                                       disabled="@isSubmitting" required
-                                       autocomplete="name" />
-                                @if (!string.IsNullOrEmpty(displayNameError))
-                                {
-                                    <div class="text-danger small mt-1">@displayNameError</div>
-                                }
-                            </div>
+                    <!-- Divider -->
+                    <div class="auth-divider">
+                        <span>Secure sign-up powered by Microsoft</span>
+                    </div>
 
-                            @if (!string.IsNullOrEmpty(generalError))
-                            {
-                                <div class="alert alert-danger" role="alert">
-                                    <i class="fas fa-exclamation-circle me-2"></i>@generalError
-                                    @if (generalError.Contains("already exists"))
-                                    {
-                                        <div class="mt-2">
-                                            <a href="/signin" class="btn btn-outline-light btn-sm">
-                                                <i class="fas fa-sign-in-alt me-1"></i>Sign In
-                                            </a>
-                                        </div>
-                                    }
-                                </div>
-                            }
+                    <!-- Security Badge -->
+                    <div class="security-info">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Your data is protected with enterprise-grade security</span>
+                    </div>
+                }
+            </div>
 
-                            <button type="submit" class="btn btn-primary-custom btn-lg w-100"
-                                    disabled="@isSubmitting">
-                                @if (isSubmitting)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    <span>Sending...</span>
-                                }
-                                else
-                                {
-                                    <i class="fas fa-envelope me-2"></i>
-                                    <span>Send Code</span>
-                                }
-                            </button>
-                        </form>
-
-                        <hr class="my-4" />
-
-                        <div class="text-center mb-3">
-                            <p class="text-muted mb-3">Or sign up with</p>
-                            <button type="button"
-                                    class="btn btn-outline-secondary btn-lg w-100"
-                                    @onclick="SignUpWithGoogle"
-                                    disabled="@isSubmitting">
-                                @if (isSubmitting)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    <span>Redirecting...</span>
-                                }
-                                else
-                                {
-                                    <i class="fab fa-google me-2"></i>
-                                    <span>Continue with Google</span>
-                                }
-                            </button>
-                        </div>
-
-                        <hr class="my-4" />
-
-                        <div class="text-center">
-                            <p class="text-muted">Already have an account?
-                                <a href="/" class="text-primary-custom">Back to Home</a>
-                            </p>
-                        </div>
-                    }
-                    else if (signupStep == SignupStep.CodeSent)
-                    {
-                        <div class="alert alert-info mb-4">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>Check your email!</strong><br />
-                            We've sent a verification code to <strong>@email</strong>
-                            <div class="mt-2 small">
-                                <i class="fas fa-exclamation-circle me-1"></i>
-                                Not seeing it? Check your spam or junk folder. If found there, please mark it as "not spam" to ensure future emails arrive.
-                            </div>
-                        </div>
-
-                        <form @onsubmit="HandleVerifyCode">
-                            <div class="mb-3">
-                                <label for="code" class="form-label">Verification Code</label>
-                                <input type="text" class="form-control form-control-lg text-center verification-code-input"
-                                       id="code" @bind="verificationCode"
-                                       placeholder="000000" maxlength="6"
-                                       disabled="@isVerifying" required
-                                       autocomplete="one-time-code" />
-                                <small class="form-text text-muted">Enter the 6-digit code from your email</small>
-                                @if (!string.IsNullOrEmpty(codeError))
-                                {
-                                    <div class="text-danger small mt-1">@codeError</div>
-                                }
-                            </div>
-
-                            @if (!string.IsNullOrEmpty(generalError))
-                            {
-                                <div class="alert alert-danger" role="alert">
-                                    <i class="fas fa-exclamation-circle me-2"></i>@generalError
-                                </div>
-                            }
-
-                            <button type="submit" class="btn btn-primary-custom btn-lg w-100"
-                                    disabled="@isVerifying">
-                                @if (isVerifying)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    <span>Verifying...</span>
-                                }
-                                else
-                                {
-                                    <i class="fas fa-check me-2"></i>
-                                    <span>Verify &amp; Register</span>
-                                }
-                            </button>
-
-                            <button type="button"
-                                    class="btn btn-outline-primary btn-lg w-100 mt-2"
-                                    @onclick="ResendCode"
-                                    disabled="@(isVerifying || resendCountdown > 0 || isResendingCode)">
-                                @if (isResendingCode)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    <span>Sending...</span>
-                                }
-                                else if (resendCountdown > 0)
-                                {
-                                    <i class="fas fa-clock me-2"></i>
-                                    <span>Resend Code (@resendCountdown s)</span>
-                                }
-                                else
-                                {
-                                    <i class="fas fa-redo me-2"></i>
-                                    <span>Resend Code</span>
-                                }
-                            </button>
-
-                            <button type="button" class="btn btn-outline-secondary btn-lg w-100 mt-2"
-                                    @onclick="ResetForm" disabled="@isVerifying">
-                                <i class="fas fa-arrow-left me-2"></i>Back
-                            </button>
-                        </form>
-
-                        <div class="text-center mt-3 text-muted small">
-                            Need a new code? You can resend once the countdown finishes.
-                        </div>
-                    }
-                    else if (signupStep == SignupStep.Success)
-                    {
-                        <div class="text-center">
-                            <div class="mb-3">
-                                <i class="fas fa-check-circle fa-4x text-success"></i>
-                            </div>
-                            <h4 class="mb-3">Welcome, @displayName!</h4>
-                            <p class="text-muted mb-4">
-                                Your account has been created successfully. Get ready for an amazing adventure!
-                            </p>
-                            <button class="btn btn-primary-custom btn-lg w-100" @onclick="GoToHome">
-                                <i class="fas fa-play me-2"></i>Start Your Adventure
-                            </button>
-                        </div>
-                    }
-                </div>
+            <!-- Footer -->
+            <div class="auth-footer">
+                <p>
+                    Already have an account?
+                    <a href="/signin" class="auth-link">Sign In</a>
+                </p>
             </div>
         </div>
+
+        <!-- Back to Home Link -->
+        <a href="/" class="back-home-link">
+            <i class="fas fa-arrow-left"></i>
+            <span>Back to Home</span>
+        </a>
     </div>
 </div>
 
 @code {
-    [Inject] private IAuthService AuthService { get; set; } = default!;
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
-    [Inject] private ILogger<SignUp> Logger { get; set; } = default!;
-
-    private enum SignupStep
-    {
-        Initial,
-        CodeSent,
-        Success
-    }
-
-    private SignupStep? signupStep;
-    private string email = string.Empty;
-    private string displayName = string.Empty;
-    private string verificationCode = string.Empty;
-
-    private bool isSubmitting = false;
-    private bool isVerifying = false;
-    private bool isResendingCode = false;
-    private int resendCountdown = 0;
-    private Timer? resendTimer;
-
-    private string emailError = string.Empty;
-    private string displayNameError = string.Empty;
-    private string codeError = string.Empty;
-    private string generalError = string.Empty;
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            Logger.LogInformation("SignUp page initializing");
-
             var isAuthenticated = await AuthService.IsAuthenticatedAsync();
             if (isAuthenticated)
             {
@@ -243,270 +117,38 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error during component initialization");
+            Logger.LogWarning(ex, "Error checking authentication status on SignUp page");
         }
-    }
-
-    private void ValidateEmail()
-    {
-        emailError = string.Empty;
-
-        if (string.IsNullOrWhiteSpace(email))
-        {
-            emailError = "Email is required";
-            return;
-        }
-
-        if (!email.Contains("@") || !email.Contains("."))
-        {
-            emailError = "Please enter a valid email address";
-            return;
-        }
-    }
-
-    private void ValidateDisplayName()
-    {
-        displayNameError = string.Empty;
-
-        if (string.IsNullOrWhiteSpace(displayName))
-        {
-            displayNameError = "Display name is required";
-            return;
-        }
-
-        if (displayName.Length < 2)
-        {
-            displayNameError = "Display name must be at least 2 characters";
-            return;
-        }
-
-        if (displayName.Length > 100)
-        {
-            displayNameError = "Display name must be less than 100 characters";
-            return;
-        }
-    }
-
-    private async Task HandleRequestSignup()
-    {
-        try
-        {
-            generalError = string.Empty;
-            ValidateEmail();
-            ValidateDisplayName();
-
-            if (!string.IsNullOrEmpty(emailError) || !string.IsNullOrEmpty(displayNameError))
-            {
-                return;
-            }
-
-            isSubmitting = true;
-            StateHasChanged();
-
-            Logger.LogInformation("Requesting passwordless signup for: {Email}", email);
-
-            var (success, message) = await AuthService.RequestPasswordlessSignupAsync(email, displayName);
-
-            if (success)
-            {
-                signupStep = SignupStep.CodeSent;
-                StartResendCountdown();
-                Logger.LogInformation("Signup code sent successfully for: {Email}", email);
-            }
-            else
-            {
-                generalError = message;
-                Logger.LogWarning("Signup request failed for: {Email}", email);
-            }
-        }
-        catch (Exception ex)
-        {
-            generalError = "An unexpected error occurred. Please try again.";
-            Logger.LogError(ex, "Error requesting signup");
-        }
-        finally
-        {
-            isSubmitting = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task HandleVerifyCode()
-    {
-        try
-        {
-            generalError = string.Empty;
-            codeError = string.Empty;
-
-            if (string.IsNullOrWhiteSpace(verificationCode))
-            {
-                codeError = "Verification code is required";
-                return;
-            }
-
-            if (verificationCode.Length != 6 || !verificationCode.All(char.IsDigit))
-            {
-                codeError = "Code must be 6 digits";
-                return;
-            }
-
-            isVerifying = true;
-            StateHasChanged();
-
-            Logger.LogInformation("Verifying signup code for: {Email}", email);
-
-            var (success, message, account) = await AuthService.VerifyPasswordlessSignupAsync(email, verificationCode);
-
-            if (success && account != null)
-            {
-                StopResendCountdown();
-                signupStep = SignupStep.Success;
-                Logger.LogInformation("Signup verified successfully for: {Email}", email);
-            }
-            else
-            {
-                generalError = message;
-                Logger.LogWarning("Signup verification failed for: {Email}", email);
-            }
-        }
-        catch (Exception ex)
-        {
-            generalError = "An unexpected error occurred. Please try again.";
-            Logger.LogError(ex, "Error verifying signup");
-        }
-        finally
-        {
-            isVerifying = false;
-            StateHasChanged();
-        }
-    }
-
-    private void ResetForm()
-    {
-        signupStep = SignupStep.Initial;
-        email = string.Empty;
-        displayName = string.Empty;
-        verificationCode = string.Empty;
-        emailError = string.Empty;
-        displayNameError = string.Empty;
-        codeError = string.Empty;
-        generalError = string.Empty;
-        StopResendCountdown();
-        StateHasChanged();
-    }
-
-    private void GoToHome()
-    {
-        Navigation.NavigateTo("/");
-    }
-
-    private async Task ResendCode()
-    {
-        if (resendCountdown > 0 || isResendingCode)
-        {
-            return;
-        }
-
-        try
-        {
-            isResendingCode = true;
-            generalError = string.Empty;
-
-            Logger.LogInformation("Resending signup code for email: {Email}", email);
-
-            var (success, message) = await AuthService.RequestPasswordlessSignupAsync(email, displayName);
-
-            if (success)
-            {
-                StartResendCountdown();
-                Logger.LogInformation("Signup code re-sent successfully for: {Email}", email);
-            }
-            else
-            {
-                generalError = message;
-                Logger.LogWarning("Failed to re-send signup code for: {Email}. Message: {Message}", email, message);
-            }
-        }
-        catch (Exception ex)
-        {
-            generalError = "An error occurred while resending the code. Please try again.";
-            Logger.LogError(ex, "Error resending signup code for: {Email}", email);
-        }
-        finally
-        {
-            isResendingCode = false;
-            StateHasChanged();
-        }
-    }
-
-    private void StartResendCountdown()
-    {
-        StopResendCountdown();
-        resendCountdown = 15;
-
-        resendTimer = new Timer(1000);
-        resendTimer.Elapsed += OnResendTimerElapsed;
-        resendTimer.AutoReset = true;
-        resendTimer.Start();
-    }
-
-    private void StopResendCountdown()
-    {
-        if (resendTimer != null)
-        {
-            resendTimer.Stop();
-            resendTimer.Elapsed -= OnResendTimerElapsed;
-            resendTimer.Dispose();
-            resendTimer = null;
-        }
-        resendCountdown = 0;
-    }
-
-    private void OnResendTimerElapsed(object? sender, ElapsedEventArgs e)
-    {
-        resendCountdown--;
-        if (resendCountdown <= 0)
-        {
-            StopResendCountdown();
-        }
-        InvokeAsync(StateHasChanged);
     }
 
     private async Task SignUpWithGoogle()
     {
         try
         {
-            isSubmitting = true;
-            generalError = string.Empty;
+            isLoading = true;
+            errorMessage = string.Empty;
             StateHasChanged();
 
             Logger.LogInformation("Initiating Google sign-up via Entra External ID");
 
-            // Check if using Entra External ID auth service
             if (AuthService is EntraExternalIdAuthService entraService)
             {
-                // Use domain_hint to skip the Entra signin page and go directly to Google
                 await entraService.LoginWithEntraAsync("Google");
             }
             else
             {
-                generalError = "Google sign-up is not available with the current authentication provider.";
-                Logger.LogWarning("Attempted Google sign-up but EntraExternalIdAuthService is not configured");
-                isSubmitting = false;
+                errorMessage = "Authentication is not configured correctly. Please try again later.";
+                Logger.LogError("EntraExternalIdAuthService is not configured");
+                isLoading = false;
                 StateHasChanged();
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error initiating Google sign-up");
-            generalError = "An error occurred while signing up with Google. Please try again.";
-            isSubmitting = false;
+            errorMessage = "Unable to connect to sign-up service. Please check your connection and try again.";
+            isLoading = false;
             StateHasChanged();
         }
-    }
-
-    public void Dispose()
-    {
-        StopResendCountdown();
     }
 }

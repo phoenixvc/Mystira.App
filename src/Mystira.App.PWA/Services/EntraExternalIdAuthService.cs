@@ -156,42 +156,6 @@ public class EntraExternalIdAuthService : IAuthService
         return Task.FromResult(false);
     }
 
-    public Task<bool> LoginAsync(string email, string password)
-    {
-        _logger.LogWarning("LoginAsync called but not supported with Entra External ID. Use LoginWithEntraAsync instead.");
-        return Task.FromResult(false);
-    }
-
-    public Task<(bool Success, string Message)> RequestPasswordlessSignupAsync(string email, string displayName)
-    {
-        _logger.LogWarning("RequestPasswordlessSignupAsync not supported with Entra External ID");
-        return Task.FromResult((false, "Use Entra External ID login instead"));
-    }
-
-    public Task<(bool Success, string Message, Account? Account)> VerifyPasswordlessSignupAsync(string email, string code)
-    {
-        _logger.LogWarning("VerifyPasswordlessSignupAsync not supported with Entra External ID");
-        return Task.FromResult<(bool, string, Account?)>((false, "Use Entra External ID login instead", null));
-    }
-
-    public Task<(bool Success, string Message)> RequestPasswordlessSigninAsync(string email)
-    {
-        _logger.LogWarning("RequestPasswordlessSigninAsync not supported with Entra External ID");
-        return Task.FromResult((false, "Use Entra External ID login instead"));
-    }
-
-    public Task<(bool Success, string Message, Account? Account)> VerifyPasswordlessSigninAsync(string email, string code)
-    {
-        _logger.LogWarning("VerifyPasswordlessSigninAsync not supported with Entra External ID");
-        return Task.FromResult<(bool, string, Account?)>((false, "Use Entra External ID login instead", null));
-    }
-
-    public Task<(bool Success, string Message, string? Token, string? RefreshToken)> RefreshTokenAsync(string token, string refreshToken)
-    {
-        _logger.LogWarning("RefreshTokenAsync not implemented for Entra External ID - tokens are managed by the identity provider");
-        return Task.FromResult<(bool, string, string?, string?)>((false, "Token refresh handled by Entra External ID", null, null));
-    }
-
     public DateTime? GetTokenExpiryTime()
     {
         try

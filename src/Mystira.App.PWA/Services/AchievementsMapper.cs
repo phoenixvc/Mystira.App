@@ -15,11 +15,13 @@ public static class AchievementsMapper
         var axisProgresses = progress?.AxisProgresses ?? new List<AxisProgressResponse>();
 
         var configByAxis = config
-            .GroupBy(b => b.CompassAxisId, StringComparer.OrdinalIgnoreCase)
+            .Where(b => !string.IsNullOrEmpty(b.CompassAxisId))
+            .GroupBy(b => b.CompassAxisId!, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.OrderBy(b => b.TierOrder).ToList(), StringComparer.OrdinalIgnoreCase);
 
         var progressByAxis = axisProgresses
-            .GroupBy(a => a.CompassAxisId, StringComparer.OrdinalIgnoreCase)
+            .Where(a => !string.IsNullOrEmpty(a.CompassAxisId))
+            .GroupBy(a => a.CompassAxisId!, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
         var axisAchievementList = axisAchievements ?? Array.Empty<AxisAchievementResponse>();
@@ -48,8 +50,8 @@ public static class AchievementsMapper
                             || string.Equals(a.CompassAxisId, axisName, StringComparison.OrdinalIgnoreCase))
                 .Select(a => new AxisAchievementCopy
                 {
-                    Direction = a.AxesDirection,
-                    Description = a.Description
+                    Direction = a.AxesDirection ?? string.Empty,
+                    Description = a.Description ?? string.Empty
                 })
                 .OrderBy(a => a.Direction, StringComparer.OrdinalIgnoreCase)
                 .ToList();
@@ -94,13 +96,13 @@ public static class AchievementsMapper
             {
                 tiers.AddRange(progressTiers.Select(t => new BadgeTierViewModel
                 {
-                    BadgeId = t.BadgeId,
-                    Tier = t.Tier,
+                    BadgeId = t.BadgeId ?? string.Empty,
+                    Tier = t.Tier ?? string.Empty,
                     TierOrder = t.TierOrder,
-                    Title = t.Title,
-                    Description = t.Description,
+                    Title = t.Title ?? string.Empty,
+                    Description = t.Description ?? string.Empty,
                     RequiredScore = t.RequiredScore,
-                    ImageId = t.ImageId,
+                    ImageId = t.ImageId ?? string.Empty,
                     ImageUrl = !string.IsNullOrWhiteSpace(t.ImageId) ? imageUrlResolver(t.ImageId) : null,
                     IsEarned = t.IsEarned,
                     EarnedAt = t.EarnedAt,

@@ -31,7 +31,7 @@ public static class CreateAccountCommandHandler
         var account = new Account
         {
             Id = Guid.NewGuid().ToString(),
-            Auth0UserId = command.Auth0UserId,
+            ExternalUserId = command.ExternalUserId,
             Email = command.Email,
             DisplayName = command.DisplayName ?? command.Email.Split('@')[0],
             UserProfileIds = command.UserProfileIds ?? new List<string>(),

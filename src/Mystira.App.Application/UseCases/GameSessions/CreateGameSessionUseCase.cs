@@ -82,7 +82,7 @@ public class CreateGameSessionUseCase
             ScenarioId = request.ScenarioId,
             AccountId = request.AccountId,
             ProfileId = request.ProfileId,
-            PlayerNames = request.PlayerNames,
+            PlayerNames = request.PlayerNames ?? new List<string>(),
             Status = SessionStatus.InProgress,
             CurrentSceneId = scenario.Scenes.First().Id,
             StartTime = DateTime.UtcNow,

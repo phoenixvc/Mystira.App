@@ -48,7 +48,7 @@ public class CreateScenarioUseCase
             Id = Guid.NewGuid().ToString(),
             Title = request.Title,
             Description = request.Description,
-            Tags = request.Tags,
+            Tags = request.Tags ?? new List<string>(),
             Difficulty = ScenarioMapper.MapDifficultyLevel((int)request.Difficulty),
             SessionLength = ScenarioMapper.MapSessionLength((int)request.SessionLength),
             Archetypes = ScenarioMapper.ParseArchetypes(request.Archetypes),

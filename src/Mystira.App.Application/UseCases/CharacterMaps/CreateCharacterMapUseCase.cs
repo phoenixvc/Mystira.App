@@ -42,7 +42,7 @@ public class CreateCharacterMapUseCase
         {
             Id = request.Id,
             Name = request.Name,
-            Image = request.Image,
+            Image = request.Image ?? string.Empty,
             Audio = request.Audio,
             Metadata = MapMetadata(request.Metadata),
             CreatedAt = DateTime.UtcNow,

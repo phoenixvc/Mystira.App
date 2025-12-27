@@ -51,7 +51,7 @@ public class UpdateScenarioUseCase
 
         scenario.Title = request.Title;
         scenario.Description = request.Description;
-        scenario.Tags = request.Tags;
+        scenario.Tags = request.Tags ?? new List<string>();
         scenario.Difficulty = ScenarioMapper.MapDifficultyLevel((int)request.Difficulty);
         scenario.SessionLength = ScenarioMapper.MapSessionLength((int)request.SessionLength);
         scenario.Archetypes = ScenarioMapper.ParseArchetypes(request.Archetypes);

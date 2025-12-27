@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Mystira.App.Shared.Media;
+using Mystira.Shared.Media;
 using Xunit;
 
 namespace Mystira.App.Application.Tests.Shared;
@@ -126,7 +126,7 @@ public class MimeTypeRegistryTests
 
     [Theory]
     [InlineData("application/unknown")]
-    [InlineData("text/plain")]
+    [InlineData("application/x-custom-type")]
     public void GetExtension_WithUnknownMimeType_ReturnsNull(string mimeType)
     {
         // Act
@@ -134,6 +134,16 @@ public class MimeTypeRegistryTests
 
         // Assert
         result.Should().BeNull();
+    }
+
+    [Fact]
+    public void GetExtension_WithTextPlain_ReturnsTxtExtension()
+    {
+        // Act
+        var result = MimeTypeRegistry.GetExtension("text/plain");
+
+        // Assert
+        result.Should().Be(".txt");
     }
 
     #endregion

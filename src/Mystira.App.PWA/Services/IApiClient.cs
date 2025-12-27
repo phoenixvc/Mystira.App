@@ -8,11 +8,6 @@ public interface IApiClient
     Task<Scenario?> GetScenarioAsync(string id);
     Task<Scene?> GetSceneAsync(string scenarioId, string sceneId);
     Task<string?> GetMediaUrlFromId(string mediaId);
-    Task<PasswordlessSignupResponse?> RequestPasswordlessSignupAsync(string email, string displayName);
-    Task<PasswordlessVerifyResponse?> VerifyPasswordlessSignupAsync(string email, string code);
-    Task<PasswordlessSigninResponse?> RequestPasswordlessSigninAsync(string email);
-    Task<PasswordlessVerifyResponse?> VerifyPasswordlessSigninAsync(string email, string code);
-    Task<RefreshTokenResponse?> RefreshTokenAsync(string token, string refreshToken);
     Task<GameSession?> StartGameSessionAsync(string scenarioId, string accountId, string profileId, List<string> playerNames, string targetAgeGroup);
     Task<GameSession?> StartGameSessionWithAssignmentsAsync(StartGameSessionRequest request);
     Task<GameSession?> EndGameSessionAsync(string sessionId);
@@ -33,7 +28,6 @@ public interface IApiClient
 
     Task<List<GameSession>?> GetSessionsByAccountAsync(string accountId);
     Task<List<GameSession>?> GetSessionsByProfileAsync(string profileId);
-    Task<Account?> GetAccountByEmailAsync(string email);
 
     // Character endpoints
     Task<Character?> GetCharacterAsync(string id);
