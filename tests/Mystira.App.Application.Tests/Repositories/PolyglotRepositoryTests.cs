@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Infrastructure.Data.Polyglot;
+using Mystira.Shared.Telemetry;
 
 namespace Mystira.App.Application.Tests.Repositories;
 
@@ -15,10 +16,12 @@ namespace Mystira.App.Application.Tests.Repositories;
 public class PolyglotRepositoryTests
 {
     private readonly Mock<ILogger<PolyglotRepository<TestEntity>>> _loggerMock;
+    private readonly Mock<ICustomMetrics> _metricsMock;
 
     public PolyglotRepositoryTests()
     {
         _loggerMock = new Mock<ILogger<PolyglotRepository<TestEntity>>>();
+        _metricsMock = new Mock<ICustomMetrics>();
     }
 
     [Theory]
@@ -232,7 +235,8 @@ public class PolyglotRepositoryTests
             primaryContext,
             Options.Create(options),
             _loggerMock.Object,
-            secondaryContext);
+            secondaryContext,
+            _metricsMock.Object);
     }
 
     public class TestEntity
