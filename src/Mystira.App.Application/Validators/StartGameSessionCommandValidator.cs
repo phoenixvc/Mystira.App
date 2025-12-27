@@ -18,10 +18,5 @@ public class StartGameSessionCommandValidator : AbstractValidator<StartGameSessi
             .NotEmpty()
             .WithMessage("Scenario ID is required")
             .When(x => x.Request != null);
-
-        RuleFor(x => x.Request.UserProfileId)
-            .NotEmpty()
-            .WithMessage("User profile ID is required")
-            .When(x => x.Request != null);
     }
 }

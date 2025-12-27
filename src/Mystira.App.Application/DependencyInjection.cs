@@ -16,7 +16,7 @@ public static class DependencyInjection
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
         // Register all validators from this assembly
-        services.AddValidatorsFromAssemblyContaining<DependencyInjection>();
+        services.AddValidatorsFromAssemblyContaining<Validators.StartGameSessionCommandValidator>();
 
         return services;
     }

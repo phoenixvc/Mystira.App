@@ -23,10 +23,5 @@ public class AwardBadgeCommandValidator : AbstractValidator<AwardBadgeCommand>
             .NotEmpty()
             .WithMessage("Badge configuration ID is required")
             .When(x => x.Request != null);
-
-        RuleFor(x => x.Request.Axis)
-            .NotEmpty()
-            .WithMessage("Axis is required")
-            .When(x => x.Request != null);
     }
 }
