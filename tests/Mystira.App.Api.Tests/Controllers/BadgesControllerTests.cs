@@ -10,6 +10,7 @@ using Moq;
 using Mystira.App.Api.Controllers;
 using Mystira.App.Application.CQRS.Badges.Queries;
 using Mystira.Contracts.App.Responses.Badges;
+using CompassAxisScoreResult = Mystira.App.Application.CQRS.Badges.Queries.CompassAxisScoreResult;
 using Wolverine;
 using Xunit;
 
@@ -253,7 +254,7 @@ public class BadgesControllerTests
     {
         // Arrange
         var profileId = "profile-1";
-        var progress = new BadgeProgressResponse { ProfileId = profileId };
+        var progress = new BadgeProgressResponse { AgeGroupId = "8-12" };
 
         _mockBus
             .Setup(x => x.InvokeAsync<BadgeProgressResponse?>(
@@ -268,7 +269,7 @@ public class BadgesControllerTests
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedProgress = okResult.Value.Should().BeOfType<BadgeProgressResponse>().Subject;
-        returnedProgress.ProfileId.Should().Be(profileId);
+        returnedProgress.AgeGroupId.Should().Be("8-12");
     }
 
     [Fact]

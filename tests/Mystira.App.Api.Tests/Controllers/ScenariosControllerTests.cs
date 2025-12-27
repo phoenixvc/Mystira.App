@@ -49,10 +49,10 @@ public class ScenariosControllerTests
         var request = new ScenarioQueryRequest { Page = 1, PageSize = 10 };
         var expectedResponse = new ScenarioListResponse
         {
-            Scenarios = new List<Scenario>
+            Scenarios = new List<ScenarioSummary>
             {
-                new Scenario { Id = "scenario-1", Title = "Test Scenario 1" },
-                new Scenario { Id = "scenario-2", Title = "Test Scenario 2" }
+                new ScenarioSummary { Id = "scenario-1", Title = "Test Scenario 1" },
+                new ScenarioSummary { Id = "scenario-2", Title = "Test Scenario 2" }
             },
             TotalCount = 2,
             Page = 1,
@@ -103,7 +103,7 @@ public class ScenariosControllerTests
 
         // Assert
         capturedQuery.Should().NotBeNull();
-        capturedQuery!.Page.Should().Be(2);
+        capturedQuery!.PageNumber.Should().Be(2);
         capturedQuery.PageSize.Should().Be(20);
         capturedQuery.Search.Should().Be("dragon");
         capturedQuery.AgeGroup.Should().Be("8-12");
@@ -359,8 +359,8 @@ public class ScenariosControllerTests
         var scenarioId = "scenario-1";
         var attribution = new ContentAttributionResponse
         {
-            ScenarioId = scenarioId,
-            Title = "Test Scenario"
+            ContentId = scenarioId,
+            ContentTitle = "Test Scenario"
         };
 
         _mockBus
@@ -376,7 +376,7 @@ public class ScenariosControllerTests
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedAttribution = okResult.Value.Should().BeOfType<ContentAttributionResponse>().Subject;
-        returnedAttribution.ScenarioId.Should().Be(scenarioId);
+        returnedAttribution.ContentId.Should().Be(scenarioId);
     }
 
     [Fact]
@@ -410,7 +410,8 @@ public class ScenariosControllerTests
         var scenarioId = "scenario-1";
         var ipStatus = new IpVerificationResponse
         {
-            ScenarioId = scenarioId,
+            ContentId = scenarioId,
+            ContentTitle = "Test Scenario",
             IsRegistered = true
         };
 
@@ -427,7 +428,7 @@ public class ScenariosControllerTests
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedIpStatus = okResult.Value.Should().BeOfType<IpVerificationResponse>().Subject;
-        returnedIpStatus.ScenarioId.Should().Be(scenarioId);
+        returnedIpStatus.ContentId.Should().Be(scenarioId);
         returnedIpStatus.IsRegistered.Should().BeTrue();
     }
 
