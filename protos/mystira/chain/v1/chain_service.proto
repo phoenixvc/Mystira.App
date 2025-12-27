@@ -1,0 +1,209 @@
+syntax = "proto3";
+
+package mystira.chain.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option csharp_namespace = "Mystira.Chain.V1";
+
+// ChainService provides gRPC interface to Mystira.Chain for IP asset management and royalty operations.
+service ChainService {
+  // Register a new IP asset on the blockchain
+  rpc RegisterIpAsset(RegisterIpAssetRequest) returns (RegisterIpAssetResponse);
+
+  // Check if content is already registered
+  rpc IsRegistered(IsRegisteredRequest) returns (IsRegisteredResponse);
+
+  // Get royalty configuration for an IP asset
+  rpc GetRoyaltyConfiguration(GetRoyaltyConfigurationRequest) returns (GetRoyaltyConfigurationResponse);
+
+  // Update royalty split for an IP asset
+  rpc UpdateRoyaltySplit(UpdateRoyaltySplitRequest) returns (UpdateRoyaltySplitResponse);
+
+  // Pay royalties to an IP asset
+  rpc PayRoyalties(PayRoyaltiesRequest) returns (PayRoyaltiesResponse);
+
+  // Get claimable royalties for an IP asset
+  rpc GetClaimableRoyalties(GetClaimableRoyaltiesRequest) returns (GetClaimableRoyaltiesResponse);
+
+  // Claim royalties for a contributor
+  rpc ClaimRoyalties(ClaimRoyaltiesRequest) returns (ClaimRoyaltiesResponse);
+
+  // Watch transaction status updates (streaming)
+  rpc WatchTransactions(WatchTransactionsRequest) returns (stream TransactionUpdate);
+
+  // Health check endpoint
+  rpc HealthCheck(google.protobuf.Empty) returns (HealthCheckResponse);
+}
+
+// Contributor information for royalty splits
+message Contributor {
+  string wallet_address = 1;
+  ContributorType contributor_type = 2;
+  uint32 share_basis_points = 3;
+  string display_name = 4;
+}
+
+// Types of contributors
+enum ContributorType {
+  CONTRIBUTOR_TYPE_UNSPECIFIED = 0;
+  CONTRIBUTOR_TYPE_AUTHOR = 1;
+  CONTRIBUTOR_TYPE_ARTIST = 2;
+  CONTRIBUTOR_TYPE_CURATOR = 3;
+  CONTRIBUTOR_TYPE_PUBLISHER = 4;
+  CONTRIBUTOR_TYPE_OTHER = 5;
+}
+
+// IP Asset status
+enum IpAssetStatus {
+  IP_ASSET_STATUS_UNSPECIFIED = 0;
+  IP_ASSET_STATUS_PENDING = 1;
+  IP_ASSET_STATUS_REGISTERED = 2;
+  IP_ASSET_STATUS_FAILED = 3;
+}
+
+// Payment status
+enum PaymentStatus {
+  PAYMENT_STATUS_UNSPECIFIED = 0;
+  PAYMENT_STATUS_PENDING = 1;
+  PAYMENT_STATUS_CONFIRMED = 2;
+  PAYMENT_STATUS_FAILED = 3;
+}
+
+// Transaction status for watching
+enum TransactionStatus {
+  TRANSACTION_STATUS_UNSPECIFIED = 0;
+  TRANSACTION_STATUS_PENDING = 1;
+  TRANSACTION_STATUS_CONFIRMED = 2;
+  TRANSACTION_STATUS_FAILED = 3;
+}
+
+// Register IP Asset
+message RegisterIpAssetRequest {
+  string content_id = 1;
+  string content_title = 2;
+  repeated Contributor contributors = 3;
+  string metadata_uri = 4;
+  string license_terms_id = 5;
+  string idempotency_key = 6;
+}
+
+message RegisterIpAssetResponse {
+  string ip_asset_id = 1;
+  string registration_tx_hash = 2;
+  google.protobuf.Timestamp registered_at = 3;
+  IpAssetStatus status = 4;
+  string error_message = 5;
+}
+
+// Is Registered
+message IsRegisteredRequest {
+  string content_id = 1;
+}
+
+message IsRegisteredResponse {
+  bool is_registered = 1;
+  string ip_asset_id = 2;
+}
+
+// Get Royalty Configuration
+message GetRoyaltyConfigurationRequest {
+  string ip_asset_id = 1;
+}
+
+message RoyaltyRecipient {
+  string wallet_address = 1;
+  uint32 share_basis_points = 2;
+  string role = 3;
+}
+
+message GetRoyaltyConfigurationResponse {
+  string royalty_module_id = 1;
+  repeated RoyaltyRecipient recipients = 2;
+}
+
+// Update Royalty Split
+message UpdateRoyaltySplitRequest {
+  string ip_asset_id = 1;
+  repeated Contributor contributors = 2;
+  string idempotency_key = 3;
+}
+
+message UpdateRoyaltySplitResponse {
+  bool success = 1;
+  string transaction_hash = 2;
+  string error_message = 3;
+}
+
+// Pay Royalties
+message PayRoyaltiesRequest {
+  string ip_asset_id = 1;
+  string amount_wei = 2;
+  string currency_token = 3;
+  string payer_reference = 4;
+  string idempotency_key = 5;
+}
+
+message PayRoyaltiesResponse {
+  string payment_id = 1;
+  string transaction_hash = 2;
+  string currency_token = 3;
+  google.protobuf.Timestamp paid_at = 4;
+  PaymentStatus status = 5;
+  string error_message = 6;
+}
+
+// Get Claimable Royalties
+message GetClaimableRoyaltiesRequest {
+  string ip_asset_id = 1;
+}
+
+message RoyaltyBalance {
+  string ip_asset_id = 1;
+  string amount_wei = 2;
+  string currency_token = 3;
+}
+
+message GetClaimableRoyaltiesResponse {
+  repeated RoyaltyBalance balances = 1;
+  google.protobuf.Timestamp last_updated = 2;
+}
+
+// Claim Royalties
+message ClaimRoyaltiesRequest {
+  string ip_asset_id = 1;
+  string contributor_wallet = 2;
+  string currency_token = 3;
+  string idempotency_key = 4;
+}
+
+message ClaimRoyaltiesResponse {
+  string transaction_hash = 1;
+  string amount_claimed_wei = 2;
+  PaymentStatus status = 3;
+  string error_message = 4;
+}
+
+// Watch Transactions
+message WatchTransactionsRequest {
+  repeated string transaction_hashes = 1;
+}
+
+message TransactionUpdate {
+  string transaction_hash = 1;
+  TransactionStatus status = 2;
+  uint32 confirmations = 3;
+  string error_message = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+// Health Check
+message HealthCheckResponse {
+  enum ServingStatus {
+    UNKNOWN = 0;
+    SERVING = 1;
+    NOT_SERVING = 2;
+  }
+  ServingStatus status = 1;
+}

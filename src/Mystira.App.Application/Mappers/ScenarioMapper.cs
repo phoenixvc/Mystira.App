@@ -13,7 +13,13 @@ public static partial class ScenarioMapper
 {
     /// <summary>
     /// Maps a CharacterRequest to a ScenarioCharacter domain model.
+    /// Note: Description, Role, Archetype, Traits, IsPlayerCharacter are in Metadata, not directly on ScenarioCharacter.
     /// </summary>
+    [MapperIgnoreSource(nameof(CharacterRequest.Description))]
+    [MapperIgnoreSource(nameof(CharacterRequest.Role))]
+    [MapperIgnoreSource(nameof(CharacterRequest.Archetype))]
+    [MapperIgnoreSource(nameof(CharacterRequest.Traits))]
+    [MapperIgnoreSource(nameof(CharacterRequest.IsPlayerCharacter))]
     public static partial ScenarioCharacter ToScenarioCharacter(CharacterRequest request);
 
     /// <summary>
@@ -24,17 +30,35 @@ public static partial class ScenarioMapper
 
     /// <summary>
     /// Maps a SceneRequest to a Scene domain model.
+    /// Note: Content, Order, BackgroundImage, BackgroundMusic, Choices are handled differently or not needed.
+    /// Music and SoundEffects are set separately as they don't exist in SceneRequest.
     /// </summary>
     [MapProperty(nameof(SceneRequest.Type), nameof(Scene.Type), Use = nameof(ParseSceneType))]
     [MapProperty(nameof(SceneRequest.Difficulty), nameof(Scene.Difficulty), Use = nameof(ParseDifficulty))]
     [MapProperty(nameof(SceneRequest.Media), nameof(Scene.Media), Use = nameof(MapMedia))]
     [MapProperty(nameof(SceneRequest.Branches), nameof(Scene.Branches), Use = nameof(MapBranches))]
     [MapProperty(nameof(SceneRequest.EchoReveals), nameof(Scene.EchoReveals), Use = nameof(MapEchoReveals))]
+    [MapperIgnoreSource(nameof(SceneRequest.Content))]
+    [MapperIgnoreSource(nameof(SceneRequest.Order))]
+    [MapperIgnoreSource(nameof(SceneRequest.BackgroundImage))]
+    [MapperIgnoreSource(nameof(SceneRequest.BackgroundMusic))]
+    [MapperIgnoreSource(nameof(SceneRequest.Choices))]
+    [MapperIgnoreTarget(nameof(Scene.Music))]
+    [MapperIgnoreTarget(nameof(Scene.SoundEffects))]
     public static partial Scene ToScene(SceneRequest request);
 
     /// <summary>
     /// Maps a BranchRequest to a Branch domain model.
+    /// Note: Text, CompassAxis, CompassDirection, CompassDelta are handled via MapBranches.
+    /// Choice, EchoLog, CompassChange are set via the manual mapping in MapBranches.
     /// </summary>
+    [MapperIgnoreSource(nameof(BranchRequest.Text))]
+    [MapperIgnoreSource(nameof(BranchRequest.CompassAxis))]
+    [MapperIgnoreSource(nameof(BranchRequest.CompassDirection))]
+    [MapperIgnoreSource(nameof(BranchRequest.CompassDelta))]
+    [MapperIgnoreTarget(nameof(Branch.Choice))]
+    [MapperIgnoreTarget(nameof(Branch.EchoLog))]
+    [MapperIgnoreTarget(nameof(Branch.CompassChange))]
     public static partial Branch ToBranch(BranchRequest request);
 
     /// <summary>
