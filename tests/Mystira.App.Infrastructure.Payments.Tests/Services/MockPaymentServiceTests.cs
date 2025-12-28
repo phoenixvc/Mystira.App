@@ -28,7 +28,9 @@ public class MockPaymentServiceTests
             AccountId = "acc-123",
             Amount = 99.99m,
             Currency = "ZAR",
-            Email = "test@example.com"
+            Email = "test@example.com",
+            ProductId = "product-123",
+            Description = "Test checkout"
         };
 
         // Act
@@ -49,7 +51,9 @@ public class MockPaymentServiceTests
         {
             AccountId = "acc-123",
             Amount = 50m,
-            Currency = "ZAR"
+            Currency = "ZAR",
+            ProductId = "product-123",
+            Description = "Test checkout"
         };
 
         // Act

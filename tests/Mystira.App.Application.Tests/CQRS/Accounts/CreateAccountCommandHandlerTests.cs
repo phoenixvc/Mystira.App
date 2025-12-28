@@ -157,7 +157,7 @@ public class CreateAccountCommandHandlerTests
         // Arrange
         var subscription = new SubscriptionDetails
         {
-            PlanId = "premium",
+            Tier = "premium",
             StartDate = DateTime.UtcNow,
             EndDate = DateTime.UtcNow.AddYears(1)
         };
@@ -184,7 +184,7 @@ public class CreateAccountCommandHandlerTests
 
         // Assert
         result.Subscription.Should().NotBeNull();
-        result.Subscription.PlanId.Should().Be("premium");
+        result.Subscription.Tier.Should().Be("premium");
     }
 
     [Fact]
@@ -194,7 +194,7 @@ public class CreateAccountCommandHandlerTests
         var settings = new AccountSettings
         {
             NotificationsEnabled = true,
-            Language = "en"
+            PreferredLanguage = "en"
         };
 
         var command = new CreateAccountCommand(
@@ -220,7 +220,7 @@ public class CreateAccountCommandHandlerTests
         // Assert
         result.Settings.Should().NotBeNull();
         result.Settings.NotificationsEnabled.Should().BeTrue();
-        result.Settings.Language.Should().Be("en");
+        result.Settings.PreferredLanguage.Should().Be("en");
     }
 
     [Fact]

@@ -25,7 +25,7 @@ public class PeachPaymentsServiceTests
 
         var paymentOptions = new PaymentOptions
         {
-            Provider = "PeachPayments",
+            Provider = PaymentProvider.PeachPayments,
             TimeoutSeconds = 30,
             SuccessUrl = "https://example.com/success",
             PeachPayments = new PeachPaymentsOptions
@@ -56,7 +56,9 @@ public class PeachPaymentsServiceTests
             Amount = 99.99m,
             Currency = "ZAR",
             Email = "test@example.com",
-            Type = CheckoutType.OneTime
+            Type = CheckoutType.OneTime,
+            ProductId = "product-123",
+            Description = "Test checkout"
         };
 
         _mockHttp.When(HttpMethod.Post, "https://test.oppwa.com/v1/checkouts")
@@ -85,7 +87,9 @@ public class PeachPaymentsServiceTests
             AccountId = "acc-123",
             Amount = 100m,
             Currency = "ZAR",
-            Email = "test@example.com"
+            Email = "test@example.com",
+            ProductId = "product-123",
+            Description = "Test checkout"
         };
 
         _mockHttp.When(HttpMethod.Post, "https://test.oppwa.com/v1/checkouts")
@@ -109,7 +113,9 @@ public class PeachPaymentsServiceTests
             AccountId = "acc-123",
             Amount = 100m,
             Currency = "ZAR",
-            Email = "test@example.com"
+            Email = "test@example.com",
+            ProductId = "product-123",
+            Description = "Test checkout"
         };
 
         _mockHttp.When(HttpMethod.Post, "https://test.oppwa.com/v1/checkouts")
@@ -133,7 +139,9 @@ public class PeachPaymentsServiceTests
             Amount = 49.99m,
             Currency = "ZAR",
             Email = "test@example.com",
-            Type = CheckoutType.Subscription
+            Type = CheckoutType.Subscription,
+            ProductId = "product-sub-123",
+            Description = "Subscription checkout"
         };
 
         string? capturedContent = null;
@@ -162,6 +170,8 @@ public class PeachPaymentsServiceTests
             Amount = 100m,
             Currency = "ZAR",
             Email = "test@example.com",
+            ProductId = "product-123",
+            Description = "Checkout with metadata",
             Metadata = new Dictionary<string, string>
             {
                 ["orderId"] = "order-456",

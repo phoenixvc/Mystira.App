@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +9,7 @@ using Mystira.App.Application.CQRS.Avatars.Queries;
 using Mystira.Contracts.App.Responses.Common;
 using Mystira.Contracts.App.Responses.Media;
 using Wolverine;
+using Xunit;
 
 namespace Mystira.App.Api.Tests.Controllers;
 

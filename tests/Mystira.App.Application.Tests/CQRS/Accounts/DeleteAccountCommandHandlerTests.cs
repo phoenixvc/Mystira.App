@@ -93,6 +93,8 @@ public class DeleteAccountCommandHandlerTests
         _repository.Setup(r => r.DeleteAsync(It.IsAny<string>()))
             .Callback<string>(id => deletedAccountId = id)
             .Returns(Task.CompletedTask);
+        _unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
 
         var command = new DeleteAccountCommand(accountId);
 
@@ -123,7 +125,7 @@ public class DeleteAccountCommandHandlerTests
             .Returns(Task.CompletedTask);
         _unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Callback(() => callOrder.Add("save"))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(1);
 
         var command = new DeleteAccountCommand(accountId);
 
@@ -152,7 +154,7 @@ public class DeleteAccountCommandHandlerTests
             .ReturnsAsync(existingAccount);
         _unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Callback<CancellationToken>(ct => capturedToken = ct)
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(1);
 
         var command = new DeleteAccountCommand(accountId);
 
