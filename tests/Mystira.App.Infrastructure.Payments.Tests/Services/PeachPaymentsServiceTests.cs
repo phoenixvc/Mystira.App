@@ -48,6 +48,10 @@ public class PeachPaymentsServiceTests
 
     #region CreateCheckoutAsync Tests
 
+    // NOTE: MockHttp requires wildcard URL patterns (e.g., "*/v1/checkouts") when
+    // the service sets HttpClient.BaseAddress in ConfigureHttpClient(). Without the
+    // leading wildcard, MockHttp fails to match requests made with relative URLs.
+
     [Fact]
     public async Task CreateCheckoutAsync_OnSuccess_ReturnsCreatedStatus()
     {
@@ -63,7 +67,8 @@ public class PeachPaymentsServiceTests
             Description = "Test checkout"
         };
 
-        _mockHttp.When(HttpMethod.Post, $"{BaseUrl}/v1/checkouts")
+        // Use wildcard pattern for URL matching - MockHttp requires this when HttpClient.BaseAddress is set
+        _mockHttp.When(HttpMethod.Post, "*/v1/checkouts")
             .Respond("application/json", JsonSerializer.Serialize(new
             {
                 id = "checkout_12345",
@@ -94,7 +99,7 @@ public class PeachPaymentsServiceTests
             Description = "Test checkout"
         };
 
-        _mockHttp.When(HttpMethod.Post, $"{BaseUrl}/v1/checkouts")
+        _mockHttp.When(HttpMethod.Post, "*/v1/checkouts")
             .Respond(HttpStatusCode.BadRequest, "application/json", "{\"error\": \"Invalid request\"}");
 
         // Act
@@ -120,7 +125,7 @@ public class PeachPaymentsServiceTests
             Description = "Test checkout"
         };
 
-        _mockHttp.When(HttpMethod.Post, $"{BaseUrl}/v1/checkouts")
+        _mockHttp.When(HttpMethod.Post, "*/v1/checkouts")
             .Throw(new HttpRequestException("Network error"));
 
         // Act
@@ -147,7 +152,7 @@ public class PeachPaymentsServiceTests
         };
 
         string? capturedContent = null;
-        _mockHttp.When(HttpMethod.Post, $"{BaseUrl}/v1/checkouts")
+        _mockHttp.When(HttpMethod.Post, "*/v1/checkouts")
             .With(req =>
             {
                 capturedContent = req.Content?.ReadAsStringAsync().Result;
@@ -182,7 +187,7 @@ public class PeachPaymentsServiceTests
         };
 
         string? capturedContent = null;
-        _mockHttp.When(HttpMethod.Post, $"{BaseUrl}/v1/checkouts")
+        _mockHttp.When(HttpMethod.Post, "*/v1/checkouts")
             .With(req =>
             {
                 capturedContent = req.Content?.ReadAsStringAsync().Result;
@@ -213,7 +218,7 @@ public class PeachPaymentsServiceTests
             PaymentMethodToken = "tok_card_123"
         };
 
-        _mockHttp.When(HttpMethod.Post, $"{BaseUrl}/v1/payments")
+        _mockHttp.When(HttpMethod.Post, "*/v1/payments")
             .Respond("application/json", JsonSerializer.Serialize(new
             {
                 id = "payment_12345",
@@ -243,7 +248,7 @@ public class PeachPaymentsServiceTests
             PaymentMethodToken = "tok_declined"
         };
 
-        _mockHttp.When(HttpMethod.Post, $"{BaseUrl}/v1/payments")
+        _mockHttp.When(HttpMethod.Post, "*/v1/payments")
             .Respond("application/json", JsonSerializer.Serialize(new
             {
                 id = "payment_declined",
@@ -271,7 +276,7 @@ public class PeachPaymentsServiceTests
             PaymentMethodToken = "tok_123"
         };
 
-        _mockHttp.When(HttpMethod.Post, $"{BaseUrl}/v1/payments")
+        _mockHttp.When(HttpMethod.Post, "*/v1/payments")
             .Throw(new HttpRequestException("Connection refused"));
 
         // Act
@@ -368,7 +373,7 @@ public class PeachPaymentsServiceTests
         // Arrange
         var transactionId = "pay_status_123";
 
-        _mockHttp.When(HttpMethod.Get, $"{BaseUrl}/v1/payments/{transactionId}*")
+        _mockHttp.When(HttpMethod.Get, $"*/v1/payments/{transactionId}*")
             .Respond("application/json", JsonSerializer.Serialize(new
             {
                 id = transactionId,
@@ -394,7 +399,7 @@ public class PeachPaymentsServiceTests
         // Arrange
         var transactionId = "pay_pending_123";
 
-        _mockHttp.When(HttpMethod.Get, $"{BaseUrl}/v1/payments/{transactionId}*")
+        _mockHttp.When(HttpMethod.Get, $"*/v1/payments/{transactionId}*")
             .Respond("application/json", JsonSerializer.Serialize(new
             {
                 id = transactionId,
@@ -425,7 +430,7 @@ public class PeachPaymentsServiceTests
             Reason = "Customer requested refund"
         };
 
-        _mockHttp.When(HttpMethod.Post, $"{BaseUrl}/v1/payments/pay_to_refund")
+        _mockHttp.When(HttpMethod.Post, "*/v1/payments/pay_to_refund")
             .Respond("application/json", JsonSerializer.Serialize(new
             {
                 id = "refund_123",
@@ -452,7 +457,7 @@ public class PeachPaymentsServiceTests
             Amount = 100m
         };
 
-        _mockHttp.When(HttpMethod.Post, $"{BaseUrl}/v1/payments/pay_invalid")
+        _mockHttp.When(HttpMethod.Post, "*/v1/payments/pay_invalid")
             .Respond("application/json", JsonSerializer.Serialize(new
             {
                 id = "",
@@ -477,7 +482,7 @@ public class PeachPaymentsServiceTests
             Amount = 100m
         };
 
-        _mockHttp.When(HttpMethod.Post, $"{BaseUrl}/v1/payments/pay_network_error")
+        _mockHttp.When(HttpMethod.Post, "*/v1/payments/pay_network_error")
             .Throw(new HttpRequestException("Network error"));
 
         // Act
@@ -533,7 +538,7 @@ public class PeachPaymentsServiceTests
     public async Task IsHealthyAsync_WhenApiReachable_ReturnsTrue()
     {
         // Arrange
-        _mockHttp.When(HttpMethod.Get, $"{BaseUrl}/v1/")
+        _mockHttp.When(HttpMethod.Get, "*/v1/")
             .Respond(HttpStatusCode.OK);
 
         // Act
@@ -547,7 +552,7 @@ public class PeachPaymentsServiceTests
     public async Task IsHealthyAsync_WhenApiReturnsNotFound_StillReturnsTrue()
     {
         // Arrange - NotFound is acceptable for health check
-        _mockHttp.When(HttpMethod.Get, $"{BaseUrl}/v1/")
+        _mockHttp.When(HttpMethod.Get, "*/v1/")
             .Respond(HttpStatusCode.NotFound);
 
         // Act
@@ -561,7 +566,7 @@ public class PeachPaymentsServiceTests
     public async Task IsHealthyAsync_WhenApiUnreachable_ReturnsFalse()
     {
         // Arrange
-        _mockHttp.When(HttpMethod.Get, $"{BaseUrl}/v1/")
+        _mockHttp.When(HttpMethod.Get, "*/v1/")
             .Throw(new HttpRequestException("Connection refused"));
 
         // Act
