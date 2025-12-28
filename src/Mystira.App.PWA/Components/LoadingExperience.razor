@@ -4,11 +4,11 @@
 <div class="loading-screen">
     <div class="loading-content">
         <img src="images/mystira-logo.webp" alt="Mystira" class="loading-logo" />
-        <h1 class="loading-title">Mystira</h1>
+        <h1 class="loading-title">MYSTIRA</h1>
 
         <div class="loading-status">
             <div class="loading-spinner"></div>
-            <p class="loading-message">@currentMessage</p>
+            <p class="loading-message">Loading...</p>
         </div>
     </div>
 </div>
@@ -18,28 +18,14 @@
     [Parameter] public bool AutoStart { get; set; } = true;
     [Parameter] public EventCallback OnLoaded { get; set; }
 
-    private string currentMessage = "Starting Mystira…";
     private DotNetObjectReference<LoadingExperience>? selfReference;
-
-    private readonly string[] messages = new[]
-    {
-        "Starting Mystira…",
-        "Loading your library…",
-        "Preparing story engine…",
-        "Almost ready…"
-    };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && AutoStart)
         {
-            // Cycle through messages for visual feedback
-            foreach (var message in messages)
-            {
-                currentMessage = message;
-                StateHasChanged();
-                await Task.Delay(150);
-            }
+            // Brief delay for smooth transition
+            await Task.Delay(200);
 
             if (OnLoaded.HasDelegate)
             {
