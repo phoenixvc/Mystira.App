@@ -37,25 +37,16 @@ public class UserProfileTests
     [Fact]
     public void CurrentAge_WhenBirthdayNotYetOccurredThisYear_ReturnsCorrectAge()
     {
-        // Arrange
+        // Arrange - Set birthday to tomorrow, 9 years ago
         var today = DateTime.Today;
-        // Set birthday to 6 months from now, but 10 years ago
-        var birthDate = today.AddYears(-10).AddMonths(6);
+        var birthDate = today.AddYears(-9).AddDays(1);
         var profile = new UserProfile { DateOfBirth = birthDate };
 
         // Act
         var age = profile.CurrentAge;
 
-        // Assert
-        // If birthday hasn't happened yet this year, age should be one less
-        if (birthDate.Date > today.AddYears(-10))
-        {
-            age.Should().Be(9);
-        }
-        else
-        {
-            age.Should().Be(10);
-        }
+        // Assert - Birthday hasn't occurred yet this year, so age is 8
+        age.Should().Be(8);
     }
 
     [Fact]
