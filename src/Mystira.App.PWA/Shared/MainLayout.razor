@@ -57,15 +57,6 @@
                             About
                         </a>
                     </li>
-                    @if (isAuthenticated)
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link" href="/profiles">
-                                <i class="fas fa-users me-1"></i>
-                                Profiles
-                            </a>
-                        </li>
-                    }
                     @if (CurrentGameSession != null)
                     {
                         <li class="nav-item d-flex align-items-center">
@@ -100,6 +91,10 @@
                                         @(CurrentAccount?.DisplayName ?? "Account")
                                     </h6>
                                     <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item" href="/profiles">
+                                        <i class="fas fa-users me-2"></i>
+                                        Profiles
+                                    </a>
                                     <AccountInstallOption />
                                     <button class="dropdown-item" @onclick="OpenSettingsAsync">
                                         <i class="fas fa-cog me-2"></i>
