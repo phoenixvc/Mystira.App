@@ -141,7 +141,7 @@ public class AvatarsControllerTests
                 It.IsAny<GetAvatarsByAgeGroupQuery>(),
                 It.IsAny<CancellationToken>(),
                 It.IsAny<TimeSpan?>()))
-            .ReturnsAsync((AvatarConfigurationResponse?)null);
+            .ReturnsAsync(default(AvatarConfigurationResponse));
 
         // Act
         var result = await _controller.GetAvatarsByAgeGroup("unknown-age-group");

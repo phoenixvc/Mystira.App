@@ -68,7 +68,7 @@ public class UpdateUserProfileCommandHandlerTests
         var request = new UpdateUserProfileRequest();
 
         _repository.Setup(r => r.GetByIdAsync(profileId))
-            .ReturnsAsync((UserProfile?)null);
+            .ReturnsAsync(default(UserProfile));
 
         var command = new UpdateUserProfileCommand(profileId, request);
 

@@ -34,7 +34,7 @@ public class CreateAccountCommandHandlerTests
         );
 
         _repository.Setup(r => r.GetByEmailAsync(command.Email))
-            .ReturnsAsync((Account?)null);
+            .ReturnsAsync(default(Account));
 
         // Act
         var result = await CreateAccountCommandHandler.Handle(
@@ -70,7 +70,7 @@ public class CreateAccountCommandHandlerTests
         );
 
         _repository.Setup(r => r.GetByEmailAsync(command.Email))
-            .ReturnsAsync((Account?)null);
+            .ReturnsAsync(default(Account));
 
         // Act
         var result = await CreateAccountCommandHandler.Handle(
@@ -137,7 +137,7 @@ public class CreateAccountCommandHandlerTests
         );
 
         _repository.Setup(r => r.GetByEmailAsync(command.Email))
-            .ReturnsAsync((Account?)null);
+            .ReturnsAsync(default(Account));
 
         // Act
         var result = await CreateAccountCommandHandler.Handle(
@@ -172,7 +172,7 @@ public class CreateAccountCommandHandlerTests
         );
 
         _repository.Setup(r => r.GetByEmailAsync(command.Email))
-            .ReturnsAsync((Account?)null);
+            .ReturnsAsync(default(Account));
 
         // Act
         var result = await CreateAccountCommandHandler.Handle(
@@ -207,7 +207,7 @@ public class CreateAccountCommandHandlerTests
         );
 
         _repository.Setup(r => r.GetByEmailAsync(command.Email))
-            .ReturnsAsync((Account?)null);
+            .ReturnsAsync(default(Account));
 
         // Act
         var result = await CreateAccountCommandHandler.Handle(
@@ -237,7 +237,7 @@ public class CreateAccountCommandHandlerTests
         );
 
         _repository.Setup(r => r.GetByEmailAsync(command.Email))
-            .ReturnsAsync((Account?)null);
+            .ReturnsAsync(default(Account));
 
         // Act
         var result = await CreateAccountCommandHandler.Handle(

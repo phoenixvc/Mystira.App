@@ -58,7 +58,7 @@ public class DeleteAccountCommandHandlerTests
         var accountId = "nonexistent-123";
 
         _repository.Setup(r => r.GetByIdAsync(accountId))
-            .ReturnsAsync((Account?)null);
+            .ReturnsAsync(default(Account));
 
         var command = new DeleteAccountCommand(accountId);
 

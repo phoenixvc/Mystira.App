@@ -168,7 +168,7 @@ public class AwardBadgeCommandHandlerTests
         };
 
         _badgeConfigRepository.Setup(r => r.GetByIdAsync("nonexistent-badge"))
-            .ReturnsAsync((BadgeConfiguration?)null);
+            .ReturnsAsync(default(BadgeConfiguration));
 
         var command = new AwardBadgeCommand(request);
 
