@@ -55,30 +55,30 @@ public class PeachPaymentsServiceTests
 
     private void SetupHttpResponse(HttpStatusCode statusCode, object? responseBody = null)
     {
-        var response = new HttpResponseMessage(statusCode);
-        if (responseBody != null)
-        {
-            response.Content = new StringContent(
-                JsonSerializer.Serialize(responseBody),
-                Encoding.UTF8,
-                "application/json");
-        }
-
         _httpHandlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
                 ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>(async (req, _) =>
+            .Returns<HttpRequestMessage, CancellationToken>(async (req, _) =>
             {
                 _capturedRequest = req;
                 if (req.Content != null)
                 {
                     _capturedContent = await req.Content.ReadAsStringAsync();
                 }
-            })
-            .ReturnsAsync(response);
+
+                var response = new HttpResponseMessage(statusCode);
+                if (responseBody != null)
+                {
+                    response.Content = new StringContent(
+                        JsonSerializer.Serialize(responseBody),
+                        Encoding.UTF8,
+                        "application/json");
+                }
+                return response;
+            });
     }
 
     private void SetupHttpException(Exception exception)
