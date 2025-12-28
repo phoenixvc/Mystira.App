@@ -192,7 +192,7 @@ public class UserBadgesController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting badges for account {Email}", email);
+            _logger.LogError(ex, "Error getting badges for account");
             return StatusCode(500, new ErrorResponse
             {
                 Message = "Internal server error while getting account badges",
@@ -216,7 +216,7 @@ public class UserBadgesController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting badge statistics for account {Email}", email);
+            _logger.LogError(ex, "Error getting badge statistics for account");
             return StatusCode(500, new ErrorResponse
             {
                 Message = "Internal server error while getting account badge statistics",
