@@ -31,31 +31,25 @@
                         <ThemeToggle />
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/">
+                        <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
                             <i class="fas fa-home me-1"></i>
                             Home
-                        </a>
+                        </NavLink>
                     </li>
                     @if (isAuthenticated)
                     {
                         <li class="nav-item">
-                            <a class="nav-link" href="/adventures">
+                            <NavLink class="nav-link" href="/adventures">
                                 <i class="fas fa-compass me-1"></i>
                                 Adventures
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/achievements">
-                                <i class="fas fa-trophy me-1"></i>
-                                Achievements
-                            </a>
+                            </NavLink>
                         </li>
                     }
                     <li class="nav-item">
-                        <a class="nav-link" href="/about">
+                        <NavLink class="nav-link" href="/about">
                             <i class="fas fa-info-circle me-1"></i>
                             About
-                        </a>
+                        </NavLink>
                     </li>
                     @if (CurrentGameSession != null)
                     {
@@ -91,6 +85,10 @@
                                         @(CurrentAccount?.DisplayName ?? "Account")
                                     </h6>
                                     <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item" href="/achievements">
+                                        <i class="fas fa-trophy me-2"></i>
+                                        Achievements
+                                    </a>
                                     <a class="dropdown-item" href="/profiles">
                                         <i class="fas fa-users me-2"></i>
                                         Profiles
