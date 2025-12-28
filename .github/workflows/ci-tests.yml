@@ -41,7 +41,7 @@ jobs:
           dotnet nuget add source https://nuget.pkg.github.com/phoenixvc/index.json \
             --name github \
             --username phoenixvc \
-            --password ${{ secrets.GH_PACKAGES_TOKEN }} \
+            --password ${{ secrets.GITHUB_TOKEN }} \
             --store-password-in-clear-text \
             --configfile nuget.config
 
