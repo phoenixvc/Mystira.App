@@ -23,6 +23,8 @@ env:
 jobs:
   test-and-coverage:
     runs-on: ubuntu-latest
+    env:
+      GH_PACKAGES_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -34,16 +36,6 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Configure GitHub Packages authentication
-        run: |
-          dotnet nuget remove source github --configfile nuget.config || true
-          dotnet nuget add source https://nuget.pkg.github.com/phoenixvc/index.json \
-            --name github \
-            --username phoenixvc \
-            --password ${{ secrets.GH_PACKAGES_TOKEN }} \
-            --store-password-in-clear-text \
-            --configfile nuget.config
 
       - name: Cache NuGet packages
         uses: actions/cache@v5
