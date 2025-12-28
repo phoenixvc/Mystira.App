@@ -26,6 +26,8 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     name: Build and Deploy to Dev
+    env:
+      GH_PACKAGES_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -37,9 +39,6 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          source-url: https://nuget.pkg.github.com/phoenixvc/index.json
-        env:
-          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install wasm-tools workload
         run: dotnet workload install wasm-tools
