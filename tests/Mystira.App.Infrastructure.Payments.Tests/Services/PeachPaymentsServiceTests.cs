@@ -1,11 +1,9 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
-using Moq.Protected;
 using Mystira.App.Infrastructure.Payments.Configuration;
 using Mystira.App.Infrastructure.Payments.Services.PeachPayments;
 using Mystira.Contracts.App.Enums;
@@ -13,20 +11,63 @@ using Mystira.Contracts.App.Requests.Payments;
 
 namespace Mystira.App.Infrastructure.Payments.Tests.Services;
 
+/// <summary>
+/// Test handler that captures requests and returns configured responses.
+/// </summary>
+public class TestHttpMessageHandler : HttpMessageHandler
+{
+    private HttpStatusCode _statusCode = HttpStatusCode.OK;
+    private string? _responseContent;
+    private Exception? _exception;
+
+    public HttpRequestMessage? CapturedRequest { get; private set; }
+    public string? CapturedContent { get; private set; }
+
+    public void SetupResponse(HttpStatusCode statusCode, object? responseBody = null)
+    {
+        _statusCode = statusCode;
+        _responseContent = responseBody != null ? JsonSerializer.Serialize(responseBody) : null;
+        _exception = null;
+    }
+
+    public void SetupException(Exception exception)
+    {
+        _exception = exception;
+    }
+
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        CapturedRequest = request;
+        if (request.Content != null)
+        {
+            CapturedContent = await request.Content.ReadAsStringAsync(cancellationToken);
+        }
+
+        if (_exception != null)
+        {
+            throw _exception;
+        }
+
+        var response = new HttpResponseMessage(_statusCode);
+        if (_responseContent != null)
+        {
+            response.Content = new StringContent(_responseContent, Encoding.UTF8, "application/json");
+        }
+        return response;
+    }
+}
+
 public class PeachPaymentsServiceTests
 {
-    private readonly Mock<HttpMessageHandler> _httpHandlerMock;
+    private readonly TestHttpMessageHandler _testHandler;
     private readonly Mock<ILogger<PeachPaymentsService>> _loggerMock;
     private readonly IOptions<PaymentOptions> _options;
     private const string BaseUrl = "https://test.oppwa.com";
 
-    // Captured request for verification
-    private HttpRequestMessage? _capturedRequest;
-    private string? _capturedContent;
-
     public PeachPaymentsServiceTests()
     {
-        _httpHandlerMock = new Mock<HttpMessageHandler>();
+        _testHandler = new TestHttpMessageHandler();
         _loggerMock = new Mock<ILogger<PeachPaymentsService>>();
 
         var paymentOptions = new PaymentOptions
@@ -49,47 +90,8 @@ public class PeachPaymentsServiceTests
 
     private PeachPaymentsService CreateService()
     {
-        var httpClient = new HttpClient(_httpHandlerMock.Object);
+        var httpClient = new HttpClient(_testHandler);
         return new PeachPaymentsService(httpClient, _options, _loggerMock.Object);
-    }
-
-    private void SetupHttpResponse(HttpStatusCode statusCode, object? responseBody = null)
-    {
-        _httpHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Returns<HttpRequestMessage, CancellationToken>(async (req, _) =>
-            {
-                _capturedRequest = req;
-                if (req.Content != null)
-                {
-                    _capturedContent = await req.Content.ReadAsStringAsync();
-                }
-
-                var response = new HttpResponseMessage(statusCode);
-                if (responseBody != null)
-                {
-                    response.Content = new StringContent(
-                        JsonSerializer.Serialize(responseBody),
-                        Encoding.UTF8,
-                        "application/json");
-                }
-                return response;
-            });
-    }
-
-    private void SetupHttpException(Exception exception)
-    {
-        _httpHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ThrowsAsync(exception);
     }
 
     #region CreateCheckoutAsync Tests
@@ -109,7 +111,7 @@ public class PeachPaymentsServiceTests
             Description = "Test checkout"
         };
 
-        SetupHttpResponse(HttpStatusCode.OK, new
+        _testHandler.SetupResponse(HttpStatusCode.OK, new
         {
             id = "checkout_12345",
             result = new { code = "000.200.100", description = "Success" }
@@ -141,7 +143,7 @@ public class PeachPaymentsServiceTests
             Description = "Test checkout"
         };
 
-        SetupHttpResponse(HttpStatusCode.BadRequest, new { error = "Invalid request" });
+        _testHandler.SetupResponse(HttpStatusCode.BadRequest, new { error = "Invalid request" });
 
         var sut = CreateService();
 
@@ -168,7 +170,7 @@ public class PeachPaymentsServiceTests
             Description = "Test checkout"
         };
 
-        SetupHttpException(new HttpRequestException("Network error"));
+        _testHandler.SetupException(new HttpRequestException("Network error"));
 
         var sut = CreateService();
 
@@ -195,7 +197,7 @@ public class PeachPaymentsServiceTests
             Description = "Subscription checkout"
         };
 
-        SetupHttpResponse(HttpStatusCode.OK, new { id = "checkout_sub_123" });
+        _testHandler.SetupResponse(HttpStatusCode.OK, new { id = "checkout_sub_123" });
 
         var sut = CreateService();
 
@@ -203,8 +205,8 @@ public class PeachPaymentsServiceTests
         await sut.CreateCheckoutAsync(request);
 
         // Assert
-        _capturedContent.Should().NotBeNull();
-        _capturedContent.Should().Contain("paymentType=PA");
+        _testHandler.CapturedContent.Should().NotBeNull();
+        _testHandler.CapturedContent.Should().Contain("paymentType=PA");
     }
 
     [Fact]
@@ -226,7 +228,7 @@ public class PeachPaymentsServiceTests
             }
         };
 
-        SetupHttpResponse(HttpStatusCode.OK, new { id = "checkout_123" });
+        _testHandler.SetupResponse(HttpStatusCode.OK, new { id = "checkout_123" });
 
         var sut = CreateService();
 
@@ -234,8 +236,8 @@ public class PeachPaymentsServiceTests
         await sut.CreateCheckoutAsync(request);
 
         // Assert
-        _capturedContent.Should().NotBeNull();
-        _capturedContent.Should().Contain("customParameters");
+        _testHandler.CapturedContent.Should().NotBeNull();
+        _testHandler.CapturedContent.Should().Contain("customParameters");
     }
 
     #endregion
@@ -254,7 +256,7 @@ public class PeachPaymentsServiceTests
             PaymentMethodToken = "tok_card_123"
         };
 
-        SetupHttpResponse(HttpStatusCode.OK, new
+        _testHandler.SetupResponse(HttpStatusCode.OK, new
         {
             id = "payment_12345",
             result = new { code = "000.100.110", description = "Request successfully processed" }
@@ -285,7 +287,7 @@ public class PeachPaymentsServiceTests
             PaymentMethodToken = "tok_declined"
         };
 
-        SetupHttpResponse(HttpStatusCode.OK, new
+        _testHandler.SetupResponse(HttpStatusCode.OK, new
         {
             id = "payment_declined",
             result = new { code = "800.100.151", description = "Transaction declined" }
@@ -314,7 +316,7 @@ public class PeachPaymentsServiceTests
             PaymentMethodToken = "tok_123"
         };
 
-        SetupHttpException(new HttpRequestException("Connection refused"));
+        _testHandler.SetupException(new HttpRequestException("Connection refused"));
 
         var sut = CreateService();
 
@@ -418,7 +420,7 @@ public class PeachPaymentsServiceTests
         // Arrange
         var transactionId = "pay_status_123";
 
-        SetupHttpResponse(HttpStatusCode.OK, new
+        _testHandler.SetupResponse(HttpStatusCode.OK, new
         {
             id = transactionId,
             amount = "200.00",
@@ -445,7 +447,7 @@ public class PeachPaymentsServiceTests
         // Arrange
         var transactionId = "pay_pending_123";
 
-        SetupHttpResponse(HttpStatusCode.OK, new
+        _testHandler.SetupResponse(HttpStatusCode.OK, new
         {
             id = transactionId,
             amount = "100.00",
@@ -477,7 +479,7 @@ public class PeachPaymentsServiceTests
             Reason = "Customer requested refund"
         };
 
-        SetupHttpResponse(HttpStatusCode.OK, new
+        _testHandler.SetupResponse(HttpStatusCode.OK, new
         {
             id = "refund_123",
             result = new { code = "000.100.110", description = "Refund successful" }
@@ -505,7 +507,7 @@ public class PeachPaymentsServiceTests
             Amount = 100m
         };
 
-        SetupHttpResponse(HttpStatusCode.OK, new
+        _testHandler.SetupResponse(HttpStatusCode.OK, new
         {
             id = "",
             result = new { code = "700.400.200", description = "Cannot refund transaction" }
@@ -531,7 +533,7 @@ public class PeachPaymentsServiceTests
             Amount = 100m
         };
 
-        SetupHttpException(new HttpRequestException("Network error"));
+        _testHandler.SetupException(new HttpRequestException("Network error"));
 
         var sut = CreateService();
 
@@ -592,7 +594,7 @@ public class PeachPaymentsServiceTests
     public async Task IsHealthyAsync_WhenApiReachable_ReturnsTrue()
     {
         // Arrange
-        SetupHttpResponse(HttpStatusCode.OK);
+        _testHandler.SetupResponse(HttpStatusCode.OK);
 
         var sut = CreateService();
 
@@ -607,7 +609,7 @@ public class PeachPaymentsServiceTests
     public async Task IsHealthyAsync_WhenApiReturnsNotFound_StillReturnsTrue()
     {
         // Arrange - NotFound is acceptable for health check
-        SetupHttpResponse(HttpStatusCode.NotFound);
+        _testHandler.SetupResponse(HttpStatusCode.NotFound);
 
         var sut = CreateService();
 
@@ -622,7 +624,7 @@ public class PeachPaymentsServiceTests
     public async Task IsHealthyAsync_WhenApiUnreachable_ReturnsFalse()
     {
         // Arrange
-        SetupHttpException(new HttpRequestException("Connection refused"));
+        _testHandler.SetupException(new HttpRequestException("Connection refused"));
 
         var sut = CreateService();
 
