@@ -26,17 +26,6 @@
             </div>
         </div>
     }
-    else if (!profiles.Any())
-    {
-        <EmptyState IconClass="fas fa-user-friends fa-4x"
-                   Title="Create a Profile to Start Earning Badges"
-                   Message="Profiles help Mystira pick the right adventures and achievements for each player."
-                   ShowClearButton="false">
-            <a class="btn btn-primary-custom" href="/profiles">
-                <i class="fas fa-users me-2"></i>Manage Profiles
-            </a>
-        </EmptyState>
-    }
     else if (!string.IsNullOrWhiteSpace(errorMessage))
     {
         <EmptyState IconClass="fas fa-exclamation-triangle fa-4x"
@@ -403,6 +392,7 @@
             profiles = await ProfileService.GetUserProfilesAsync(account.Id) ?? new List<UserProfile>();
             if (!profiles.Any())
             {
+                NavigationManager.NavigateTo("/profiles");
                 return;
             }
 
