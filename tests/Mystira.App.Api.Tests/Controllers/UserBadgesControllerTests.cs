@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +10,6 @@ using Mystira.App.Application.CQRS.UserBadges.Queries;
 using Mystira.App.Domain.Models;
 using Mystira.Contracts.App.Requests.Badges;
 using Wolverine;
-using Xunit;
 
 namespace Mystira.App.Api.Tests.Controllers;
 

@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +8,6 @@ using Mystira.App.Application.CQRS.Avatars.Queries;
 using Mystira.Contracts.App.Responses.Common;
 using Mystira.Contracts.App.Responses.Media;
 using Wolverine;
-using Xunit;
 
 namespace Mystira.App.Api.Tests.Controllers;
 
@@ -39,15 +37,9 @@ public class AvatarsControllerTests
         // Arrange
         var avatarResponse = new AvatarResponse
         {
-            AvatarConfigurations = new Dictionary<string, AvatarConfigurationResponse>
+            AgeGroupAvatars = new Dictionary<string, List<string>>
             {
-                {
-                    "6-9", new AvatarConfigurationResponse
-                    {
-                        DefaultAvatarMediaId = "default-avatar-id",
-                        AvailableAvatarMediaIds = new List<string> { "avatar-1", "avatar-2" }
-                    }
-                }
+                { "6-9", new List<string> { "avatar-1", "avatar-2" } }
             }
         };
 
@@ -64,7 +56,7 @@ public class AvatarsControllerTests
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedAvatars = okResult.Value.Should().BeOfType<AvatarResponse>().Subject;
-        returnedAvatars.AvatarConfigurations.Should().ContainKey("6-9");
+        returnedAvatars.AgeGroupAvatars.Should().ContainKey("6-9");
     }
 
     [Fact]
@@ -97,8 +89,8 @@ public class AvatarsControllerTests
         var ageGroup = "6-9";
         var avatarConfig = new AvatarConfigurationResponse
         {
-            DefaultAvatarMediaId = "default-avatar-id",
-            AvailableAvatarMediaIds = new List<string> { "avatar-1", "avatar-2", "avatar-3" }
+            AgeGroup = ageGroup,
+            AvatarMediaIds = new List<string> { "avatar-1", "avatar-2", "avatar-3" }
         };
 
         _mockBus
@@ -114,8 +106,8 @@ public class AvatarsControllerTests
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedConfig = okResult.Value.Should().BeOfType<AvatarConfigurationResponse>().Subject;
-        returnedConfig.DefaultAvatarMediaId.Should().Be("default-avatar-id");
-        returnedConfig.AvailableAvatarMediaIds.Should().HaveCount(3);
+        returnedConfig.AgeGroup.Should().Be(ageGroup);
+        returnedConfig.AvatarMediaIds.Should().HaveCount(3);
     }
 
     [Fact]
@@ -197,7 +189,7 @@ public class AvatarsControllerTests
                 It.IsAny<CancellationToken>(),
                 It.IsAny<TimeSpan?>()))
             .Callback<object, CancellationToken, TimeSpan?>((q, ct, ts) => capturedQuery = q as GetAvatarsByAgeGroupQuery)
-            .ReturnsAsync(new AvatarConfigurationResponse());
+            .ReturnsAsync(new AvatarConfigurationResponse { AgeGroup = ageGroup, AvatarMediaIds = new List<string>() });
 
         // Act
         await _controller.GetAvatarsByAgeGroup(ageGroup);

@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +10,6 @@ using Mystira.App.Application.CQRS.Royalties.Queries;
 using Mystira.App.Domain.Models;
 using Mystira.Contracts.App.Requests.Royalties;
 using Wolverine;
-using Xunit;
 
 namespace Mystira.App.Api.Tests.Controllers;
 
@@ -43,8 +41,8 @@ public class RoyaltiesControllerTests
         var balance = new RoyaltyBalance
         {
             IpAssetId = ipAssetId,
-            ClaimableAmount = 1000m,
-            Currency = "ETH"
+            TotalClaimable = 1000m,
+            TokenAddress = "0xETH"
         };
 
         _mockBus
@@ -61,7 +59,7 @@ public class RoyaltiesControllerTests
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedBalance = okResult.Value.Should().BeOfType<RoyaltyBalance>().Subject;
         returnedBalance.IpAssetId.Should().Be(ipAssetId);
-        returnedBalance.ClaimableAmount.Should().Be(1000m);
+        returnedBalance.TotalClaimable.Should().Be(1000m);
     }
 
     [Fact]
