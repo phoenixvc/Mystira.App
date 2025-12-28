@@ -46,6 +46,7 @@ public class PeachPaymentsService : IPaymentService
     {
         _httpClient.BaseAddress = new Uri(_peachOptions.BaseUrl);
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _peachOptions.AccessToken);
         _httpClient.Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds);
     }
 
@@ -87,7 +88,6 @@ public class PeachPaymentsService : IPaymentService
 
             // Create the checkout session
             var content = new FormUrlEncodedContent(formData);
-            content.Headers.Add("Authorization", $"Bearer {_peachOptions.AccessToken}");
 
             var response = await _httpClient.PostAsync("/v1/checkouts", content);
             var responseBody = await response.Content.ReadAsStringAsync();
@@ -149,7 +149,6 @@ public class PeachPaymentsService : IPaymentService
             };
 
             var content = new FormUrlEncodedContent(formData);
-            content.Headers.Add("Authorization", $"Bearer {_peachOptions.AccessToken}");
 
             var response = await _httpClient.PostAsync("/v1/payments", content);
             var responseBody = await response.Content.ReadAsStringAsync();
@@ -279,7 +278,6 @@ public class PeachPaymentsService : IPaymentService
             }
 
             var content = new FormUrlEncodedContent(formData);
-            content.Headers.Add("Authorization", $"Bearer {_peachOptions.AccessToken}");
 
             var response = await _httpClient.PostAsync($"/v1/payments/{request.TransactionId}", content);
             var responseBody = await response.Content.ReadAsStringAsync();
