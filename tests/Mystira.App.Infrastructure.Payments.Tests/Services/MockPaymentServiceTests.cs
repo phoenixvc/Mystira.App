@@ -255,7 +255,9 @@ public class MockPaymentServiceTests
         result.SubscriptionId.Should().StartWith("mock_sub_");
         result.Status.Should().Be(SubscriptionResultStatus.Active);
         result.PlanId.Should().Be("plan_monthly");
-        result.CurrentPeriodEnd.Should().BeAfter(result.CurrentPeriodStart);
+        result.CurrentPeriodStart.Should().NotBeNull();
+        result.CurrentPeriodEnd.Should().NotBeNull();
+        result.CurrentPeriodEnd!.Value.Should().BeAfter(result.CurrentPeriodStart!.Value);
     }
 
     [Fact]
