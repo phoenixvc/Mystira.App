@@ -1,0 +1,288 @@
+/* Mystira - Entra External ID Custom Branding CSS */
+/* Upload this file to: Entra Admin > Company Branding > Layout > Custom CSS */
+
+/* Background - Subtle gradient from soft purple to light blue */
+body {
+  background: linear-gradient(135deg, #E0E7FF 0%, #EDE9FE 25%, #F5F3FF 50%, #EFF6FF 75%, #F0F9FF 100%) !important;
+  min-height: 100vh;
+}
+
+/* Alternative: Dark theme (uncomment to use instead)
+body {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e3a5f 100%) !important;
+  min-height: 100vh;
+}
+*/
+
+/* Main container adjustments */
+.ext-sign-in-box,
+.login-paginated-page,
+.outer,
+div[data-viewid] {
+  background: transparent !important;
+}
+
+/* Sign-in card styling */
+.lightbox-cover,
+.inner,
+.ext-sign-in-box .ext-panel,
+div[role="main"],
+.middle {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15),
+              0 0 0 1px rgba(255, 255, 255, 0.5) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Card container */
+.ext-sign-in-box,
+.lightbox {
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Primary button styling - Mystira purple */
+button[type="submit"],
+input[type="submit"],
+.ext-button.ext-primary,
+.win-button.button_primary,
+.btn-primary,
+#idSIButton9 {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 12px 24px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.025em !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 14px 0 rgba(124, 58, 237, 0.4) !important;
+}
+
+button[type="submit"]:hover,
+input[type="submit"]:hover,
+.ext-button.ext-primary:hover,
+.win-button.button_primary:hover,
+.btn-primary:hover,
+#idSIButton9:hover {
+  background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 20px 0 rgba(124, 58, 237, 0.5) !important;
+}
+
+/* Secondary button styling */
+button:not([type="submit"]),
+.ext-button.ext-secondary,
+.win-button:not(.button_primary),
+.btn-secondary,
+#idBtn_Back {
+  background: white !important;
+  border: 2px solid #E5E7EB !important;
+  border-radius: 8px !important;
+  color: #374151 !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+}
+
+button:not([type="submit"]):hover,
+.ext-button.ext-secondary:hover,
+.win-button:not(.button_primary):hover,
+.btn-secondary:hover,
+#idBtn_Back:hover {
+  background: #F9FAFB !important;
+  border-color: #7c3aed !important;
+  color: #7c3aed !important;
+}
+
+/* Input field styling */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+.ext-text-field input,
+.form-control,
+#i0116,
+#i0118,
+#idTxtBx_SAOTCC_OTC {
+  border: 2px solid #E5E7EB !important;
+  border-radius: 8px !important;
+  padding: 12px 16px !important;
+  font-size: 16px !important;
+  transition: all 0.2s ease !important;
+  background: #FAFAFA !important;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="tel"]:focus,
+.ext-text-field input:focus,
+.form-control:focus,
+#i0116:focus,
+#i0118:focus,
+#idTxtBx_SAOTCC_OTC:focus {
+  border-color: #7c3aed !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1) !important;
+  background: white !important;
+}
+
+/* Labels and text */
+label,
+.ext-text-field label,
+.ext-label {
+  color: #374151 !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  margin-bottom: 6px !important;
+}
+
+/* Title/header text */
+.ext-title,
+.title,
+h1, h2 {
+  color: #111827 !important;
+  font-weight: 700 !important;
+}
+
+/* Subtitle/description text */
+.ext-subtitle,
+.subtitle,
+p {
+  color: #6B7280 !important;
+}
+
+/* Links */
+a,
+.ext-link {
+  color: #7c3aed !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
+  transition: color 0.2s ease !important;
+}
+
+a:hover,
+.ext-link:hover {
+  color: #5b21b6 !important;
+  text-decoration: underline !important;
+}
+
+/* Error messages */
+.ext-error,
+.error,
+.alert-error,
+#passwordError,
+#usernameError {
+  background: #FEF2F2 !important;
+  border: 1px solid #FECACA !important;
+  border-radius: 8px !important;
+  color: #DC2626 !important;
+  padding: 12px !important;
+}
+
+/* Success messages */
+.ext-success,
+.success,
+.alert-success {
+  background: #F0FDF4 !important;
+  border: 1px solid #BBF7D0 !important;
+  border-radius: 8px !important;
+  color: #16A34A !important;
+  padding: 12px !important;
+}
+
+/* Footer styling */
+.footer,
+.ext-footer,
+#footer {
+  background: transparent !important;
+  color: #9CA3AF !important;
+}
+
+.footer a,
+.ext-footer a,
+#footer a {
+  color: #6B7280 !important;
+  font-size: 12px !important;
+}
+
+/* Logo area */
+.ext-header,
+.logo,
+.ext-sign-in-box .ext-header img {
+  max-height: 48px !important;
+}
+
+/* Dividers */
+hr,
+.ext-divider {
+  border: none !important;
+  border-top: 1px solid #E5E7EB !important;
+  margin: 20px 0 !important;
+}
+
+/* Social/external identity provider buttons */
+.ext-social-container button,
+.ext-idp-button,
+#socialOptions button {
+  background: white !important;
+  border: 2px solid #E5E7EB !important;
+  border-radius: 8px !important;
+  padding: 12px 16px !important;
+  font-weight: 500 !important;
+  color: #374151 !important;
+  transition: all 0.2s ease !important;
+}
+
+.ext-social-container button:hover,
+.ext-idp-button:hover,
+#socialOptions button:hover {
+  background: #F9FAFB !important;
+  border-color: #D1D5DB !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Checkbox styling */
+input[type="checkbox"] {
+  accent-color: #7c3aed !important;
+}
+
+/* Progress indicators */
+.ext-progress,
+.progress-bar {
+  background: #7c3aed !important;
+}
+
+/* Loading spinner */
+.ext-spinner,
+.spinner {
+  border-color: #E5E7EB !important;
+  border-top-color: #7c3aed !important;
+}
+
+/* Placeholder text */
+::placeholder {
+  color: #9CA3AF !important;
+  opacity: 1 !important;
+}
+
+/* Smooth animations */
+* {
+  transition-property: background-color, border-color, color, box-shadow, transform;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}
+
+/* Remove any default Microsoft branding artifacts */
+.background-image,
+.background-image-holder {
+  display: none !important;
+}
+
+/* Ensure readable text on the gradient background */
+.ext-sign-in-box .ext-panel *,
+.middle * {
+  color: inherit;
+}
