@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Mystira.App.Application.Ports.Data;
+using Mystira.Shared.Polyglot;
 
 namespace Mystira.App.Infrastructure.Data.Polyglot;
 
@@ -19,9 +19,9 @@ public static class PolyglotServiceCollectionExtensions
         IConfiguration configuration)
         where TContext : DbContext
     {
-        // Configure migration options
-        services.Configure<MigrationOptions>(
-            configuration.GetSection(MigrationOptions.SectionName));
+        // Configure polyglot options
+        services.Configure<PolyglotOptions>(
+            configuration.GetSection(PolyglotOptions.SectionName));
 
         // Register the EF specification repository for standard use
         services.AddScoped(typeof(ISpecRepository<>), typeof(EfSpecificationRepository<>));
@@ -44,9 +44,9 @@ public static class PolyglotServiceCollectionExtensions
         where TPrimaryContext : DbContext
         where TSecondaryContext : DbContext
     {
-        // Configure migration options
-        services.Configure<MigrationOptions>(
-            configuration.GetSection(MigrationOptions.SectionName));
+        // Configure polyglot options
+        services.Configure<PolyglotOptions>(
+            configuration.GetSection(PolyglotOptions.SectionName));
 
         // Register both contexts
         // Note: Individual DbContexts should be registered separately with their connection strings
@@ -70,7 +70,7 @@ public static class PolyglotServiceCollectionExtensions
         services.AddScoped<IPolyglotRepository<TEntity>>(sp =>
         {
             var context = sp.GetRequiredService<TContext>();
-            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<MigrationOptions>>();
+            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<PolyglotOptions>>();
             var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<PolyglotRepository<TEntity>>>();
 
             return new PolyglotRepository<TEntity>(context, options, logger);
