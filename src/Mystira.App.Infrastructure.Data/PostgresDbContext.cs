@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Mystira.App.Domain.Models;
+using Mystira.App.Infrastructure.Data.Polyglot;
 
 namespace Mystira.App.Infrastructure.Data;
 
@@ -27,6 +28,9 @@ public class PostgresDbContext : DbContext
     public DbSet<GameSession> GameSessions { get; set; }
     public DbSet<PlayerScenarioScore> PlayerScenarioScores { get; set; }
 
+    // Sync tracking
+    public DbSet<PolyglotSyncLog> SyncLogs { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -34,6 +38,17 @@ public class PostgresDbContext : DbContext
         ConfigureAccount(modelBuilder);
         ConfigureGameSession(modelBuilder);
         ConfigurePlayerScenarioScore(modelBuilder);
+        ConfigureSyncLog(modelBuilder);
+    }
+
+    private void ConfigureSyncLog(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<PolyglotSyncLog>(entity =>
+        {
+            entity.ToTable("_polyglot_sync_log");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).UseIdentityColumn();
+        });
     }
 
     private void ConfigureAccount(ModelBuilder modelBuilder)

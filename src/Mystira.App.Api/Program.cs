@@ -277,6 +277,9 @@ if (usePostgres)
         return new PolyglotRepository<PlayerScenarioScore>(cosmosContext, options, logger, postgresContext, metrics);
     });
 
+    // Register backfill service for data sync operations
+    builder.Services.AddScoped<IPolyglotBackfillService, PolyglotBackfillService>();
+
     Log.Information("PostgreSQL polyglot persistence enabled. Mode: {Mode}", polyglotMode);
 }
 else

@@ -67,7 +67,8 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
             return await DualWriteAsync(
                 () => base.AddAsync(entity, cancellationToken),
                 () => AddToSecondaryAsync(entity, cancellationToken),
-                cancellationToken);
+                cancellationToken,
+                SyncOperation.Insert);
         }
 
         return await base.AddAsync(entity, cancellationToken);
@@ -78,10 +79,13 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     {
         if (IsDualWriteMode)
         {
+            var entityId = TryGetEntityId(entity);
             await DualWriteAsync(
                 async () => { var result = await base.UpdateAsync(entity, cancellationToken); return entity; },
                 async () => { await UpdateInSecondaryAsync(entity, cancellationToken); return entity; },
-                cancellationToken);
+                cancellationToken,
+                SyncOperation.Update,
+                entityId);
             return 1; // Assuming single entity update
         }
 
@@ -93,10 +97,13 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     {
         if (IsDualWriteMode)
         {
+            var entityId = TryGetEntityId(entity);
             await DualWriteAsync(
                 async () => { var result = await base.DeleteAsync(entity, cancellationToken); return entity; },
                 async () => { await DeleteFromSecondaryAsync(entity, cancellationToken); return entity; },
-                cancellationToken);
+                cancellationToken,
+                SyncOperation.Delete,
+                entityId);
             return 1; // Assuming single entity delete
         }
 
@@ -303,7 +310,9 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     private async Task<T> DualWriteAsync(
         Func<Task<T>> primaryWrite,
         Func<Task<T>> secondaryWrite,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string operation = SyncOperation.Insert,
+        string? entityId = null)
     {
         // Write to primary first
         var result = await primaryWrite();
@@ -312,6 +321,9 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
         {
             return result;
         }
+
+        // Try to get entity ID for sync logging
+        var id = entityId ?? TryGetEntityId(result);
 
         // Attempt secondary write with timeout
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -327,6 +339,9 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
             _secondaryWriteSuccesses.Add(1,
                 new KeyValuePair<string, object?>("entity_type", typeof(T).Name),
                 new KeyValuePair<string, object?>("mode", _options.Mode.ToString()));
+
+            // Log successful sync
+            await LogSyncAsync(id, operation, SyncStatus.Synced, null, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -343,6 +358,9 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
                 _options.Mode,
                 _options.EnableCompensation);
 
+            // Log failed sync
+            await LogSyncAsync(id, operation, SyncStatus.Failed, ex.Message, cancellationToken);
+
             // Also track via ICustomMetrics if available
             _metrics?.TrackDualWriteFailure(
                 typeof(T).Name,
@@ -352,6 +370,54 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
         }
 
         return result;
+    }
+
+    private async Task LogSyncAsync(
+        string? entityId,
+        string operation,
+        string status,
+        string? errorMessage,
+        CancellationToken cancellationToken)
+    {
+        if (_secondaryContext is not PostgresDbContext postgresContext)
+        {
+            return; // Sync log is PostgreSQL-specific
+        }
+
+        try
+        {
+            var syncLog = new PolyglotSyncLog
+            {
+                EntityType = typeof(T).Name,
+                EntityId = entityId ?? "unknown",
+                Operation = operation,
+                SourceBackend = "cosmos",
+                SyncStatus = status,
+                CosmosTimestamp = DateTime.UtcNow,
+                PostgresTimestamp = DateTime.UtcNow,
+                ErrorMessage = errorMessage
+            };
+
+            postgresContext.SyncLogs.Add(syncLog);
+            await postgresContext.SaveChangesAsync(cancellationToken);
+
+            // Detach to avoid tracking issues
+            postgresContext.Entry(syncLog).State = EntityState.Detached;
+        }
+        catch (Exception ex)
+        {
+            // Don't fail the operation if sync logging fails
+            _logger.LogWarning(ex, "Failed to log sync operation for {EntityType}", typeof(T).Name);
+        }
+    }
+
+    private static string? TryGetEntityId(T? entity)
+    {
+        if (entity == null) return null;
+
+        // Try common ID property names
+        var idProperty = typeof(T).GetProperty("Id") ?? typeof(T).GetProperty("ID");
+        return idProperty?.GetValue(entity)?.ToString();
     }
 
     private async Task<T> AddToSecondaryAsync(T entity, CancellationToken cancellationToken)
