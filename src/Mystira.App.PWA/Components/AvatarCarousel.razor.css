@@ -126,7 +126,7 @@
 }
 
 /* Dark Mode Support */
-@media (prefers-color-scheme: dark-disabled) {
+@media (prefers-color-scheme: dark) {
     .avatar-display {
         background: #1e1b4b;
     }

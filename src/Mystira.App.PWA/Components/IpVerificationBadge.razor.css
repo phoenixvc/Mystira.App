@@ -297,7 +297,7 @@
 }
 
 /* Dark Mode */
-@media (prefers-color-scheme: dark-disabled) {
+@media (prefers-color-scheme: dark) {
     .ip-verification-badge.verified {
         background: rgba(5, 150, 105, 0.2);
         border-color: rgba(5, 150, 105, 0.3);

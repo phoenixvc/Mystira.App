@@ -260,7 +260,7 @@
 }
 
 /* Dark Mode Support */
-@media (prefers-color-scheme: dark-disabled) {
+@media (prefers-color-scheme: dark) {
     .active-adventures-header {
         background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(124, 58, 237, 0.1) 100%);
         border-color: rgba(99, 102, 241, 0.25);

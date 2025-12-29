@@ -142,8 +142,12 @@
 }
 
 /* Dark mode support */
-[data-theme="dark"] .update-notification-content,
-@media (prefers-color-scheme: dark-disabled) {
+[data-theme="dark"] .update-notification-content {
+    background: var(--card-bg, #1f2937);
+    border-color: var(--card-border, #374151);
+}
+
+@media (prefers-color-scheme: dark) {
     .update-notification-content {
         background: var(--card-bg, #1f2937);
         border-color: var(--card-border, #374151);

@@ -183,7 +183,7 @@
 }
 
 /* Dark Mode */
-@media (prefers-color-scheme: dark-disabled) {
+@media (prefers-color-scheme: dark) {
     .content-attribution {
         background: var(--card-dark, rgba(31, 41, 55, 0.9));
         border-color: var(--border-dark, rgba(255, 255, 255, 0.1));
