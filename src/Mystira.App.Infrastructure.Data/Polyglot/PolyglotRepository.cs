@@ -17,8 +17,8 @@ namespace Mystira.App.Infrastructure.Data.Polyglot;
 /// Implements permanent dual-write pattern per ADR-0013/0014.
 ///
 /// Architecture:
-/// - Cosmos DB: Primary store for reads/writes, document data, global distribution
-/// - PostgreSQL: Secondary store for analytics, reporting, relational queries
+/// - Primary Store (Cosmos DB): Reads/writes, document data, global distribution
+/// - Secondary Store (PostgreSQL): Analytics, reporting, relational queries
 ///
 /// Features:
 /// - Dual-write with compensation on failure
@@ -37,27 +37,27 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
         "polyglot.secondary_write_successes",
         description: "Count of successful secondary database writes during dual-write operations");
 
-    private readonly MigrationOptions _options;
+    private readonly PolyglotOptions _options;
     private readonly DbContext? _secondaryContext;
     private readonly ResiliencePipeline _resiliencePipeline;
     private readonly ICustomMetrics? _metrics;
 
     public PolyglotRepository(
         DbContext primaryContext,
-        IOptions<MigrationOptions> options,
+        IOptions<PolyglotOptions> options,
         ILogger<PolyglotRepository<T>> logger,
         DbContext? secondaryContext = null,
         ICustomMetrics? metrics = null)
         : base(primaryContext, logger)
     {
-        _options = options?.Value ?? new MigrationOptions();
+        _options = options?.Value ?? new PolyglotOptions();
         _secondaryContext = secondaryContext;
         _resiliencePipeline = CreateResiliencePipeline();
         _metrics = metrics;
     }
 
     /// <inheritdoc />
-    public MigrationPhase CurrentPhase => _options.Phase;
+    public PolyglotMode CurrentMode => _options.Mode;
 
     /// <inheritdoc />
     public override async Task<T> AddAsync(T entity, CancellationToken cancellationToken = default)
@@ -210,7 +210,7 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     #region Private Helpers
 
     private bool IsDualWriteMode =>
-        _options.Phase == MigrationPhase.DualWriteCosmosRead && _secondaryContext != null;
+        _options.Mode == PolyglotMode.DualWrite && _secondaryContext != null;
 
     private async Task<T> DualWriteAsync(
         Func<Task<T>> primaryWrite,
@@ -227,7 +227,7 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
 
         // Attempt secondary write with timeout
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        cts.CancelAfter(_options.DualWriteTimeoutMs);
+        cts.CancelAfter(_options.SecondaryWriteTimeoutMs);
 
         try
         {
@@ -238,21 +238,21 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
             // Track successful secondary writes via Meter
             _secondaryWriteSuccesses.Add(1,
                 new KeyValuePair<string, object?>("entity_type", typeof(T).Name),
-                new KeyValuePair<string, object?>("phase", _options.Phase.ToString()));
+                new KeyValuePair<string, object?>("mode", _options.Mode.ToString()));
         }
         catch (Exception ex)
         {
             // Emit metric for monitoring/alerting via Meter
             _secondaryWriteFailures.Add(1,
                 new KeyValuePair<string, object?>("entity_type", typeof(T).Name),
-                new KeyValuePair<string, object?>("phase", _options.Phase.ToString()),
+                new KeyValuePair<string, object?>("mode", _options.Mode.ToString()),
                 new KeyValuePair<string, object?>("exception_type", ex.GetType().Name));
 
             _logger.LogError(ex,
-                "Secondary write failed for {EntityType}. Phase: {Phase}. Compensation enabled: {CompensationEnabled}. " +
+                "Secondary write failed for {EntityType}. Mode: {Mode}. Compensation enabled: {CompensationEnabled}. " +
                 "This failure is tracked via polyglot.secondary_write_failures metric.",
                 typeof(T).Name,
-                _options.Phase,
+                _options.Mode,
                 _options.EnableCompensation);
 
             // Also track via ICustomMetrics if available
@@ -336,7 +336,7 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
                 ShouldHandle = new PredicateBuilder().Handle<DbUpdateException>()
             })
             // Timeout: Fail fast if secondary is too slow
-            .AddTimeout(TimeSpan.FromMilliseconds(_options.DualWriteTimeoutMs))
+            .AddTimeout(TimeSpan.FromMilliseconds(_options.SecondaryWriteTimeoutMs))
             .Build();
     }
 

@@ -7,8 +7,8 @@ namespace Mystira.App.Application.Ports.Data;
 /// Implements permanent dual-write pattern per ADR-0013/0014.
 ///
 /// Architecture:
-/// - Cosmos DB: Primary store for reads/writes, document data, global distribution
-/// - PostgreSQL: Secondary store for analytics, reporting, relational queries
+/// - Primary Store (Cosmos DB): Reads/writes, document data, global distribution
+/// - Secondary Store (PostgreSQL): Analytics, reporting, relational queries
 ///
 /// Features:
 /// - Ardalis.Specification support for queries
@@ -16,10 +16,10 @@ namespace Mystira.App.Application.Ports.Data;
 /// - Resilience with Polly policies
 ///
 /// Usage:
-///   // Reads always from Cosmos DB (primary)
+///   // Reads always from primary store
 ///   var account = await _repository.FirstOrDefaultAsync(new AccountByEmailSpec(email));
 ///
-///   // Writes go to both Cosmos and PostgreSQL (when enabled)
+///   // Writes go to both stores (when DualWrite mode enabled)
 ///   await _repository.AddAsync(newAccount);
 ///   await _repository.SaveChangesAsync();
 /// </summary>
@@ -29,7 +29,7 @@ public interface IPolyglotRepository<T> : ISpecRepository<T> where T : class
     /// <summary>
     /// Get the current operational mode for this repository.
     /// </summary>
-    MigrationPhase CurrentPhase { get; }
+    PolyglotMode CurrentMode { get; }
 
     /// <summary>
     /// Check if the primary backend is healthy.
@@ -37,7 +37,7 @@ public interface IPolyglotRepository<T> : ISpecRepository<T> where T : class
     Task<bool> IsPrimaryHealthyAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Check if the secondary backend is healthy (when in dual-write mode).
+    /// Check if the secondary backend is healthy.
     /// </summary>
     Task<bool> IsSecondaryHealthyAsync(CancellationToken cancellationToken = default);
 
@@ -69,10 +69,10 @@ public enum BackendType
     /// <summary>Secondary backend (PostgreSQL)</summary>
     Secondary,
 
-    /// <summary>Cosmos DB - primary store for document data</summary>
+    /// <summary>Cosmos DB - primary document store</summary>
     CosmosDb,
 
-    /// <summary>PostgreSQL - secondary store for analytics/reporting</summary>
+    /// <summary>PostgreSQL - secondary analytics store</summary>
     PostgreSql,
 
     /// <summary>Redis cache layer</summary>

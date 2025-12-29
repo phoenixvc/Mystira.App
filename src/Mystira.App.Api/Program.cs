@@ -238,17 +238,17 @@ if (usePostgres)
         });
     });
 
-    // Configure polyglot persistence migration options
-    builder.Services.Configure<MigrationOptions>(
-        builder.Configuration.GetSection(MigrationOptions.SectionName));
+    // Configure polyglot persistence options
+    builder.Services.Configure<PolyglotOptions>(
+        builder.Configuration.GetSection(PolyglotOptions.SectionName));
 
-    // Register polyglot repositories for migration candidates
-    // These wrap both Cosmos and PostgreSQL contexts for dual-write/read operations
+    // Register polyglot repositories for dual-write entities
+    // These wrap both Cosmos and PostgreSQL contexts for dual-write operations
     builder.Services.AddScoped<IPolyglotRepository<Account>>(sp =>
     {
         var cosmosContext = sp.GetRequiredService<MystiraAppDbContext>();
         var postgresContext = sp.GetRequiredService<PostgresDbContext>();
-        var options = sp.GetRequiredService<IOptions<MigrationOptions>>();
+        var options = sp.GetRequiredService<IOptions<PolyglotOptions>>();
         var logger = sp.GetRequiredService<ILogger<PolyglotRepository<Account>>>();
         var metrics = sp.GetService<ICustomMetrics>();
         return new PolyglotRepository<Account>(cosmosContext, options, logger, postgresContext, metrics);
@@ -258,7 +258,7 @@ if (usePostgres)
     {
         var cosmosContext = sp.GetRequiredService<MystiraAppDbContext>();
         var postgresContext = sp.GetRequiredService<PostgresDbContext>();
-        var options = sp.GetRequiredService<IOptions<MigrationOptions>>();
+        var options = sp.GetRequiredService<IOptions<PolyglotOptions>>();
         var logger = sp.GetRequiredService<ILogger<PolyglotRepository<GameSession>>>();
         var metrics = sp.GetService<ICustomMetrics>();
         return new PolyglotRepository<GameSession>(cosmosContext, options, logger, postgresContext, metrics);
@@ -268,13 +268,13 @@ if (usePostgres)
     {
         var cosmosContext = sp.GetRequiredService<MystiraAppDbContext>();
         var postgresContext = sp.GetRequiredService<PostgresDbContext>();
-        var options = sp.GetRequiredService<IOptions<MigrationOptions>>();
+        var options = sp.GetRequiredService<IOptions<PolyglotOptions>>();
         var logger = sp.GetRequiredService<ILogger<PolyglotRepository<PlayerScenarioScore>>>();
         var metrics = sp.GetService<ICustomMetrics>();
         return new PolyglotRepository<PlayerScenarioScore>(cosmosContext, options, logger, postgresContext, metrics);
     });
 
-    Log.Information("PostgreSQL polyglot persistence enabled for migration candidates");
+    Log.Information("PostgreSQL polyglot persistence enabled (DualWrite mode)");
 }
 else
 {

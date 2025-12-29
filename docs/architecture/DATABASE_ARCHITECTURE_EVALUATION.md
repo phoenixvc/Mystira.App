@@ -27,18 +27,20 @@ This document evaluates the discussion against the **actual Mystira.App implemen
 | **Secondary Database** | PostgreSQL | 🔮 Planned (not implemented) |
 | **Cache** | Redis | ✅ Active (optional) |
 | **Blob Storage** | Azure Blob Storage | ✅ Active |
-| **Migration Framework** | Polyglot Persistence | ✅ Ready (Phase: CosmosOnly) |
+| **Migration Framework** | Polyglot Persistence | ✅ Ready (Mode: SingleStore) |
 
 ### Key Finding
 
 > **The system is currently 100% Cosmos DB** - PostgreSQL migration is planned but not yet active.
 
-The codebase has a sophisticated polyglot persistence layer (`PolyglotRepository<T>`) ready for migration, with these phases defined in `MigrationPhase.cs`:
+The codebase has a sophisticated polyglot persistence layer (`PolyglotRepository<T>`) with these operational modes defined in `PolyglotMode.cs`:
 
 ```
-CosmosOnly → DualWriteCosmosRead → DualWritePostgresRead → PostgresOnly
-     ↑
-  CURRENT
+┌─────────────────────────────────────────────────────────────┐
+│  SingleStore (Cosmos Only)  →  DualWrite (Both Stores)     │
+│       ↑                                                     │
+│    CURRENT                    (Recommended for production)  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -280,9 +282,9 @@ The team's instinct to question and examine actual data before migration is the 
     "PostgreSql": "Host=;Database=;Username=;Password="
   },
   "PolyglotPersistence": {
-    "Phase": "CosmosOnly",
+    "Mode": "SingleStore",
     "EnableCompensation": true,
-    "DualWriteTimeoutMs": 5000,
+    "SecondaryWriteTimeoutMs": 5000,
     "EnableConsistencyValidation": false
   }
 }
@@ -294,17 +296,17 @@ The system uses **permanent polyglot persistence** (not migration):
 
 | Mode | Description | Use Case |
 |------|-------------|----------|
-| `CosmosOnly` | All operations use Cosmos DB only | Initial setup, no PostgreSQL configured |
-| `DualWriteCosmosRead` | Write to both, read from Cosmos | **Recommended for production** |
+| `SingleStore` | All operations use Cosmos DB only | Initial setup, no PostgreSQL configured |
+| `DualWrite` | Write to both, read from Cosmos | **Recommended for production** |
 
 **Architecture:**
-- **Cosmos DB**: Primary store for reads/writes, document data, global distribution
-- **PostgreSQL**: Secondary store for analytics, reporting, relational queries
+- **Primary Store (Cosmos DB)**: All reads/writes, document data, global distribution
+- **Secondary Store (PostgreSQL)**: Analytics, reporting, relational queries
 
 To enable dual-write, set:
 ```json
 "PolyglotPersistence": {
-  "Phase": "DualWriteCosmosRead"
+  "Mode": "DualWrite"
 }
 ```
 
@@ -321,7 +323,8 @@ src/Mystira.App.Infrastructure.Data/Migrations/PostgreSQL/V001__Initial_Migratio
 
 - `src/Mystira.App.Infrastructure.Data/MystiraAppDbContext.cs` - All 26 Cosmos containers
 - `src/Mystira.App.Infrastructure.Data/PostgresDbContext.cs` - PostgreSQL migration candidates
-- `src/Mystira.App.Application/Ports/Data/MigrationPhase.cs` - Migration phases
-- `src/Mystira.App.Infrastructure.Data/Polyglot/PolyglotRepository.cs` - Migration infrastructure
+- `src/Mystira.App.Application/Ports/Data/PolyglotMode.cs` - Polyglot operational modes
+- `src/Mystira.App.Application/Ports/Data/IPolyglotRepository.cs` - Polyglot repository interface
+- `src/Mystira.App.Infrastructure.Data/Polyglot/PolyglotRepository.cs` - Polyglot persistence infrastructure
 - `src/Mystira.App.Infrastructure.Data/Caching/CacheOptions.cs` - Redis configuration
 - `src/Mystira.App.Infrastructure.Data/Migrations/PostgreSQL/` - PostgreSQL migration scripts
