@@ -2,6 +2,8 @@ using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Mystira.App.Domain.Models;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Mystira.App.Api.Adapters;
@@ -23,6 +25,7 @@ using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
 using Mystira.App.Infrastructure.Data;
 using Mystira.App.Infrastructure.Data.Caching;
+using Mystira.App.Infrastructure.Data.Polyglot;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.Services;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -213,6 +216,70 @@ else
 
 // Register DbContext base type for repositories and UnitOfWork that depend on it
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<MystiraAppDbContext>());
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POSTGRESQL DATABASE: For polyglot persistence migration (ADR-0013/0014)
+// Migration candidates: Account, GameSession, PlayerScenarioScore
+// ═══════════════════════════════════════════════════════════════════════════════
+var postgresConnectionString = builder.Configuration.GetConnectionString("PostgreSql");
+var usePostgres = !string.IsNullOrEmpty(postgresConnectionString);
+
+if (usePostgres)
+{
+    builder.Services.AddDbContext<PostgresDbContext>(options =>
+    {
+        options.UseNpgsql(postgresConnectionString, npgsqlOptions =>
+        {
+            npgsqlOptions.CommandTimeout(30);
+            npgsqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 3,
+                maxRetryDelay: TimeSpan.FromSeconds(5),
+                errorCodesToAdd: null);
+        });
+    });
+
+    // Configure polyglot persistence migration options
+    builder.Services.Configure<MigrationOptions>(
+        builder.Configuration.GetSection(MigrationOptions.SectionName));
+
+    // Register polyglot repositories for migration candidates
+    // These wrap both Cosmos and PostgreSQL contexts for dual-write/read operations
+    builder.Services.AddScoped<IPolyglotRepository<Account>>(sp =>
+    {
+        var cosmosContext = sp.GetRequiredService<MystiraAppDbContext>();
+        var postgresContext = sp.GetRequiredService<PostgresDbContext>();
+        var options = sp.GetRequiredService<IOptions<MigrationOptions>>();
+        var logger = sp.GetRequiredService<ILogger<PolyglotRepository<Account>>>();
+        var metrics = sp.GetService<ICustomMetrics>();
+        return new PolyglotRepository<Account>(cosmosContext, options, logger, postgresContext, metrics);
+    });
+
+    builder.Services.AddScoped<IPolyglotRepository<GameSession>>(sp =>
+    {
+        var cosmosContext = sp.GetRequiredService<MystiraAppDbContext>();
+        var postgresContext = sp.GetRequiredService<PostgresDbContext>();
+        var options = sp.GetRequiredService<IOptions<MigrationOptions>>();
+        var logger = sp.GetRequiredService<ILogger<PolyglotRepository<GameSession>>>();
+        var metrics = sp.GetService<ICustomMetrics>();
+        return new PolyglotRepository<GameSession>(cosmosContext, options, logger, postgresContext, metrics);
+    });
+
+    builder.Services.AddScoped<IPolyglotRepository<PlayerScenarioScore>>(sp =>
+    {
+        var cosmosContext = sp.GetRequiredService<MystiraAppDbContext>();
+        var postgresContext = sp.GetRequiredService<PostgresDbContext>();
+        var options = sp.GetRequiredService<IOptions<MigrationOptions>>();
+        var logger = sp.GetRequiredService<ILogger<PolyglotRepository<PlayerScenarioScore>>>();
+        var metrics = sp.GetService<ICustomMetrics>();
+        return new PolyglotRepository<PlayerScenarioScore>(cosmosContext, options, logger, postgresContext, metrics);
+    });
+
+    Log.Information("PostgreSQL polyglot persistence enabled for migration candidates");
+}
+else
+{
+    Log.Information("PostgreSQL not configured - running in Cosmos-only mode");
+}
 
 // Add Azure Infrastructure Services
 builder.Services.AddAzureBlobStorage(builder.Configuration);
@@ -537,6 +604,15 @@ var healthChecksBuilder = builder.Services.AddHealthChecks()
 if (useCosmosDb)
 {
     healthChecksBuilder.AddCheck<CosmosDbHealthCheck>("cosmos_db", tags: new[] { "ready", "db" });
+}
+
+// Add PostgreSQL health check when using polyglot persistence
+if (usePostgres)
+{
+    healthChecksBuilder.AddNpgSql(
+        postgresConnectionString!,
+        name: "postgresql",
+        tags: new[] { "ready", "db", "polyglot" });
 }
 
 // Add Discord Bot Integration (Optional - controlled by configuration)
