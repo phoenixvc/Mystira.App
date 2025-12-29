@@ -250,7 +250,7 @@
 }
 
 /* Dark Mode Support */
-@media (prefers-color-scheme: dark-disabled) {
+@media (prefers-color-scheme: dark) {
     .adventure-card {
         background: linear-gradient(135deg, #1e1b4b 0%, #14122b 100%);
         border-color: rgba(99, 102, 241, 0.2);

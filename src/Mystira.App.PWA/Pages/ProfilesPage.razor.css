@@ -205,7 +205,7 @@
 }
 
 /* Modal Dark Mode Support */
-@media (prefers-color-scheme: dark-disabled) {
+@media (prefers-color-scheme: dark) {
     .modal-content {
         background: linear-gradient(135deg, #14122b 0%, #1e1b4b 100%);
         border: 1px solid #2d2a5e;
@@ -455,7 +455,7 @@ html[data-theme="light"] .btn-secondary:hover {
 }
 
 /* Dark mode for Profile Cards */
-@media (prefers-color-scheme: dark-disabled) {
+@media (prefers-color-scheme: dark) {
     .profile-card {
         background: linear-gradient(135deg, #1e1b4b 0%, #14122b 100%);
         border-color: rgba(99, 102, 241, 0.2);

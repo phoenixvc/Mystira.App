@@ -42,7 +42,7 @@ function getCurrentTheme() {
     }
 
     // Fallback: system preference
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark-disabled)').matches) {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         return 'dark';
     }
 

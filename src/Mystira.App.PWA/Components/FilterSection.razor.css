@@ -499,7 +499,7 @@ button:focus-visible {
 }
 
 /* Dark Mode Support */
-@media (prefers-color-scheme: dark-disabled) {
+@media (prefers-color-scheme: dark) {
     .filter-card {
         background: linear-gradient(135deg, #14122b 0%, #1e1b4b 100%);
         border-color: rgba(99, 102, 241, 0.2);
