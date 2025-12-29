@@ -4,19 +4,22 @@ namespace Mystira.App.Application.Ports.Data;
 
 /// <summary>
 /// Polyglot repository interface supporting multiple database backends.
-/// Implements dual-write patterns for gradual database migration per ADR-0013/0014.
+/// Implements permanent dual-write pattern per ADR-0013/0014.
+///
+/// Architecture:
+/// - Primary Store (Cosmos DB): Reads/writes, document data, global distribution
+/// - Secondary Store (PostgreSQL): Analytics, reporting, relational queries
 ///
 /// Features:
 /// - Ardalis.Specification support for queries
-/// - Migration phase awareness (Cosmos-only, dual-write, Postgres-only)
 /// - Health checks per backend
 /// - Resilience with Polly policies
 ///
 /// Usage:
-///   // Read operations use the appropriate backend based on migration phase
+///   // Reads always from primary store
 ///   var account = await _repository.FirstOrDefaultAsync(new AccountByEmailSpec(email));
 ///
-///   // Write operations may go to multiple backends during migration
+///   // Writes go to both stores (when DualWrite mode enabled)
 ///   await _repository.AddAsync(newAccount);
 ///   await _repository.SaveChangesAsync();
 /// </summary>
@@ -24,9 +27,9 @@ namespace Mystira.App.Application.Ports.Data;
 public interface IPolyglotRepository<T> : ISpecRepository<T> where T : class
 {
     /// <summary>
-    /// Get the current migration phase for this repository.
+    /// Get the current operational mode for this repository.
     /// </summary>
-    MigrationPhase CurrentPhase { get; }
+    PolyglotMode CurrentMode { get; }
 
     /// <summary>
     /// Check if the primary backend is healthy.
@@ -34,7 +37,7 @@ public interface IPolyglotRepository<T> : ISpecRepository<T> where T : class
     Task<bool> IsPrimaryHealthyAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Check if the secondary backend is healthy (when in dual-write mode).
+    /// Check if the secondary backend is healthy.
     /// </summary>
     Task<bool> IsSecondaryHealthyAsync(CancellationToken cancellationToken = default);
 
@@ -56,24 +59,21 @@ public interface IPolyglotRepository<T> : ISpecRepository<T> where T : class
 }
 
 /// <summary>
-/// Backend type for explicit backend access.
+/// Backend type for explicit backend access in polyglot persistence.
 /// </summary>
 public enum BackendType
 {
-    /// <summary>Primary read backend (depends on migration phase)</summary>
-    Primary,
+    /// <summary>
+    /// Primary backend - currently Cosmos DB.
+    /// Source of truth for all reads in dual-write mode.
+    /// </summary>
+    Primary = 0,
 
-    /// <summary>Secondary write backend (depends on migration phase)</summary>
-    Secondary,
-
-    /// <summary>Cosmos DB backend</summary>
-    CosmosDb,
-
-    /// <summary>PostgreSQL backend</summary>
-    PostgreSql,
-
-    /// <summary>Redis cache</summary>
-    Cache
+    /// <summary>
+    /// Secondary backend - currently PostgreSQL.
+    /// Used for analytics, reporting, and relational queries.
+    /// </summary>
+    Secondary = 1
 }
 
 /// <summary>

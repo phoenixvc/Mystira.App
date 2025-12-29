@@ -25,6 +25,8 @@
     <PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0" />
     <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="4.1.0" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="9.0.11" />
+    <!-- PostgreSQL health check for polyglot persistence -->
+    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
     <PackageReference Include="NJsonSchema" Version="11.5.2" />
     <PackageReference Include="Azure.Communication.Email" Version="1.1.0" />

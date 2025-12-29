@@ -11,7 +11,7 @@ namespace Mystira.App.Application.Tests.Repositories;
 
 /// <summary>
 /// Unit tests for PolyglotRepository dual-write behavior.
-/// Tests verify migration phase handling and dual-write patterns.
+/// Tests verify polyglot mode handling and dual-write patterns.
 /// </summary>
 public class PolyglotRepositoryTests
 {
@@ -25,29 +25,27 @@ public class PolyglotRepositoryTests
     }
 
     [Theory]
-    [InlineData(MigrationPhase.CosmosOnly)]
-    [InlineData(MigrationPhase.DualWriteCosmosRead)]
-    [InlineData(MigrationPhase.DualWritePostgresRead)]
-    [InlineData(MigrationPhase.PostgresOnly)]
-    public void CurrentPhase_ShouldReturnConfiguredPhase(MigrationPhase expectedPhase)
+    [InlineData(PolyglotMode.SingleStore)]
+    [InlineData(PolyglotMode.DualWrite)]
+    public void CurrentMode_ShouldReturnConfiguredMode(PolyglotMode expectedMode)
     {
         // Arrange
-        var options = new MigrationOptions { Phase = expectedPhase };
+        var options = new PolyglotOptions { Mode = expectedMode };
         using var context = CreateInMemoryContext();
         var sut = CreateRepository(context, options);
 
         // Act
-        var actualPhase = sut.CurrentPhase;
+        var actualMode = sut.CurrentMode;
 
         // Assert
-        actualPhase.Should().Be(expectedPhase);
+        actualMode.Should().Be(expectedMode);
     }
 
     [Fact]
-    public async Task AddAsync_InCosmosOnlyMode_ShouldOnlyWriteToPrimary()
+    public async Task AddAsync_InSingleStoreMode_ShouldOnlyWriteToPrimary()
     {
         // Arrange
-        var options = new MigrationOptions { Phase = MigrationPhase.CosmosOnly };
+        var options = new PolyglotOptions { Mode = PolyglotMode.SingleStore };
         using var primaryContext = CreateInMemoryContext("primary");
         using var secondaryContext = CreateInMemoryContext("secondary");
 
@@ -67,7 +65,7 @@ public class PolyglotRepositoryTests
     public async Task AddAsync_InDualWriteMode_ShouldWriteToBothContexts()
     {
         // Arrange
-        var options = new MigrationOptions { Phase = MigrationPhase.DualWriteCosmosRead };
+        var options = new PolyglotOptions { Mode = PolyglotMode.DualWrite };
         using var primaryContext = CreateInMemoryContext("primary");
         using var secondaryContext = CreateInMemoryContext("secondary");
 
@@ -87,7 +85,7 @@ public class PolyglotRepositoryTests
     public async Task IsPrimaryHealthyAsync_WhenConnectable_ShouldReturnTrue()
     {
         // Arrange
-        var options = new MigrationOptions { Phase = MigrationPhase.CosmosOnly };
+        var options = new PolyglotOptions { Mode = PolyglotMode.SingleStore };
         using var context = CreateInMemoryContext();
         var sut = CreateRepository(context, options);
 
@@ -102,7 +100,7 @@ public class PolyglotRepositoryTests
     public async Task IsSecondaryHealthyAsync_WhenNoSecondary_ShouldReturnFalse()
     {
         // Arrange
-        var options = new MigrationOptions { Phase = MigrationPhase.CosmosOnly };
+        var options = new PolyglotOptions { Mode = PolyglotMode.SingleStore };
         using var context = CreateInMemoryContext();
         var sut = CreateRepository(context, options, null);
 
@@ -117,7 +115,7 @@ public class PolyglotRepositoryTests
     public async Task IsSecondaryHealthyAsync_WhenSecondaryConnectable_ShouldReturnTrue()
     {
         // Arrange
-        var options = new MigrationOptions { Phase = MigrationPhase.DualWriteCosmosRead };
+        var options = new PolyglotOptions { Mode = PolyglotMode.DualWrite };
         using var primaryContext = CreateInMemoryContext("primary");
         using var secondaryContext = CreateInMemoryContext("secondary");
         var sut = CreateRepository(primaryContext, options, secondaryContext);
@@ -133,7 +131,7 @@ public class PolyglotRepositoryTests
     public async Task ValidateConsistencyAsync_WhenBothContextsHaveSameData_ShouldReturnConsistent()
     {
         // Arrange
-        var options = new MigrationOptions { Phase = MigrationPhase.DualWriteCosmosRead };
+        var options = new PolyglotOptions { Mode = PolyglotMode.DualWrite };
         using var primaryContext = CreateInMemoryContext("primary");
         using var secondaryContext = CreateInMemoryContext("secondary");
 
@@ -159,7 +157,7 @@ public class PolyglotRepositoryTests
     public async Task ValidateConsistencyAsync_WhenMissingInSecondary_ShouldReturnInconsistent()
     {
         // Arrange
-        var options = new MigrationOptions { Phase = MigrationPhase.DualWriteCosmosRead };
+        var options = new PolyglotOptions { Mode = PolyglotMode.DualWrite };
         using var primaryContext = CreateInMemoryContext("primary");
         using var secondaryContext = CreateInMemoryContext("secondary");
 
@@ -181,7 +179,7 @@ public class PolyglotRepositoryTests
     public async Task ValidateConsistencyAsync_WhenNoSecondaryContext_ShouldReturnConsistent()
     {
         // Arrange
-        var options = new MigrationOptions { Phase = MigrationPhase.CosmosOnly };
+        var options = new PolyglotOptions { Mode = PolyglotMode.SingleStore };
         using var primaryContext = CreateInMemoryContext();
         var sut = CreateRepository(primaryContext, options, null);
 
@@ -192,27 +190,65 @@ public class PolyglotRepositoryTests
         result.IsConsistent.Should().BeTrue();
     }
 
-    [Theory]
-    [InlineData(BackendType.Primary)]
-    [InlineData(BackendType.CosmosDb)]
-    public async Task GetFromBackendAsync_ShouldReturnEntityFromCorrectBackend(BackendType backend)
+    [Fact]
+    public async Task GetFromBackendAsync_Primary_ShouldReturnEntityFromPrimaryContext()
     {
         // Arrange
-        var options = new MigrationOptions { Phase = MigrationPhase.CosmosOnly };
-        using var context = CreateInMemoryContext();
+        var options = new PolyglotOptions { Mode = PolyglotMode.SingleStore };
+        using var primaryContext = CreateInMemoryContext("primary");
 
         var entity = new TestEntity { Id = "1", Name = "Test" };
-        context.Set<TestEntity>().Add(entity);
-        await context.SaveChangesAsync();
+        primaryContext.Set<TestEntity>().Add(entity);
+        await primaryContext.SaveChangesAsync();
 
-        var sut = CreateRepository(context, options);
+        var sut = CreateRepository(primaryContext, options);
 
         // Act
-        var result = await sut.GetFromBackendAsync("1", backend);
+        var result = await sut.GetFromBackendAsync("1", BackendType.Primary);
 
         // Assert
         result.Should().NotBeNull();
         result!.Id.Should().Be("1");
+    }
+
+    [Fact]
+    public async Task GetFromBackendAsync_Secondary_ShouldReturnEntityFromSecondaryContext()
+    {
+        // Arrange
+        var options = new PolyglotOptions { Mode = PolyglotMode.DualWrite };
+        using var primaryContext = CreateInMemoryContext("primary");
+        using var secondaryContext = CreateInMemoryContext("secondary");
+
+        // Add entity to secondary context only
+        var entity = new TestEntity { Id = "2", Name = "SecondaryOnly" };
+        secondaryContext.Set<TestEntity>().Add(entity);
+        await secondaryContext.SaveChangesAsync();
+
+        var sut = CreateRepository(primaryContext, options, secondaryContext);
+
+        // Act
+        var result = await sut.GetFromBackendAsync("2", BackendType.Secondary);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Id.Should().Be("2");
+        result.Name.Should().Be("SecondaryOnly");
+    }
+
+    [Fact]
+    public async Task GetFromBackendAsync_Secondary_WhenNoSecondaryContext_ShouldReturnNull()
+    {
+        // Arrange
+        var options = new PolyglotOptions { Mode = PolyglotMode.SingleStore };
+        using var primaryContext = CreateInMemoryContext();
+
+        var sut = CreateRepository(primaryContext, options, null);
+
+        // Act
+        var result = await sut.GetFromBackendAsync("1", BackendType.Secondary);
+
+        // Assert
+        result.Should().BeNull();
     }
 
     private TestDbContext CreateInMemoryContext(string? name = null)
@@ -228,7 +264,7 @@ public class PolyglotRepositoryTests
 
     private PolyglotRepository<TestEntity> CreateRepository(
         DbContext primaryContext,
-        MigrationOptions options,
+        PolyglotOptions options,
         DbContext? secondaryContext = null)
     {
         return new PolyglotRepository<TestEntity>(
