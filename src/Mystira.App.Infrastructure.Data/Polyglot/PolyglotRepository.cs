@@ -14,13 +14,16 @@ namespace Mystira.App.Infrastructure.Data.Polyglot;
 
 /// <summary>
 /// Polyglot repository implementation supporting multiple database backends.
-/// Implements dual-write patterns for gradual database migration per ADR-0013/0014.
+/// Implements permanent dual-write pattern per ADR-0013/0014.
+///
+/// Architecture:
+/// - Cosmos DB: Primary store for reads/writes, document data, global distribution
+/// - PostgreSQL: Secondary store for analytics, reporting, relational queries
 ///
 /// Features:
-/// - Migration phase awareness (Cosmos-only, dual-write, Postgres-only)
 /// - Dual-write with compensation on failure
 /// - Health checks per backend
-/// - Polly resilience policies
+/// - Polly resilience policies (circuit breaker, retry, timeout)
 /// - Consistency validation between backends
 /// </summary>
 /// <typeparam name="T">The entity type</typeparam>
@@ -143,11 +146,11 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     {
         var context = backend switch
         {
-            BackendType.Primary => GetPrimaryContext(),
+            BackendType.Primary => _dbContext,      // Cosmos DB is always primary
             BackendType.Secondary => _secondaryContext,
-            BackendType.CosmosDb => _options.Phase <= MigrationPhase.DualWriteCosmosRead ? _dbContext : _secondaryContext,
-            BackendType.PostgreSql => _options.Phase >= MigrationPhase.DualWritePostgresRead ? _dbContext : _secondaryContext,
-            _ => GetPrimaryContext()
+            BackendType.CosmosDb => _dbContext,     // Always Cosmos
+            BackendType.PostgreSql => _secondaryContext, // Always PostgreSQL
+            _ => _dbContext
         };
 
         if (context == null)
@@ -207,17 +210,7 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     #region Private Helpers
 
     private bool IsDualWriteMode =>
-        _options.Phase == MigrationPhase.DualWriteCosmosRead ||
-        _options.Phase == MigrationPhase.DualWritePostgresRead;
-
-    private DbContext GetPrimaryContext() => _options.Phase switch
-    {
-        MigrationPhase.CosmosOnly => _dbContext,
-        MigrationPhase.DualWriteCosmosRead => _dbContext,
-        MigrationPhase.DualWritePostgresRead => _secondaryContext ?? _dbContext,
-        MigrationPhase.PostgresOnly => _secondaryContext ?? _dbContext,
-        _ => _dbContext
-    };
+        _options.Phase == MigrationPhase.DualWriteCosmosRead && _secondaryContext != null;
 
     private async Task<T> DualWriteAsync(
         Func<Task<T>> primaryWrite,

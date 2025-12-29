@@ -4,19 +4,22 @@ namespace Mystira.App.Application.Ports.Data;
 
 /// <summary>
 /// Polyglot repository interface supporting multiple database backends.
-/// Implements dual-write patterns for gradual database migration per ADR-0013/0014.
+/// Implements permanent dual-write pattern per ADR-0013/0014.
+///
+/// Architecture:
+/// - Cosmos DB: Primary store for reads/writes, document data, global distribution
+/// - PostgreSQL: Secondary store for analytics, reporting, relational queries
 ///
 /// Features:
 /// - Ardalis.Specification support for queries
-/// - Migration phase awareness (Cosmos-only, dual-write, Postgres-only)
 /// - Health checks per backend
 /// - Resilience with Polly policies
 ///
 /// Usage:
-///   // Read operations use the appropriate backend based on migration phase
+///   // Reads always from Cosmos DB (primary)
 ///   var account = await _repository.FirstOrDefaultAsync(new AccountByEmailSpec(email));
 ///
-///   // Write operations may go to multiple backends during migration
+///   // Writes go to both Cosmos and PostgreSQL (when enabled)
 ///   await _repository.AddAsync(newAccount);
 ///   await _repository.SaveChangesAsync();
 /// </summary>
@@ -24,7 +27,7 @@ namespace Mystira.App.Application.Ports.Data;
 public interface IPolyglotRepository<T> : ISpecRepository<T> where T : class
 {
     /// <summary>
-    /// Get the current migration phase for this repository.
+    /// Get the current operational mode for this repository.
     /// </summary>
     MigrationPhase CurrentPhase { get; }
 
@@ -60,19 +63,19 @@ public interface IPolyglotRepository<T> : ISpecRepository<T> where T : class
 /// </summary>
 public enum BackendType
 {
-    /// <summary>Primary read backend (depends on migration phase)</summary>
+    /// <summary>Primary backend (Cosmos DB)</summary>
     Primary,
 
-    /// <summary>Secondary write backend (depends on migration phase)</summary>
+    /// <summary>Secondary backend (PostgreSQL)</summary>
     Secondary,
 
-    /// <summary>Cosmos DB backend</summary>
+    /// <summary>Cosmos DB - primary store for document data</summary>
     CosmosDb,
 
-    /// <summary>PostgreSQL backend</summary>
+    /// <summary>PostgreSQL - secondary store for analytics/reporting</summary>
     PostgreSql,
 
-    /// <summary>Redis cache</summary>
+    /// <summary>Redis cache layer</summary>
     Cache
 }
 

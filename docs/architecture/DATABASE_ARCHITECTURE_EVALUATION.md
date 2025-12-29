@@ -288,14 +288,25 @@ The team's instinct to question and examine actual data before migration is the 
 }
 ```
 
-### Migration Phases
+### Operational Modes
 
-To migrate, change the `Phase` setting:
+The system uses **permanent polyglot persistence** (not migration):
 
-1. `CosmosOnly` - Current state (default)
-2. `DualWriteCosmosRead` - Write to both, read from Cosmos
-3. `DualWritePostgresRead` - Write to both, read from PostgreSQL
-4. `PostgresOnly` - All operations use PostgreSQL
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| `CosmosOnly` | All operations use Cosmos DB only | Initial setup, no PostgreSQL configured |
+| `DualWriteCosmosRead` | Write to both, read from Cosmos | **Recommended for production** |
+
+**Architecture:**
+- **Cosmos DB**: Primary store for reads/writes, document data, global distribution
+- **PostgreSQL**: Secondary store for analytics, reporting, relational queries
+
+To enable dual-write, set:
+```json
+"PolyglotPersistence": {
+  "Phase": "DualWriteCosmosRead"
+}
+```
 
 ### PostgreSQL Schema
 
