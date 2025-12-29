@@ -218,11 +218,18 @@ else
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<MystiraAppDbContext>());
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// POSTGRESQL DATABASE: For polyglot persistence migration (ADR-0013/0014)
+// POLYGLOT PERSISTENCE: PostgreSQL secondary store (ADR-0013/0014)
 // Migration candidates: Account, GameSession, PlayerScenarioScore
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// Always configure polyglot options (needed for DI even in SingleStore mode)
+builder.Services.Configure<PolyglotOptions>(
+    builder.Configuration.GetSection(PolyglotOptions.SectionName));
+
 var postgresConnectionString = builder.Configuration.GetConnectionString("PostgreSql");
 var usePostgres = !string.IsNullOrEmpty(postgresConnectionString);
+var polyglotMode = builder.Configuration.GetSection(PolyglotOptions.SectionName)
+    .GetValue<PolyglotMode>("Mode");
 
 if (usePostgres)
 {
@@ -237,10 +244,6 @@ if (usePostgres)
                 errorCodesToAdd: null);
         });
     });
-
-    // Configure polyglot persistence options
-    builder.Services.Configure<PolyglotOptions>(
-        builder.Configuration.GetSection(PolyglotOptions.SectionName));
 
     // Register polyglot repositories for dual-write entities
     // These wrap both Cosmos and PostgreSQL contexts for dual-write operations
@@ -274,11 +277,11 @@ if (usePostgres)
         return new PolyglotRepository<PlayerScenarioScore>(cosmosContext, options, logger, postgresContext, metrics);
     });
 
-    Log.Information("PostgreSQL polyglot persistence enabled (DualWrite mode)");
+    Log.Information("PostgreSQL polyglot persistence enabled. Mode: {Mode}", polyglotMode);
 }
 else
 {
-    Log.Information("PostgreSQL not configured - running in Cosmos-only mode");
+    Log.Information("PostgreSQL not configured - running in SingleStore mode (Cosmos only)");
 }
 
 // Add Azure Infrastructure Services

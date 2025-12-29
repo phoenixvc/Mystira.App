@@ -104,6 +104,96 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     }
 
     /// <inheritdoc />
+    public override async Task<IEnumerable<T>> AddRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+    {
+        var entityList = entities.ToList();
+
+        if (IsDualWriteMode)
+        {
+            // Add to primary first
+            var result = await base.AddRangeAsync(entityList, cancellationToken);
+
+            // Then add to secondary with resilience
+            foreach (var entity in entityList)
+            {
+                try
+                {
+                    await AddToSecondaryAsync(entity, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Secondary bulk add failed for entity in {EntityType}", typeof(T).Name);
+                    // Continue with remaining entities (compensation pattern)
+                }
+            }
+
+            return result;
+        }
+
+        return await base.AddRangeAsync(entityList, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task UpdateRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+    {
+        var entityList = entities.ToList();
+
+        if (IsDualWriteMode)
+        {
+            // Update primary first
+            await base.UpdateRangeAsync(entityList, cancellationToken);
+
+            // Then update secondary with resilience
+            foreach (var entity in entityList)
+            {
+                try
+                {
+                    await UpdateInSecondaryAsync(entity, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Secondary bulk update failed for entity in {EntityType}", typeof(T).Name);
+                    // Continue with remaining entities (compensation pattern)
+                }
+            }
+
+            return;
+        }
+
+        await base.UpdateRangeAsync(entityList, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public override async Task DeleteRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+    {
+        var entityList = entities.ToList();
+
+        if (IsDualWriteMode)
+        {
+            // Delete from primary first
+            await base.DeleteRangeAsync(entityList, cancellationToken);
+
+            // Then delete from secondary with resilience
+            foreach (var entity in entityList)
+            {
+                try
+                {
+                    await DeleteFromSecondaryAsync(entity, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Secondary bulk delete failed for entity in {EntityType}", typeof(T).Name);
+                    // Continue with remaining entities (compensation pattern)
+                }
+            }
+
+            return;
+        }
+
+        await base.DeleteRangeAsync(entityList, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<bool> IsPrimaryHealthyAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -146,10 +236,8 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     {
         var context = backend switch
         {
-            BackendType.Primary => _dbContext,      // Cosmos DB is always primary
-            BackendType.Secondary => _secondaryContext,
-            BackendType.CosmosDb => _dbContext,     // Always Cosmos
-            BackendType.PostgreSql => _secondaryContext, // Always PostgreSQL
+            BackendType.Primary => _dbContext,      // Cosmos DB
+            BackendType.Secondary => _secondaryContext, // PostgreSQL
             _ => _dbContext
         };
 
@@ -270,8 +358,19 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     {
         if (_secondaryContext == null) return entity;
 
-        await _secondaryContext.Set<T>().AddAsync(entity, cancellationToken);
+        // Detach from secondary context if already tracked (prevents tracking conflicts)
+        var existingEntry = _secondaryContext.ChangeTracker.Entries<T>()
+            .FirstOrDefault(e => e.Entity == entity);
+        if (existingEntry != null)
+        {
+            existingEntry.State = EntityState.Detached;
+        }
+
+        _secondaryContext.Entry(entity).State = EntityState.Added;
         await _secondaryContext.SaveChangesAsync(cancellationToken);
+
+        // Detach after save to prevent cross-context tracking issues
+        _secondaryContext.Entry(entity).State = EntityState.Detached;
         return entity;
     }
 
@@ -279,16 +378,37 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     {
         if (_secondaryContext == null) return 0;
 
-        _secondaryContext.Set<T>().Update(entity);
-        return await _secondaryContext.SaveChangesAsync(cancellationToken);
+        // Detach any existing tracked instance with same key
+        var existingEntry = _secondaryContext.ChangeTracker.Entries<T>()
+            .FirstOrDefault(e => e.Entity == entity);
+        if (existingEntry != null)
+        {
+            existingEntry.State = EntityState.Detached;
+        }
+
+        _secondaryContext.Entry(entity).State = EntityState.Modified;
+        var result = await _secondaryContext.SaveChangesAsync(cancellationToken);
+
+        // Detach after save
+        _secondaryContext.Entry(entity).State = EntityState.Detached;
+        return result;
     }
 
     private async Task<int> DeleteFromSecondaryAsync(T entity, CancellationToken cancellationToken)
     {
         if (_secondaryContext == null) return 0;
 
-        _secondaryContext.Set<T>().Remove(entity);
-        return await _secondaryContext.SaveChangesAsync(cancellationToken);
+        // Detach any existing tracked instance
+        var existingEntry = _secondaryContext.ChangeTracker.Entries<T>()
+            .FirstOrDefault(e => e.Entity == entity);
+        if (existingEntry != null)
+        {
+            existingEntry.State = EntityState.Detached;
+        }
+
+        _secondaryContext.Entry(entity).State = EntityState.Deleted;
+        var result = await _secondaryContext.SaveChangesAsync(cancellationToken);
+        return result;
     }
 
     private ResiliencePipeline CreateResiliencePipeline()
@@ -335,8 +455,8 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
                 UseJitter = true,
                 ShouldHandle = new PredicateBuilder().Handle<DbUpdateException>()
             })
-            // Timeout: Fail fast if secondary is too slow
-            .AddTimeout(TimeSpan.FromMilliseconds(_options.SecondaryWriteTimeoutMs))
+            // Note: Timeout is handled via CancellationTokenSource in DualWriteAsync
+            // to allow per-operation control and avoid double-timeout conflicts
             .Build();
     }
 

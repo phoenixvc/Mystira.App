@@ -59,24 +59,21 @@ public interface IPolyglotRepository<T> : ISpecRepository<T> where T : class
 }
 
 /// <summary>
-/// Backend type for explicit backend access.
+/// Backend type for explicit backend access in polyglot persistence.
 /// </summary>
 public enum BackendType
 {
-    /// <summary>Primary backend (Cosmos DB)</summary>
-    Primary,
+    /// <summary>
+    /// Primary backend - currently Cosmos DB.
+    /// Source of truth for all reads in dual-write mode.
+    /// </summary>
+    Primary = 0,
 
-    /// <summary>Secondary backend (PostgreSQL)</summary>
-    Secondary,
-
-    /// <summary>Cosmos DB - primary document store</summary>
-    CosmosDb,
-
-    /// <summary>PostgreSQL - secondary analytics store</summary>
-    PostgreSql,
-
-    /// <summary>Redis cache layer</summary>
-    Cache
+    /// <summary>
+    /// Secondary backend - currently PostgreSQL.
+    /// Used for analytics, reporting, and relational queries.
+    /// </summary>
+    Secondary = 1
 }
 
 /// <summary>
