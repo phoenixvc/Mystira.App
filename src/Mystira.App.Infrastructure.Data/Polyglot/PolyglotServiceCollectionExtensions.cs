@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Mystira.Shared.Polyglot;
+using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Infrastructure.Data.Polyglot;
 

@@ -4,7 +4,7 @@ using Ardalis.Specification;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Mystira.Shared.Polyglot;
+using Mystira.App.Application.Ports.Data;
 using Mystira.Shared.Telemetry;
 using Polly;
 using Polly.CircuitBreaker;

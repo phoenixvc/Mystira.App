@@ -32,8 +32,8 @@
     <!-- Redis caching (per workspace ADR-0014) -->
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.11" />
     <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
-    <!-- Shared infrastructure including polyglot persistence -->
-    <PackageReference Include="Mystira.Shared" Version="0.5.0-alpha*" />
+    <!-- Shared telemetry interfaces -->
+    <PackageReference Include="Mystira.Shared" Version="0.4.3-alpha*" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Mystira.App.Domain\Mystira.App.Domain.csproj" />

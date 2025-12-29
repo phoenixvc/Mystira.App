@@ -3,8 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using Mystira.App.Application.Ports.Data;
 using Mystira.App.Infrastructure.Data.Polyglot;
-using Mystira.Shared.Polyglot;
 using Mystira.Shared.Telemetry;
 
 namespace Mystira.App.Application.Tests.Repositories;
