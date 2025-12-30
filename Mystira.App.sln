@@ -4,8 +4,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{636A8ADA-190
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{07610817-4AC8-456C-AAE7-764888044CCD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.Domain", "src\Mystira.App.Domain\Mystira.App.Domain.csproj", "{2C5D697D-B826-402C-86E8-49DB0B35BFD3}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.Infrastructure.Azure", "src\Mystira.App.Infrastructure.Azure\Mystira.App.Infrastructure.Azure.csproj", "{1F971ECA-0287-49CA-BD08-2059D0C8121B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mystira.App.Api", "src\Mystira.App.Api\Mystira.App.Api.csproj", "{C9E28354-D031-4F64-9C11-C4E23FC6852E}"
@@ -52,18 +50,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{2C5D697D-B826-402C-86E8-49DB0B35BFD3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2C5D697D-B826-402C-86E8-49DB0B35BFD3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2C5D697D-B826-402C-86E8-49DB0B35BFD3}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{2C5D697D-B826-402C-86E8-49DB0B35BFD3}.Debug|x64.Build.0 = Debug|Any CPU
-		{2C5D697D-B826-402C-86E8-49DB0B35BFD3}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{2C5D697D-B826-402C-86E8-49DB0B35BFD3}.Debug|x86.Build.0 = Debug|Any CPU
-		{2C5D697D-B826-402C-86E8-49DB0B35BFD3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2C5D697D-B826-402C-86E8-49DB0B35BFD3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2C5D697D-B826-402C-86E8-49DB0B35BFD3}.Release|x64.ActiveCfg = Release|Any CPU
-		{2C5D697D-B826-402C-86E8-49DB0B35BFD3}.Release|x64.Build.0 = Release|Any CPU
-		{2C5D697D-B826-402C-86E8-49DB0B35BFD3}.Release|x86.ActiveCfg = Release|Any CPU
-		{2C5D697D-B826-402C-86E8-49DB0B35BFD3}.Release|x86.Build.0 = Release|Any CPU
 		{1F971ECA-0287-49CA-BD08-2059D0C8121B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1F971ECA-0287-49CA-BD08-2059D0C8121B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1F971ECA-0287-49CA-BD08-2059D0C8121B}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -285,7 +271,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{2C5D697D-B826-402C-86E8-49DB0B35BFD3} = {636A8ADA-1901-4A23-88BB-A86586F1F765}
 		{1F971ECA-0287-49CA-BD08-2059D0C8121B} = {636A8ADA-1901-4A23-88BB-A86586F1F765}
 		{C9E28354-D031-4F64-9C11-C4E23FC6852E} = {636A8ADA-1901-4A23-88BB-A86586F1F765}
 		{998C75B4-2658-4C64-A7E3-9A6CCA82796A} = {636A8ADA-1901-4A23-88BB-A86586F1F765}
