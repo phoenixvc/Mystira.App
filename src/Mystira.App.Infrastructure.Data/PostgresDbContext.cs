@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Mystira.App.Domain.Models;
-using Mystira.App.Infrastructure.Data.Polyglot;
+using Mystira.Shared.Polyglot;
 
 namespace Mystira.App.Infrastructure.Data;
 
