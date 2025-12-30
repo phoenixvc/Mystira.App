@@ -3,7 +3,7 @@ using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Validation;
 using Mystira.App.Application.Mappers;
 using Mystira.Contracts.App.Requests.Scenarios;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using NJsonSchema;
 
 namespace Mystira.App.Application.UseCases.Scenarios;

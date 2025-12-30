@@ -2,7 +2,7 @@ using Wolverine;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.MediaAssets.Queries;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using ErrorResponse = Mystira.Contracts.App.Responses.Common.ErrorResponse;
 
 namespace Mystira.App.Api.Controllers;

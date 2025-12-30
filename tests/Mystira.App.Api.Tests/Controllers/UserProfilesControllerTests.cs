@@ -11,7 +11,7 @@ using Moq;
 using Mystira.App.Api.Controllers;
 using Mystira.App.Application.CQRS.UserProfiles.Commands;
 using Mystira.App.Application.CQRS.UserProfiles.Queries;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using Mystira.Contracts.App.Requests.UserProfiles;
 using Wolverine;
 using Xunit;

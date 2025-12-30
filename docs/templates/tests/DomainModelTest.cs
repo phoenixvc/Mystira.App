@@ -1,11 +1,11 @@
 // Example Domain Model Test
-// File: tests/Mystira.App.Domain.Tests/Models/ScenarioTests.cs
+// File: tests/Mystira.Domain.Tests/Models/ScenarioTests.cs
 
 using FluentAssertions;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using Xunit;
 
-namespace Mystira.App.Domain.Tests.Models;
+namespace Mystira.Domain.Tests.Models;
 
 /// <summary>
 /// Example tests for a domain model (Scenario entity)

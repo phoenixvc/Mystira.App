@@ -1,7 +1,7 @@
 ﻿using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using Mystira.App.PWA.Models;
 using Mystira.App.PWA.Services;
 using Mystira.App.PWA.Services.Music;

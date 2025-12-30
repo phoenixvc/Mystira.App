@@ -1,5 +1,5 @@
 using Ardalis.Specification;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 
 namespace Mystira.App.Application.Specifications;
 

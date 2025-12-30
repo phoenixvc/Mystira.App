@@ -2,7 +2,7 @@ using Wolverine;
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.CQRS.Accounts.Queries;
 using Mystira.App.Application.CQRS.UserProfiles.Queries;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.UserBadges.Queries;
 

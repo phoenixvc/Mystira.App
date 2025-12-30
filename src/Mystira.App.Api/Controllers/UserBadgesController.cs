@@ -4,7 +4,7 @@ using Mystira.App.Application.CQRS.UserBadges.Commands;
 using Mystira.App.Application.CQRS.UserBadges.Queries;
 using Mystira.Contracts.App.Requests.Badges;
 using Mystira.App.Api.Models;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;
 

@@ -1,5 +1,5 @@
 using Microsoft.JSInterop;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 
 namespace Mystira.App.PWA.Services.Music;
 

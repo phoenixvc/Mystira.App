@@ -3,7 +3,7 @@ using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Specifications;
 using Mystira.Contracts.App.Models.GameSessions;
 using Mystira.Contracts.App.Responses.GameSessions;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.GameSessions.Queries;
 

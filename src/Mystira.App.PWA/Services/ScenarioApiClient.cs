@@ -198,9 +198,9 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                                     CreatedAt = GetDate("createdAt"),
                                     Scenes = new List<Scene>(),
                                     MusicPalette = item.TryGetProperty("musicPalette", out var musicPaletteProp) && musicPaletteProp.ValueKind == JsonValueKind.Object
-                                        ? JsonSerializer.Deserialize<Mystira.App.Domain.Models.MusicPalette>(musicPaletteProp.GetRawText(), JsonOptions)
+                                        ? JsonSerializer.Deserialize<Mystira.Domain.Models.MusicPalette>(musicPaletteProp.GetRawText(), JsonOptions)
                                         : (item.TryGetProperty("MusicPalette", out var musicPaletteProp2) && musicPaletteProp2.ValueKind == JsonValueKind.Object
-                                            ? JsonSerializer.Deserialize<Mystira.App.Domain.Models.MusicPalette>(musicPaletteProp2.GetRawText(), JsonOptions)
+                                            ? JsonSerializer.Deserialize<Mystira.Domain.Models.MusicPalette>(musicPaletteProp2.GetRawText(), JsonOptions)
                                             : null)
                                 };
 
@@ -465,11 +465,11 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                                 : (int?)null,
                             ActiveCharacter = string.IsNullOrWhiteSpace(activeChar) ? null : activeChar,
                             Music = TryGetProp(s, "music", out var musicProp) && musicProp.ValueKind == JsonValueKind.Object
-                                ? JsonSerializer.Deserialize<Mystira.App.Domain.Models.SceneMusicSettings>(musicProp.GetRawText(), JsonOptions)
+                                ? JsonSerializer.Deserialize<Mystira.Domain.Models.SceneMusicSettings>(musicProp.GetRawText(), JsonOptions)
                                 : null,
                             SoundEffects = TryGetProp(s, "soundEffects", out var sfxProp) && sfxProp.ValueKind == JsonValueKind.Array
-                                ? JsonSerializer.Deserialize<List<Mystira.App.Domain.Models.SceneSoundEffect>>(sfxProp.GetRawText(), JsonOptions) ?? new List<Mystira.App.Domain.Models.SceneSoundEffect>()
-                                : new List<Mystira.App.Domain.Models.SceneSoundEffect>()
+                                ? JsonSerializer.Deserialize<List<Mystira.Domain.Models.SceneSoundEffect>>(sfxProp.GetRawText(), JsonOptions) ?? new List<Mystira.Domain.Models.SceneSoundEffect>()
+                                : new List<Mystira.Domain.Models.SceneSoundEffect>()
                         };
                         scenes.Add(scene);
                     }
@@ -533,7 +533,7 @@ public class ScenarioApiClient : BaseApiClient, IScenarioApiClient
                     Scenes = ReadScenes(root),
                     Characters = ReadCharacters(root),
                     MusicPalette = TryGetProp(root, "musicPalette", out var paletteProp) && paletteProp.ValueKind == JsonValueKind.Object
-                        ? JsonSerializer.Deserialize<Mystira.App.Domain.Models.MusicPalette>(paletteProp.GetRawText(), JsonOptions)
+                        ? JsonSerializer.Deserialize<Mystira.Domain.Models.MusicPalette>(paletteProp.GetRawText(), JsonOptions)
                         : null
                 };
 

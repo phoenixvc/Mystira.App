@@ -3,7 +3,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Mystira.App.Api.Adapters;
@@ -168,7 +168,7 @@ builder.Services.AddSwaggerGen(c =>
     // Fix schema naming conflicts
     c.CustomSchemaIds(type =>
     {
-        if (type == typeof(Mystira.App.Domain.Models.CharacterMetadata))
+        if (type == typeof(Mystira.Domain.Models.CharacterMetadata))
         {
             return "DomainCharacterMetadata";
         }

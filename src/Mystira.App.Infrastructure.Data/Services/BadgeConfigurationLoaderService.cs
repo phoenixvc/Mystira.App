@@ -4,7 +4,7 @@ using Json.Schema;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 
 namespace Mystira.App.Infrastructure.Data.Services;
 
@@ -165,7 +165,7 @@ public class BadgeConfigurationLoaderService
     private static string GetSchemaFilePath()
     {
         var currentDir = AppDomain.CurrentDomain.BaseDirectory;
-        var schemaDir = Path.GetFullPath(Path.Combine(currentDir, "..", "..", "..", "..", "src", "Mystira.App.Domain", "Schemas"));
+        var schemaDir = Path.GetFullPath(Path.Combine(currentDir, "..", "..", "..", "..", "data", "Schemas"));
 
         var possiblePaths = new[]
         {
@@ -181,7 +181,7 @@ public class BadgeConfigurationLoaderService
     private static string GetBadgeConfigFilePath(string ageGroupId)
     {
         var currentDir = AppDomain.CurrentDomain.BaseDirectory;
-        var badgesDir = Path.GetFullPath(Path.Combine(currentDir, "..", "..", "..", "..", "src", "Mystira.App.Domain", "Data", "Badges"));
+        var badgesDir = Path.GetFullPath(Path.Combine(currentDir, "..", "..", "..", "..", "data", "SeedData", "Badges"));
 
         var possiblePaths = new[]
         {

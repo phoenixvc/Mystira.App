@@ -1,7 +1,7 @@
 using Mystira.Shared.CQRS;
 using Mystira.App.Application.Interfaces;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.BadgeConfigurations.Queries;
 

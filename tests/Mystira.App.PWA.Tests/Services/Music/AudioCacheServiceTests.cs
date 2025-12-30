@@ -1,6 +1,6 @@
 ﻿using Moq;
 using Mystira.App.PWA.Models;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using Mystira.App.PWA.Services;
 using Mystira.App.PWA.Services.Music;
 using Microsoft.Extensions.Logging;
@@ -42,21 +42,21 @@ public class AudioCacheServiceTests
                 new Scene
                 {
                     Media = new SceneMedia { Audio = "audio1" },
-                    SoundEffects = new List<Mystira.App.Domain.Models.SceneSoundEffect>
+                    SoundEffects = new List<Mystira.Domain.Models.SceneSoundEffect>
                     {
-                        new Mystira.App.Domain.Models.SceneSoundEffect { Track = "sfx1" }
+                        new Mystira.Domain.Models.SceneSoundEffect { Track = "sfx1" }
                     }
                 },
                 new Scene
                 {
                     Media = new SceneMedia { Audio = "audio1" }, // Duplicate
-                    SoundEffects = new List<Mystira.App.Domain.Models.SceneSoundEffect>
+                    SoundEffects = new List<Mystira.Domain.Models.SceneSoundEffect>
                     {
-                        new Mystira.App.Domain.Models.SceneSoundEffect { Track = "sfx2" }
+                        new Mystira.Domain.Models.SceneSoundEffect { Track = "sfx2" }
                     }
                 }
             },
-            MusicPalette = new Mystira.App.Domain.Models.MusicPalette
+            MusicPalette = new Mystira.Domain.Models.MusicPalette
             {
                 TracksByProfile = new Dictionary<string, List<string>>
                 {

@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using Wolverine;
 
 namespace Mystira.App.Application.CQRS.UserProfiles.Commands;

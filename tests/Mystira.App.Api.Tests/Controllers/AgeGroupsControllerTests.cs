@@ -10,7 +10,7 @@ using Moq;
 using Mystira.App.Api.Controllers;
 using Mystira.App.Api.Models;
 using Mystira.App.Application.CQRS.AgeGroups.Queries;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using Wolverine;
 using Xunit;
 

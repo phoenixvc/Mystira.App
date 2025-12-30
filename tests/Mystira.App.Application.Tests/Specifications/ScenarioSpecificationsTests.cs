@@ -1,6 +1,6 @@
 using FluentAssertions;
 using Mystira.App.Application.Specifications;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 
 namespace Mystira.App.Application.Tests.Specifications;
 

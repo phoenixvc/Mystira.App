@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using ContractCharacterAssignmentDto = Mystira.Contracts.App.Models.CharacterAssignmentDto;
 
 namespace Mystira.App.Application.CQRS.GameSessions.Commands;

@@ -1,5 +1,5 @@
 using Mystira.Contracts.App.Requests.UserProfiles;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.UserProfiles.Commands;
 

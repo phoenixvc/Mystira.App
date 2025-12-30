@@ -1,4 +1,4 @@
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using Mystira.App.PWA.Models;
 using Scene = Mystira.App.PWA.Models.Scene;
 using Scenario = Mystira.App.PWA.Models.Scenario;

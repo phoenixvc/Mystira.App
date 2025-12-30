@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Mystira.Shared.Polyglot;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using Mystira.Shared.Polyglot;
 
 namespace Mystira.App.Infrastructure.Data.Polyglot;

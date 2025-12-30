@@ -24,5 +24,5 @@ public class ScenarioSummaryDto
     public string AgeGroup { get; set; } = string.Empty;
     public List<string> CoreAxes { get; set; } = new();
     public DateTime CreatedAt { get; set; }
-    public Mystira.App.Domain.Models.MusicPalette? MusicPalette { get; set; }
+    public Mystira.Domain.Models.MusicPalette? MusicPalette { get; set; }
 }

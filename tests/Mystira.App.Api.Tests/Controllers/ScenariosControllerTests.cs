@@ -10,7 +10,7 @@ using Moq;
 using Mystira.App.Api.Controllers;
 using Mystira.App.Application.CQRS.Attribution.Queries;
 using Mystira.App.Application.CQRS.Scenarios.Queries;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using Mystira.Contracts.App.Requests.Scenarios;
 using Mystira.Contracts.App.Responses.Attribution;
 using Mystira.Contracts.App.Responses.Scenarios;

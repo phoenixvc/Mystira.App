@@ -1,5 +1,5 @@
 using Mystira.Contracts.App.Requests.Scenarios;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.Scenarios.Commands;
 

@@ -11,7 +11,7 @@ using Moq;
 using Mystira.App.Api.Controllers;
 using Mystira.App.Application.CQRS.MediaAssets.Queries;
 using Mystira.Contracts.App.Responses.Common;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using Wolverine;
 using Xunit;
 

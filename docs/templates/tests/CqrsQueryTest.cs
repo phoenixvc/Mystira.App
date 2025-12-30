@@ -3,7 +3,7 @@
 
 using FluentAssertions;
 using Mystira.App.Application.CQRS.Scenarios.Queries;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using Xunit;
 
 namespace Mystira.App.Application.Tests.CQRS.Scenarios;

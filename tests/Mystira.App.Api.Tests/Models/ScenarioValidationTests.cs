@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using FluentAssertions;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using Xunit;
 
 namespace Mystira.App.Api.Tests.Models;

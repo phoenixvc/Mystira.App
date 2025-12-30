@@ -2,7 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 
 namespace Mystira.App.Infrastructure.Data.Services;
 
@@ -242,11 +242,11 @@ public class MasterDataSeederService
     {
         // Ensure fileName is a safe single file name, not a path
         fileName = Path.GetFileName(fileName);
-        // Look for the JSON file in the Domain/Data directory
+        // Look for the JSON file in the data/SeedData directory
         var currentDir = AppDomain.CurrentDomain.BaseDirectory;
 
-        // Compute absolute path to the Data directory, then combine with fileName
-        var dataDir = Path.GetFullPath(Path.Combine(currentDir, "..", "..", "..", "..", "src", "Mystira.App.Domain", "Data"));
+        // Compute absolute path to the SeedData directory, then combine with fileName
+        var dataDir = Path.GetFullPath(Path.Combine(currentDir, "..", "..", "..", "..", "data", "SeedData"));
 
         var possiblePaths = new[]
         {

@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Data;
 using Mystira.Contracts.App.Requests.Scenarios;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using ContractEnums = Mystira.Contracts.App.Enums;
 
 namespace Mystira.App.Application.Parsers;

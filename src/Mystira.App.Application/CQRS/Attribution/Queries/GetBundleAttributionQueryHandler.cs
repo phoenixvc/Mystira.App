@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Helpers;
 using Mystira.App.Application.Ports.Data;
 using Mystira.Contracts.App.Responses.Attribution;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.Attribution.Queries;
 

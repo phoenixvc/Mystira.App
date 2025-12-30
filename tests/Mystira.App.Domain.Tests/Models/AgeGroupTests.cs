@@ -1,6 +1,6 @@
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 
-namespace Mystira.App.Domain.Tests.Models;
+namespace Mystira.Domain.Tests.Models;
 
 public class AgeGroupTests
 {

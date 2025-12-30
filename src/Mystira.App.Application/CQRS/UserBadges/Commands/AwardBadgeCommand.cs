@@ -1,5 +1,5 @@
 using Mystira.Contracts.App.Requests.Badges;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.UserBadges.Commands;
 

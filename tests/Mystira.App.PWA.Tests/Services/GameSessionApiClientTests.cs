@@ -185,7 +185,7 @@ public class GameSessionApiClientTests
     public async Task EndGameSessionAsync_WhenSuccessful_ReturnsGameSession()
     {
         // Arrange
-        var expectedSession = new GameSession { Id = "session-ended", Status = Mystira.App.Domain.Models.SessionStatus.Completed };
+        var expectedSession = new GameSession { Id = "session-ended", Status = Mystira.Domain.Models.SessionStatus.Completed };
         SetupResponse(HttpStatusCode.OK, expectedSession);
 
         // Act
@@ -193,7 +193,7 @@ public class GameSessionApiClientTests
 
         // Assert
         result.Should().NotBeNull();
-        result!.Status.Should().Be(Mystira.App.Domain.Models.SessionStatus.Completed);
+        result!.Status.Should().Be(Mystira.Domain.Models.SessionStatus.Completed);
     }
     
     [Fact]
@@ -228,7 +228,7 @@ public class GameSessionApiClientTests
     public async Task PauseGameSessionAsync_WhenSuccessful_ReturnsGameSession()
     {
         // Arrange
-        var expectedSession = new GameSession { Id = "paused-123", Status = Mystira.App.Domain.Models.SessionStatus.Paused };
+        var expectedSession = new GameSession { Id = "paused-123", Status = Mystira.Domain.Models.SessionStatus.Paused };
         SetupResponse(HttpStatusCode.OK, expectedSession);
 
         // Act
@@ -236,14 +236,14 @@ public class GameSessionApiClientTests
 
         // Assert
         result.Should().NotBeNull();
-        result!.Status.Should().Be(Mystira.App.Domain.Models.SessionStatus.Paused);
+        result!.Status.Should().Be(Mystira.Domain.Models.SessionStatus.Paused);
     }
 
     [Fact]
     public async Task ResumeGameSessionAsync_WhenSuccessful_ReturnsGameSession()
     {
         // Arrange
-        var expectedSession = new GameSession { Id = "resumed-123", Status = Mystira.App.Domain.Models.SessionStatus.InProgress };
+        var expectedSession = new GameSession { Id = "resumed-123", Status = Mystira.Domain.Models.SessionStatus.InProgress };
         SetupResponse(HttpStatusCode.OK, expectedSession);
 
         // Act
@@ -251,7 +251,7 @@ public class GameSessionApiClientTests
 
         // Assert
         result.Should().NotBeNull();
-        result!.Status.Should().Be(Mystira.App.Domain.Models.SessionStatus.InProgress);
+        result!.Status.Should().Be(Mystira.Domain.Models.SessionStatus.InProgress);
     }
 
     [Fact]
@@ -327,7 +327,7 @@ public class GameSessionApiClientTests
         // Arrange
         var expectedSessions = new List<GameSession> 
         { 
-            new GameSession { Id = "s1", Status = Mystira.App.Domain.Models.SessionStatus.InProgress }
+            new GameSession { Id = "s1", Status = Mystira.Domain.Models.SessionStatus.InProgress }
         };
         SetupResponse(HttpStatusCode.OK, expectedSessions);
 
@@ -337,7 +337,7 @@ public class GameSessionApiClientTests
         // Assert
         result.Should().NotBeNull();
         result.Should().HaveCount(1);
-        result![0].Status.Should().Be(Mystira.App.Domain.Models.SessionStatus.InProgress);
+        result![0].Status.Should().Be(Mystira.Domain.Models.SessionStatus.InProgress);
     }
 
     [Fact]

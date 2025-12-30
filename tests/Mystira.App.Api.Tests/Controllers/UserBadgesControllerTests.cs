@@ -7,7 +7,7 @@ using Mystira.App.Api.Controllers;
 using Mystira.App.Api.Models;
 using Mystira.App.Application.CQRS.UserBadges.Commands;
 using Mystira.App.Application.CQRS.UserBadges.Queries;
-using Mystira.App.Domain.Models;
+using Mystira.Domain.Models;
 using Mystira.Contracts.App.Requests.Badges;
 using Wolverine;
 
