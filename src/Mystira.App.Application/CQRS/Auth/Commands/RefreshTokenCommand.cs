@@ -1,3 +1,5 @@
+using Mystira.App.Application.CQRS.Auth.Responses;
+
 namespace Mystira.App.Application.CQRS.Auth.Commands;
 
 /// <summary>
@@ -7,4 +9,4 @@ namespace Mystira.App.Application.CQRS.Auth.Commands;
 public record RefreshTokenCommand(
     string Token,
     string RefreshToken
-) : ICommand<(bool Success, string Message, string? AccessToken, string? NewRefreshToken)>;
+) : ICommand<AuthResponse>;

@@ -1,3 +1,5 @@
+using Mystira.App.Application.CQRS.Common.Responses;
+
 namespace Mystira.App.Application.CQRS.Discord.Commands;
 
 /// <summary>
@@ -7,4 +9,4 @@ namespace Mystira.App.Application.CQRS.Discord.Commands;
 public record SendDiscordMessageCommand(
     ulong ChannelId,
     string Message
-) : ICommand<(bool Success, string Message)>;
+) : ICommand<CommandResponse>;

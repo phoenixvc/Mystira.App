@@ -203,7 +203,7 @@
     private bool isResendingCode = false;
     private bool rememberMe = true;
     private bool rememberMeUserSet = false;
-    private System.Timers.Timer? countdownTimer;
+    private Timer? countdownTimer;
 
     private async Task RequestSigninCode()
     {
@@ -356,7 +356,7 @@
         StopResendCountdown();
         resendCountdown = 15;
 
-        countdownTimer = new System.Timers.Timer(1000);
+        countdownTimer = new Timer(1000);
         countdownTimer.Elapsed += OnCountdownTimerElapsed;
         countdownTimer.AutoReset = true;
         countdownTimer.Start();

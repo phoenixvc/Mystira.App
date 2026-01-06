@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.CompassAxes.Queries;
+using Mystira.App.Contracts.Common;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;
@@ -40,12 +41,12 @@ public class CompassAxesController : ControllerBase
     }
 
     [HttpPost("validate")]
-    public async Task<ActionResult<dynamic>> ValidateCompassAxis([FromBody] ValidateCompassAxisRequest request)
+    public async Task<ActionResult<ValidationResult>> ValidateCompassAxis([FromBody] ValidateCompassAxisRequest request)
     {
         _logger.LogInformation("POST: Validating compass axis: {Name}", request.Name);
 
         var isValid = await _mediator.Send(new ValidateCompassAxisQuery(request.Name));
-        return Ok(new { isValid });
+        return Ok(new ValidationResult { IsValid = isValid });
     }
 }
 

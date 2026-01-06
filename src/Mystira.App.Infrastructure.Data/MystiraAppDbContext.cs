@@ -133,6 +133,7 @@ public partial class MystiraAppDbContext : DbContext
             });
         }
 
+
         // Configure Account
         modelBuilder.Entity<Account>(entity =>
         {
@@ -444,6 +445,26 @@ public partial class MystiraAppDbContext : DbContext
                         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
                         c => c.ToList()));
 
+            entity.OwnsOne(e => e.MusicPalette, palette =>
+            {
+                palette.ToJsonProperty("MusicPalette");
+                palette.Property(p => p.DefaultProfile)
+                       .ToJsonProperty("DefaultProfile")
+                       .HasConversion(
+                           v => v.ToString(),
+                           v => Enum.Parse<MusicProfile>(v, true));
+
+                palette.Property(p => p.TracksByProfile)
+                       .ToJsonProperty("TracksByProfile")
+                       .HasConversion(isInMemoryDatabase
+                           ? (ValueConverter)new InMemoryDictionaryConverter()
+                           : (ValueConverter)new CosmosDictionaryConverter())
+                       .Metadata.SetValueComparer(new ValueComparer<Dictionary<string, List<string>>>(
+                           (d1, d2) => d1 != null && d2 != null && d1.Count == d2.Count && !d1.Except(d2).Any(),
+                           d => d.Aggregate(0, (a, v) => HashCode.Combine(a, v.Key.GetHashCode(), v.Value.Aggregate(0, (a2, v2) => HashCode.Combine(a2, v2.GetHashCode())))),
+                           d => new Dictionary<string, List<string>>(d, StringComparer.OrdinalIgnoreCase)));
+            });
+
             entity.OwnsMany(e => e.Characters, character =>
             {
                 character.OwnsOne(c => c.Metadata, metadata =>
@@ -483,6 +504,28 @@ public partial class MystiraAppDbContext : DbContext
             entity.OwnsMany(e => e.Scenes, scene =>
             {
                 scene.OwnsOne(s => s.Media);
+                scene.OwnsOne(s => s.Music, music =>
+                {
+                    music.ToJsonProperty("Music");
+                    music.Property(m => m.Profile).ToJsonProperty("Profile")
+                         .HasConversion(v => v.ToString(), v => Enum.Parse<MusicProfile>(v, true));
+                    music.Property(m => m.Energy).ToJsonProperty("Energy");
+                    music.Property(m => m.Continuity).ToJsonProperty("Continuity")
+                         .HasConversion(v => v.ToString(), v => Enum.Parse<MusicContinuity>(v, true));
+                    music.Property(m => m.TransitionHint).ToJsonProperty("TransitionHint")
+                         .HasConversion(v => v.ToString(), v => Enum.Parse<MusicTransitionHint>(v, true));
+                    music.Property(m => m.Priority).ToJsonProperty("Priority")
+                         .HasConversion(v => v.ToString(), v => Enum.Parse<MusicPriority>(v, true));
+                    music.Property(m => m.Ducking).ToJsonProperty("Ducking")
+                         .HasConversion(v => v.ToString(), v => Enum.Parse<MusicDucking>(v, true));
+                });
+                scene.OwnsMany(s => s.SoundEffects, sfx =>
+                {
+                    sfx.ToJsonProperty("SoundEffects");
+                    sfx.Property(s => s.Track).ToJsonProperty("Track");
+                    sfx.Property(s => s.Loopable).ToJsonProperty("Loopable");
+                    sfx.Property(s => s.Energy).ToJsonProperty("Energy");
+                });
                 scene.OwnsMany(s => s.Branches, branch =>
                 {
                     branch.OwnsOne(b => b.EchoLog, echoLog =>
@@ -585,8 +628,8 @@ public partial class MystiraAppDbContext : DbContext
             // Configure CompassValues as a JSON property
             entity.Property(e => e.CompassValues)
                   .HasConversion(
-                      v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
-                      v => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, CompassTracking>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new()
+                      v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                      v => JsonSerializer.Deserialize<Dictionary<string, CompassTracking>>(v, (JsonSerializerOptions?)null) ?? new()
                   )
                   .Metadata.SetValueComparer(new ValueComparer<Dictionary<string, CompassTracking>>(
                       (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
@@ -655,8 +698,8 @@ public partial class MystiraAppDbContext : DbContext
             {
                 metadata.Property(m => m.AdditionalProperties)
                         .HasConversion(
-                            v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
-                            v => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new Dictionary<string, object>(),
+                            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                            v => JsonSerializer.Deserialize<Dictionary<string, object>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, object>(),
                             new ValueComparer<Dictionary<string, object>>(
                                 (c1, c2) => c1 != null && c2 != null && c1.Count == c2.Count && !c1.Except(c2).Any(),
                                 c => c != null ? c.Aggregate(0, (a, v) => HashCode.Combine(a, v.Key.GetHashCode(), v.Value != null ? v.Value.GetHashCode() : 0)) : 0,
@@ -833,10 +876,9 @@ public partial class MystiraAppDbContext : DbContext
 
             // Convert Dictionary<string, List<string>> for storage
             entity.Property(e => e.AgeGroupAvatars)
-                  .HasConversion(
-                      v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
-                      v => System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, List<string>>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new Dictionary<string, List<string>>()
-                  )
+                  .HasConversion(isInMemoryDatabase
+                      ? (ValueConverter)new InMemoryDictionaryConverter()
+                      : (ValueConverter)new CosmosDictionaryConverter())
                   .Metadata.SetValueComparer(new ValueComparer<Dictionary<string, List<string>>>(
                       (c1, c2) => c1 != null && c2 != null && c1.Count == c2.Count &&
                                   c1.Keys.All(k => c2.ContainsKey(k) && c1[k].SequenceEqual(c2[k])),
@@ -896,6 +938,77 @@ public partial class MystiraAppDbContext : DbContext
             return dict == null
                 ? new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)
                 : new Dictionary<string, float>(dict, StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private static Dictionary<string, List<string>> DeserializeDictionary(object? input)
+    {
+        if (input == null)
+            return new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+        if (input is Dictionary<string, List<string>> dict)
+            return dict;
+
+        string? s;
+        try
+        {
+            // If it's already a JToken (common in Cosmos provider)
+            if (input is Newtonsoft.Json.Linq.JToken token)
+            {
+                if (token.Type == Newtonsoft.Json.Linq.JTokenType.Object)
+                {
+                    return token.ToObject<Dictionary<string, List<string>>>()
+                           ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+                }
+                s = token.ToString();
+            }
+            else
+            {
+                s = input.ToString();
+            }
+
+            if (string.IsNullOrWhiteSpace(s))
+                return new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+            // First, try to see if it's a raw JSON object string
+            var trimmed = s.Trim();
+            if (trimmed.StartsWith("{"))
+            {
+                return Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(s)
+                       ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            // Otherwise, it might be a JSON-serialized string containing JSON
+            var innerJson = Newtonsoft.Json.JsonConvert.DeserializeObject<string>(s);
+            if (string.IsNullOrWhiteSpace(innerJson))
+                return new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+            return Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, List<string>>>(innerJson)
+                   ?? new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private class CosmosDictionaryConverter : ValueConverter<Dictionary<string, List<string>>, Newtonsoft.Json.Linq.JObject>
+    {
+        public CosmosDictionaryConverter()
+            : base(
+                v => Newtonsoft.Json.Linq.JObject.FromObject(v ?? new Dictionary<string, List<string>>()),
+                v => DeserializeDictionary(v))
+        {
+        }
+    }
+
+    private class InMemoryDictionaryConverter : ValueConverter<Dictionary<string, List<string>>, string>
+    {
+        public InMemoryDictionaryConverter()
+            : base(
+                v => Newtonsoft.Json.JsonConvert.SerializeObject(v),
+                v => DeserializeDictionary(v))
+        {
         }
     }
 }

@@ -5,10 +5,10 @@ namespace Mystira.App.Domain.Models;
 /// </summary>
 public static class BadgeThresholds
 {
-    public static readonly Dictionary<AgeGroup, Dictionary<string, float>> AgeGroupThresholds = new()
+    public static readonly Dictionary<string, Dictionary<string, float>> AgeGroupThresholds = new()
     {
         {
-            AgeGroup.Parse("school")!, // Ages 6-9
+            "6-9", // school
             new Dictionary<string, float>
             {
                 { "kindness", 0.5f },
@@ -18,7 +18,7 @@ public static class BadgeThresholds
             }
         },
         {
-            AgeGroup.Parse("preteens")!, // Ages 10-12
+            "10-12", // preteens
             new Dictionary<string, float>
             {
                 { "loyalty", 0.6f },
@@ -29,7 +29,7 @@ public static class BadgeThresholds
             }
         },
         {
-            AgeGroup.Parse("teens")!, // Ages 13-18
+            "13-18", // teens
             new Dictionary<string, float>
             {
                 { "integrity", 0.7f },
@@ -48,7 +48,7 @@ public static class BadgeThresholds
     /// <returns>Dictionary of compass axis to threshold values</returns>
     public static Dictionary<string, float> GetThresholdsForAgeGroup(AgeGroup ageGroup)
     {
-        return AgeGroupThresholds.TryGetValue(ageGroup, out var thresholds)
+        return AgeGroupThresholds.TryGetValue(ageGroup.Value, out var thresholds)
             ? thresholds
             : new Dictionary<string, float>();
     }

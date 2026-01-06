@@ -16,5 +16,6 @@ public class ScenarioSummary
     public List<string> CoreAxes { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public string? Image { get; set; }
+    public MusicPalette? MusicPalette { get; set; }
 }
 
