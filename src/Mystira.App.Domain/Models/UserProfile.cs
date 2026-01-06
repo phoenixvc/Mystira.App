@@ -107,7 +107,7 @@ public class UserProfile
     /// <summary>
     /// Badges earned by this user profile
     /// </summary>
-    public virtual List<UserBadge> EarnedBadges { get; set; } = new();
+    public virtual List<UserBadge> EarnedBadges { get; private set; } = new();
 
     /// <summary>
     /// Get badges earned for a specific axis

@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Mystira.App.Application.CQRS.AgeGroups.Queries;
-using Mystira.App.Contracts.Common;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Api.Controllers;
@@ -41,12 +40,12 @@ public class AgeGroupsController : ControllerBase
     }
 
     [HttpPost("validate")]
-    public async Task<ActionResult<ValidationResult>> ValidateAgeGroup([FromBody] ValidateAgeGroupRequest request)
+    public async Task<ActionResult<dynamic>> ValidateAgeGroup([FromBody] ValidateAgeGroupRequest request)
     {
         _logger.LogInformation("POST: Validating age group: {Value}", request.Value);
 
         var isValid = await _mediator.Send(new ValidateAgeGroupQuery(request.Value));
-        return Ok(new ValidationResult { IsValid = isValid });
+        return Ok(new { isValid });
     }
 }
 

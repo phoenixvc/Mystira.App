@@ -626,7 +626,7 @@ public class StoryProtocolService : IStoryProtocolService
 
         foreach (var log in receipt.Logs)
         {
-            var logObject = Newtonsoft.Json.Linq.JObject.FromObject(log);
+            var logObject = log as Newtonsoft.Json.Linq.JObject;
             if (logObject == null) continue;
 
             var topics = logObject["topics"] as Newtonsoft.Json.Linq.JArray;
@@ -661,7 +661,7 @@ public class StoryProtocolService : IStoryProtocolService
 
         foreach (var log in receipt.Logs)
         {
-            var logObject = Newtonsoft.Json.Linq.JObject.FromObject(log);
+            var logObject = log as Newtonsoft.Json.Linq.JObject;
             if (logObject == null) continue;
 
             var topics = logObject["topics"] as Newtonsoft.Json.Linq.JArray;
@@ -684,11 +684,10 @@ public class StoryProtocolService : IStoryProtocolService
         }
 
         // Fallback: use the contract address from the first log that's likely the IP Asset
-        if (receipt.Logs != null && receipt.Logs.Length > 0)
+        if (receipt.Logs.Count > 0)
         {
-            var firstLog = receipt.Logs[0];
-            var logObject = Newtonsoft.Json.Linq.JObject.FromObject(firstLog);
-            var address = logObject?["address"]?.ToString();
+            var firstLog = receipt.Logs[0] as Newtonsoft.Json.Linq.JObject;
+            var address = firstLog?["address"]?.ToString();
             if (!string.IsNullOrEmpty(address))
                 return address.ToLowerInvariant();
         }

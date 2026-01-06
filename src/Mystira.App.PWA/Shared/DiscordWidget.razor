@@ -118,7 +118,7 @@
     private string? botUsername;
     private string? botId;
     private DateTime? lastChecked;
-    private Timer? refreshTimer;
+    private System.Threading.Timer? refreshTimer;
     
     private bool showNotificationForm;
     private ulong channelId;
@@ -132,7 +132,7 @@
         await RefreshStatusAsync();
 
         // Refresh status every 30 seconds
-        refreshTimer = new Timer(async _ =>
+        refreshTimer = new System.Threading.Timer(async _ =>
         {
             await RefreshStatusAsync();
             await InvokeAsync(StateHasChanged);

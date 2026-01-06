@@ -36,13 +36,7 @@ public static class BranchParser
              branchDict.TryGetValue("echo_log", out echoLogObj)) &&
             echoLogObj is IDictionary<object, object> echoLogDict)
         {
-            if (echoLogDict.TryGetValue("echotype", out var echoTypeObj) &&
-                echoTypeObj != null &&
-                !echoTypeObj.ToString().Equals(""))
-            {
-                branch.EchoLog = EchoLogParser.Parse(echoLogDict);
-
-            }
+            branch.EchoLog = EchoLogParser.Parse(echoLogDict);
         }
 
         // Parse CompassChange if available

@@ -9,7 +9,7 @@ using Mystira.App.Api.Services;
 using Mystira.App.Application.Behaviors;
 using Mystira.App.Application.Ports;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Contracts.Ports.Health;
+using Mystira.App.Application.Ports.Health;
 using Mystira.App.Application.Ports.Media;
 using Mystira.App.Application.Ports.Messaging;
 using Mystira.App.Application.Services;
@@ -28,9 +28,7 @@ using Microsoft.ApplicationInsights.Extensibility;
 using Mystira.App.Infrastructure.Discord;
 using Mystira.App.Infrastructure.Discord.Services;
 using Mystira.App.Infrastructure.StoryProtocol;
-using Mystira.App.Shared.Adapters;
 using Mystira.App.Shared.Middleware;
-using Mystira.App.Shared.Services;
 using Mystira.App.Shared.Telemetry;
 using Serilog;
 using Serilog.Events;
@@ -459,6 +457,7 @@ builder.Services.AddScoped<DownloadMediaUseCase>();
 
 // Register application services
 builder.Services.AddScoped<IHealthCheckService, HealthCheckServiceAdapter>();
+builder.Services.AddScoped<IAppStatusService, AppStatusService>();
 builder.Services.AddScoped<Mystira.App.Shared.Services.IJwtService, Mystira.App.Shared.Services.JwtService>();
 // Domain services for scoring and awards
 builder.Services.AddScoped<IAxisScoringService, AxisScoringService>();
@@ -468,7 +467,7 @@ builder.Services.AddScoped<IBadgeAwardingService, BadgeAwardingService>();
 builder.Services.AddScoped<Mystira.App.Application.Ports.Auth.IJwtService, JwtServiceAdapter>();
 // Use infrastructure email service directly - configuration is read from AzureCommunicationServices section
 builder.Services.AddAzureEmailService(builder.Configuration);
-builder.Services.AddScoped<IHealthCheckPort, HealthCheckPortAdapter>();
+builder.Services.AddScoped<IHealthCheckPort, Mystira.App.Shared.Adapters.HealthCheckPortAdapter>();
 builder.Services.AddScoped<IMediaMetadataService, MediaMetadataService>();
 
 // Configure Memory Cache for query caching
@@ -594,9 +593,7 @@ builder.Services.AddCors(options =>
 
 // Configure logging
 builder.Logging.AddConsole();
-#if !DEBUG
 builder.Logging.AddAzureWebAppDiagnostics();
-#endif
 
 // Configure Rate Limiting (BUG-5: Prevent brute-force attacks)
 builder.Services.AddRateLimiter(options =>
@@ -696,33 +693,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-// Apply strict rate limiting to auth endpoints via metadata (BUG-5)
-// This avoids dynamic IL generation issues in .NET 9 caused by [EnableRateLimiting] attributes on the controller/actions.
-// We apply it here after MapControllers so it's applied to the endpoints directly.
-// Note: We use the exact paths matching the AuthController routes.
-var authEndpoints = new[]
-{
-    "/api/auth/passwordless/signup",
-    "/api/auth/passwordless/verify",
-    "/api/auth/passwordless/signin",
-    "/api/auth/passwordless/signin/verify",
-    "/api/auth/refresh"
-};
-
-// MapControllers doesn't return the builder in a way that we can easily filter,
-// so we'll use a more standard approach for .NET 9 if possible,
-// or just stick to the fact that attributes ARE the standard way and
-// this IL bug might be specific to some combination.
-// Since we found that removing attributes fixes it, let's use a convention-based
-// approach to apply rate limiting to these routes.
-// We'll use a Global Rate Limiter that checks the path, or just use the MapControllers
-// metadata if we can find a way to access it.
-// Actually, the simplest and most robust way in .NET 9 to apply a policy
-// without attributes is to use the RequireRateLimiting on the endpoint group.
-
-app.MapGroup("/api/auth")
-   .RequireRateLimiting("auth");
 
 // Map health check endpoints
 // /health - checks all dependencies (blob storage, database, discord if enabled)

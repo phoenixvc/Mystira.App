@@ -76,7 +76,7 @@ public class UpdateScenarioUseCase
 
         if (errors.Count > 0)
         {
-            var errorMessages = string.Join(", ", errors.Select(e => e.ToString()).ToList());
+            var errorMessages = string.Join(", ", errors.Select(e => e.ToString()));
             throw new ArgumentException($"Scenario validation failed: {errorMessages}");
         }
     }

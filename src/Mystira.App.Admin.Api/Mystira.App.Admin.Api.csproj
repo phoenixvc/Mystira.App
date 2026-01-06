@@ -47,8 +47,4 @@
     </Content>
   </ItemGroup>
 
-  <ItemGroup>
-    <None Remove="Properties\launchSettings.json" />
-  </ItemGroup>
-
 </Project>

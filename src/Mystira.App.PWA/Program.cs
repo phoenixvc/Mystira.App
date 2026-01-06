@@ -7,8 +7,6 @@ using Mystira.App.PWA.Services;
 using Polly;
 using Polly.Extensions.Http;
 
-using Mystira.App.PWA.Services.Music;
-
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
@@ -109,13 +107,6 @@ builder.Services.AddHttpClient<IGameSessionApiClient, GameSessionApiClient>(Conf
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
     .AddHttpMessageHandler<AuthHeaderHandler>();
 
-// Music and Audio Services
-builder.Services.AddSingleton<IMusicResolver, MusicResolver>();
-builder.Services.AddSingleton<IAudioStateStore, AudioStateStore>();
-builder.Services.AddSingleton<IAudioBus, AudioBus>();
-builder.Services.AddSingleton<SceneAudioOrchestrator>();
-builder.Services.AddScoped<IAudioCacheService, AudioCacheService>();
-
 builder.Services.AddHttpClient<IUserProfileApiClient, UserProfileApiClient>(ConfigureApiHttpClient)
     .AddPolicyHandler(CreateResiliencePolicy("UserProfileApi"))
     .AddHttpMessageHandler<ApiBaseAddressHandler>()
@@ -194,7 +185,7 @@ builder.Services.AddScoped<IPlayerContextService, PlayerContextService>();
 builder.Services.AddScoped<IAchievementsService, AchievementsService>();
 builder.Services.AddScoped<IAwardsState, AwardsState>();
 // Settings service (localStorage-backed)
-builder.Services.AddSingleton<ISettingsService, SettingsService>();
+builder.Services.AddScoped<ISettingsService, SettingsService>();
 
 // UI Services
 builder.Services.AddScoped<ToastService>();

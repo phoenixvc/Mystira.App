@@ -1,4 +1,3 @@
-using Mystira.App.Application.CQRS.Auth.Responses;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.Auth.Commands;
@@ -10,4 +9,4 @@ namespace Mystira.App.Application.CQRS.Auth.Commands;
 public record VerifyPasswordlessSigninCommand(
     string Email,
     string Code
-) : ICommand<AuthResponse>;
+) : ICommand<(bool Success, string Message, Account? Account, string? AccessToken, string? RefreshToken, string? ErrorDetails)>;

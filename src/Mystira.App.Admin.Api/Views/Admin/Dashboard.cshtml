@@ -1,0 +1,555 @@
+@{
+    ViewData["Title"] = "Dashboard";
+    Layout = "_Layout";
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">📊 Content Dashboard</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" id="refreshStatsBtn" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-refresh"></i> Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2 card-stat">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total Scenarios</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalScenarios">-</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-book fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2 card-stat">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Media Files</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalMedia">-</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-image fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2 card-stat">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Active Sessions</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="activeSessions">-</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-play fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2 card-stat">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Storage Used</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="storageUsed">-</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-hdd fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Content Management</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/admin/scenarios/import" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Import New Scenario
+                    </a>
+                    <a href="/admin/media/import" class="btn btn-outline-primary">
+                        <i class="fas fa-upload me-2"></i>Import Media
+                    </a>
+                    <!--                    <a href="/admin/bundles/import" class="btn btn-outline-success">
+                        <i class="fas fa-archive me-2"></i>Import Bundle
+                    </a> -->
+                    <a href="/admin/bundles" class="btn btn-outline-info">
+                        <i class="fas fa-archive me-2"></i>Manage Content Bundles
+                    </a>
+                    <a href="/admin/charactermaps/import" class="btn btn-outline-info">
+                        <i class="fas fa-users me-2"></i>Import Character Map
+                    </a>
+                    <a href="/admin/badges/import" class="btn btn-outline-warning">
+                        <i class="fas fa-award me-2"></i>Import Badges
+                    </a>
+                    <a href="/admin/media-metadata" class="btn btn-outline-secondary">
+                        <i class="fas fa-tags me-2"></i>Manage Media Metadata
+                    </a>
+                    <a href="/admin/character-media-metadata" class="btn btn-outline-secondary">
+                        <i class="fas fa-user-tag me-2"></i>Manage Character Media Metadata
+                    </a>
+                    <a href="/admin/avatars" class="btn btn-outline-info">
+                        <i class="fas fa-palette me-2"></i>Manage Avatars
+                    </a>
+                    <a href="/admin/compassaxes" class="btn btn-outline-secondary">
+                        <i class="fas fa-compass me-2"></i>Manage Compass Axes
+                    </a>
+                    <a href="/admin/archetypes" class="btn btn-outline-secondary">
+                        <i class="fas fa-masks-theater me-2"></i>Manage Archetypes
+                    </a>
+                    <a href="/admin/echotypes" class="btn btn-outline-secondary">
+                        <i class="fas fa-echo me-2"></i>Manage Echo Types
+                    </a>
+                    <a href="/admin/fantasythemes" class="btn btn-outline-secondary">
+                        <i class="fas fa-wand-magic-sparkles me-2"></i>Manage Fantasy Themes
+                    </a>
+                    <a href="/admin/agegroups" class="btn btn-outline-secondary">
+                        <i class="fas fa-users me-2"></i>Manage Age Groups
+                    </a>
+                </div>
+                <div class="mt-3">
+                    <h6>Development Tools</h6>
+                    <button id="initializeSampleDataBtn" class="btn btn-outline-warning me-2">
+                        <i class="fas fa-database me-2"></i>Initialize Sample Data
+                    </button>
+                    <button id="fixMetadataFormatBtn" class="btn btn-outline-danger">
+                        <i class="fas fa-wrench me-2"></i>Fix Metadata Format
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">System Management</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/admin/status" class="btn btn-warning">
+                        <i class="fas fa-cog me-2"></i>App Status Config
+                    </a>
+                    <button id="exportDataBtn" class="btn btn-outline-secondary">
+                        <i class="fas fa-download me-2"></i>Export Data
+                    </button>
+                    <button id="clearCacheBtn" class="btn btn-outline-danger">
+                        <i class="fas fa-trash me-2"></i>Clear Cache
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Content Status -->
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Content Status</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="contentTable">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Count</th>
+                                <th>Last Updated</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Scenarios</td>
+                                <td id="scenarioCount">-</td>
+                                <td id="scenarioLastUpdated">-</td>
+                                <td><span class="badge bg-success">Active</span></td>
+                                <td>
+                                    <a href="/admin/scenarios" class="btn btn-sm btn-primary">Manage</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Media Assets</td>
+                                <td id="mediaCount">-</td>
+                                <td id="mediaLastUpdated">-</td>
+                                <td><span class="badge bg-success">Active</span></td>
+                                <td>
+                                    <a href="/admin/media" class="btn btn-sm btn-primary">Manage</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Character Maps</td>
+                                <td id="characterMapCount">-</td>
+                                <td id="characterMapLastUpdated">-</td>
+                                <td><span class="badge bg-success">Active</span></td>
+                                <td>
+                                    <a href="/admin/charactermaps" class="btn btn-sm btn-primary">Manage</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Media Metadata</td>
+                                <td id="mediaMetadataCount">-</td>
+                                <td id="mediaMetadataLastUpdated">-</td>
+                                <td><span class="badge bg-success">Active</span></td>
+                                <td>
+                                    <a href="/admin/media-metadata" class="btn btn-sm btn-primary">Manage</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Character Media Metadata</td>
+                                <td id="characterMediaMetadataCount">-</td>
+                                <td id="characterMediaMetadataLastUpdated">-</td>
+                                <td><span class="badge bg-success">Active</span></td>
+                                <td>
+                                    <a href="/admin/character-media-metadata" class="btn btn-sm btn-primary">Manage</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Compass Axes</td>
+                                <td id="compassAxisCount">-</td>
+                                <td id="compassAxisLastUpdated">-</td>
+                                <td><span class="badge bg-success">Active</span></td>
+                                <td>
+                                    <a href="/admin/compassaxes" class="btn btn-sm btn-primary">Manage</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Archetypes</td>
+                                <td id="archetypeCount">-</td>
+                                <td id="archetypeLastUpdated">-</td>
+                                <td><span class="badge bg-success">Active</span></td>
+                                <td>
+                                    <a href="/admin/archetypes" class="btn btn-sm btn-primary">Manage</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>App Status</td>
+                                <td colspan="2" id="appStatusInfo">-</td>
+                                <td><span class="badge bg-info" id="maintenanceBadge">Normal</span></td>
+                                <td>
+                                    <a href="/admin/status" class="btn btn-sm btn-warning">Configure</a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scenario Reference Status -->
+<div class="row mb-4">
+    <div class="col-lg-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Scenario Reference Validation</h6>
+                <button id="refreshScenarioRefsBtn" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-refresh"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 mb-0 font-weight-bold text-gray-800" id="totalScenariosRef">-</div>
+                            <div class="text-xs font-weight-bold text-uppercase text-muted">Total Scenarios</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 mb-0 font-weight-bold text-success" id="validScenarios">-</div>
+                            <div class="text-xs font-weight-bold text-uppercase text-muted">Valid References</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 mb-0 font-weight-bold text-warning" id="scenariosWithMissing">-</div>
+                            <div class="text-xs font-weight-bold text-uppercase text-muted">Missing References</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h4 mb-0 font-weight-bold text-info" id="totalMissingRefs">-</div>
+                            <div class="text-xs font-weight-bold text-uppercase text-muted">Total Missing</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenarios with Missing References -->
+                <div id="missingReferencesSection" class="d-none">
+                    <h6 class="text-warning">Scenarios with Missing References:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Scenario</th>
+                                    <th>Missing</th>
+                                    <th>Total</th>
+                                    <th>Issues</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="missingReferencesTable">
+                                <!-- Content will be loaded dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="scenarioRefLoading" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading scenario reference validation...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+@{ var cspNonce = Context.Items["CspNonce"] as string; }
+<script nonce="@cspNonce">
+$(document).ready(function() {
+    loadDashboardData();
+    loadScenarioReferences();
+
+    // Bind UI events to satisfy CSP (no inline handlers)
+    $('#refreshStatsBtn').on('click', () => refreshStats());
+    $('#initializeSampleDataBtn').on('click', () => initializeSampleData());
+    $('#fixMetadataFormatBtn').on('click', () => fixMetadataFormat());
+    $('#exportDataBtn').on('click', () => exportData());
+    $('#clearCacheBtn').on('click', () => clearCache());
+    $('#refreshScenarioRefsBtn').on('click', () => refreshScenarioReferences());
+});
+
+function loadDashboardData() {
+    // Load scenarios count
+    $.get('/api/admin/ScenariosAdmin?pageSize=1', function(data) {
+        $('#totalScenarios, #scenarioCount').text(data.totalCount || 0);
+    });
+
+    // Load character count from new character map file
+    $.get('/api/admin/CharacterMapAdmin', function(data) {
+        $('#characterMapCount').text(data.characters ? data.characters.length : 0);
+        $('#characterMapLastUpdated').text(new Date(data.updatedAt).toLocaleDateString());
+    }).fail(function() {
+        $('#characterMapCount').text('0');
+        $('#characterMapLastUpdated').text('Never');
+    });
+
+    // Load app status
+    $.get('/admin/status', function(data) {
+        $('#appStatusInfo').text(`Version: ${data.latestVersion || '1.0.0'}`);
+        $('#maintenanceBadge').removeClass('bg-info bg-danger').addClass(data.maintenanceMode ? 'bg-danger' : 'bg-info')
+            .text(data.maintenanceMode ? 'Maintenance' : 'Normal');
+    }).fail(function() {
+        $('#appStatusInfo').text('Version: 1.0.0');
+    });
+
+    // Load media metadata counts
+    $.get('/api/admin/mediametadata', function(data) {
+        $('#mediaMetadataCount').text(data.entries.length);
+        $('#mediaMetadataLastUpdated').text(new Date(data.updatedAt).toLocaleDateString());
+    }).fail(function() {
+        $('#mediaMetadataCount').text('0');
+        $('#mediaMetadataLastUpdated').text('Never');
+    });
+
+    // Load character media metadata counts
+    $.get('/api/admin/charactermediametadataadmin', function(data) {
+        $('#characterMediaMetadataCount').text(data.entries.length);
+        $('#characterMediaMetadataLastUpdated').text(new Date(data.updatedAt).toLocaleDateString());
+    }).fail(function() {
+        $('#characterMediaMetadataCount').text('0');
+        $('#characterMediaMetadataLastUpdated').text('Never');
+    });
+
+    // Load actual media count
+    $.get('/api/admin/mediaadmin/count', function(mediaCount) {
+        $('#totalMedia, #mediaCount').text(mediaCount.count || 0);
+        $('#mediaLastUpdated').text(new Date().toLocaleDateString());
+    }).fail(function() {
+        $('#totalMedia, #mediaCount').text('0');
+        $('#mediaLastUpdated').text('Never');
+    });
+
+    // Load actual active sessions count
+    $.get('/api/game-sessions/active/count', function(sessionsCount) {
+        $('#activeSessions').text(sessionsCount.count || 0);
+    }).fail(function() {
+        $('#activeSessions').text('0');
+    });
+
+    // Load storage usage (placeholder for now - will be implemented later)
+    $('#storageUsed').text('Calculating...');
+
+    $('#scenarioLastUpdated').text(new Date().toLocaleDateString());
+}
+
+function refreshStats() {
+    loadDashboardData();
+}
+
+function exportData() {
+    alert('Data export functionality would be implemented here.');
+}
+
+function clearCache() {
+    if (confirm('Are you sure you want to clear the application cache? This may temporarily slow down the application.')) {
+        // In a real implementation, this would call a cache clearing endpoint
+        alert('Cache clearing functionality would be implemented here.');
+    }
+}
+
+async function initializeSampleData() {
+    if (!confirm('This will initialize sample data including characters and metadata. Continue?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/admin/initialize-sample-data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            alert('Sample data initialized successfully!');
+            loadDashboardData(); // Refresh the dashboard
+        } else {
+            alert('Error initializing sample data: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Error initializing sample data:', error);
+        alert('Error initializing sample data');
+    }
+}
+
+async function fixMetadataFormat() {
+    if (!confirm('This will fix metadata format issues by recreating metadata files. This will clear existing metadata. Continue?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/admin/fix-metadata-format', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            alert('Metadata format fixed successfully!');
+            loadDashboardData(); // Refresh the dashboard
+        } else {
+            alert('Error fixing metadata format: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Error fixing metadata format:', error);
+        alert('Error fixing metadata format');
+    }
+}
+
+function loadScenarioReferences() {
+    $('#scenarioRefLoading').removeClass('d-none');
+    $('#missingReferencesSection').addClass('d-none');
+
+    $.get('/api/admin/scenariosadmin/validate-all-references', function(data) {
+        const totalScenarios = data.length;
+        const scenariosWithMissing = data.filter(s => s.hasMissingReferences);
+        const validScenarios = totalScenarios - scenariosWithMissing.length;
+        const totalMissingRefs = data.reduce((sum, s) => sum + s.missingReferencesCount, 0);
+
+        // Update stats
+        $('#totalScenariosRef').text(totalScenarios);
+        $('#validScenarios').text(validScenarios);
+        $('#scenariosWithMissing').text(scenariosWithMissing.length);
+        $('#totalMissingRefs').text(totalMissingRefs);
+
+        // Show missing references table if there are any
+        if (scenariosWithMissing.length > 0) {
+            displayMissingReferences(scenariosWithMissing);
+            $('#missingReferencesSection').removeClass('d-none');
+        }
+
+        $('#scenarioRefLoading').addClass('d-none');
+    }).fail(function(xhr) {
+        console.error('Failed to load scenario references:', xhr.responseText);
+        $('#scenarioRefLoading').html('<div class="alert alert-danger">Failed to load scenario reference data</div>');
+    });
+}
+
+function displayMissingReferences(scenarios) {
+    const tbody = $('#missingReferencesTable');
+    tbody.empty();
+
+    scenarios.forEach(scenario => {
+        const mediaIssues = scenario.missingReferences.filter(r => r.referenceType === 'media').length;
+        const characterIssues = scenario.missingReferences.filter(r => r.referenceType === 'character').length;
+
+        let issuesText = [];
+        if (mediaIssues > 0) issuesText.push(`${mediaIssues} media`);
+        if (characterIssues > 0) issuesText.push(`${characterIssues} character`);
+
+        const row = $(`
+            <tr>
+                <td>
+                    <strong>${scenario.scenarioTitle}</strong>
+                    <br><small class="text-muted">${scenario.scenarioId}</small>
+                </td>
+                <td><span class="badge bg-danger">${scenario.missingReferencesCount}</span></td>
+                <td><span class="badge bg-info">${scenario.totalReferences}</span></td>
+                <td>${issuesText.join(', ')}</td>
+                <td>
+                    <a href="/admin/scenarios" class="btn btn-sm btn-outline-primary">View</a>
+                </td>
+            </tr>
+        `);
+        tbody.append(row);
+    });
+}
+
+function refreshScenarioReferences() {
+    loadScenarioReferences();
+}
+</script>
+}

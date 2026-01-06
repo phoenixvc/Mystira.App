@@ -34,11 +34,6 @@ public class Scenario
     /// </summary>
     public string? Image { get; set; }
 
-    /// <summary>
-    /// Optional: allowed background-music tracks grouped by mood profile for this story.
-    /// </summary>
-    public MusicPalette? MusicPalette { get; set; }
-
     public bool Validate(out List<string> errors)
     {
         errors = new List<string>();
@@ -109,16 +104,6 @@ public class Scene
     public List<Branch> Branches { get; set; } = new();
     public List<EchoReveal> EchoReveals { get; set; } = new();
     public int? Difficulty { get; set; }
-
-    /// <summary>
-    /// Optional background-music intent for this scene.
-    /// </summary>
-    public SceneMusicSettings? Music { get; set; }
-
-    /// <summary>
-    /// Optional list of additional sound effects or ambience layers for this scene.
-    /// </summary>
-    public List<SceneSoundEffect> SoundEffects { get; set; } = new();
 
     // For choice scenes, must correspond to one of the Scenario.Characters (by id). May be empty otherwise.
     public string? ActiveCharacter { get; set; }
@@ -194,3 +179,4 @@ public enum SceneType
     Roll = 2,
     Special = 3
 }
+

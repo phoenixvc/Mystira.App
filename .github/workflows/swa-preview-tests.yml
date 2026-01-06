@@ -43,7 +43,7 @@ jobs:
             const delayMs = 30000; // 30 seconds between attempts
 
             // Get PR number from the workflow run that triggered this
-            const pullRequests = context.payload.workflow_run.pull_requests;
+            const pullRequests = github.event.workflow_run.pull_requests;
             if (!pullRequests || pullRequests.length === 0) {
               console.log('❌ No pull requests found in workflow_run event');
               core.setOutput('url', '');
@@ -339,7 +339,7 @@ jobs:
             const previewUrl = '${{ needs.wait-for-preview.outputs.preview-url }}';
 
             // Get PR number from the workflow run that triggered this
-            const pullRequests = context.payload.workflow_run.pull_requests;
+            const pullRequests = github.event.workflow_run.pull_requests;
             if (!pullRequests || pullRequests.length === 0) {
               console.log('No pull requests found, skipping comment');
               return;

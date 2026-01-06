@@ -58,7 +58,6 @@ public class MediaController : ControllerBase
     /// </summary>
     [HttpGet("{mediaId}")]
     [AllowAnonymous]
-    [ResponseCache(Duration = 31536000, Location = ResponseCacheLocation.Any)]
     public async Task<IActionResult> GetMediaFile(string mediaId)
     {
         try

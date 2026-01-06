@@ -79,15 +79,4 @@ public class QueryCacheInvalidationService : IQueryCacheInvalidationService
             _cacheKeys.Add(cacheKey);
         }
     }
-
-    /// <summary>
-    /// Clears all tracked cache keys. Should only be used for testing.
-    /// </summary>
-    public static void ClearTrackedKeys()
-    {
-        lock (_lock)
-        {
-            _cacheKeys.Clear();
-        }
-    }
 }

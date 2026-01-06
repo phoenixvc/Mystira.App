@@ -8,7 +8,6 @@ public class SettingsService : ISettingsService
     private const string ShowAgeGroupMismatchWarningKey = "mystira_show_age_group_warning";
     private const string ShowGameAlreadyPlayedWarningKey = "mystira_show_game_already_played_warning";
     private const string ShowGuestWarningKey = "mystira_show_guest_warning";
-    private const string AudioEnabledKey = "mystira_audio_enabled";
 
     public SettingsService(IJSRuntime jsRuntime)
     {
@@ -98,36 +97,6 @@ public class SettingsService : ISettingsService
         try
         {
             await _jsRuntime.InvokeVoidAsync("localStorage.setItem", ShowGuestWarningKey, value.ToString().ToLower());
-        }
-        catch
-        {
-            // Silently fail if localStorage is not available
-        }
-    }
-
-    public async Task<bool> GetAudioEnabledAsync()
-    {
-        try
-        {
-            var value = await _jsRuntime.InvokeAsync<string?>("localStorage.getItem", AudioEnabledKey);
-            // Default to true if not set
-            if (string.IsNullOrEmpty(value))
-            {
-                return true;
-            }
-            return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
-        }
-        catch
-        {
-            return true;
-        }
-    }
-
-    public async Task SetAudioEnabledAsync(bool value)
-    {
-        try
-        {
-            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", AudioEnabledKey, value.ToString().ToLower());
         }
         catch
         {

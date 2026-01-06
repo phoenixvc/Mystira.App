@@ -23,8 +23,7 @@ public class AgeGroupRepository : IAgeGroupRepository
 
     public async Task<AgeGroupDefinition?> GetByIdAsync(string id)
     {
-        return await _context.AgeGroupDefinitions
-            .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
+        return await _context.AgeGroupDefinitions.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
     }
 
     public async Task<AgeGroupDefinition?> GetByNameAsync(string name)

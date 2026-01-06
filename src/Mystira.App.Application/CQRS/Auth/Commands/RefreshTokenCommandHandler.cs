@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Mystira.App.Application.CQRS.Auth.Responses;
 using Mystira.App.Application.Ports.Auth;
 using Mystira.App.Application.Ports.Data;
 
@@ -10,7 +9,7 @@ namespace Mystira.App.Application.CQRS.Auth.Commands;
 /// Validates current access token, retrieves user account, and generates new tokens.
 /// </summary>
 public class RefreshTokenCommandHandler
-    : ICommandHandler<RefreshTokenCommand, AuthResponse>
+    : ICommandHandler<RefreshTokenCommand, (bool Success, string Message, string? AccessToken, string? NewRefreshToken)>
 {
     private readonly IAccountRepository _accountRepository;
     private readonly IJwtService _jwtService;
@@ -26,7 +25,7 @@ public class RefreshTokenCommandHandler
         _logger = logger;
     }
 
-    public async Task<AuthResponse> Handle(
+    public async Task<(bool Success, string Message, string? AccessToken, string? NewRefreshToken)> Handle(
         RefreshTokenCommand command,
         CancellationToken cancellationToken)
     {
@@ -40,7 +39,7 @@ public class RefreshTokenCommandHandler
             if (!isValid || string.IsNullOrEmpty(userId))
             {
                 _logger.LogWarning("Invalid access token during refresh attempt (signature/issuer/audience validation failed)");
-                return new AuthResponse(false, "Invalid access token");
+                return (false, "Invalid access token", null, null);
             }
 
             // In a real implementation, you would validate the refresh token against stored data
@@ -52,7 +51,7 @@ public class RefreshTokenCommandHandler
             if (account == null)
             {
                 _logger.LogWarning("User not found during token refresh: {UserId}", userId);
-                return new AuthResponse(false, "User not found");
+                return (false, "User not found", null, null);
             }
 
             // Generate new tokens
@@ -65,12 +64,12 @@ public class RefreshTokenCommandHandler
 
             _logger.LogInformation("Token refreshed successfully for user: {UserId}", userId);
 
-            return new AuthResponse(true, "Token refreshed successfully", null, null, null, newAccessToken, newRefreshToken);
+            return (true, "Token refreshed successfully", newAccessToken, newRefreshToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error refreshing token");
-            return new AuthResponse(false, "An error occurred while refreshing token");
+            return (false, "An error occurred while refreshing token", null, null);
         }
     }
 }

@@ -51,8 +51,6 @@ public abstract class CqrsIntegrationTestBase : IDisposable
         services.AddScoped<IAgeGroupRepository, AgeGroupRepository>();
         services.AddScoped<ICompassAxisRepository, CompassAxisRepository>();
         services.AddScoped<IArchetypeRepository, ArchetypeRepository>();
-        services.AddScoped<IFantasyThemeRepository, FantasyThemeRepository>();
-        services.AddScoped<IEchoTypeRepository, EchoTypeRepository>();
 
         // Add Unit of Work (explicitly use Application port as service type)
         services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -104,7 +102,6 @@ public abstract class CqrsIntegrationTestBase : IDisposable
         {
             memoryCache.Compact(1.0); // Remove 100% of entries
         }
-        QueryCacheInvalidationService.ClearTrackedKeys();
     }
 
     public void Dispose()

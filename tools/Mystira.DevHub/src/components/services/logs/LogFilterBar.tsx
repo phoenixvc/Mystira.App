@@ -1,0 +1,382 @@
+import { LogFilter, ServiceLog } from '../types';
+import { isErrorMessage } from './logUtils';
+
+interface LogFilterBarProps {
+  filter: LogFilter;
+  filteredLogs: ServiceLog[];
+  logs: ServiceLog[];
+  isAutoScroll: boolean;
+  autoScrollToErrors: boolean;
+  showLineNumbers: boolean;
+  collapseSimilar: boolean;
+  wordWrap: boolean;
+  timestampFormat: 'time' | 'full' | 'relative';
+  maxLogs?: number;
+  errorIndices: number[];
+  currentErrorIndex: number;
+  onFilterChange: (filter: LogFilter) => void;
+  onAutoScrollChange: (enabled: boolean) => void;
+  onAutoScrollToErrorsChange: (enabled: boolean) => void;
+  onShowLineNumbersChange: (enabled: boolean) => void;
+  onCollapseSimilarChange: (enabled: boolean) => void;
+  onWordWrapChange: (enabled: boolean) => void;
+  onTimestampFormatChange: (format: 'time' | 'full' | 'relative') => void;
+  onMaxLogsChange?: (limit: number) => void;
+  onExport: () => void;
+  onCopyVisible: () => void;
+  onCopyAll: () => void;
+  onNavigateError: (direction: 'next' | 'prev') => void;
+  onApplyPreset: (preset: 'build-errors' | 'runtime-warnings' | 'all-errors' | 'build-only' | 'runtime-only') => void;
+  onClearLogs?: () => void;
+}
+
+export function LogFilterBar({
+  filter,
+  filteredLogs,
+  logs,
+  isAutoScroll,
+  autoScrollToErrors,
+  showLineNumbers,
+  collapseSimilar,
+  wordWrap,
+  timestampFormat,
+  maxLogs,
+  errorIndices,
+  currentErrorIndex,
+  onFilterChange,
+  onAutoScrollChange,
+  onAutoScrollToErrorsChange,
+  onShowLineNumbersChange,
+  onCollapseSimilarChange,
+  onWordWrapChange,
+  onTimestampFormatChange,
+  onMaxLogsChange,
+  onExport,
+  onCopyVisible,
+  onCopyAll,
+  onNavigateError,
+  onApplyPreset,
+  onClearLogs,
+}: LogFilterBarProps) {
+  const stats = {
+    errorCount: filteredLogs.filter(log => {
+      return log.type === 'stderr' || isErrorMessage(log.message);
+    }).length,
+    warningCount: filteredLogs.filter(log => {
+      const msg = log.message.toLowerCase();
+      // Exclude count messages
+      if (msg.match(/^\d+\s+warning\(s\)/i) || msg.match(/^\d+\s+warnings/i)) {
+        return false;
+      }
+      return msg.includes('warning') || msg.includes('warn') || msg.includes('deprecated');
+    }).length,
+  };
+
+  return (
+    <div className="bg-gray-100 dark:bg-gray-700 p-2 flex gap-2 items-center flex-wrap border-b border-gray-200 dark:border-gray-600">
+      {/* Search Input */}
+      <input
+        type="text"
+        placeholder="Search logs..."
+        value={filter.search}
+        onChange={(e) => onFilterChange({ ...filter, search: e.target.value })}
+        className="flex-1 min-w-[180px] px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      />
+      
+      {/* Filter Presets */}
+      <div className="flex gap-1 items-center">
+        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Presets:</span>
+        <button
+          onClick={() => onApplyPreset('build-errors')}
+          className="px-2 py-0.5 text-[10px] bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+          title="Show build errors only"
+        >
+          Build Errors
+        </button>
+        <button
+          onClick={() => onApplyPreset('runtime-warnings')}
+          className="px-2 py-0.5 text-[10px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded hover:bg-yellow-200 dark:hover:bg-yellow-900/50 transition-colors"
+          title="Show runtime warnings only"
+        >
+          Runtime Warnings
+        </button>
+        <button
+          onClick={() => onApplyPreset('all-errors')}
+          className="px-2 py-0.5 text-[10px] bg-red-200 dark:bg-red-800/40 text-red-800 dark:text-red-200 rounded hover:bg-red-300 dark:hover:bg-red-800/60 transition-colors"
+          title="Show all errors"
+        >
+          All Errors
+        </button>
+      </div>
+      
+      {/* Filter Group */}
+      <div className="flex gap-1 items-center">
+        {/* Severity Filter - Checkboxes */}
+        <div className="flex gap-2 items-center border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800">
+          <label className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filter.severityEnabled?.errors !== false}
+              onChange={(e) => {
+                const current = filter.severityEnabled || { errors: true, warnings: true, info: true };
+                onFilterChange({ 
+                  ...filter, 
+                  severityEnabled: { 
+                    ...current, 
+                    errors: e.target.checked 
+                  }
+                });
+              }}
+              className="rounded border-gray-300 dark:border-gray-600 w-3.5 h-3.5 text-red-500 focus:ring-red-500"
+            />
+            <span className="text-red-600 dark:text-red-400">🔴 Errors</span>
+          </label>
+          <div className="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
+          <label className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filter.severityEnabled?.warnings !== false}
+              onChange={(e) => {
+                const current = filter.severityEnabled || { errors: true, warnings: true, info: true };
+                onFilterChange({ 
+                  ...filter, 
+                  severityEnabled: { 
+                    ...current, 
+                    warnings: e.target.checked 
+                  }
+                });
+              }}
+              className="rounded border-gray-300 dark:border-gray-600 w-3.5 h-3.5 text-yellow-500 focus:ring-yellow-500"
+            />
+            <span className="text-yellow-600 dark:text-yellow-400">⚠️ Warnings</span>
+          </label>
+          <div className="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
+          <label className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filter.severityEnabled?.info !== false}
+              onChange={(e) => {
+                const current = filter.severityEnabled || { errors: true, warnings: true, info: true };
+                onFilterChange({ 
+                  ...filter, 
+                  severityEnabled: { 
+                    ...current, 
+                    info: e.target.checked 
+                  }
+                });
+              }}
+              className="rounded border-gray-300 dark:border-gray-600 w-3.5 h-3.5 text-blue-500 focus:ring-blue-500"
+            />
+            <span className="text-blue-600 dark:text-blue-400">ℹ️ Info</span>
+          </label>
+        </div>
+
+        {/* Source Filter */}
+        <div className="flex gap-0.5 border border-gray-300 dark:border-gray-600 rounded overflow-hidden">
+          <button
+            onClick={() => onFilterChange({ ...filter, source: filter.source === 'build' ? 'all' : 'build' })}
+            className={`px-2 py-1 text-xs font-medium transition-colors ${
+              filter.source === 'build'
+                ? 'bg-yellow-600 text-white'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
+            }`}
+            title="Show build logs only"
+          >
+            🔨 Build
+          </button>
+          <div className="w-px bg-gray-300 dark:bg-gray-600"></div>
+          <button
+            onClick={() => onFilterChange({ ...filter, source: filter.source === 'run' ? 'all' : 'run' })}
+            className={`px-2 py-1 text-xs font-medium transition-colors ${
+              filter.source === 'run'
+                ? 'bg-green-600 text-white'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20'
+            }`}
+            title="Show runtime logs only"
+          >
+            ▶️ Run
+          </button>
+        </div>
+
+        {/* Type Filter */}
+        <select
+          value={filter.type}
+          onChange={(e) => onFilterChange({ ...filter, type: e.target.value as 'all' | 'stdout' | 'stderr' })}
+          className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+          title="Filter by stream type"
+        >
+          <option value="all">All Streams</option>
+          <option value="stdout">Stdout</option>
+          <option value="stderr">Stderr</option>
+        </select>
+      </div>
+
+      {/* View Options */}
+      <div className="flex gap-1 items-center border-l border-gray-300 dark:border-gray-600 pl-2">
+        <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300" title="Show line numbers">
+          <input
+            type="checkbox"
+            checked={showLineNumbers}
+            onChange={(e) => onShowLineNumbersChange(e.target.checked)}
+            className="rounded border-gray-300 dark:border-gray-600 w-3 h-3"
+          />
+          <span>#</span>
+        </label>
+        <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300" title="Wrap long lines">
+          <input
+            type="checkbox"
+            checked={wordWrap}
+            onChange={(e) => onWordWrapChange(e.target.checked)}
+            className="rounded border-gray-300 dark:border-gray-600 w-3 h-3"
+          />
+          <span>Wrap</span>
+        </label>
+        <label className="flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300" title="Collapse similar consecutive logs">
+          <input
+            type="checkbox"
+            checked={collapseSimilar}
+            onChange={(e) => onCollapseSimilarChange(e.target.checked)}
+            className="rounded border-gray-300 dark:border-gray-600 w-3 h-3"
+          />
+          <span>Collapse</span>
+        </label>
+        <select
+          value={timestampFormat}
+          onChange={(e) => onTimestampFormatChange(e.target.value as 'time' | 'full' | 'relative')}
+          className="px-1.5 py-0.5 border border-gray-300 dark:border-gray-600 rounded text-[10px] bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+          title="Timestamp format"
+        >
+          <option value="time">Time</option>
+          <option value="full">Full</option>
+          <option value="relative">Relative</option>
+        </select>
+      </div>
+
+      {/* Error Navigation */}
+      {errorIndices.length > 0 && (
+        <div className="flex gap-1 items-center border-l border-gray-300 dark:border-gray-600 pl-2">
+          <button
+            onClick={() => onNavigateError('prev')}
+            disabled={errorIndices.length === 0}
+            className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-500 disabled:opacity-50 transition-colors"
+            title="Previous error"
+          >
+            ⬆️ Prev
+          </button>
+          <span className="text-xs text-gray-600 dark:text-gray-400">
+            {currentErrorIndex >= 0 ? `${currentErrorIndex + 1}/${errorIndices.length}` : `0/${errorIndices.length}`}
+          </span>
+          <button
+            onClick={() => onNavigateError('next')}
+            disabled={errorIndices.length === 0}
+            className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-500 disabled:opacity-50 transition-colors"
+            title="Next error"
+          >
+            ⬇️ Next
+          </button>
+        </div>
+      )}
+
+      {/* Copy, Export, and Clear Buttons */}
+      <div className="flex gap-1 items-center border-l border-gray-300 dark:border-gray-600 pl-2">
+        {filteredLogs.length > 0 && (
+          <>
+            <button
+              onClick={onCopyVisible}
+              className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+              title={`Copy ${filteredLogs.length} visible (filtered) logs to clipboard`}
+            >
+              📋 Copy Visible
+            </button>
+            {logs.length > filteredLogs.length && (
+              <button
+                onClick={onCopyAll}
+                className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                title={`Copy all ${logs.length} logs to clipboard`}
+              >
+                📋 Copy All
+              </button>
+            )}
+            <button
+              onClick={onExport}
+              className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              title="Export filtered logs to file"
+            >
+              💾 Export
+            </button>
+          </>
+        )}
+        {onClearLogs && logs.length > 0 && (
+          <button
+            onClick={onClearLogs}
+            className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            title="Clear all logs"
+          >
+            🗑️ Clear
+          </button>
+        )}
+      </div>
+
+      {/* Auto-scroll Options */}
+      <div className="flex items-center gap-2 border-l border-gray-300 dark:border-gray-600 pl-2">
+        <label className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
+          <input
+            type="checkbox"
+            checked={isAutoScroll}
+            onChange={(e) => onAutoScrollChange(e.target.checked)}
+            className="rounded border-gray-300 dark:border-gray-600 w-3.5 h-3.5"
+          />
+          <span>Auto-scroll</span>
+        </label>
+        <label className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300" title="Auto-scroll to errors when they occur">
+          <input
+            type="checkbox"
+            checked={autoScrollToErrors}
+            onChange={(e) => onAutoScrollToErrorsChange(e.target.checked)}
+            className="rounded border-gray-300 dark:border-gray-600 w-3.5 h-3.5"
+          />
+          <span>Scroll to Errors</span>
+        </label>
+      </div>
+
+      {/* Statistics and Retention */}
+      <div className="flex items-center gap-2 text-xs border-l border-gray-300 dark:border-gray-600 pl-2">
+        {stats.errorCount > 0 && (
+          <span className="text-red-500 font-medium" title={`${stats.errorCount} error(s)`}>
+            🔴 {stats.errorCount}
+          </span>
+        )}
+        {stats.warningCount > 0 && (
+          <span className="text-yellow-500 font-medium" title={`${stats.warningCount} warning(s)`}>
+            ⚠️ {stats.warningCount}
+          </span>
+        )}
+        <span className="text-gray-600 dark:text-gray-400 font-medium">
+          {filteredLogs.length} / {logs.length}
+        </span>
+        {onMaxLogsChange && (
+          <div className="flex items-center gap-1" title="Log retention limit">
+            <span className="text-gray-500 dark:text-gray-400">Max:</span>
+            <input
+              type="number"
+              min="100"
+              max="100000"
+              step="1000"
+              value={maxLogs}
+              onChange={(e) => {
+                const value = parseInt(e.target.value, 10);
+                if (!isNaN(value) && value >= 100) {
+                  onMaxLogsChange(value);
+                }
+              }}
+              className="w-16 px-1 py-0.5 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              title="Maximum number of logs to retain"
+              aria-label="Log retention limit"
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+

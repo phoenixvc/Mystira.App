@@ -257,7 +257,7 @@
     private bool showReplayButton = false;
     private bool showFullIntro = false;
     private bool showLogoAnimation = false; // SVG animation after video
-    private Timer? _animationTimer;
+    private System.Threading.Timer? _animationTimer;
     private DotNetObjectReference<HeroSection>? _dotNetRef;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -302,14 +302,14 @@
 
         // Stop animation after 4 seconds
         _animationTimer?.Dispose();
-        _animationTimer = new Timer(_ =>
+        _animationTimer = new System.Threading.Timer(_ =>
         {
             InvokeAsync(() =>
             {
                 showLogoAnimation = false;
                 StateHasChanged();
             });
-        }, null, 4000, Timeout.Infinite);
+        }, null, 4000, System.Threading.Timeout.Infinite);
     }
 
     [JSInvokable]

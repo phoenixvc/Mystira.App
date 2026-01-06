@@ -5,7 +5,6 @@ using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.Ports.Storage;
 using Mystira.App.Contracts.Requests.Media;
 using Mystira.App.Domain.Models;
-using Mystira.App.Shared.Media;
 
 namespace Mystira.App.Application.UseCases.Media;
 
@@ -19,6 +18,31 @@ public class UploadMediaUseCase
     private readonly IBlobService _blobStorageService;
     private readonly IMediaMetadataService _mediaMetadataService;
     private readonly ILogger<UploadMediaUseCase> _logger;
+
+    private readonly Dictionary<string, string> _mimeTypeMap = new()
+    {
+        // Audio
+        { ".mp3", "audio/mpeg" },
+        { ".wav", "audio/wav" },
+        { ".ogg", "audio/ogg" },
+        { ".aac", "audio/aac" },
+        { ".m4a", "audio/mp4" },
+        
+        // Video
+        { ".mp4", "video/mp4" },
+        { ".avi", "video/x-msvideo" },
+        { ".mov", "video/quicktime" },
+        { ".wmv", "video/x-ms-wmv" },
+        { ".mkv", "video/x-matroska" },
+        
+        // Images
+        { ".jpg", "image/jpeg" },
+        { ".jpeg", "image/jpeg" },
+        { ".png", "image/png" },
+        { ".gif", "image/gif" },
+        { ".bmp", "image/bmp" },
+        { ".webp", "image/webp" }
+    };
 
     public UploadMediaUseCase(
         IMediaAssetRepository repository,
@@ -82,7 +106,7 @@ public class UploadMediaUseCase
         return mediaAsset;
     }
 
-    private static void ValidateMediaFile(UploadMediaRequest request)
+    private void ValidateMediaFile(UploadMediaRequest request)
     {
         if (request == null || request.FileStream == null)
         {
@@ -94,15 +118,30 @@ public class UploadMediaUseCase
             throw new ArgumentException("File size must be greater than zero");
         }
 
-        var maxSizeBytes = MimeTypeRegistry.GetMaxFileSizeBytes(request.MediaType);
+        var maxSizeBytes = request.MediaType switch
+        {
+            "audio" => 50 * 1024 * 1024, // 50MB
+            "video" => 100 * 1024 * 1024, // 100MB
+            "image" => 10 * 1024 * 1024, // 10MB
+            _ => 10 * 1024 * 1024 // Default 10MB
+        };
+
         if (request.FileSizeBytes > maxSizeBytes)
         {
             throw new ArgumentException($"File size exceeds maximum allowed size for {request.MediaType} files");
         }
 
-        if (!MimeTypeRegistry.IsValidExtension(request.FileName, request.MediaType))
+        var extension = Path.GetExtension(request.FileName).ToLower();
+        var allowedExtensions = request.MediaType switch
         {
-            var extension = Path.GetExtension(request.FileName);
+            "audio" => new[] { ".mp3", ".wav", ".ogg", ".aac", ".m4a" },
+            "video" => new[] { ".mp4", ".avi", ".mov", ".wmv", ".mkv" },
+            "image" => new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" },
+            _ => Array.Empty<string>()
+        };
+
+        if (!allowedExtensions.Contains(extension))
+        {
             throw new ArgumentException($"File extension '{extension}' is not allowed for {request.MediaType} files");
         }
     }
@@ -143,6 +182,10 @@ public class UploadMediaUseCase
         return Convert.ToHexString(hashBytes).ToLowerInvariant();
     }
 
-    private static string GetMimeType(string fileName) => MimeTypeRegistry.GetMimeType(fileName);
+    private string GetMimeType(string fileName)
+    {
+        var extension = Path.GetExtension(fileName).ToLower();
+        return _mimeTypeMap.TryGetValue(extension, out var mimeType) ? mimeType : "application/octet-stream";
+    }
 }
 

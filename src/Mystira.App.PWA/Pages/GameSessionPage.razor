@@ -55,9 +55,6 @@ else
                             <i class="fas fa-door-open"></i>
                             <span>Exit Adventure</span>
                         </button>
-                        <button class="btn-game-control btn-music-toggle" @onclick="ToggleMusic" disabled="@isProcessing" title="@(isMusicPaused ? "Resume Music" : "Pause Music")">
-                            <i class="fas @(isMusicPaused ? "fa-volume-mute" : "fa-music")"></i>
-                        </button>
                         <img src="images/mystira-logo.webp"
                             alt="Mystira Logo"
                             width="80"
@@ -102,10 +99,7 @@ else
                                 else if (!string.IsNullOrWhiteSpace(gameSession.CurrentScene.VideoUrl))
                                 {
                                     <FantasyMediaFrame MediaKind="video" Color="#165668" Rounded="true" Pulse="true">
-                                        <video controls class="w-100" @key="gameSession.CurrentScene.VideoUrl"
-                                               @onplay="() => HandleMediaAction(true)"
-                                               @onpause="() => HandleMediaAction(false)"
-                                               @onended="() => HandleMediaAction(false)">
+                                        <video controls class="w-100" @key="gameSession.CurrentScene.VideoUrl">
                                             <source src="@gameSession.CurrentScene.VideoUrl" type="video/mp4">
                                             Your browser does not support the video tag.
                                         </video>
@@ -119,10 +113,7 @@ else
                                     <FantasyMediaFrame MediaKind="audio" Color="#165668" Rounded="true" Pulse="true">
                                         <div class="p-4 bg-dark text-center">
                                             <i class="fas fa-music fa-2x text-white mb-3"></i>
-                                            <audio controls class="w-100" @key="gameSession.CurrentScene.AudioUrl"
-                                                   @onplay="() => HandleMediaAction(true)"
-                                                   @onpause="() => HandleMediaAction(false)"
-                                                   @onended="() => HandleMediaAction(false)">
+                                            <audio controls class="w-100" @key="gameSession.CurrentScene.AudioUrl">
                                                 <source src="@gameSession.CurrentScene.AudioUrl" type="audio/mpeg">
                                                 Your browser does not support the audio element.
                                             </audio>
@@ -378,8 +369,6 @@ else
     [Inject] private IApiClient ApiClient { get; set; } = default!;
     [Inject] private IAwardsState AwardsState { get; set; } = default!;
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
-    [Inject] private Mystira.App.PWA.Services.Music.SceneAudioOrchestrator AudioOrchestrator { get; set; } = default!;
-    [Inject] private Mystira.App.PWA.Services.Music.IAudioBus AudioBus { get; set; } = default!;
 
     private sealed record PlayerOption(string Id, string DisplayName);
 
@@ -389,10 +378,10 @@ else
     private bool? lastRollSuccess = null;
     private string? lastRollMessage = null;
     private bool hasNavigatedHome = false;
-    private bool isMusicPaused = false;
 
     // Audio
     private string? isPlayingAudio = null;
+    private IJSObjectReference? audioModule;
 
     // Awards modal state
     private bool showAwardsModal = false;
@@ -428,22 +417,6 @@ else
                 catch (Exception ex)
                 {
                     Logger.LogWarning(ex, "Failed to precompute out-of-age assigned players (OnInitialized)");
-                }
-            });
-        }
-
-        // Orchestrate audio for the initial scene if it's already set
-        if (gameSession is { CurrentScene: not null, Scenario: not null })
-        {
-            _ = InvokeAsync(async () =>
-            {
-                try
-                {
-                    await AudioOrchestrator.EnterSceneAsync(gameSession.CurrentScene, gameSession.Scenario);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Error orchestrating initial scene audio");
                 }
             });
         }
@@ -498,11 +471,11 @@ else
         {
             try
             {
-                isMusicPaused = await AudioBus.IsMusicPausedAsync();
+                audioModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "./js/audioPlayer.js");
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error checking music pause status");
+                Logger.LogError(ex, "Error loading audio module");
             }
         }
 
@@ -527,27 +500,28 @@ else
     {
         try
         {
+            if (audioModule == null)
+                return;
+
             if (isPlayingAudio == audioUrl)
             {
-                await AudioBus.StopSoundEffectAsync(audioUrl);
-                await AudioBus.DuckMusicAsync(false);
+                await audioModule.InvokeVoidAsync("stopAudio");
                 isPlayingAudio = null;
             }
             else
             {
                 if (!string.IsNullOrEmpty(isPlayingAudio))
                 {
-                    await AudioBus.StopSoundEffectAsync(isPlayingAudio);
+                    await audioModule.InvokeVoidAsync("stopAudio");
                 }
 
-                await AudioBus.DuckMusicAsync(true);
-                await AudioBus.PlaySoundEffectAsync(audioUrl);
+                await audioModule.InvokeVoidAsync("playAudio", audioUrl);
                 isPlayingAudio = audioUrl;
             }
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error playing audio: {AudioUrl}", audioUrl);
+            Logger.LogError(ex, "Error playing audio");
         }
         finally
         {
@@ -559,11 +533,15 @@ else
     {
         try
         {
-            await AudioOrchestrator.StopAllAsync();
+            if (audioModule != null)
+            {
+                await audioModule.InvokeVoidAsync("stopAudio");
+                await audioModule.DisposeAsync();
+            }
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Error disposing audio in GameSessionPage");
+            Logger.LogWarning(ex, "Error disposing audio module in GameSessionPage");
         }
 
         // Unsubscribe from events
@@ -815,11 +793,6 @@ else
         }
     }
 
-    private async Task HandleMediaAction(bool active)
-    {
-        await AudioOrchestrator.OnSceneActionAsync(active);
-    }
-
     private async Task ResumeGame()
     {
         if (isProcessing)
@@ -838,8 +811,6 @@ else
             else
             {
                 Logger.LogInformation("Game session resumed");
-                // Sync music paused state
-                isMusicPaused = await AudioBus.IsMusicPausedAsync();
             }
         }
         catch (Exception ex)
@@ -850,32 +821,6 @@ else
         {
             isProcessing = false;
             StateHasChanged();
-        }
-    }
-
-    private async Task ToggleMusic()
-    {
-        try
-        {
-            // Sync with actual state before toggling
-            isMusicPaused = await AudioBus.IsMusicPausedAsync();
-
-            if (isMusicPaused)
-            {
-                await AudioBus.ResumeMusicAsync();
-            }
-            else
-            {
-                await AudioBus.PauseMusicAsync();
-            }
-
-            // Update local state and trigger UI refresh
-            isMusicPaused = await AudioBus.IsMusicPausedAsync();
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error toggling music");
         }
     }
 

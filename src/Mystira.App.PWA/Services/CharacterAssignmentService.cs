@@ -8,20 +8,17 @@ public class CharacterAssignmentService : ICharacterAssignmentService
     private readonly IApiClient _apiClient;
     private readonly IAuthService _authService;
     private readonly IGameSessionService _gameSessionService;
-    private readonly Music.SceneAudioOrchestrator _audioOrchestrator;
 
     public CharacterAssignmentService(
         ILogger<CharacterAssignmentService> logger,
         IApiClient apiClient,
         IAuthService authService,
-        IGameSessionService gameSessionService,
-        Music.SceneAudioOrchestrator audioOrchestrator)
+        IGameSessionService gameSessionService)
     {
         _logger = logger;
         _apiClient = apiClient;
         _authService = authService;
         _gameSessionService = gameSessionService;
-        _audioOrchestrator = audioOrchestrator;
     }
 
     public async Task<CharacterAssignmentResponse> GetCharacterAssignmentDataAsync(string scenarioId,
@@ -123,7 +120,6 @@ public class CharacterAssignmentService : ICharacterAssignmentService
 
                 if (startingScene != null)
                 {
-                    _logger.LogInformation("Resolving media URLs for starting scene: {SceneId}", startingScene.Id);
                     // Resolve media URLs for the starting scene
                     startingScene.AudioUrl = !string.IsNullOrEmpty(startingScene.Media?.Audio)
                         ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Audio)
@@ -134,7 +130,6 @@ public class CharacterAssignmentService : ICharacterAssignmentService
                     startingScene.VideoUrl = !string.IsNullOrEmpty(startingScene.Media?.Video)
                         ? await _apiClient.GetMediaUrlFromId(startingScene.Media.Video)
                         : null;
-                    _logger.LogInformation("Media URLs resolved");
 
                     // Create local game session
                     var localGameSession = new GameSession
@@ -159,11 +154,6 @@ public class CharacterAssignmentService : ICharacterAssignmentService
 
                     // Also store assignments in the session service for placeholder replacement
                     _gameSessionService.SetCharacterAssignments(localGameSession.CharacterAssignments);
-
-                    // Orchestrate initial scene audio
-                    _logger.LogInformation("Orchestrating initial scene audio");
-                    await _audioOrchestrator.EnterSceneAsync(startingScene, scenario);
-                    _logger.LogInformation("Audio orchestration complete");
 
                     _logger.LogInformation("Local game session populated with starting scene: {SceneTitle}", startingScene.Title);
                 }

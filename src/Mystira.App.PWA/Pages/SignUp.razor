@@ -199,7 +199,7 @@
     private bool isVerifying = false;
     private bool isResendingCode = false;
     private int resendCountdown = 0;
-    private Timer? resendTimer;
+    private System.Timers.Timer? resendTimer;
 
     private string emailError = string.Empty;
     private string displayNameError = string.Empty;
@@ -421,7 +421,7 @@
         StopResendCountdown();
         resendCountdown = 15;
 
-        resendTimer = new Timer(1000);
+        resendTimer = new System.Timers.Timer(1000);
         resendTimer.Elapsed += OnResendTimerElapsed;
         resendTimer.AutoReset = true;
         resendTimer.Start();
