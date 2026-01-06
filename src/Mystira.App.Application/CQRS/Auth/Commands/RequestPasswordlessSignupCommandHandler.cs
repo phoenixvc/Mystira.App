@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
+using Mystira.App.Application.CQRS.Auth.Responses;
 using Mystira.App.Application.Ports.Auth;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
@@ -11,7 +12,7 @@ namespace Mystira.App.Application.CQRS.Auth.Commands;
 /// Validates email availability, generates secure code, and sends verification email.
 /// </summary>
 public class RequestPasswordlessSignupCommandHandler
-    : ICommandHandler<RequestPasswordlessSignupCommand, (bool Success, string Message, string? Code, string? ErrorDetails)>
+    : ICommandHandler<RequestPasswordlessSignupCommand, AuthResponse>
 {
     private readonly IAccountRepository _accountRepository;
     private readonly IPendingSignupRepository _pendingSignupRepository;
@@ -34,7 +35,7 @@ public class RequestPasswordlessSignupCommandHandler
         _logger = logger;
     }
 
-    public async Task<(bool Success, string Message, string? Code, string? ErrorDetails)> Handle(
+    public async Task<AuthResponse> Handle(
         RequestPasswordlessSignupCommand command,
         CancellationToken cancellationToken)
     {
@@ -48,17 +49,8 @@ public class RequestPasswordlessSignupCommandHandler
             if (existingAccount != null)
             {
                 _logger.LogWarning("Signup requested for existing email: {Email}", email);
-                return (false, "An account with this email already exists. Please sign in instead.", null, null);
+                return new AuthResponse(false, "An account with this email already exists. Please sign in instead.");
             }
-
-            // BELOW BLOCKS RESEND CODE. TODO: Fix.
-            // Check if there's already a pending signup
-            // var existingPending = await _pendingSignupRepository.GetActiveByEmailAsync(email);
-            // if (existingPending != null)
-            // {
-            //     _logger.LogInformation("Signup already pending for email: {Email}, reusing existing code", email);
-            //     return (true, "Check your email for the verification code", existingPending.Code, null);
-            // }
 
             // Generate secure verification code
             var code = GenerateSecureCode();
@@ -84,10 +76,10 @@ public class RequestPasswordlessSignupCommandHandler
             if (!emailSuccess)
             {
                 _logger.LogWarning("Failed to send verification email to {Email}: {Error}", email, emailError);
-                return (false, "Failed to send verification email. Please try again later.", null, emailError);
+                return new AuthResponse(false, "Failed to send verification email. Please try again later.", null, emailError);
             }
 
-            return (true, "Check your email for the verification code", code, null);
+            return new AuthResponse(true, "Check your email for the verification code", code);
         }
         catch (Exception ex)
         {
@@ -97,7 +89,7 @@ public class RequestPasswordlessSignupCommandHandler
             {
                 errorDetails += $" | Inner: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}";
             }
-            return (false, "An error occurred while processing your signup", null, errorDetails);
+            return new AuthResponse(false, "An error occurred while processing your signup", null, errorDetails);
         }
     }
 

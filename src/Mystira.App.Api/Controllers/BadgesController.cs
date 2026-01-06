@@ -118,8 +118,10 @@ public class BadgesController : ControllerBase
     }
 
     /// <summary>
-    /// Get badge progress and earned badges for a profile
+    /// Retrieves badge progress for the specified profile.
     /// </summary>
+    /// <param name="profileId">The identifier of the profile whose badge progress to retrieve.</param>
+    /// <returns>The badge progress for the profile as a <see cref="BadgeProgressResponse"/>.</returns>
     [HttpGet("profile/{profileId}")]
     public async Task<ActionResult<BadgeProgressResponse>> GetProfileBadgeProgress(string profileId)
     {
@@ -146,4 +148,101 @@ public class BadgesController : ControllerBase
             });
         }
     }
+
+    /// <summary>
+    /// Calculate required badge scores per tier for a content bundle.
+    /// Performs depth-first traversal of all scenarios in the bundle and calculates
+    /// percentile-based score thresholds for each compass axis.
+    /// </summary>
+    /// <param name="request">Request payload containing a non-empty ContentBundleId and a non-empty list of Percentiles used to compute per-tier scores.</param>
+    /// <returns>A list of CompassAxisScoreResult where each item maps the requested percentiles to score thresholds for a compass axis.</returns>
+    [HttpPost("calculate-scores")]
+    [ProducesResponseType(typeof(List<CompassAxisScoreResult>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<List<CompassAxisScoreResult>>> CalculateBadgeScores(
+        [FromBody] CalculateBadgeScoresRequest request)
+    {
+        if (request == null)
+        {
+            return BadRequest(new ErrorResponse
+            {
+                Message = "Request body is required",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ContentBundleId))
+        {
+            return BadRequest(new ErrorResponse
+            {
+                Message = "ContentBundleId is required",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+
+        if (request.Percentiles == null || !request.Percentiles.Any())
+        {
+            return BadRequest(new ErrorResponse
+            {
+                Message = "Percentiles array is required and must not be empty",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+
+        try
+        {
+            var query = new CalculateBadgeScoresQuery(
+                request.ContentBundleId,
+                request.Percentiles);
+
+            var results = await _mediator.Send(query);
+            return Ok(results);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid request for badge score calculation");
+            return BadRequest(new ErrorResponse
+            {
+                Message = ex.Message,
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+        {
+            _logger.LogWarning(ex, "Content bundle not found: {BundleId}", request.ContentBundleId);
+            return NotFound(new ErrorResponse
+            {
+                Message = ex.Message,
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calculating badge scores for bundle {BundleId}", request.ContentBundleId);
+            return StatusCode(500, new ErrorResponse
+            {
+                Message = "Internal server error while calculating badge scores",
+                TraceId = HttpContext.TraceIdentifier
+            });
+        }
+    }
+}
+
+/// <summary>
+/// Request model for calculating badge scores per tier
+/// </summary>
+public class CalculateBadgeScoresRequest
+{
+    /// <summary>
+    /// The ID of the content bundle containing scenarios to analyze
+    /// </summary>
+    public string ContentBundleId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Array of percentile values (0-100) to calculate score thresholds for.
+    /// Example: [50, 75, 90, 95] for bronze, silver, gold, platinum tiers
+    /// </summary>
+    public List<double> Percentiles { get; set; } = new();
 }

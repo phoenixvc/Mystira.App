@@ -92,7 +92,7 @@ public class CreateScenarioCommandHandler : ICommandHandler<CreateScenarioComman
 
         if (errors.Count > 0)
         {
-            var errorMessages = string.Join(", ", errors.Select(e => e.ToString()));
+            var errorMessages = string.Join(", ", errors.Select(e => e.ToString()).ToList());
             throw new ArgumentException($"Scenario validation failed: {errorMessages}");
         }
     }
