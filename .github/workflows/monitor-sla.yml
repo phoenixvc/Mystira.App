@@ -1,0 +1,298 @@
+name: "[Monitor] SLA"
+
+# SLA monitoring - Track uptime, latency, error rates
+# Layer 5 of 7-layer validation stack: SLA Monitoring
+
+on:
+  # Scheduled monitoring (every 15 minutes)
+  schedule:
+    - cron: '*/15 * * * *'
+
+  # Manual trigger for ad-hoc checks
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to monitor'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - dev
+          - staging
+          - production
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: monitor-sla
+  cancel-in-progress: false  # Don't skip monitoring runs
+
+env:
+  # Environment URLs
+  DEV_API_URL: "https://api-dev.mystira.app"
+  DEV_PWA_URL: "https://dev.mystira.app"
+  STAGING_API_URL: "https://api-staging.mystira.app"
+  STAGING_PWA_URL: "https://staging.mystira.app"
+  PROD_API_URL: "https://api.mystira.app"
+  PROD_PWA_URL: "https://mystira.app"
+
+  # SLA Thresholds
+  UPTIME_THRESHOLD: "99.5"
+  LATENCY_P95_THRESHOLD: "500"
+  LATENCY_P99_THRESHOLD: "1000"
+  ERROR_RATE_THRESHOLD: "1"
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    name: Monitor ${{ matrix.env.name }}
+    timeout-minutes: 5
+
+    strategy:
+      fail-fast: false
+      matrix:
+        env:
+          - name: "Dev"
+            api_url: "https://api-dev.mystira.app"
+            pwa_url: "https://dev.mystira.app"
+            id: "dev"
+          - name: "Staging"
+            api_url: "https://api-staging.mystira.app"
+            pwa_url: "https://staging.mystira.app"
+            id: "staging"
+          - name: "Production"
+            api_url: "https://api.mystira.app"
+            pwa_url: "https://mystira.app"
+            id: "production"
+
+    outputs:
+      dev_status: ${{ steps.check.outputs.status }}
+      staging_status: ${{ steps.check.outputs.status }}
+      production_status: ${{ steps.check.outputs.status }}
+
+    steps:
+      - name: Check if should run
+        id: should-run
+        run: |
+          INPUT_ENV="${{ inputs.environment }}"
+          MATRIX_ENV="${{ matrix.env.id }}"
+
+          if [ -z "$INPUT_ENV" ] || [ "$INPUT_ENV" = "all" ] || [ "$INPUT_ENV" = "$MATRIX_ENV" ]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          else
+            echo "run=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Health Checks
+        id: check
+        if: steps.should-run.outputs.run == 'true'
+        run: |
+          API_URL="${{ matrix.env.api_url }}"
+          PWA_URL="${{ matrix.env.pwa_url }}"
+          ENV_NAME="${{ matrix.env.name }}"
+
+          # Initialize metrics
+          API_STATUS="down"
+          API_LATENCY="0"
+          API_CODE="0"
+          PWA_STATUS="down"
+          PWA_LATENCY="0"
+          PWA_CODE="0"
+          ERRORS=0
+
+          echo "=== Monitoring $ENV_NAME ==="
+
+          # Check API health
+          echo "Checking API: $API_URL/health"
+          START=$(date +%s%3N)
+          API_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}|%{time_total}" --max-time 10 "$API_URL/health" 2>/dev/null || echo "000|0")
+          END=$(date +%s%3N)
+
+          API_CODE=$(echo "$API_RESPONSE" | cut -d'|' -f1)
+          API_TIME=$(echo "$API_RESPONSE" | cut -d'|' -f2)
+          API_LATENCY=$(echo "$API_TIME * 1000" | bc | cut -d'.' -f1)
+
+          if [ "$API_CODE" = "200" ]; then
+            API_STATUS="up"
+            echo "API: UP (${API_LATENCY}ms)"
+          else
+            API_STATUS="down"
+            ERRORS=$((ERRORS + 1))
+            echo "API: DOWN (HTTP $API_CODE)"
+          fi
+
+          # Check API readiness
+          READY_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$API_URL/health/ready" 2>/dev/null || echo "000")
+          if [ "$READY_CODE" != "200" ]; then
+            echo "API Readiness: Not ready (HTTP $READY_CODE)"
+          fi
+
+          # Check PWA
+          echo "Checking PWA: $PWA_URL"
+          PWA_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}|%{time_total}" --max-time 10 "$PWA_URL/" 2>/dev/null || echo "000|0")
+
+          PWA_CODE=$(echo "$PWA_RESPONSE" | cut -d'|' -f1)
+          PWA_TIME=$(echo "$PWA_RESPONSE" | cut -d'|' -f2)
+          PWA_LATENCY=$(echo "$PWA_TIME * 1000" | bc | cut -d'.' -f1)
+
+          if [ "$PWA_CODE" = "200" ]; then
+            PWA_STATUS="up"
+            echo "PWA: UP (${PWA_LATENCY}ms)"
+          else
+            PWA_STATUS="down"
+            ERRORS=$((ERRORS + 1))
+            echo "PWA: DOWN (HTTP $PWA_CODE)"
+          fi
+
+          # Check Blazor assets
+          BLAZOR_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$PWA_URL/_framework/blazor.boot.json" 2>/dev/null || echo "000")
+          if [ "$BLAZOR_CODE" != "200" ]; then
+            echo "Warning: Blazor assets not accessible"
+          fi
+
+          # Determine overall status
+          if [ "$API_STATUS" = "up" ] && [ "$PWA_STATUS" = "up" ]; then
+            OVERALL="healthy"
+          elif [ "$API_STATUS" = "up" ] || [ "$PWA_STATUS" = "up" ]; then
+            OVERALL="degraded"
+          else
+            OVERALL="down"
+          fi
+
+          # Check latency thresholds
+          LATENCY_OK="true"
+          if [ "$API_LATENCY" -gt "${{ env.LATENCY_P95_THRESHOLD }}" ]; then
+            echo "Warning: API latency (${API_LATENCY}ms) exceeds P95 threshold (${{ env.LATENCY_P95_THRESHOLD }}ms)"
+            LATENCY_OK="false"
+          fi
+          if [ "$PWA_LATENCY" -gt "${{ env.LATENCY_P95_THRESHOLD }}" ]; then
+            echo "Warning: PWA latency (${PWA_LATENCY}ms) exceeds P95 threshold (${{ env.LATENCY_P95_THRESHOLD }}ms)"
+            LATENCY_OK="false"
+          fi
+
+          # Output metrics
+          echo "status=$OVERALL" >> $GITHUB_OUTPUT
+          echo "api_status=$API_STATUS" >> $GITHUB_OUTPUT
+          echo "api_latency=$API_LATENCY" >> $GITHUB_OUTPUT
+          echo "api_code=$API_CODE" >> $GITHUB_OUTPUT
+          echo "pwa_status=$PWA_STATUS" >> $GITHUB_OUTPUT
+          echo "pwa_latency=$PWA_LATENCY" >> $GITHUB_OUTPUT
+          echo "pwa_code=$PWA_CODE" >> $GITHUB_OUTPUT
+          echo "latency_ok=$LATENCY_OK" >> $GITHUB_OUTPUT
+          echo "errors=$ERRORS" >> $GITHUB_OUTPUT
+
+          # Generate step summary
+          echo "### $ENV_NAME Environment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status | Latency | HTTP Code |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|---------|-----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| API | $API_STATUS | ${API_LATENCY}ms | $API_CODE |" >> $GITHUB_STEP_SUMMARY
+          echo "| PWA | $PWA_STATUS | ${PWA_LATENCY}ms | $PWA_CODE |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Record metrics
+        if: steps.should-run.outputs.run == 'true'
+        run: |
+          # This step can be extended to push metrics to:
+          # - Azure Application Insights
+          # - Prometheus/Grafana
+          # - DataDog
+          # - Custom metrics storage
+
+          echo "Recording metrics for ${{ matrix.env.name }}:"
+          echo "  API Status: ${{ steps.check.outputs.api_status }}"
+          echo "  API Latency: ${{ steps.check.outputs.api_latency }}ms"
+          echo "  PWA Status: ${{ steps.check.outputs.pwa_status }}"
+          echo "  PWA Latency: ${{ steps.check.outputs.pwa_latency }}ms"
+          echo "  Overall: ${{ steps.check.outputs.status }}"
+
+  summary:
+    runs-on: ubuntu-latest
+    needs: monitor
+    if: always()
+    name: SLA Summary
+
+    steps:
+      - name: Generate overall summary
+        run: |
+          echo "## SLA Monitoring Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Layer 5 of 7**: SLA Monitoring" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### SLA Thresholds" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Threshold |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Uptime | ${{ env.UPTIME_THRESHOLD }}% |" >> $GITHUB_STEP_SUMMARY
+          echo "| Latency P95 | ${{ env.LATENCY_P95_THRESHOLD }}ms |" >> $GITHUB_STEP_SUMMARY
+          echo "| Latency P99 | ${{ env.LATENCY_P99_THRESHOLD }}ms |" >> $GITHUB_STEP_SUMMARY
+          echo "| Error Rate | ${{ env.ERROR_RATE_THRESHOLD }}% |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "Monitoring runs every 15 minutes. For detailed metrics, check Azure Application Insights." >> $GITHUB_STEP_SUMMARY
+
+  alert:
+    runs-on: ubuntu-latest
+    needs: monitor
+    if: failure()
+    name: Send Alerts
+
+    steps:
+      - name: Create incident issue
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const timestamp = new Date().toISOString();
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            // Check if there's an existing open incident issue
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'incident,sla-violation',
+              state: 'open'
+            });
+
+            const existingIncident = issues.find(i =>
+              i.title.includes('SLA Monitoring Alert') &&
+              Date.now() - new Date(i.created_at).getTime() < 3600000  // Within last hour
+            );
+
+            if (existingIncident) {
+              // Add comment to existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIncident.number,
+                body: `## Follow-up Alert\n\n**Time**: ${timestamp}\n**Run**: ${runUrl}\n\nMonitoring continues to detect issues.`
+              });
+              console.log(`Updated existing incident #${existingIncident.number}`);
+            } else {
+              // Create new incident issue
+              const { data: issue } = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `SLA Monitoring Alert - ${timestamp.split('T')[0]}`,
+                body: `## SLA Violation Detected\n\n**Time**: ${timestamp}\n**Run**: ${runUrl}\n\n### Action Required\n\n1. Check the workflow run for specific failures\n2. Investigate affected environments\n3. Update this issue with findings\n4. Close when resolved\n\n---\n*This issue was automatically created by the SLA monitoring workflow.*`,
+                labels: ['incident', 'sla-violation', 'priority:high']
+              });
+              console.log(`Created new incident #${issue.number}`);
+            }
+
+      - name: Send notification (placeholder)
+        run: |
+          echo "SLA Alert: Monitoring detected failures"
+          echo "This step can be configured to send:"
+          echo "  - Slack notifications via webhook"
+          echo "  - Teams notifications via webhook"
+          echo "  - PagerDuty alerts"
+          echo "  - Email notifications"
+
+          # Example Slack notification (uncomment and configure):
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data '{"text":"SLA Alert: Service degradation detected"}' \
+          #   ${{ vars.SLACK_WEBHOOK_URL }}

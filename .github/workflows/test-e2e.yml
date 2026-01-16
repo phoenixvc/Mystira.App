@@ -1,0 +1,358 @@
+name: "[Test] E2E"
+
+# End-to-end testing after deployments
+# Layer 3 of 7-layer validation stack: E2E Tests
+
+on:
+  # Trigger after deployment workflows complete
+  workflow_run:
+    workflows:
+      - "[PWA] Build & Test (Dev)"
+      - "PWA CI/CD - Dev Environment"
+      - "PWA CI/CD - Staging Environment"
+      - "PWA CI/CD - Production Environment"
+    types: [completed]
+
+  # Manual trigger for ad-hoc testing
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to test'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+      custom_url:
+        description: 'Custom URL to test (overrides environment)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: test-e2e-${{ github.event.workflow_run.head_branch || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Default environment URLs
+  DEV_API_URL: "https://api-dev.mystira.app"
+  DEV_PWA_URL: "https://dev.mystira.app"
+  STAGING_API_URL: "https://api-staging.mystira.app"
+  STAGING_PWA_URL: "https://staging.mystira.app"
+  PROD_API_URL: "https://api.mystira.app"
+  PROD_PWA_URL: "https://mystira.app"
+
+jobs:
+  # Job 1: Determine test configuration
+  configure:
+    runs-on: ubuntu-latest
+    name: Configure E2E Tests
+    outputs:
+      pwa_url: ${{ steps.config.outputs.pwa_url }}
+      api_url: ${{ steps.config.outputs.api_url }}
+      environment: ${{ steps.config.outputs.environment }}
+      should_run: ${{ steps.config.outputs.should_run }}
+      preview_url: ${{ steps.preview.outputs.url }}
+
+    steps:
+      - name: Determine URLs
+        id: config
+        run: |
+          # Manual trigger with custom URL
+          if [ -n "${{ inputs.custom_url }}" ]; then
+            echo "pwa_url=${{ inputs.custom_url }}" >> $GITHUB_OUTPUT
+            echo "api_url=" >> $GITHUB_OUTPUT
+            echo "environment=custom" >> $GITHUB_OUTPUT
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Manual trigger with environment
+          if [ -n "${{ inputs.environment }}" ]; then
+            ENV="${{ inputs.environment }}"
+          # Auto-detect from workflow_run
+          elif [ "${{ github.event.workflow_run.conclusion }}" = "success" ]; then
+            # Determine environment from triggering workflow
+            WORKFLOW="${{ github.event.workflow_run.name }}"
+            case "$WORKFLOW" in
+              *"Dev"*)        ENV="dev" ;;
+              *"Staging"*)    ENV="staging" ;;
+              *"Production"*) ENV="production" ;;
+              *)              ENV="dev" ;;
+            esac
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          case "$ENV" in
+            dev)
+              echo "pwa_url=${{ env.DEV_PWA_URL }}" >> $GITHUB_OUTPUT
+              echo "api_url=${{ env.DEV_API_URL }}" >> $GITHUB_OUTPUT
+              ;;
+            staging)
+              echo "pwa_url=${{ env.STAGING_PWA_URL }}" >> $GITHUB_OUTPUT
+              echo "api_url=${{ env.STAGING_API_URL }}" >> $GITHUB_OUTPUT
+              ;;
+            production)
+              echo "pwa_url=${{ env.PROD_PWA_URL }}" >> $GITHUB_OUTPUT
+              echo "api_url=${{ env.PROD_API_URL }}" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          echo "should_run=true" >> $GITHUB_OUTPUT
+
+      - name: Get Preview URL (for PR deployments)
+        id: preview
+        if: github.event.workflow_run.event == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const pullRequests = context.payload.workflow_run?.pull_requests || [];
+            if (pullRequests.length === 0) {
+              core.setOutput('url', '');
+              return;
+            }
+
+            const prNumber = pullRequests[0].number;
+            console.log(`Looking for preview URL for PR #${prNumber}`);
+
+            // Poll for SWA preview URL
+            for (let attempt = 1; attempt <= 5; attempt++) {
+              try {
+                const comments = await github.rest.issues.listComments({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                });
+
+                const swaComment = comments.data.find(c =>
+                  c.body.includes('azurestaticapps.net')
+                );
+
+                if (swaComment) {
+                  const match = swaComment.body.match(/https:\/\/[^\s<>"]+\.azurestaticapps\.net[^\s<>"]*/);
+                  if (match) {
+                    core.setOutput('url', match[0]);
+                    console.log(`Found preview URL: ${match[0]}`);
+                    return;
+                  }
+                }
+              } catch (e) {
+                console.log(`Attempt ${attempt} failed: ${e.message}`);
+              }
+
+              if (attempt < 5) {
+                await new Promise(r => setTimeout(r, 15000));
+              }
+            }
+
+            core.setOutput('url', '');
+
+  # Job 2: API Smoke Tests
+  api-smoke-tests:
+    runs-on: ubuntu-latest
+    needs: configure
+    if: needs.configure.outputs.should_run == 'true' && needs.configure.outputs.api_url != ''
+    name: API Smoke Tests
+    timeout-minutes: 10
+    env:
+      API_URL: ${{ needs.configure.outputs.api_url }}
+
+    steps:
+      - name: Health Check
+        run: |
+          echo "Testing API health: $API_URL"
+
+          for i in {1..5}; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$API_URL/health" || echo "000")
+
+            if [ "$response" = "200" ]; then
+              echo "Health check passed (HTTP $response)"
+              exit 0
+            fi
+
+            echo "Attempt $i: HTTP $response"
+            [ $i -lt 5 ] && sleep 10
+          done
+
+          echo "Health check failed after 5 attempts"
+          exit 1
+
+      - name: Readiness Check
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$API_URL/health/ready" || echo "000")
+
+          if [ "$response" = "200" ]; then
+            echo "Readiness check passed"
+          else
+            echo "Warning: Readiness check returned HTTP $response"
+          fi
+
+      - name: Version Endpoint
+        run: |
+          version=$(curl -s --max-time 10 "$API_URL/version" || echo "{}")
+          echo "API Version: $version"
+
+      - name: Response Time Check
+        run: |
+          time_total=$(curl -s -o /dev/null -w "%{time_total}" --max-time 30 "$API_URL/health")
+          time_ms=$(echo "$time_total * 1000" | bc)
+          echo "Health endpoint response time: ${time_ms}ms"
+
+          # Warn if over 500ms
+          if (( $(echo "$time_ms > 500" | bc -l) )); then
+            echo "Warning: Response time exceeds 500ms threshold"
+          fi
+
+  # Job 3: PWA Smoke Tests
+  pwa-smoke-tests:
+    runs-on: ubuntu-latest
+    needs: configure
+    if: needs.configure.outputs.should_run == 'true'
+    name: PWA Smoke Tests
+    timeout-minutes: 10
+    env:
+      PWA_URL: ${{ needs.configure.outputs.preview_url || needs.configure.outputs.pwa_url }}
+
+    steps:
+      - name: Home Page Load
+        run: |
+          echo "Testing PWA: $PWA_URL"
+
+          for i in {1..3}; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$PWA_URL/" || echo "000")
+
+            if [ "$response" = "200" ]; then
+              echo "Home page loads successfully (HTTP $response)"
+              exit 0
+            fi
+
+            echo "Attempt $i: HTTP $response"
+            [ $i -lt 3 ] && sleep 10
+          done
+
+          echo "Home page test failed"
+          exit 1
+
+      - name: SPA Routes
+        run: |
+          routes=("/" "/adventures" "/profile")
+
+          for route in "${routes[@]}"; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" "$PWA_URL$route")
+            if [ "$response" = "200" ]; then
+              echo "Route $route: OK"
+            else
+              echo "Route $route: FAILED (HTTP $response)"
+              exit 1
+            fi
+          done
+
+      - name: Blazor Assets
+        run: |
+          # Check blazor.boot.json
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$PWA_URL/_framework/blazor.boot.json")
+          if [ "$response" = "200" ]; then
+            echo "blazor.boot.json: OK"
+          else
+            echo "blazor.boot.json: FAILED"
+            exit 1
+          fi
+
+      - name: PWA Manifest
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$PWA_URL/manifest.json")
+          if [ "$response" = "200" ]; then
+            echo "PWA manifest: OK"
+          else
+            echo "PWA manifest: FAILED"
+            exit 1
+          fi
+
+      - name: Service Worker
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$PWA_URL/service-worker.js" 2>/dev/null || echo "404")
+          if [ "$response" = "200" ]; then
+            echo "Service worker: OK"
+          else
+            echo "Service worker: Not found (may not be published)"
+          fi
+
+      - name: Security Headers
+        run: |
+          headers=$(curl -sI "$PWA_URL/")
+
+          # Check common security headers
+          if echo "$headers" | grep -qi "x-content-type-options"; then
+            echo "X-Content-Type-Options: Present"
+          else
+            echo "Warning: X-Content-Type-Options missing"
+          fi
+
+          if echo "$headers" | grep -qi "x-frame-options"; then
+            echo "X-Frame-Options: Present"
+          else
+            echo "Warning: X-Frame-Options missing"
+          fi
+
+  # Job 4: Report Results
+  report-results:
+    runs-on: ubuntu-latest
+    needs: [configure, api-smoke-tests, pwa-smoke-tests]
+    if: always()
+    name: Report E2E Results
+
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "## E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Layer 3 of 7**: End-to-End Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| API Smoke Tests | ${{ needs.api-smoke-tests.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| PWA Smoke Tests | ${{ needs.pwa-smoke-tests.result || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment**: ${{ needs.configure.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**PWA URL**: ${{ needs.configure.outputs.preview_url || needs.configure.outputs.pwa_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**API URL**: ${{ needs.configure.outputs.api_url }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Post PR Comment
+        if: github.event.workflow_run.event == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const pullRequests = context.payload.workflow_run?.pull_requests || [];
+            if (pullRequests.length === 0) return;
+
+            const prNumber = pullRequests[0].number;
+            const apiResult = '${{ needs.api-smoke-tests.result }}';
+            const pwaResult = '${{ needs.pwa-smoke-tests.result }}';
+
+            const apiIcon = apiResult === 'success' ? '✅' : apiResult === 'skipped' ? '⏭️' : '❌';
+            const pwaIcon = pwaResult === 'success' ? '✅' : pwaResult === 'skipped' ? '⏭️' : '❌';
+            const overall = (apiResult === 'success' || apiResult === 'skipped') &&
+                           (pwaResult === 'success' || pwaResult === 'skipped');
+
+            let body = `## ${overall ? '✅' : '❌'} E2E Tests ${overall ? 'Passed' : 'Failed'}\n\n`;
+            body += `| Test Suite | Status |\n`;
+            body += `|------------|--------|\n`;
+            body += `| API Smoke Tests | ${apiIcon} ${apiResult} |\n`;
+            body += `| PWA Smoke Tests | ${pwaIcon} ${pwaResult} |\n`;
+            body += `\n---\n`;
+            body += `**Layer 3 of 7**: End-to-End Tests`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: body
+            });

@@ -1,0 +1,391 @@
+name: "[Test] Load"
+
+# Load testing for API endpoints using k6
+# Layer 4 of 7-layer validation stack: Load Tests
+
+on:
+  # Manual trigger for load testing
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to test'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+      test_type:
+        description: 'Test type'
+        required: true
+        type: choice
+        options:
+          - smoke
+          - load
+          - stress
+          - soak
+      duration:
+        description: 'Test duration (e.g., 30s, 5m, 1h)'
+        required: false
+        default: '1m'
+      vus:
+        description: 'Virtual users (concurrent)'
+        required: false
+        default: '10'
+
+  # Scheduled load tests (weekly on staging)
+  schedule:
+    - cron: '0 4 * * 1'  # Mondays at 4am UTC
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: test-load-${{ github.ref }}
+  cancel-in-progress: false  # Don't cancel load tests
+
+env:
+  DEV_API_URL: "https://api-dev.mystira.app"
+  STAGING_API_URL: "https://api-staging.mystira.app"
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    name: Setup Load Test
+    outputs:
+      api_url: ${{ steps.config.outputs.api_url }}
+      environment: ${{ steps.config.outputs.environment }}
+      test_type: ${{ steps.config.outputs.test_type }}
+      duration: ${{ steps.config.outputs.duration }}
+      vus: ${{ steps.config.outputs.vus }}
+
+    steps:
+      - name: Configure test parameters
+        id: config
+        run: |
+          # Determine environment
+          ENV="${{ inputs.environment }}"
+          if [ -z "$ENV" ]; then
+            ENV="staging"  # Default for scheduled runs
+          fi
+
+          case "$ENV" in
+            dev)     API_URL="${{ env.DEV_API_URL }}" ;;
+            staging) API_URL="${{ env.STAGING_API_URL }}" ;;
+          esac
+
+          # Test type (default: smoke for scheduled)
+          TEST_TYPE="${{ inputs.test_type }}"
+          if [ -z "$TEST_TYPE" ]; then
+            TEST_TYPE="smoke"
+          fi
+
+          # Duration defaults by test type
+          DURATION="${{ inputs.duration }}"
+          if [ -z "$DURATION" ]; then
+            case "$TEST_TYPE" in
+              smoke)  DURATION="30s" ;;
+              load)   DURATION="5m" ;;
+              stress) DURATION="3m" ;;
+              soak)   DURATION="30m" ;;
+            esac
+          fi
+
+          # VU defaults by test type
+          VUS="${{ inputs.vus }}"
+          if [ -z "$VUS" ]; then
+            case "$TEST_TYPE" in
+              smoke)  VUS="5" ;;
+              load)   VUS="50" ;;
+              stress) VUS="100" ;;
+              soak)   VUS="20" ;;
+            esac
+          fi
+
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          echo "test_type=$TEST_TYPE" >> $GITHUB_OUTPUT
+          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+          echo "vus=$VUS" >> $GITHUB_OUTPUT
+
+          echo "Configuration:"
+          echo "  Environment: $ENV"
+          echo "  API URL: $API_URL"
+          echo "  Test Type: $TEST_TYPE"
+          echo "  Duration: $DURATION"
+          echo "  VUs: $VUS"
+
+  load-test:
+    runs-on: ubuntu-latest
+    needs: setup
+    name: Run k6 Load Test
+    timeout-minutes: 60
+    env:
+      API_URL: ${{ needs.setup.outputs.api_url }}
+      TEST_TYPE: ${{ needs.setup.outputs.test_type }}
+      DURATION: ${{ needs.setup.outputs.duration }}
+      VUS: ${{ needs.setup.outputs.vus }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Create k6 test script
+        run: |
+          mkdir -p tests/load
+
+          cat > tests/load/api-load-test.js << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+          import { Rate, Trend } from 'k6/metrics';
+
+          // Custom metrics
+          const errorRate = new Rate('errors');
+          const healthLatency = new Trend('health_latency');
+          const apiLatency = new Trend('api_latency');
+
+          // Test configuration from environment
+          const API_URL = __ENV.API_URL || 'https://api-staging.mystira.app';
+          const TEST_TYPE = __ENV.TEST_TYPE || 'smoke';
+
+          // Dynamic options based on test type
+          export function getOptions() {
+            const duration = __ENV.DURATION || '1m';
+            const vus = parseInt(__ENV.VUS) || 10;
+
+            switch (TEST_TYPE) {
+              case 'smoke':
+                return {
+                  vus: Math.min(vus, 5),
+                  duration: duration,
+                  thresholds: {
+                    http_req_duration: ['p(95)<500'],
+                    errors: ['rate<0.01'],
+                  },
+                };
+              case 'load':
+                return {
+                  stages: [
+                    { duration: '30s', target: vus / 2 },
+                    { duration: duration, target: vus },
+                    { duration: '30s', target: 0 },
+                  ],
+                  thresholds: {
+                    http_req_duration: ['p(95)<1000'],
+                    errors: ['rate<0.05'],
+                  },
+                };
+              case 'stress':
+                return {
+                  stages: [
+                    { duration: '30s', target: vus / 2 },
+                    { duration: '1m', target: vus },
+                    { duration: '30s', target: vus * 1.5 },
+                    { duration: '1m', target: vus * 2 },
+                    { duration: '30s', target: 0 },
+                  ],
+                  thresholds: {
+                    http_req_duration: ['p(95)<2000'],
+                    errors: ['rate<0.10'],
+                  },
+                };
+              case 'soak':
+                return {
+                  stages: [
+                    { duration: '2m', target: vus },
+                    { duration: duration, target: vus },
+                    { duration: '2m', target: 0 },
+                  ],
+                  thresholds: {
+                    http_req_duration: ['p(95)<1000'],
+                    errors: ['rate<0.01'],
+                  },
+                };
+              default:
+                return {
+                  vus: vus,
+                  duration: duration,
+                };
+            }
+          }
+
+          export const options = getOptions();
+
+          // Health check endpoint
+          export function healthCheck() {
+            const start = Date.now();
+            const res = http.get(`${API_URL}/health`, {
+              tags: { name: 'health' },
+            });
+
+            healthLatency.add(Date.now() - start);
+
+            const success = check(res, {
+              'health status is 200': (r) => r.status === 200,
+              'health response time < 500ms': (r) => r.timings.duration < 500,
+            });
+
+            errorRate.add(!success);
+            return success;
+          }
+
+          // Version endpoint
+          export function versionCheck() {
+            const res = http.get(`${API_URL}/version`, {
+              tags: { name: 'version' },
+            });
+
+            const success = check(res, {
+              'version status is 200': (r) => r.status === 200,
+            });
+
+            errorRate.add(!success);
+            return success;
+          }
+
+          // Readiness endpoint
+          export function readinessCheck() {
+            const start = Date.now();
+            const res = http.get(`${API_URL}/health/ready`, {
+              tags: { name: 'ready' },
+            });
+
+            apiLatency.add(Date.now() - start);
+
+            const success = check(res, {
+              'ready status is 200': (r) => r.status === 200,
+            });
+
+            errorRate.add(!success);
+            return success;
+          }
+
+          // Main test function
+          export default function() {
+            // Weighted distribution of requests
+            const rand = Math.random();
+
+            if (rand < 0.6) {
+              // 60% health checks
+              healthCheck();
+            } else if (rand < 0.85) {
+              // 25% readiness checks
+              readinessCheck();
+            } else {
+              // 15% version checks
+              versionCheck();
+            }
+
+            // Small sleep to prevent overwhelming
+            sleep(0.1 + Math.random() * 0.2);
+          }
+
+          // Setup function - runs once before test
+          export function setup() {
+            console.log(`Starting ${TEST_TYPE} test against ${API_URL}`);
+            console.log(`Configuration: ${JSON.stringify(options)}`);
+
+            // Verify API is reachable
+            const res = http.get(`${API_URL}/health`);
+            if (res.status !== 200) {
+              throw new Error(`API not reachable: ${res.status}`);
+            }
+
+            return { startTime: Date.now() };
+          }
+
+          // Teardown function - runs once after test
+          export function teardown(data) {
+            const duration = (Date.now() - data.startTime) / 1000;
+            console.log(`Test completed in ${duration.toFixed(2)}s`);
+          }
+          EOF
+
+      - name: Run k6 test
+        run: |
+          k6 run \
+            --env API_URL="$API_URL" \
+            --env TEST_TYPE="$TEST_TYPE" \
+            --env DURATION="$DURATION" \
+            --env VUS="$VUS" \
+            --out json=results.json \
+            --summary-export=summary.json \
+            tests/load/api-load-test.js
+
+      - name: Parse results
+        id: results
+        run: |
+          # Extract key metrics from summary
+          if [ -f summary.json ]; then
+            HTTP_REQS=$(jq -r '.metrics.http_reqs.values.count // 0' summary.json)
+            HTTP_DURATION_P95=$(jq -r '.metrics.http_req_duration.values."p(95)" // 0' summary.json)
+            HTTP_DURATION_AVG=$(jq -r '.metrics.http_req_duration.values.avg // 0' summary.json)
+            ERROR_RATE=$(jq -r '.metrics.errors.values.rate // 0' summary.json)
+
+            echo "http_reqs=$HTTP_REQS" >> $GITHUB_OUTPUT
+            echo "http_duration_p95=$HTTP_DURATION_P95" >> $GITHUB_OUTPUT
+            echo "http_duration_avg=$HTTP_DURATION_AVG" >> $GITHUB_OUTPUT
+            echo "error_rate=$ERROR_RATE" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload results
+        uses: actions/upload-artifact@v6
+        with:
+          name: load-test-results-${{ needs.setup.outputs.test_type }}
+          path: |
+            results.json
+            summary.json
+          retention-days: 30
+
+      - name: Generate summary
+        run: |
+          echo "## Load Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Layer 4 of 7**: Load Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ needs.setup.outputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Type | ${{ needs.setup.outputs.test_type }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Duration | ${{ needs.setup.outputs.duration }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Virtual Users | ${{ needs.setup.outputs.vus }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Requests | ${{ steps.results.outputs.http_reqs }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Avg Response Time | ${{ steps.results.outputs.http_duration_avg }}ms |" >> $GITHUB_STEP_SUMMARY
+          echo "| P95 Response Time | ${{ steps.results.outputs.http_duration_p95 }}ms |" >> $GITHUB_STEP_SUMMARY
+          echo "| Error Rate | ${{ steps.results.outputs.error_rate }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "API URL: ${{ needs.setup.outputs.api_url }}" >> $GITHUB_STEP_SUMMARY
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [setup, load-test]
+    if: always() && (github.event_name == 'schedule' || needs.load-test.result == 'failure')
+    name: Notify Results
+
+    steps:
+      - name: Send notification
+        run: |
+          RESULT="${{ needs.load-test.result }}"
+          ENV="${{ needs.setup.outputs.environment }}"
+          TYPE="${{ needs.setup.outputs.test_type }}"
+
+          if [ "$RESULT" = "failure" ]; then
+            echo "Load test FAILED on $ENV ($TYPE)"
+            # Add Slack/Teams webhook notification here if needed
+          else
+            echo "Load test passed on $ENV ($TYPE)"
+          fi

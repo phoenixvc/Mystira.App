@@ -1,0 +1,179 @@
+name: "[Test] Unit"
+
+# Consolidated unit testing for all components
+# Layer 1 of 7-layer validation stack: Unit Tests
+
+on:
+  pull_request:
+    branches: [main, dev, staging]
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+    inputs:
+      filter:
+        description: 'Test filter (optional, e.g., "Api", "PWA", "Domain")'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+  pull-requests: write
+
+concurrency:
+  group: test-unit-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: "9.0.x"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    name: Run Unit Tests
+    env:
+      GH_PACKAGES_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        test-project:
+          - name: "API"
+            path: "tests/Mystira.App.Api.Tests"
+            filter: "Api"
+          - name: "Application"
+            path: "tests/Mystira.App.Application.Tests"
+            filter: "Application"
+          - name: "Domain"
+            path: "tests/Mystira.App.Domain.Tests"
+            filter: "Domain"
+          - name: "PWA"
+            path: "tests/Mystira.App.PWA.Tests"
+            filter: "PWA"
+
+    steps:
+      - name: Check filter match
+        id: filter-check
+        run: |
+          FILTER="${{ inputs.filter }}"
+          PROJECT_FILTER="${{ matrix.test-project.filter }}"
+
+          if [ -z "$FILTER" ] || [ "$FILTER" = "$PROJECT_FILTER" ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "Running tests for ${{ matrix.test-project.name }}"
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "Skipping ${{ matrix.test-project.name }} (filter: $FILTER)"
+          fi
+
+      - name: Checkout repository
+        if: steps.filter-check.outputs.should_run == 'true'
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        if: steps.filter-check.outputs.should_run == 'true'
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        if: steps.filter-check.outputs.should_run == 'true'
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Install wasm-tools workload
+        if: steps.filter-check.outputs.should_run == 'true' && matrix.test-project.name == 'PWA'
+        run: dotnet workload install wasm-tools
+
+      - name: Restore dependencies
+        if: steps.filter-check.outputs.should_run == 'true'
+        run: dotnet restore ${{ matrix.test-project.path }}
+
+      - name: Build test project
+        if: steps.filter-check.outputs.should_run == 'true'
+        run: dotnet build ${{ matrix.test-project.path }} --no-restore --configuration Release
+
+      - name: Run unit tests
+        if: steps.filter-check.outputs.should_run == 'true'
+        run: |
+          dotnet test ${{ matrix.test-project.path }} \
+            --no-build \
+            --configuration Release \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage/${{ matrix.test-project.filter }} \
+            --settings coverlet.runsettings \
+            --logger "trx;LogFileName=${{ matrix.test-project.filter }}-results.trx" \
+            --verbosity normal \
+            -- RunConfiguration.MaxCpuCount=0
+
+      - name: Upload test results
+        if: always() && steps.filter-check.outputs.should_run == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-results-${{ matrix.test-project.filter }}
+          path: ./coverage/${{ matrix.test-project.filter }}/**/*.trx
+          retention-days: 14
+
+      - name: Upload coverage report
+        if: steps.filter-check.outputs.should_run == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-${{ matrix.test-project.filter }}
+          path: ./coverage/${{ matrix.test-project.filter }}/**/coverage.cobertura.xml
+          retention-days: 14
+
+  summary:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: always()
+    name: Test Summary
+
+    steps:
+      - name: Download all test results
+        uses: actions/download-artifact@v6
+        with:
+          pattern: test-results-*
+          path: ./test-results
+          merge-multiple: true
+
+      - name: Generate summary
+        run: |
+          echo "## Unit Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Count results
+          TOTAL=0
+          PASSED=0
+          FAILED=0
+
+          for result in $(find ./test-results -name "*.trx" 2>/dev/null); do
+            TOTAL=$((TOTAL + 1))
+            if [ -f "$result" ]; then
+              if grep -q 'outcome="Passed"' "$result" 2>/dev/null; then
+                PASSED=$((PASSED + 1))
+              else
+                FAILED=$((FAILED + 1))
+              fi
+            fi
+          done
+
+          if [ "$TOTAL" -eq 0 ]; then
+            echo "No test results found." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+            echo "| API | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Application | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Domain | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| PWA | ${{ needs.unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Layer 1 of 7**: Unit Tests" >> $GITHUB_STEP_SUMMARY
