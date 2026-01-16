@@ -21,7 +21,7 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Wolverine for event-driven messaging (ADR-0015 migration - replaced MediatR) -->
-    <PackageReference Include="WolverineFx" Version="5.9.2" />
+    <PackageReference Include="WolverineFx" Version="5.10.0" />
     <!-- Mapperly for compile-time object mapping (Roslyn source generator) -->
     <PackageReference Include="Riok.Mapperly" Version="4.3.1" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
