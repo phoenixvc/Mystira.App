@@ -20,8 +20,8 @@
     <PackageTags>mystira;infrastructure;data;efcore;internal</PackageTags>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" Version="9.0.11" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" Version="9.0.12" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.12" />
     <!-- PostgreSQL provider for polyglot persistence migration (per ADR-0013/0014) -->
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     <PackageReference Include="JsonSchema.Net" Version="8.0.5" />
@@ -30,7 +30,7 @@
     <!-- Polly for resilience patterns (per workspace ADR-0014) -->
     <PackageReference Include="Polly" Version="8.6.5" />
     <!-- Redis caching (per workspace ADR-0014) -->
-    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.12" />
     <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
     <!-- Shared infrastructure including polyglot persistence -->
     <PackageReference Include="Mystira.Shared" Version="0.5.0-alpha*" />
