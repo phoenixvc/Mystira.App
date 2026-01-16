@@ -1,9 +1,12 @@
 using System.Diagnostics.Metrics;
+using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Ardalis.Specification;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Mystira.Shared.Data;
 using Mystira.Shared.Polyglot;
 using Mystira.Shared.Telemetry;
 using Polly;
@@ -58,6 +61,58 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
 
     /// <inheritdoc />
     public PolyglotMode CurrentMode => _options.Mode;
+
+    /// <inheritdoc />
+    public BackendType Target => _options.Mode switch
+    {
+        PolyglotMode.PrimaryOnly => BackendType.Primary,
+        PolyglotMode.SecondaryOnly => BackendType.Secondary,
+        _ => BackendType.Primary // Default to primary for dual-write
+    };
+
+    /// <inheritdoc />
+    public async Task<T?> GetByIdNoCacheAsync(string id, CancellationToken cancellationToken = default)
+    {
+        // Bypass any caching by going directly to database
+        return await _dbContext.Set<T>().FindAsync(new object[] { id }, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task InvalidateCacheAsync(string id, CancellationToken cancellationToken = default)
+    {
+        // No caching implemented in this repository - no-op
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public async Task<IEnumerable<PolyglotSyncLog>> GetSyncLogsAsync(string entityId, int limit = 100, CancellationToken cancellationToken = default)
+    {
+        if (_secondaryContext is not PostgresDbContext postgresContext)
+        {
+            return Enumerable.Empty<PolyglotSyncLog>();
+        }
+
+        return await postgresContext.SyncLogs
+            .Where(s => s.EntityId == entityId && s.EntityType == typeof(T).Name)
+            .OrderByDescending(s => s.CosmosTimestamp)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<IEnumerable<PolyglotSyncLog>> GetPendingSyncsAsync(int limit = 100, CancellationToken cancellationToken = default)
+    {
+        if (_secondaryContext is not PostgresDbContext postgresContext)
+        {
+            return Enumerable.Empty<PolyglotSyncLog>();
+        }
+
+        return await postgresContext.SyncLogs
+            .Where(s => s.EntityType == typeof(T).Name && s.SyncStatus == SyncStatus.Failed)
+            .OrderBy(s => s.CosmosTimestamp)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+    }
 
     /// <inheritdoc />
     public override async Task<T> AddAsync(T entity, CancellationToken cancellationToken = default)
@@ -141,14 +196,14 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     }
 
     /// <inheritdoc />
-    public override async Task UpdateRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+    public override async Task<int> UpdateRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
     {
         var entityList = entities.ToList();
 
         if (IsDualWriteMode)
         {
             // Update primary first
-            await base.UpdateRangeAsync(entityList, cancellationToken);
+            var count = await base.UpdateRangeAsync(entityList, cancellationToken);
 
             // Then update secondary with resilience
             foreach (var entity in entityList)
@@ -164,21 +219,21 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
                 }
             }
 
-            return;
+            return count;
         }
 
-        await base.UpdateRangeAsync(entityList, cancellationToken);
+        return await base.UpdateRangeAsync(entityList, cancellationToken);
     }
 
     /// <inheritdoc />
-    public override async Task DeleteRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+    public override async Task<int> DeleteRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
     {
         var entityList = entities.ToList();
 
         if (IsDualWriteMode)
         {
             // Delete from primary first
-            await base.DeleteRangeAsync(entityList, cancellationToken);
+            var count = await base.DeleteRangeAsync(entityList, cancellationToken);
 
             // Then delete from secondary with resilience
             foreach (var entity in entityList)
@@ -194,10 +249,10 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
                 }
             }
 
-            return;
+            return count;
         }
 
-        await base.DeleteRangeAsync(entityList, cancellationToken);
+        return await base.DeleteRangeAsync(entityList, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -524,6 +579,61 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
             // Note: Timeout is handled via CancellationTokenSource in DualWriteAsync
             // to allow per-operation control and avoid double-timeout conflicts
             .Build();
+    }
+
+    #endregion
+
+    #region Explicit IRepository<T> Interface Implementations
+
+    // These explicit implementations satisfy IRepository<T> interface requirements
+    // where return types differ from RepositoryBase<T>
+
+    /// <inheritdoc />
+    async Task IRepository<T>.AddRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken)
+    {
+        await AddRangeAsync(entities, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    async Task IRepository<T>.UpdateAsync(T entity, CancellationToken cancellationToken)
+    {
+        await UpdateAsync(entity, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    async Task IRepository<T>.DeleteAsync(T entity, CancellationToken cancellationToken)
+    {
+        await DeleteAsync(entity, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    async Task IRepository<T>.DeleteAsync(string id, CancellationToken cancellationToken)
+    {
+        await DeleteByIdAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    async Task IRepository<T>.DeleteAsync(Guid id, CancellationToken cancellationToken)
+    {
+        await DeleteByIdAsync(id, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    async Task<IEnumerable<T>> IRepository<T>.ListAsync(ISpecification<T> specification, CancellationToken cancellationToken)
+    {
+        return await ListBySpecAsync(specification, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    IAsyncEnumerable<T> IRepository<T>.StreamAllAsync(CancellationToken cancellationToken)
+    {
+        return StreamAllAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    IAsyncEnumerable<T> IRepository<T>.StreamAsync(ISpecification<T> specification, CancellationToken cancellationToken)
+    {
+        return StreamBySpecAsync(specification, cancellationToken);
     }
 
     #endregion
