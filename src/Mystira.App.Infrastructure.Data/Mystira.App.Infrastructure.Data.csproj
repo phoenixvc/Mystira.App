@@ -23,7 +23,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Cosmos" Version="9.0.12" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.12" />
     <!-- PostgreSQL provider for polyglot persistence migration (per ADR-0013/0014) -->
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     <PackageReference Include="JsonSchema.Net" Version="8.0.5" />
     <!-- Ardalis.Specification EF Core integration (per workspace ADR-0014) -->
     <PackageReference Include="Ardalis.Specification.EntityFrameworkCore" Version="9.3.1" />
