@@ -6,7 +6,6 @@ using Ardalis.Specification;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Mystira.Shared.Data;
 using Mystira.Shared.Polyglot;
 using Mystira.Shared.Telemetry;
 using Polly;
@@ -63,11 +62,11 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     public PolyglotMode CurrentMode => _options.Mode;
 
     /// <inheritdoc />
-    public BackendType Target => _options.Mode switch
+    public DatabaseTarget Target => _options.Mode switch
     {
-        PolyglotMode.PrimaryOnly => BackendType.Primary,
-        PolyglotMode.SecondaryOnly => BackendType.Secondary,
-        _ => BackendType.Primary // Default to primary for dual-write
+        PolyglotMode.PrimaryOnly => DatabaseTarget.CosmosDb,
+        PolyglotMode.SecondaryOnly => DatabaseTarget.PostgreSql,
+        _ => DatabaseTarget.CosmosDb // Default to primary for dual-write
     };
 
     /// <inheritdoc />
@@ -85,11 +84,11 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     }
 
     /// <inheritdoc />
-    public async Task<IEnumerable<PolyglotSyncLog>> GetSyncLogsAsync(string entityId, int limit = 100, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PolyglotSyncLog>> GetSyncLogsAsync(string entityId, int limit = 100, CancellationToken cancellationToken = default)
     {
         if (_secondaryContext is not PostgresDbContext postgresContext)
         {
-            return Enumerable.Empty<PolyglotSyncLog>();
+            return Array.Empty<PolyglotSyncLog>();
         }
 
         return await postgresContext.SyncLogs
@@ -100,11 +99,11 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
     }
 
     /// <inheritdoc />
-    public async Task<IEnumerable<PolyglotSyncLog>> GetPendingSyncsAsync(int limit = 100, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PolyglotSyncLog>> GetPendingSyncsAsync(int limit = 100, CancellationToken cancellationToken = default)
     {
         if (_secondaryContext is not PostgresDbContext postgresContext)
         {
-            return Enumerable.Empty<PolyglotSyncLog>();
+            return Array.Empty<PolyglotSyncLog>();
         }
 
         return await postgresContext.SyncLogs
@@ -583,55 +582,49 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
 
     #endregion
 
-    #region Explicit IRepository<T> Interface Implementations
+    #region IPolyglotRepository Interface Implementations
 
-    // These explicit implementations satisfy IRepository<T> interface requirements
-    // where return types differ from RepositoryBase<T>
+    // These implementations satisfy IPolyglotRepository<T> interface requirements
+    // for methods with different signatures from RepositoryBase<T>
 
     /// <inheritdoc />
-    async Task IRepository<T>.AddRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken)
+    async Task IPolyglotRepository<T>.AddRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken)
     {
         await AddRangeAsync(entities, cancellationToken);
     }
 
     /// <inheritdoc />
-    async Task IRepository<T>.UpdateAsync(T entity, CancellationToken cancellationToken)
+    async Task IPolyglotRepository<T>.UpdateAsync(T entity, CancellationToken cancellationToken)
     {
         await UpdateAsync(entity, cancellationToken);
     }
 
     /// <inheritdoc />
-    async Task IRepository<T>.DeleteAsync(T entity, CancellationToken cancellationToken)
+    async Task IPolyglotRepository<T>.DeleteAsync(T entity, CancellationToken cancellationToken)
     {
         await DeleteAsync(entity, cancellationToken);
     }
 
     /// <inheritdoc />
-    async Task IRepository<T>.DeleteAsync(string id, CancellationToken cancellationToken)
+    public async Task DeleteAsync(string id, CancellationToken cancellationToken = default)
     {
         await DeleteByIdAsync(id, cancellationToken);
     }
 
     /// <inheritdoc />
-    async Task IRepository<T>.DeleteAsync(Guid id, CancellationToken cancellationToken)
+    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         await DeleteByIdAsync(id, cancellationToken);
     }
 
     /// <inheritdoc />
-    async Task<IEnumerable<T>> IRepository<T>.ListAsync(ISpecification<T> specification, CancellationToken cancellationToken)
+    async Task<IEnumerable<T>> IPolyglotRepository<T>.ListAsync(ISpecification<T> specification, CancellationToken cancellationToken)
     {
         return await ListBySpecAsync(specification, cancellationToken);
     }
 
     /// <inheritdoc />
-    IAsyncEnumerable<T> IRepository<T>.StreamAllAsync(CancellationToken cancellationToken)
-    {
-        return StreamAllAsync(cancellationToken);
-    }
-
-    /// <inheritdoc />
-    IAsyncEnumerable<T> IRepository<T>.StreamAsync(ISpecification<T> specification, CancellationToken cancellationToken)
+    public IAsyncEnumerable<T> StreamAsync(ISpecification<T> specification, CancellationToken cancellationToken = default)
     {
         return StreamBySpecAsync(specification, cancellationToken);
     }
