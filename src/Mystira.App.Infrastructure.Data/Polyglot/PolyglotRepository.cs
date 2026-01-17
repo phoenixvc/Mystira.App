@@ -29,7 +29,7 @@ namespace Mystira.App.Infrastructure.Data.Polyglot;
 /// - Consistency validation between backends
 /// </summary>
 /// <typeparam name="T">The entity type</typeparam>
-public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepository<T> where T : class
+public class PolyglotRepository<T> : EfSpecificationRepository<T> where T : class
 {
     private static readonly Meter _meter = new("Mystira.App.Polyglot", "1.0.0");
     private static readonly Counter<long> _secondaryWriteFailures = _meter.CreateCounter<long>(
@@ -582,45 +582,4 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
 
     #endregion
 
-    #region IRepository<T> Explicit Interface Implementations
-
-    // These explicit implementations satisfy Mystira.Shared.Polyglot.IRepository<T> interface requirements
-    // where the base class methods have different return types
-
-    async Task Mystira.Shared.Polyglot.IRepository<T>.AddRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken)
-    {
-        await AddRangeAsync(entities, cancellationToken);
-    }
-
-    async Task Mystira.Shared.Polyglot.IRepository<T>.UpdateAsync(T entity, CancellationToken cancellationToken)
-    {
-        await UpdateAsync(entity, cancellationToken);
-    }
-
-    async Task Mystira.Shared.Polyglot.IRepository<T>.DeleteAsync(T entity, CancellationToken cancellationToken)
-    {
-        await DeleteAsync(entity, cancellationToken);
-    }
-
-    async Task Mystira.Shared.Polyglot.IRepository<T>.DeleteAsync(string id, CancellationToken cancellationToken)
-    {
-        await DeleteByIdAsync(id, cancellationToken);
-    }
-
-    async Task Mystira.Shared.Polyglot.IRepository<T>.DeleteAsync(Guid id, CancellationToken cancellationToken)
-    {
-        await DeleteByIdAsync(id, cancellationToken);
-    }
-
-    async Task<IEnumerable<T>> Mystira.Shared.Polyglot.IRepository<T>.ListAsync(ISpecification<T> specification, CancellationToken cancellationToken)
-    {
-        return await ListBySpecAsync(specification, cancellationToken);
-    }
-
-    IAsyncEnumerable<T> Mystira.Shared.Polyglot.IRepository<T>.StreamAsync(ISpecification<T> specification, CancellationToken cancellationToken)
-    {
-        return StreamBySpecAsync(specification, cancellationToken);
-    }
-
-    #endregion
 }
