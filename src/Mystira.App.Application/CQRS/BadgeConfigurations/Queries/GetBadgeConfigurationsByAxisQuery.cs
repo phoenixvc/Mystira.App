@@ -13,9 +13,9 @@ public record GetBadgeConfigurationsByAxisQuery(string Axis)
 
 public sealed class GetBadgeConfigurationsByAxisQueryHandler
 {
-    private readonly IRepository<BadgeConfiguration> _repository;
+    private readonly IRepository<BadgeConfiguration, string> _repository;
 
-    public GetBadgeConfigurationsByAxisQueryHandler(IRepository<BadgeConfiguration> repository)
+    public GetBadgeConfigurationsByAxisQueryHandler(IRepository<BadgeConfiguration, string> repository)
     {
         _repository = repository;
     }

@@ -7,7 +7,7 @@ namespace Mystira.App.Application.Ports.Data;
 /// Repository interface for PlayerScenarioScore entity
 /// Tracks scored scenarios to ensure each profile/scenario pair is scored only once
 /// </summary>
-public interface IPlayerScenarioScoreRepository : IRepository<PlayerScenarioScore>
+public interface IPlayerScenarioScoreRepository : IRepository<PlayerScenarioScore, string>
 {
     /// <summary>
     /// Get score for a specific profile/scenario pair

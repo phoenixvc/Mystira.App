@@ -6,7 +6,7 @@ namespace Mystira.App.Application.Ports.Data;
 /// <summary>
 /// Repository interface for UserBadge entity with domain-specific queries
 /// </summary>
-public interface IUserBadgeRepository : IRepository<UserBadge>
+public interface IUserBadgeRepository : IRepository<UserBadge, string>
 {
     Task<IEnumerable<UserBadge>> GetByUserProfileIdAsync(string userProfileId);
     Task<UserBadge?> GetByUserProfileIdAndBadgeConfigIdAsync(string userProfileId, string badgeConfigurationId);

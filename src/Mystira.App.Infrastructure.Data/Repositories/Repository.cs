@@ -9,10 +9,10 @@ namespace Mystira.App.Infrastructure.Data.Repositories;
 
 /// <summary>
 /// Generic repository implementation following the Repository pattern.
-/// Implements Mystira.Shared.Data.Repositories.IRepository&lt;T&gt; which extends
+/// Implements Mystira.Shared.Data.Repositories.IRepository&lt;TEntity, TKey&gt; which extends
 /// Ardalis.Specification.IRepositoryBase&lt;T&gt; for specification pattern and caching decorator support.
 /// </summary>
-public class Repository<TEntity> : IRepository<TEntity> where TEntity : class
+public class Repository<TEntity> : IRepository<TEntity, string> where TEntity : class
 {
     protected readonly DbContext _context;
     protected readonly DbSet<TEntity> _dbSet;
