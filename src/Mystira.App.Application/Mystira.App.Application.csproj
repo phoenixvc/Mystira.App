@@ -21,12 +21,12 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Wolverine for event-driven messaging (ADR-0015 migration - replaced MediatR) -->
-    <PackageReference Include="WolverineFx" Version="5.9.2" />
+    <PackageReference Include="WolverineFx" Version="5.10.0" />
     <!-- Mapperly for compile-time object mapping (Roslyn source generator) -->
     <PackageReference Include="Riok.Mapperly" Version="4.3.1" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.11" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.12" />
     <PackageReference Include="NJsonSchema" Version="11.5.2" />
     <!-- Ardalis.Specification for composable query patterns (per workspace ADR-0014) -->
     <PackageReference Include="Ardalis.Specification" Version="9.3.1" />

@@ -104,7 +104,7 @@ public class AzureBlobService : IBlobService
             var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
             var blobNames = new List<string>();
 
-            await foreach (var blobItem in containerClient.GetBlobsAsync(prefix: prefix))
+            await foreach (var blobItem in containerClient.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix, default))
             {
                 blobNames.Add(blobItem.Name);
             }
