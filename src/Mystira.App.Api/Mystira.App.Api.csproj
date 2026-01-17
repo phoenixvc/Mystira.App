@@ -38,17 +38,16 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Mystira.App.Domain\Mystira.App.Domain.csproj" />
-    <PackageReference Include="Mystira.Contracts" Version="0.5.0-alpha*" />
+    <ProjectReference Include="..\Mystira.App.Infrastructure.Azure\Mystira.App.Infrastructure.Azure.csproj" />
+    <ProjectReference Include="..\Mystira.App.Infrastructure.Data\Mystira.App.Infrastructure.Data.csproj" />
+    <PackageReference Include="Mystira.Contracts" Version="0.4.3-alpha*" />
     <PackageReference Include="Mystira.Shared" Version="0.5.0-alpha*" />
-    <!-- Shared infrastructure packages from workspace -->
-    <PackageReference Include="Mystira.Infrastructure.Azure" Version="0.5.0-alpha*" />
-    <PackageReference Include="Mystira.Infrastructure.Data" Version="0.5.0-alpha*" />
-    <PackageReference Include="Mystira.Infrastructure.Discord" Version="0.5.0-alpha*" />
-    <PackageReference Include="Mystira.Infrastructure.Payments" Version="0.5.0-alpha*" />
     <!-- Wolverine HTTP integration for API endpoints -->
     <PackageReference Include="WolverineFx" Version="5.10.0" />
     <PackageReference Include="WolverineFx.Http" Version="5.10.0" />
     <ProjectReference Include="..\Mystira.App.Application\Mystira.App.Application.csproj" />
+    <ProjectReference Include="..\Mystira.App.Infrastructure.Discord\Mystira.App.Infrastructure.Discord.csproj" />
+    <ProjectReference Include="..\Mystira.App.Infrastructure.Payments\Mystira.App.Infrastructure.Payments.csproj" />
   </ItemGroup>
 
   <ItemGroup>
