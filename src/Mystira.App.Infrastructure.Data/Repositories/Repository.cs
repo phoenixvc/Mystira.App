@@ -9,10 +9,10 @@ namespace Mystira.App.Infrastructure.Data.Repositories;
 
 /// <summary>
 /// Generic repository implementation following the Repository pattern.
-/// Implements both Mystira.Shared.Data.Repositories.IRepository&lt;T&gt; for shared infrastructure compatibility
-/// and Ardalis.Specification.IRepositoryBase&lt;T&gt; for specification pattern and caching decorator support.
+/// Implements Mystira.Shared.Data.Repositories.IRepository&lt;T&gt; which extends
+/// Ardalis.Specification.IRepositoryBase&lt;T&gt; for specification pattern and caching decorator support.
 /// </summary>
-public class Repository<TEntity> : IRepository<TEntity>, IRepositoryBase<TEntity> where TEntity : class
+public class Repository<TEntity> : IRepository<TEntity> where TEntity : class
 {
     protected readonly DbContext _context;
     protected readonly DbSet<TEntity> _dbSet;
@@ -23,7 +23,7 @@ public class Repository<TEntity> : IRepository<TEntity>, IRepositoryBase<TEntity
         _dbSet = context.Set<TEntity>();
     }
 
-    #region IRepository<T> Implementation (Mystira.Shared)
+    #region IRepository<T> Specific Methods (Mystira.Shared extensions)
 
     public virtual async Task<TEntity?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
@@ -95,47 +95,9 @@ public class Repository<TEntity> : IRepository<TEntity>, IRepositoryBase<TEntity
         }
     }
 
-    // Explicit interface implementations for IRepository<T> where signatures differ from IRepositoryBase<T>
-
-    /// <summary>
-    /// Explicit implementation for IRepository&lt;T&gt;.ListAsync which returns IEnumerable&lt;T&gt;
-    /// (IRepositoryBase&lt;T&gt;.ListAsync returns List&lt;T&gt;)
-    /// </summary>
-    async Task<IEnumerable<TEntity>> IRepository<TEntity>.ListAsync(ISpecification<TEntity> specification, CancellationToken cancellationToken)
-    {
-        return await ListAsync(specification, cancellationToken);
-    }
-
-    /// <summary>
-    /// Explicit implementation for IRepository&lt;T&gt;.AddRangeAsync which returns Task (void)
-    /// (IRepositoryBase&lt;T&gt;.AddRangeAsync returns Task&lt;IEnumerable&lt;T&gt;&gt;)
-    /// </summary>
-    async Task IRepository<TEntity>.AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken)
-    {
-        await AddRangeAsync(entities, cancellationToken);
-    }
-
-    /// <summary>
-    /// Explicit implementation for IRepository&lt;T&gt;.UpdateAsync which returns Task (void)
-    /// (IRepositoryBase&lt;T&gt;.UpdateAsync returns Task&lt;int&gt;)
-    /// </summary>
-    async Task IRepository<TEntity>.UpdateAsync(TEntity entity, CancellationToken cancellationToken)
-    {
-        await UpdateAsync(entity, cancellationToken);
-    }
-
-    /// <summary>
-    /// Explicit implementation for IRepository&lt;T&gt;.DeleteAsync which returns Task (void)
-    /// (IRepositoryBase&lt;T&gt;.DeleteAsync returns Task&lt;int&gt;)
-    /// </summary>
-    async Task IRepository<TEntity>.DeleteAsync(TEntity entity, CancellationToken cancellationToken)
-    {
-        await DeleteAsync(entity, cancellationToken);
-    }
-
     #endregion
 
-    #region IRepositoryBase<T> Implementation (Ardalis.Specification)
+    #region IRepositoryBase<T> Methods (inherited via IRepository<T>)
 
     public virtual async Task<TEntity?> GetByIdAsync<TId>(TId id, CancellationToken cancellationToken = default) where TId : notnull
     {

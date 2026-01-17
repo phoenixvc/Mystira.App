@@ -33,7 +33,7 @@
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.12" />
     <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
     <!-- Shared infrastructure including polyglot persistence -->
-    <PackageReference Include="Mystira.Shared" Version="0.5.0-alpha*" />
+    <PackageReference Include="Mystira.Shared" Version="0.5.2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Mystira.App.Domain\Mystira.App.Domain.csproj" />
