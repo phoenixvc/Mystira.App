@@ -582,42 +582,42 @@ public class PolyglotRepository<T> : EfSpecificationRepository<T>, IPolyglotRepo
 
     #endregion
 
-    #region IRepository<T> Explicit Interface Implementations
+    #region IPolyglotRepository<T> Explicit Interface Implementations
 
-    // These explicit implementations satisfy IRepository<T> interface requirements
+    // These explicit implementations satisfy IPolyglotRepository<T> interface requirements
     // where the base class methods have different return types
 
-    async Task IRepository<T>.AddRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken)
+    async Task IPolyglotRepository<T>.AddRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken)
     {
         await AddRangeAsync(entities, cancellationToken);
     }
 
-    async Task IRepository<T>.UpdateAsync(T entity, CancellationToken cancellationToken)
+    async Task IPolyglotRepository<T>.UpdateAsync(T entity, CancellationToken cancellationToken)
     {
         await UpdateAsync(entity, cancellationToken);
     }
 
-    async Task IRepository<T>.DeleteAsync(T entity, CancellationToken cancellationToken)
+    async Task IPolyglotRepository<T>.DeleteAsync(T entity, CancellationToken cancellationToken)
     {
         await DeleteAsync(entity, cancellationToken);
     }
 
-    async Task IRepository<T>.DeleteAsync(string id, CancellationToken cancellationToken)
+    async Task IPolyglotRepository<T>.DeleteAsync(string id, CancellationToken cancellationToken)
     {
         await DeleteByIdAsync(id, cancellationToken);
     }
 
-    async Task IRepository<T>.DeleteAsync(Guid id, CancellationToken cancellationToken)
+    async Task IPolyglotRepository<T>.DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
         await DeleteByIdAsync(id, cancellationToken);
     }
 
-    async Task<IEnumerable<T>> IRepository<T>.ListAsync(ISpecification<T> specification, CancellationToken cancellationToken)
+    async Task<IEnumerable<T>> IPolyglotRepository<T>.ListAsync(ISpecification<T> specification, CancellationToken cancellationToken)
     {
         return await ListBySpecAsync(specification, cancellationToken);
     }
 
-    IAsyncEnumerable<T> IRepository<T>.StreamAsync(ISpecification<T> specification, CancellationToken cancellationToken)
+    IAsyncEnumerable<T> IPolyglotRepository<T>.StreamAsync(ISpecification<T> specification, CancellationToken cancellationToken)
     {
         return StreamBySpecAsync(specification, cancellationToken);
     }
