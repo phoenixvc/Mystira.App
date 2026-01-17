@@ -1,3 +1,4 @@
+using Ardalis.Specification;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -60,8 +61,8 @@ public static class CachingServiceCollectionExtensions
         where TEntity : class
     {
         // Register the cached decorator
-        // This requires the base ISpecRepository to be registered first
-        services.Decorate<Application.Ports.Data.ISpecRepository<TEntity>, CachedRepository<TEntity>>();
+        // This requires the base IRepositoryBase to be registered first
+        services.Decorate<IRepositoryBase<TEntity>, CachedRepository<TEntity>>();
         return services;
     }
 }
