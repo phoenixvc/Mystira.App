@@ -35,10 +35,10 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.12" />
     <!-- Polly v8 resilience via Microsoft.Extensions.Http.Resilience -->
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="9.10.0" />
-    <PackageReference Include="System.Text.Json" Version="9.0.12" />
+    <PackageReference Include="System.Text.Json" Version="10.0.2" />
     <PackageReference Include="Markdig" Version="0.44.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
-    <PackageReference Include="Microsoft.Authentication.WebAssembly.Msal" Version="9.0.12" />
+    <PackageReference Include="Microsoft.Authentication.WebAssembly.Msal" Version="10.0.2" />
   </ItemGroup>
 
   <ItemGroup>
