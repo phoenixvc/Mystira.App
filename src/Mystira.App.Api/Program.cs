@@ -32,6 +32,7 @@ using Mystira.App.Infrastructure.Discord;
 using Mystira.App.Infrastructure.Discord.Services;
 using Mystira.App.Infrastructure.Payments;
 using Mystira.Shared.Configuration;
+using Mystira.Shared.Data.Repositories;
 using Mystira.Shared.Middleware;
 using Mystira.Shared.Telemetry;
 using Serilog;

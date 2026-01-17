@@ -1,4 +1,5 @@
 using Mystira.App.Domain.Models;
+using Mystira.Shared.Data.Repositories;
 
 namespace Mystira.App.Application.Ports.Data;
 
@@ -11,4 +12,3 @@ public interface IAccountRepository : IRepository<Account>
     Task<Account?> GetByExternalUserIdAsync(string externalUserId);
     Task<bool> ExistsByEmailAsync(string email);
 }
-
