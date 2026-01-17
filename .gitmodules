@@ -1,3 +1,0 @@
-[submodule "packages/app"]
-	path = packages/app
-	url = https://github.com/phoenixvc/Mystira.App.git
