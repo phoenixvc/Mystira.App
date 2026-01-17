@@ -99,6 +99,7 @@ public class Repository<TEntity> : IRepository<TEntity>, IRepositoryBase<TEntity
 
     /// <summary>
     /// Explicit implementation for IRepository&lt;T&gt;.ListAsync which returns IEnumerable&lt;T&gt;
+    /// (IRepositoryBase&lt;T&gt;.ListAsync returns List&lt;T&gt;)
     /// </summary>
     async Task<IEnumerable<TEntity>> IRepository<TEntity>.ListAsync(ISpecification<TEntity> specification, CancellationToken cancellationToken)
     {
@@ -107,10 +108,29 @@ public class Repository<TEntity> : IRepository<TEntity>, IRepositoryBase<TEntity
 
     /// <summary>
     /// Explicit implementation for IRepository&lt;T&gt;.AddRangeAsync which returns Task (void)
+    /// (IRepositoryBase&lt;T&gt;.AddRangeAsync returns Task&lt;IEnumerable&lt;T&gt;&gt;)
     /// </summary>
     async Task IRepository<TEntity>.AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken)
     {
         await AddRangeAsync(entities, cancellationToken);
+    }
+
+    /// <summary>
+    /// Explicit implementation for IRepository&lt;T&gt;.UpdateAsync which returns Task (void)
+    /// (IRepositoryBase&lt;T&gt;.UpdateAsync returns Task&lt;int&gt;)
+    /// </summary>
+    async Task IRepository<TEntity>.UpdateAsync(TEntity entity, CancellationToken cancellationToken)
+    {
+        await UpdateAsync(entity, cancellationToken);
+    }
+
+    /// <summary>
+    /// Explicit implementation for IRepository&lt;T&gt;.DeleteAsync which returns Task (void)
+    /// (IRepositoryBase&lt;T&gt;.DeleteAsync returns Task&lt;int&gt;)
+    /// </summary>
+    async Task IRepository<TEntity>.DeleteAsync(TEntity entity, CancellationToken cancellationToken)
+    {
+        await DeleteAsync(entity, cancellationToken);
     }
 
     #endregion
