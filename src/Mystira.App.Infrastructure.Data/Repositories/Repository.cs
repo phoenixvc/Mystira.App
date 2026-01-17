@@ -95,6 +95,24 @@ public class Repository<TEntity> : IRepository<TEntity>, IRepositoryBase<TEntity
         }
     }
 
+    // Explicit interface implementations for IRepository<T> where signatures differ from IRepositoryBase<T>
+
+    /// <summary>
+    /// Explicit implementation for IRepository&lt;T&gt;.ListAsync which returns IEnumerable&lt;T&gt;
+    /// </summary>
+    async Task<IEnumerable<TEntity>> IRepository<TEntity>.ListAsync(ISpecification<TEntity> specification, CancellationToken cancellationToken)
+    {
+        return await ListAsync(specification, cancellationToken);
+    }
+
+    /// <summary>
+    /// Explicit implementation for IRepository&lt;T&gt;.AddRangeAsync which returns Task (void)
+    /// </summary>
+    async Task IRepository<TEntity>.AddRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken)
+    {
+        await AddRangeAsync(entities, cancellationToken);
+    }
+
     #endregion
 
     #region IRepositoryBase<T> Implementation (Ardalis.Specification)
