@@ -3,7 +3,6 @@ using Ardalis.Specification;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Mystira.App.Application.Ports.Data;
 
 namespace Mystira.App.Infrastructure.Data.Caching;
 
@@ -21,19 +20,19 @@ public interface IHasId
 
 /// <summary>
 /// Repository decorator that adds caching using the cache-aside pattern.
-/// Wraps an existing ISpecRepository and adds Redis caching.
+/// Wraps an existing IRepositoryBase and adds Redis caching.
 ///
 /// Cache-aside pattern:
 /// - Read: Check cache first, if miss, read from DB and populate cache
 /// - Write: Write to DB, then invalidate/update cache
 ///
 /// Usage:
-///   services.Decorate{ISpecRepository{Account}, CachedRepository{Account}}();
+///   services.Decorate{IRepositoryBase{Account}, CachedRepository{Account}}();
 /// </summary>
 /// <typeparam name="T">The entity type</typeparam>
-public class CachedRepository<T> : ISpecRepository<T> where T : class
+public class CachedRepository<T> : IRepositoryBase<T> where T : class
 {
-    private readonly ISpecRepository<T> _inner;
+    private readonly IRepositoryBase<T> _inner;
     private readonly IDistributedCache _cache;
     private readonly CacheOptions _options;
     private readonly ILogger<CachedRepository<T>> _logger;
@@ -46,7 +45,7 @@ public class CachedRepository<T> : ISpecRepository<T> where T : class
     };
 
     public CachedRepository(
-        ISpecRepository<T> inner,
+        IRepositoryBase<T> inner,
         IDistributedCache cache,
         IOptions<CacheOptions> options,
         ILogger<CachedRepository<T>> logger)

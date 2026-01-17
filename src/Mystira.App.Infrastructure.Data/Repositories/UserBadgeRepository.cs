@@ -91,19 +91,19 @@ public class UserBadgeRepository : Repository<UserBadge>, IUserBadgeRepository
         return OrderByEarnedAtDescending(badges);
     }
 
-    public override async Task<UserBadge> AddAsync(UserBadge entity)
+    public override async Task<UserBadge> AddAsync(UserBadge entity, CancellationToken cancellationToken = default)
     {
-        if (entity == null) throw new ArgumentNullException(nameof(entity));
+        ArgumentNullException.ThrowIfNull(entity);
 
         if (_isInMemory)
         {
-            await _context.Set<UserBadge>().AddAsync(entity);
+            await _context.Set<UserBadge>().AddAsync(entity, cancellationToken);
             return entity;
         }
 
         // For Cosmos DB: Add the owned entity to the owner's collection
         var profile = await _context.Set<UserProfile>()
-            .FirstOrDefaultAsync(p => p.Id == entity.UserProfileId);
+            .FirstOrDefaultAsync(p => p.Id == entity.UserProfileId, cancellationToken);
 
         if (profile == null)
         {
