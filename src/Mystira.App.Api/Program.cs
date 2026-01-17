@@ -24,7 +24,6 @@ using Mystira.App.Infrastructure.Azure.HealthChecks;
 using Mystira.App.Infrastructure.Azure.Services;
 using Mystira.App.Infrastructure.Data;
 using Mystira.App.Infrastructure.Data.Caching;
-using Mystira.App.Infrastructure.Data.Polyglot;
 using Mystira.App.Infrastructure.Data.Repositories;
 using Mystira.App.Infrastructure.Data.Services;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -33,7 +32,6 @@ using Mystira.App.Infrastructure.Discord.Services;
 using Mystira.App.Infrastructure.Payments;
 using Mystira.Shared.Configuration;
 using Mystira.Shared.Middleware;
-using Mystira.Shared.Polyglot;
 using Mystira.Shared.Telemetry;
 using Serilog;
 using Serilog.Events;
@@ -218,18 +216,12 @@ else
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<MystiraAppDbContext>());
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// POLYGLOT PERSISTENCE: PostgreSQL secondary store (ADR-0013/0014)
-// Migration candidates: Account, GameSession, PlayerScenarioScore
+// POSTGRESQL: Secondary store for analytics/reporting
+// Note: Polyglot persistence infrastructure moved to Mystira.Shared package
 // ═══════════════════════════════════════════════════════════════════════════════
-
-// Always configure polyglot options (needed for DI even in SingleStore mode)
-builder.Services.Configure<PolyglotOptions>(
-    builder.Configuration.GetSection(PolyglotOptions.SectionName));
 
 var postgresConnectionString = builder.Configuration.GetConnectionString("PostgreSql");
 var usePostgres = !string.IsNullOrEmpty(postgresConnectionString);
-var polyglotMode = builder.Configuration.GetSection(PolyglotOptions.SectionName)
-    .GetValue<PolyglotMode>("Mode");
 
 if (usePostgres)
 {
@@ -245,46 +237,11 @@ if (usePostgres)
         });
     });
 
-    // Register polyglot repositories for dual-write entities
-    // These wrap both Cosmos and PostgreSQL contexts for dual-write operations
-    builder.Services.AddScoped<IPolyglotRepository<Account>>(sp =>
-    {
-        var cosmosContext = sp.GetRequiredService<MystiraAppDbContext>();
-        var postgresContext = sp.GetRequiredService<PostgresDbContext>();
-        var options = sp.GetRequiredService<IOptions<PolyglotOptions>>();
-        var logger = sp.GetRequiredService<ILogger<PolyglotRepository<Account>>>();
-        var metrics = sp.GetService<ICustomMetrics>();
-        return new PolyglotRepository<Account>(cosmosContext, options, logger, postgresContext, metrics);
-    });
-
-    builder.Services.AddScoped<IPolyglotRepository<GameSession>>(sp =>
-    {
-        var cosmosContext = sp.GetRequiredService<MystiraAppDbContext>();
-        var postgresContext = sp.GetRequiredService<PostgresDbContext>();
-        var options = sp.GetRequiredService<IOptions<PolyglotOptions>>();
-        var logger = sp.GetRequiredService<ILogger<PolyglotRepository<GameSession>>>();
-        var metrics = sp.GetService<ICustomMetrics>();
-        return new PolyglotRepository<GameSession>(cosmosContext, options, logger, postgresContext, metrics);
-    });
-
-    builder.Services.AddScoped<IPolyglotRepository<PlayerScenarioScore>>(sp =>
-    {
-        var cosmosContext = sp.GetRequiredService<MystiraAppDbContext>();
-        var postgresContext = sp.GetRequiredService<PostgresDbContext>();
-        var options = sp.GetRequiredService<IOptions<PolyglotOptions>>();
-        var logger = sp.GetRequiredService<ILogger<PolyglotRepository<PlayerScenarioScore>>>();
-        var metrics = sp.GetService<ICustomMetrics>();
-        return new PolyglotRepository<PlayerScenarioScore>(cosmosContext, options, logger, postgresContext, metrics);
-    });
-
-    // Register backfill service for data sync operations
-    builder.Services.AddScoped<IPolyglotBackfillService, PolyglotBackfillService>();
-
-    Log.Information("PostgreSQL polyglot persistence enabled. Mode: {Mode}", polyglotMode);
+    Log.Information("PostgreSQL configured for analytics/reporting");
 }
 else
 {
-    Log.Information("PostgreSQL not configured - running in SingleStore mode (Cosmos only)");
+    Log.Information("PostgreSQL not configured - running with Cosmos only");
 }
 
 // Add Azure Infrastructure Services
