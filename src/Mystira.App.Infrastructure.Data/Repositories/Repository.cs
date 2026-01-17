@@ -179,38 +179,41 @@ public class Repository<TEntity> : IRepository<TEntity>, IRepositoryBase<TEntity
         return entityList;
     }
 
-    public virtual Task UpdateAsync(TEntity entity, CancellationToken cancellationToken = default)
+    public virtual Task<int> UpdateAsync(TEntity entity, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entity);
         _dbSet.Update(entity);
-        return Task.CompletedTask;
+        return Task.FromResult(1);
     }
 
-    public virtual Task UpdateRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
+    public virtual Task<int> UpdateRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entities);
-        _dbSet.UpdateRange(entities);
-        return Task.CompletedTask;
+        var entityList = entities.ToList();
+        _dbSet.UpdateRange(entityList);
+        return Task.FromResult(entityList.Count);
     }
 
-    public virtual Task DeleteAsync(TEntity entity, CancellationToken cancellationToken = default)
+    public virtual Task<int> DeleteAsync(TEntity entity, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entity);
         _dbSet.Remove(entity);
-        return Task.CompletedTask;
+        return Task.FromResult(1);
     }
 
-    public virtual Task DeleteRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
+    public virtual Task<int> DeleteRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entities);
-        _dbSet.RemoveRange(entities);
-        return Task.CompletedTask;
+        var entityList = entities.ToList();
+        _dbSet.RemoveRange(entityList);
+        return Task.FromResult(entityList.Count);
     }
 
-    public virtual async Task DeleteRangeAsync(ISpecification<TEntity> specification, CancellationToken cancellationToken = default)
+    public virtual async Task<int> DeleteRangeAsync(ISpecification<TEntity> specification, CancellationToken cancellationToken = default)
     {
         var entities = await ListAsync(specification, cancellationToken);
         _dbSet.RemoveRange(entities);
+        return entities.Count;
     }
 
     public virtual async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
