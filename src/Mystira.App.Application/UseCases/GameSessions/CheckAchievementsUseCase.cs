@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Application.Specifications;
 using Mystira.App.Domain.Models;
 using Mystira.Shared.Extensions;
 
@@ -45,7 +44,7 @@ public class CheckAchievementsUseCase
         var achievements = new List<SessionAchievement>();
 
         // Fetch all badge configurations to check thresholds dynamically
-        var badgeConfigs = await _badgeRepository.ListAsync(new AllBadgeConfigurationsSpec());
+        var badgeConfigs = await _badgeRepository.GetAllAsync();
 
         // Check compass threshold achievements
         foreach (var compassTracking in session.CompassValues.Values)
