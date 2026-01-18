@@ -203,23 +203,21 @@ public class CachedRepository<T> : IRepositoryBase<T> where T : class
     }
 
     /// <inheritdoc />
-    public async Task<int> UpdateAsync(T entity, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(T entity, CancellationToken cancellationToken = default)
     {
-        var result = await _inner.UpdateAsync(entity, cancellationToken);
+        await _inner.UpdateAsync(entity, cancellationToken);
 
         if (_options.EnableInvalidationOnChange)
         {
             await InvalidateOrUpdateCacheAsync(entity, cancellationToken);
         }
-
-        return result;
     }
 
     /// <inheritdoc />
-    public async Task<int> UpdateRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+    public async Task UpdateRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
     {
         var entityList = entities.ToList();
-        var result = await _inner.UpdateRangeAsync(entityList, cancellationToken);
+        await _inner.UpdateRangeAsync(entityList, cancellationToken);
 
         if (_options.EnableInvalidationOnChange)
         {
@@ -228,28 +226,24 @@ public class CachedRepository<T> : IRepositoryBase<T> where T : class
                 await InvalidateOrUpdateCacheAsync(entity, cancellationToken);
             }
         }
-
-        return result;
     }
 
     /// <inheritdoc />
-    public async Task<int> DeleteAsync(T entity, CancellationToken cancellationToken = default)
+    public async Task DeleteAsync(T entity, CancellationToken cancellationToken = default)
     {
-        var result = await _inner.DeleteAsync(entity, cancellationToken);
+        await _inner.DeleteAsync(entity, cancellationToken);
 
         if (_options.EnableInvalidationOnChange)
         {
             await InvalidateCacheAsync(entity, cancellationToken);
         }
-
-        return result;
     }
 
     /// <inheritdoc />
-    public async Task<int> DeleteRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+    public async Task DeleteRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
     {
         var entityList = entities.ToList();
-        var result = await _inner.DeleteRangeAsync(entityList, cancellationToken);
+        await _inner.DeleteRangeAsync(entityList, cancellationToken);
 
         if (_options.EnableInvalidationOnChange)
         {
@@ -258,17 +252,15 @@ public class CachedRepository<T> : IRepositoryBase<T> where T : class
                 await InvalidateCacheAsync(entity, cancellationToken);
             }
         }
-
-        return result;
     }
 
     /// <inheritdoc />
-    public async Task<int> DeleteRangeAsync(ISpecification<T> specification, CancellationToken cancellationToken = default)
+    public async Task DeleteRangeAsync(ISpecification<T> specification, CancellationToken cancellationToken = default)
     {
         // Get entities to delete for cache invalidation
         var entities = await _inner.ListAsync(specification, cancellationToken);
 
-        var result = await _inner.DeleteRangeAsync(specification, cancellationToken);
+        await _inner.DeleteRangeAsync(specification, cancellationToken);
 
         if (_options.EnableInvalidationOnChange)
         {
@@ -277,8 +269,6 @@ public class CachedRepository<T> : IRepositoryBase<T> where T : class
                 await InvalidateCacheAsync(entity, cancellationToken);
             }
         }
-
-        return result;
     }
 
     /// <inheritdoc />

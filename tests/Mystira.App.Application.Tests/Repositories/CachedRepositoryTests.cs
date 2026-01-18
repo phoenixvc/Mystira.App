@@ -1,9 +1,9 @@
+using Ardalis.Specification;
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
-using Mystira.App.Application.Ports.Data;
 using Mystira.App.Infrastructure.Data.Caching;
 using System.Text;
 using System.Text.Json;
@@ -16,7 +16,7 @@ namespace Mystira.App.Application.Tests.Repositories;
 /// </summary>
 public class CachedRepositoryTests
 {
-    private readonly Mock<ISpecRepository<TestEntity>> _innerRepoMock;
+    private readonly Mock<IRepositoryBase<TestEntity>> _innerRepoMock;
     private readonly Mock<IDistributedCache> _cacheMock;
     private readonly Mock<ILogger<CachedRepository<TestEntity>>> _loggerMock;
     private readonly CacheOptions _cacheOptions;
@@ -24,7 +24,7 @@ public class CachedRepositoryTests
 
     public CachedRepositoryTests()
     {
-        _innerRepoMock = new Mock<ISpecRepository<TestEntity>>();
+        _innerRepoMock = new Mock<IRepositoryBase<TestEntity>>();
         _cacheMock = new Mock<IDistributedCache>();
         _loggerMock = new Mock<ILogger<CachedRepository<TestEntity>>>();
         _cacheOptions = new CacheOptions
@@ -149,7 +149,7 @@ public class CachedRepositoryTests
         // Arrange
         var entity = new TestEntity { Id = "123", Name = "Updated" };
         _innerRepoMock.Setup(r => r.UpdateAsync(entity, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
+            .Returns(Task.CompletedTask);
 
         // Act
         await _sut.UpdateAsync(entity);
@@ -170,7 +170,7 @@ public class CachedRepositoryTests
         // Arrange
         var entity = new TestEntity { Id = "123", Name = "ToDelete" };
         _innerRepoMock.Setup(r => r.DeleteAsync(entity, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
+            .Returns(Task.CompletedTask);
 
         // Act
         await _sut.DeleteAsync(entity);
