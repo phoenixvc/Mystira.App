@@ -4,13 +4,14 @@ using Moq;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Application.UseCases.GameSessions;
 using Mystira.App.Domain.Models;
+using Mystira.Shared.Data.Repositories;
 
 namespace Mystira.App.Application.Tests.UseCases;
 
 public class CheckAchievementsUseCaseTests
 {
     private readonly Mock<IGameSessionRepository> _sessionRepository;
-    private readonly Mock<IRepository<BadgeConfiguration>> _badgeRepository;
+    private readonly Mock<IBadgeConfigurationRepository> _badgeRepository;
     private readonly Mock<IUnitOfWork> _unitOfWork;
     private readonly Mock<ILogger<CheckAchievementsUseCase>> _logger;
     private readonly CheckAchievementsUseCase _useCase;
@@ -18,7 +19,7 @@ public class CheckAchievementsUseCaseTests
     public CheckAchievementsUseCaseTests()
     {
         _sessionRepository = new Mock<IGameSessionRepository>();
-        _badgeRepository = new Mock<IRepository<BadgeConfiguration>>();
+        _badgeRepository = new Mock<IBadgeConfigurationRepository>();
         _unitOfWork = new Mock<IUnitOfWork>();
         _logger = new Mock<ILogger<CheckAchievementsUseCase>>();
 
@@ -64,7 +65,7 @@ public class CheckAchievementsUseCaseTests
 
         _sessionRepository.Setup(r => r.GetByIdAsync(session.Id))
             .ReturnsAsync(session);
-        _badgeRepository.Setup(r => r.ListAsync(It.IsAny<Ardalis.Specification.ISpecification<BadgeConfiguration>>()))
+        _badgeRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<BadgeConfiguration>());
 
         // Act
@@ -92,7 +93,7 @@ public class CheckAchievementsUseCaseTests
 
         _sessionRepository.Setup(r => r.GetByIdAsync(session.Id))
             .ReturnsAsync(session);
-        _badgeRepository.Setup(r => r.ListAsync(It.IsAny<Ardalis.Specification.ISpecification<BadgeConfiguration>>()))
+        _badgeRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<BadgeConfiguration>());
 
         // Act
@@ -130,7 +131,7 @@ public class CheckAchievementsUseCaseTests
 
         _sessionRepository.Setup(r => r.GetByIdAsync(session.Id))
             .ReturnsAsync(session);
-        _badgeRepository.Setup(r => r.ListAsync(It.IsAny<Ardalis.Specification.ISpecification<BadgeConfiguration>>()))
+        _badgeRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<BadgeConfiguration> { badgeConfig });
 
         // Act
@@ -161,7 +162,7 @@ public class CheckAchievementsUseCaseTests
 
         _sessionRepository.Setup(r => r.GetByIdAsync(session.Id))
             .ReturnsAsync(session);
-        _badgeRepository.Setup(r => r.ListAsync(It.IsAny<Ardalis.Specification.ISpecification<BadgeConfiguration>>()))
+        _badgeRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<BadgeConfiguration>());
 
         // Act
@@ -192,7 +193,7 @@ public class CheckAchievementsUseCaseTests
 
         _sessionRepository.Setup(r => r.GetByIdAsync(session.Id))
             .ReturnsAsync(session);
-        _badgeRepository.Setup(r => r.ListAsync(It.IsAny<Ardalis.Specification.ISpecification<BadgeConfiguration>>()))
+        _badgeRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<BadgeConfiguration>());
 
         // Act
@@ -221,7 +222,7 @@ public class CheckAchievementsUseCaseTests
 
         _sessionRepository.Setup(r => r.GetByIdAsync(session.Id))
             .ReturnsAsync(session);
-        _badgeRepository.Setup(r => r.ListAsync(It.IsAny<Ardalis.Specification.ISpecification<BadgeConfiguration>>()))
+        _badgeRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<BadgeConfiguration>());
 
         // Act
@@ -254,7 +255,7 @@ public class CheckAchievementsUseCaseTests
 
         _sessionRepository.Setup(r => r.GetByIdAsync(session.Id))
             .ReturnsAsync(session);
-        _badgeRepository.Setup(r => r.ListAsync(It.IsAny<Ardalis.Specification.ISpecification<BadgeConfiguration>>()))
+        _badgeRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<BadgeConfiguration>());
 
         // Act
@@ -277,7 +278,7 @@ public class CheckAchievementsUseCaseTests
 
         _sessionRepository.Setup(r => r.GetByIdAsync(session.Id))
             .ReturnsAsync(session);
-        _badgeRepository.Setup(r => r.ListAsync(It.IsAny<Ardalis.Specification.ISpecification<BadgeConfiguration>>()))
+        _badgeRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<BadgeConfiguration>());
 
         // Act

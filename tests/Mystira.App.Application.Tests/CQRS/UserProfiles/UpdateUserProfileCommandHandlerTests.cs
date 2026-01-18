@@ -5,6 +5,7 @@ using Mystira.App.Application.CQRS.UserProfiles.Commands;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
 using Mystira.Contracts.App.Requests.UserProfiles;
+using Mystira.Shared.Data.Repositories;
 
 namespace Mystira.App.Application.Tests.CQRS.UserProfiles;
 

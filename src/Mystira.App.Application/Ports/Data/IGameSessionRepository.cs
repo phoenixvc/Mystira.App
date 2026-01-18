@@ -1,11 +1,12 @@
 using Mystira.App.Domain.Models;
+using Mystira.Shared.Data.Repositories;
 
 namespace Mystira.App.Application.Ports.Data;
 
 /// <summary>
 /// Repository interface for GameSession entity with domain-specific queries
 /// </summary>
-public interface IGameSessionRepository : IRepository<GameSession>
+public interface IGameSessionRepository : IRepository<GameSession, string>
 {
     Task<IEnumerable<GameSession>> GetByAccountIdAsync(string accountId);
     Task<IEnumerable<GameSession>> GetByProfileIdAsync(string profileId);

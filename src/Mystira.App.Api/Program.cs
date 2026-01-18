@@ -32,6 +32,7 @@ using Mystira.App.Infrastructure.Discord;
 using Mystira.App.Infrastructure.Discord.Services;
 using Mystira.App.Infrastructure.Payments;
 using Mystira.Shared.Configuration;
+using Mystira.Shared.Data.Repositories;
 using Mystira.Shared.Middleware;
 using Mystira.Shared.Telemetry;
 using Serilog;
@@ -423,7 +424,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<Mystira.App.Application.Ports.Services.ICurrentUserService, Mystira.App.Api.Services.CurrentUserService>();
 
 // Register repositories
-builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>)); // Generic repository
+// Note: Generic IRepository<,> registration removed - all entities use specific repository interfaces
 builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
@@ -435,6 +436,7 @@ builder.Services.AddScoped<IPlayerScenarioScoreRepository, PlayerScenarioScoreRe
 builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
 builder.Services.AddScoped<IBadgeImageRepository, BadgeImageRepository>();
 builder.Services.AddScoped<IAxisAchievementRepository, AxisAchievementRepository>();
+builder.Services.AddScoped<IBadgeConfigurationRepository, BadgeConfigurationRepository>();
 
 builder.Services.AddScoped<IMediaAssetRepository, MediaAssetRepository>();
 builder.Services.AddScoped<IMediaMetadataFileRepository, MediaMetadataFileRepository>();

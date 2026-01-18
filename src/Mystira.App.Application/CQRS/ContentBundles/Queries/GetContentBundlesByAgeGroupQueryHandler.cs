@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Application.Specifications;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.ContentBundles.Queries;
@@ -24,11 +23,8 @@ public static class GetContentBundlesByAgeGroupQueryHandler
             throw new ArgumentException("Age group cannot be null or empty", nameof(request.AgeGroup));
         }
 
-        // Create specification for reusable query logic
-        var spec = new ContentBundlesByAgeGroupSpec(request.AgeGroup);
-
         // Execute query using repository
-        var bundles = await repository.ListAsync(spec);
+        var bundles = await repository.GetByAgeGroupAsync(request.AgeGroup);
 
         logger.LogDebug("Retrieved {Count} bundles for age group {AgeGroup}",
             bundles.Count(), request.AgeGroup);

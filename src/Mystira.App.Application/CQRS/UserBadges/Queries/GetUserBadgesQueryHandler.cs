@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Application.Specifications;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.UserBadges.Queries;
@@ -21,8 +20,7 @@ public static class GetUserBadgesQueryHandler
         ILogger logger,
         CancellationToken ct)
     {
-        var spec = new UserBadgesByProfileSpec(query.UserProfileId);
-        var badges = await repository.ListAsync(spec);
+        var badges = await repository.GetByUserProfileIdAsync(query.UserProfileId);
 
         logger.LogDebug("Retrieved {Count} badges for user profile {UserProfileId}",
             badges.Count(), query.UserProfileId);

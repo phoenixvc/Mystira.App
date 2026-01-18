@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Application.Specifications;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.UserProfiles.Queries;
@@ -26,8 +25,7 @@ public static class GetProfilesByAccountQueryHandler
             throw new ArgumentException("AccountId is required");
         }
 
-        var spec = new ProfilesByAccountSpec(request.AccountId);
-        var profiles = await repository.ListAsync(spec);
+        var profiles = await repository.GetByAccountIdAsync(request.AccountId);
 
         logger.LogDebug("Retrieved {Count} profiles for account {AccountId}",
             profiles.Count(), request.AccountId);

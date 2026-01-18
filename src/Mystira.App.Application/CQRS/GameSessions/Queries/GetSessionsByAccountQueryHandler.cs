@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Application.Specifications;
 using Mystira.Contracts.App.Models.GameSessions;
 using Mystira.Contracts.App.Responses.GameSessions;
 using Mystira.App.Domain.Models;
@@ -29,8 +28,7 @@ public static class GetSessionsByAccountQueryHandler
             throw new ArgumentException("AccountId is required");
         }
 
-        var spec = new SessionsByAccountSpec(request.AccountId);
-        var sessions = await repository.ListAsync(spec);
+        var sessions = await repository.GetByAccountIdAsync(request.AccountId);
 
         var response = sessions.Select(s =>
         {

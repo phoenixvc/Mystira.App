@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Application.Specifications;
 using Mystira.App.Domain.Models;
 
 namespace Mystira.App.Application.CQRS.ContentBundles.Queries;
@@ -17,11 +16,8 @@ public static class GetAllContentBundlesQueryHandler
         ILogger<GetAllContentBundlesQuery> logger,
         CancellationToken ct)
     {
-        // Use specification for consistent filtering
-        var spec = new ActiveContentBundlesSpec();
-
-        // Execute query
-        var bundles = await repository.ListAsync(spec);
+        // Get all content bundles
+        var bundles = await repository.GetAllAsync();
 
         logger.LogDebug("Retrieved {Count} content bundles", bundles.Count());
 

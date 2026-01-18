@@ -5,20 +5,21 @@ using Mystira.App.Application.CQRS.UserBadges.Commands;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
 using Mystira.Contracts.App.Requests.Badges;
+using Mystira.Shared.Data.Repositories;
 
 namespace Mystira.App.Application.Tests.CQRS.UserBadges;
 
 public class AwardBadgeCommandHandlerTests
 {
     private readonly Mock<IUserBadgeRepository> _badgeRepository;
-    private readonly Mock<IRepository<BadgeConfiguration>> _badgeConfigRepository;
+    private readonly Mock<IBadgeConfigurationRepository> _badgeConfigRepository;
     private readonly Mock<IUnitOfWork> _unitOfWork;
     private readonly Mock<ILogger> _logger;
 
     public AwardBadgeCommandHandlerTests()
     {
         _badgeRepository = new Mock<IUserBadgeRepository>();
-        _badgeConfigRepository = new Mock<IRepository<BadgeConfiguration>>();
+        _badgeConfigRepository = new Mock<IBadgeConfigurationRepository>();
         _unitOfWork = new Mock<IUnitOfWork>();
         _logger = new Mock<ILogger>();
     }

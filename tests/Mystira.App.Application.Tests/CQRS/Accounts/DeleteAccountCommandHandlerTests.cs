@@ -4,6 +4,7 @@ using Moq;
 using Mystira.App.Application.CQRS.Accounts.Commands;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
+using Mystira.Shared.Data.Repositories;
 
 namespace Mystira.App.Application.Tests.CQRS.Accounts;
 
