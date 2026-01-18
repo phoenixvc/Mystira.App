@@ -179,11 +179,11 @@ public class Repository<TEntity> : IRepository<TEntity, string> where TEntity : 
         return entityList;
     }
 
-    public virtual Task<int> UpdateAsync(TEntity entity, CancellationToken cancellationToken = default)
+    public virtual Task UpdateAsync(TEntity entity, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entity);
         _dbSet.Update(entity);
-        return Task.FromResult(1);
+        return Task.CompletedTask;
     }
 
     public virtual Task<int> UpdateRangeAsync(IEnumerable<TEntity> entities, CancellationToken cancellationToken = default)
