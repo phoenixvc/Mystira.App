@@ -424,7 +424,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<Mystira.App.Application.Ports.Services.ICurrentUserService, Mystira.App.Api.Services.CurrentUserService>();
 
 // Register repositories
-builder.Services.AddScoped(typeof(IRepository<,>), typeof(Repository<>)); // Generic repository
+// Note: Generic IRepository<,> registration removed - all entities use specific repository interfaces
 builder.Services.AddScoped<IGameSessionRepository, GameSessionRepository>();
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();

@@ -1,10 +1,9 @@
-using Ardalis.Specification;
 using Mystira.App.Domain.Models;
 using Mystira.Shared.Data.Repositories;
 
 namespace Mystira.App.Application.Ports.Data;
 
-public interface IBadgeRepository : IRepository<Badge, string>, IRepositoryBase<Badge>
+public interface IBadgeRepository : IRepository<Badge, string>
 {
     Task<IEnumerable<Badge>> GetByAgeGroupAsync(string ageGroupId);
     Task<IEnumerable<Badge>> GetByCompassAxisAsync(string compassAxisId);
