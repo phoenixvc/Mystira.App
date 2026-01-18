@@ -17,7 +17,7 @@ public static class AwardBadgeCommandHandler
     public static async Task<UserBadge> Handle(
         AwardBadgeCommand command,
         IUserBadgeRepository repository,
-        IRepository<BadgeConfiguration, string> badgeConfigRepository,
+        IBadgeConfigurationRepository badgeConfigRepository,
         IUnitOfWork unitOfWork,
         ILogger logger,
         CancellationToken ct)

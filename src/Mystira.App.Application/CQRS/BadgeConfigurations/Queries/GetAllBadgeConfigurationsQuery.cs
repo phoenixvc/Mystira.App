@@ -13,9 +13,9 @@ public record GetAllBadgeConfigurationsQuery
 
 public sealed class GetAllBadgeConfigurationsQueryHandler
 {
-    private readonly IRepository<BadgeConfiguration, string> _repository;
+    private readonly IBadgeConfigurationRepository _repository;
 
-    public GetAllBadgeConfigurationsQueryHandler(IRepository<BadgeConfiguration, string> repository)
+    public GetAllBadgeConfigurationsQueryHandler(IBadgeConfigurationRepository repository)
     {
         _repository = repository;
     }

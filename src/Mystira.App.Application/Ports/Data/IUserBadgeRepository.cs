@@ -1,3 +1,4 @@
+using Ardalis.Specification;
 using Mystira.App.Domain.Models;
 using Mystira.Shared.Data.Repositories;
 
@@ -6,7 +7,7 @@ namespace Mystira.App.Application.Ports.Data;
 /// <summary>
 /// Repository interface for UserBadge entity with domain-specific queries
 /// </summary>
-public interface IUserBadgeRepository : IRepository<UserBadge, string>
+public interface IUserBadgeRepository : IRepository<UserBadge, string>, IRepositoryBase<UserBadge>
 {
     Task<IEnumerable<UserBadge>> GetByUserProfileIdAsync(string userProfileId);
     Task<UserBadge?> GetByUserProfileIdAndBadgeConfigIdAsync(string userProfileId, string badgeConfigurationId);

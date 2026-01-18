@@ -12,13 +12,13 @@ namespace Mystira.App.Application.UseCases.GameSessions;
 public class CheckAchievementsUseCase
 {
     private readonly IGameSessionRepository _repository;
-    private readonly IRepository<BadgeConfiguration, string> _badgeRepository;
+    private readonly IBadgeConfigurationRepository _badgeRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<CheckAchievementsUseCase> _logger;
 
     public CheckAchievementsUseCase(
         IGameSessionRepository repository,
-        IRepository<BadgeConfiguration, string> badgeRepository,
+        IBadgeConfigurationRepository badgeRepository,
         IUnitOfWork unitOfWork,
         ILogger<CheckAchievementsUseCase> logger)
     {

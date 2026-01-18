@@ -13,16 +13,16 @@ public record GetBadgeConfigurationsByAxisQuery(string Axis)
 
 public sealed class GetBadgeConfigurationsByAxisQueryHandler
 {
-    private readonly IRepository<BadgeConfiguration, string> _repository;
+    private readonly IBadgeConfigurationRepository _repository;
 
-    public GetBadgeConfigurationsByAxisQueryHandler(IRepository<BadgeConfiguration, string> repository)
+    public GetBadgeConfigurationsByAxisQueryHandler(IBadgeConfigurationRepository repository)
     {
         _repository = repository;
     }
 
     public async Task<List<BadgeConfiguration>> Handle(GetBadgeConfigurationsByAxisQuery request, CancellationToken cancellationToken)
     {
-        var list = await _repository.FindAsync(b => b.Axis == request.Axis);
+        var list = await _repository.GetByAxisAsync(request.Axis);
         return list.OrderBy(b => b.Name).ToList();
     }
 }
