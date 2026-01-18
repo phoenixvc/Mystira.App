@@ -149,7 +149,7 @@ public class CachedRepositoryTests
         // Arrange
         var entity = new TestEntity { Id = "123", Name = "Updated" };
         _innerRepoMock.Setup(r => r.UpdateAsync(entity, It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(1);
 
         // Act
         await _sut.UpdateAsync(entity);
@@ -170,7 +170,7 @@ public class CachedRepositoryTests
         // Arrange
         var entity = new TestEntity { Id = "123", Name = "ToDelete" };
         _innerRepoMock.Setup(r => r.DeleteAsync(entity, It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(1);
 
         // Act
         await _sut.DeleteAsync(entity);
