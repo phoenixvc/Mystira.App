@@ -24,6 +24,11 @@ public class UnitOfWork : IUnitOfWork
 
     public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
+        if (_transaction != null)
+        {
+            throw new InvalidOperationException("A transaction is already in progress. Commit or rollback the current transaction before starting a new one.");
+        }
+
         _transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
     }
 
@@ -41,7 +46,8 @@ public class UnitOfWork : IUnitOfWork
         }
         catch
         {
-            await RollbackTransactionAsync(cancellationToken);
+            // Use CancellationToken.None to ensure rollback always executes even if cancellation is requested
+            await RollbackTransactionAsync(CancellationToken.None);
             throw;
         }
         finally

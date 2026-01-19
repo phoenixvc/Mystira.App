@@ -205,23 +205,23 @@ public class CachedRepository<T> : IRepositoryBase<T> where T : class
     /// <inheritdoc />
     public async Task<int> UpdateAsync(T entity, CancellationToken cancellationToken = default)
     {
-        await _inner.UpdateAsync(entity, cancellationToken);
+        var affected = await _inner.UpdateAsync(entity, cancellationToken);
 
-        if (_options.EnableInvalidationOnChange)
+        if (_options.EnableInvalidationOnChange && affected > 0)
         {
             await InvalidateOrUpdateCacheAsync(entity, cancellationToken);
         }
 
-        return 1;
+        return affected;
     }
 
     /// <inheritdoc />
     public async Task<int> UpdateRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
     {
         var entityList = entities.ToList();
-        await _inner.UpdateRangeAsync(entityList, cancellationToken);
+        var affected = await _inner.UpdateRangeAsync(entityList, cancellationToken);
 
-        if (_options.EnableInvalidationOnChange)
+        if (_options.EnableInvalidationOnChange && affected > 0)
         {
             foreach (var entity in entityList)
             {
@@ -229,29 +229,29 @@ public class CachedRepository<T> : IRepositoryBase<T> where T : class
             }
         }
 
-        return entityList.Count;
+        return affected;
     }
 
     /// <inheritdoc />
     public async Task<int> DeleteAsync(T entity, CancellationToken cancellationToken = default)
     {
-        await _inner.DeleteAsync(entity, cancellationToken);
+        var affected = await _inner.DeleteAsync(entity, cancellationToken);
 
-        if (_options.EnableInvalidationOnChange)
+        if (_options.EnableInvalidationOnChange && affected > 0)
         {
             await InvalidateCacheAsync(entity, cancellationToken);
         }
 
-        return 1;
+        return affected;
     }
 
     /// <inheritdoc />
     public async Task<int> DeleteRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
     {
         var entityList = entities.ToList();
-        await _inner.DeleteRangeAsync(entityList, cancellationToken);
+        var affected = await _inner.DeleteRangeAsync(entityList, cancellationToken);
 
-        if (_options.EnableInvalidationOnChange)
+        if (_options.EnableInvalidationOnChange && affected > 0)
         {
             foreach (var entity in entityList)
             {
@@ -259,7 +259,7 @@ public class CachedRepository<T> : IRepositoryBase<T> where T : class
             }
         }
 
-        return entityList.Count;
+        return affected;
     }
 
     /// <inheritdoc />
@@ -268,9 +268,9 @@ public class CachedRepository<T> : IRepositoryBase<T> where T : class
         // Get entities to delete for cache invalidation
         var entities = await _inner.ListAsync(specification, cancellationToken);
 
-        await _inner.DeleteRangeAsync(specification, cancellationToken);
+        var affected = await _inner.DeleteRangeAsync(specification, cancellationToken);
 
-        if (_options.EnableInvalidationOnChange)
+        if (_options.EnableInvalidationOnChange && affected > 0)
         {
             foreach (var entity in entities)
             {
@@ -278,7 +278,7 @@ public class CachedRepository<T> : IRepositoryBase<T> where T : class
             }
         }
 
-        return entities.Count;
+        return affected;
     }
 
     /// <inheritdoc />
