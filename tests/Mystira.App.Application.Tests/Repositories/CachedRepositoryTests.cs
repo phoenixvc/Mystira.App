@@ -182,37 +182,7 @@ public class CachedRepositoryTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact]
-    public async Task ExistsAsync_WhenCacheHit_ShouldReturnTrue()
-    {
-        // Arrange
-        _cacheMock.Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Encoding.UTF8.GetBytes("{}"));
-
-        // Act
-        var result = await _sut.ExistsAsync("123");
-
-        // Assert
-        result.Should().BeTrue();
-        _innerRepoMock.Verify(r => r.ExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task ExistsAsync_WhenCacheMiss_ShouldQueryInnerRepo()
-    {
-        // Arrange
-        _cacheMock.Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((byte[]?)null);
-        _innerRepoMock.Setup(r => r.ExistsAsync("123", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
-        // Act
-        var result = await _sut.ExistsAsync("123");
-
-        // Assert
-        result.Should().BeTrue();
-        _innerRepoMock.Verify(r => r.ExistsAsync("123", It.IsAny<CancellationToken>()), Times.Once);
-    }
+    // ExistsAsync tests removed - IRepositoryBase<T> doesn't have ExistsAsync method
 
     /// <summary>
     /// Test entity implementing IHasId for cache key generation tests.

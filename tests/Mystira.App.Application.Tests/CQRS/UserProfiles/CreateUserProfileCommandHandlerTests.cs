@@ -49,7 +49,7 @@ public class CreateUserProfileCommandHandlerTests
         result.AccountId.Should().Be("acc-123");
         result.Id.Should().NotBeNullOrEmpty();
 
-        _repository.Verify(r => r.AddAsync(It.IsAny<UserProfile>()), Times.Once);
+        _repository.Verify(r => r.AddAsync(It.IsAny<UserProfile>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 

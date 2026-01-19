@@ -43,7 +43,7 @@ public class CheckAchievementsUseCaseTests
     public async Task ExecuteAsync_WithNonExistentSession_ReturnsEmptyList()
     {
         // Arrange
-        _sessionRepository.Setup(r => r.GetByIdAsync("non-existent"))
+        _sessionRepository.Setup(r => r.GetByIdAsync("non-existent", It.IsAny<CancellationToken>()))
             .ReturnsAsync((GameSession?)null);
 
         // Act
@@ -63,7 +63,7 @@ public class CheckAchievementsUseCaseTests
             new SessionChoice { SceneId = "scene1", ChoiceText = "First choice" }
         };
 
-        _sessionRepository.Setup(r => r.GetByIdAsync(session.Id))
+        _sessionRepository.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
         _badgeRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<BadgeConfiguration>());
@@ -75,7 +75,7 @@ public class CheckAchievementsUseCaseTests
         result.Should().ContainSingle(a => a.Type == AchievementType.FirstChoice);
         result.First(a => a.Type == AchievementType.FirstChoice).Title.Should().Be("First Steps");
 
-        _sessionRepository.Verify(r => r.UpdateAsync(It.IsAny<GameSession>()), Times.Once);
+        _sessionRepository.Verify(r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -91,7 +91,7 @@ public class CheckAchievementsUseCaseTests
             new SessionChoice { SceneId = "scene2", ChoiceText = "Choice 2" }
         };
 
-        _sessionRepository.Setup(r => r.GetByIdAsync(session.Id))
+        _sessionRepository.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
         _badgeRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<BadgeConfiguration>());
@@ -129,7 +129,7 @@ public class CheckAchievementsUseCaseTests
             Message = "You showed great courage!"
         };
 
-        _sessionRepository.Setup(r => r.GetByIdAsync(session.Id))
+        _sessionRepository.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
         _badgeRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<BadgeConfiguration> { badgeConfig });
@@ -160,7 +160,7 @@ public class CheckAchievementsUseCaseTests
             }
         };
 
-        _sessionRepository.Setup(r => r.GetByIdAsync(session.Id))
+        _sessionRepository.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
         _badgeRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<BadgeConfiguration>());
@@ -191,7 +191,7 @@ public class CheckAchievementsUseCaseTests
             }
         };
 
-        _sessionRepository.Setup(r => r.GetByIdAsync(session.Id))
+        _sessionRepository.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
         _badgeRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<BadgeConfiguration>());
@@ -201,7 +201,7 @@ public class CheckAchievementsUseCaseTests
 
         // Assert
         result.Should().BeEmpty(); // No new achievements
-        _sessionRepository.Verify(r => r.UpdateAsync(It.IsAny<GameSession>()), Times.Never);
+        _sessionRepository.Verify(r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -220,7 +220,7 @@ public class CheckAchievementsUseCaseTests
             }
         };
 
-        _sessionRepository.Setup(r => r.GetByIdAsync(session.Id))
+        _sessionRepository.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
         _badgeRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<BadgeConfiguration>());
@@ -253,7 +253,7 @@ public class CheckAchievementsUseCaseTests
             }
         };
 
-        _sessionRepository.Setup(r => r.GetByIdAsync(session.Id))
+        _sessionRepository.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
         _badgeRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<BadgeConfiguration>());
@@ -276,7 +276,7 @@ public class CheckAchievementsUseCaseTests
         session.ChoiceHistory = new List<SessionChoice>(); // No choices
         session.CompassValues = new Dictionary<string, CompassTracking>(); // No compass values
 
-        _sessionRepository.Setup(r => r.GetByIdAsync(session.Id))
+        _sessionRepository.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
         _badgeRepository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<BadgeConfiguration>());
@@ -286,7 +286,7 @@ public class CheckAchievementsUseCaseTests
 
         // Assert
         result.Should().BeEmpty();
-        _sessionRepository.Verify(r => r.UpdateAsync(It.IsAny<GameSession>()), Times.Never);
+        _sessionRepository.Verify(r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 

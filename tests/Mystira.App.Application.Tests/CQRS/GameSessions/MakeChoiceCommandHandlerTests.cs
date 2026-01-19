@@ -30,7 +30,7 @@ public class MakeChoiceCommandHandlerTests
         var session = CreateActiveSession();
         var request = CreateValidRequest(session.Id);
 
-        _repository.Setup(r => r.GetByIdAsync(session.Id))
+        _repository.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
         var command = new MakeChoiceCommand(request);
@@ -50,7 +50,7 @@ public class MakeChoiceCommandHandlerTests
         result.ChoiceHistory[0].ChoiceText.Should().Be(request.ChoiceText);
         result.CurrentSceneId.Should().Be(request.NextSceneId);
 
-        _repository.Verify(r => r.UpdateAsync(It.IsAny<GameSession>()), Times.Once);
+        _repository.Verify(r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -72,7 +72,7 @@ public class MakeChoiceCommandHandlerTests
         request.CompassDirection = "positive";
         request.CompassDelta = 1.5;
 
-        _repository.Setup(r => r.GetByIdAsync(session.Id))
+        _repository.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
         var command = new MakeChoiceCommand(request);
@@ -181,7 +181,7 @@ public class MakeChoiceCommandHandlerTests
     {
         // Arrange
         var request = CreateValidRequest("non-existent-session");
-        _repository.Setup(r => r.GetByIdAsync(request.SessionId))
+        _repository.Setup(r => r.GetByIdAsync(request.SessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((GameSession?)null);
 
         var command = new MakeChoiceCommand(request);
@@ -196,7 +196,7 @@ public class MakeChoiceCommandHandlerTests
 
         // Assert
         result.Should().BeNull();
-        _repository.Verify(r => r.UpdateAsync(It.IsAny<GameSession>()), Times.Never);
+        _repository.Verify(r => r.UpdateAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -207,7 +207,7 @@ public class MakeChoiceCommandHandlerTests
         session.Status = SessionStatus.Completed;
 
         var request = CreateValidRequest(session.Id);
-        _repository.Setup(r => r.GetByIdAsync(session.Id))
+        _repository.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
         var command = new MakeChoiceCommand(request);
@@ -233,7 +233,7 @@ public class MakeChoiceCommandHandlerTests
         session.Status = SessionStatus.Paused;
 
         var request = CreateValidRequest(session.Id);
-        _repository.Setup(r => r.GetByIdAsync(session.Id))
+        _repository.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
         var command = new MakeChoiceCommand(request);
@@ -259,7 +259,7 @@ public class MakeChoiceCommandHandlerTests
         session.StartTime = DateTime.UtcNow.AddMinutes(-5);
 
         var request = CreateValidRequest(session.Id);
-        _repository.Setup(r => r.GetByIdAsync(session.Id))
+        _repository.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
         var command = new MakeChoiceCommand(request);
@@ -286,7 +286,7 @@ public class MakeChoiceCommandHandlerTests
         var request = CreateValidRequest(session.Id);
         request.PlayerId = "specific-player-id";
 
-        _repository.Setup(r => r.GetByIdAsync(session.Id))
+        _repository.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
         var command = new MakeChoiceCommand(request);
@@ -313,7 +313,7 @@ public class MakeChoiceCommandHandlerTests
         var request = CreateValidRequest(session.Id);
         request.PlayerId = null;
 
-        _repository.Setup(r => r.GetByIdAsync(session.Id))
+        _repository.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
         var command = new MakeChoiceCommand(request);

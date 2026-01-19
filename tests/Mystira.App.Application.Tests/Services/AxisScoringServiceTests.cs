@@ -6,6 +6,7 @@ using Mystira.App.Application.Services;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data;
 using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.Shared.Data.Repositories;
 
 namespace Mystira.App.Application.Tests.Services;
 

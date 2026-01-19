@@ -34,7 +34,7 @@ public class CreateAccountCommandHandlerTests
             Settings: null
         );
 
-        _repository.Setup(r => r.GetByEmailAsync(command.Email))
+        _repository.Setup(r => r.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(default(Account));
 
         // Act
@@ -53,7 +53,7 @@ public class CreateAccountCommandHandlerTests
         result.Id.Should().NotBeNullOrEmpty();
         result.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
 
-        _repository.Verify(r => r.AddAsync(It.IsAny<Account>()), Times.Once);
+        _repository.Verify(r => r.AddAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -70,7 +70,7 @@ public class CreateAccountCommandHandlerTests
             Settings: null
         );
 
-        _repository.Setup(r => r.GetByEmailAsync(command.Email))
+        _repository.Setup(r => r.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(default(Account));
 
         // Act
@@ -105,7 +105,7 @@ public class CreateAccountCommandHandlerTests
             Settings: null
         );
 
-        _repository.Setup(r => r.GetByEmailAsync(command.Email))
+        _repository.Setup(r => r.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingAccount);
 
         // Act
@@ -120,7 +120,7 @@ public class CreateAccountCommandHandlerTests
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*already exists*");
 
-        _repository.Verify(r => r.AddAsync(It.IsAny<Account>()), Times.Never);
+        _repository.Verify(r => r.AddAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public class CreateAccountCommandHandlerTests
             Settings: null
         );
 
-        _repository.Setup(r => r.GetByEmailAsync(command.Email))
+        _repository.Setup(r => r.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(default(Account));
 
         // Act
@@ -172,7 +172,7 @@ public class CreateAccountCommandHandlerTests
             Settings: null
         );
 
-        _repository.Setup(r => r.GetByEmailAsync(command.Email))
+        _repository.Setup(r => r.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(default(Account));
 
         // Act
@@ -207,7 +207,7 @@ public class CreateAccountCommandHandlerTests
             Settings: settings
         );
 
-        _repository.Setup(r => r.GetByEmailAsync(command.Email))
+        _repository.Setup(r => r.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(default(Account));
 
         // Act
@@ -237,7 +237,7 @@ public class CreateAccountCommandHandlerTests
             Settings: null
         );
 
-        _repository.Setup(r => r.GetByEmailAsync(command.Email))
+        _repository.Setup(r => r.GetByEmailAsync(command.Email, It.IsAny<CancellationToken>()))
             .ReturnsAsync(default(Account));
 
         // Act
