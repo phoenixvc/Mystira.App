@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Mystira.App.Application.Ports.Data;
-using Mystira.App.Application.Specifications;
 using Mystira.App.Domain.Models;
 using Mystira.Shared.Extensions;
 
@@ -12,13 +11,13 @@ namespace Mystira.App.Application.UseCases.GameSessions;
 public class CheckAchievementsUseCase
 {
     private readonly IGameSessionRepository _repository;
-    private readonly IRepository<BadgeConfiguration> _badgeRepository;
+    private readonly IBadgeConfigurationRepository _badgeRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<CheckAchievementsUseCase> _logger;
 
     public CheckAchievementsUseCase(
         IGameSessionRepository repository,
-        IRepository<BadgeConfiguration> badgeRepository,
+        IBadgeConfigurationRepository badgeRepository,
         IUnitOfWork unitOfWork,
         ILogger<CheckAchievementsUseCase> logger)
     {
@@ -45,7 +44,7 @@ public class CheckAchievementsUseCase
         var achievements = new List<SessionAchievement>();
 
         // Fetch all badge configurations to check thresholds dynamically
-        var badgeConfigs = await _badgeRepository.ListAsync(new AllBadgeConfigurationsSpec());
+        var badgeConfigs = await _badgeRepository.GetAllAsync();
 
         // Check compass threshold achievements
         foreach (var compassTracking in session.CompassValues.Values)

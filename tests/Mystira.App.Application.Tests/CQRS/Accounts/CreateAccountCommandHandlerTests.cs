@@ -4,6 +4,7 @@ using Moq;
 using Mystira.App.Application.CQRS.Accounts.Commands;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
+using Mystira.Shared.Data.Repositories;
 
 namespace Mystira.App.Application.Tests.CQRS.Accounts;
 
@@ -52,7 +53,7 @@ public class CreateAccountCommandHandlerTests
         result.Id.Should().NotBeNullOrEmpty();
         result.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
 
-        _repository.Verify(r => r.AddAsync(It.IsAny<Account>()), Times.Once);
+        _repository.Verify(r => r.AddAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -119,7 +120,7 @@ public class CreateAccountCommandHandlerTests
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*already exists*");
 
-        _repository.Verify(r => r.AddAsync(It.IsAny<Account>()), Times.Never);
+        _repository.Verify(r => r.AddAsync(It.IsAny<Account>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

@@ -1,12 +1,13 @@
 using System.Linq.Expressions;
 using Mystira.App.Domain.Models;
+using Mystira.Shared.Data.Repositories;
 
 namespace Mystira.App.Application.Ports.Data;
 
 /// <summary>
 /// Repository interface for Scenario entity with domain-specific queries
 /// </summary>
-public interface IScenarioRepository : IRepository<Scenario>
+public interface IScenarioRepository : IRepository<Scenario, string>
 {
     Task<IEnumerable<Scenario>> GetByAgeGroupAsync(string ageGroup);
     Task<Scenario?> GetByTitleAsync(string title);

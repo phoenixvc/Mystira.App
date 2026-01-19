@@ -6,6 +6,7 @@ using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
 using Mystira.Contracts.App.Models;
 using Mystira.Contracts.App.Requests.GameSessions;
+using Mystira.Shared.Data.Repositories;
 
 namespace Mystira.App.Application.Tests.CQRS.GameSessions;
 
@@ -33,7 +34,7 @@ public class StartGameSessionCommandHandlerTests
 
         _sessionRepository.Setup(r => r.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId))
             .ReturnsAsync(new List<GameSession>());
-        _scenarioRepository.Setup(r => r.GetByIdAsync(request.ScenarioId))
+        _scenarioRepository.Setup(r => r.GetByIdAsync(request.ScenarioId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(scenario);
 
         var command = new StartGameSessionCommand(request);
@@ -56,7 +57,7 @@ public class StartGameSessionCommandHandlerTests
         result.PlayerNames.Should().Contain("Player1");
         result.CompassValues.Should().NotBeEmpty();
 
-        _sessionRepository.Verify(r => r.AddAsync(It.IsAny<GameSession>()), Times.Once);
+        _sessionRepository.Verify(r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -80,7 +81,7 @@ public class StartGameSessionCommandHandlerTests
 
         _sessionRepository.Setup(r => r.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId))
             .ReturnsAsync(new List<GameSession> { existingSession });
-        _scenarioRepository.Setup(r => r.GetByIdAsync(request.ScenarioId))
+        _scenarioRepository.Setup(r => r.GetByIdAsync(request.ScenarioId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateTestScenario());
 
         var command = new StartGameSessionCommand(request);
@@ -97,7 +98,7 @@ public class StartGameSessionCommandHandlerTests
         // Assert
         result.Should().NotBeNull();
         result.Id.Should().Be(existingSession.Id);
-        _sessionRepository.Verify(r => r.AddAsync(It.IsAny<GameSession>()), Times.Never);
+        _sessionRepository.Verify(r => r.AddAsync(It.IsAny<GameSession>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -200,7 +201,7 @@ public class StartGameSessionCommandHandlerTests
 
         _sessionRepository.Setup(r => r.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId))
             .ReturnsAsync(new List<GameSession>());
-        _scenarioRepository.Setup(r => r.GetByIdAsync(request.ScenarioId))
+        _scenarioRepository.Setup(r => r.GetByIdAsync(request.ScenarioId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(scenario);
 
         var command = new StartGameSessionCommand(request);
@@ -241,7 +242,7 @@ public class StartGameSessionCommandHandlerTests
 
         _sessionRepository.Setup(r => r.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId))
             .ReturnsAsync(new List<GameSession>());
-        _scenarioRepository.Setup(r => r.GetByIdAsync(request.ScenarioId))
+        _scenarioRepository.Setup(r => r.GetByIdAsync(request.ScenarioId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateTestScenario());
 
         var command = new StartGameSessionCommand(request);
@@ -275,7 +276,7 @@ public class StartGameSessionCommandHandlerTests
 
         _sessionRepository.Setup(r => r.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId))
             .ReturnsAsync(new List<GameSession>());
-        _scenarioRepository.Setup(r => r.GetByIdAsync(request.ScenarioId))
+        _scenarioRepository.Setup(r => r.GetByIdAsync(request.ScenarioId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(scenario);
 
         var command = new StartGameSessionCommand(request);

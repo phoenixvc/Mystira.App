@@ -5,20 +5,21 @@ using Mystira.App.Application.CQRS.UserBadges.Commands;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
 using Mystira.Contracts.App.Requests.Badges;
+using Mystira.Shared.Data.Repositories;
 
 namespace Mystira.App.Application.Tests.CQRS.UserBadges;
 
 public class AwardBadgeCommandHandlerTests
 {
     private readonly Mock<IUserBadgeRepository> _badgeRepository;
-    private readonly Mock<IRepository<BadgeConfiguration>> _badgeConfigRepository;
+    private readonly Mock<IBadgeConfigurationRepository> _badgeConfigRepository;
     private readonly Mock<IUnitOfWork> _unitOfWork;
     private readonly Mock<ILogger> _logger;
 
     public AwardBadgeCommandHandlerTests()
     {
         _badgeRepository = new Mock<IUserBadgeRepository>();
-        _badgeConfigRepository = new Mock<IRepository<BadgeConfiguration>>();
+        _badgeConfigRepository = new Mock<IBadgeConfigurationRepository>();
         _unitOfWork = new Mock<IUnitOfWork>();
         _logger = new Mock<ILogger>();
     }
@@ -46,7 +47,7 @@ public class AwardBadgeCommandHandlerTests
             ScenarioId = "scenario-789"
         };
 
-        _badgeConfigRepository.Setup(r => r.GetByIdAsync("badge-config-123"))
+        _badgeConfigRepository.Setup(r => r.GetByIdAsync("badge-config-123", It.IsAny<CancellationToken>()))
             .ReturnsAsync(badgeConfig);
 
         var command = new AwardBadgeCommand(request);
@@ -75,7 +76,7 @@ public class AwardBadgeCommandHandlerTests
         result.ImageId.Should().Be("img-123");
         result.EarnedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
 
-        _badgeRepository.Verify(r => r.AddAsync(It.IsAny<UserBadge>()), Times.Once);
+        _badgeRepository.Verify(r => r.AddAsync(It.IsAny<UserBadge>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -167,7 +168,7 @@ public class AwardBadgeCommandHandlerTests
             BadgeConfigurationId = "nonexistent-badge"
         };
 
-        _badgeConfigRepository.Setup(r => r.GetByIdAsync("nonexistent-badge"))
+        _badgeConfigRepository.Setup(r => r.GetByIdAsync("nonexistent-badge", It.IsAny<CancellationToken>()))
             .ReturnsAsync(default(BadgeConfiguration));
 
         var command = new AwardBadgeCommand(request);
@@ -203,7 +204,7 @@ public class AwardBadgeCommandHandlerTests
             BadgeConfigurationId = "badge-config-456"
         };
 
-        _badgeConfigRepository.Setup(r => r.GetByIdAsync("badge-config-456"))
+        _badgeConfigRepository.Setup(r => r.GetByIdAsync("badge-config-456", It.IsAny<CancellationToken>()))
             .ReturnsAsync(badgeConfig);
 
         var command = new AwardBadgeCommand(request);
@@ -240,7 +241,7 @@ public class AwardBadgeCommandHandlerTests
             // No optional fields: TriggerValue, GameSessionId, ScenarioId
         };
 
-        _badgeConfigRepository.Setup(r => r.GetByIdAsync("badge-config-789"))
+        _badgeConfigRepository.Setup(r => r.GetByIdAsync("badge-config-789", It.IsAny<CancellationToken>()))
             .ReturnsAsync(badgeConfig);
 
         var command = new AwardBadgeCommand(request);
@@ -282,7 +283,7 @@ public class AwardBadgeCommandHandlerTests
             BadgeConfigurationId = $"badge-{axis}"
         };
 
-        _badgeConfigRepository.Setup(r => r.GetByIdAsync($"badge-{axis}"))
+        _badgeConfigRepository.Setup(r => r.GetByIdAsync($"badge-{axis}", It.IsAny<CancellationToken>()))
             .ReturnsAsync(badgeConfig);
 
         var command = new AwardBadgeCommand(request);

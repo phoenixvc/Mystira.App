@@ -5,6 +5,7 @@ using Mystira.App.Application.CQRS.UserProfiles.Commands;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
 using Mystira.Contracts.App.Requests.UserProfiles;
+using Mystira.Shared.Data.Repositories;
 
 namespace Mystira.App.Application.Tests.CQRS.UserProfiles;
 
@@ -48,7 +49,7 @@ public class CreateUserProfileCommandHandlerTests
         result.AccountId.Should().Be("acc-123");
         result.Id.Should().NotBeNullOrEmpty();
 
-        _repository.Verify(r => r.AddAsync(It.IsAny<UserProfile>()), Times.Once);
+        _repository.Verify(r => r.AddAsync(It.IsAny<UserProfile>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 

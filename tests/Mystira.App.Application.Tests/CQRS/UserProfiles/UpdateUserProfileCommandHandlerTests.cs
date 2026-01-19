@@ -5,6 +5,7 @@ using Mystira.App.Application.CQRS.UserProfiles.Commands;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
 using Mystira.Contracts.App.Requests.UserProfiles;
+using Mystira.Shared.Data.Repositories;
 
 namespace Mystira.App.Application.Tests.CQRS.UserProfiles;
 
@@ -38,7 +39,7 @@ public class UpdateUserProfileCommandHandlerTests
             Bio = "Updated bio"
         };
 
-        _repository.Setup(r => r.GetByIdAsync(profileId))
+        _repository.Setup(r => r.GetByIdAsync(profileId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingProfile);
 
         var command = new UpdateUserProfileCommand(profileId, request);
@@ -56,7 +57,7 @@ public class UpdateUserProfileCommandHandlerTests
         result!.Bio.Should().Be("Updated bio");
         result.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
 
-        _repository.Verify(r => r.UpdateAsync(It.IsAny<UserProfile>()), Times.Once);
+        _repository.Verify(r => r.UpdateAsync(It.IsAny<UserProfile>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -67,7 +68,7 @@ public class UpdateUserProfileCommandHandlerTests
         var profileId = "nonexistent-123";
         var request = new UpdateUserProfileRequest();
 
-        _repository.Setup(r => r.GetByIdAsync(profileId))
+        _repository.Setup(r => r.GetByIdAsync(profileId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(default(UserProfile));
 
         var command = new UpdateUserProfileCommand(profileId, request);
@@ -82,7 +83,7 @@ public class UpdateUserProfileCommandHandlerTests
 
         // Assert
         result.Should().BeNull();
-        _repository.Verify(r => r.UpdateAsync(It.IsAny<UserProfile>()), Times.Never);
+        _repository.Verify(r => r.UpdateAsync(It.IsAny<UserProfile>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -101,7 +102,7 @@ public class UpdateUserProfileCommandHandlerTests
             AgeGroup = "10-12"
         };
 
-        _repository.Setup(r => r.GetByIdAsync(profileId))
+        _repository.Setup(r => r.GetByIdAsync(profileId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingProfile);
 
         var command = new UpdateUserProfileCommand(profileId, request);
@@ -134,7 +135,7 @@ public class UpdateUserProfileCommandHandlerTests
             AgeGroup = "invalid-age-group"
         };
 
-        _repository.Setup(r => r.GetByIdAsync(profileId))
+        _repository.Setup(r => r.GetByIdAsync(profileId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingProfile);
 
         var command = new UpdateUserProfileCommand(profileId, request);
@@ -170,7 +171,7 @@ public class UpdateUserProfileCommandHandlerTests
             DateOfBirth = newBirthDate
         };
 
-        _repository.Setup(r => r.GetByIdAsync(profileId))
+        _repository.Setup(r => r.GetByIdAsync(profileId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingProfile);
 
         var command = new UpdateUserProfileCommand(profileId, request);
@@ -204,7 +205,7 @@ public class UpdateUserProfileCommandHandlerTests
             SelectedAvatarMediaId = "new-avatar-123"
         };
 
-        _repository.Setup(r => r.GetByIdAsync(profileId))
+        _repository.Setup(r => r.GetByIdAsync(profileId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingProfile);
 
         var command = new UpdateUserProfileCommand(profileId, request);
@@ -237,7 +238,7 @@ public class UpdateUserProfileCommandHandlerTests
             Pronouns = "they/them"
         };
 
-        _repository.Setup(r => r.GetByIdAsync(profileId))
+        _repository.Setup(r => r.GetByIdAsync(profileId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingProfile);
 
         var command = new UpdateUserProfileCommand(profileId, request);
@@ -270,7 +271,7 @@ public class UpdateUserProfileCommandHandlerTests
             AccountId = "new-account-456"
         };
 
-        _repository.Setup(r => r.GetByIdAsync(profileId))
+        _repository.Setup(r => r.GetByIdAsync(profileId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingProfile);
 
         var command = new UpdateUserProfileCommand(profileId, request);
@@ -303,7 +304,7 @@ public class UpdateUserProfileCommandHandlerTests
             HasCompletedOnboarding = true
         };
 
-        _repository.Setup(r => r.GetByIdAsync(profileId))
+        _repository.Setup(r => r.GetByIdAsync(profileId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingProfile);
 
         var command = new UpdateUserProfileCommand(profileId, request);
@@ -336,7 +337,7 @@ public class UpdateUserProfileCommandHandlerTests
             IsGuest = false
         };
 
-        _repository.Setup(r => r.GetByIdAsync(profileId))
+        _repository.Setup(r => r.GetByIdAsync(profileId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingProfile);
 
         var command = new UpdateUserProfileCommand(profileId, request);
@@ -369,7 +370,7 @@ public class UpdateUserProfileCommandHandlerTests
             IsNpc = true
         };
 
-        _repository.Setup(r => r.GetByIdAsync(profileId))
+        _repository.Setup(r => r.GetByIdAsync(profileId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingProfile);
 
         var command = new UpdateUserProfileCommand(profileId, request);
@@ -402,7 +403,7 @@ public class UpdateUserProfileCommandHandlerTests
             PreferredFantasyThemes = new List<string> { "Adventure", "Mystery" }
         };
 
-        _repository.Setup(r => r.GetByIdAsync(profileId))
+        _repository.Setup(r => r.GetByIdAsync(profileId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingProfile);
 
         var command = new UpdateUserProfileCommand(profileId, request);
@@ -439,7 +440,7 @@ public class UpdateUserProfileCommandHandlerTests
             SelectedAvatarMediaId = null // Should not update
         };
 
-        _repository.Setup(r => r.GetByIdAsync(profileId))
+        _repository.Setup(r => r.GetByIdAsync(profileId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingProfile);
 
         var command = new UpdateUserProfileCommand(profileId, request);

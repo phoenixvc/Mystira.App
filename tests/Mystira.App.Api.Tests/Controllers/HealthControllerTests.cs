@@ -9,7 +9,6 @@ using Moq;
 using Mystira.App.Api.Controllers;
 using Mystira.App.Api.Models;
 using Mystira.App.Application.CQRS.Health.Queries;
-using Mystira.Contracts.App.Responses.Common;
 using Wolverine;
 using Xunit;
 

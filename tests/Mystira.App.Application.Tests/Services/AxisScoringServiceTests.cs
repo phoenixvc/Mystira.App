@@ -6,6 +6,7 @@ using Mystira.App.Application.Services;
 using Mystira.App.Domain.Models;
 using Mystira.App.Infrastructure.Data;
 using Mystira.App.Infrastructure.Data.Repositories;
+using Mystira.Shared.Data.Repositories;
 
 namespace Mystira.App.Application.Tests.Services;
 
@@ -27,7 +28,6 @@ public class AxisScoringServiceTests : IDisposable
         services.AddScoped<DbContext>(sp => sp.GetRequiredService<MystiraAppDbContext>());
 
         // Add repositories
-        services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IPlayerScenarioScoreRepository, PlayerScenarioScoreRepository>();
         services.AddScoped<IBadgeRepository, BadgeRepository>();
         services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();

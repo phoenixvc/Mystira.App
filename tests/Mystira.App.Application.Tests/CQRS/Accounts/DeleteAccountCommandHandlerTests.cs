@@ -4,6 +4,7 @@ using Moq;
 using Mystira.App.Application.CQRS.Accounts.Commands;
 using Mystira.App.Application.Ports.Data;
 using Mystira.App.Domain.Models;
+using Mystira.Shared.Data.Repositories;
 
 namespace Mystira.App.Application.Tests.CQRS.Accounts;
 
@@ -32,7 +33,7 @@ public class DeleteAccountCommandHandlerTests
             ExternalUserId = "ext-123"
         };
 
-        _repository.Setup(r => r.GetByIdAsync(accountId))
+        _repository.Setup(r => r.GetByIdAsync(accountId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingAccount);
 
         var command = new DeleteAccountCommand(accountId);
@@ -47,7 +48,7 @@ public class DeleteAccountCommandHandlerTests
 
         // Assert
         result.Should().BeTrue();
-        _repository.Verify(r => r.DeleteAsync(accountId), Times.Once);
+        _repository.Verify(r => r.DeleteAsync(accountId, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -57,7 +58,7 @@ public class DeleteAccountCommandHandlerTests
         // Arrange
         var accountId = "nonexistent-123";
 
-        _repository.Setup(r => r.GetByIdAsync(accountId))
+        _repository.Setup(r => r.GetByIdAsync(accountId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(default(Account));
 
         var command = new DeleteAccountCommand(accountId);
@@ -72,7 +73,7 @@ public class DeleteAccountCommandHandlerTests
 
         // Assert
         result.Should().BeFalse();
-        _repository.Verify(r => r.DeleteAsync(It.IsAny<string>()), Times.Never);
+        _repository.Verify(r => r.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -88,10 +89,10 @@ public class DeleteAccountCommandHandlerTests
         };
 
         string? deletedAccountId = null;
-        _repository.Setup(r => r.GetByIdAsync(accountId))
+        _repository.Setup(r => r.GetByIdAsync(accountId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingAccount);
-        _repository.Setup(r => r.DeleteAsync(It.IsAny<string>()))
-            .Callback<string>(id => deletedAccountId = id)
+        _repository.Setup(r => r.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, CancellationToken>((id, _) => deletedAccountId = id)
             .Returns(Task.CompletedTask);
         _unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
@@ -118,9 +119,9 @@ public class DeleteAccountCommandHandlerTests
         var existingAccount = new Account { Id = accountId };
         var callOrder = new List<string>();
 
-        _repository.Setup(r => r.GetByIdAsync(accountId))
+        _repository.Setup(r => r.GetByIdAsync(accountId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingAccount);
-        _repository.Setup(r => r.DeleteAsync(It.IsAny<string>()))
+        _repository.Setup(r => r.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Callback(() => callOrder.Add("delete"))
             .Returns(Task.CompletedTask);
         _unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
@@ -150,7 +151,7 @@ public class DeleteAccountCommandHandlerTests
         using var cts = new CancellationTokenSource();
 
         CancellationToken? capturedToken = null;
-        _repository.Setup(r => r.GetByIdAsync(accountId))
+        _repository.Setup(r => r.GetByIdAsync(accountId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingAccount);
         _unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Callback<CancellationToken>(ct => capturedToken = ct)
