@@ -28,7 +28,6 @@ public class AxisScoringServiceTests : IDisposable
         services.AddScoped<DbContext>(sp => sp.GetRequiredService<MystiraAppDbContext>());
 
         // Add repositories
-        services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IPlayerScenarioScoreRepository, PlayerScenarioScoreRepository>();
         services.AddScoped<IBadgeRepository, BadgeRepository>();
         services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();

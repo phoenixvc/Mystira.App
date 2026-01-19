@@ -32,7 +32,7 @@ public class StartGameSessionCommandHandlerTests
         var request = CreateValidRequest();
         var scenario = CreateTestScenario();
 
-        _sessionRepository.Setup(r => r.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId, It.IsAny<CancellationToken>()))
+        _sessionRepository.Setup(r => r.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId))
             .ReturnsAsync(new List<GameSession>());
         _scenarioRepository.Setup(r => r.GetByIdAsync(request.ScenarioId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(scenario);
@@ -79,7 +79,7 @@ public class StartGameSessionCommandHandlerTests
             CompassValues = new Dictionary<string, CompassTracking>()
         };
 
-        _sessionRepository.Setup(r => r.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId, It.IsAny<CancellationToken>()))
+        _sessionRepository.Setup(r => r.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId))
             .ReturnsAsync(new List<GameSession> { existingSession });
         _scenarioRepository.Setup(r => r.GetByIdAsync(request.ScenarioId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateTestScenario());
@@ -199,7 +199,7 @@ public class StartGameSessionCommandHandlerTests
         var scenario = CreateTestScenario();
         scenario.MinimumAge = 12; // Higher than target age group
 
-        _sessionRepository.Setup(r => r.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId, It.IsAny<CancellationToken>()))
+        _sessionRepository.Setup(r => r.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId))
             .ReturnsAsync(new List<GameSession>());
         _scenarioRepository.Setup(r => r.GetByIdAsync(request.ScenarioId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(scenario);
@@ -240,7 +240,7 @@ public class StartGameSessionCommandHandlerTests
             }
         };
 
-        _sessionRepository.Setup(r => r.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId, It.IsAny<CancellationToken>()))
+        _sessionRepository.Setup(r => r.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId))
             .ReturnsAsync(new List<GameSession>());
         _scenarioRepository.Setup(r => r.GetByIdAsync(request.ScenarioId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(CreateTestScenario());
@@ -274,7 +274,7 @@ public class StartGameSessionCommandHandlerTests
             CoreAxis.Parse("wisdom")!
         };
 
-        _sessionRepository.Setup(r => r.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId, It.IsAny<CancellationToken>()))
+        _sessionRepository.Setup(r => r.GetActiveSessionsByScenarioAndAccountAsync(request.ScenarioId, request.AccountId))
             .ReturnsAsync(new List<GameSession>());
         _scenarioRepository.Setup(r => r.GetByIdAsync(request.ScenarioId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(scenario);

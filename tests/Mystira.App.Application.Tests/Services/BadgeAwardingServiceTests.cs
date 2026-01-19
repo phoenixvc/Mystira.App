@@ -29,7 +29,6 @@ public class BadgeAwardingServiceTests : IDisposable
         services.AddScoped<DbContext>(sp => sp.GetRequiredService<MystiraAppDbContext>());
 
         // Add repositories
-        services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IBadgeRepository, BadgeRepository>();
         services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
 
