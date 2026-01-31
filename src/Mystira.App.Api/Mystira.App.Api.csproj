@@ -43,8 +43,8 @@
     <PackageReference Include="Mystira.Contracts" Version="0.6.0-alpha*" />
     <PackageReference Include="Mystira.Shared" Version="0.6.0-alpha*" />
     <!-- Wolverine HTTP integration for API endpoints -->
-    <PackageReference Include="WolverineFx" Version="5.10.0" />
-    <PackageReference Include="WolverineFx.Http" Version="5.10.0" />
+    <PackageReference Include="WolverineFx" Version="5.13.0" />
+    <PackageReference Include="WolverineFx.Http" Version="5.13.0" />
     <ProjectReference Include="..\Mystira.App.Application\Mystira.App.Application.csproj" />
     <ProjectReference Include="..\Mystira.App.Infrastructure.Discord\Mystira.App.Infrastructure.Discord.csproj" />
     <ProjectReference Include="..\Mystira.App.Infrastructure.Payments\Mystira.App.Infrastructure.Payments.csproj" />
